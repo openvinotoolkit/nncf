@@ -299,9 +299,7 @@ class BaseParametrized:
             for tensor_ in (test_input, test_scale):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
 
-            ref_value = RQ.forward(
-                input_=ref_input, input_low=ref_input_low, input_range=ref_input_range, levels=levels
-            )
+            ref_value = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
             if use_cuda:
                 quant_len = ref_input_range / (2**bits - 1)
@@ -379,19 +377,17 @@ class BaseParametrized:
             for tensor_ in (test_input, test_scale):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
 
-            ref_output = RQ.forward(
-                input_=ref_input, input_low=ref_input_low, input_range=ref_input_range, levels=levels
-            )
+            ref_output = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
-                grad_output=mock_prev_output_grads,
-                input_=ref_input,
-                input_low=ref_input_low,
-                input_range=ref_input_range,
-                levels=levels,
-                level_low=level_low,
-                level_high=level_high,
+                mock_prev_output_grads,
+                ref_input,
+                ref_input_low,
+                ref_input_range,
+                levels,
+                level_low,
+                level_high,
             )
             del ref_grads[1]
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
@@ -494,9 +490,7 @@ class BaseParametrized:
             )
 
             ref_input_range = abs(ref_input_range) + EPS
-            ref_input_low, ref_input_range = RQ.tune_range(
-                input_low=ref_input_low, input_range=ref_input_range, levels=levels
-            )
+            ref_input_low, ref_input_range = RQ.tune_range(ref_input_low, ref_input_range, levels)
 
             ref_input = generate_input(
                 input_size, ref_input_low, ref_input_range, bits, scale_mode, is_weights, True
@@ -508,9 +502,7 @@ class BaseParametrized:
             for tensor_ in (test_input, test_input_low, test_input_range):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
 
-            ref_value = RQ.forward(
-                input_=ref_input, input_low=ref_input_low, input_range=ref_input_range, levels=levels
-            )
+            ref_value = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
             test_value = asymmetric_quantize(
                 test_input, levels, level_low, level_high, test_input_low, test_input_range, EPS
             )
@@ -564,9 +556,7 @@ class BaseParametrized:
             )
 
             ref_input_range = abs(ref_input_range) + EPS
-            ref_input_low, ref_input_range = RQ.tune_range(
-                input_low=ref_input_low, input_range=ref_input_range, levels=levels
-            )
+            ref_input_low, ref_input_range = RQ.tune_range(ref_input_low, ref_input_range, levels)
 
             for tensor_ in (test_input_low, test_input_range):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
@@ -597,19 +587,17 @@ class BaseParametrized:
             for tensor_ in (test_input, test_input_low, test_input_range):
                 assert tensor_.dtype == torch.half if is_fp16 else torch.float
 
-            ref_output = RQ.forward(
-                input_=ref_input, input_low=ref_input_low, input_range=ref_input_range, levels=levels
-            )
+            ref_output = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
-                grad_output=mock_prev_output_grads,
-                input_=ref_input,
-                input_low=ref_input_low,
-                input_range=ref_input_range,
-                levels=levels,
-                level_low=level_low,
-                level_high=level_high,
+                mock_prev_output_grads,
+                ref_input,
+                ref_input_low,
+                ref_input_range,
+                levels,
+                level_low,
+                level_high,
             )
 
             test_value = asymmetric_quantize(

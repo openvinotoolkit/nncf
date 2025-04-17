@@ -160,7 +160,7 @@ class QuantizeSymmetricTorch(torch.autograd.Function):
         original_shape = input_.shape
         input_ = input_.reshape(input_shape)
 
-        output = RQ.Quantize_forward(input_=input_, input_low=input_low, input_range=input_range, levels=levels)
+        output = RQ.Quantize_forward(input_, input_low, input_range, levels)
 
         ctx.save_for_backward(input_, input_low, input_range)
         ctx.level_low = level_low
@@ -182,13 +182,13 @@ class QuantizeSymmetricTorch(torch.autograd.Function):
         grad_output = grad_output.reshape(input_shape)
 
         grad_input, _, grad_scale = RQ.Quantize_backward(
-            grad_output=grad_output,
-            input_=input_,
-            input_low=input_low,
-            input_range=input_range,
-            levels=levels,
-            level_low=level_low,
-            level_high=level_high,
+            grad_output,
+            input_,
+            input_low,
+            input_range,
+            levels,
+            level_low,
+            level_high,
         )
 
         grad_input = grad_input.reshape(orig_shape)
@@ -207,7 +207,7 @@ class QuantizeAsymmetricTorch(torch.autograd.Function):
         original_shape = input_.shape
         input_ = input_.reshape(input_shape)
 
-        output = RQ.Quantize_forward(input_=input_, input_low=input_low, input_range=input_range, levels=levels)
+        output = RQ.Quantize_forward(input_, input_low, input_range, levels)
 
         # Save tensors for backward pass
         ctx.save_for_backward(input_, input_low, input_range)
@@ -229,13 +229,13 @@ class QuantizeAsymmetricTorch(torch.autograd.Function):
         grad_output = grad_output.reshape(input_shape)
 
         grad_input, grad_low, grad_range = RQ.Quantize_backward(
-            grad_output=grad_output,
-            input_=input_,
-            input_low=input_low,
-            input_range=input_range,
-            levels=levels,
-            level_low=level_low,
-            level_high=level_high,
+            grad_output,
+            input_,
+            input_low,
+            input_range,
+            levels,
+            level_low,
+            level_high,
         )
 
         grad_input = grad_input.reshape(orig_shape)
