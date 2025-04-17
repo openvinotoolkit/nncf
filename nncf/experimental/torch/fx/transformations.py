@@ -383,27 +383,21 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
     # use the same qparams from quantize op
     dq_inputs = [quantized_node] + quantize_op_inputs[1:]
-    if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-        user_dq_nodes = []
-        with graph.inserting_after(quantized_node):
-            for user in target_node.users:
+
+    with graph.inserting_after(quantized_node):
+        dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
+        dq_node.meta["val"] = copy(meta_val)
+        if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+            for user in list(target_node.users):
                 if user is quantized_node:
                     continue
-                dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
-                dq_node.meta["val"] = copy(meta_val)
-                user_dq_nodes.append((user, dq_node))
+                user.replace_input_with(target_node, dq_node)
 
-        for user, dq_node in user_dq_nodes:
-            user.replace_input_with(target_node, dq_node)
-    elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
-        with graph.inserting_after(quantized_node):
-            dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
-            dq_node.meta["val"] = copy(meta_val)
-
-        target_node.replace_input_with(input_node, dq_node)
-    else:
-        msg = f"Unexpected target type: {target_point.target_type}"
-        raise nncf.InternalError(msg)
+        elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
+            target_node.replace_input_with(input_node, dq_node)
+        else:
+            msg = f"Unexpected target type: {target_point.target_type}"
+            raise nncf.InternalError(msg)
 
 
 def _insert_call_module(
