@@ -367,7 +367,7 @@ class ScaleEstimation:
         return result_scale, zp
 
     @staticmethod
-    def activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
+    def activations_to_wc_statistics(activations: List[Tensor], input_channel_axis: int) -> WCTensorStatistic:
         """
         Mimic the activation reducing logic from WeightCompression.get_statistic_points.
 
@@ -378,7 +378,7 @@ class ScaleEstimation:
         shapes = []
         for act in activations:
             shapes.append(act.shape)
-            reduction_shape = tuple(range(act.ndim - 1))
+            reduction_shape = tuple(set(range(len(act.shape))) - {input_channel_axis % len(act.shape)})
             mean_values.append(fns.mean(act, axis=reduction_shape))
         wc_statistics = WCTensorStatistic(mean_values, shapes)
         return wc_statistics
