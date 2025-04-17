@@ -50,16 +50,12 @@ std::vector<at::Tensor> q_cpu_backward(
     auto outside_mask = mask_hi.add_(mask_lo);
     grad_input = grad_input.masked_fill_(outside_mask, 0);
 
-    if (is_asymmetric) {
-        auto grad_input_low = grad_output.clone();
-        auto all_ones = torch::ones_like(outside_mask);
-        grad_input_low = grad_input_low.masked_fill_(at::__xor__(all_ones, outside_mask), 0);
+    auto grad_input_low = grad_output.clone();
+    auto all_ones = torch::ones_like(outside_mask);
+    grad_input_low = grad_input_low.masked_fill_(at::__xor__(all_ones, outside_mask), 0);
 
-        sum_like(grad_input_low, input_low);
-        return {grad_input, grad_input_low, grad_input_range};
-    }
-    auto dummy_variable = torch::autograd::make_variable(at::empty(input_low.sizes()), true);
-    return {grad_input, dummy_variable, grad_input_range};
+    sum_like(grad_input_low, input_low);
+    return {grad_input, grad_input_low, grad_input_range};
 }
 
 #define CHECK_INPUT(x) CHECK_CPU(x)

@@ -17,11 +17,13 @@ from torch.autograd import Variable
 from torch.distributions.uniform import Uniform
 
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.quantization.reference import ReferenceBackendType
 from nncf.torch.quantization.reference import ReferenceQuantize
+from nncf.torch.quantization.reference import ReferenceQuantizedFunctions
 from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import get_grads
 
@@ -669,3 +671,71 @@ def test_get_scale_zp_from_input_low_input_high(
     )
     assert zero_point == ref_zero_point, f"{zero_point} != {ref_zero_point}"
     assert np.isclose(scale, ref_scale), f"{scale:.10f} != {ref_scale}"
+
+
+class CompatibilityTestDesc:
+    def __init__(self, levels, level_low, level_high, is_asymmetric):
+        self.input_ = torch.tensor([[-0.5, 0.5]])
+        self.input_low = torch.tensor([-0.5])
+        self.input_high = torch.tensor([0.5])
+        self.grad_output = torch.tensor([[-0.5, 0.5]])
+        self.levels = levels
+        self.level_low = level_low
+        self.level_high = level_high
+        self.is_asymmetric = is_asymmetric
+
+
+@pytest.mark.parametrize(
+    "desc",
+    [
+        CompatibilityTestDesc(
+            levels=256,
+            level_low=-128,
+            level_high=127,
+            is_asymmetric=True,
+        ),
+        CompatibilityTestDesc(
+            levels=256,
+            level_low=-128,
+            level_high=127,
+            is_asymmetric=False,
+        ),
+        CompatibilityTestDesc(
+            levels=16,
+            level_low=0,
+            level_high=15,
+            is_asymmetric=False,
+        ),
+        CompatibilityTestDesc(
+            levels=16,
+            level_low=0,
+            level_high=15,
+            is_asymmetric=True,
+        ),
+    ],
+)
+def test_extension_reference_compatibility(desc):
+    input_range = desc.input_high - desc.input_low
+    fwd_args = [desc.input_, desc.input_low, input_range, desc.levels]
+    bwd_args = [
+        desc.grad_output,
+        desc.input_,
+        desc.input_low,
+        input_range,
+        desc.levels,
+        desc.level_low,
+        desc.level_high,
+        desc.is_asymmetric,
+    ]
+
+    ext_fwd_output = QuantizedFunctionsCPU.get("Quantize_forward")(*fwd_args)
+    ref_fwd_output = ReferenceQuantizedFunctions.Quantize_forward(*fwd_args)
+
+    assert torch.allclose(ext_fwd_output, ref_fwd_output)
+
+    bwd_grad_input, bwd_grad_low, bwd_grad_range = QuantizedFunctionsCPU.get("Quantize_backward")(*bwd_args)
+    ref_grad_input, ref_grad_low, ref_grad_range = ReferenceQuantizedFunctions.Quantize_backward(*bwd_args)
+
+    assert torch.allclose(bwd_grad_input, ref_grad_input)
+    assert torch.allclose(bwd_grad_low, ref_grad_low)
+    assert torch.allclose(bwd_grad_range, ref_grad_range)
