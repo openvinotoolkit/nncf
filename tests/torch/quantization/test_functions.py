@@ -18,6 +18,7 @@ from torch.distributions.uniform import Uniform
 
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
+from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
@@ -692,29 +693,15 @@ class CompatibilityTestDesc:
             levels=256,
             level_low=-128,
             level_high=127,
-            is_asymmetric=True,
-        ),
-        CompatibilityTestDesc(
-            levels=256,
-            level_low=-128,
-            level_high=127,
-            is_asymmetric=False,
         ),
         CompatibilityTestDesc(
             levels=16,
             level_low=0,
             level_high=15,
-            is_asymmetric=False,
-        ),
-        CompatibilityTestDesc(
-            levels=16,
-            level_low=0,
-            level_high=15,
-            is_asymmetric=True,
         ),
     ],
 )
-def test_extension_reference_compatibility(desc):
+def test_cpu_extension_reference_compatibility(desc):
     input_range = desc.input_high - desc.input_low
     fwd_args = [desc.input_, desc.input_low, input_range, desc.levels]
     bwd_args = [
@@ -725,7 +712,6 @@ def test_extension_reference_compatibility(desc):
         desc.levels,
         desc.level_low,
         desc.level_high,
-        desc.is_asymmetric,
     ]
 
     ext_fwd_output = QuantizedFunctionsCPU.get("Quantize_forward")(*fwd_args)
@@ -734,6 +720,49 @@ def test_extension_reference_compatibility(desc):
     assert torch.allclose(ext_fwd_output, ref_fwd_output)
 
     bwd_grad_input, bwd_grad_low, bwd_grad_range = QuantizedFunctionsCPU.get("Quantize_backward")(*bwd_args)
+    ref_grad_input, ref_grad_low, ref_grad_range = ReferenceQuantizedFunctions.Quantize_backward(*bwd_args)
+
+    assert torch.allclose(bwd_grad_input, ref_grad_input)
+    assert torch.allclose(bwd_grad_low, ref_grad_low)
+    assert torch.allclose(bwd_grad_range, ref_grad_range)
+
+
+@pytest.mark.cuda
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
+@pytest.mark.parametrize(
+    "desc",
+    [
+        CompatibilityTestDesc(
+            levels=256,
+            level_low=-128,
+            level_high=127,
+        ),
+        CompatibilityTestDesc(
+            levels=16,
+            level_low=0,
+            level_high=15,
+        ),
+    ],
+)
+def test_cuda_extension_reference_compatibility(desc):
+    input_range = desc.input_high - desc.input_low
+    fwd_args = [desc.input_, desc.input_low, input_range, desc.levels]
+    bwd_args = [
+        desc.grad_output,
+        desc.input_,
+        desc.input_low,
+        input_range,
+        desc.levels,
+        desc.level_low,
+        desc.level_high,
+    ]
+
+    ext_fwd_output = QuantizedFunctionsCUDA.get("Quantize_forward")(*fwd_args)
+    ref_fwd_output = ReferenceQuantizedFunctions.Quantize_forward(*fwd_args)
+
+    assert torch.allclose(ext_fwd_output, ref_fwd_output)
+
+    bwd_grad_input, bwd_grad_low, bwd_grad_range = QuantizedFunctionsCUDA.get("Quantize_backward")(*bwd_args)
     ref_grad_input, ref_grad_low, ref_grad_range = ReferenceQuantizedFunctions.Quantize_backward(*bwd_args)
 
     assert torch.allclose(bwd_grad_input, ref_grad_input)
