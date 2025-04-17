@@ -66,7 +66,7 @@ class AWQ(Algorithm):
         alpha_min: float = 0.0,
         alpha_max: float = 1.0,
         steps: int = 100,
-        is_data_aware: bool = True,
+        prefer_data_aware: bool = True,
     ):
         """
         :param subset_size: The number of samples for AWQ.
@@ -74,7 +74,7 @@ class AWQ(Algorithm):
         :param alpha_min: Minimum value of smoothness parameter for grid search.
         :param alpha_max: Maximal value of smoothness parameter for grid search.
         :param steps: The number of the steps in grid search.
-        :param is_data_aware: Determines whether to use activations to calculate scales.
+        :param prefer_data_aware: Determines whether to use activations to calculate scales.
         """
         super().__init__()
         self._subset_size = subset_size
@@ -82,7 +82,7 @@ class AWQ(Algorithm):
         self._alpha_min = alpha_min
         self._alpha_max = alpha_max
         self._steps = steps
-        self._is_data_aware = is_data_aware
+        self._prefer_data_aware = prefer_data_aware
         self._backend_entity = None
         self._patterns = None
         self._scale_per_target_node = {}
@@ -143,7 +143,7 @@ class AWQ(Algorithm):
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
-        is_data_free = statistics is None or not self._is_data_aware
+        is_data_free = statistics is None or not self._prefer_data_aware
 
         description = "Applying data-free AWQ" if is_data_free else "Applying data-aware AWQ"
 
