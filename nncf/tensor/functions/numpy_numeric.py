@@ -27,7 +27,7 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore [type-arg]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]
 
 DTYPE_MAP: Dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
