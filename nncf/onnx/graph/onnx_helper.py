@@ -34,6 +34,20 @@ NNCF_DTYPE_TO_ONNX_DTYPE = {
 ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
 
 
+def get_metadata_by_key(model: onnx.ModelProto, key: str) -> Optional[str]:
+    """
+    Returns the metadata value associated with the given key from the ONNX model.
+
+    :param model: The ONNX model.
+    :param key: The key of the metadata value to retrieve.
+    :return: The metadata value associated with the provided key, or None if the key is not found.
+    """
+    for metadata in model.metadata_props:
+        if metadata.key == key:
+            return metadata.value
+    return None
+
+
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
     """
     Returns mapping from node name to the node.
@@ -198,7 +212,19 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     :param tensor_name: Name of the tensor.
     :return: The value of the tensor.
     """
-    return numpy_helper.to_array(get_tensor(model, tensor_name))
+    tensor = get_tensor(model, tensor_name)
+    return get_array_from_tensor(model, tensor)
+
+
+def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> np.ndarray:
+    """
+    :param model:
+    :param tensor:
+    :return:
+    """
+    external_data_dir = get_metadata_by_key(model, "nncf.external_data_dir")
+    base_dir = external_data_dir if external_data_dir else ""
+    return numpy_helper.to_array(tensor, base_dir)
 
 
 def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
