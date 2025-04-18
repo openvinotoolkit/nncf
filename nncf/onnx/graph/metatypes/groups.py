@@ -98,6 +98,7 @@ ATOMIC_ACTIVATIONS_OPERATIONS = [
     onnx_metatypes.ONNXSigmoidMetatype,
     onnx_metatypes.ONNXHardSigmoidMetatype,
     onnx_metatypes.ONNXHardSwishMetatype,
+    onnx_metatypes.ONNXSeluMetatype,
 ]
 
 
