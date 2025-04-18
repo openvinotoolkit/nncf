@@ -701,7 +701,6 @@ def test_raise_error_with_unsupported_params_for_e2m1(algo):
     "algo",
     (
         "lora_correction",
-        "awq",
         "scale_estimation",
         "gptq",
     ),
@@ -1567,6 +1566,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_not_supported_algorithms() -> List[str]:
         return []
+
+    @staticmethod
+    def supports_data_free() -> bool:
+        return True
 
     @staticmethod
     def get_scale_estimation_ref():

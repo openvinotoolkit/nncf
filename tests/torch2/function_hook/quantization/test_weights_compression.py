@@ -412,6 +412,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return ["lora_correction", "gptq"]
 
     @staticmethod
+    def supports_data_free() -> bool:
+        return False
+
+    @staticmethod
     def get_scale_estimation_ref():
         return torch.tensor(
             [
