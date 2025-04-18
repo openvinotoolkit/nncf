@@ -16,6 +16,7 @@ import onnx
 from onnx import numpy_helper
 
 import nncf
+from nncf.onnx.graph.model_utils import get_metadata_by_key
 from nncf.tensor.definitions import TensorDataType
 
 NNCF_DTYPE_TO_ONNX_DTYPE = {
@@ -198,7 +199,19 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     :param tensor_name: Name of the tensor.
     :return: The value of the tensor.
     """
-    return numpy_helper.to_array(get_tensor(model, tensor_name))
+    tensor = get_tensor(model, tensor_name)
+    return get_array_from_tensor(model, tensor)
+
+
+def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> np.ndarray:
+    """
+    :param model:
+    :param tensor:
+    :return:
+    """
+    external_data_dir = get_metadata_by_key(model, "nncf.external_data_dir")
+    base_dir = external_data_dir if external_data_dir else ""
+    return numpy_helper.to_array(tensor, base_dir)
 
 
 def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[int]:

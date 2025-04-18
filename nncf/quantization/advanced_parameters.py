@@ -373,6 +373,8 @@ class AdvancedCompressionParameters:
     :type lora_correction_params: AdvancedLoraCorrectionParameters
     :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
     :type lora_adapter_rank: int
+    :param backend_params: Backend-specific parameters.
+    :type backend_params: Dict[str, Any]
     """
 
     statistics_path: Optional[str] = None
@@ -383,6 +385,7 @@ class AdvancedCompressionParameters:
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
+    backend_params: Dict[str, Any] = field(default_factory=dict)
 
 
 @api()

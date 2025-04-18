@@ -12,6 +12,7 @@
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 import onnx
+from onnx.quantization.backend_parameters import get_external_data_dir
 
 import nncf
 from nncf.common.factory import NNCFGraphFactory
@@ -77,6 +78,10 @@ def quantize_impl(
             advanced_parameters = AdvancedQuantizationParameters()
         advanced_parameters.weights_quantization_params = QuantizationParameters(per_channel=False)
         advanced_parameters.activations_quantization_params = QuantizationParameters(per_channel=False)
+
+    external_data_dir = get_external_data_dir(advanced_parameters)
+    if external_data_dir:
+        model.metadata_props.add(key="nncf.external_data_dir", value=external_data_dir)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
@@ -234,6 +239,11 @@ def compress_weights_impl(
     if model.opset_import[0].version < 21 and group_size > 0:
         msg = "ONNX models with opset version < 21 do not support block-wise quantization."
         raise nncf.ValidationError(msg)
+
+    external_data_dir = get_external_data_dir(advanced_parameters)
+    if external_data_dir:
+        model.metadata_props.add(key="nncf.external_data_dir", value=external_data_dir)
+
     compression_algorithm = WeightCompression(
         mode,
         ratio,

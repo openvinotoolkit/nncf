@@ -394,7 +394,12 @@ class ONNXModelTransformer(ModelTransformer):
         if not output_tensor_names:
             output_tensor_names = [n.name for n in self._model.graph.output]
 
-        return self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
+        extracted_model = self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
+        if self.model.metadata_props:
+            values = {p.key: p.value for p in self.model.metadata_props}
+            onnx.helper.set_model_props(extracted_model, values)
+
+        return extracted_model
 
     def _apply_qdq_node_removing_transformations(
         self, model: onnx.ModelProto, transformations: list[ONNXQDQNodeRemovingCommand]
