@@ -16,7 +16,7 @@ import onnxruntime as rt
 from onnx import ModelProto
 
 from nncf.common.engine import Engine
-from nncf.onnx.graph.model_utils import get_metadata_by_key
+from nncf.onnx.graph.onnx_helper import get_metadata_by_key
 
 
 class ONNXEngine(Engine):
