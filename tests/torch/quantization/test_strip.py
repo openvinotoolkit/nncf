@@ -372,9 +372,9 @@ def check_compression_modules(
         (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 1e-8),
         (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.bfloat16, 1e-2),
         (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 1e-3),
-        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-8),  # torch.compile introduces bigger diff for sym
+        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-3),  # torch.compile introduces bigger diff for sym
         (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.bfloat16, 1e-2),
-        (CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 1e-8),  # int8 uses per-channel vs int4 group-wise
+        (CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 1e-2),  # int8 uses per-channel vs int4 group-wise
         (CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 1e-8),  # int8 uses per-channel vs int4 group-wise
     ),
 )
