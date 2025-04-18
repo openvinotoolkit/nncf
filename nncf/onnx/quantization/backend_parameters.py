@@ -26,8 +26,12 @@ class BackendParameters:
 def get_external_data_dir(
     advanced_parameters: Optional[Union[AdvancedQuantizationParameters, AdvancedCompressionParameters]],
 ) -> Optional[str]:
-    """ """
+    """
+    Returns the value associated with the `BackendParameters.EXTERNAL_DATA_DIR` key from the backend parameters.
 
+    :param advanced_parameters: Advanced parameters that may contain backend parameters.
+    :return: A string representing the external data directory if found; otherwise, `None`.
+    """
     if advanced_parameters is not None and advanced_parameters.backend_params is not None:
         return advanced_parameters.backend_params.get(BackendParameters.EXTERNAL_DATA_DIR, None)
     return None
