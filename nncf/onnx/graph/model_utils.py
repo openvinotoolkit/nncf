@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Optional
 
 import onnx
 
