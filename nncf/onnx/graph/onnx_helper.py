@@ -16,7 +16,6 @@ import onnx
 from onnx import numpy_helper
 
 import nncf
-from nncf.onnx.graph.model_utils import get_metadata_by_key
 from nncf.tensor.definitions import TensorDataType
 
 NNCF_DTYPE_TO_ONNX_DTYPE = {
@@ -33,6 +32,20 @@ NNCF_DTYPE_TO_ONNX_DTYPE = {
 }
 
 ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
+
+
+def get_metadata_by_key(model: onnx.ModelProto, key: str) -> Optional[str]:
+    """
+    Returns the metadata value associated with the given key from the ONNX model.
+
+    :param model: The ONNX model.
+    :param key: The key of the metadata value to retrieve.
+    :return: The metadata value associated with the provided key, or None if the key is not found.
+    """
+    for metadata in model.metadata_props:
+        if metadata.key == key:
+            return metadata.value
+    return None
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
