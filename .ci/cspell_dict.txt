@@ -26,6 +26,7 @@ argprovider
 argspec
 argvalue
 ascale
+ascontiguousarray
 asym
 asymm
 atol
@@ -49,6 +50,7 @@ biburl
 bitwidth
 bitwidths
 bkup
+blockwise
 bnas
 booktitle
 bootstrapnas
@@ -452,6 +454,7 @@ thresholded
 thresholding
 timestep
 tinyyolov
+tobytes
 togethercomputer
 torchdynamo
 truncnorm
