@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import tempfile
+from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import onnx
@@ -19,6 +21,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+from nncf.onnx.graph.model_utils import eliminate_nop_cast
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
@@ -42,6 +45,47 @@ from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
+
+
+def quantize_pre_process(model: onnx.ModelProto, save_as_external_data: bool = True):
+    """
+    Preprocesses the provided ONNX model for quantization.
+
+    This method performs the following steps:
+        1. Infers shapes in the model.
+        2. Removes redundant 'No-op' cast nodes from the model.
+
+    :param model: The ONNX model to be preprocessed.
+    :param save_as_external_data: A boolean flag indicating whether to
+        save the model with external data. If `True`, external data is
+        saved separately; otherwise, the model is saved as a single file.
+    :return: A preprocessed ONNX model, ready for quantization.
+    """
+    with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as temp_dir:
+        temp_path = Path(temp_dir)
+        input_model_path = str(temp_path / "input_model.onnx")
+
+        if save_as_external_data:
+            onnx.save_model(
+                model,
+                input_model_path,
+                save_as_external_data=True,
+                all_tensors_to_one_file=True,
+                location="model.data",
+                size_threshold=1024,
+                convert_attribute=False,
+            )
+        else:
+            onnx.save(model, input_model_path)
+        model = None
+
+        shape_inferred_model_path = str(temp_path / "shape_inferred_model.onnx")
+        onnx.shape_inference.infer_shapes_path(input_model_path, shape_inferred_model_path)
+
+        preprocessed_model = onnx.load(shape_inferred_model_path)
+        preprocessed_model = eliminate_nop_cast(preprocessed_model)
+
+    return preprocessed_model
 
 
 def quantize_impl(
@@ -88,7 +132,8 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    graph = GraphConverter.create_nncf_graph(model)
+    model = quantize_pre_process(model)
+    graph = GraphConverter.create_nncf_graph(model, infer_shapes=False)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
