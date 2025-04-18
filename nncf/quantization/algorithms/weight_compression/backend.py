@@ -18,7 +18,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
@@ -213,7 +212,7 @@ class WeightCompressionAlgoBackend(ABC):
     @abstractmethod
     def mean_statistic_collector(
         self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Return mean statistic collector
 

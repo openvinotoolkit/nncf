@@ -23,7 +23,10 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.tensor_statistics.collectors import ReductionAxes
+
+# Using experimental tensor statistics implementation as part of the migration
+# from old tensor statistics to experimental tensor statistics
+from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
@@ -228,7 +231,7 @@ def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_
 
 def get_inplace_reduce_op(
     op: Type[ov.Node],
-    reduction_axes: Optional[ReductionAxes],
+    reduction_axes: Optional[AggregationAxes],
     use_abs: bool,
     keep_dims: bool = True,
 ) -> InplaceInsertionFnType:
@@ -265,7 +268,7 @@ def get_inplace_reduce_op(
     return get_reduce_op
 
 
-def get_inplace_min_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
+def get_inplace_min_op(reduction_axes: Optional[AggregationAxes]) -> InplaceInsertionFnType:
     """
     Returns inplace min function that adds reduce min node to a passed node.
 
@@ -277,7 +280,7 @@ def get_inplace_min_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsert
 
 
 def get_inplace_max_op(
-    reduction_axes: Optional[ReductionAxes], use_abs_max: bool, keep_dims: bool = True
+    reduction_axes: Optional[AggregationAxes], use_abs_max: bool, keep_dims: bool = True
 ) -> InplaceInsertionFnType:
     """
     Returns inplace max function that adds reduce max node to a passed node.
@@ -291,7 +294,7 @@ def get_inplace_max_op(
     return get_inplace_reduce_op(opset.reduce_max, reduction_axes, use_abs_max, keep_dims)
 
 
-def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
+def get_inplace_mean_op(reduction_axes: Optional[AggregationAxes]) -> InplaceInsertionFnType:
     """
     Returns inplace mean function that adds reduce mean node to a passed node.
 
@@ -329,7 +332,7 @@ def var_op(
     return variance
 
 
-def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+def get_inplace_mean_var_op(reduction_axes: Optional[AggregationAxes] = None) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes variance across given axes and then mean-reduces the result across
     the remaining axes.
@@ -358,7 +361,7 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
     return get_mean_var_reduce_op
 
 
-def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+def get_inplace_max_var_op(reduction_axes: Optional[AggregationAxes] = None) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes variance across given axes and then max-reduces the result across
     the remaining axes.
@@ -387,7 +390,7 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
     return get_max_var_reduce_op
 
 
-def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max: bool) -> InplaceInsertionFnType:
+def get_inplace_mean_max_op(reduction_axes: Optional[AggregationAxes], use_abs_max: bool) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes maximum across given axes and then mean-reduces the result across
     the remaining axes.
