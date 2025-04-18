@@ -19,9 +19,9 @@ from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
 from torch import nn
 
 import nncf
-from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
+from nncf.torch.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.hook_storage import RemovableHookHandle
 
 ATR_HOOK_STORAGE = "__nncf_hooks"
 

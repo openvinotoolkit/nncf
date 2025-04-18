@@ -18,20 +18,20 @@ import torch
 from torch import nn
 
 from nncf.common.logging import nncf_logger as logger
-from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorInfo
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorSource
-from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
-from nncf.experimental.torch2.function_hook.wrapper import ForwardWithHooks
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.graph.graph_utils import ConstMeta
+from nncf.torch.function_hook.graph.graph_utils import EdgeMeta
+from nncf.torch.function_hook.graph.graph_utils import FunctionMeta
+from nncf.torch.function_hook.graph.graph_utils import InOutMeta
+from nncf.torch.function_hook.graph.graph_utils import NodeType
+from nncf.torch.function_hook.graph.graph_utils import TensorInfo
+from nncf.torch.function_hook.graph.graph_utils import TensorMeta
+from nncf.torch.function_hook.graph.graph_utils import TensorSource
+from nncf.torch.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.torch.function_hook.hook_executor_mode import OpMeta
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.weak_map import WeakUnhashableKeyMap
+from nncf.torch.function_hook.wrapper import ForwardWithHooks
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.utils import training_mode_switcher
 
 

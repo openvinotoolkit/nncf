@@ -16,8 +16,8 @@ from torch import nn
 import nncf
 from nncf import nncf_logger
 from nncf.common.graph.graph import NNCFNode
-from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.model_graph_manager import get_const_data

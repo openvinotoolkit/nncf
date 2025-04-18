@@ -16,8 +16,8 @@ from torch import nn
 
 import nncf
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.utils import get_model_device

@@ -25,14 +25,14 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.statistics.aggregator import PT2StatisticsAggregator
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.statistics.aggregator import PT2StatisticsAggregator
 from nncf.torch.model_creation import wrap_model
 from tests.cross_fw.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 from tests.torch.helpers import get_all_inputs_for_graph_node

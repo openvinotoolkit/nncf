@@ -17,8 +17,8 @@ import torch
 from networkx.drawing.nx_pydot import to_pydot
 
 import nncf
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.parameters import ModelType
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import EmbeddingModel
 from tests.cross_fw.test_templates.helpers import RoPEModel

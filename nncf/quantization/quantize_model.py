@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDi
 
 import nncf
 from nncf.api.compression import TModel
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -21,7 +22,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -232,10 +232,10 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        if is_torch_tracing_by_torch_function_mode():
-            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
-        else:
+        if is_torch_tracing_by_patching():
             from nncf.torch.quantization.quantize_model import quantize_impl
+        else:
+            from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,

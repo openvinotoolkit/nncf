@@ -18,10 +18,10 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_visualization import to_pydot
-from nncf.experimental.torch2.function_hook.handle_inner_functions import MAP_HANDLER_TO_INNER_FUNCTION
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_visualization import to_pydot
+from nncf.torch.function_hook.handle_inner_functions import MAP_HANDLER_TO_INNER_FUNCTION
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.utils import compare_with_reference_file
 

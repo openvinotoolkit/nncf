@@ -13,13 +13,13 @@ import torch
 from torch import nn
 from torch.overrides import _get_current_function_mode_stack
 
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_visualization import to_pydot
-from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.function_hook.hook_executor_mode import disable_function_hook_mode
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.torch import disable_tracing
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_visualization import to_pydot
+from nncf.torch.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
+from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.utils import compare_with_reference_file
 

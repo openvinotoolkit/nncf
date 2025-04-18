@@ -24,10 +24,10 @@ from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
-from nncf.experimental.torch2.commands import PT2InsertionCommand
-from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.tensor import Tensor
+from nncf.torch.function_hook.commands import PT2InsertionCommand
+from nncf.torch.function_hook.hook_storage import RemovableHookHandle
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 

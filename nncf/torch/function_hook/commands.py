@@ -17,7 +17,7 @@ from torch import nn
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
+from nncf.torch.function_hook.hook_storage import RemovableHookHandle
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 

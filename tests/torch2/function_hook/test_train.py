@@ -19,7 +19,7 @@ from torch import nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 import nncf
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook.helpers import ConvModel
 from tests.torch2.function_hook.helpers import get_wrapped_simple_model_with_hook
 
