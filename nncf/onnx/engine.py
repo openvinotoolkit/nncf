@@ -16,6 +16,7 @@ import onnxruntime as rt
 from onnx import ModelProto
 
 from nncf.common.engine import Engine
+from nncf.onnx.graph.model_utils import get_metadata_by_key
 
 
 class ONNXEngine(Engine):
@@ -25,9 +26,17 @@ class ONNXEngine(Engine):
 
     def __init__(self, model: ModelProto, **rt_session_options: Any):
         self.input_names = set()
+
+        sees_options = rt.SessionOptions()
+        external_data_dir = get_metadata_by_key(model, "nncf.external_data_dir")
+        if external_data_dir:
+            sees_options.add_session_config_entry(
+                "session.model_external_initializers_file_folder_path", external_data_dir
+            )
+
         rt_session_options["providers"] = ["CPUExecutionProvider"]
         serialized_model = model.SerializeToString()
-        self.sess = rt.InferenceSession(serialized_model, **rt_session_options)
+        self.sess = rt.InferenceSession(serialized_model, sees_options, **rt_session_options)
 
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)

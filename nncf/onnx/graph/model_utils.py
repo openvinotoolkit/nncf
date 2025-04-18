@@ -8,7 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from collections import deque
+from typing import Optional
 
 import onnx
 
@@ -51,3 +53,17 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
         nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
 
     return model_transformer.transform(transformation_layout)
+
+
+def get_metadata_by_key(model: onnx.ModelProto, key: str) -> Optional[str]:
+    """
+    Returns the metadata value associated with the given key from the ONNX model.
+
+    :param model: The ONNX model.
+    :param key: The key of the metadata value to retrieve.
+    :return: The metadata value associated with the provided key, or None if the key is not found.
+    """
+    for metadata in model.metadata_props:
+        if metadata.key == key:
+            return metadata.value
+    return None

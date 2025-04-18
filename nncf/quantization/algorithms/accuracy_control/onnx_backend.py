@@ -25,6 +25,7 @@ from nncf.onnx.graph.metatypes.groups import QUANTIZE_DEQUANTIZE_OPERATIONS
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
+from nncf.onnx.graph.onnx_helper import get_array_from_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.backend import PreparedModel
@@ -113,11 +114,11 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def get_model_size(model: onnx.ModelProto) -> int:
         model_size = 0
         for initializer in model.graph.initializer:
-            model_size += onnx.numpy_helper.to_array(initializer).nbytes
+            model_size += get_array_from_tensor(model, initializer).nbytes
         for node in model.graph.node:
             for attr in node.attribute:
                 if attr.HasField("t"):
-                    model_size += onnx.numpy_helper.to_array(attr.t).nbytes
+                    model_size += get_array_from_tensor(model, attr.t).nbytes
                 for t in attr.tensors:
-                    model_size += onnx.numpy_helper.to_array(t).nbytes
+                    model_size += get_array_from_tensor(model, t).nbytes
         return model_size
