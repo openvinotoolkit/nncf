@@ -395,8 +395,8 @@ class ONNXModelTransformer(ModelTransformer):
             output_tensor_names = [n.name for n in self._model.graph.output]
 
         extracted_model = self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
-        if self.model.metadata_props:
-            values = {p.key: p.value for p in self.model.metadata_props}
+        if self._model.metadata_props:
+            values = {p.key: p.value for p in self._model.metadata_props}
             onnx.helper.set_model_props(extracted_model, values)
 
         return extracted_model
