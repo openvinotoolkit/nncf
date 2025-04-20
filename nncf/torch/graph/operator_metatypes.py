@@ -542,6 +542,12 @@ class PTSILUMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTSELUMetatype(PTOperatorMetatype):
+    name = "SeluOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["selu"]}
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTSigmoidMetatype(PTOperatorMetatype):
     name = "SigmoidOp"
     module_to_function_names = {
