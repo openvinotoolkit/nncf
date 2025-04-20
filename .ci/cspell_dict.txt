@@ -320,6 +320,7 @@ ovhw
 ovlstm
 ovmvn
 ovroi
+ovselu
 pbar
 perchannel
 pertensor
@@ -341,6 +342,7 @@ pthw
 ptnncf
 ptprelu
 ptrelu
+ptselu
 ptsilu
 ptwc
 pymodules
