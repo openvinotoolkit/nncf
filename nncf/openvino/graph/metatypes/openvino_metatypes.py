@@ -12,7 +12,7 @@
 from collections import deque
 from typing import List, Optional, Type
 
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
@@ -680,6 +680,12 @@ class OVSwishMetatype(OVOpMetatype):
 class OVHSwishMetatype(OVOpMetatype):
     name = "HSwishOp"
     op_names = ["HSwish"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSELUMetatype(OVOpMetatype):
+    name = "SeluOp"
+    op_names = ["Selu"]
 
 
 @OV_OPERATOR_METATYPES.register()

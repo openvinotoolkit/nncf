@@ -18,10 +18,6 @@ hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull_backend_OPTIMUM:
   metric_value: null
 hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless_backend_OPTIMUM:
   metric_value: null
-  exception_xfail_reason:
-    type: "TypeError"
-    error_message: "cannot pickle 'openvino._pyopenvino.Tensor' object"
-    message: "Issue-161969"
 hf/hf-internal-testing/tiny-random-gpt2_backend_FP32:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_OPTIMUM:

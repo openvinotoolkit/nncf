@@ -19,14 +19,13 @@ from typing import Callable, DefaultDict, Dict, List, Optional, Union
 
 import torch
 
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.hook_handle import HookHandle
 from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
-from nncf.experimental.torch2.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
@@ -37,6 +36,7 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
+from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
 
 
 class ThreadLocalGlobalContext(threading.local):
@@ -409,7 +409,7 @@ class TracingContext:
             self._threading.thread_local.node_call_tracker[node.node_id] = 1
 
     def reset_node_call_counters(self):
-        for k, _ in self._threading.thread_local.node_call_tracker.items():
+        for k in self._threading.thread_local.node_call_tracker:
             self._threading.thread_local.node_call_tracker[k] = 0
 
     def get_node_call_counter_dict(self):
@@ -442,8 +442,7 @@ class TracingContext:
         stack_copy = self.relative_scopes_stack.copy()
         scope_el_list = []
         for relative_scope in stack_copy:
-            for scope_element in relative_scope.scope_elements:
-                scope_el_list.append(scope_element)
+            scope_el_list.extend(relative_scope.scope_elements)
         return Scope(scope_el_list)
 
     def reset_graph(self):
@@ -507,15 +506,15 @@ def disable_tracing(method):
     Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_patching():
 
         def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-            with disable_function_hook_mode():
+            with no_nncf_trace():
                 return fn(*args, **kwargs)
     else:
 
         def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-            with no_nncf_trace():
+            with disable_function_hook_mode():
                 return fn(*args, **kwargs)
 
     PATCHER.patch(method, no_nncf_trace_wrapper)

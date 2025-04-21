@@ -89,7 +89,7 @@ def test_ambiguous_function():
 
     unique_op_exec_contexts = set()
 
-    for _, node in graph._nx_graph.nodes.items():
+    for node in graph._nx_graph.nodes.values():
         node_op_address = node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR].op_address
         assert node_op_address not in unique_op_exec_contexts
         unique_op_exec_contexts.add(node_op_address)
