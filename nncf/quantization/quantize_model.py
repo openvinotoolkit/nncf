@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import warnings
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDict, TypeVar, Union
 
 import nncf
@@ -583,6 +584,10 @@ def compress_weights(
         if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
             msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
             raise nncf.ParameterNotSupportedError(msg)
+
+        if dataset is not None:
+            warnings.warn("data-aware methods are not supported in INT8 modes. dataset is set to None")
+            dataset = None
 
         compression_weights_impl = fx_compression_weights_impl
 
