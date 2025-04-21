@@ -20,7 +20,9 @@ from transformers import PreTrainedModel
 from transformers.cache_utils import StaticCacheConfig
 from transformers.integrations.executorch import TorchExportableModuleWithStaticCache
 from transformers.modeling_outputs import CausalLMOutputWithPast
+
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+
 
 class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
     def __init__(
@@ -55,36 +57,28 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
 
     def get_prefill(self, input_ids: torch.Tensor, cache_position: torch.Tensor):
         if (
-            self.backend is not None
-            and self.backend == "openvino"
-            and (
-                self.prefill is None
-                or self._cached_prefill_input_ids.shape != input_ids.shape
-                or self._cached_cache_position.shape != cache_position.shape
-            )
+            self.prefill is None
+            or self._cached_prefill_input_ids.shape != input_ids.shape
+            or self._cached_cache_position.shape != cache_position.shape
         ):
             self._cached_prefill_input_ids = input_ids
             self._cached_cache_position = cache_position
-            if(self.compiled_prefill == False):
-                self.prefill = self.model
-                self.prefill.forward = torch.compile(
-                    self.prefill.forward,
-                    backend="openvino",
-                    options=self.get_openvino_backend_options(),
-                )
-                self.compiled_prefill = True
+            self.prefill = self.model
+            self.prefill.forward = torch.compile(
+                self.prefill.forward,
+                backend="openvino",
+                options=self.get_openvino_backend_options(),
+            )
         return self.prefill
 
     def get_decode_one_token(self, input_ids: torch.Tensor, cache_position: torch.Tensor):
-        if self.backend is not None and self.backend == "openvino" and self.decode_one_token is None:
-            if(self.compiled_decode == False):
-                self.decode_one_token = self.model
-                self.decode_one_token.forward = torch.compile(
-                    self.decode_one_token.forward,
-                    backend="openvino",
-                    options=self.get_openvino_backend_options(),
-                )
-                self.compiled_decode = True
+        if self.decode_one_token is None:
+            self.decode_one_token = self.model
+            self.decode_one_token.forward = torch.compile(
+                self.decode_one_token.forward,
+                backend="openvino",
+                options=self.get_openvino_backend_options(),
+            )
         return self.decode_one_token
 
     def infer_prefill(self, input_ids: torch.Tensor, cache_position: torch.Tensor):
@@ -153,17 +147,15 @@ def convert_and_export_with_cache(model: PreTrainedModel, re_export=False):
     Convert a `PreTrainedModel` into an exportable module and export it using `torch.export`
     or `torch._export.capture_pre_autograd_graph`.
     """
-    
+
     with disable_patching():
         with torch.no_grad():
             example_input_ids = torch.ones(1, 8, dtype=torch.long)
             example_cache_position = torch.arange(0, 8, dtype=torch.long)
             model_config = None
-            if(not re_export):
+            if not re_export:
                 model.generation_config.cache_implementation = "static"
-                model.generation_config.cache_config = StaticCacheConfig(
-                    batch_size=1, max_cache_len=512
-                )
+                model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
                 model(example_input_ids)
                 model_config = model.config
                 model = TorchExportableModuleWithStaticCacheDynamicShape(model)
@@ -173,7 +165,10 @@ def convert_and_export_with_cache(model: PreTrainedModel, re_export=False):
 
             exported_program = torch.export.export_for_training(
                 model,
-                args=(example_input_ids,example_cache_position,),
-                dynamic_shapes=dynamic_shapes
+                args=(
+                    example_input_ids,
+                    example_cache_position,
+                ),
+                dynamic_shapes=dynamic_shapes,
             ).run_decompositions(decomp_table={})
             return exported_program, model_config
