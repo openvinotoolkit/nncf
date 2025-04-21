@@ -12,6 +12,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDi
 
 import nncf
 from nncf.api.compression import TModel
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -21,7 +22,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -232,10 +232,10 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        if is_torch_tracing_by_torch_function_mode():
-            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
-        else:
+        if is_torch_tracing_by_patching():
             from nncf.torch.quantization.quantize_model import quantize_impl
+        else:
+            from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,
@@ -608,6 +608,37 @@ def compress_weights(
 
         compression_weights_impl = ov_compress_weights_impl
 
+    elif backend == BackendType.ONNX:
+        from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
+
+        if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
+            msg = "ONNX backend does not support NF4 and E2M1 modes for weight compression."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        options = {
+            "awq": awq,
+            "scale_estimation": scale_estimation,
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_options = [name for name, value in options.items() if value is not None]
+        if unsupported_options:
+            msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
+            msg = (
+                "ONNX backend only supports data-free sensitivity metric. "
+                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
+            )
+            raise nncf.ParameterNotSupportedError(msg)
+        if dataset:
+            msg = "ONNX only supports data-free weights compression. Set the 'dataset' option to None"
+            raise nncf.ParameterNotSupportedError(msg)
+        if advanced_parameters and advanced_parameters.statistics_path:
+            msg = "ONNX does not supports statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
+        compression_weights_impl = onnx_compress_weights_impl
     if compression_weights_impl is None:
         msg = f"Unsupported type of backend: {backend}"
         raise nncf.UnsupportedBackendError(msg)

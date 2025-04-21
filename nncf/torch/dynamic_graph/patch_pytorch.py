@@ -23,8 +23,8 @@ from torch.nn.parallel import DistributedDataParallel
 
 import nncf
 from nncf import nncf_logger
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.utils.api_marker import api
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
@@ -181,18 +181,18 @@ class MagicFunctionsToPatch:
 
 @api(canonical_alias="nncf.torch.register_operator")
 def register_operator(name=None):
-    if is_torch_tracing_by_torch_function_mode():
-
-        def wrap(operator):
-            # Skip wrapping operator for tracing by TorchFunctionMode
-            return operator
-    else:
+    if is_torch_tracing_by_patching():
 
         def wrap(operator):
             op_name = name
             if op_name is None:
                 op_name = operator.__name__
             return wrap_operator(operator, PatchedOperatorInfo(op_name, NamespaceTarget.EXTERNAL))
+    else:
+
+        def wrap(operator):
+            # Skip wrapping operator for tracing by TorchFunctionMode
+            return operator
 
     return wrap
 
@@ -360,7 +360,7 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
 
 
 def patch_torch_operators():
-    if is_torch_tracing_by_torch_function_mode():
+    if not is_torch_tracing_by_patching():
         return
 
     # Only patch torch.jit.script during first patch_torch_operators call

@@ -26,6 +26,7 @@ argprovider
 argspec
 argvalue
 ascale
+ascontiguousarray
 asym
 asymm
 atol
@@ -49,6 +50,7 @@ biburl
 bitwidth
 bitwidths
 bkup
+blockwise
 bnas
 booktitle
 bootstrapnas
@@ -319,6 +321,7 @@ ovhw
 ovlstm
 ovmvn
 ovroi
+ovselu
 pbar
 perchannel
 pertensor
@@ -340,6 +343,7 @@ pthw
 ptnncf
 ptprelu
 ptrelu
+ptselu
 ptsilu
 ptwc
 pymodules
@@ -453,6 +457,7 @@ thresholded
 thresholding
 timestep
 tinyyolov
+tobytes
 togethercomputer
 torchdynamo
 truncnorm

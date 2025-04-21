@@ -18,13 +18,13 @@ import torch
 from pytest import FixtureRequest
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
-from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.torch.function_hook.hook_executor_mode import OpMeta
+from nncf.torch.function_hook.hook_executor_mode import generate_normalized_op_name
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.wrapper import register_pre_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 from tests.torch2.function_hook.helpers import CallCount
 from tests.torch2.function_hook.helpers import CounterHook

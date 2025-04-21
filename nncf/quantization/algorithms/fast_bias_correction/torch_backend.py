@@ -20,10 +20,10 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch2.function_hook.extractor import extract_model
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
+from nncf.torch.function_hook.extractor import extract_model
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand

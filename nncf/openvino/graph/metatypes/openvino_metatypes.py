@@ -683,6 +683,12 @@ class OVHSwishMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVSELUMetatype(OVOpMetatype):
+    name = "SeluOp"
+    op_names = ["Selu"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVClampMetatype(OVOpMetatype):
     name = "ClampOp"
     op_names = ["Clamp"]
