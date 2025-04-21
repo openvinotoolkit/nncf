@@ -279,7 +279,7 @@ def test_ptq_quantization(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
-    torch_compile_validation: bool = True
+    torch_compile_validation: bool = True,
 ):
     run_pipeline(
         test_case_name,
