@@ -32,6 +32,7 @@ from tests.post_training.pipelines.image_classification_timm import ImageClassif
 from tests.post_training.pipelines.image_classification_torchvision import ImageClassificationTorchvision
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.masked_language_modeling import MaskedLanguageModelingHF
+from tests.post_training.pipelines.ultralytics_detection import UltralyticsDetection
 
 QUANTIZATION_MODELS = [
     # HF models
@@ -131,6 +132,85 @@ QUANTIZATION_MODELS = [
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
         "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
+        "batch_size": 1,
+    },
+    # Ultralytics models
+    {
+        "reported_name": "ultralytics/yolov8n",
+        "model_id": "yolov8n",
+        "pipeline_cls": UltralyticsDetection,
+        "compression_params": {
+            "preset": nncf.QuantizationPreset.MIXED,
+            "ignored_scope": nncf.IgnoredScope(
+                types=["mul", "sub", "sigmoid", "__getitem__"],
+                subgraphs=[
+                    nncf.Subgraph(
+                        inputs=["cat_13", "cat_14", "cat_15"],
+                        outputs=["output"],
+                    )
+                ],
+            ),
+        },
+        "backends": [BackendType.FX_TORCH],
+        "batch_size": 1,
+    },
+    {
+        "reported_name": "ultralytics/yolov8n",
+        "model_id": "yolov8n",
+        "pipeline_cls": UltralyticsDetection,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "ignored_scope": nncf.IgnoredScope(
+                types=["Multiply", "Subtract", "Sigmoid"],
+                subgraphs=[
+                    nncf.Subgraph(
+                        inputs=["/model.22/Concat", "/model.22/Concat_1", "/model.22/Concat_2"],
+                        outputs=["output0/sink_port_0"],
+                    )
+                ],
+            ),
+        },
+        "backends": [BackendType.OV],
+        "batch_size": 1,
+    },
+    {
+        "reported_name": "ultralytics/yolo11n",
+        "model_id": "yolo11n",
+        "pipeline_cls": UltralyticsDetection,
+        "compression_params": {
+            "model_type": nncf.ModelType.TRANSFORMER,
+            "preset": QuantizationPreset.MIXED,
+            "ignored_scope": nncf.IgnoredScope(
+                types=["mul", "sub", "sigmoid", "__getitem__"],
+                subgraphs=[
+                    nncf.Subgraph(
+                        inputs=["cat_13", "cat_14", "cat_15"],
+                        outputs=["output"],
+                    )
+                ],
+            ),
+        },
+        "backends": [BackendType.FX_TORCH],
+        "batch_size": 1,
+    },
+    {
+        "reported_name": "ultralytics/yolo11n",
+        "model_id": "yolo11n",
+        "pipeline_cls": UltralyticsDetection,
+        "compression_params": {
+            "model_type": nncf.ModelType.TRANSFORMER,
+            "preset": QuantizationPreset.MIXED,
+            "ignored_scope": nncf.IgnoredScope(
+                types=["Multiply", "Subtract", "Sigmoid"],
+                subgraphs=[
+                    nncf.Subgraph(
+                        inputs=["/model.23/Concat", "/model.23/Concat_1", "/model.23/Concat_2"],
+                        outputs=["output0/sink_port_0"],
+                    )
+                ],
+            ),
+        },
+        "backends": [BackendType.OV],
         "batch_size": 1,
     },
     # Timm models
