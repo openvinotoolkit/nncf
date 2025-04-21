@@ -75,7 +75,7 @@ class ImageClassificationBase(PTQTestPipeline):
     def _validate_torch_compile(
         self, val_loader: torch.utils.data.DataLoader, predictions: np.ndarray, references: np.ndarray
     ):
-        compiled_model = torch.compile(self.compressed_model.cpu(), backend="openvino")
+        compiled_model = torch.compile(self.compressed_model.cpu(), backend="openvino", options={"aot_autograd": True})
         for i, (images, target) in enumerate(val_loader):
             # W/A for memory leaks when using torch DataLoader and OpenVINO
             pred = compiled_model(images)
