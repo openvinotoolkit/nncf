@@ -25,10 +25,10 @@ import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgorithm
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import TargetScope
 from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.scopes import IgnoredScope
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_creation import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import set_torch_seed

@@ -14,10 +14,10 @@ import torch
 from torch import nn
 
 import tests.cross_fw.test_templates.helpers as helpers
-from nncf.experimental.torch2.function_hook.extractor import extract_model
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.extractor import extract_model
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.wrapper import register_pre_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import SymmetricQuantizer

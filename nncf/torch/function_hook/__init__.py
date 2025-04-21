@@ -9,16 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-
-def is_torch_tracing_by_torch_function_mode() -> bool:
-    """
-    Checks if legacy torch tracing is enabled by environment variable NNCF_TORCH_LEGACY_TRACING.
-
-    True - will wrap model by NNCFNetwork and patch function in torch namespace.
-    False - will use FunctionHookMode without patching torch namespace.
-
-    :return: True if legacy torch tracing is enabled, False otherwise.
-    """
-    return os.getenv("NNCF_TORCH_LEGACY_TRACING", "").lower() not in ["1", "on", "true"]
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph as build_graph
+from nncf.torch.function_hook.wrapper import get_hook_storage as get_hook_storage
+from nncf.torch.function_hook.wrapper import is_wrapped as is_wrapped
+from nncf.torch.function_hook.wrapper import register_post_function_hook as register_post_function_hook
+from nncf.torch.function_hook.wrapper import register_pre_function_hook as register_pre_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model as wrap_model

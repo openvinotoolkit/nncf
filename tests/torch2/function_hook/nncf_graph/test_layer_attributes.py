@@ -15,10 +15,10 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.graph_utils import TensorMeta
+from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook.helpers import ConvModel
 from tests.torch2.function_hook.helpers import MatMulLeft
 from tests.torch2.function_hook.helpers import MatMulRight

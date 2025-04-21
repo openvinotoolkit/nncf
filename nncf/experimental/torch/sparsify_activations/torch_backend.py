@@ -22,11 +22,11 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
-from nncf.experimental.torch2.commands import PT2InsertionCommand
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
 from nncf.tensor.functions.torch_numeric import quantile
+from nncf.torch.function_hook.commands import PT2InsertionCommand
+from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
