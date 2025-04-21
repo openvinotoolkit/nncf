@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.torch.function_hook.graph.build_graph_mode`
+=========================================================
+
+.. py:module:: nncf.torch.function_hook.graph.build_graph_mode
+
+

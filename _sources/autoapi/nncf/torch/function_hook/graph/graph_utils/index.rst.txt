@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.torch.function_hook.graph.graph_utils`
+====================================================
+
+.. py:module:: nncf.torch.function_hook.graph.graph_utils
+
+

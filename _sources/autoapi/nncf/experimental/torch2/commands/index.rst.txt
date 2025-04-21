@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.experimental.torch2.commands`
-===========================================
-
-.. py:module:: nncf.experimental.torch2.commands
-
-
