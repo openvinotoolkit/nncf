@@ -585,7 +585,10 @@ def compress_weights(
             msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if dataset is not None:
+        if (
+            mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
+            and dataset is not None
+        ):
             warnings.warn("data-aware methods are not supported in INT8 modes. dataset is set to None")
             dataset = None
 
