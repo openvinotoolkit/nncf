@@ -414,7 +414,7 @@ class PTQTestPipeline(BaseTestPipeline):
         reference_data,
         no_eval,
         run_benchmark_app,
-        torch_compile_validation=True,
+        torch_compile_validation,
         params=None,
         batch_size=1,
         memory_monitor=False,
