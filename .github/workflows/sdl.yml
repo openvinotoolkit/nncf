@@ -85,7 +85,6 @@ jobs:
         with:
           scan-type: "fs"
           scan-ref: .
-          severity: "CRITICAL,HIGH"
           scanners: "misconfig,license,vuln"
           format: template
           template: "@.github/scripts/trivy_html.tpl"
