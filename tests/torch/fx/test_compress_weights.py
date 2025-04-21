@@ -19,7 +19,6 @@ from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
-from nncf.data.dataset import Dataset
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.parameters import CompressionFormat
@@ -235,7 +234,6 @@ def test_compress_weights_functional_model(mode):
         {"gptq": True},
         {"scale_estimation": True},
         {"lora_correction": True},
-        {"dataset": Dataset([1])},
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},

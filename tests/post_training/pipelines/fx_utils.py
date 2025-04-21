@@ -20,7 +20,7 @@ from transformers import PreTrainedModel
 from transformers.cache_utils import StaticCacheConfig
 from transformers.integrations.executorch import TorchExportableModuleWithStaticCache
 from transformers.modeling_outputs import CausalLMOutputWithPast
-from optimum.executorch import ExecuTorchModelForCausalLM
+
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 
 
