@@ -9,6 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+
+# Enable patching of torch functions
+# Should be set before any import of nncf
+os.environ["NNCF_TORCH_LEGACY_TRACING"] = "1"
+
 import random
 from pathlib import Path
 
@@ -121,9 +126,6 @@ def pytest_configure(config: Config):
     for regen_option in ["dot", "json"]:
         if config.getoption(f"--regen-{regen_option}", False):
             os.environ[f"NNCF_TEST_REGEN_{regen_option.upper()}"] = "1"
-
-    # Enable patching of torch functions
-    os.environ["NNCF_TORCH_LEGACY_TRACING"] = "1"
 
 
 @pytest.fixture(scope="module")
