@@ -138,7 +138,8 @@ jobs:
             fi
 
             # Run scan and capture output
-            clamscan $SCAN_ARGS --exclude-dir='.git' > clamav_report.txt
+            clamscan $SCAN_ARGS > clamav_report.txt
+            exit 1
             "
       - name: Print Scan Results
         if: ${{ !cancelled() }}
