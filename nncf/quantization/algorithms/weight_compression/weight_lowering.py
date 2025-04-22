@@ -71,7 +71,7 @@ CENTER_OF_NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
-MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = int(1e5)
+MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = int(0)
 
 
 @dataclass
