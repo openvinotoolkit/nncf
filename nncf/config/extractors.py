@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -21,7 +21,7 @@ from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 
 
-def extract_algorithm_names(config: NNCFConfig) -> List[str]:
+def extract_algorithm_names(config: NNCFConfig) -> list[str]:
     retval = []
     compression_config_json_section = config.get("compression", [])
     if isinstance(compression_config_json_section, dict):
@@ -31,7 +31,7 @@ def extract_algorithm_names(config: NNCFConfig) -> List[str]:
     return retval
 
 
-def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) -> Dict[str, Any]:
+def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) -> dict[str, Any]:
     """
     Extracts a .json sub-dictionary for a given compression algorithm from the
     common NNCFConfig.
@@ -75,7 +75,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     return next(iter(matches))
 
 
-def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantization") -> Optional[Dict[str, Any]]:
+def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantization") -> Optional[dict[str, Any]]:
     """
     Extracts parameters of the quantization range initialization algorithm from the
     compression algorithm NNCFconfig.
@@ -105,7 +105,7 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
 
     max_num_init_samples = 0
     global_range_init_config = None
-    scope_overrides: List[PerLayerRangeInitConfig] = []
+    scope_overrides: list[PerLayerRangeInitConfig] = []
     if isinstance(init_range_config_dict_or_list, dict):
         global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
         max_num_init_samples = global_range_init_config.num_init_samples
@@ -135,7 +135,7 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
     return params
 
 
-def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Optional[Dict[str, object]]:
+def extract_bn_adaptation_init_params(config: NNCFConfig, algo_name: str) -> Optional[dict[str, object]]:
     """
     Extracts parameters for initialization of an object of the class `BatchnormAdaptationAlgorithm`
     from the compression algorithm NNCFconfig.
@@ -159,7 +159,7 @@ class BNAdaptDataLoaderNotFoundError(RuntimeError):
     pass
 
 
-def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: dict[str, Any]) -> Optional[dict[str, Any]]:
     num_bn_adaptation_samples = params.get("num_bn_adaptation_samples", NUM_BN_ADAPTATION_SAMPLES)
 
     if num_bn_adaptation_samples == 0:
@@ -186,7 +186,7 @@ def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) ->
     return params
 
 
-def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, Any]:
+def extract_accuracy_aware_training_params(config: NNCFConfig) -> dict[str, Any]:
     """
     Extracts accuracy aware training parameters from NNCFConfig.
 
@@ -199,7 +199,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, Any]
         FILTER_PRUNING = "filter_pruning"
         SPARSITY = ["rb_sparsity", "magnitude_sparsity", "const_sparsity"]
 
-    def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, Any]) -> None:
+    def validate_accuracy_aware_schema(config: NNCFConfig, params: dict[str, Any]) -> None:
         from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
 
         if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:

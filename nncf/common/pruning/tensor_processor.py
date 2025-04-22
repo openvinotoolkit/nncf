@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, Union
+from typing import Union
 
 from nncf.common.tensor import DeviceType
 from nncf.common.tensor import NNCFTensor
@@ -23,7 +23,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+    def concatenate(cls, tensors: list[NNCFTensor], axis: int) -> NNCFTensor:
         """
         Join a list of NNCFTensors along an existing axis.
 
@@ -34,7 +34,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def ones(cls, shape: Union[int, List[int]], device: DeviceType) -> NNCFTensor:
+    def ones(cls, shape: Union[int, list[int]], device: DeviceType) -> NNCFTensor:
         """
         Return a new float tensor of given shape, filled with ones.
 
@@ -45,7 +45,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: list[NNCFTensor]) -> None:
         """
         Raises an AssertionError if any two tensors are not equal.
 
@@ -65,7 +65,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+    def elementwise_mask_propagation(cls, input_masks: list[NNCFTensor]) -> NNCFTensor:
         """
         Assemble output mask for elementwise pruning operation from given input masks.
         Raises an AssertionError if input masks are not pairwise equal.
@@ -76,7 +76,7 @@ class NNCFPruningBaseTensorProcessor:
 
     @classmethod
     @abstractmethod
-    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+    def split(cls, tensor: NNCFTensor, output_shapes: list[int]) -> list[NNCFTensor]:
         """
         Split/chunk NNCFTensor into chunks along an existing dimension.
 

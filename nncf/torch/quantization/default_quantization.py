@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes
@@ -17,7 +16,7 @@ from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 # If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
-DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetatype]] = {
+DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: dict[QuantizationTrait, list[PTOperatorMetatype]] = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         operator_metatypes.PTConv2dMetatype,
         operator_metatypes.PTModuleConv2dMetatype,
@@ -105,4 +104,4 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
 }
 
 
-QUANTIZATION_LAYER_METATYPES: List[PTOperatorMetatype] = OPERATORS_WITH_WEIGHTS_METATYPES
+QUANTIZATION_LAYER_METATYPES: list[PTOperatorMetatype] = OPERATORS_WITH_WEIGHTS_METATYPES

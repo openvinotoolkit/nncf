@@ -9,14 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Tuple
+from typing import Any
 
 import tensorflow as tf
 
 from nncf.common.utils.registry import Registry
 
 
-def replace_value_by_index(xs: Tuple[Any, ...], pos: int, value: Any) -> Tuple[Any, ...]:
+def replace_value_by_index(xs: tuple[Any, ...], pos: int, value: Any) -> tuple[Any, ...]:
     """
     Return a new instance of the tuple replacing the specified
     position with the new value.

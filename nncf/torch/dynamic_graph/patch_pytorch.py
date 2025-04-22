@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 import torch.utils.cpp_extension
@@ -280,7 +280,7 @@ class OriginalOpInfo:
         self.op = op
 
 
-ORIGINAL_OPERATORS: List[OriginalOpInfo] = []
+ORIGINAL_OPERATORS: list[OriginalOpInfo] = []
 ORIGINAL_CALL = torch.nn.Module.__call__
 _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
@@ -325,7 +325,7 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
         nncf_logger.debug(f"Not patching {op_name} since it is missing in this version of PyTorch")
 
 
-def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:
+def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> list[str]:
     """
     Seeks all attributes from the namespace, then takes only attributes,
     which types are function, builtin, method or method descriptor.
@@ -334,7 +334,7 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
     :param do_filter: If True return only public functions, else - otherwise.
     """
 
-    def remove_private_functions(names: List[str]) -> List[str]:
+    def remove_private_functions(names: list[str]) -> list[str]:
         filtered_names = []
         for name in names:
             if name.startswith("_"):

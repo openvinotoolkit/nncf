@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 import torch
 from torch import nn
@@ -38,14 +38,14 @@ class StatefulModuleInterface(ABC):
     """
 
     @abstractmethod
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         """
         Returns the compression module config.
         """
 
     @classmethod
     @abstractmethod
-    def from_config(cls, state: Dict[str, Any]) -> object:
+    def from_config(cls, state: dict[str, Any]) -> object:
         """
         Creates a compression module instance from the given config.
         """

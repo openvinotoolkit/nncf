@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Set, Tuple
+from typing import Any, Callable
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 
@@ -27,6 +27,6 @@ class PT2OpLayerAttributes(BaseLayerAttributes):
     """
 
     func: Callable[..., Any]
-    op_args: Tuple[Any, ...]
-    op_kwargs: Dict[str, Any]
-    constant_port_ids: Set[int]
+    op_args: tuple[Any, ...]
+    op_kwargs: dict[str, Any]
+    constant_port_ids: set[int]

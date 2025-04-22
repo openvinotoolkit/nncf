@@ -10,7 +10,7 @@
 # limitations under the License.
 from collections import deque
 from copy import deepcopy
-from typing import Any, Dict, List, Set
+from typing import Any
 
 import networkx as nx
 
@@ -31,7 +31,7 @@ class SearchGraphNode:
     Class describing nodes used in SearchGraph.
     """
 
-    def __init__(self, node_key: str, data: Dict):
+    def __init__(self, node_key: str, data: dict):
         self.node_key = node_key
         self.data = data if data else {}
 
@@ -95,7 +95,7 @@ class SearchGraphNode:
         return isinstance(other, SearchGraphNode) and self.node_key == other.node_key
 
 
-ShapeVsNodesMap = Dict[str, Set[SearchGraphNode]]
+ShapeVsNodesMap = dict[str, set[SearchGraphNode]]
 
 
 class SearchGraph:
@@ -120,7 +120,7 @@ class SearchGraph:
             if len(list(next_nodes)) > 1:
                 self._insert_dummy_node(node_key)
 
-    def _nx_node_to_sgraph_node(self, nx_node_key: str, nx_node_attrs: Dict[str, Any]):
+    def _nx_node_to_sgraph_node(self, nx_node_key: str, nx_node_attrs: dict[str, Any]):
         return SearchGraphNode(nx_node_key, nx_node_attrs)
 
     def get_node_by_key(self, node_key: str) -> SearchGraphNode:
@@ -130,7 +130,7 @@ class SearchGraph:
         """
         return SearchGraphNode(node_key, self._nx_graph.nodes[node_key])
 
-    def get_all_nodes(self) -> List[SearchGraphNode]:
+    def get_all_nodes(self) -> list[SearchGraphNode]:
         """
         Returns list of all graph nodes.
         """
@@ -139,7 +139,7 @@ class SearchGraph:
             all_nodes.append(SearchGraphNode(node_key, node_attrs))
         return all_nodes
 
-    def get_next_nodes(self, node_key: str) -> List[SearchGraphNode]:
+    def get_next_nodes(self, node_key: str) -> list[SearchGraphNode]:
         """
         Returns consumer nodes of provided node key.
 
@@ -149,7 +149,7 @@ class SearchGraph:
         next_node_keys = self._nx_graph.succ[node_key]
         return [self.get_node_by_key(node_key) for node_key in next_node_keys]
 
-    def get_previous_nodes(self, node: SearchGraphNode) -> List[SearchGraphNode]:
+    def get_previous_nodes(self, node: SearchGraphNode) -> list[SearchGraphNode]:
         """
         Returns producer nodes of provided node.
 
@@ -165,7 +165,7 @@ class SearchGraph:
         """
         self._nx_graph.nodes[node_key][name_attr] = value_attr
 
-    def get_prev_nodes(self, node_key: str) -> List[SearchGraphNode]:
+    def get_prev_nodes(self, node_key: str) -> list[SearchGraphNode]:
         """
         Returns producer nodes of provided node key.
 
@@ -175,10 +175,10 @@ class SearchGraph:
         prev_node_keys = self._nx_graph.pred[node_key]
         return [self.get_node_by_key(node_key) for node_key in prev_node_keys]
 
-    def get_prev_edges(self, node_key: str) -> Dict[str, Any]:
+    def get_prev_edges(self, node_key: str) -> dict[str, Any]:
         return self._nx_graph.pred[node_key]
 
-    def get_next_edges(self, node_key: str) -> Dict[str, Any]:
+    def get_next_edges(self, node_key: str) -> dict[str, Any]:
         return self._nx_graph.succ[node_key]
 
     def _insert_dummy_node(self, node_key: str):

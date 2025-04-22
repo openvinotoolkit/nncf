@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, Set, Tuple, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 import numpy as np
 
@@ -55,7 +55,7 @@ class BiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def model_extraction_command(
-        input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]
+        input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> TransformationCommand:
         """
         Returns backend-specific command to extract sub-model based on input & output names.

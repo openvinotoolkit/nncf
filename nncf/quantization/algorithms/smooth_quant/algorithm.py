@@ -12,7 +12,7 @@
 from collections import Counter
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -47,7 +47,7 @@ class SmoothQuant(Algorithm):
     """
 
     def __init__(
-        self, subset_size: int = 300, inplace_statistics: bool = True, alpha_map: Dict[str, float] = ALPHA_MAP
+        self, subset_size: int = 300, inplace_statistics: bool = True, alpha_map: dict[str, float] = ALPHA_MAP
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -68,7 +68,7 @@ class SmoothQuant(Algorithm):
         self._alpha_map = alpha_map
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -180,7 +180,7 @@ class SmoothQuant(Algorithm):
     @staticmethod
     def _calculate_scale_and_ratio(
         activations: Tensor, weights: Tensor, alpha: float, quantile: Optional[float] = 0.1
-    ) -> Tuple[Tensor, float]:
+    ) -> tuple[Tensor, float]:
         """
         Calculates base scale value and it's ratio.
 
@@ -200,7 +200,7 @@ class SmoothQuant(Algorithm):
         ratio = scales.min() / (scales.max() + eps)
         return scales, ratio
 
-    def _group_nodes_by_source(self, nodes_to_smooth: List[Dict], nncf_graph: NNCFGraph) -> Dict[tuple, List]:
+    def _group_nodes_by_source(self, nodes_to_smooth: list[dict], nncf_graph: NNCFGraph) -> dict[tuple, list]:
         """
         Groups nodes that will be smoothed by source (parent node).
 
@@ -223,7 +223,7 @@ class SmoothQuant(Algorithm):
 
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node_name: str, act_port: int
-    ) -> List[TTensor]:
+    ) -> list[TTensor]:
         """
         Collects statistics for node.
 
@@ -272,7 +272,7 @@ class SmoothQuant(Algorithm):
             )
         return statistic_container
 
-    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: List[OperatorMetatype]) -> List[Dict]:
+    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]) -> list[dict]:
         """
         Collects layers whose activations will be smoothed.
 
@@ -311,7 +311,7 @@ class SmoothQuant(Algorithm):
         return nodes_to_smooth_data
 
     def _calculate_activation_scale(
-        self, scale_value: TTensor, activations_shape: List[int], nodes: List[NNCFNode], nncf_graph: NNCFGraph
+        self, scale_value: TTensor, activations_shape: list[int], nodes: list[NNCFNode], nncf_graph: NNCFGraph
     ) -> TTensor:
         """
         Calculates activation scales for Smooth node.
@@ -358,7 +358,7 @@ class SmoothQuant(Algorithm):
             return weight_scale
         return scale_value
 
-    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
+    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> tuple[int]:
         """
         Returns reduction axes for specified input.
 
@@ -402,7 +402,7 @@ class SmoothQuant(Algorithm):
         self._cached_multiply_names[scale_node_name] += 1
         return f"{scale_node_name}_{unique_index}/nncf_smooth_quant"
 
-    def _get_alpha_map(self) -> Dict[OperatorMetatype, float]:
+    def _get_alpha_map(self) -> dict[OperatorMetatype, float]:
         """
         Returns alpha map by metatypes.
 
@@ -426,7 +426,7 @@ class SmoothQuant(Algorithm):
         return alpha_by_metatype_map
 
     @staticmethod
-    def _clip_statistics(statistics: List[Tensor]) -> Tensor:
+    def _clip_statistics(statistics: list[Tensor]) -> Tensor:
         """
         Clips statistics for further calculation.
         :param statistics: Input statistics.

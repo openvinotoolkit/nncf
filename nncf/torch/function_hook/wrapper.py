@@ -14,7 +14,7 @@ from __future__ import annotations
 import inspect
 import types
 from types import MethodType
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast
 
 from torch import nn
 
@@ -83,7 +83,7 @@ class ForwardWithHooks:
         return self.__call__.__code__
 
     @property
-    def __globals__(self) -> Dict[str, Any]:
+    def __globals__(self) -> dict[str, Any]:
         return self.orig_forward.__globals__
 
     @property
@@ -158,10 +158,10 @@ class ReplicateForDataParallel:
     def __repr__(self) -> str:
         return f"ReplicateForDataParallel.{repr(self._func)}"
 
-    def __reduce__(self) -> Tuple[Callable[..., Any], Tuple[Any, ...], Tuple[Any, ...]]:
+    def __reduce__(self) -> tuple[Callable[..., Any], tuple[Any, ...], tuple[Any, ...]]:
         return type(self), (self._func,), (self._func, self.__dict__ or None)
 
-    def __setstate__(self, state: Dict[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         if not isinstance(state, tuple):
             msg = "argument to __setstate__ must be a tuple"
             raise TypeError(msg)

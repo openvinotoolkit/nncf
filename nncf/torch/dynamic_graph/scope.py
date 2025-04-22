@@ -10,7 +10,6 @@
 # limitations under the License.
 import re
 from copy import deepcopy
-from typing import List
 
 import nncf
 
@@ -48,7 +47,7 @@ class ScopeElement:
 
 
 class Scope:
-    def __init__(self, scope_elements: List[ScopeElement] = None):
+    def __init__(self, scope_elements: list[ScopeElement] = None):
         if scope_elements is not None:
             self.scope_elements = scope_elements
         else:
@@ -99,7 +98,7 @@ class Scope:
             elts = []
         return Scope([ScopeElement.from_str(s) for s in elts])
 
-    def get_iteration_scopes(self) -> List[str]:
+    def get_iteration_scopes(self) -> list[str]:
         results = []
         from nncf.torch.layers import ITERATION_MODULES
 

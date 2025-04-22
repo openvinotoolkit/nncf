@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List
+from typing import Any
 
 import torch
 from torch import nn
@@ -47,7 +47,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
 
     def __init__(self, dataset: Dataset):
         super().__init__(dataset)
-        self.hook_handles: List[RemovableHookHandle] = []
+        self.hook_handles: list[RemovableHookHandle] = []
 
     def collect_statistics(self, model: GraphModelWrapper, graph: NNCFGraph) -> None:  # type: ignore[override]
         with torch.no_grad():
@@ -89,7 +89,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: torch.Tensor) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: torch.Tensor) -> dict[str, Tensor]:
         # PyTorch backend doesn't use outputs to register statistics
         return {}
 

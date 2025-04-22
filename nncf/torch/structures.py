@@ -12,7 +12,7 @@
 PyTorch-specific structure definitions for passing arguments into certain NNCF calls.
 """
 
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 from torch import nn
@@ -124,7 +124,7 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
             type(None),
         ],
         val_loader: torch.utils.data.DataLoader,
-        val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], Tuple[float, float]],
+        val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], tuple[float, float]],
         train_optimizer: Optional[torch.optim.Optimizer],
         nncf_config: NNCFConfig,
     ):

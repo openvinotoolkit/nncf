@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Union
 
 import openvino as ov  # type: ignore
 from numpy.typing import NDArray
@@ -20,7 +20,7 @@ from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric
 
-DTYPE_MAP: Dict[TensorDataType, ov.Type] = {
+DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.nf4: ov.Type.nf4,
     TensorDataType.f8e4m3: ov.Type.f8e4m3,
     TensorDataType.f8e5m2: ov.Type.f8e5m2,
@@ -77,7 +77,7 @@ def _(a: ov.Tensor) -> int:
 
 
 @numeric.reshape.register
-def _(a: ov.Tensor, shape: Union[int, Tuple[int, ...]]) -> ov.Tensor:
+def _(a: ov.Tensor, shape: Union[int, tuple[int, ...]]) -> ov.Tensor:
     return ov.Tensor(a.data.reshape(shape), shape, a.get_element_type())
 
 

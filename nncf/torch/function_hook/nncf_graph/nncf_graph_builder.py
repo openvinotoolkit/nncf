@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import networkx as nx  # type: ignore
 import torch
@@ -126,7 +126,7 @@ def is_constant_input_node(nx_graph: nx.MultiDiGraph, node: int) -> bool:
     return False
 
 
-def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> Set[int]:
+def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> set[int]:
     """
     Get the indices of input ports corresponding to the constant node or subgraph.
 
@@ -134,7 +134,7 @@ def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> Set[int]:
     :param node: The node to get the constant port IDs from.
     :return: The list of input port indices with constants.
     """
-    constant_port_ids: Set[int] = set()
+    constant_port_ids: set[int] = set()
 
     for s_node, _, data in nx_graph.in_edges(node, data=True):
         if is_constant_input_node(nx_graph, s_node):
@@ -172,7 +172,7 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
     """
     nncf_graph = PTNNCFGraph()
 
-    map_nx_node_to_nncf_node: Dict[int, NNCFNode] = {}
+    map_nx_node_to_nncf_node: dict[int, NNCFNode] = {}
     for node, data in nx_graph.nodes(data=True):
         meta = data["meta"]
         if not isinstance(meta, (ConstMeta, FunctionMeta, InOutMeta)):
@@ -191,7 +191,7 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 
-    map_edges: Dict[Tuple[int, int], List[EdgeMeta]] = defaultdict(list)
+    map_edges: dict[tuple[int, int], list[EdgeMeta]] = defaultdict(list)
 
     for s_node, t_node, data in nx_graph.edges(data=True):
         meta = data["meta"]
