@@ -8,9 +8,6 @@ on:
       - develop
       - release_v*
   pull_request:
-    paths:
-      - '.github/workflows/sdl.yml'
-      - '**.py'
 
 jobs:
   bandit:
@@ -145,6 +142,7 @@ jobs:
             "
       - name: Print Scan Results
         if: ${{ !cancelled() }}
+        shell: bash
         run: cat clamav_report.txt
       - name: Rename Report
         if: ${{ !cancelled() }}
