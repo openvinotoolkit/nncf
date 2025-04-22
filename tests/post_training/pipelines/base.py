@@ -489,13 +489,18 @@ class PTQTestPipeline(BaseTestPipeline):
         model_folder = folder_path / "model"
         bin_file = None
         xml_file = None
+        if len(os.listdir(model_folder)) > 2:
+            msg = "Graph break encountered in torch compile!"
+            raise nncf.InternalError(msg)
+
         for file in os.listdir(model_folder):
             if file.endswith(".bin"):
                 bin_file = file
             elif file.endswith(".xml"):
                 xml_file = file
         if bin_file is None or xml_file is None:
-            return
+            msg = "Openvino Model Files Not Found!"
+            raise FileNotFoundError(msg)
         bin_new_path = folder_path / f"{new_name}.bin"
         xml_new_path = folder_path / f"{new_name}.xml"
 
@@ -519,11 +524,6 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
-            # TODO Uncomment these lines after Issue - 162009
-            # ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
-            # ov_model.reshape(self.input_size)
-            # ov.serialize(ov_model, self.path_compressed_ir)
-            # TODO Remove after Issue - 162009
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")
             mod = torch.compile(
                 exported_model.module(),
