@@ -14,22 +14,29 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import onnx
 
 import nncf
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
@@ -201,3 +208,47 @@ def quantize_with_accuracy_control_impl(
         )
 
     return quantized_model
+
+
+def compress_weights_impl(
+    model: onnx.ModelProto,
+    dataset: Dataset,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+    subset_size: int,
+    scale_estimation: bool,
+    gptq: bool,
+    lora_correction: bool,
+    backup_mode: BackupMode,
+    compression_format: CompressionFormat,
+    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+) -> onnx.ModelProto:
+    if model.opset_import[0].version < 13:
+        msg = "ONNX models with opset version < 13 do not support per-channel quantization."
+        raise nncf.ValidationError(msg)
+    if model.opset_import[0].version < 21 and group_size > 0:
+        msg = "ONNX models with opset version < 21 do not support block-wise quantization."
+        raise nncf.ValidationError(msg)
+    compression_algorithm = WeightCompression(
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        backup_mode,
+        compression_format,
+        advanced_parameters,
+    )
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph, dataset=dataset)

@@ -46,12 +46,46 @@ The example is fully automated. Just run the following command in the prepared P
 python main.py
 ```
 
-## Results
+## Results on wikitext
 
-`HuggingFaceTB/SmolLM-1.7B-Instruct`
+The table illustrates that Quantization-Aware Training integrated with absorbable LoRA (QAT+LoRA) substantially
+alleviates the accuracy degradation associated with quantization. Compared to NNCF's prior leading
+post-training weight compression (PTWC) techniques, QAT+LoRA reduces the quantization-induced perplexity
+increase by 50% on average, achieving a **2x enhancement in minimizing accuracy loss**.
 
-| Method                                | Main<br>Precision | Emb/Head<br>Precision | Group<br>Size | wikitext,<br>word_pp | WWB,<br>similarity |
-|---------------------------------------|-------------------|-----------------------|---------------|----------------------|--------------------|
-| Original   model (Torch)              | BF16              | BF16                  |               | 10.00                | 100%               |
-| [QAT]   Mergeable LoRA                | INT4_ASYM         | INT8_ASYM             | 64            | 10.47                | 92%                |
-| [PTQ]   AWQ + Scale Estimation + GPTQ | INT4_ASYM         | INT8_ASYM             | 64            | 10.71                | 91.2%              |
+The **proportion of the PTWC-induced perplexity increase that is recovered** by using QAT+LoRA can be calculated
+using the following formula:
+
+$Improvement = \frac{PPL_{PTWC} - PPL_{QAT+LoRA}}{PPL_{PTWC} - PPL_{BF16}}$
+
+Where:
+
+- `PPL_BF16` is the perplexity of the original, uncompressed model (BF16 precision).
+- `PPL_PTWC` is the perplexity after applying the best Post-Training Weight Compression method identified
+for each specific model: this was "AWQ + Scale Estimation + GPTQ" for "HuggingFaceTB/SmolLM-1.7B-Instruct",
+and "AWQ + Scale Estimation" for all other models evaluated.
+- `PPL_QAT+LoRA` is the perplexity after applying Quantization-Aware Training with LoRA.
+
+All quantization methods compressed the models to `INT4_ASYM` precision with a group size of `64`.
+
+| Model                              | Precision         | Wikitext,<br>word_ppl | Improvement |
+|------------------------------------|-------------------|-----------------------|-------------|
+| google/gemma-2-2b-it               | BF16              | 15.02                 |             |
+| google/gemma-2-2b-it               | INT4 (QAT + LoRA) | 15.13                 | 86%         |
+| google/gemma-2-2b-it               | INT4 (best PTWC)  | 15.80                 |             |
+| microsoft/phi3-mini-4k-instruct    | BF16              | 9.49                  |             |
+| microsoft/phi3-mini-4k-instruct    | INT4 (QAT + LoRA) | 10.12                 | 27%         |
+| microsoft/phi3-mini-4k-instruct    | INT4 (best PTWC)  | 10.36                 |             |
+| Qwen/Qwen2.5-3B-Instruct           | BF16              | 11.01                 |             |
+| Qwen/Qwen2.5-3B-Instruct           | INT4 (QAT + LoRA) | 11.49                 | 25%         |
+| Qwen/Qwen2.5-3B-Instruct           | INT4 (best PTWC)  | 11.65                 |             |
+| HuggingFaceTB/SmolLM-1.7B-Instruct | BF16              | 19.11                 |             |
+| HuggingFaceTB/SmolLM-1.7B-Instruct | INT4 (QAT + LoRA) | 19.25                 | 79%         |
+| HuggingFaceTB/SmolLM-1.7B-Instruct | INT4 (best PTWC)  | 19.79                 |             |
+| mistralai/Mistral-7B-v0.3          | BF16              | 8.21                  |             |
+| mistralai/Mistral-7B-v0.3          | INT4 (QAT + LoRA) | 8.38                  | 12%         |
+| mistralai/Mistral-7B-v0.3          | INT4 (best PTWC)  | 8.40                  |             |
+| meta-llama/Llama-3.2-3B-Instruct   | BF16              | 12.67                 |             |
+| meta-llama/Llama-3.2-3B-Instruct   | INT4 (QAT + LoRA) | 12.82                 | 73%         |
+| meta-llama/Llama-3.2-3B-Instruct   | INT4 (best PTWC)  | 13.22                 |             |
+|                                    |                   |               Average | 50.4%       |

@@ -889,8 +889,7 @@ class MinMaxQuantization(Algorithm):
                     unified_scale_group.append(activation_target_point)
                 else:
                     weight_target_points = self._get_weight_quantization_target_points(quantization_point, nncf_graph)
-                    for weight_target_point in weight_target_points:
-                        unified_scale_group.append(weight_target_point)
+                    unified_scale_group.extend(weight_target_points)
             unified_scale_groups.append(unified_scale_group)
         return unified_scale_groups
 

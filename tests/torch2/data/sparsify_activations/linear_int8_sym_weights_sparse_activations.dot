@@ -1,0 +1,28 @@
+strict digraph {
+input [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+weight [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.post_hooks.weight__0.0._scale" [id=2, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"post_hook__weight__0[0]/type/0" [id=3, type=type, metatype=UnknownMetatype];
+"post_hook__weight__0[0]/mul/0" [id=4, type=mul, metatype=PTMulMetatype];
+"post_hook__weight__0[0]/type/1" [id=5, type=type, metatype=UnknownMetatype];
+bias [id=6, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"pre_hook__-linear-0__0[0]/abs/0" [id=7, type=abs, metatype=PTAbsMetatype];
+"__nncf_hooks.pre_hooks./linear/0__0.0.running_threshold" [id=8, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"pre_hook__-linear-0__0[0]/le/0" [id=9, type=le, metatype=UnknownMetatype];
+"pre_hook__-linear-0__0[0]/masked_fill/0" [id=10, type="masked_fill", metatype=PTScatterMetatype];
+"/linear/0" [id=11, type=linear, metatype=PTLinearMetatype];
+output [id=12, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+input -> "pre_hook__-linear-0__0[0]/abs/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+input -> "pre_hook__-linear-0__0[0]/masked_fill/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+weight -> "post_hook__weight__0[0]/type/0" [dtype=int, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.weight__0.0._scale" -> "post_hook__weight__0[0]/mul/0" [dtype=float, shape="(2, 1)", out_port_id=0, in_port_id=1];
+"post_hook__weight__0[0]/type/0" -> "post_hook__weight__0[0]/mul/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"post_hook__weight__0[0]/mul/0" -> "post_hook__weight__0[0]/type/1" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"post_hook__weight__0[0]/type/1" -> "/linear/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=1];
+bias -> "/linear/0" [dtype=float, shape="(2,)", out_port_id=0, in_port_id=2];
+"pre_hook__-linear-0__0[0]/abs/0" -> "pre_hook__-linear-0__0[0]/le/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks./linear/0__0.0.running_threshold" -> "pre_hook__-linear-0__0[0]/le/0" [dtype=float, shape="()", out_port_id=0, in_port_id=1];
+"pre_hook__-linear-0__0[0]/le/0" -> "pre_hook__-linear-0__0[0]/masked_fill/0" [dtype=int, shape="(2, 4)", out_port_id=0, in_port_id=1];
+"pre_hook__-linear-0__0[0]/masked_fill/0" -> "/linear/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"/linear/0" -> output [dtype=float, shape="(2, 2)", out_port_id=0, in_port_id=0];
+}

@@ -14,9 +14,9 @@ from typing import List
 import pytest
 import torch
 
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm

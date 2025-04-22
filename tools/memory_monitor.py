@@ -20,7 +20,7 @@ from enum import Enum
 from functools import lru_cache
 from functools import partial
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 import matplotlib.pyplot as plt
 import psutil
@@ -150,7 +150,7 @@ class MemoryMonitor:
             atexit.unregister(self._stop_logging_atexit_fn)
             self._stop_logging_atexit_fn = None
 
-    def get_data(self, memory_from_zero: Optional[bool] = False) -> Tuple[List, List]:
+    def get_data(self, memory_from_zero: Optional[bool] = False) -> tuple[list, list]:
         """
         :param memory_from_zero: Whether to normalize memory measurements by subtracting the first value. This way
             the measurements will start with 0. Hence, is not very reliable and may actually result in negative values.
@@ -172,8 +172,8 @@ class MemoryMonitor:
 
     def save_memory_logs(
         self,
-        time_values: List[float],
-        memory_values: List[float],
+        time_values: list[float],
+        memory_values: list[float],
         save_dir: Path,
         plot_title: Optional[str] = "",
         filename_suffix: Optional[str] = "",
@@ -350,7 +350,7 @@ if __name__ == "__main__":
         description="Memory Monitor Tool. Monitors memory for an executable and saves logs at specified location.",
         epilog="Examples:\n"
         "   python memory_monitor.py --log-dir ./allocation_logs python allocate.py\n"
-        "   python memory_monitor.py optimum-cli export openvino ...",
+        '   python memory_monitor.py "optimum-cli export openvino ..."',
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(

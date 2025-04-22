@@ -20,11 +20,11 @@ import torch
 from addict import Dict
 from datasets import Dataset
 from onnx import numpy_helper
+from openvino import Core
+from openvino import serialize
 from openvino._offline_transformations import apply_fused_names_cleanup
 from openvino._offline_transformations import apply_moc_transformations
 from openvino._offline_transformations import apply_pruning_transformation
-from openvino.runtime import Core
-from openvino.runtime import serialize
 from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR

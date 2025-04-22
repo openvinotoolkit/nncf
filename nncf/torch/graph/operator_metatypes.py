@@ -12,6 +12,7 @@
 
 from typing import Dict, List, Optional, Type, TypeVar
 
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -22,7 +23,6 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
@@ -76,7 +76,7 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for _, function_names in cls.module_to_function_names.items():
+        for function_names in cls.module_to_function_names.values():
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
@@ -542,6 +542,12 @@ class PTSILUMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTSELUMetatype(PTOperatorMetatype):
+    name = "SeluOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["selu"]}
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTSigmoidMetatype(PTOperatorMetatype):
     name = "SigmoidOp"
     module_to_function_names = {
@@ -729,14 +735,14 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     }
     subtypes = [PTModuleBatchNormMetatype]
 
-    if is_experimental_torch_tracing_enabled():
-        # torch.batch_norm
-        weight_port_ids = [1]
-        bias_port_id = 2
-    else:
+    if is_torch_tracing_by_patching():
         # torch.nn.functional.batch_norm
         weight_port_ids = [3]
         bias_port_id = 4
+    else:
+        # torch.batch_norm
+        weight_port_ids = [1]
+        bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()

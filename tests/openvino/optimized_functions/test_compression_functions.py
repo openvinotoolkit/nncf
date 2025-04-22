@@ -26,6 +26,7 @@ from nncf import Dataset
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
@@ -147,6 +148,10 @@ def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantizati
             mock.assert_called_once()
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
@@ -262,6 +267,10 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
     _check_values(results)
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
@@ -291,6 +300,10 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
     _check_values(results)
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("weight_dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])

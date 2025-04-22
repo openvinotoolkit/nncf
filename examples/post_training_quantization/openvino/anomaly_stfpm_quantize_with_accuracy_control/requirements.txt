@@ -1,4 +1,4 @@
 anomalib==0.6.0
-openvino==2025.0
+openvino==2025.1
 setuptools<=72.1.0
 numpy<2

@@ -52,7 +52,7 @@ from nncf.torch.quantization.precision_init.compression_ratio import Compression
 
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
-    for _qid, _q in qctrl.all_quantizations.items():
+    for _qid in qctrl.all_quantizations:
         if qid_str == str(_qid):
             return _qid
     return None

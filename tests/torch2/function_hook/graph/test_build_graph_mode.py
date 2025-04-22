@@ -16,20 +16,20 @@ import torch
 from pytest import FixtureRequest
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import GraphBuilderMode
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorInfo
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorSource
-from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.build_graph_mode import GraphBuilderMode
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_utils import ConstMeta
+from nncf.torch.function_hook.graph.graph_utils import EdgeMeta
+from nncf.torch.function_hook.graph.graph_utils import FunctionMeta
+from nncf.torch.function_hook.graph.graph_utils import InOutMeta
+from nncf.torch.function_hook.graph.graph_utils import NodeType
+from nncf.torch.function_hook.graph.graph_utils import TensorInfo
+from nncf.torch.function_hook.graph.graph_utils import TensorMeta
+from nncf.torch.function_hook.graph.graph_utils import TensorSource
+from nncf.torch.function_hook.hook_executor_mode import OpMeta
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 
 

@@ -14,9 +14,9 @@ from copy import deepcopy
 from typing import (
     Any,
     Callable,
-    Collection,
     Dict,
     Generator,
+    Iterable,
     KeysView,
     List,
     Optional,
@@ -259,7 +259,7 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
-    def get_nodes_by_metatypes(self, metatype_list: Collection[Type[OperatorMetatype]]) -> List[NNCFNode]:
+    def get_nodes_by_metatypes(self, metatype_list: Iterable[Type[OperatorMetatype]]) -> List[NNCFNode]:
         """
         Return a list of nodes with provided metatypes.
 
@@ -781,7 +781,7 @@ class NNCFGraph:
         for nx_edge in self._nx_graph.in_edges:
             yield self.get_edge(self.get_node_by_key(nx_edge[0]), self.get_node_by_key(nx_edge[1]))
 
-    def remove_nodes_from(self, nodes: Collection[NNCFNode]) -> None:
+    def remove_nodes_from(self, nodes: Iterable[NNCFNode]) -> None:
         """
         Removes nodes from the current NNCFGraph instance.
         We use the remove_node method here because remove_nodes_from uses a silent fail instead of an exception.
