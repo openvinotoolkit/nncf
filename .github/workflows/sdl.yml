@@ -136,16 +136,14 @@ jobs:
             # Run scan based on scope
             if [ '${{ github.event_name == 'pull_request' }}' = 'true' ] && [ -n '${{ steps.changed-files.outputs.all_changed_files }}' ]; then
               echo 'Running ClamAV on changed files'
-              FILES='${{ steps.changed-files.outputs.all_changed_files }}'
-              SCAN_CMD='clamscan'
+              SCAN_ARGS='${{ steps.changed-files.outputs.all_changed_files }}'
             else
-              echo 'Running ClamAV on all files in ${{ inputs.paths }}'
-              FILES='${{ inputs.paths }}'
-              SCAN_CMD='clamscan -r'
+              echo 'Running ClamAV on all files'
+              SCAN_ARGS='-r'
             fi
 
             # Run scan and capture output
-            clamscan -r --exclude='\.git' > clamav_report.txt
+            clamscan $SCAN_ARGS --exclude='\.git' > clamav_report.txt
             "
       - name: Upload Scan Results
         if: ${{ !cancelled() }}
