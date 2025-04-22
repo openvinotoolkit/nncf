@@ -15,7 +15,6 @@ import torch
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
-from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -23,7 +22,6 @@ from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -60,7 +58,6 @@ from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWra
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
-from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTransformationCommand
 from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
@@ -69,7 +66,6 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
-from nncf.torch.model_transformer import update_parameter
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
@@ -233,14 +229,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        if is_torch_tracing_by_patching():
-            update_parameter(node_with_weight.node_name, "weight", weight.data, model)
-        else:
-            weight_node = get_const_node(node_with_weight, weight_port_id, graph)
-            module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
-            module = get_module_by_name(module_name, model.model)
-            weight_param = getattr(module, weight_attr_name)
-            weight_param.data = weight.data
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+        module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+        module = get_module_by_name(module_name, model.model)
+        weight_param = getattr(module, weight_attr_name)
+        weight_param.data = weight.data
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
@@ -359,17 +352,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         target_node_name = wc_params.weight_name
         target_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=target_node_name)
 
-        if is_torch_tracing_by_patching():
-            storage_key = "FQ_LORA_{}".format(target_node_name.replace(".", "_"))
-            return PTSharedFnInsertionCommand(
-                target_points=[target_point],
-                fn=quantizer,
-                op_unique_name=storage_key,
-                compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
-                priority=TransformationPriority.QUANTIZATION_PRIORITY,
-            )
-        else:
-            return PT2InsertionCommand([target_point], quantizer)
+        return PT2InsertionCommand([target_point], quantizer)
 
     @staticmethod
     def get_dq_insertion_command(
@@ -439,25 +422,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight.requires_grad = False
         weight.data = packed_tensor
 
-        if is_torch_tracing_by_patching():
-            # registry weight decompression module in the model
-            decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-
-            # inserts the weight decompressor into the model as the post hook on the model weight
-            return PTSharedFnInsertionCommand(
-                [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
-                decompressor,
-                decompressor_name,
-            )
-        else:
-            return PT2InsertionCommand(
-                [
-                    PTTargetPoint(
-                        TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name.replace(".", ":")
-                    )
-                ],
-                decompressor,
-            )
+        return PT2InsertionCommand(
+            [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
+            decompressor,
+        )
 
     def transform_model(
         self,
@@ -560,9 +528,6 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
         sq_multiply = SQMultiply(scale.shape)
         sq_multiply.scale = scale
 
-        if is_torch_tracing_by_patching():
-            scale_node_name = f"{source_node.node_name}/awq_mul"
-            return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
         return PT2InsertionCommand(target_points, sq_multiply)
 
 

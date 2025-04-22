@@ -12,7 +12,6 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDi
 
 import nncf
 from nncf.api.compression import TModel
-from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -232,10 +231,7 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        if is_torch_tracing_by_patching():
-            from nncf.torch.quantization.quantize_model import quantize_impl
-        else:
-            from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
+        from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,

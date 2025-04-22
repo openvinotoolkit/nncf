@@ -16,7 +16,6 @@ from typing import List
 import pytest
 import torch
 
-import nncf
 from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
 from nncf.torch import wrap_model
@@ -127,13 +126,6 @@ def test_torch_compile_on_nncf_model():
     model = BasicConvTestModel()
     compiled_model = torch.compile(model)
     compiled_model(torch.ones(model.INPUT_SIZE))
-
-    model = BasicConvTestModel()
-    quantized_model = nncf.quantize(model, nncf.Dataset([torch.rand(model.INPUT_SIZE)]))
-    with pytest.raises(
-        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
-    ):
-        torch.compile(quantized_model)
 
     model = BasicConvTestModel()
     config = get_test_quantization_config(model)
