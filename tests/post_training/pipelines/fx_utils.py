@@ -148,27 +148,26 @@ def convert_and_export_with_cache(model: PreTrainedModel, re_export=False):
     or `torch._export.capture_pre_autograd_graph`.
     """
 
-    with disable_patching():
-        with torch.no_grad():
-            example_input_ids = torch.ones(1, 8, dtype=torch.long)
-            example_cache_position = torch.arange(0, 8, dtype=torch.long)
-            model_config = None
-            if not re_export:
-                model.generation_config.cache_implementation = "static"
-                model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
-                model(example_input_ids)
-                model_config = model.config
-                model = TorchExportableModuleWithStaticCacheDynamicShape(model)
+    with torch.no_grad():
+        example_input_ids = torch.ones(1, 8, dtype=torch.long)
+        example_cache_position = torch.arange(0, 8, dtype=torch.long)
+        model_config = None
+        if not re_export:
+            model.generation_config.cache_implementation = "static"
+            model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
+            model(example_input_ids)
+            model_config = model.config
+            model = TorchExportableModuleWithStaticCacheDynamicShape(model)
 
-            sequence_length = torch.export.Dim("sequence_length", min=1, max=512)
-            dynamic_shapes = {"input_ids": {1: sequence_length}, "cache_position": {0: sequence_length}}
+        sequence_length = torch.export.Dim("sequence_length", min=1, max=512)
+        dynamic_shapes = {"input_ids": {1: sequence_length}, "cache_position": {0: sequence_length}}
 
-            exported_program = torch.export.export_for_training(
-                model,
-                args=(
-                    example_input_ids,
-                    example_cache_position,
-                ),
-                dynamic_shapes=dynamic_shapes,
-            ).run_decompositions(decomp_table={})
-            return exported_program, model_config
+        exported_program = torch.export.export_for_training(
+            model,
+            args=(
+                example_input_ids,
+                example_cache_position,
+            ),
+            dynamic_shapes=dynamic_shapes,
+        ).run_decompositions(decomp_table={})
+        return exported_program, model_config
