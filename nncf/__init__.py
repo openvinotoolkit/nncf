@@ -90,3 +90,15 @@ if not any(_AVAILABLE_FRAMEWORKS.values()):
         "Please install one of the supported frameworks above in order to use NNCF on top of it.\n"
         "See the installation guide at https://github.com/openvinotoolkit/nncf#installation-guide for help."
     )
+
+if _AVAILABLE_FRAMEWORKS["torch"]:
+    from nncf import torch as torch
+
+if _AVAILABLE_FRAMEWORKS["tensorflow"]:
+    from nncf import tensorflow as tensorflow
+
+if _AVAILABLE_FRAMEWORKS["onnx"]:
+    from nncf import onnx as onnx
+
+if _AVAILABLE_FRAMEWORKS["openvino"]:
+    from nncf import openvino as openvino

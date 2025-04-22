@@ -22,7 +22,7 @@ The framework is designed so that the modifications to your original training co
 
     ```python
     import torch
-    import nncf.torch  # Important - must be imported before any other external package that depends on torch
+    import nncf  # Important - must be imported before any other external package that depends on torch
     from nncf import NNCFConfig, create_compressed_model, load_state
     ```
 

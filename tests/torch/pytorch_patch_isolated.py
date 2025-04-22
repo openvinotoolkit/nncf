@@ -42,7 +42,7 @@ def test_jit_if_tracing_script_source_equals():
     # Get original torch.jit._script_if_tracing source
     torch_source = clean_source_code(inspect.getsource(torch.jit._script_if_tracing))
 
-    import nncf.torch  # noqa: F401
+    import nncf  # noqa: F401
 
     # Get torch.jit._script_if_tracing source after patching was performed
     nncf_source = clean_source_code(inspect.getsource(torch.jit._script_if_tracing))
@@ -109,7 +109,7 @@ def compile_and_run_test_model(compile_forward: bool) -> torch.Tensor:
 def test_compile():
     compile_forward = os.environ.get("COMPILE_FORWARD", None) == "1"
     before_nncf = compile_and_run_test_model(compile_forward)
-    import nncf.torch  # noqa: F401
+    import nncf  # noqa: F401
 
     after_nncf = compile_and_run_test_model(compile_forward)
     assert torch.allclose(before_nncf, after_nncf)

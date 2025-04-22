@@ -19,7 +19,6 @@ from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
-import nncf.torch
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.constant_folding import constant_fold

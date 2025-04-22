@@ -17,7 +17,6 @@ from torch import nn
 from torch.quantization import FakeQuantize
 
 import nncf
-import nncf.torch
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from tests.common.quantization.data_generators import generate_lazy_sweep_data

@@ -18,7 +18,6 @@ from pytest_mock import MockerFixture
 from torch import nn
 
 import nncf
-import nncf.torch
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat

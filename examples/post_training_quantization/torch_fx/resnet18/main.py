@@ -29,7 +29,6 @@ from rich.progress import track
 from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
-import nncf.torch
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
 

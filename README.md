@@ -242,7 +242,6 @@ Here is an example of Accuracy Aware Quantization pipeline where model weights a
 
 ```python
 import nncf
-import nncf.torch
 import torch
 from torchvision import datasets, models
 
@@ -296,7 +295,7 @@ Here is an example of Accuracy Aware RB Sparsification pipeline where model weig
 
 ```python
 import torch
-import nncf.torch  # Important - must be imported before any other external package that depends on torch
+import nncf  # Important - must be imported before any other external package that depends on torch
 
 from nncf import NNCFConfig
 from nncf.torch import create_compressed_model, register_default_init_args

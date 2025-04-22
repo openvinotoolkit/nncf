@@ -18,7 +18,6 @@ from nncf.torch import create_compressed_model
 
 def test_patching():
     # Check that patching torch functions is disabled
-    import nncf.torch  # noqa: F401
 
     with pytest.raises(AttributeError):
         getattr(torch.relu, "_original_op")
