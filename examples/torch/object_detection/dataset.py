@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import namedtuple
-from typing import Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -137,7 +136,7 @@ class BaseTransform:
         self.std = np.array(std, dtype=np.float32)
         self.normalize_coef = normalize_coef
 
-    def __call__(self, image: Image, target: List[Dict]) -> Tuple[torch.Tensor, np.ndarray]:
+    def __call__(self, image: Image, target: list[dict]) -> tuple[torch.Tensor, np.ndarray]:
         boxes = np.asarray([x["bbox"] for x in target])
         labels = np.asarray([x["label_idx"] for x in target])
         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
