@@ -12,7 +12,6 @@
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 import onnx
-from onnx.quantization.backend_parameters import get_external_data_dir
 
 import nncf
 from nncf.common.factory import NNCFGraphFactory
@@ -21,6 +20,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.quantization.backend_parameters import get_external_data_dir
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
