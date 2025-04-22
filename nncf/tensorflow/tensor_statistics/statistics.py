@@ -11,10 +11,12 @@
 
 import tensorflow as tf
 
-from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.common.tensor_statistics.statistics import TensorStatistic
+# Using experimental tensor statistics implementation as part of the migration
+# from old tensor statistics to experimental tensor statistics
+from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 
 
 class TFMinMaxTensorStatistic(MinMaxTensorStatistic):
