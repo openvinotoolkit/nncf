@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List
+from typing import Any
 
 from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -37,7 +37,7 @@ class StageDescriptor:
 
     def __init__(
         self,
-        train_dims: List[ElasticityDim],
+        train_dims: list[ElasticityDim],
         epochs: int = 1,
         reorg_weights: bool = False,
         bn_adapt: bool = False,
@@ -65,7 +65,7 @@ class StageDescriptor:
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "StageDescriptor":
+    def from_config(cls, config: dict[str, Any]) -> "StageDescriptor":
         """
         Creates the object from its config.
         """
@@ -84,7 +84,7 @@ class StageDescriptor:
         return cls(**kwargs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]):
+    def from_state(cls, state: dict[str, Any]):
         """
         Creates the object from its state.
 
@@ -95,7 +95,7 @@ class StageDescriptor:
         kwargs[cls._state_names.TRAIN_DIMS] = [ElasticityDim(dim) for dim in train_dims]
         return cls(**kwargs)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state_dict = {
             self._state_names.TRAIN_DIMS: [dim.value for dim in self.train_dims],
             self._state_names.EPOCHS: self.epochs,

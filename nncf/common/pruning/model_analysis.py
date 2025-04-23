@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Type, cast
+from typing import Optional, cast
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -23,7 +23,7 @@ from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
-def get_position(nodes_list: List[NNCFNode], idx: int) -> Optional[int]:
+def get_position(nodes_list: list[NNCFNode], idx: int) -> Optional[int]:
     for i, node in enumerate(nodes_list):
         if node.node_id == idx:
             return i
@@ -31,7 +31,7 @@ def get_position(nodes_list: List[NNCFNode], idx: int) -> Optional[int]:
 
 
 def merge_clusters_for_nodes(
-    nodes_to_merge: List[NNCFNode],
+    nodes_to_merge: list[NNCFNode],
     clusterization: Clusterization,  # type:ignore[type-arg]
 ) -> None:
     """
@@ -61,7 +61,7 @@ def merge_clusters_for_nodes(
 
 
 def cluster_special_ops(
-    graph: NNCFGraph, special_types: List[str], identity_types: List[str]
+    graph: NNCFGraph, special_types: list[str], identity_types: list[str]
 ) -> Clusterization[NNCFNode]:
     """
     This model will cluster all operations with type from special_types. Connected nodes is nodes that:
@@ -114,7 +114,7 @@ class ModelAnalyzer:
         self,
         graph: NNCFGraph,
         pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-        prune_operations_types: List[str],
+        prune_operations_types: list[str],
     ):
         """
         :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
@@ -129,7 +129,7 @@ class ModelAnalyzer:
         self._prune_operations_types = prune_operations_types
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
         self._stop_propagation_op_metatype = cast(
-            Type[BasePruningOp], pruning_op_metatypes_dict["stop_propagation_ops"]
+            type[BasePruningOp], pruning_op_metatypes_dict["stop_propagation_ops"]
         )
         self._concat_op_metatype = pruning_op_metatypes_dict["concat"]
 
@@ -156,7 +156,7 @@ class ModelAnalyzer:
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> Type[BasePruningOp]:
+    def get_meta_operation_by_type_name(self, type_name: str) -> type[BasePruningOp]:
         """
         Returns class of metaop that corresponds to `type_name` type.
 
@@ -209,7 +209,7 @@ class ModelAnalyzer:
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
-    def analyse_model_before_pruning(self) -> Dict[int, PruningAnalysisDecision]:
+    def analyse_model_before_pruning(self) -> dict[int, PruningAnalysisDecision]:
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()

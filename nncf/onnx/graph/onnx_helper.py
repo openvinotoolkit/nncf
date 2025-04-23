@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Iterator, Optional, Union
 
 import numpy as np
 import onnx
@@ -34,7 +34,7 @@ NNCF_DTYPE_TO_ONNX_DTYPE = {
 ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
 
 
-def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+def get_name_to_node_map(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
     """
     Returns mapping from node name to the node.
 
@@ -44,7 +44,7 @@ def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
     return {node.name: node for node in model.graph.node}
 
 
-def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
+def get_edge_info_mapping(model: onnx.ModelProto) -> dict[str, onnx.ValueInfoProto]:
     """
     Returns mapping from edge name to the edge info.
 
@@ -57,7 +57,7 @@ def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoPro
     }
 
 
-def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.NodeProto]]:
+def get_children_node_mapping(model: onnx.ModelProto) -> dict[str, list[onnx.NodeProto]]:
     """
     Returns a mapping from edge name to nodes which consume this edge as an input.
 
@@ -71,7 +71,7 @@ def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.Nod
     return output
 
 
-def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+def get_parents_node_mapping(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
     """
     Returns a mapping from edge name to node which outputs this edge.
 
@@ -85,7 +85,7 @@ def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto
     return output
 
 
-def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
+def get_model_inputs(model: onnx.ModelProto) -> list[onnx.ValueInfoProto]:
     """
     Returns all model inputs.
 
@@ -201,7 +201,7 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     return numpy_helper.to_array(get_tensor(model, tensor_name))
 
 
-def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
+def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[int]:
     """
     Returns edge shape.
 
@@ -243,7 +243,7 @@ def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
 def get_parent(
     node: onnx.NodeProto,
     port_id: int,
-    parents_node_mapping: Dict[str, onnx.NodeProto],
+    parents_node_mapping: dict[str, onnx.NodeProto],
 ) -> Optional[onnx.NodeProto]:
     """
     Returns parents of the node. If there is no parent node, returns None.
@@ -258,7 +258,7 @@ def get_parent(
     return None
 
 
-def get_children(node: onnx.NodeProto, children_node_mapping: Dict[str, List[onnx.NodeProto]]) -> List[onnx.NodeProto]:
+def get_children(node: onnx.NodeProto, children_node_mapping: dict[str, list[onnx.NodeProto]]) -> list[onnx.NodeProto]:
     """
     Returns children of the node.
 
@@ -275,7 +275,7 @@ def get_children(node: onnx.NodeProto, children_node_mapping: Dict[str, List[onn
 def is_node_has_shared_weight(
     node: onnx.NodeProto,
     weight_port_id: int,
-    children_node_mapping: Dict[str, List[onnx.NodeProto]],
+    children_node_mapping: dict[str, list[onnx.NodeProto]],
 ) -> bool:
     """
     Returns whether the node share a weight.

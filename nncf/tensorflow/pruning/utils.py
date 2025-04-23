@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 import numpy as np
 import tensorflow as tf
@@ -72,7 +71,7 @@ def broadcast_filter_mask(filter_mask, shape, dim):
     return broadcasted_filter_mask
 
 
-def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:  # noqa: F821
+def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> dict[NNCFNodeName, list[int]]:  # noqa: F821
     """
     Collects output dimension shapes for convolutions and fully connected layers
     from the connected edges in the NNCFGraph.

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Iterable, Optional, Union
 
 import torch
 
@@ -96,15 +96,15 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ]
 
     @property
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         return PTWeightCompressionAlgoBackend.MATMUL_METATYPES
 
     @property
-    def embedding_metatypes(self) -> List[OperatorMetatype]:
+    def embedding_metatypes(self) -> list[OperatorMetatype]:
         return PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
 
     @property
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         return PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
 
     @staticmethod
@@ -125,7 +125,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return False
 
     @staticmethod
-    def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
+    def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
         weight_port_ids = []
         for prev_node in graph.get_previous_nodes(node):
             weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
@@ -137,7 +137,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_port_ids
 
     @staticmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
 
         ndims = len(weight_node.layer_attributes.shape)
@@ -175,7 +175,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     def mean_statistic_collector(
-        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        self, reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         mean_reducer = MeanReducer(reduction_axes)
         shape_reducer = ShapeReducer()
@@ -222,7 +222,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
 
     @staticmethod
-    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         return tuple(weight_node.layer_attributes.shape)
 
@@ -241,7 +241,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         raise NotImplementedError()
 
     @staticmethod
-    def init_lora_adapters(svd_residual: torch.Tensor, rank: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def init_lora_adapters(svd_residual: torch.Tensor, rank: Optional[int] = None) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Initializes LoRA adapters using Singular Value Decomposition (SVD).
 
@@ -274,7 +274,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_fq_insertion_command(
         compressed_weight: CompressedWeight,
         wc_params: WeightCompressionParameters,
-        orig_weight_shape: Tuple[int, ...],
+        orig_weight_shape: tuple[int, ...],
         compression_format: CompressionFormat,
         lora_adapter_rank: int,
         is_all_8bit: bool,
@@ -432,8 +432,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: Union[GraphModelWrapper, torch.nn.Module],
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: Dict[str, Tensor] = None,
-        precomputed_zero_points: Dict[str, Tensor] = None,
+        precomputed_scales: dict[str, Tensor] = None,
+        precomputed_zero_points: dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
@@ -534,7 +534,7 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
 class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompressionAlgoBackend):
     @staticmethod
     def mean_variance_statistic_collector(
-        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         reducer = MeanVarianceReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
@@ -544,7 +544,7 @@ class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompression
 
     @staticmethod
     def max_variance_statistic_collector(
-        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         reducer = MaxVarianceReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
@@ -554,7 +554,7 @@ class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompression
 
     @staticmethod
     def mean_abs_max_statistic_collector(
-        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         reducer = MeanAbsMaxReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)

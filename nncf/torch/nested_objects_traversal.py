@@ -10,13 +10,13 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Any, Callable, Dict, List, Mapping, Sequence, Set, Tuple, Type, Union
+from typing import Any, Callable, Mapping, Sequence, Union
 
 string_types = (str, bytes)
 iteritems = lambda mapping: getattr(mapping, "iteritems", mapping.items)()
 
 
-def to_tuple(lst: List, named_tuple_class: Type = None, named_tuple_fields: List[str] = None) -> Tuple:
+def to_tuple(lst: list, named_tuple_class: type = None, named_tuple_fields: list[str] = None) -> tuple:
     # Able to produce namedtuples if a corresponding parameter is given
     if named_tuple_fields is None:
         return tuple(lst)
@@ -37,13 +37,13 @@ def maybe_get_iterator(obj):
     if isinstance(obj, Mapping):
         it = iteritems
 
-    elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
+    elif isinstance(obj, (Sequence, set)) and not isinstance(obj, string_types):
         it = enumerate
     return it
 
 
 class InputIndexEntry:
-    def __init__(self, path: Tuple[Union[int, str], ...], getter: Callable, setter: Callable):
+    def __init__(self, path: tuple[Union[int, str], ...], getter: Callable, setter: Callable):
         self.path = path
         self.getter = getter
         self.setter = setter
@@ -65,7 +65,7 @@ class TupleRebuildingSetter:
 
 class NestedObjectIndex:
     def __init__(self, obj, path=(), memo=None, previous_level_setter=None):
-        self._flat_nested_obj_indexing: List[InputIndexEntry] = []
+        self._flat_nested_obj_indexing: list[InputIndexEntry] = []
         self._nested_object_paths_generator(obj, self._flat_nested_obj_indexing, path, memo, previous_level_setter)
 
     @staticmethod
@@ -111,7 +111,7 @@ class NestedObjectIndex:
         is_leaf = True
         return path, is_leaf
 
-    def get_flat_nested_obj_indexing(self) -> List[InputIndexEntry]:
+    def get_flat_nested_obj_indexing(self) -> list[InputIndexEntry]:
         return self._flat_nested_obj_indexing
 
 
@@ -140,7 +140,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         if id(obj) not in memo:
             memo.add(id(obj))
             indices_to_apply_fn_to = set()
-            indices_vs_named_tuple_data: Dict[Any, Tuple[list, Type, List[str]]] = {}
+            indices_vs_named_tuple_data: dict[Any, tuple[list, type, list[str]]] = {}
             for idx, value in iterator(obj):
                 next_level_it = maybe_get_iterator(value)
                 if next_level_it is None:

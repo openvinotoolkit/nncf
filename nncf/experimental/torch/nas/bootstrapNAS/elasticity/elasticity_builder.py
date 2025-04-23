@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import OrderedDict
-from typing import Any, Dict, List
+from typing import Any
 
 from nncf import NNCFConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
@@ -64,7 +64,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         all_elasticity_dims = {e.value for e in ElasticityDim}
         available_elasticity_dims_str = self._algo_config.get("available_elasticity_dims", all_elasticity_dims)
         self._available_elasticity_dims = list(map(ElasticityDim, available_elasticity_dims_str))
-        self._elasticity_builders: Dict[ElasticityDim, SingleElasticityBuilder] = OrderedDict()
+        self._elasticity_builders: dict[ElasticityDim, SingleElasticityBuilder] = OrderedDict()
         self._builder_states = None
 
     def initialize(self, model: NNCFNetwork) -> None:
@@ -75,13 +75,13 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         """
 
-    def get_available_elasticity_dims(self) -> List[ElasticityDim]:
+    def get_available_elasticity_dims(self) -> list[ElasticityDim]:
         """
         :return: list of available elasticity dimensions
         """
         return self._available_elasticity_dims
 
-    def _get_algo_specific_config_section(self) -> Dict:
+    def _get_algo_specific_config_section(self) -> dict:
         return self.config.get("bootstrapNAS", {}).get("training", {}).get("elasticity", {})
 
     def _build_controller(self, model: NNCFNetwork) -> "ElasticityController":
@@ -127,7 +127,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
                 layout.register(command)
         return layout
 
-    def _get_state_without_name(self) -> Dict[str, Any]:
+    def _get_state_without_name(self) -> dict[str, Any]:
         """
         Implementation of get_state that returns state without builder name.
 
@@ -141,7 +141,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
             self._state_names.AVAILABLE_ELASTICITY_DIMS: available_elasticity_dims_state,
         }
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: dict[str, Any]):
         """
         Implementation of load state that takes state without builder name.
 

@@ -11,7 +11,7 @@
 
 import json
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 
 @dataclass
@@ -145,11 +145,11 @@ class PropagationGroup:
     def __init__(
         self,
         block: PruningBlock,
-        producers: Optional[Set[ProducerInfo]] = None,
-        consumers: Optional[Set[ConsumerInfo]] = None,
+        producers: Optional[set[ProducerInfo]] = None,
+        consumers: Optional[set[ConsumerInfo]] = None,
     ) -> None:
         self.block = block
-        self._children: List[PropagationGroup] = []
+        self._children: list[PropagationGroup] = []
         self._is_invalid = False
         self._producers = set() if producers is None else producers
         self._consumers = set() if consumers is None else consumers
@@ -196,7 +196,7 @@ class PropagationGroup:
             new_group.add_consumers(group.get_consumers())
         return new_group
 
-    def add_consumers(self, consumers: Set[ConsumerInfo]):
+    def add_consumers(self, consumers: set[ConsumerInfo]):
         """
         Adds information about consumer to the group and to all children.
         The idea is to have up-to-date list of consumers in each leaf eventually.
@@ -207,19 +207,19 @@ class PropagationGroup:
         for child in self._children:
             child.add_consumers(consumers)
 
-    def add_producers(self, producers: Set[ProducerInfo]) -> None:
+    def add_producers(self, producers: set[ProducerInfo]) -> None:
         self._producers.update(producers)
 
     def add_child(self, child: "PropagationGroup") -> None:
         self._children.append(child)
 
-    def get_consumers(self) -> Set[ConsumerInfo]:
+    def get_consumers(self) -> set[ConsumerInfo]:
         return self._consumers.copy()
 
-    def get_producers(self) -> Set[ProducerInfo]:
+    def get_producers(self) -> set[ProducerInfo]:
         return self._producers.copy()
 
-    def get_children(self) -> List["PropagationGroup"]:
+    def get_children(self) -> list["PropagationGroup"]:
         return self._children.copy()
 
     def has_children(self) -> bool:
@@ -240,7 +240,7 @@ class PropagationMask:
     with retaining it in the consumers.
     """
 
-    def __init__(self, dim_groups_map: Dict[int, List[PropagationGroup]] = None) -> None:
+    def __init__(self, dim_groups_map: dict[int, list[PropagationGroup]] = None) -> None:
         self.dim_groups_map = dim_groups_map if dim_groups_map is not None else {}
 
     def __str__(self) -> str:

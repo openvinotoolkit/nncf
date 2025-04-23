@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, Optional, Union
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -72,7 +72,7 @@ def should_consider_scope(
     )
 
 
-def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope, None], nodes: List[NNCFNode]) -> List[str]:
+def get_not_matched_scopes(scope: Union[list[str], str, IgnoredScope, None], nodes: list[NNCFNode]) -> list[str]:
     """
     Return list of scope that do not match node list.
 
@@ -104,8 +104,8 @@ def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope, None], nod
 
 def check_scopes_in_graph(
     graph: NNCFGraph,
-    ignored_scopes: Union[IgnoredScope, List[str]],
-    target_scopes: Optional[List[str]] = None,
+    ignored_scopes: Union[IgnoredScope, list[str]],
+    target_scopes: Optional[list[str]] = None,
     validate_scopes: bool = True,
 ) -> None:
     """

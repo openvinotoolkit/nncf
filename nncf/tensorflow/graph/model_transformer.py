@@ -11,7 +11,7 @@
 import copy
 from collections import OrderedDict
 from collections import namedtuple
-from typing import Callable, Dict, List, Set, TypeVar, Union
+from typing import Callable, TypeVar, Union
 
 import tensorflow as tf
 
@@ -92,7 +92,7 @@ class TFModelTransformer(ModelTransformer):
         return weights_map
 
     @staticmethod
-    def _set_layer_weights(layer, weights_map: Dict):
+    def _set_layer_weights(layer, weights_map: dict):
         weight_value_tuples = []
         for weight_tensor in layer.weights:
             weight_name = get_weight_name(weight_tensor.name, layer.name)
@@ -144,7 +144,7 @@ class TFModelTransformer(ModelTransformer):
             msg = f"Transformation type {transformation.type} does not support"
             raise TypeError(msg)
 
-    def _insert(self, target_point: Union[TargetPoint, TFMultiLayerPoint], insertion_objects: List[Callable]):
+    def _insert(self, target_point: Union[TargetPoint, TFMultiLayerPoint], insertion_objects: list[Callable]):
         if isinstance(target_point, TFMultiLayerPoint):
             self._shared_insert_layers(target_point.target_points, insertion_objects)
         elif isinstance(target_point, TFLayerWeight):
@@ -162,7 +162,7 @@ class TFModelTransformer(ModelTransformer):
             msg = f"Insertion transform does not support {target_point.type} target point type"
             raise TypeError(msg)
 
-    def _shared_insert_layers(self, target_points: List[TargetPoint], layers_to_insert: List[Callable]):
+    def _shared_insert_layers(self, target_points: list[TargetPoint], layers_to_insert: list[Callable]):
         functional_model = is_functional_model(self._model)
         if functional_model:
             for layer in self._model_config["input_layers"]:
@@ -221,7 +221,7 @@ class TFModelTransformer(ModelTransformer):
             layer_name = target_points[0].layer_name
             self._insert_layer_after_sequential(layer_name, config)
 
-    def _multi_insertion(self, target_point: TargetPoint, commands: List[TransformationCommand]):
+    def _multi_insertion(self, target_point: TargetPoint, commands: list[TransformationCommand]):
         if not isinstance(target_point, TFLayer):
             msg = f"Multiple insertion transform does not support {target_point.type} target point type"
             raise TypeError(msg)
@@ -266,7 +266,7 @@ class TFModelTransformer(ModelTransformer):
         elif not layer_config["config"]["weights_attr_operations"]:
             self._replace_config(layer_name, layer_config["config"]["layer"])
 
-    def _insert_weight_operations(self, layer_name: str, weight_operations: List[WeightOperations]):
+    def _insert_weight_operations(self, layer_name: str, weight_operations: list[WeightOperations]):
         """
         Assigns the operations to be executed with a layer weight while accessing it.
         Any operation that have already been associated with the weight will be replaced with the
@@ -289,7 +289,7 @@ class TFModelTransformer(ModelTransformer):
         replace_layer_config = tf.keras.utils.serialize_keras_object(replace_layer)
         self._replace_config(layer_name, replace_layer_config)
 
-    def _replace_config(self, layer_name: str, replace_layer_config: Dict):
+    def _replace_config(self, layer_name: str, replace_layer_config: dict):
         replace_layer_name = replace_layer_config["config"]["name"]
         if is_functional_model(self._model):
             if "name" not in replace_layer_config:
@@ -300,7 +300,7 @@ class TFModelTransformer(ModelTransformer):
 
         self._update_layer_mapping(layer_name, replace_layer_name)
 
-    def _replace_functional(self, layer_name: str, replace_layer_config: Dict):
+    def _replace_functional(self, layer_name: str, replace_layer_config: dict):
         replace_layer_name = replace_layer_config["name"]
         for layer in self._model_config["layers"]:
             for inbound_node in layer["inbound_nodes"]:
@@ -312,11 +312,11 @@ class TFModelTransformer(ModelTransformer):
         replace_layer_config["inbound_nodes"] = layer_config["inbound_nodes"]
         self._model_config["layers"][idx] = replace_layer_config
 
-    def _replace_sequential(self, layer_name: str, replace_layer_config: Dict):
+    def _replace_sequential(self, layer_name: str, replace_layer_config: dict):
         idx, _ = self._find_layer_config(layer_name)
         self._model_config["layers"][idx] = replace_layer_config
 
-    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int, layers_to_insert: List):
+    def _insert_layers_before(self, layer_name: str, instance_idx: int, input_port_id: int, layers_to_insert: list):
         """
         Performs insertion before the (downstream) layer.
 
@@ -367,7 +367,7 @@ class TFModelTransformer(ModelTransformer):
         for config in layer_configs:
             self._model_config["layers"].insert(idx, config)
 
-    def _insert_layers_after(self, layer_name: str, instance_idx: int, output_port_id: int, layers_to_insert: List):
+    def _insert_layers_after(self, layer_name: str, instance_idx: int, output_port_id: int, layers_to_insert: list):
         """
         Performs insertion after the (upstream) layer.
 
@@ -392,7 +392,7 @@ class TFModelTransformer(ModelTransformer):
             else:
                 self._insert_layer_after_sequential(layer_name, config)
 
-    def _insert_layer_after_functional(self, layer_name: str, instance_idx: int, layer_to_insert_config: Dict):
+    def _insert_layer_after_functional(self, layer_name: str, instance_idx: int, layer_to_insert_config: dict):
         """
         Performs insertion after the (upstream) layer (functional model).
 
@@ -432,7 +432,7 @@ class TFModelTransformer(ModelTransformer):
         connection_infos,
         layer_name: str,
         instance_idx: int,
-        layer_out_ports: Set,
+        layer_out_ports: set,
         replace_layer_name: str,
         insert_with_instance_idx: int = 0,
     ):
@@ -450,7 +450,7 @@ class TFModelTransformer(ModelTransformer):
         self,
         layer_name: str,
         instance_idx: int,
-        layer_out_ports: Set,
+        layer_out_ports: set,
         replace_layer_name: str,
         insert_with_instance_idx: int = 0,
     ):

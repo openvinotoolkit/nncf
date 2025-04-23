@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
 
 import tensorflow as tf
 
@@ -25,7 +24,7 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
     Implementation of the quantization statistics collector for the TensorFlow backend.
     """
 
-    def __init__(self, model: tf.keras.Model, operation_names: List[str]):
+    def __init__(self, model: tf.keras.Model, operation_names: list[str]):
         """
         Initializes a collector of the quantization statistics.
 
@@ -36,7 +35,7 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
         self._model = model
         self._operation_names = operation_names
 
-    def _collect_quantizers_descriptions(self) -> List[QuantizerDescription]:
+    def _collect_quantizers_descriptions(self) -> list[QuantizerDescription]:
         """
         Collects descriptions of the quantizers.
 
@@ -67,7 +66,7 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
 
         return quantizers_descriptions
 
-    def _get_potential_quantizers_num(self) -> Tuple[int, int]:
+    def _get_potential_quantizers_num(self) -> tuple[int, int]:
         """
         Returns a potential number of quantizers for weights and activations.
 

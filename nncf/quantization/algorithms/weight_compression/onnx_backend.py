@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Iterable, Optional
 
 import numpy as np
 import onnx
@@ -76,8 +76,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return dtype
 
     def _preprocess_compressed_weight_shapes(
-        self, compressed_weight: Tensor, weight_shape: Tuple[int], dequantize_block_size: int
-    ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+        self, compressed_weight: Tensor, weight_shape: tuple[int], dequantize_block_size: int
+    ) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
         """
         Helper function to preprocess the tensor shapes for the compressed weight tensors to ONNX shapes expectations.
         The function reshapes the weight tensor and squeezes the scale and zero point tensors based on the
@@ -105,15 +105,15 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_tensor.data, scale.data, zero_point.data if zero_point is not None else None
 
     @property
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         return MATMUL_METATYPES
 
     @property
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         return CONVOLUTION_METATYPES
 
     @property
-    def embedding_metatypes(self) -> List[OperatorMetatype]:
+    def embedding_metatypes(self) -> list[OperatorMetatype]:
         return [metatypes.ONNXEmbeddingMetatype]
 
     @staticmethod
@@ -121,7 +121,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return node.layer_attributes.has_weight()
 
     @staticmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
         return get_reduction_axes(channel_axes, const_shape)
@@ -131,7 +131,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     def mean_statistic_collector(
-        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        self, reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         mean_reducer = MeanReducer(reduction_axes)
         shape_reducer = ShapeReducer()
@@ -145,7 +145,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         raise NotImplementedError()
 
     @staticmethod
-    def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
+    def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
         return [(attr["name"], port_id) for port_id, attr in node.layer_attributes.weight_attrs.items()]
 
     def get_weight(
@@ -163,7 +163,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return ONNX_DTYPE_TO_NNCF_DTYPE[weight_tensor.data_type]
 
     @staticmethod
-    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:
         return node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
 
     def set_weight(
@@ -194,8 +194,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: onnx.ModelProto,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: Dict[str, Tensor] = None,
-        precomputed_zero_points: Dict[str, Tensor] = None,
+        precomputed_scales: dict[str, Tensor] = None,
+        precomputed_zero_points: dict[str, Tensor] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),

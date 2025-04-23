@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 import tensorflow as tf
 
@@ -26,7 +26,7 @@ NNCF_QUANTIZATION_OPERATIONS_V2 = Registry("nncf_quantization_operations_v2")
 @NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizerV2(SymmetricQuantizer):
     def set_input_spec(
-        self, input_type: str, input_shape: Optional[List[int]] = None, channel_axes: Optional[List[int]] = None
+        self, input_type: str, input_shape: Optional[list[int]] = None, channel_axes: Optional[list[int]] = None
     ):
         """
         Sets input tensor specification for the quantizer.
@@ -43,7 +43,7 @@ class SymmetricQuantizerV2(SymmetricQuantizer):
         self.input_shape = input_shape
         self.channel_axes = channel_axes
 
-    def create_variables(self, layer: tf.keras.layers.Layer) -> Dict[str, tf.Variable]:
+    def create_variables(self, layer: tf.keras.layers.Layer) -> dict[str, tf.Variable]:
         """
         Creates quantizer variables using `layer.add_weight()` method.
 
@@ -60,7 +60,7 @@ class SymmetricQuantizerV2(SymmetricQuantizer):
 @NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizerV2(AsymmetricQuantizer):
     def set_input_spec(
-        self, input_type: str, input_shape: Optional[List[int]] = None, channel_axes: Optional[List[int]] = None
+        self, input_type: str, input_shape: Optional[list[int]] = None, channel_axes: Optional[list[int]] = None
     ):
         """
         Sets input tensor specification for the quantizer.
@@ -77,7 +77,7 @@ class AsymmetricQuantizerV2(AsymmetricQuantizer):
         self.input_shape = input_shape
         self.channel_axes = channel_axes
 
-    def create_variables(self, layer: tf.keras.layers.Layer) -> Dict[str, tf.Variable]:
+    def create_variables(self, layer: tf.keras.layers.Layer) -> dict[str, tf.Variable]:
         """
         Creates quantizer variables using `layer.add_weight()` method.
 
@@ -95,8 +95,8 @@ def create_quantizer(
     name: str,
     qspec: TFQuantizerSpec,
     is_weight_quantization: bool,
-    input_shape: Optional[List[int]] = None,
-    channel_axes: Optional[List[int]] = None,
+    input_shape: Optional[list[int]] = None,
+    channel_axes: Optional[list[int]] = None,
 ):
     """
     Factory method to create quantizer.

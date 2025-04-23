@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from itertools import islice
 from pathlib import Path
-from typing import Any, Dict, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf.common import factory
@@ -105,7 +105,7 @@ class StatisticsAggregator(ABC):
         self._load_statistics(loaded_data)
         nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path.absolute()}")
 
-    def _load_statistics(self, data: Dict[str, Any]) -> None:
+    def _load_statistics(self, data: dict[str, Any]) -> None:
         """
         Loads statistics into the registered statistic points from the given data.
 
@@ -131,7 +131,7 @@ class StatisticsAggregator(ABC):
         dump_statistics(data_to_dump, dir_path, self.BACKEND, additional_metadata)
         nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}")
 
-    def _prepare_statistics(self) -> Dict[str, Any]:
+    def _prepare_statistics(self) -> dict[str, Any]:
         """
         Prepares the statistics data for dumping into a directory.
 
@@ -166,7 +166,7 @@ class StatisticsAggregator(ABC):
                             self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
-    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         """
         Process prepared raw model outputs and statistic points for the further usage.
 
@@ -204,7 +204,7 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: Any) -> dict[str, Tensor]:
         """
         Post-process model outputs for the further statistics collection.
 

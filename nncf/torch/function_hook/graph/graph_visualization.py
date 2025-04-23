@@ -11,7 +11,7 @@
 
 import hashlib
 from enum import Enum
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import networkx as nx  # type: ignore[import-untyped]
 import pydot  # type: ignore[import-untyped]
@@ -48,7 +48,7 @@ def fix_dot_label(label: str) -> str:
     return label.replace("{", r"\{").replace("}", r"\}")
 
 
-def args_to_label(args: Tuple[Any, ...]) -> str:
+def args_to_label(args: tuple[Any, ...]) -> str:
     """
     Converts function arguments to a formatted string label.
 
@@ -63,7 +63,7 @@ def args_to_label(args: Tuple[Any, ...]) -> str:
     return ret + "\n]"
 
 
-def kwargs_to_label(kwargs: Dict[str, Any]) -> str:
+def kwargs_to_label(kwargs: dict[str, Any]) -> str:
     """
     Converts function keyword arguments to a formatted string label.
 
@@ -78,7 +78,7 @@ def kwargs_to_label(kwargs: Dict[str, Any]) -> str:
     return ret + "\n}"
 
 
-def get_label_from_node_data(node_data: Dict[str, Any], style: PydotStyleTemplate) -> str:
+def get_label_from_node_data(node_data: dict[str, Any], style: PydotStyleTemplate) -> str:
     """
     Generates a label for a graph node based on its metadata and the desired style.
 
@@ -124,7 +124,7 @@ def get_label_from_node_data(node_data: Dict[str, Any], style: PydotStyleTemplat
     raise ValueError(msg)
 
 
-def get_label_from_edge_data(node_data: Dict[str, Any], style: PydotStyleTemplate) -> str:
+def get_label_from_edge_data(node_data: dict[str, Any], style: PydotStyleTemplate) -> str:
     """
     Generates a label for a graph edge based on its metadata and the desired style.
 
@@ -168,7 +168,7 @@ def color_picker(data: str) -> str:
     return _RAINBOW_COLORS[hex_int % len(_RAINBOW_COLORS)]
 
 
-def get_style(node: Dict[str, Any], style: PydotStyleTemplate) -> Dict[str, str]:
+def get_style(node: dict[str, Any], style: PydotStyleTemplate) -> dict[str, str]:
     """
     Generates a style dictionary for a graph node based on its metadata and the desired style.
 

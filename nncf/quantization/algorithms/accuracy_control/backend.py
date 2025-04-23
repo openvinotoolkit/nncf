@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, List, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
@@ -56,7 +56,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_op_with_weights_metatypes() -> List[OperatorMetatype]:
+    def get_op_with_weights_metatypes() -> list[OperatorMetatype]:
         """
         Returns a list of operation metatypes that can be reverted to representation
         with int8 weights.
@@ -67,7 +67,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_quantizer_metatypes() -> List[OperatorMetatype]:
+    def get_quantizer_metatypes() -> list[OperatorMetatype]:
         """
         Returns a list of quantizer metatypes.
 
@@ -76,7 +76,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_const_metatypes() -> List[OperatorMetatype]:
+    def get_const_metatypes() -> list[OperatorMetatype]:
         """
         Returns a list of constant metatypes.
 
@@ -85,7 +85,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_quantizable_metatypes() -> List[OperatorMetatype]:
+    def get_quantizable_metatypes() -> list[OperatorMetatype]:
         """
         Returns a list of metatypes for operations that may be quantized.
 
@@ -94,7 +94,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> list[NNCFNode]:
         """
         Returns a list of NNCFNodes to use as start nodes for activation path tracing.
 
@@ -104,7 +104,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_quantize_agnostic_metatypes() -> List[OperatorMetatype]:
+    def get_quantize_agnostic_metatypes() -> list[OperatorMetatype]:
         """
         Returns a list of quantize agnostic metatypes.
 
@@ -113,7 +113,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_shapeof_metatypes() -> List[OperatorMetatype]:
+    def get_shapeof_metatypes() -> list[OperatorMetatype]:
         """
         Returns a list of shape of metatypes.
 
@@ -171,7 +171,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[Optional[int]]:
         """
         Returns node's input port indices with weights tensors.
 

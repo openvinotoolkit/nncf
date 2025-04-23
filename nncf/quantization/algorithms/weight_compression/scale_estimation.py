@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -63,7 +63,7 @@ class ScaleEstimation:
         self._weight_penalty = weight_penalty
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -92,10 +92,10 @@ class ScaleEstimation:
         self,
         model: TModel,
         graph: NNCFGraph,
-        all_weight_params: List[WeightCompressionParameters],
-        statistics: Dict[str, WCTensorStatistic],
+        all_weight_params: list[WeightCompressionParameters],
+        statistics: dict[str, WCTensorStatistic],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> Tuple[Dict[str, Tensor], Dict[str, Tensor]]:
+    ) -> tuple[dict[str, Tensor], dict[str, Tensor]]:
         """
         Estimates better scale for the int4 nodes in the model.
         Minimizes per-group difference between floating point MatMul and
@@ -161,7 +161,7 @@ class ScaleEstimation:
     def calculate_quantization_params(
         statistics: WCTensorStatistic,
         weight: Tensor,
-        reduction_axes: Tuple[int, ...],
+        reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
         subset_size: int = 32,
         initial_steps: int = 5,
@@ -367,7 +367,7 @@ class ScaleEstimation:
         return result_scale, zp
 
     @staticmethod
-    def activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
+    def activations_to_wc_statistics(activations: list[Tensor]) -> WCTensorStatistic:
         """
         Mimic the activation reducing logic from WeightCompression.get_statistic_points.
 
@@ -384,7 +384,7 @@ class ScaleEstimation:
         return wc_statistics
 
 
-def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
+def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> tuple[Tensor, Tensor]:
     """
     Computes the target values and a mask indicating zero values in the target.
 

@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import weakref
-from typing import Any, Iterator, Optional, Tuple, cast
+from typing import Any, Iterator, Optional, cast
 
 from torch import nn
 
@@ -174,7 +174,7 @@ class HookStorage(nn.Module):
         """
         return self._execute_hooks(self.post_hooks, op_name.replace(".", ":"), port_id, value)
 
-    def named_hooks(self, prefix: str = "", remove_duplicate: bool = True) -> Iterator[Tuple[str, nn.Module]]:
+    def named_hooks(self, prefix: str = "", remove_duplicate: bool = True) -> Iterator[tuple[str, nn.Module]]:
         """
         Retrieve named hook modules from the model.
 
@@ -189,7 +189,7 @@ class HookStorage(nn.Module):
                 yield f"{prefix}.{name}" if prefix else name, cast(nn.Module, module)
 
 
-def decode_hook_name(hook_name: str) -> Tuple[str, str, int]:
+def decode_hook_name(hook_name: str) -> tuple[str, str, int]:
     """
     Decodes a name of the hook to extract the operation name and port ID.
 

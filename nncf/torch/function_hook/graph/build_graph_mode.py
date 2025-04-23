@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Tuple, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import networkx as nx  # type: ignore[import-untyped]
 import torch
@@ -161,8 +161,8 @@ class GraphBuilderMode(FunctionHookMode):
         return value
 
     def execute_pre_hooks(
-        self, args: Tuple[Any, ...], kwargs: Dict[str, Any], op_meta: OpMeta
-    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+        self, args: tuple[Any, ...], kwargs: dict[str, Any], op_meta: OpMeta
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
         """
         Overloaded function to register a model output to the graph.
 
@@ -285,7 +285,7 @@ class GraphBuilderMode(FunctionHookMode):
             return TensorMeta.from_tensor(arg)
         return arg
 
-    def register_op_node(self, args: Tuple[Any], kwargs: Dict[str, Any], op_meta: OpMeta) -> None:
+    def register_op_node(self, args: tuple[Any], kwargs: dict[str, Any], op_meta: OpMeta) -> None:
         """
         Registers a new operation node in the graph.
 

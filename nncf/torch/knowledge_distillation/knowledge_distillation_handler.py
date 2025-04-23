@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import torch
 from torch import nn
@@ -44,7 +43,7 @@ class KnowledgeDistillationLossHandler(nn.Module):
         """
         self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME] = []
 
-    def get_kd_loss(self) -> List[torch.Tensor]:
+    def get_kd_loss(self) -> list[torch.Tensor]:
         if len(self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]) == 0:
             return [torch.zeros([], device=self._compressed_context.global_buffer_store[self.KD_STORAGE_DEVICE])]
         return self._compressed_context.global_buffer_store[self.KD_LOSS_STORAGE_NAME]

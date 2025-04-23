@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Dict
 
 import numpy as np
 import openvino as ov
@@ -40,7 +39,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         super().collect_statistics(model, graph)
 
-    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             stat_node_name, port_id, _ = self._translate_to_post_layer_operation(statistic_point)
             input_info = []
@@ -128,7 +127,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         return stat_node_name, port_id, target_point_type
 
     @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: dict[str, np.ndarray]) -> dict[str, Tensor]:
         return {n: Tensor(v) for n, v in outputs.items()}
 
     def _get_statistics_key(self, statistics: TensorStatistic, target_point: OVTargetPoint) -> str:

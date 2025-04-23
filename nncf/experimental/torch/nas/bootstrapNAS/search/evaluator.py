@@ -11,7 +11,7 @@
 import csv
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Dict, NoReturn, Optional, Tuple, TypeVar
+from typing import Any, Callable, NoReturn, Optional, TypeVar
 
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import safe_open
@@ -60,7 +60,7 @@ class BaseEvaluator:
         """
         self._current_value = val
 
-    def evaluate_and_add_to_cache_from_pymoo(self, pymoo_repr: Tuple[float, ...]) -> float:
+    def evaluate_and_add_to_cache_from_pymoo(self, pymoo_repr: tuple[float, ...]) -> float:
         """
         Evaluates active sub-network and uses Pymoo representation for insertion in cache.
 
@@ -77,7 +77,7 @@ class BaseEvaluator:
     def evaluate_subnet(self) -> float:
         """This method should implement how to a subnet is evaluated for a particular metric."""
 
-    def add_to_cache(self, subnet_config_repr: Tuple[float, ...], measurement: float) -> NoReturn:
+    def add_to_cache(self, subnet_config_repr: tuple[float, ...], measurement: float) -> NoReturn:
         """
         Adds evaluation result to cache
 
@@ -88,7 +88,7 @@ class BaseEvaluator:
         nncf_logger.debug(f"Add to evaluator {self.name}: {subnet_config_repr}, {measurement}")
         self.cache[subnet_config_repr] = measurement
 
-    def retrieve_from_cache(self, subnet_config_repr: Tuple[float, ...]) -> Tuple[bool, float]:
+    def retrieve_from_cache(self, subnet_config_repr: tuple[float, ...]) -> tuple[bool, float]:
         """
         Checks if sub-network info is in cache and returns the corresponding value.
         :param subnet_config_repr: tuple representing the values for the associated design variables.
@@ -98,7 +98,7 @@ class BaseEvaluator:
             return True, self.cache[subnet_config_repr]
         return False, 0
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns state of the evaluator
 
@@ -112,7 +112,7 @@ class BaseEvaluator:
         }
         return state_dict
 
-    def update_from_state(self, state: Dict[str, Any]) -> NoReturn:
+    def update_from_state(self, state: dict[str, Any]) -> NoReturn:
         """
         Updates the cache and other values in the evaluator from a saved state.
 
@@ -200,7 +200,7 @@ class AccuracyEvaluator(BaseEvaluator):
         self._current_value = self._eval_func(self._model, self._val_loader) * -1.0
         return self._current_value
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Get state of Accuracy evaluator.
 
@@ -210,7 +210,7 @@ class AccuracyEvaluator(BaseEvaluator):
         state["is_top1"] = self._is_top1
         return state
 
-    def update_from_state(self, state: Dict[str, Any]) -> NoReturn:
+    def update_from_state(self, state: dict[str, Any]) -> NoReturn:
         """
 
         :param state: dict with state that should be used for updating this evaluator

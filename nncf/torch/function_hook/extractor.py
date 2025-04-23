@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Optional, Sequence
 
 import torch
 from torch import nn
@@ -43,7 +43,7 @@ class ExtractedFunc(nn.Module):
     :param kwargs: Function arguments.
     """
 
-    def __init__(self, fn: Callable[..., torch.Tensor], kwargs: Dict[str, Any]) -> None:
+    def __init__(self, fn: Callable[..., torch.Tensor], kwargs: dict[str, Any]) -> None:
         super().__init__()
         self.fn = fn
         self.kwargs = kwargs
@@ -53,8 +53,8 @@ class ExtractedFunc(nn.Module):
 
 
 def apply_args_to_kwargs(
-    args: Sequence[Any], kwargs: Dict[str, Any], indexed_args: List[Tuple[int, str]]
-) -> Dict[str, Any]:
+    args: Sequence[Any], kwargs: dict[str, Any], indexed_args: list[tuple[int, str]]
+) -> dict[str, Any]:
     """
     Applies the given arguments and keyword arguments to a dictionary of keyword arguments.
 
@@ -63,7 +63,7 @@ def apply_args_to_kwargs(
     :param indexed_args: The list of pairs of indexes and names.
     :return: A dictionary of keyword arguments with the applied arguments and keyword arguments.
     """
-    args_dict: Dict[str, Any] = dict()
+    args_dict: dict[str, Any] = dict()
     for idx, arg_name in indexed_args:
         if idx < len(args):
             args_dict[arg_name] = args[idx]
@@ -190,7 +190,7 @@ def extract_conv(
 
 
 def extract_model(
-    model: nn.Module, graph: PTNNCFGraph, input_nodes: List[str], output_nodes: List[str]
+    model: nn.Module, graph: PTNNCFGraph, input_nodes: list[str], output_nodes: list[str]
 ) -> Optional[nn.Module]:
     """
     Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Tuple, Type, cast
+from typing import Any, Callable, cast
 
 from torch import nn
 
@@ -31,7 +31,7 @@ from nncf.torch.model_graph_manager import update_fused_bias
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_multidevice
 
-TRANSFORMATION_PAIRS = Tuple[Tuple[Type[Any], Callable[[GraphModelWrapper, List[Any]], GraphModelWrapper]], ...]
+TRANSFORMATION_PAIRS = tuple[tuple[type[Any], Callable[[GraphModelWrapper, list[Any]], GraphModelWrapper]], ...]
 
 
 class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
@@ -59,7 +59,7 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         :return: The new instance of a model with applied transformations.
         """
         transformations = transformation_layout.transformations
-        aggregated_transformations: Dict[type, List[Command]] = defaultdict(list)
+        aggregated_transformations: dict[type, list[Command]] = defaultdict(list)
         for transformation in transformations:
             transformation_cls = transformation.__class__
             if transformation_cls not in [x[0] for x in self._command_transformation_ordered_pairs]:
@@ -78,7 +78,7 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         return model
 
     def _apply_insertion_transformations(
-        self, wrapped_model: GraphModelWrapper, transformations: List[PT2InsertionCommand]
+        self, wrapped_model: GraphModelWrapper, transformations: list[PT2InsertionCommand]
     ) -> GraphModelWrapper:
         """
         Applies insertion transformation to the model.
@@ -106,7 +106,7 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
 
     @staticmethod
     def _apply_bias_correction_transformations(
-        wrapped_model: GraphModelWrapper, transformations: List[PTBiasCorrectionCommand]
+        wrapped_model: GraphModelWrapper, transformations: list[PTBiasCorrectionCommand]
     ) -> GraphModelWrapper:
         """
         Applies bias correction transformations on the model.
@@ -127,7 +127,7 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
 
     @staticmethod
     def _apply_const_update_transformations(
-        wrapped_model: GraphModelWrapper, transformations: List[PT2ConstUpdateCommand]
+        wrapped_model: GraphModelWrapper, transformations: list[PT2ConstUpdateCommand]
     ) -> GraphModelWrapper:
         """
         Applies const data update transformations on the model.

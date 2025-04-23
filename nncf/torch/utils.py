@@ -11,7 +11,7 @@
 import random
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List
+from typing import Any, Generator
 
 import numpy as np
 import torch
@@ -51,7 +51,7 @@ def get_all_modules(model, prefix=None):
 
 def get_all_modules_by_type(
     model, module_types=None, current_scope=None, ignored_scopes=None, target_scopes=None, memo=None
-) -> Dict[Scope, Module]:
+) -> dict[Scope, Module]:
     if memo is None:
         memo = set()
     if isinstance(module_types, str):
@@ -89,8 +89,8 @@ def get_all_modules_by_type(
 
 
 def get_state_dict_names_with_modules(
-    model: torch.nn.Module, str_types: List[str] = None, prefix=""
-) -> Dict[str, torch.nn.Module]:
+    model: torch.nn.Module, str_types: list[str] = None, prefix=""
+) -> dict[str, torch.nn.Module]:
     found = OrderedDict()
     for name, module in model.named_children():
         full_node_name = f"{prefix}{name}"
@@ -214,8 +214,8 @@ def is_traced_tensor(obj):
 
 class _ModuleState:
     def __init__(self, base_module: Module = None):
-        self._training_state: Dict[str, bool] = {}
-        self._requires_grad_state: Dict[str, bool] = {}
+        self._training_state: dict[str, bool] = {}
+        self._requires_grad_state: dict[str, bool] = {}
         if base_module is not None:
             for module_name, module in base_module.named_modules():
                 self.training_state[module_name] = module.training
@@ -224,11 +224,11 @@ class _ModuleState:
                 self.requires_grad_state[param_name] = param.requires_grad
 
     @property
-    def training_state(self) -> Dict[str, bool]:
+    def training_state(self) -> dict[str, bool]:
         return self._training_state
 
     @property
-    def requires_grad_state(self) -> Dict[str, bool]:
+    def requires_grad_state(self) -> dict[str, bool]:
         return self._requires_grad_state
 
 
@@ -330,7 +330,7 @@ def default_distributed_unwrapper(model: nn.Module):
 
 
 def rename_legacy_names_in_state_dict(
-    state_dict_to_load: Dict[str, Any], legacy_names: List[str], legacy_name: str, new_name: str
+    state_dict_to_load: dict[str, Any], legacy_names: list[str], legacy_name: str, new_name: str
 ):
     for name in legacy_names:
         tensor = state_dict_to_load.pop(name)
@@ -353,7 +353,7 @@ LEGACY_VS_NEW_BN_MAP = {
 }
 
 
-def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]) -> None:
+def maybe_convert_legacy_names_in_model_state(state_dict_to_load: dict[str, Any]) -> None:
     """
     Convert legacy layer names in compressed model state dict in case such names exist.
 
@@ -369,7 +369,7 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: Dict[str, Any]
         rename_legacy_names_in_state_dict(state_dict_to_load, matched_legacy_names[old_name], old_name, new_name)
 
 
-def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, Any]) -> None:
+def maybe_convert_legacy_names_in_compress_state(compression_state: dict[str, Any]) -> None:
     """
     Convert legacy layer names in compression state in case such names exist.
 

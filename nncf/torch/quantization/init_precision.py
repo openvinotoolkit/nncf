@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
 
 from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
@@ -19,7 +18,7 @@ from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionIn
 
 class PrecisionInitializerFactory:
     @staticmethod
-    def create(init_type: str) -> Type[BasePrecisionInitializer]:
+    def create(init_type: str) -> type[BasePrecisionInitializer]:
         if init_type == "manual":
             return ManualPrecisionInitializer
         if init_type == "hawq":

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import tensorflow as tf
 
@@ -46,7 +46,7 @@ class TFQuantizerSpec(QuantizerSpec):
             qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force, narrow_range, half_range, qconfig.per_channel
         )
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -63,7 +63,7 @@ class TFQuantizerSpec(QuantizerSpec):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFQuantizerSpec":
+    def from_state(cls, state: dict[str, Any]) -> "TFQuantizerSpec":
         """
         Creates the object from its state.
 

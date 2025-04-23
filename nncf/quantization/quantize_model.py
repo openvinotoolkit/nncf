@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDict, TypeVar, Union
+from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -59,7 +59,7 @@ def warning_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> None:
     """
     Logs when is_model_no_batchwise_support(...) returns True.
@@ -79,7 +79,7 @@ def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
@@ -265,7 +265,7 @@ def quantize(
     raise nncf.UnsupportedBackendError(msg)
 
 
-def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., Tuple[Any, ...]]:
+def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., tuple[Any, ...]]:
     """
     Wraps validation function to support case when it only returns metric value.
 
@@ -273,7 +273,7 @@ def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., Tuple
     :return: Wrapped validation function.
     """
 
-    def wrapper(*args: Any, **kwargs: Any) -> Tuple[Any, ...]:
+    def wrapper(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
         retval = validation_fn(*args, **kwargs)
         if isinstance(retval, tuple):
             return retval
@@ -297,7 +297,7 @@ def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -707,7 +707,7 @@ def quantize_with_tune_hyperparams(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,

@@ -10,7 +10,6 @@
 # limitations under the License.
 import re
 from enum import Enum
-from typing import Dict, List, Set, Tuple
 
 import torch
 
@@ -22,7 +21,7 @@ from nncf.common.utils.api_marker import api
 
 @api(canonical_alias="nncf.torch.load_state")
 def load_state(
-    model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False, keys_to_ignore: List[str] = None
+    model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False, keys_to_ignore: list[str] = None
 ) -> int:
     """
     Used to load a checkpoint containing a compressed model into an NNCFNetwork object, but can
@@ -69,7 +68,7 @@ class ParametersRegistry:
     def register(self, parameter_name: str):
         self._parameters_names.add(parameter_name)
 
-    def get_parameters_names(self) -> Set[str]:
+    def get_parameters_names(self) -> set[str]:
         return self._parameters_names
 
 
@@ -92,17 +91,17 @@ class ProcessedKeys:
     """Contains checkpoint keys with their status of matching with model keys"""
 
     def __init__(self):
-        self._keys: Dict[ProcessedKeyStatus, Set[str]] = {}
+        self._keys: dict[ProcessedKeyStatus, set[str]] = {}
         for key_status in ProcessedKeyStatus:
             self._keys[key_status] = set()
 
     def add_key(self, key: str, status: ProcessedKeyStatus):
         self._keys[status].add(key)
 
-    def extend_keys(self, keys: List[str], status: ProcessedKeyStatus):
+    def extend_keys(self, keys: list[str], status: ProcessedKeyStatus):
         self._keys[status].update(keys)
 
-    def add_skipped_and_missing_keys(self, model_state_dict: Dict[str, torch.Tensor]):
+    def add_skipped_and_missing_keys(self, model_state_dict: dict[str, torch.Tensor]):
         all_processed_keys = []
         optional_param_names = OPTIONAL_PARAMETERS_REGISTRY.get_parameters_names()
         params_to_skip = tuple("." + name for name in optional_param_names)
@@ -151,7 +150,7 @@ class NormalizedKeys:
     unified compression parameters from the separate ones.
     """
 
-    def __init__(self, keys: List[str], keys_to_ignore: List[str]):
+    def __init__(self, keys: list[str], keys_to_ignore: list[str]):
         self._unique_normalized_key_vs_orig_key_map = {}
         self.is_unified_group_detected = False
         unique_clipped_key_vs_orig_key_map, ignored_keys = self._clip_keys_without_collisions(keys, keys_to_ignore)
@@ -169,8 +168,8 @@ class NormalizedKeys:
         return self._unique_normalized_key_vs_orig_key_map[normalized_key]
 
     def _normalize_keys_without_collisions(
-        self, unique_clipped_key_vs_orig_key_map: Dict[str, str], keys_to_ignore: List[str]
-    ) -> List[str]:
+        self, unique_clipped_key_vs_orig_key_map: dict[str, str], keys_to_ignore: list[str]
+    ) -> list[str]:
         ignored_keys = []
         normalized_key_vs_clipped_key_list_map = {}
         for clipped_key in unique_clipped_key_vs_orig_key_map:
@@ -201,7 +200,7 @@ class NormalizedKeys:
         return ignored_keys
 
     @staticmethod
-    def _clip_keys_without_collisions(keys: List[str], keys_to_ignore: List[str]) -> Tuple[Dict[str, str], List[str]]:
+    def _clip_keys_without_collisions(keys: list[str], keys_to_ignore: list[str]) -> tuple[dict[str, str], list[str]]:
         clipped_key_vs_orig_key_list_map = {}
         ignored_keys = []
         for orig_key in keys:
@@ -233,7 +232,7 @@ class NormalizedKeys:
             new_key = new_key.replace(pattern, "")
         return new_key
 
-    def _key_replacer(self, key: str) -> List[str]:
+    def _key_replacer(self, key: str) -> list[str]:
         new_key = key
 
         match = re.search("(pre_ops|post_ops)\\.(\\d+?)\\.op", key)
@@ -244,7 +243,7 @@ class NormalizedKeys:
         return result
 
     @staticmethod
-    def _split_unified_parameters(new_key: str) -> List[str]:
+    def _split_unified_parameters(new_key: str) -> list[str]:
         """
         Covers unified activation quantizers case, e.g.
             external_quantizers.RELU_0;RELU_1;RELU_2.op
@@ -280,9 +279,9 @@ class KeyMatcher:
     def __init__(
         self,
         is_resume: bool,
-        state_dict_to_load: Dict[str, torch.Tensor],
-        model_state_dict: Dict[str, torch.Tensor],
-        ignored_keys: List[str] = None,
+        state_dict_to_load: dict[str, torch.Tensor],
+        model_state_dict: dict[str, torch.Tensor],
+        ignored_keys: list[str] = None,
     ):
         """
         :param state_dict_to_load: A state dict containing the parameters to be loaded into the model.
@@ -297,7 +296,7 @@ class KeyMatcher:
         self._num_params_to_load = len(state_dict_to_load.items())
         self.ignored_keys = ignored_keys if ignored_keys else []
 
-    def run(self) -> Dict[str, torch.Tensor]:
+    def run(self) -> dict[str, torch.Tensor]:
         """
         :return: the model state dict with matched parameters
         """
@@ -373,8 +372,8 @@ class KeyMatcher:
 
     @staticmethod
     def _cross_match_version_agnostic_names(
-        normalized_keys_to_load: List[str], normalized_model_keys: List[str]
-    ) -> Dict[str, str]:
+        normalized_keys_to_load: list[str], normalized_model_keys: list[str]
+    ) -> dict[str, str]:
         """
         Handles the situation where the normalized_keys_to_load contain legacy version-agnostic names
         of operations, such as `RELU`.

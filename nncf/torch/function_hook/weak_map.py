@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import weakref
-from typing import Any, Dict, Generic, Optional, Tuple, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
@@ -30,7 +30,7 @@ class WeakUnhashableKeyMap(Generic[_K, _V]):
 
     def __init__(self) -> None:
         """Initialize an empty WeakUnhashableKeyMap."""
-        self._data: Dict[int, Tuple[weakref.ReferenceType[_K], _V]] = {}
+        self._data: dict[int, tuple[weakref.ReferenceType[_K], _V]] = {}
 
     def __getitem__(self, obj: Any) -> Any:
         """
