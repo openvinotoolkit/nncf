@@ -13,7 +13,7 @@ import operator
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -47,8 +47,8 @@ class GroupToRank:
         if `GroupToRank.quantizers` are removed.
     """
 
-    quantizers: List[NNCFNode]
-    operations: List[NNCFNode]
+    quantizers: list[NNCFNode]
+    operations: list[NNCFNode]
 
 
 class Ranker:
@@ -87,7 +87,7 @@ class Ranker:
         self._num_workers = num_workers
         self._restore_mode = restore_mode
 
-    def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
+    def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> list[GroupToRank]:
         """
         Finds groups of quantizers to rank.
 
@@ -137,12 +137,12 @@ class Ranker:
 
     def rank_groups_of_quantizers(
         self,
-        groups_to_rank: List[GroupToRank],
+        groups_to_rank: list[GroupToRank],
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
-        reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
-        approximate_values_for_each_item: Union[List[float], List[List[TTensor]]],
-    ) -> List[GroupToRank]:
+        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
+        approximate_values_for_each_item: Union[list[float], list[list[TTensor]]],
+    ) -> list[GroupToRank]:
         """
         Ranks groups of quantizers by their contribution to accuracy drop. Returns a list of
         ranked groups where `ranked_groups[-1]` group of quantizers has maximal ranking
@@ -194,9 +194,9 @@ class Ranker:
         self,
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
-        groups_to_rank: List[GroupToRank],
-        ranking_subset_indices: List[int],
-        reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
+        groups_to_rank: list[GroupToRank],
+        ranking_subset_indices: list[int],
+        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         for current_group in track(groups_to_rank, description="Calculating ranking scores"):
@@ -223,9 +223,9 @@ class Ranker:
         self,
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
-        groups_to_rank: List[GroupToRank],
-        ranking_subset_indices: List[int],
-        reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
+        groups_to_rank: list[GroupToRank],
+        ranking_subset_indices: list[int],
+        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         prepared_model_queue = []
@@ -264,8 +264,8 @@ class Ranker:
     def _calculate_ranking_score(
         self,
         prepared_model: TPModel,
-        ranking_subset_indices: List[int],
-        reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
+        ranking_subset_indices: list[int],
+        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
     ) -> float:
         """
         Calculates the ranking score for the current group of quantizers.
@@ -291,7 +291,7 @@ class Ranker:
 
         return ranking_score
 
-    def _create_ranking_fn(self, backend: BackendType) -> Callable[[List[TTensor], List[TTensor]], float]:
+    def _create_ranking_fn(self, backend: BackendType) -> Callable[[list[TTensor], list[TTensor]], float]:
         """
         Creates ranking function.
 

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List
+from typing import Any
 
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -61,7 +61,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
 
     @staticmethod
     def check_elasticity_dims_consistency(
-        available_elasticity_dims: List[ElasticityDim], progressivity_of_elasticity: List[ElasticityDim]
+        available_elasticity_dims: list[ElasticityDim], progressivity_of_elasticity: list[ElasticityDim]
     ) -> None:
         """
         Verifies that progressivity of elasticity is specified for all available elasticity dimensions.
@@ -87,7 +87,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         """
 
-    def _get_algo_specific_config_section(self) -> Dict:
+    def _get_algo_specific_config_section(self) -> dict:
         return self.config.get("bootstrapNAS", {}).get("training", {})
 
     def _build_controller(self, model: NNCFNetwork) -> "ProgressiveShrinkingController":
@@ -126,7 +126,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         self.check_elasticity_dims_consistency(available_elasticity_dims, self._progressivity_of_elasticity)
         return self._elasticity_builder.get_transformation_layout(target_model)
 
-    def _get_state_without_name(self) -> Dict[str, Any]:
+    def _get_state_without_name(self) -> dict[str, Any]:
         """
         Implementation of get_state that returns state without builder name.
 
@@ -139,7 +139,7 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
             self._state_names.BN_ADAPTATION_PARAMS: self._bn_adapt_params,
         }
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: dict[str, Any]):
         """
         Implementation of load state that takes state without builder name.
 

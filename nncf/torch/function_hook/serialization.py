@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, TypedDict, TypeVar, cast
+from typing import Any, TypedDict, TypeVar, cast
 from weakref import WeakKeyDictionary
 
 from torch import nn
@@ -28,12 +28,12 @@ TModel = TypeVar("TModel", bound=nn.Module)
 
 
 class S_COMMAND(TypedDict):
-    hook_names_in_model: List[str]
+    hook_names_in_model: list[str]
     module_cls_name: str
-    module_config: Dict[str, Any]
+    module_config: dict[str, Any]
 
 
-def get_config(model: nn.Module) -> Dict[str, Any]:
+def get_config(model: nn.Module) -> dict[str, Any]:
     """
     Returns serializable config which contains all information required to recover all additional modules placement.
 
@@ -43,14 +43,14 @@ def get_config(model: nn.Module) -> Dict[str, Any]:
     hook_storage = get_hook_storage(model)
 
     # Find shared modules
-    modules_map: WeakKeyDictionary[nn.Module, List[str]] = WeakKeyDictionary()
+    modules_map: WeakKeyDictionary[nn.Module, list[str]] = WeakKeyDictionary()
     for name, module in hook_storage.named_hooks(remove_duplicate=False):
         if module not in modules_map:
             modules_map[module] = []
         modules_map[module].append(name)
 
     # Generate serialized transformation commands
-    serialized_transformations: List[S_COMMAND] = []
+    serialized_transformations: list[S_COMMAND] = []
     for module, names in modules_map.items():
         compression_module_name = module.__class__.__name__
         if compression_module_name not in COMPRESSION_MODULES.registry_dict:
@@ -74,7 +74,7 @@ def get_config(model: nn.Module) -> Dict[str, Any]:
     return {COMPRESSION_STATE_ATTR: serialized_transformations}
 
 
-def load_from_config(model: TModel, config: Dict[str, Any]) -> TModel:
+def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
     """
     Initialize model with compressed modules from config file.
 
@@ -100,7 +100,7 @@ def load_from_config(model: TModel, config: Dict[str, Any]) -> TModel:
     """
     wrapped_model = wrap_model(model)
     hook_storage = get_hook_storage(wrapped_model)
-    transformation_commands = cast(List[S_COMMAND], config[COMPRESSION_STATE_ATTR])
+    transformation_commands = cast(list[S_COMMAND], config[COMPRESSION_STATE_ATTR])
 
     device = None
     if not is_multidevice(wrapped_model):

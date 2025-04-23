@@ -34,10 +34,10 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.helpers import create_depthwise_conv
-from tests.torch.ptq.helpers import get_nncf_network
-from tests.torch.ptq.helpers import get_single_conv_nncf_graph
-from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
 from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
+from tests.torch2.function_hook.quantization.helper import get_nncf_network
+from tests.torch2.function_hook.quantization.helper import get_single_conv_nncf_graph
+from tests.torch2.function_hook.quantization.helper import get_single_no_weight_matmul_nncf_graph
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:

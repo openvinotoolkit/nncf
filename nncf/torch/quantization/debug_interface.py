@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
@@ -63,9 +63,9 @@ class QuantizationDebugInterface(DebugInterface):
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         quantizers_in_nncf_modules = owner_model.nncf.get_modules_in_nncf_modules_by_type(quantization_types)
-        nncf_module_quantizations_id_list: List[str] = [str(scope) for scope in quantizers_in_nncf_modules]
+        nncf_module_quantizations_id_list: list[str] = [str(scope) for scope in quantizers_in_nncf_modules]
 
-        activation_quantizer_id_list: List[str] = owner_model.nncf.get_compression_modules_by_type(
+        activation_quantizer_id_list: list[str] = owner_model.nncf.get_compression_modules_by_type(
             ExtraCompressionModuleType.EXTERNAL_QUANTIZER
         ).keys()
         self.call_trackers[self.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME].init_with_key_list(
@@ -108,7 +108,7 @@ class QuantizationDebugInterface(DebugInterface):
                     msg = f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!"
                     raise nncf.InternalError(msg)
 
-    def dump_scale(self, quantizer_scale_params: Dict[str, torch.Tensor], quantizer_name: str):
+    def dump_scale(self, quantizer_scale_params: dict[str, torch.Tensor], quantizer_name: str):
         import re
 
         quantizer_normalized_name = re.sub(r"[^\w\-_\. ]", "_", quantizer_name)

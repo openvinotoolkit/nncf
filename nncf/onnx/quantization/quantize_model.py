@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 import onnx
 
@@ -99,7 +99,7 @@ def quantize_with_accuracy_control_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,

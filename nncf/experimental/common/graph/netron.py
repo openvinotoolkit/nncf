@@ -11,7 +11,7 @@
 
 # Since we are not reading XML, but creating it, the package security message is irrelevant
 import xml.etree.ElementTree as ET  # nosec
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -36,7 +36,7 @@ class PortDesc:
     Represents a port description in the computational graph.
     """
 
-    def __init__(self, port_id: str, precision: str, shape: Optional[List[int]] = None):
+    def __init__(self, port_id: str, precision: str, shape: Optional[list[int]] = None):
         """
         :param port_id: The identifier of the port.
         :param precision: Precision of the tensor corresponding to the port, either "fp32" or "i32".
@@ -73,9 +73,9 @@ class NodeDesc:
         node_id: str,
         name: str,
         node_type: str,
-        attrs: Optional[Dict[str, str]] = None,
-        inputs: Optional[List[PortDesc]] = None,
-        outputs: Optional[List[PortDesc]] = None,
+        attrs: Optional[dict[str, str]] = None,
+        inputs: Optional[list[PortDesc]] = None,
+        outputs: Optional[list[PortDesc]] = None,
     ):
         """
         :param node_id: The identifier of the node.
@@ -149,7 +149,7 @@ class EdgeDesc:
         return edge
 
 
-GET_ATTRIBUTES_FN_TYPE = Callable[[NNCFNode], Dict[str, str]]
+GET_ATTRIBUTES_FN_TYPE = Callable[[NNCFNode], dict[str, str]]
 
 
 def convert_nncf_dtype_to_ov_dtype(dtype: Dtype) -> str:
@@ -159,14 +159,14 @@ def convert_nncf_dtype_to_ov_dtype(dtype: Dtype) -> str:
     :param dtype: The data type to be converted.
     :return: The openvino dtype string corresponding to the given data type.
     """
-    dummy_precision_map: Dict[Dtype, str] = {Dtype.INTEGER: "i32", Dtype.FLOAT: "f32"}
+    dummy_precision_map: dict[Dtype, str] = {Dtype.INTEGER: "i32", Dtype.FLOAT: "f32"}
 
     return dummy_precision_map[dtype]
 
 
 def get_graph_desc(
     graph: NNCFGraph, include_fq_params: bool = False, get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None
-) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+) -> tuple[list[NodeDesc], list[EdgeDesc]]:
     """
     Retrieves descriptions of nodes and edges from an NNCFGraph.
 
@@ -181,7 +181,7 @@ def get_graph_desc(
         get_attributes_fn = lambda x: {
             "metatype": str(x.metatype.name),
         }
-    include_node: Dict[int, bool] = {}
+    include_node: dict[int, bool] = {}
     edges = []
     for edge in graph.get_all_edges():
         if not include_fq_params and edge.to_node.node_type == "FakeQuantize" and edge.input_port_id != 0:

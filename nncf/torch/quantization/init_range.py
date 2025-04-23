@@ -11,7 +11,7 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Callable, Dict, List, Tuple
+from typing import Callable
 
 import numpy as np
 import torch
@@ -72,7 +72,7 @@ class PTRangeInitParams(RangeInitParams):
         return self.get_init_config_for_scope_and_group(qid, group)
 
     def get_init_config_for_scope_and_group(self, qid: QuantizerId, group: QuantizerGroup) -> RangeInitConfig:
-        matches: List[RangeInitConfig] = []
+        matches: list[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
             should_be_considered = should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes)
             if should_be_considered and (group == pl_config.target_group or pl_config.target_group is None):
@@ -107,7 +107,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
-    def get_reduction_aggregation_axes(self, is_per_sample: bool) -> Tuple[ReductionAxes, AggregationAxes]:
+    def get_reduction_aggregation_axes(self, is_per_sample: bool) -> tuple[ReductionAxes, AggregationAxes]:
         if self.is_per_channel:
             return super().get_reduction_aggregation_axes(self._input_shape, (self._channel_idx,), is_per_sample)
         return super().get_reduction_aggregation_axes(self._input_shape, (), is_per_sample)
@@ -117,7 +117,7 @@ class StatCollectorGenerator:
     @staticmethod
     def generate_collectors_for_range_init_statistics_collection(
         target_model_graph: PTNNCFGraph, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[TensorStatisticObservationPoint, Dict[ReductionAxes, TensorStatisticCollectorBase]]:
+    ) -> dict[TensorStatisticObservationPoint, dict[ReductionAxes, TensorStatisticCollectorBase]]:
         retval = {}
         for qp in quantizer_setup.quantization_points.values():
             init_config = range_init_params.get_init_config_for_quantization_point(qp)
@@ -222,7 +222,7 @@ class StatCollectorGenerator:
     @classmethod
     def get_all_scale_shapes_with_params(
         cls, qp: QuantizationPointBase, target_nncf_graph: PTNNCFGraph
-    ) -> Dict[ReductionAxes, PTRangeInitCollectorParams]:
+    ) -> dict[ReductionAxes, PTRangeInitCollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -254,7 +254,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     def __init__(
         self,
         model: NNCFNetwork,
-        modules_to_init_vs_init_configs: Dict[str, Tuple[BaseQuantizer, RangeInitConfig, bool, Tuple[int]]],
+        modules_to_init_vs_init_configs: dict[str, tuple[BaseQuantizer, RangeInitConfig, bool, tuple[int]]],
         init_device: str,
         batch_size: int = None,
     ):
@@ -262,7 +262,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.modules_to_init = modules_to_init_vs_init_configs
         self.progressbar_description = "Range parameters initialization"
 
-        self.collectors_and_modules_to_init: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]] = (
+        self.collectors_and_modules_to_init: dict[str, tuple[TensorStatisticCollectorBase, BaseQuantizer]] = (
             OrderedDict()
         )
         self.hook_handles = []

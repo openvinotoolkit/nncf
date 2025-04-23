@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Dict, Iterator, Optional, Tuple, Union, cast
+from typing import Any, Iterator, Optional, Union, cast
 
 import nncf
 from nncf.common.utils.backend import BackendType
@@ -38,7 +38,7 @@ class Tensor:
         return self._data
 
     @property
-    def shape(self) -> Tuple[int, ...]:
+    def shape(self) -> tuple[int, ...]:
         return tuple(self.data.shape)
 
     @property
@@ -67,10 +67,10 @@ class Tensor:
     def __iter__(self) -> Iterator[Tensor]:
         return TensorIterator(self.data)
 
-    def __getitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]]) -> Tensor:
+    def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]]) -> Tensor:
         return Tensor(self.data[unwrap_index(index)])
 
-    def __setitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]], value: Any) -> None:
+    def __setitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]], value: Any) -> None:
         self.data[unwrap_index(index)] = unwrap_tensor_data(value)
 
     def __str__(self) -> str:
@@ -238,7 +238,7 @@ class TensorIterator(Iterator[Tensor]):
         raise StopIteration
 
 
-def unwrap_index(obj: Union[Any, Tuple[Any, ...]]) -> Union[TTensor, Tuple[TTensor, ...]]:
+def unwrap_index(obj: Union[Any, tuple[Any, ...]]) -> Union[TTensor, tuple[TTensor, ...]]:
     """
     Unwraps the tensor data from the input object or tuple of objects.
 
@@ -267,7 +267,7 @@ def get_tensor_backend(backend: BackendType) -> TensorBackend:
     :param backend: Backend type.
     :return: Corresponding tensor backend type.
     """
-    BACKEND_TO_TENSOR_BACKEND: Dict[BackendType, TensorBackend] = {
+    BACKEND_TO_TENSOR_BACKEND: dict[BackendType, TensorBackend] = {
         BackendType.OPENVINO: TensorBackend.numpy,
         BackendType.ONNX: TensorBackend.numpy,
         BackendType.TORCH_FX: TensorBackend.torch,

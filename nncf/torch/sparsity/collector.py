@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.common.sparsity.collector import BaseSparseModelStatisticsCollector
 from nncf.common.sparsity.collector import WeightDescription
@@ -24,7 +23,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
     """
 
     def __init__(
-        self, model: NNCFNetwork, sparse_modules_info: List[SparseModuleInfo], supports_sparse_bias: bool = False
+        self, model: NNCFNetwork, sparse_modules_info: list[SparseModuleInfo], supports_sparse_bias: bool = False
     ):
         """
         Initializes statistics collector of the sparse tf.keras.Model.
@@ -36,7 +35,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
         self._sparse_modules_info = sparse_modules_info
         self._supports_sparse_bias = supports_sparse_bias
 
-    def _collect_weights_descriptions(self) -> List[WeightDescription]:
+    def _collect_weights_descriptions(self) -> list[WeightDescription]:
         weights_descriptions = []
         processed_modules = []
 

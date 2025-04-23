@@ -16,7 +16,15 @@ import torch
 from torch import nn
 
 import nncf
-from tests.torch.test_models.alexnet import AlexNet as ModelWithSingleInput
+
+
+class ModelWithSingleInput(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._conv2d_0 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1)
+
+    def forward(self, input_0):
+        return self._conv2d_0(input_0)
 
 
 class ModelWithMultipleInputs(nn.Module):

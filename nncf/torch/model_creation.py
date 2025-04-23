@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from os import path as osp
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 from torch.distributed import barrier
@@ -64,12 +64,12 @@ from nncf.torch.utils import training_mode_switcher
 def create_compressed_model(
     model: Module,
     config: NNCFConfig,
-    compression_state: Optional[Dict[str, Any]] = None,
+    compression_state: Optional[dict[str, Any]] = None,
     dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+    wrap_inputs_fn: Callable[[tuple, dict], tuple[tuple, dict]] = None,
     wrap_outputs_fn: Callable[[Any], Any] = None,
     dump_graphs=True,
-) -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+) -> tuple[CompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -315,7 +315,7 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init=True) -
 
 
 def create_compression_algorithm_builder_from_algo_names(
-    algo_names: List[str], config: NNCFConfig, should_init: bool
+    algo_names: list[str], config: NNCFConfig, should_init: bool
 ) -> PTCompressionAlgorithmBuilder:
     """
     Create compression algorithm builders by a given list of algorithm names.
@@ -410,7 +410,7 @@ def is_wrapped_model(model: Any) -> bool:
         FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
-def load_from_config(model: Module, config: Dict[str, Any], example_input: Optional[Any] = None) -> Module:
+def load_from_config(model: Module, config: dict[str, Any], example_input: Optional[Any] = None) -> Module:
     """
     Wraps given model and recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded state_dict.
@@ -440,7 +440,7 @@ def load_from_config(model: Module, config: Dict[str, Any], example_input: Optio
         FunctionCallTelemetryExtractor("nncf.torch.get_config"),
     ],
 )
-def get_config(model: Module) -> Dict[str, Any]:
+def get_config(model: Module) -> dict[str, Any]:
     """
     Returns the configuration object of the compressed model.
 

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import math
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -81,10 +81,10 @@ class GPTQ:
         model: TModel,
         graph: NNCFGraph,
         dataset: Dataset,
-        weight_compression_parameters: List[WeightCompressionParameters],
+        weight_compression_parameters: list[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> Tuple[TModel, Dict[str, Tensor], Dict[str, Tensor]]:
+    ) -> tuple[TModel, dict[str, Tensor], dict[str, Tensor]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
 
@@ -133,7 +133,7 @@ class GPTQ:
         self,
         model: TModel,
         graph: NNCFGraph,
-        target_nodes: List[NNCFNode],
+        target_nodes: list[NNCFNode],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> StatisticPointsContainer:
         """
@@ -156,7 +156,7 @@ class GPTQ:
 
         return self._layerwise_engine.get_statistic_points(model, graph, filtered_nodes)
 
-    def _calculate_hessian(self, node: NNCFNode, inputs: List[Tensor]) -> Tensor:
+    def _calculate_hessian(self, node: NNCFNode, inputs: list[Tensor]) -> Tensor:
         """
         Calculates the Hessian matrix for the given node and inputs.
 
@@ -196,7 +196,7 @@ class GPTQ:
         graph: NNCFGraph,
         wc_params: WeightCompressionParameters,
         hessian: Tensor,
-        inputs: List[Tensor],
+        inputs: list[Tensor],
     ):
         """
         Quantizes the weights of the model based on the calculated Hessian matrix.

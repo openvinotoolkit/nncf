@@ -10,7 +10,7 @@
 # limitations under the License.
 
 
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 import torch
@@ -202,7 +202,7 @@ def strip_quantized_model(model: NNCFNetwork, strip_format: StripFormat = StripF
 
 def asym_fq_to_decompressor(
     quantizer: AsymmetricQuantizer, weight: torch.Tensor
-) -> Tuple[Union[INT8AsymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor], torch.Tensor]:
+) -> tuple[Union[INT8AsymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor], torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 
@@ -260,7 +260,7 @@ def asym_fq_to_decompressor(
 
 def sym_fq_to_decompressor(
     quantizer: SymmetricQuantizer, weight: torch.Tensor
-) -> Tuple[Union[INT8SymmetricWeightsDecompressor, INT4SymmetricWeightsDecompressor], torch.Tensor]:
+) -> tuple[Union[INT8SymmetricWeightsDecompressor, INT4SymmetricWeightsDecompressor], torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 

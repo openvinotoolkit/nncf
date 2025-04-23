@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
@@ -27,7 +27,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
 from nncf.tensor import TensorDataType
 
-ReductionAxes = Union[int, Tuple[int, ...]]
+ReductionAxes = Union[int, tuple[int, ...]]
 
 
 def do_integer_quantization(
@@ -36,7 +36,7 @@ def do_integer_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-) -> Tuple[Tensor, Tensor, Tensor]:
+) -> tuple[Tensor, Tensor, Tensor]:
     """
     Quantizes the given weight tensor to an integer data type.
 
@@ -161,7 +161,7 @@ def integer_quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
+) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     Quantizes the given weight tensor to an integer data type and then dequantizes it back to obtain float32 values.
 

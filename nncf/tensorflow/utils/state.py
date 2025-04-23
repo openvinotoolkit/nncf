@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import tensorflow as tf
 
@@ -67,7 +67,7 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
         self._state = None
 
     @property
-    def state(self) -> Dict[str, Any]:
+    def state(self) -> dict[str, Any]:
         """
         Returns the compression state which was extracted from the checkpoint.
 
@@ -93,7 +93,7 @@ class ConfigState(tf.train.experimental.PythonState):
     Used to save/load a config into the tf.train.Checkpoint.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[dict[str, Any]] = None):
         """
         :param config: Config.
         """

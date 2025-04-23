@@ -10,7 +10,7 @@
 # limitations under the License.
 from functools import reduce
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 import torch
@@ -42,11 +42,11 @@ class StructuredMaskContextStatistics:
 
     def __init__(
         self,
-        weight_shape: Tuple[int, int],
-        pruned_weight_shape: Tuple[int, int],
-        bias_shape: Tuple[int],
-        pruned_bias_shape: Tuple[int],
-        head_or_channel_id_to_keep: List[int],
+        weight_shape: tuple[int, int],
+        pruned_weight_shape: tuple[int, int],
+        bias_shape: tuple[int],
+        pruned_bias_shape: tuple[int],
+        head_or_channel_id_to_keep: list[int],
         module_node_name: NNCFNodeName,
     ):
         """
@@ -84,7 +84,7 @@ class StructuredMaskContext:
         self,
         sparsifier_operand: MovementSparsifier,
         module_node_name: NNCFNodeName,
-        grid_size: Tuple[int, int],
+        grid_size: tuple[int, int],
         prune_by_row: bool,
     ):
         """
@@ -210,8 +210,8 @@ class StructuredMaskContext:
         """
         node = self.sparsifier_operand.target_module_node
         assert isinstance(node.layer_attributes, tuple(EXPECTED_NODE_LAYER_ATTRS))
-        weight_shape: Tuple[int, int] = tuple(get_weight_shape_legacy(node.layer_attributes))
-        bias_shape: Tuple[int] = (
+        weight_shape: tuple[int, int] = tuple(get_weight_shape_legacy(node.layer_attributes))
+        bias_shape: tuple[int] = (
             (get_bias_shape_legacy(node.layer_attributes),) if self.sparsifier_operand.prune_bias else (0,)
         )
 
@@ -241,12 +241,12 @@ class StructuredMaskContext:
             module_node_name=self.module_node_name,
         )
 
-    def _resolve_grid_size(self, grid_size) -> Tuple[int, int]:
+    def _resolve_grid_size(self, grid_size) -> tuple[int, int]:
         a, b = grid_size
         return (a if a > 0 else self.operand_mask_shape[0], b if b > 0 else self.operand_mask_shape[1])
 
     @staticmethod
-    def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: Tuple[int, int]) -> torch.Tensor:
+    def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: tuple[int, int]) -> torch.Tensor:
         assert len(structured_mask.shape) == len(grid_size), (
             f"Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D."
         )
@@ -261,7 +261,7 @@ class StructuredMaskContextGroup:
     Stores together the structured mask contexts that are related to the same building block.
     """
 
-    def __init__(self, group_id: int, structured_mask_contexts: List[StructuredMaskContext]):
+    def __init__(self, group_id: int, structured_mask_contexts: list[StructuredMaskContext]):
         """
         Initializes a group of related structured mask contexts.
 
@@ -292,7 +292,7 @@ class StructuredMaskHandler:
     via the `StructuredMaskContext` of each module that supports structured masking.
     """
 
-    def __init__(self, compressed_model: NNCFNetwork, sparsified_module_info_list: List[SparseModuleInfo]):
+    def __init__(self, compressed_model: NNCFNetwork, sparsified_module_info_list: list[SparseModuleInfo]):
         """
         Initializes the handler for structured masking in movement sparsity.
 
@@ -389,8 +389,8 @@ class StructuredMaskHandler:
 
     @staticmethod
     def _create_structured_mask_context_groups(
-        nncf_network: NNCFNetwork, sparsified_module_info_list: List[SparseModuleInfo]
-    ) -> List[StructuredMaskContextGroup]:
+        nncf_network: NNCFNetwork, sparsified_module_info_list: list[SparseModuleInfo]
+    ) -> list[StructuredMaskContextGroup]:
         module_vs_sparse_module_info_map = {minfo.module: minfo for minfo in sparsified_module_info_list}
 
         pruning_producing_types = ["linear"]

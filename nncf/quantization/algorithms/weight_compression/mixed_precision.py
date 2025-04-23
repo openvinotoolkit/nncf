@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Iterable, List, Optional, Tuple, TypeVar
+from typing import Iterable, Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -63,9 +63,9 @@ class MixedPrecisionCriterion(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        weight_params: List[WeightCompressionParameters],
+        weight_params: list[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
-    ) -> List[float]:
+    ) -> list[float]:
         """
         Calculates sensitivity of each layer according to a criterion.
 
@@ -78,7 +78,7 @@ class MixedPrecisionCriterion(Algorithm):
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-        weight_params: List[WeightCompressionParameters] = None,
+        weight_params: list[WeightCompressionParameters] = None,
     ) -> None:
         """
         Assigns quantization precision based on computed layers' sensitivities, ratio of parameters.
@@ -113,7 +113,7 @@ class MixedPrecisionCriterion(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -132,7 +132,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
     """
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -191,9 +191,9 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         self,
         model: TModel,
         graph: NNCFGraph,
-        weight_params: List[WeightCompressionParameters],
+        weight_params: list[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
-    ) -> List[float]:
+    ) -> list[float]:
         scores = []
         for weight_param in track(weight_params, description="Mixed-Precision assignment"):
             scores.append(self._calc_score_per_node(weight_param, model, graph, statistic_points))
@@ -203,7 +203,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:
         msg = "No statistics collection intended for data-free mixed precision criterion"
         raise RuntimeError(msg)
@@ -218,7 +218,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
     STAT_KEY = None
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -267,7 +267,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:
         self._set_backend_entity(model)
 
@@ -298,7 +298,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         Get statistic collector
         """
 
-    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
+    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
         """
         This method returns the activation layer and corresponding port id for the node.
 
@@ -314,7 +314,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
 
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str
-    ) -> List[Tensor]:
+    ) -> list[Tensor]:
         act_node, act_port_id = self._get_activation_node_and_port(node, nncf_graph)
         stats = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
