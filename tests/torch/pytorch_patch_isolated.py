@@ -40,9 +40,9 @@ def clean_source_code(code_source):
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
 def test_jit_if_tracing_script_source_equals():
     # Get original torch.jit._script_if_tracing source
-    torch_source = clean_source_code(inspect.getsource(torch.jit._script_if_tracing))
+    from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT_IF_TRACE
 
-    import nncf  # noqa: F401
+    torch_source = clean_source_code(inspect.getsource(_ORIG_JIT_SCRIPT_IF_TRACE))
 
     # Get torch.jit._script_if_tracing source after patching was performed
     nncf_source = clean_source_code(inspect.getsource(torch.jit._script_if_tracing))

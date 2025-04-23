@@ -283,6 +283,8 @@ class OriginalOpInfo:
 ORIGINAL_OPERATORS: List[OriginalOpInfo] = []
 ORIGINAL_CALL = torch.nn.Module.__call__
 _ORIG_JIT_SCRIPT = None
+_ORIG_JIT_SCRIPT_IF_TRACE = None
+
 _ORIG_JIT_TRACE_MAKE_MODULE = None
 _ORIG_TORCH_COMPILE: Union[Callable, None] = None
 
@@ -312,6 +314,8 @@ def patch_torch_jit():
 
     # Patch torch.jit._script_if_tracing because it references an original
     # unpatched torch.jit.script and the patching above does not affect it
+    global _ORIG_JIT_SCRIPT_IF_TRACE
+    _ORIG_JIT_SCRIPT_IF_TRACE = getattr(torch.jit, "_script_if_tracing")
     setattr(torch.jit, "_script_if_tracing", torch_jit_script_if_tracing)
 
 
