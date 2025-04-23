@@ -285,7 +285,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompressionAlgoBackend):
     @staticmethod
     def mean_variance_statistic_collector(
-        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         return PTMixedPrecisionAlgoBackend.mean_variance_statistic_collector(
             reduction_axes=reduction_axes, subset_size=subset_size
@@ -293,7 +293,7 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
 
     @staticmethod
     def max_variance_statistic_collector(
-        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         return PTMixedPrecisionAlgoBackend.max_variance_statistic_collector(
             reduction_axes=reduction_axes, subset_size=subset_size
@@ -301,7 +301,7 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
 
     @staticmethod
     def mean_abs_max_statistic_collector(
-        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         return PTMixedPrecisionAlgoBackend.mean_abs_max_statistic_collector(
             reduction_axes=reduction_axes, subset_size=subset_size

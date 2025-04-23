@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import warnings
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDict, TypeVar, Union
+from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
