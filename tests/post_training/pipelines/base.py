@@ -233,7 +233,6 @@ class BaseTestPipeline(ABC):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
-        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -250,7 +249,6 @@ class BaseTestPipeline(ABC):
         self.memory_monitor = memory_monitor
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
-        self.torch_compile_validation = torch_compile_validation
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
@@ -414,7 +412,6 @@ class PTQTestPipeline(BaseTestPipeline):
         reference_data,
         no_eval,
         run_benchmark_app,
-        torch_compile_validation,
         params=None,
         batch_size=1,
         memory_monitor=False,
@@ -429,7 +426,6 @@ class PTQTestPipeline(BaseTestPipeline):
             reference_data,
             no_eval,
             run_benchmark_app,
-            torch_compile_validation,
             params,
             batch_size,
             memory_monitor,

@@ -60,7 +60,6 @@ def test_sparsify_activations(
         run_torch_cuda_backend,
         subset_size,
         run_benchmark_app,
-        False,  # torch_compile_validation is not used in SA
         capsys,
         extra_columns,
         False,  # memory_monitor is not used in SA
