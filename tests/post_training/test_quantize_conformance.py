@@ -294,7 +294,7 @@ def test_ptq_quantization(
         run_torch_cuda_backend,
         subset_size,
         run_benchmark_app,
-        True, # Torch compile validation is true by default for the FX backend to have torch compile testing path as default.
+        True,  # torch_compile_validation path is default for FX backend.
         capsys,
         extra_columns,
         memory_monitor,

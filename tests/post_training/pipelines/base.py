@@ -500,12 +500,13 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
-            # Torch export is used to save the model because ov.convert_model does not fully claim support for 
+            # Torch export is used to save the model because ov.convert_model does not fully claim support for
             # Converting ExportedProgram
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")
-            # torch.compile is used to cache the OV model because this is the default user journey with Torch FX backend. 
-            # This is also neccesary because PT FE translation in OV for convert_model and the translations used for 
-            # torch.compile sometimes differ. This method can help ensure that the correct OV graph is being verified.
+            # torch.compile is used to cache the OV model because this is the default user journey with Torch FX
+            # backend. This is also neccesary because PT FE translation in OV for convert_model
+            # and the translations used for torch.compile sometimes differ. This method can help
+            # ensure that the correct OV graph is being verified.
             mod = torch.compile(
                 exported_model.module(),
                 backend="openvino",
