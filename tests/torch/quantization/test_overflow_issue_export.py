@@ -368,7 +368,17 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale, onnx_input_output_low)
 
 
-@pytest.mark.parametrize("model", [TwoConvTestModel(), EightConvTestModel(), DepthWiseConvTestModel()])
+@pytest.mark.parametrize(
+    "model",
+    [
+        TwoConvTestModel(),
+        EightConvTestModel(),
+        pytest.param(
+            DepthWiseConvTestModel(),
+            marks=pytest.mark.skip(reason="https://github.com/microsoft/onnxruntime/issues/24518"),
+        ),
+    ],
+)
 def test_is_pytorch_output_the_same_as_onnx_qdq_overflow_fix_applied(tmp_path, model):
     nncf_config = get_config_for_export_mode(True)
     nncf_config.update({"input_info": {"sample_size": [1, 1, 20, 20]}})
