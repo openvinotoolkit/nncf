@@ -237,8 +237,8 @@ def get_integer_quantization_model(
 def get_float_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
@@ -267,8 +267,8 @@ def get_float_quantization_model(
 def get_float_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
@@ -523,8 +523,8 @@ def _build_integer_quantization_model(
 def _build_float_quantization_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
@@ -667,8 +667,8 @@ def _build_integer_quantize_dequantize_weight_model(
 def _build_float_quantize_dequantize_weight_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
     return_nodes: Optional[bool] = False,
