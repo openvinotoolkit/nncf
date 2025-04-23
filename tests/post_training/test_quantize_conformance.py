@@ -276,10 +276,10 @@ def test_ptq_quantization(
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
+    torch_compile_validation: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
-    torch_compile_validation: bool = True,
 ):
     run_pipeline(
         test_case_name,
@@ -294,7 +294,7 @@ def test_ptq_quantization(
         run_torch_cuda_backend,
         subset_size,
         run_benchmark_app,
-        torch_compile_validation,
+        True, # Torch compile validation is true by default for the FX backend to have torch compile testing path as default.
         capsys,
         extra_columns,
         memory_monitor,

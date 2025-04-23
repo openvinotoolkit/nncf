@@ -485,30 +485,6 @@ class PTQTestPipeline(BaseTestPipeline):
             self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
 
-    def _rename_files(self, folder_path, new_name):
-        model_folder = folder_path / "model"
-        bin_file = None
-        xml_file = None
-        if len(os.listdir(model_folder)) > 2:
-            msg = "Graph break encountered in torch compile!"
-            raise nncf.InternalError(msg)
-
-        for file in os.listdir(model_folder):
-            if file.endswith(".bin"):
-                bin_file = file
-            elif file.endswith(".xml"):
-                xml_file = file
-        if bin_file is None or xml_file is None:
-            msg = "Openvino Model Files Not Found!"
-            raise FileNotFoundError(msg)
-        bin_new_path = folder_path / f"{new_name}.bin"
-        xml_new_path = folder_path / f"{new_name}.xml"
-
-        os.rename(os.path.join(model_folder, bin_file), bin_new_path)
-        os.rename(os.path.join(model_folder, xml_file), xml_new_path)
-
-        os.rmdir(model_folder)
-
     def save_compressed_model(self) -> None:
         """
         Save compressed model to IR.
@@ -524,14 +500,28 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
+            # Torch export is used to save the model because ov.convert_model does not fully claim support for 
+            # Converting ExportedProgram
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")
+            # torch.compile is used to cache the OV model because this is the default user journey with Torch FX backend. 
+            # This is also neccesary because PT FE translation in OV for convert_model and the translations used for 
+            # torch.compile sometimes differ. This method can help ensure that the correct OV graph is being verified.
             mod = torch.compile(
                 exported_model.module(),
                 backend="openvino",
                 options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
             )
             mod(self.dummy_tensor)
-            self._rename_files(self.output_model_dir, "model")
+
+            # Get the OV *.xml files in torch compile cache directory
+            cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))
+            if len(cached_ov_model_files) > 1:
+                msg = "Graph break encountered in torch compile!"
+                raise nncf.InternalError(msg)
+            elif len(cached_ov_model_files) == 0:
+                msg = "Openvino Model Files Not Found!"
+                raise FileNotFoundError(msg)
+            self.path_compressed_ir = cached_ov_model_files[0]
 
             if self.backend == BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()
