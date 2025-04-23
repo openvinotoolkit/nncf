@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import torch
 
@@ -57,7 +57,7 @@ class GraphTracer:
 
 
 T = TypeVar("T")
-WrapInputsFnType = Callable[[Tuple, Dict], Tuple[Tuple, Dict]]
+WrapInputsFnType = Callable[[tuple, dict], tuple[tuple, dict]]
 WrapOutputsFnType = Callable[[T], T]
 
 

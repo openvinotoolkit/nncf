@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 import torch.utils.cpp_extension
@@ -23,8 +23,8 @@ from torch.nn.parallel import DistributedDataParallel
 
 import nncf
 from nncf import nncf_logger
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.utils.api_marker import api
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
@@ -181,18 +181,18 @@ class MagicFunctionsToPatch:
 
 @api(canonical_alias="nncf.torch.register_operator")
 def register_operator(name=None):
-    if is_experimental_torch_tracing_enabled():
-
-        def wrap(operator):
-            # Skip wrapping operator for tracing by TorchFunctionMode
-            return operator
-    else:
+    if is_torch_tracing_by_patching():
 
         def wrap(operator):
             op_name = name
             if op_name is None:
                 op_name = operator.__name__
             return wrap_operator(operator, PatchedOperatorInfo(op_name, NamespaceTarget.EXTERNAL))
+    else:
+
+        def wrap(operator):
+            # Skip wrapping operator for tracing by TorchFunctionMode
+            return operator
 
     return wrap
 
@@ -280,7 +280,7 @@ class OriginalOpInfo:
         self.op = op
 
 
-ORIGINAL_OPERATORS: List[OriginalOpInfo] = []
+ORIGINAL_OPERATORS: list[OriginalOpInfo] = []
 ORIGINAL_CALL = torch.nn.Module.__call__
 _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
@@ -325,7 +325,7 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
         nncf_logger.debug(f"Not patching {op_name} since it is missing in this version of PyTorch")
 
 
-def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:
+def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> list[str]:
     """
     Seeks all attributes from the namespace, then takes only attributes,
     which types are function, builtin, method or method descriptor.
@@ -334,7 +334,7 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
     :param do_filter: If True return only public functions, else - otherwise.
     """
 
-    def remove_private_functions(names: List[str]) -> List[str]:
+    def remove_private_functions(names: list[str]) -> list[str]:
         filtered_names = []
         for name in names:
             if name.startswith("_"):
@@ -360,7 +360,7 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
 
 
 def patch_torch_operators():
-    if is_experimental_torch_tracing_enabled():
+    if not is_torch_tracing_by_patching():
         return
 
     # Only patch torch.jit.script during first patch_torch_operators call

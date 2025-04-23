@@ -15,7 +15,7 @@ import subprocess
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Iterable
 
 import numpy as np
 import openvino as ov
@@ -51,7 +51,7 @@ def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
         download.download_and_extract(root, info)
 
 
-def get_anomaly_images(data_loader: Iterable[Any]) -> List[Dict[str, torch.Tensor]]:
+def get_anomaly_images(data_loader: Iterable[Any]) -> list[dict[str, torch.Tensor]]:
     anomaly_images_ = []
     for data_item in data_loader:
         if data_item["label"].int() == 1:
@@ -60,8 +60,8 @@ def get_anomaly_images(data_loader: Iterable[Any]) -> List[Dict[str, torch.Tenso
 
 
 def validate(
-    model: ov.CompiledModel, val_loader: Iterable[Any], val_params: Dict[str, float]
-) -> Tuple[float, List[float]]:
+    model: ov.CompiledModel, val_loader: Iterable[Any], val_params: dict[str, float]
+) -> tuple[float, list[float]]:
     metric = create_metric_collection(["F1Score"], prefix="image_")["F1Score"]
     metric.threshold = 0.5
     per_sample_metric_values = []
@@ -82,7 +82,7 @@ def validate(
     return metric_value, per_sample_metric_values
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: list[int]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),

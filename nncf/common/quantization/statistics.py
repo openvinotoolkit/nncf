@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
@@ -55,7 +55,7 @@ class QuantizersCounter:
         self.potential_count = potential_count
 
 
-def _quantizers_counter_to_rows(counter: QuantizersCounter, qt: str) -> List[List[str]]:
+def _quantizers_counter_to_rows(counter: QuantizersCounter, qt: str) -> list[list[str]]:
     """
     Converts the counter of quantizers to rows.
 
@@ -129,8 +129,8 @@ class QuantizationStatistics(Statistics):
         self,
         wq_counter: QuantizersCounter,
         aq_counter: QuantizersCounter,
-        num_wq_per_bitwidth: Dict[int, int],
-        num_aq_per_bitwidth: Dict[int, int],
+        num_wq_per_bitwidth: dict[int, int],
+        num_aq_per_bitwidth: dict[int, int],
         ratio_of_enabled_quantizations: float,
     ):
         self.wq_counter = wq_counter

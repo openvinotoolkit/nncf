@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Generator, Optional
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
@@ -49,14 +49,14 @@ class ShapeOnlyTensorMetaComparator(TensorMetaComparator):
 
 class InputsMatcher:
     def __call__(
-        self, node_inputs: List[TensorMeta], real_inputs: List[TensorMeta], tm_comparators: List[TensorMetaComparator]
+        self, node_inputs: list[TensorMeta], real_inputs: list[TensorMeta], tm_comparators: list[TensorMetaComparator]
     ) -> bool:
         raise NotImplementedError
 
 
 class FirstInputsMatcher(InputsMatcher):
     def __call__(
-        self, node_inputs: List[TensorMeta], real_inputs: List[TensorMeta], tm_comparators: List[TensorMetaComparator]
+        self, node_inputs: list[TensorMeta], real_inputs: list[TensorMeta], tm_comparators: list[TensorMetaComparator]
     ) -> bool:
         if not node_inputs or not real_inputs:
             return False
@@ -73,9 +73,9 @@ class FirstInputsMatcher(InputsMatcher):
 class DefaultInputsMatcher(InputsMatcher):
     def __call__(
         self,
-        saved_inputs: List[TensorMeta],
-        actual_inputs: List[TensorMeta],
-        tm_comparators: List[TensorMetaComparator],
+        saved_inputs: list[TensorMeta],
+        actual_inputs: list[TensorMeta],
+        tm_comparators: list[TensorMetaComparator],
     ) -> bool:
         if saved_inputs is None and actual_inputs:
             return False
@@ -120,8 +120,8 @@ class OperationExecutionContext:
         operator_name: str,
         scope_in_model: Scope,
         call_order: int,
-        tensor_metas: List[TensorMeta],
-        tm_comparators: List[TensorMetaComparator] = None,
+        tensor_metas: list[TensorMeta],
+        tm_comparators: list[TensorMetaComparator] = None,
         input_matcher: InputsMatcher = None,
     ):
         self.op_address = OperationAddress(operator_name, scope_in_model, call_order)
@@ -170,7 +170,7 @@ class DynamicGraphNodeParameters:
     def __init__(
         self,
         layer_attributes: BaseLayerAttributes,
-        ignored_algorithms: List[str],
+        ignored_algorithms: list[str],
         is_called_inside_nncf_module: bool,
         calling_module_id: int,
     ):
@@ -188,7 +188,7 @@ class DynamicGraphNode:
         layer_attributes: BaseLayerAttributes,
         op_exec_context: OperationExecutionContext,
         calling_module_id: int,
-        ignored_algorithms: List[str],
+        ignored_algorithms: list[str],
         is_called_inside_nncf_module: bool,
         is_in_iteration_scope: bool,
     ):
@@ -202,7 +202,7 @@ class DynamicGraphNode:
         self.is_in_iteration_scope = is_in_iteration_scope
 
     @classmethod
-    def build_from_nx_node(cls, nx_node: Dict[str, Any]) -> "DynamicGraphNode":
+    def build_from_nx_node(cls, nx_node: dict[str, Any]) -> "DynamicGraphNode":
         return cls(
             node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
             node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
@@ -226,11 +226,11 @@ class DynamicGraphEdge:
         self,
         from_node_id: int,
         to_node_id: int,
-        activation_shape: List[int],
+        activation_shape: list[int],
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
-        parallel_input_port_ids: List[int],
+        parallel_input_port_ids: list[int],
     ):
         """
         :param from_node_id - A numeric identifier of the starting node of the edge
@@ -256,7 +256,7 @@ class DynamicGraphEdge:
 
     @classmethod
     def build_between_two_nx_nodes(
-        cls, from_nx_node: Dict[str, Any], to_nx_node: Dict[str, Any], nx_edge: Dict[str, Any]
+        cls, from_nx_node: dict[str, Any], to_nx_node: dict[str, Any], nx_edge: dict[str, Any]
     ) -> "DynamicGraphEdge":
         from_node_id = from_nx_node[DynamicGraph.ID_NODE_ATTR]
         to_node_id = to_nx_node[DynamicGraph.ID_NODE_ATTR]
@@ -275,14 +275,14 @@ class DefaultScopeNodeMatcher:
     def __init__(self, node_id_to_key_dict, nx_graph):
         self._node_id_to_key_dict = node_id_to_key_dict
         self._nx_graph = nx_graph
-        self._inputless_nodes: Dict[str, DynamicGraphNode] = {}
+        self._inputless_nodes: dict[str, DynamicGraphNode] = {}
 
     def get_node_by_id(self, node_id):
         return self._nx_graph.nodes[self._node_id_to_key_dict[node_id]]
 
     def _find_nodes_with_matching_context_among_inputless(
         self, op_exec_context: OperationExecutionContext
-    ) -> Dict[str, DynamicGraphNode]:
+    ) -> dict[str, DynamicGraphNode]:
         node_candidates = {}
         for nx_node_key, node in self._inputless_nodes.items():
             if op_exec_context.matches_saved_inputs_from(node.op_exec_context):
@@ -291,7 +291,7 @@ class DefaultScopeNodeMatcher:
 
     def _find_nodes_with_matching_context_and_inputs(
         self, op_exec_context: OperationExecutionContext
-    ) -> Dict[str, DynamicGraphNode]:
+    ) -> dict[str, DynamicGraphNode]:
         nx_node_candidates = {}
         for info in op_exec_context.tensor_metas:
             if info is None or info.creator_id is None:
@@ -302,7 +302,7 @@ class DefaultScopeNodeMatcher:
                 if op_exec_context.matches_saved_inputs_from(successor_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR]):
                     nx_node_candidates[successor_node_key] = successor_node
 
-        node_candidates: Dict[str, DynamicGraphNode] = {}
+        node_candidates: dict[str, DynamicGraphNode] = {}
         for nx_node_key, nx_node_dict in nx_node_candidates.items():
             node_candidates[nx_node_key] = DynamicGraphNode.build_from_nx_node(nx_node_dict)
 
@@ -368,7 +368,7 @@ class DefaultScopeNodeMatcher:
         return node
 
     def find_node(
-        self, op_address: OperationAddress, tensor_metas: List[TensorMeta], tm_comparators: List[TensorMetaComparator]
+        self, op_address: OperationAddress, tensor_metas: list[TensorMeta], tm_comparators: list[TensorMetaComparator]
     ) -> DynamicGraphNode:
         op_exec_context = OperationExecutionContext(
             op_address.operator_name,
@@ -460,7 +460,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         return node
 
     def find_node(
-        self, op_address: OperationAddress, tensor_metas: List[TensorMeta], tm_comparators: List[TensorMetaComparator]
+        self, op_address: OperationAddress, tensor_metas: list[TensorMeta], tm_comparators: list[TensorMetaComparator]
     ) -> Optional[DynamicGraphNode]:
         iter_scopes = op_address.scope_in_model.get_iteration_scopes()
         # compare meta information about first input nodes during the matching. During the iteration some nodes may
@@ -521,7 +521,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     break
         return node_candidates
 
-    def get_first_iteration_modules(self) -> Dict:
+    def get_first_iteration_modules(self) -> dict:
         return self._first_iteration_nodes
 
 
@@ -547,8 +547,8 @@ class NodeManager:
 
     @staticmethod
     def choose_tm_comparators(
-        op_address: OperationAddress, input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]]
-    ) -> List[TensorMetaComparator]:
+        op_address: OperationAddress, input_comparators_per_scope: list[tuple[TensorMetaComparator, list[str]]]
+    ) -> list[TensorMetaComparator]:
         result = []
         for pairs in input_comparators_per_scope:
             comparator, scopes = pairs
@@ -560,8 +560,8 @@ class NodeManager:
     def find_node(
         self,
         op_address: OperationAddress,
-        tensor_metas: List[TensorMeta],
-        input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
+        tensor_metas: list[TensorMeta],
+        input_comparators_per_scope: list[tuple[TensorMetaComparator, list[str]]],
     ) -> DynamicGraphNode:
         matcher = self.choose_matcher(op_address)
         comparators = self.choose_tm_comparators(op_address, input_comparators_per_scope)
@@ -570,8 +570,8 @@ class NodeManager:
     def add_node(
         self,
         op_address: OperationAddress,
-        tensor_metas: List[TensorMeta],
-        tm_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
+        tensor_metas: list[TensorMeta],
+        tm_comparators_per_scope: list[tuple[TensorMetaComparator, list[str]]],
         inputs,
         node_parameters: DynamicGraphNodeParameters,
     ) -> DynamicGraphNode:
@@ -638,16 +638,16 @@ class DynamicGraph:
     def find_node(
         self,
         op_address: OperationAddress,
-        tensor_metas: List[TensorMeta],
-        input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
+        tensor_metas: list[TensorMeta],
+        input_comparators_per_scope: list[tuple[TensorMetaComparator, list[str]]],
     ) -> DynamicGraphNode:
         return self.match_manager.find_node(op_address, tensor_metas, input_comparators_per_scope)
 
     def add_node(
         self,
         op_address: OperationAddress,
-        tensor_metas: List[TensorMeta],
-        input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
+        tensor_metas: list[TensorMeta],
+        input_comparators_per_scope: list[tuple[TensorMetaComparator, list[str]]],
         inputs: OperatorInput,
         node_parameters: DynamicGraphNodeParameters,
     ) -> DynamicGraphNode:
@@ -672,19 +672,19 @@ class DynamicGraph:
             self._output_nncf_nodes.append(node)
         return node
 
-    def get_input_nodes(self) -> List[DynamicGraphNode]:
+    def get_input_nodes(self) -> list[DynamicGraphNode]:
         return self._input_nncf_nodes
 
     def is_integer_input_node(self, node: DynamicGraphNode) -> bool:
         return node in self._integer_input_nodes
 
-    def get_output_nodes(self) -> List[DynamicGraphNode]:
+    def get_output_nodes(self) -> list[DynamicGraphNode]:
         return self._output_nncf_nodes
 
     def get_nodes_count(self) -> int:
         return self._nx_graph.number_of_nodes()
 
-    def get_all_nodes(self) -> List[DynamicGraphNode]:
+    def get_all_nodes(self) -> list[DynamicGraphNode]:
         all_nodes = []
         for node_key in self._node_id_to_key_dict.values():
             dynamic_graph_node = DynamicGraphNode.build_from_nx_node(self._nx_graph.nodes[node_key])
@@ -698,7 +698,7 @@ class DynamicGraph:
         for from_nx_node_key, to_nx_node_key in self._nx_graph.in_edges:
             yield self._get_edge(self._get_node_by_key(from_nx_node_key), self._get_node_by_key(to_nx_node_key))
 
-    def get_input_edges(self, node: DynamicGraphNode) -> List[DynamicGraphEdge]:
+    def get_input_edges(self, node: DynamicGraphNode) -> list[DynamicGraphEdge]:
         """
         Returns edges of input tensors with description sorted by input port ID.
 
@@ -722,7 +722,7 @@ class DynamicGraph:
         """
         return DynamicGraphNode.build_from_nx_node(self._nx_graph.nodes[key])
 
-    def _get_previous_nodes(self, node: DynamicGraphNode) -> List[DynamicGraphNode]:
+    def _get_previous_nodes(self, node: DynamicGraphNode) -> list[DynamicGraphNode]:
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [DynamicGraphNode.build_from_nx_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
 

@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Optional
 
 import numpy as np
-import openvino.runtime as ov
-import openvino.runtime.op as op
-import openvino.runtime.opset13 as opset
+import openvino as ov
+import openvino.op as op
+import openvino.opset13 as opset
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -65,7 +65,7 @@ def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNod
 
 
 def is_node_with_bias(
-    node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[List[OVOpMetatype]] = None
+    node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[list[OVOpMetatype]] = None
 ) -> bool:
     """
     Checks if the node has a bias or not.
@@ -135,7 +135,7 @@ def get_const_value_as_ov_tensor(const_node: ov.Node) -> ov.Tensor:
 
 
 def get_bias_value(
-    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, node_mapping: Dict[str, ov.Node] = None
+    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, node_mapping: dict[str, ov.Node] = None
 ) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
@@ -227,7 +227,7 @@ def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_
 
 
 def get_inplace_reduce_op(
-    op: Type[ov.Node],
+    op: type[ov.Node],
     reduction_axes: Optional[ReductionAxes],
     use_abs: bool,
     keep_dims: bool = True,
@@ -490,7 +490,7 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
     return get_reduce_op
 
 
-def get_partial_shape_safe(node, port_id) -> Tuple[int, ...]:
+def get_partial_shape_safe(node, port_id) -> tuple[int, ...]:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
         msg = f"Could not collect statistics for the node {node} because its output shape rank is dynamic or negative"
@@ -500,7 +500,7 @@ def get_partial_shape_safe(node, port_id) -> Tuple[int, ...]:
 
 def get_reducer_output_node_names(
     node_type, target_node_name: str, port_id: int, fn_output_port_id: int, inplace: bool
-) -> List[str]:
+) -> list[str]:
     """
     Returns output name to feed to a reducer node.
 
@@ -518,7 +518,7 @@ def get_reducer_output_node_names(
     return [get_result_node_name(target_node_name, port_id)]
 
 
-def get_weight_channel_axes(node: NNCFNode) -> List[int]:
+def get_weight_channel_axes(node: NNCFNode) -> list[int]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
@@ -538,7 +538,7 @@ def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     return node.metatype.const_channel_axis
 
 
-def get_matmul_channel_axes(node: ov.Node) -> List[int]:
+def get_matmul_channel_axes(node: ov.Node) -> list[int]:
     """
     Calculate channel axes for the MatMul operation.
 
@@ -566,7 +566,7 @@ def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any
 
 
 def get_weighted_layer_attributes(
-    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[int, Any]
+    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
     Function retrieves common layer attributes from the given node.
@@ -628,7 +628,7 @@ def get_weighted_layer_attributes(
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
 
 
-def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
     """
     Returns axis number of the activation tensor which correspond to it channel.
 

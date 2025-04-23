@@ -12,7 +12,7 @@
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -37,8 +37,8 @@ class PruningGroup:
     """
 
     block: PruningBlock
-    producers: Set[ProducerInfo]
-    consumers: Set[ConsumerInfo]
+    producers: set[ProducerInfo]
+    consumers: set[ConsumerInfo]
 
     def __eq__(self, other: "PruningGroup"):
         return self.block == other.block and self.producers == other.producers and self.consumers == other.consumers
@@ -54,9 +54,9 @@ class PruningGroup:
 def get_pruning_groups(
     graph: NNCFGraph,
     pruning_operations_metatypes: PruningOperationsMetatypeRegistry,
-    prune_operations_types: List[str],
+    prune_operations_types: list[str],
     dump_dir: Optional[Path] = None,
-) -> List[PruningGroup]:
+) -> list[PruningGroup]:
     """
     Determines how nodes of the given types should be pruned: which nodes should be pruned together, along which
     dimension, how many sequent channels with which offset. It's done by initializing PropagationMask's on the
@@ -73,7 +73,7 @@ def get_pruning_groups(
     :return: list of groups with parameters of pruning.
     """
     # 1. Initialize masks for producing nodes
-    all_nodes_to_prune: List[NNCFNode] = graph.get_nodes_by_types(prune_operations_types)
+    all_nodes_to_prune: list[NNCFNode] = graph.get_nodes_by_types(prune_operations_types)
     roots = {}
     for node in all_nodes_to_prune:
         assert isinstance(node.layer_attributes, (LinearLayerAttributes, ConvolutionLayerAttributes))
@@ -88,7 +88,7 @@ def get_pruning_groups(
         roots[node.node_id] = root_group
         node.attributes["output_mask"] = mask
 
-    def get_attributes_fn(node: NNCFNode) -> Dict[str, Any]:
+    def get_attributes_fn(node: NNCFNode) -> dict[str, Any]:
         result = {"metatype": str(node.metatype.name), "node_id": str(node.node_id)}
         if node.layer_attributes:
             result.update(map(lambda pair: (pair[0], str(pair[1])), node.layer_attributes.__dict__.items()))
@@ -112,7 +112,7 @@ def get_pruning_groups(
     return [PruningGroup.from_propagation_group(pg) for pg in not_invalid_groups]
 
 
-def select_largest_groups(pruning_groups: List[PruningGroup]) -> List[PruningGroup]:
+def select_largest_groups(pruning_groups: list[PruningGroup]) -> list[PruningGroup]:
     """
     Selects largest pruning groups with larger number of pruning blocks.
     """

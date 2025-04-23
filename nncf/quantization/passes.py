@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import Deque, List, Type, TypeVar
+from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -22,10 +22,10 @@ TModel = TypeVar("TModel")
 
 def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
-    input_nodes: List[NNCFNode],
-    shapeof_metatypes: List[Type[OperatorMetatype]],
-    dropout_metatypes: List[Type[OperatorMetatype]],
-    preserved_metatypes: List[Type[OperatorMetatype]],
+    input_nodes: list[NNCFNode],
+    shapeof_metatypes: list[type[OperatorMetatype]],
+    dropout_metatypes: list[type[OperatorMetatype]],
+    preserved_metatypes: list[type[OperatorMetatype]],
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -49,9 +49,9 @@ def transform_to_inference_graph(
 
 def find_shapeof_subgraphs(
     nncf_graph: NNCFGraph,
-    shapeof_metatypes: List[Type[OperatorMetatype]],
-    input_nodes: List[NNCFNode],
-) -> List[NNCFNode]:
+    shapeof_metatypes: list[type[OperatorMetatype]],
+    input_nodes: list[NNCFNode],
+) -> list[NNCFNode]:
     """
     Returns a list of nodes belonging to ShapeOf subgraphs.
 
@@ -80,7 +80,7 @@ def find_shapeof_subgraphs(
     for shape_of_node in shape_of_nodes:
         shapeof_subgraphs.add(shape_of_node)
 
-        shape_of_queue: Deque[NNCFNode] = collections.deque()
+        shape_of_queue: collections.deque[NNCFNode] = collections.deque()
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
@@ -96,9 +96,9 @@ def find_shapeof_subgraphs(
 
 def find_preserved_nodes(
     graph: NNCFGraph,
-    shapeof_subgraphs: List[NNCFNode],
-    preserved_metatypes: List[Type[OperatorMetatype]],
-) -> List[NNCFNode]:
+    shapeof_subgraphs: list[NNCFNode],
+    preserved_metatypes: list[type[OperatorMetatype]],
+) -> list[NNCFNode]:
     """
     :param graph: The input graph to be analyzed.
     :param shapeof_subgraphs: A list of nodes belonging to ShapeOf subgraphs.
@@ -129,7 +129,7 @@ def find_preserved_nodes(
 
 def remove_nodes_and_reconnect_graph(
     nncf_graph: NNCFGraph,
-    metatypes: List[Type[OperatorMetatype]],
+    metatypes: list[type[OperatorMetatype]],
 ) -> NNCFGraph:
     """
     Removes nodes with metatypes specified by `metatypes` parameter from
@@ -179,8 +179,8 @@ def remove_nodes_and_reconnect_graph(
 
 def find_constant_subgraphs(
     nncf_graph: NNCFGraph,
-    input_nodes: List[NNCFNode],
-) -> List[NNCFNode]:
+    input_nodes: list[NNCFNode],
+) -> list[NNCFNode]:
     """
     Returns a list of nodes belonging to constant subgraphs.
 

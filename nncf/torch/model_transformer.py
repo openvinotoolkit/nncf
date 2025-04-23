@@ -11,7 +11,7 @@
 
 from collections import defaultdict
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 import torch
 from torch import nn
@@ -80,7 +80,7 @@ class PTModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_insertion_transformations(
-        model: NNCFNetwork, transformations: List[PTInsertionCommand], device: Optional[torch.device]
+        model: NNCFNetwork, transformations: list[PTInsertionCommand], device: Optional[torch.device]
     ) -> NNCFNetwork:
         """
         Applies insertion transformations to the model.
@@ -92,7 +92,7 @@ class PTModelTransformer(ModelTransformer):
         :return: A modified NNCFNetwork.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-        fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = defaultdict(list)
+        fns_grouped_by_points: dict[PTInsertionPoint, list[tuple[Callable, TransformationPriority]]] = defaultdict(list)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
@@ -123,7 +123,7 @@ class PTModelTransformer(ModelTransformer):
     @staticmethod
     def _apply_shared_nodes_insertion(
         model: NNCFNetwork,
-        transformations: List[PTSharedFnInsertionCommand],
+        transformations: list[PTSharedFnInsertionCommand],
         device: Optional[torch.device],
     ) -> NNCFNetwork:
         """
@@ -149,7 +149,7 @@ class PTModelTransformer(ModelTransformer):
     @staticmethod
     def _apply_shared_node_insertion_with_compression_type(
         model: NNCFNetwork,
-        transformations: List[PTSharedFnInsertionCommand],
+        transformations: list[PTSharedFnInsertionCommand],
         device: Optional[torch.device],
         compression_module_type: ExtraCompressionModuleType,
     ):
@@ -167,7 +167,7 @@ class PTModelTransformer(ModelTransformer):
         if not model.nncf.is_compression_module_registered(compression_module_type):
             model.nncf.register_compression_module_type(compression_module_type)
 
-        insertion_commands: List[PTInsertionCommand] = []
+        insertion_commands: list[PTInsertionCommand] = []
 
         for shared_command in transformations:
             fn = shared_command.fn
@@ -193,7 +193,7 @@ class PTModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_extraction_transformations(
-        model: NNCFNetwork, transformations: List[PTModelExtractionCommand]
+        model: NNCFNetwork, transformations: list[PTModelExtractionCommand]
     ) -> nn.Sequential:
         """
         Extracts copy of sub-modules.
@@ -207,7 +207,7 @@ class PTModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_bias_correction_transformations(
-        model: NNCFNetwork, transformations: List[PTBiasCorrectionCommand]
+        model: NNCFNetwork, transformations: list[PTBiasCorrectionCommand]
     ) -> NNCFNetwork:
         """
         Applies bias correction transformations on the model.
@@ -227,7 +227,7 @@ class PTModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_weights_update_transformations(
-        model: NNCFNetwork, transformations: List[PTWeightUpdateCommand]
+        model: NNCFNetwork, transformations: list[PTWeightUpdateCommand]
     ) -> NNCFNetwork:
         """
         Applies weight update transformations on the model.

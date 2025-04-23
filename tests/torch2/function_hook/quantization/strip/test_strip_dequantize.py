@@ -20,9 +20,9 @@ from torch import nn
 import nncf
 import nncf.torch
 from nncf.common.quantization.structs import QuantizationScheme
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor as INT4AsymDQ

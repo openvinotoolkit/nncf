@@ -15,19 +15,20 @@ import torch
 from torch import nn
 
 import nncf
-from nncf.experimental.torch2.function_hook import get_hook_storage
-from nncf.experimental.torch2.function_hook import register_post_function_hook
-from nncf.experimental.torch2.function_hook import register_pre_function_hook
-from nncf.experimental.torch2.function_hook import wrap_model
 from nncf.torch import get_config
 from nncf.torch import load_from_config
+from nncf.torch.function_hook import get_hook_storage
+from nncf.torch.function_hook import register_post_function_hook
+from nncf.torch.function_hook import register_pre_function_hook
+from nncf.torch.function_hook import wrap_model
 from tests.torch2.function_hook.helpers import HookWithState
 from tests.torch2.function_hook.helpers import SimpleModel
 
 
 @pytest.mark.parametrize("is_shared_hook", [True, False], ids=["shared_hook", "not_shared_hook"])
-def test_save_load(tmp_path: Path, is_shared_hook: bool):
-    model = wrap_model(SimpleModel())
+def test_save_load(tmp_path: Path, is_shared_hook: bool, use_cuda: bool):
+    device = "cuda" if use_cuda else "cpu"
+    model = wrap_model(SimpleModel().to(device))
 
     hook1 = HookWithState("hook1")
     hook2 = hook1 if is_shared_hook else HookWithState("hook2")
@@ -48,12 +49,12 @@ def test_save_load(tmp_path: Path, is_shared_hook: bool):
 
     ckpt = torch.load(tmp_path / "checkpoint.pth")
     config = ckpt["compression_config"]
-    restored_model = load_from_config(SimpleModel(), config)
+    restored_model = load_from_config(SimpleModel().to(device), config)
     restored_model.load_state_dict(ckpt["model_state_dict"])
 
     assert state_dict == restored_model.state_dict()
 
-    tensor = model.get_example_inputs()
+    tensor = model.get_example_inputs().to(device)
     ret_1 = model(tensor)
     ret_2 = restored_model(tensor)
     assert torch.allclose(ret_1[0], ret_2[0])
@@ -65,7 +66,7 @@ def test_save_load(tmp_path: Path, is_shared_hook: bool):
     assert (hook1 is hook2) == is_shared_hook
 
 
-def test_error_dublicate_names():
+def test_error_duplicate_names():
     config = {
         "compression_state": [
             {

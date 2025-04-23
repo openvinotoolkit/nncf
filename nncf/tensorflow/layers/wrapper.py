@@ -11,7 +11,6 @@
 
 from collections import OrderedDict
 from inspect import getfullargspec
-from typing import Dict
 
 import tensorflow as tf
 
@@ -53,7 +52,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         super().__init__(layer, **kwargs)
         self._track_trackable(layer, name="layer")
 
-        self.weights_attr_ops: Dict[str, Dict[str, NNCFOperation]] = {}
+        self.weights_attr_ops: dict[str, dict[str, NNCFOperation]] = {}
 
         self._init_layer_call_fn_args()
         self._trainable_weights = []

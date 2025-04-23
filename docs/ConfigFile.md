@@ -2,7 +2,6 @@
 
 The Neural Network Compression Framework (NNCF) is designed to work with the configuration file where the parameters of compression that should be applied to the model are specified.
 These parameters are organized as a dictionary and stored in a JSON file that is deserialized when the training starts.
-The JSON file allows using comments that are supported by the [jstyleson](https://github.com/linjackson78/jstyleson) Python package.
 The NNCF config .json file is validated against a JSON schema - you can review the latest version of the schema at https://openvinotoolkit.github.io/nncf/.
 
 Below is an example of the NNCF configuration file:

@@ -10,7 +10,6 @@
 # limitations under the License.
 import inspect
 from copy import deepcopy
-from typing import List
 
 import torch
 import torch.distributed as dist
@@ -81,7 +80,7 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             layerwise_loss_lambda=0.5,
         )
 
-    def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
+    def _sparsify_weights(self, target_model: NNCFNetwork) -> list[PTInsertionCommand]:
         device = get_model_device(target_model)
         sparsified_module_nodes = target_model.nncf.get_weighted_original_graph_nodes(
             nncf_module_names=[m.__name__ for m in SUPPORTED_NNCF_MODULES]
@@ -139,7 +138,7 @@ def is_supported_model_family(model: NNCFNetwork) -> None:
 
 @ADAPTIVE_COMPRESSION_CONTROLLERS.register("pt_movement_sparsity")
 class MovementSparsityController(BaseSparsityAlgoController):
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: list[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         algo_config = extract_algo_specific_config(config, "movement_sparsity")
         sparsify_operations = [m.operand for m in self.sparsified_module_info]

@@ -15,7 +15,6 @@ import subprocess
 import tarfile
 from copy import deepcopy
 from pathlib import Path
-from typing import List
 from urllib.request import urlretrieve
 
 import torch
@@ -60,7 +59,7 @@ def create_dataset(root: Path) -> MVTec:
     return MVTec(root)
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: list[int]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),

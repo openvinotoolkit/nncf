@@ -26,6 +26,7 @@ argprovider
 argspec
 argvalue
 ascale
+ascontiguousarray
 asym
 asymm
 atol
@@ -49,6 +50,7 @@ biburl
 bitwidth
 bitwidths
 bkup
+blockwise
 bnas
 booktitle
 bootstrapnas
@@ -195,7 +197,6 @@ inputless
 interp
 ioff
 iterval
-jstyleson
 junitxml
 keepdim
 keepdims
@@ -220,9 +221,9 @@ logicalor
 logicalxor
 logit
 loglikelihoods
+lspec
 lstmsequence
 lstsq
-lspec
 lyalyushkin
 mapillary
 maskrcnn
@@ -319,7 +320,9 @@ ovhw
 ovlstm
 ovmvn
 ovroi
+ovselu
 pbar
+perchannel
 pertensor
 pinv
 popleft
@@ -339,6 +342,7 @@ pthw
 ptnncf
 ptprelu
 ptrelu
+ptselu
 ptsilu
 ptwc
 pymodules
@@ -452,6 +456,7 @@ thresholded
 thresholding
 timestep
 tinyyolov
+tobytes
 togethercomputer
 torchdynamo
 truncnorm

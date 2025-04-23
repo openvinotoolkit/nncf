@@ -12,8 +12,6 @@
 Base classes for NNCF PyTorch sparsity algorithm builder and controller objects.
 """
 
-from typing import List
-
 import torch
 
 from nncf.api.compression import CompressionLoss
@@ -60,7 +58,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
             layout.register(command)
         return layout
 
-    def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
+    def _sparsify_weights(self, target_model: NNCFNetwork) -> list[PTInsertionCommand]:
         device = get_model_device(target_model)
         sparsified_module_nodes = target_model.nncf.get_weighted_original_graph_nodes(
             nncf_module_names=self.compressed_nncf_module_names
@@ -103,7 +101,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     Base class for sparsity algorithm controllers in PT.
     """
 
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo]):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: list[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(get_model_device(target_model))
         self._scheduler = BaseCompressionScheduler()

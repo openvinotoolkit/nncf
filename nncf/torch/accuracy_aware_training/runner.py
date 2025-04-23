@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import os.path as osp
-from typing import Dict
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -144,7 +143,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(
 ):
     def __init__(
         self,
-        accuracy_aware_training_params: Dict,
+        accuracy_aware_training_params: dict,
         uncompressed_model_accuracy: float,
         verbose: bool = True,
         dump_checkpoints: bool = True,

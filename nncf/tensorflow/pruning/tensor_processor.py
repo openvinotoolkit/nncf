@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import Union
 
 import tensorflow as tf
 
@@ -24,17 +24,17 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
     """
 
     @classmethod
-    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
+    def concatenate(cls, tensors: list[NNCFTensor], axis: int) -> NNCFTensor:
         ret_tensor = tf.concat([t.tensor for t in tensors], axis=axis)
         return TFNNCFTensor(ret_tensor)
 
     @classmethod
-    def ones(cls, shape: Union[int, List[int]], device: tf.device) -> NNCFTensor:
+    def ones(cls, shape: Union[int, list[int]], device: tf.device) -> NNCFTensor:
         with tf.device(device):
             return TFNNCFTensor(tf.ones(shape))
 
     @classmethod
-    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
+    def assert_allclose(cls, tensors: list[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             tf.debugging.assert_near(tensors[0].tensor, input_mask.tensor)
 
@@ -44,12 +44,12 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
         return TFNNCFTensor(ret_tensor)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[NNCFTensor]) -> NNCFTensor:
+    def elementwise_mask_propagation(cls, input_masks: list[NNCFTensor]) -> NNCFTensor:
         cls.assert_allclose(input_masks)
         return input_masks[0]
 
     @classmethod
-    def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
+    def split(cls, tensor: NNCFTensor, output_shapes: list[int]) -> list[NNCFTensor]:
         chunks = len(output_shapes)
         ret_tensors = tf.split(tensor.tensor, chunks)
         return [TFNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]

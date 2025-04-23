@@ -15,11 +15,11 @@ from typing import Callable, Dict, List
 from unittest.mock import patch
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 import nncf
 import nncf.openvino.optimized_functions as opt_fns

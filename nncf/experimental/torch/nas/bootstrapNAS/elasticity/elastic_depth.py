@@ -10,7 +10,7 @@
 # limitations under the License.
 import random
 from itertools import combinations
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -33,8 +33,8 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.nncf_network import NNCFNetwork
 
 BlockId = int
-ElasticDepthConfig = List[BlockId]  # list of block indexes
-ElasticDepthSearchSpace = List[ElasticDepthConfig]  # grouped list of block indexes
+ElasticDepthConfig = list[BlockId]  # list of block indexes
+ElasticDepthSearchSpace = list[ElasticDepthConfig]  # grouped list of block indexes
 
 
 class EDHandlerStateNames:
@@ -53,7 +53,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         target_model: NNCFNetwork,
         skipped_blocks: BuildingBlocks,
         skip_dependencies: GroupedBlockIDs,
-        node_names_per_block: Dict[int, List[NNCFNodeName]],
+        node_names_per_block: dict[int, list[NNCFNodeName]],
     ):
         """
         Constructor
@@ -74,7 +74,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         self._is_search_space_obsolete = True
         self._cached_search_space = None
 
-    def get_transformation_commands(self) -> List[TransformationCommand]:
+    def get_transformation_commands(self) -> list[TransformationCommand]:
         """
         :return: transformation commands for introducing the elasticity to NNCFNetwork
         """
@@ -97,7 +97,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         self._depth_indicator = depth_indicator
         self._is_search_space_obsolete = True
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
         :param state: Output of `get_state()` method.
@@ -105,7 +105,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
         super().load_state(state)
         self.depth_indicator = state[self._depth_state_names.DEPTH_INDICATOR]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -219,7 +219,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
                     )
         return result
 
-    def get_names_of_skipped_nodes(self) -> List[NNCFNodeName]:
+    def get_names_of_skipped_nodes(self) -> list[NNCFNodeName]:
         """
         :return: names of nodes that are currently skipped by Elastic Depth
         """
@@ -265,8 +265,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
                             f"The block #{block_index} or #{valid_block_indexes} "
                             f"did not satisfy requirement of next static block"
                         )
-                        for valid_block_index in valid_block_indexes:
-                            block_indexes_to_remove.append(valid_block_index)
+                        block_indexes_to_remove.extend(valid_block_indexes)
                         break
             if found:
                 break
@@ -294,7 +293,7 @@ class ElasticDepthParams(BaseElasticityParams):
         max_block_size: int,
         min_block_size: int,
         hw_fused_ops: bool = True,
-        skipped_blocks: Optional[List[List[NNCFNodeName]]] = None,
+        skipped_blocks: Optional[list[list[NNCFNodeName]]] = None,
     ):
         """
         Constructor
@@ -314,7 +313,7 @@ class ElasticDepthParams(BaseElasticityParams):
         self.skipped_blocks = skipped_blocks
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "ElasticDepthParams":
+    def from_config(cls, config: dict[str, Any]) -> "ElasticDepthParams":
         """
         Creates the object from its config.
         """
@@ -327,7 +326,7 @@ class ElasticDepthParams(BaseElasticityParams):
         return cls(**kwargs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "ElasticDepthParams":
+    def from_state(cls, state: dict[str, Any]) -> "ElasticDepthParams":
         """
         Creates the object from its state.
 
@@ -335,7 +334,7 @@ class ElasticDepthParams(BaseElasticityParams):
         """
         return cls(**state)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns the compression loss state.
 
@@ -371,8 +370,8 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
     def __init__(
         self,
         params: ElasticDepthParams,
-        ignored_scopes: Optional[List[str]] = None,
-        target_scopes: Optional[List[str]] = None,
+        ignored_scopes: Optional[list[str]] = None,
+        target_scopes: Optional[list[str]] = None,
     ):
         """
         :param params: parameters to configure elastic depth.
@@ -420,7 +419,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
 
         return ElasticDepthHandler(target_model, self._skipped_blocks, self._skip_dependencies, node_names_per_block)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -438,7 +437,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         self._skip_dependencies = state[self._state_names.SKIPPED_BLOCKS_DEPENDENCIES]
         self._skipped_blocks = [BuildingBlock.from_state(bb_state) for bb_state in skipped_blocks_from_state]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -455,7 +454,7 @@ class ElasticDepthBuilder(SingleElasticityBuilder):
         }
 
     @staticmethod
-    def _get_node_names_per_block(target_model: NNCFNetwork, skipped_blocks) -> Dict[int, List[NNCFNodeName]]:
+    def _get_node_names_per_block(target_model: NNCFNetwork, skipped_blocks) -> dict[int, list[NNCFNodeName]]:
         graph = target_model.nncf.get_original_graph()
         all_node_names_per_block = {}
         for idx, block in enumerate(skipped_blocks):

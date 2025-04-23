@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Dict, List, Optional, Type
+from typing import Optional
 
 import onnx
 
@@ -26,15 +26,15 @@ ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
 
 
 class ONNXOpMetatype(OperatorMetatype):
-    op_names: List[str] = []
-    subtypes: List[Type[OperatorMetatype]] = []
+    op_names: list[str] = []
+    subtypes: list[type[OperatorMetatype]] = []
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return cls.op_names
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return cls.subtypes
 
     @classmethod
@@ -42,7 +42,7 @@ class ONNXOpMetatype(OperatorMetatype):
         return node.op_type in cls.op_names
 
     @classmethod
-    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
+    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[type[OperatorMetatype]]:
         matches = []
         subtypes_list = deque(cls.get_subtypes())
         while subtypes_list:
@@ -66,9 +66,9 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     """
 
     weight_channel_axis: int
-    weight_port_ids: List[int] = []
+    weight_port_ids: list[int] = []
     bias_port_id: Optional[int] = None
-    possible_weight_ports: List[int] = []
+    possible_weight_ports: list[int] = []
 
 
 @ONNX_OPERATION_METATYPES.register(is_subtype=True)
@@ -687,7 +687,13 @@ class ONNXSinMetatype(ONNXOpMetatype):
     op_names = ["Sin"]
 
 
-def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSeluMetatype(ONNXOpMetatype):
+    name = "SeluOp"
+    op_names = ["Selu"]
+
+
+def get_operator_metatypes() -> list[type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
 
@@ -716,7 +722,7 @@ def get_tensor_edge_name(
     model: onnx.ModelProto,
     node: onnx.NodeProto,
     port_id: int,
-    parents_node_mapping: Dict[str, onnx.NodeProto],
+    parents_node_mapping: dict[str, onnx.NodeProto],
 ) -> Optional[str]:
     """
     Returns an edge name associated with a weight of a node laying on  an input port_id.

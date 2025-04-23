@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -57,11 +57,11 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return get_weight_value(node, model, port_id)
 
     @staticmethod
-    def get_activation_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_node(node: NNCFNode) -> tuple[int, int]:
         return 0, 0
 
     @staticmethod
-    def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_weights_port_ids_for_node(node: NNCFNode) -> tuple[int, int]:
         return 0, 1
 
     @staticmethod
