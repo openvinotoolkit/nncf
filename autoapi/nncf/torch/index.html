@@ -380,7 +380,7 @@ model and a configuration object.</p>
 source.</p></li>
 <li><p><strong>config</strong> (<a class="reference internal" href="../index.html#nncf.NNCFConfig" title="nncf.NNCFConfig"><em>nncf.NNCFConfig</em></a>) – A configuration object used to determine the exact compression modifications to be applied
 to the model</p></li>
-<li><p><strong>compression_state</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – representation of the entire compression state to unambiguously restore
+<li><p><strong>compression_state</strong> (<em>Optional</em><em>[</em><em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – representation of the entire compression state to unambiguously restore
 the compressed model. Includes builder and controller states.</p></li>
 <li><p><strong>dummy_forward_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.nn.Module</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – if supplied, will be used instead of a <em>forward</em> function call to build
 the internal graph representation via tracing. Specifying this is useful when the original training pipeline
@@ -390,7 +390,7 @@ to the shape specified in the config object. The dummy_forward_fn code MUST cont
 nncf.nncf_model_input functions made with each compressed model input tensor in the underlying model’s
 args/kwargs tuple, and these calls should be exactly the same as in the wrap_inputs_fn function code
 (see below); if dummy_forward_fn is specified, then wrap_inputs_fn also must be specified.</p></li>
-<li><p><strong>wrap_inputs_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Tuple</em><em>, </em><em>Dict</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>Tuple</em><em>, </em><em>Dict</em><em>]</em><em>]</em>) – if supplied, will be used on the module’s input arguments during a regular, non-dummy
+<li><p><strong>wrap_inputs_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>tuple</em><em>, </em><em>dict</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>tuple</em><em>, </em><em>dict</em><em>]</em><em>]</em>) – if supplied, will be used on the module’s input arguments during a regular, non-dummy
 forward call before passing the inputs to the underlying compressed model. This is required if the model’s
 input tensors that are important for compression are not supplied as arguments to the model’s forward call
 directly, but instead are located in a container (such as list), and the model receives the container as an
@@ -411,7 +411,7 @@ is an instance of CompositeCompressionController) and the model ready for compre
 as an object of NNCFNetwork.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Tuple[<a class="reference internal" href="../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController">nncf.api.compression.CompressionAlgorithmController</a>, nncf.torch.nncf_network.NNCFNetwork]</p>
+<dd class="field-odd"><p>tuple[<a class="reference internal" href="../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController">nncf.api.compression.CompressionAlgorithmController</a>, nncf.torch.nncf_network.NNCFNetwork]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -442,7 +442,7 @@ with compression algorithms applied to evaluate the model.
 <li><p><strong>model</strong> (<em>torch.nn.Module</em>) – </p></li>
 <li><p><strong>state_dict_to_load</strong> (<em>dict</em>) – </p></li>
 <li><p><strong>is_resume</strong> (<em>bool</em>) – </p></li>
-<li><p><strong>keys_to_ignore</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – </p></li>
+<li><p><strong>keys_to_ignore</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -462,11 +462,11 @@ with compression algorithms applied to evaluate the model.
 <li><p><strong>criterion</strong> (<em>torch.nn.modules.loss._Loss</em>) – </p></li>
 <li><p><strong>criterion_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Any</em><em>, </em><em>torch.nn.modules.loss._Loss</em><em>]</em><em>, </em><em>torch.Tensor</em><em>]</em>) – </p></li>
 <li><p><strong>train_steps_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.utils.data.DataLoader</em><em>, </em><em>torch.nn.Module</em><em>, </em><em>torch.optim.Optimizer</em><em>, </em><a class="reference internal" href="../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>Optional</em><em>[</em><em>int</em><em>]</em><em>]</em><em>, </em><em>type</em><em>(</em><em>None</em><em>)</em><em>]</em>) – </p></li>
-<li><p><strong>validate_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.nn.Module</em><em>, </em><em>torch.utils.data.DataLoader</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>validate_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.nn.Module</em><em>, </em><em>torch.utils.data.DataLoader</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em><em>]</em>) – </p></li>
 <li><p><strong>val_loader</strong> (<em>torch.utils.data.DataLoader</em>) – </p></li>
 <li><p><strong>autoq_eval_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.nn.Module</em><em>, </em><em>torch.utils.data.DataLoader</em><em>]</em><em>, </em><em>float</em><em>]</em>) – </p></li>
 <li><p><strong>model_eval_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.nn.Module</em><em>, </em><em>torch.utils.data.DataLoader</em><em>]</em><em>, </em><em>float</em><em>]</em>) – </p></li>
-<li><p><strong>distributed_callbacks</strong> (<em>Tuple</em><em>[</em><em>Callable</em><em>, </em><em>Callable</em><em>]</em>) – </p></li>
+<li><p><strong>distributed_callbacks</strong> (<em>tuple</em><em>[</em><em>Callable</em><em>, </em><em>Callable</em><em>]</em>) – </p></li>
 <li><p><strong>execution_parameters</strong> (<a class="reference internal" href="structures/index.html#nncf.torch.structures.ExecutionParameters" title="nncf.torch.structures.ExecutionParameters"><em>nncf.torch.structures.ExecutionParameters</em></a>) – </p></li>
 <li><p><strong>legr_train_optimizer</strong> (<em>torch.optim.Optimizer</em>) – </p></li>
 <li><p><strong>device</strong> (<em>str</em>) – </p></li>

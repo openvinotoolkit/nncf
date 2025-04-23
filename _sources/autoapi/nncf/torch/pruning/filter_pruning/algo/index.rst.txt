@@ -43,7 +43,7 @@ Classes
 
 
    .. py:property:: current_groupwise_pruning_level
-      :type: Dict[int, float]
+      :type: dict[int, float]
 
       Return the dict of layer group id's and corresponding current groupwise
       pruning levels in the model

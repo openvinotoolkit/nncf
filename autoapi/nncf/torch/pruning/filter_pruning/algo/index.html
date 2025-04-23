@@ -310,9 +310,9 @@ compression loss.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>target_model</strong> (<em>nncf.torch.nncf_network.NNCFNetwork</em>) – </p></li>
-<li><p><strong>prunable_types</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – </p></li>
+<li><p><strong>prunable_types</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – </p></li>
 <li><p><strong>pruned_module_groups</strong> (<em>nncf.common.pruning.clusterization.Clusterization</em><em>[</em><em>nncf.torch.pruning.structs.PrunedModuleInfo</em><em>]</em>) – </p></li>
-<li><p><strong>pruned_norms_operators</strong> (<em>List</em><em>[</em><em>Tuple</em><em>[</em><em>nncf.common.graph.NNCFNode</em><em>, </em><em>nncf.torch.pruning.filter_pruning.layers.FilterPruningMask</em><em>, </em><em>torch.nn.Module</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>pruned_norms_operators</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>nncf.common.graph.NNCFNode</em><em>, </em><em>nncf.torch.pruning.filter_pruning.layers.FilterPruningMask</em><em>, </em><em>torch.nn.Module</em><em>]</em><em>]</em>) – </p></li>
 <li><p><strong>config</strong> (<a class="reference internal" href="../../../../index.html#nncf.NNCFConfig" title="nncf.NNCFConfig"><em>nncf.NNCFConfig</em></a>) – </p></li>
 </ul>
 </dd>
@@ -352,12 +352,12 @@ compression loss.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.torch.pruning.filter_pruning.algo.FilterPruningController.current_groupwise_pruning_level">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_groupwise_pruning_level</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/pruning/filter_pruning/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.pruning.filter_pruning.algo.FilterPruningController.current_groupwise_pruning_level" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_groupwise_pruning_level</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/pruning/filter_pruning/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.pruning.filter_pruning.algo.FilterPruningController.current_groupwise_pruning_level" title="Permalink to this definition">#</a></dt>
 <dd><p>Return the dict of layer group id’s and corresponding current groupwise
 pruning levels in the model</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[int, float]</p>
+<dd class="field-odd"><p>dict[int, float]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -423,7 +423,7 @@ values to groupwise pruning level to be set in the model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>pruning_level</strong> (<em>Union</em><em>[</em><em>float</em><em>, </em><em>Dict</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>pruning_level</strong> (<em>Union</em><em>[</em><em>float</em><em>, </em><em>dict</em><em>[</em><em>int</em><em>, </em><em>float</em><em>]</em><em>]</em>) – </p></li>
 <li><p><strong>run_batchnorm_adaptation</strong> (<em>bool</em>) – </p></li>
 </ul>
 </dd>

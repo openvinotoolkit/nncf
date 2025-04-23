@@ -342,7 +342,7 @@ and fully-connected layers to construct the loss function.</p>
 <dd><p>Loads the compression loss state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – The state of the compression loss, most likely obtained as the result of a <cite>.get_state()</cite> method
+<dd class="field-odd"><p><strong>state</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – The state of the compression loss, most likely obtained as the result of a <cite>.get_state()</cite> method
 call.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -357,7 +357,7 @@ call.</p>
 <dd><p>Returns the compression loss state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[str, Any]</p>
+<dd class="field-odd"><p>dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -437,7 +437,7 @@ will update the state of the compression method.</p>
 compression method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Output of <cite>get_state()</cite> method.</p>
+<dd class="field-odd"><p><strong>state</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Output of <cite>get_state()</cite> method.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>None</p>
@@ -451,7 +451,7 @@ compression method.</p>
 <dd><p>Returns the compression scheduler state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[str, Any]</p>
+<dd class="field-odd"><p>dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -578,7 +578,7 @@ or the ratio of filters pruned).</p>
 <dd><p>Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – map of the algorithm name to the dictionary with the corresponding state attributes.</p>
+<dd class="field-odd"><p><strong>state</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – map of the algorithm name to the dictionary with the corresponding state attributes.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>None</p>
@@ -593,7 +593,7 @@ or the ratio of filters pruned).</p>
 corresponding state attributes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[str, Dict[str, Any]]</p>
+<dd class="field-odd"><p>dict[str, dict[str, Any]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -609,7 +609,7 @@ This state should be used to unambiguously resume compression via <cite>compress
 <dd class="field-odd"><p>Compression state of the model to  resume compression from it.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Dict[str, Any]</p>
+<dd class="field-even"><p>dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -717,9 +717,9 @@ the specified path.</p>
 <li><p><strong>save_path</strong> (<em>str</em>) – The path where the model will be saved.</p></li>
 <li><p><strong>save_format</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Saving format. The default format will
 be used if <cite>save_format</cite> is not specified.</p></li>
-<li><p><strong>input_names</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the input tensors of the model.</p></li>
-<li><p><strong>output_names</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the output tensors of the model.</p></li>
-<li><p><strong>model_args</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><em>Any</em><em>, </em><em>Ellipsis</em><em>]</em><em>]</em>) – <p>Tuple of additional positional and keyword arguments
+<li><p><strong>input_names</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the input tensors of the model.</p></li>
+<li><p><strong>output_names</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the output tensors of the model.</p></li>
+<li><p><strong>model_args</strong> (<em>Optional</em><em>[</em><em>tuple</em><em>[</em><em>Any</em><em>, </em><em>Ellipsis</em><em>]</em><em>]</em>) – <p>Tuple of additional positional and keyword arguments
 which are required for the model’s forward during export. Should be
 specified in the following format:</p>
 <ul>
@@ -848,7 +848,7 @@ algorithm-specific compression during fine-tuning.</p>
 <dd><p>Initializes object from the supplied state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – The state of the builder, most likely obtained as the result of a <cite>.get_state()</cite> call.</p>
+<dd class="field-odd"><p><strong>state</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – The state of the builder, most likely obtained as the result of a <cite>.get_state()</cite> call.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>None</p>
@@ -863,7 +863,7 @@ algorithm-specific compression during fine-tuning.</p>
 represents state of the object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[str, Any]</p>
+<dd class="field-odd"><p>dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>

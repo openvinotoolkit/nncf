@@ -321,7 +321,7 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>name</strong> (<em>str</em>) – Layer’s name.</p></li>
-<li><p><strong>weight_shape</strong> (<em>List</em><em>[</em><em>int</em><em>]</em>) – Weight’s shape.</p></li>
+<li><p><strong>weight_shape</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Weight’s shape.</p></li>
 <li><p><strong>sparsity_level</strong> (<em>float</em>) – Sparsity level of the sparsified layer.</p></li>
 <li><p><strong>weight_percentage</strong> (<em>float</em>) – Proportion of the layer’s weights in the whole model.</p></li>
 </ul>
@@ -340,7 +340,7 @@
 <li><p><strong>sparsity_level</strong> (<em>float</em>) – Sparsity level of the whole model.</p></li>
 <li><p><strong>sparsity_level_for_layers</strong> (<em>float</em>) – Sparsity level of all sparsified layers
 (i.e. layers for which the algorithm was applied).</p></li>
-<li><p><strong>sparsified_layers_summary</strong> (<em>List</em><em>[</em><a class="reference internal" href="#nncf.common.sparsity.statistics.SparsifiedLayerSummary" title="nncf.common.sparsity.statistics.SparsifiedLayerSummary"><em>SparsifiedLayerSummary</em></a><em>]</em>) – Detailed summary for the sparsified layers.</p></li>
+<li><p><strong>sparsified_layers_summary</strong> (<em>list</em><em>[</em><a class="reference internal" href="#nncf.common.sparsity.statistics.SparsifiedLayerSummary" title="nncf.common.sparsity.statistics.SparsifiedLayerSummary"><em>SparsifiedLayerSummary</em></a><em>]</em>) – Detailed summary for the sparsified layers.</p></li>
 </ul>
 </dd>
 </dl>
@@ -366,7 +366,7 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model_statistics</strong> (<a class="reference internal" href="#nncf.common.sparsity.statistics.SparsifiedModelStatistics" title="nncf.common.sparsity.statistics.SparsifiedModelStatistics"><em>SparsifiedModelStatistics</em></a>) – Statistics of the sparsified model.</p></li>
-<li><p><strong>thresholds</strong> (<em>List</em><em>[</em><em>LayerThreshold</em><em>]</em>) – List of the sparsity thresholds.</p></li>
+<li><p><strong>thresholds</strong> (<em>list</em><em>[</em><em>LayerThreshold</em><em>]</em>) – List of the sparsity thresholds.</p></li>
 <li><p><strong>target_sparsity_level</strong> (<em>float</em>) – A target level of the sparsity for the algorithm for the current epoch.</p></li>
 </ul>
 </dd>

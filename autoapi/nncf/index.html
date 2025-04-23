@@ -490,7 +490,7 @@ schema at <a class="reference external" href="https://openvinotoolkit.github.io/
 <dd><p>Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>nncf_dict</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – A Python dict with the JSON-style configuration for NNCF.</p>
+<dd class="field-odd"><p><strong>nncf_dict</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – A Python dict with the JSON-style configuration for NNCF.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#nncf.NNCFConfig" title="nncf.NNCFConfig">NNCFConfig</a></p>
@@ -518,7 +518,7 @@ schema at <a class="reference external" href="https://openvinotoolkit.github.io/
 <dd><p>Attach the supplied list of extra configuration structures to this configuration object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>struct_list</strong> (<em>List</em><em>[</em><em>nncf.config.structures.NNCFExtraConfigStruct</em><em>]</em>) – List of extra configuration structures.</p>
+<dd class="field-odd"><p><strong>struct_list</strong> (<em>list</em><em>[</em><em>nncf.config.structures.NNCFExtraConfigStruct</em><em>]</em>) – List of extra configuration structures.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>None</p>
@@ -558,7 +558,7 @@ the resolution of the redefinable parameter should occur.</p></li>
 <dd><p>Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict[str, Any]</p>
+<dd class="field-odd"><p>dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -596,7 +596,7 @@ will be passed into the model as-is.</p></li>
 <dd><p>Returns the iterable object that contains selected data items from the data source as-is.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>indices</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em>) – The zero-based indices of data items that should be selected from
+<dd class="field-odd"><p><strong>indices</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>int</em><em>]</em><em>]</em>) – The zero-based indices of data items that should be selected from
 the data source. The indices should be sorted in ascending order. If indices are
 not passed all data items are selected from the data source.</p>
 </dd>
@@ -617,7 +617,7 @@ the transformation function was applied. The item, which was returned per iterat
 iterable, can be used as the model’s input for model inference.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>indices</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em>) – The zero-based indices of data items that should be selected from
+<dd class="field-odd"><p><strong>indices</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>int</em><em>]</em><em>]</em>) – The zero-based indices of data items that should be selected from
 the data source. The indices should be sorted in ascending order. If indices are
 not passed all data items are selected from the data source.</p>
 </dd>
@@ -963,7 +963,7 @@ fine-tuning the quantization algorithm.</p></li>
 <li><p><strong>model</strong> (<em>TModel</em>) – A model to be quantized.</p></li>
 <li><p><strong>calibration_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A representative dataset for the calibration process.</p></li>
 <li><p><strong>validation_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A dataset for the validation process.</p></li>
-<li><p><strong>validation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Iterable</em><em>[</em><em>Any</em><em>]</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>float</em><em>, </em><em>Union</em><em>[</em><em>None</em><em>, </em><em>List</em><em>[</em><em>float</em><em>]</em><em>, </em><em>List</em><em>[</em><em>List</em><em>[</em><em>TTensor</em><em>]</em><em>]</em><em>]</em><em>]</em><em>]</em>) – <p>A validation function to validate the model. It should take two arguments:
+<li><p><strong>validation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Iterable</em><em>[</em><em>Any</em><em>]</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>Union</em><em>[</em><em>None</em><em>, </em><em>list</em><em>[</em><em>float</em><em>]</em><em>, </em><em>list</em><em>[</em><em>list</em><em>[</em><em>TTensor</em><em>]</em><em>]</em><em>]</em><em>]</em><em>]</em>) – <p>A validation function to validate the model. It should take two arguments:
 - <cite>model</cite>: model to be validate.
 - <cite>validation_dataset</cite>: dataset that provides data items to</p>
 <blockquote>

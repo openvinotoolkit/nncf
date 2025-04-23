@@ -356,9 +356,9 @@ the specified path.</p>
 <li><p><strong>save_path</strong> (<em>str</em>) – The path where the model will be saved.</p></li>
 <li><p><strong>save_format</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Saving format. The default format will
 be used if <cite>save_format</cite> is not specified.</p></li>
-<li><p><strong>input_names</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the input tensors of the model.</p></li>
-<li><p><strong>output_names</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the output tensors of the model.</p></li>
-<li><p><strong>model_args</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><em>Any</em><em>, </em><em>Ellipsis</em><em>]</em><em>]</em>) – <p>Tuple of additional positional and keyword arguments
+<li><p><strong>input_names</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the input tensors of the model.</p></li>
+<li><p><strong>output_names</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – Names to be assigned to the output tensors of the model.</p></li>
+<li><p><strong>model_args</strong> (<em>Optional</em><em>[</em><em>tuple</em><em>[</em><em>Any</em><em>, </em><em>Ellipsis</em><em>]</em><em>]</em>) – <p>Tuple of additional positional and keyword arguments
 which are required for the model’s forward during export. Should be
 specified in the following format:</p>
 <blockquote>
@@ -398,7 +398,7 @@ state and registered algorithm key.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>name</strong> (<em>str</em>) – algorithm name, the string that was used to register the builder</p></li>
-<li><p><strong>builder_state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – state of the builder</p></li>
+<li><p><strong>builder_state</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – state of the builder</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -413,7 +413,7 @@ state and registered algorithm key.</p>
 <dd><p>Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – map of the algorithm name to the dictionary with the corresponding state attributes.</p>
+<dd class="field-odd"><p><strong>state</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – map of the algorithm name to the dictionary with the corresponding state attributes.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>None</p>
@@ -431,7 +431,7 @@ corresponding state attributes.</p>
 <dd class="field-odd"><p>The compression controller state.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Dict[str, Dict[str, Any]]</p>
+<dd class="field-even"><p>dict[str, dict[str, Any]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -447,7 +447,7 @@ method.</p>
 <dd class="field-odd"><p>The compression state.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Dict[str, Any]</p>
+<dd class="field-even"><p>dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
