@@ -31,22 +31,22 @@ from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.fx.helpers import get_torch_fx_model
-from tests.torch.ptq.test_weights_compression import ALL_SENSITIVITY_METRICS
-from tests.torch.ptq.test_weights_compression import INT4_MODES
-from tests.torch.ptq.test_weights_compression import INT8_MODES
-from tests.torch.ptq.test_weights_compression import SUPPORTED_MODES
-from tests.torch.ptq.test_weights_compression import UNSUPPORTED_MODES
-from tests.torch.ptq.test_weights_compression import AWQActLinearModel
-from tests.torch.ptq.test_weights_compression import AWQLinearModel
-from tests.torch.ptq.test_weights_compression import ConvolutionModel
-from tests.torch.ptq.test_weights_compression import DTypeModel
-from tests.torch.ptq.test_weights_compression import EmptyModel
-from tests.torch.ptq.test_weights_compression import FunctionalModel
-from tests.torch.ptq.test_weights_compression import LinearModel
-from tests.torch.ptq.test_weights_compression import MatMulModel
-from tests.torch.ptq.test_weights_compression import SequentialMatmulModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
+from tests.torch2.function_hook.quantization.test_weights_compression import ALL_SENSITIVITY_METRICS
+from tests.torch2.function_hook.quantization.test_weights_compression import INT4_MODES
+from tests.torch2.function_hook.quantization.test_weights_compression import INT8_MODES
+from tests.torch2.function_hook.quantization.test_weights_compression import SUPPORTED_MODES
+from tests.torch2.function_hook.quantization.test_weights_compression import UNSUPPORTED_MODES
+from tests.torch2.function_hook.quantization.test_weights_compression import AWQActLinearModel
+from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel
+from tests.torch2.function_hook.quantization.test_weights_compression import ConvolutionModel
+from tests.torch2.function_hook.quantization.test_weights_compression import DTypeModel
+from tests.torch2.function_hook.quantization.test_weights_compression import EmptyModel
+from tests.torch2.function_hook.quantization.test_weights_compression import FunctionalModel
+from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
+from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
+from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
