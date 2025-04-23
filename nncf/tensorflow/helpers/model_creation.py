@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import types
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import tensorflow as tf
 
@@ -69,8 +69,8 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) 
     ],
 )
 def create_compressed_model(
-    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
-) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
+    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[dict[str, Any]] = None
+) -> tuple[CompressionAlgorithmController, tf.keras.Model]:
     """
     The main function used to produce a model ready for compression fine-tuning
     from an original TensorFlow Keras model and a configuration object.
@@ -101,8 +101,8 @@ def create_compressed_model(
 
 
 def create_compressed_model_impl(
-    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
-) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
+    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[dict[str, Any]] = None
+) -> tuple[CompressionAlgorithmController, tf.keras.Model]:
     """
     Implementation of the create_compressed_model() method.
     """
@@ -162,7 +162,7 @@ def get_input_signature(config: NNCFConfig):
         FunctionCallTelemetryExtractor("nncf.tensorflow.load_from_config"),
     ],
 )
-def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.Model:
+def load_from_config(model: tf.keras.Model, config: dict[str, Any]) -> tf.keras.Model:
     """
     Recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded checkpoint file.
@@ -189,7 +189,7 @@ def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.
         FunctionCallTelemetryExtractor("nncf.tensorflow.get_config"),
     ],
 )
-def get_config(model: tf.keras.Model) -> Dict[str, Any]:
+def get_config(model: tf.keras.Model) -> dict[str, Any]:
     """
     Extracts the config from the model.
 

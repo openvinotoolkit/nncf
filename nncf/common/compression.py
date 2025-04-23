@@ -11,7 +11,7 @@
 from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf import NNCFConfig
@@ -62,7 +62,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         """
         super().__init__(target_model)
         self._name: Optional[str] = None
-        self._builder_state: Optional[Dict[str, Any]] = None
+        self._builder_state: Optional[dict[str, Any]] = None
 
     @property
     def name(self) -> str:
@@ -83,9 +83,9 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         self,
         save_path: str,
         save_format: Optional[str] = None,
-        input_names: Optional[List[str]] = None,
-        output_names: Optional[List[str]] = None,
-        model_args: Optional[Tuple[Any, ...]] = None,
+        input_names: Optional[list[str]] = None,
+        output_names: Optional[list[str]] = None,
+        model_args: Optional[tuple[Any, ...]] = None,
     ) -> None:
         """
         Exports the compressed model to the specified format for deployment.
@@ -126,7 +126,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
     def disable_scheduler(self) -> None:
         self._scheduler = StubCompressionScheduler()
 
-    def set_builder_state_with_name(self, name: str, builder_state: Dict[str, Any]) -> None:
+    def set_builder_state_with_name(self, name: str, builder_state: dict[str, Any]) -> None:
         """
         Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
         state and registered algorithm key.
@@ -137,7 +137,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         self._name = name
         self._builder_state = builder_state
 
-    def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:
+    def load_state(self, state: dict[str, dict[str, Any]]) -> None:
         """
         Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.
 
@@ -155,7 +155,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
             self.loss.load_state(algo_state[self._state_names.LOSS])
             self.scheduler.load_state(algo_state[self._state_names.SCHEDULER])
 
-    def get_state(self) -> Dict[str, Dict[str, Any]]:
+    def get_state(self) -> dict[str, dict[str, Any]]:
         """
         Returns compression controller state, which is the map of the algorithm name to the dictionary with the
         corresponding state attributes.
@@ -170,7 +170,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
             }
         }
 
-    def get_compression_state(self) -> Dict[str, Any]:
+    def get_compression_state(self) -> dict[str, Any]:
         """
         Returns compression state - builder and controller state.
         This state should be used to resume compression via `compression_state` argument of `create_compressed_model`
@@ -225,14 +225,14 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             if self.target_scopes is None:
                 self.target_scopes = algo_target_scopes
 
-    def _get_algo_specific_config_section(self) -> Dict[str, Any]:
+    def _get_algo_specific_config_section(self) -> dict[str, Any]:
         return extract_algo_specific_config(self.config, self.name)
 
     @property
     def name(self) -> str:
         return getattr(self, Registry.REGISTERED_NAME_ATTR, "NOT_REGISTERED_" + self.__class__.__name__)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -241,7 +241,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         if self.name in state:
             self._load_state_without_name(state[self.name])
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -275,7 +275,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         return ctrl
 
     @abstractmethod
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]) -> None:
+    def _load_state_without_name(self, state_without_name: dict[str, Any]) -> None:
         """
         Implementation of load state that takes state without builder name.
 
@@ -283,7 +283,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         """
 
     @abstractmethod
-    def _get_state_without_name(self) -> Dict[str, Any]:
+    def _get_state_without_name(self) -> dict[str, Any]:
         """
         Implementation of get_state that returns state without builder name.
 
@@ -291,7 +291,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
         """
 
-    def _parse_bn_adapt_params(self) -> Optional[Dict[str, Any]]:
+    def _parse_bn_adapt_params(self) -> Optional[dict[str, Any]]:
         try:
             return extract_bn_adaptation_init_params(self.config, self.name)
         except BNAdaptDataLoaderNotFoundError as e:

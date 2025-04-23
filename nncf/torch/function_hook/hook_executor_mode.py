@@ -20,7 +20,7 @@ from dataclasses import field
 from itertools import chain
 from types import MethodType
 from types import TracebackType
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, cast
+from typing import Any, Callable, Iterator, Optional, cast
 from weakref import ReferenceType
 from weakref import ref
 
@@ -60,7 +60,7 @@ class OpMeta:
 
     op_name: str
     func: Callable[..., Any]
-    extra_info: Dict[str, Any] = field(default_factory=lambda: dict())
+    extra_info: dict[str, Any] = field(default_factory=lambda: dict())
 
 
 def _get_full_fn_name(fn: Callable[..., Any]) -> str:
@@ -114,9 +114,9 @@ class FunctionHookMode(TorchFunctionMode):
         super().__init__()
         self.hook_storage: HookStorage = hook_storage
         self.model: nn.Module = model
-        self.module_call_stack: List[nn.Module] = []
+        self.module_call_stack: list[nn.Module] = []
         self.nested_enter_count = 0
-        self.op_calls: Dict[str, int] = defaultdict(int)
+        self.op_calls: dict[str, int] = defaultdict(int)
         self.enabled: bool = True
 
         # Variables for hooks after constant nodes
@@ -126,17 +126,17 @@ class FunctionHookMode(TorchFunctionMode):
         self.in_process_const = False
 
         # Hook names
-        self.hooks_module_to_group_name: Dict[ReferenceType[nn.Module], str] = {}
+        self.hooks_module_to_group_name: dict[ReferenceType[nn.Module], str] = {}
         self._get_named_hooks(self.hook_storage.pre_hooks, "pre_hook")
         self._get_named_hooks(self.hook_storage.post_hooks, "post_hook")
 
         # Collect how many times shared parameter used
-        counter_shared_weights: Dict[int, int] = defaultdict(int)
+        counter_shared_weights: dict[int, int] = defaultdict(int)
         for name, parameter in chain(self.model.named_parameters(remove_duplicate=False)):
             counter_shared_weights[id(parameter)] += 1
 
         self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}
-        self.cache_parameters: Dict[int, Tensor] = {}
+        self.cache_parameters: dict[int, Tensor] = {}
 
     def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str) -> None:
         """
@@ -164,7 +164,7 @@ class FunctionHookMode(TorchFunctionMode):
         :return: The wrapped function call.
         """
 
-        def wrapped_call(self_: nn.Module, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Any:
+        def wrapped_call(self_: nn.Module, *args: tuple[Any, ...], **kwargs: dict[str, Any]) -> Any:
             self.push_module_call_stack(self_)
             retval = fn_call.__func__(self_, *args, **kwargs)
             self.pop_module_call_stack()
@@ -191,7 +191,7 @@ class FunctionHookMode(TorchFunctionMode):
         return self
 
     def __exit__(
-        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+        self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
     ) -> None:
         """
         Exit the context manager, unwrapping the _call_impl function of each module.
@@ -212,9 +212,9 @@ class FunctionHookMode(TorchFunctionMode):
     def __torch_function__(
         self,
         func: Callable[..., Any],
-        types: List[Type[Any]],
-        args: Tuple[Any, ...] = (),
-        kwargs: Optional[Dict[str, Any]] = None,
+        types: list[type[Any]],
+        args: tuple[Any, ...] = (),
+        kwargs: Optional[dict[str, Any]] = None,
     ) -> Any:
         """
         Override the __torch_function__ method to add pre- and post-hook execution.
@@ -353,7 +353,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         return ret_value
 
-    def process_parameters(self, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[List[Any], Dict[str, Any]]:
+    def process_parameters(self, args: list[Any], kwargs: dict[str, Any]) -> tuple[list[Any], dict[str, Any]]:
         """
         Execute post-hooks for parameters.
 
@@ -368,8 +368,8 @@ class FunctionHookMode(TorchFunctionMode):
         return args, kwargs
 
     def execute_pre_hooks(
-        self, args: Tuple[Any, ...], kwargs: Dict[str, Any], op_meta: OpMeta
-    ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
+        self, args: tuple[Any, ...], kwargs: dict[str, Any], op_meta: OpMeta
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
         """
         Execute pre-hooks for the operation.
 
@@ -378,7 +378,7 @@ class FunctionHookMode(TorchFunctionMode):
         :param op_meta: Metadata for the operation.
         :return: The modified arguments and keyword arguments after pre-hooks.
         """
-        _args: List[Any] = list(args)
+        _args: list[Any] = list(args)
         with self:
             _args, kwargs = self.process_parameters(_args, kwargs)
 
@@ -386,7 +386,7 @@ class FunctionHookMode(TorchFunctionMode):
             for idx, value in enumerate(_args):
                 if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
                     is_tuple = isinstance(value, tuple)
-                    list_args = cast(List[Tensor], list(value) if is_tuple else value)
+                    list_args = cast(list[Tensor], list(value) if is_tuple else value)
                     for tensor_idx, tensor in enumerate(list_args):
                         list_args[tensor_idx] = self.hook_storage.execute_pre_function_hooks(
                             op_meta.op_name, port_id, tensor
@@ -400,7 +400,7 @@ class FunctionHookMode(TorchFunctionMode):
             for kw_name, value in kwargs.items():
                 if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
                     is_tuple = isinstance(value, tuple)
-                    list_args = cast(List[Tensor], list(value) if is_tuple else value)
+                    list_args = cast(list[Tensor], list(value) if is_tuple else value)
                     for tensor_idx, tensor in enumerate(list_args):
                         list_args[tensor_idx] = self.hook_storage.execute_pre_function_hooks(
                             op_meta.op_name, port_id, tensor
@@ -447,7 +447,7 @@ class FunctionHookMode(TorchFunctionMode):
                 output = self.process_post_function_hooks_for_value(output, op_meta, 0)
         return output
 
-    def process_model_inputs(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Tuple[Tuple[Any], Dict[str, Any]]:
+    def process_model_inputs(self, args: tuple[Any], kwargs: dict[str, Any]) -> tuple[tuple[Any], dict[str, Any]]:
         """
         Processes the input arguments for the model's forward function.
 

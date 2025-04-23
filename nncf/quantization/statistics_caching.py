@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from nncf.api.compression import TModel
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -28,7 +27,7 @@ def register_statistics_for_algorithm(
     model: TModel,
     graph: NNCFGraph,
     compression_algo: WeightCompression,
-    matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+    matmul_input_to_output_nodes_map: dict[tuple[NNCFNode, int], list[NNCFNode]],
 ) -> None:
     """
     Registers the statistics required for the given compression algorithm.
@@ -48,7 +47,7 @@ def _register_mixed_precision(
     aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
-    matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+    matmul_input_to_output_nodes_map: dict[tuple[NNCFNode, int], list[NNCFNode]],
     subset_size: int,
 ) -> None:
     """

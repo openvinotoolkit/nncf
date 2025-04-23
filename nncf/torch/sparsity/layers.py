@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List
+from typing import Any
 
 import torch
 from torch import nn
@@ -23,7 +23,7 @@ from nncf.torch.utils import is_tracing_state
 class BinaryMask(nn.Module, StatefulModuleInterface):
     SHAPE_KEY = "shape"
 
-    def __init__(self, shape: List[int]):
+    def __init__(self, shape: list[int]):
         super().__init__()
         self.register_buffer("_binary_mask", torch.ones(shape))
         self.frozen = False
@@ -49,9 +49,9 @@ class BinaryMask(nn.Module, StatefulModuleInterface):
     def apply_binary_mask(self, weight):
         return apply_binary_mask_impl(self.binary_mask, weight)
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return {self.SHAPE_KEY: list(self.binary_mask.shape)}
 
     @classmethod
-    def from_config(cls, state: Dict[str, Any]) -> "BinaryMask":
+    def from_config(cls, state: dict[str, Any]) -> "BinaryMask":
         return BinaryMask(state[cls.SHAPE_KEY])

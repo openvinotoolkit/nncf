@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 from torch import nn
 
@@ -73,7 +73,7 @@ class UpdateParameterList(BaseOp):
     forward method call by operand call.
     """
 
-    def __init__(self, param_names: List[str], op: Callable, is_optional_list: Optional[List[bool]] = None):
+    def __init__(self, param_names: list[str], op: Callable, is_optional_list: Optional[list[bool]] = None):
         super().__init__(op)
         self._param_names = param_names
         if is_optional_list is None:

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 
@@ -42,7 +42,7 @@ class TensorSource(Enum):
 @dataclass
 class TensorMeta:
     dtype: torch.dtype
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
 
     @staticmethod
     def from_tensor(tensor: torch.Tensor) -> TensorMeta:
@@ -52,7 +52,7 @@ class TensorMeta:
 @dataclass
 class ConstMeta:
     dtype: torch.dtype
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
     name_in_model: str
 
     @staticmethod
@@ -63,7 +63,7 @@ class ConstMeta:
 @dataclass
 class InOutMeta:
     dtype: torch.dtype
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
     name: str
 
     @staticmethod
@@ -75,8 +75,8 @@ class InOutMeta:
 class FunctionMeta:
     op_name: str
     func: Callable[..., Any]
-    args: Tuple[Any, ...]
-    kwargs: Dict[str, Any]
+    args: tuple[Any, ...]
+    kwargs: dict[str, Any]
 
     @property
     def func_name(self) -> str:
@@ -86,7 +86,7 @@ class FunctionMeta:
 @dataclass
 class EdgeMeta:
     dtype: torch.dtype
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
     input_port: int
     output_port: int
 
@@ -98,7 +98,7 @@ class EdgeMeta:
 @dataclass
 class TensorInfo:
     tensor_source: TensorSource
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
     dtype: torch.dtype
     output_port_id: int
     source_node_id: Optional[int]

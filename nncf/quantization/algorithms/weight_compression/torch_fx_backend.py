@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Iterable, Optional
 
 import torch
 import torch.fx
@@ -65,15 +65,15 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     CONVOLUTION_METATYPES = PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
 
     @property
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         return FXWeightCompressionAlgoBackend.MATMUL_METATYPES
 
     @property
-    def embedding_metatypes(self) -> List[OperatorMetatype]:
+    def embedding_metatypes(self) -> list[OperatorMetatype]:
         return FXWeightCompressionAlgoBackend.EMBEDDING_METATYPES
 
     @property
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         return FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
 
     @staticmethod
@@ -81,13 +81,13 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return PTWeightCompressionAlgoBackend.is_node_with_weights(node, graph)
 
     @staticmethod
-    def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
+    def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
         port_ids = get_weight_tensor_port_ids(node, graph)
         weight_name_port_ids = [(get_const_node(node, pid, graph).node_name, pid) for pid in port_ids]
         return weight_name_port_ids
 
     @staticmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
 
@@ -122,7 +122,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return PTWeightCompressionAlgoBackend.target_point(target_type, target_node_name, port_id)
 
     def mean_statistic_collector(
-        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+        self, reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         mean_reducer = MeanReducer(reduction_axes)
         shape_reducer = ShapeReducer()
@@ -153,7 +153,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
 
     @staticmethod
-    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         edge = graph.get_edge(weight_node, node_with_weight)
         return tuple(edge.tensor_shape)
@@ -189,8 +189,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: torch.fx.GraphModule,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: Dict[str, Tensor] = None,
-        precomputed_zero_points: Dict[str, Tensor] = None,
+        precomputed_scales: dict[str, Tensor] = None,
+        precomputed_zero_points: dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),

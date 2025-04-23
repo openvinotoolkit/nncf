@@ -34,8 +34,8 @@ from nncf.torch.model_transformer import PTInsertionCommand
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 from tests.torch.helpers import HookChecker
-from tests.torch.ptq.helpers import get_nncf_network
-from tests.torch.ptq.test_ptq_params import ToNNCFNetworkInterface
+from tests.torch2.function_hook.quantization.helper import get_nncf_network
+from tests.torch2.function_hook.quantization.test_ptq_params import ToNNCFNetworkInterface
 
 IDENTITY_NODE_NAME = "PTIdentityConvModel/__add___0"
 CONV_NODE_NAME = "PTIdentityConvModel/Conv2d[conv]/conv2d_0"

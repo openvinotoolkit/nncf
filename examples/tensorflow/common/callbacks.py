@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, MutableMapping
+from typing import Any, MutableMapping
 
 import tensorflow as tf
 from absl import logging
@@ -26,7 +26,7 @@ def get_callbacks(
     log_dir: str = None,
     ckpt_dir: str = None,
     checkpoint: tf.train.Checkpoint = None,
-) -> List[tf.keras.callbacks.Callback]:
+) -> list[tf.keras.callbacks.Callback]:
     """Get all callbacks."""
     log_dir = log_dir or ""
     ckpt_dir = ckpt_dir or log_dir

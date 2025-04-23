@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, TypeVar
+from typing import Any, TypeVar
 
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
@@ -36,7 +36,7 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             )
             raise Exception(msg)
 
-    def _get_state_without_name(self) -> Dict[str, Any]:
+    def _get_state_without_name(self) -> dict[str, Any]:
         """
         Implementation of get_state that returns state without builder name.
 
@@ -45,7 +45,7 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         return {}
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: dict[str, Any]):
         """
         Implementation of load state that takes state without builder name.
 

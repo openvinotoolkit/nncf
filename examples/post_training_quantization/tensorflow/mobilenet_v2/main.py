@@ -12,7 +12,6 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import List
 
 import openvino as ov
 import tensorflow as tf
@@ -38,7 +37,7 @@ def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
     return metric.result()
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: list[int]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),

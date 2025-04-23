@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 import tensorflow as tf
 
@@ -64,12 +64,12 @@ class SparseLoss(CompressionLoss):
     def set_target_sparsity_loss(self, sparsity_level):
         self.target.assign(1 - sparsity_level)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         self.target.assign(state["target"])
         self.disabled.assign(state["disabled"])
         self.p = state["p"]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {
             "target": float(tf.keras.backend.eval(self.target)),
             "disabled": bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple, Type, Union
+from typing import Optional, Union
 
 import torch
 from torch import nn
@@ -81,7 +81,7 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[N
             return weight_node
 
 
-def split_const_name(const_name: str) -> Tuple[str, str]:
+def split_const_name(const_name: str) -> tuple[str, str]:
     """
     Splits the constant name into module and attribute names.
 
@@ -240,7 +240,7 @@ def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, nncf_graph:
     set_const_data(new_bias, fused_bias_node, model)
 
 
-def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[int]:
+def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[int]:
     """
     Returns list of input port ids that contains traced constant tensor.
 
@@ -344,7 +344,7 @@ def get_fake_quantizer(
     return None
 
 
-def get_weight_channel_axes(metatype: Type[OperatorMetatype], ndims: int, input_port_id: int) -> Tuple[int, ...]:
+def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_port_id: int) -> tuple[int, ...]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
@@ -386,7 +386,7 @@ def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
 def get_weight_nodes(
     nncf_graph: NNCFGraph,
     inference_nncf_graph: NNCFGraph,
-) -> List[NNCFNode]:
+) -> list[NNCFNode]:
     """
     Returns nodes that have weights.
 

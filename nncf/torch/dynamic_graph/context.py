@@ -15,7 +15,7 @@ from collections import OrderedDict
 from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable, DefaultDict, Dict, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 
@@ -101,8 +101,8 @@ class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._post_hooks: DefaultDict[OperationAddress, Dict[str, Callable]] = defaultdict(OrderedDict)
-        self._pre_hooks: DefaultDict[PreHookId, Dict[str, Callable]] = defaultdict(OrderedDict)
+        self._post_hooks: defaultdict[OperationAddress, dict[str, Callable]] = defaultdict(OrderedDict)
+        self._pre_hooks: defaultdict[PreHookId, dict[str, Callable]] = defaultdict(OrderedDict)
         self._num_nested_hooks = 0
         self.reused_parameters = []
 
@@ -158,7 +158,7 @@ class TracingContext:
         set_current_context(previous_context)
 
     def find_operator_node(
-        self, tensor_metas: List[Optional[TensorMeta]], op_address: OperationAddress
+        self, tensor_metas: list[Optional[TensorMeta]], op_address: OperationAddress
     ) -> Optional[DynamicGraphNode]:
         with self._threading.cond:
             self._n_instances_searching_graph += 1
@@ -206,10 +206,10 @@ class TracingContext:
     def maybe_add_node(
         self,
         inputs: OperatorInput,
-        tensor_metas: List[Optional[TensorMeta]],
+        tensor_metas: list[Optional[TensorMeta]],
         op_address: OperationAddress,
         module_attrs: BaseLayerAttributes = None,
-        ignored_algorithms: List[str] = None,
+        ignored_algorithms: list[str] = None,
         is_called_inside_nncf_module: bool = False,
     ) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
@@ -348,7 +348,7 @@ class TracingContext:
     def disable_node_additions(self):
         self._may_add_nodes = False
 
-    def add_node_comparators(self, scopes_to_apply: List[str], node_input_comparator: TensorMetaComparator = None):
+    def add_node_comparators(self, scopes_to_apply: list[str], node_input_comparator: TensorMetaComparator = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
@@ -376,7 +376,7 @@ class TracingContext:
         self._threading.thread_local.in_parameter_trace = val
 
     @property
-    def module_call_stack(self) -> List[torch.nn.Module]:
+    def module_call_stack(self) -> list[torch.nn.Module]:
         return self._threading.thread_local.module_call_stack
 
     def get_current_module(self) -> Optional[torch.nn.Module]:
@@ -385,7 +385,7 @@ class TracingContext:
         return None
 
     @property
-    def relative_scopes_stack(self) -> List[Scope]:
+    def relative_scopes_stack(self) -> list[Scope]:
         return self._threading.thread_local.scopes
 
     @property
@@ -448,7 +448,7 @@ class TracingContext:
     def reset_graph(self):
         self.graph = DynamicGraph()
 
-    def set_active_skipped_block(self, block_indexes: List[int]):
+    def set_active_skipped_block(self, block_indexes: list[int]):
         if self.active_block_indexes is not None:
             self.start_node_name_of_skipped_block = []
             self.end_node_name_of_skipped_block = []
@@ -458,7 +458,7 @@ class TracingContext:
                 self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_index].start_node_name)
                 self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_index].end_node_name)
 
-    def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):  # noqa: F821
+    def set_elastic_blocks(self, blocks: list["BuildingBlock"] = None):  # noqa: F821
         if blocks is not None and isinstance(blocks, list):
             if len(blocks) == 0:
                 self.skipped_blocks = []

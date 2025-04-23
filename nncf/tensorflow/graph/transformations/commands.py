@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -51,7 +51,7 @@ class TFLayerPoint(TargetPoint):
     def __str__(self) -> str:
         return super().__str__() + " " + self.layer_name
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -64,7 +64,7 @@ class TFLayerPoint(TargetPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFLayerPoint":
+    def from_state(cls, state: dict[str, Any]) -> "TFLayerPoint":
         """
         Creates the object from its state.
 
@@ -84,11 +84,11 @@ class TFMultiLayerPoint:
     graph: insertion spots before/after layer.
     """
 
-    def __init__(self, target_points: List[TargetPoint]):
+    def __init__(self, target_points: list[TargetPoint]):
         self._target_points = target_points
 
     @property
-    def target_points(self) -> List[TargetPoint]:
+    def target_points(self) -> list[TargetPoint]:
         return self._target_points
 
     def __str__(self) -> str:
@@ -113,7 +113,7 @@ class TFLayer(TFLayerPoint):
     def __init__(self, layer_name: str):
         super().__init__(TargetType.LAYER, layer_name)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -125,7 +125,7 @@ class TFLayer(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFLayer":
+    def from_state(cls, state: dict[str, Any]) -> "TFLayer":
         """
         Creates the object from its state.
 
@@ -178,7 +178,7 @@ class TFBeforeLayer(TFLayerPoint):
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -192,7 +192,7 @@ class TFBeforeLayer(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFBeforeLayer":
+    def from_state(cls, state: dict[str, Any]) -> "TFBeforeLayer":
         """
         Creates the object from its state.
 
@@ -246,7 +246,7 @@ class TFAfterLayer(TFLayerPoint):
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -260,7 +260,7 @@ class TFAfterLayer(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFAfterLayer":
+    def from_state(cls, state: dict[str, Any]) -> "TFAfterLayer":
         """
         Creates the object from its state.
 
@@ -307,7 +307,7 @@ class TFLayerWeight(TFLayerPoint):
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -320,7 +320,7 @@ class TFLayerWeight(TFLayerPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFLayerWeight":
+    def from_state(cls, state: dict[str, Any]) -> "TFLayerWeight":
         """
         Creates the object from its state.
 
@@ -369,7 +369,7 @@ class TFOperationWithWeights(TFLayerWeight):
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -383,7 +383,7 @@ class TFOperationWithWeights(TFLayerWeight):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFOperationWithWeights":
+    def from_state(cls, state: dict[str, Any]) -> "TFOperationWithWeights":
         """
         Creates the object from its state.
 
@@ -439,7 +439,7 @@ class TFInsertionCommand(TFTransformationCommand):
             self.callable_objects.append((callable_object, _priority))
 
     @property
-    def insertion_objects(self) -> List[Callable]:
+    def insertion_objects(self) -> list[Callable]:
         return [x for x, _ in self.callable_objects]
 
     def union(self, other: TFTransformationCommand) -> "TFInsertionCommand":
@@ -484,7 +484,7 @@ class TFMultipleInsertionCommands(TFTransformationCommand):
         self,
         target_point: TargetPoint,
         check_target_points_fn: Optional[Callable] = None,
-        commands: Optional[List[TFTransformationCommand]] = None,
+        commands: Optional[list[TFTransformationCommand]] = None,
     ):
         super().__init__(TransformationType.MULTI_INSERT, target_point)
         self.check_target_points_fn = check_target_points_fn
@@ -496,7 +496,7 @@ class TFMultipleInsertionCommands(TFTransformationCommand):
                 self.add_insertion_command(cmd)
 
     @property
-    def commands(self) -> List[TFTransformationCommand]:
+    def commands(self) -> list[TFTransformationCommand]:
         return self._commands
 
     def check_insertion_command(self, command: TFTransformationCommand) -> bool:

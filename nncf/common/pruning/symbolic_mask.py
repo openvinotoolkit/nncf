@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Union
+from typing import Union
 
 import nncf
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
@@ -36,8 +36,8 @@ class SymbolicMaskProducer:
         return self._id
 
     @classmethod
-    def merge_producers(cls, masks: List["SymbolicMask"]) -> List["SymbolicMaskProducer"]:
-        merged_producers: Dict[int, SymbolicMaskProducer] = {}
+    def merge_producers(cls, masks: list["SymbolicMask"]) -> list["SymbolicMaskProducer"]:
+        merged_producers: dict[int, SymbolicMaskProducer] = {}
         for mask in masks:
             for mask_producer in mask.mask_producers:
                 if mask_producer.id in merged_producers:
@@ -58,7 +58,7 @@ class SymbolicMask(NNCFTensor):
     symbolic mask propagation by SymbolicMaskProcessor.
     """
 
-    def __init__(self, dimension: int, mask_producers: Union[None, int, List[SymbolicMaskProducer]] = None):
+    def __init__(self, dimension: int, mask_producers: Union[None, int, list[SymbolicMaskProducer]] = None):
         super().__init__(None)
         if mask_producers is None:
             self._mask_producers = []
@@ -70,11 +70,11 @@ class SymbolicMask(NNCFTensor):
         self._shape = dimension
 
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> list[int]:
         return [self._shape]
 
     @property
-    def mask_producers(self) -> List[SymbolicMaskProducer]:
+    def mask_producers(self) -> list[SymbolicMaskProducer]:
         return self._mask_producers
 
     @property
@@ -89,7 +89,7 @@ class AmbiguousSymbolicMask(SymbolicMask):
     certainly mark all producers of such mask as unprunable by dimension mismatch.
     """
 
-    def __init__(self, mask_producers: Union[int, List[SymbolicMaskProducer]] = None):
+    def __init__(self, mask_producers: Union[int, list[SymbolicMaskProducer]] = None):
         super().__init__(-1, mask_producers)
 
 
@@ -102,13 +102,13 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     """
 
     @classmethod
-    def concatenate(cls, tensors: List[SymbolicMask], axis: int) -> SymbolicMask:  # type: ignore
+    def concatenate(cls, tensors: list[SymbolicMask], axis: int) -> SymbolicMask:  # type: ignore
         ret_shape = sum([t.shape[0] for t in tensors])
         producers = SymbolicMaskProducer.merge_producers(tensors)
         return SymbolicMask(ret_shape, producers)
 
     @classmethod
-    def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:  # type: ignore
+    def ones(cls, shape: Union[int, list[int]], device) -> SymbolicMask:  # type: ignore
         if isinstance(shape, list):
             if len(shape) != 1:
                 msg = f"Unexpected shape = {shape} for 1D symbolic mask"
@@ -118,7 +118,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(shape)
 
     @classmethod
-    def assert_allclose(cls, tensors: List[SymbolicMask]) -> None:  # type: ignore
+    def assert_allclose(cls, tensors: list[SymbolicMask]) -> None:  # type: ignore
         for input_mask in tensors[1:]:
             assert tensors[0].shape == input_mask.shape
 
@@ -132,7 +132,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(tensor.shape[0] * repeats, updated_mask_producers)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:  # type: ignore
+    def elementwise_mask_propagation(cls, input_masks: list[SymbolicMask]) -> SymbolicMask:  # type: ignore
         """
         Assemble output mask for elementwise pruning operation from given input masks.
         In case input_masks have different shape don't propagate any masks.
@@ -148,7 +148,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(input_masks[0].shape[0], producers)
 
     @classmethod
-    def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:  # type: ignore
+    def split(cls, tensor: SymbolicMask, output_shapes: list[int]) -> list[SymbolicMask]:  # type: ignore
         if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
             msg = (
                 "Symbolic mask split was called with"

@@ -11,7 +11,7 @@
 import math
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import torch
 from torch import nn
@@ -40,7 +40,7 @@ class SparseConfig:
     """
 
     def __init__(
-        self, mode: SparseStructure, sparse_factors: Optional[Tuple[int, int]] = None, sparse_axis: Optional[int] = None
+        self, mode: SparseStructure, sparse_factors: Optional[tuple[int, int]] = None, sparse_axis: Optional[int] = None
     ):
         """
         Parses and validates the sparse structure of a certain layer for movement sparsity.
@@ -90,7 +90,7 @@ class SparseConfig:
             self.sparse_axis = int(sparse_axis)
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "SparseConfig":
+    def from_config(cls, config: dict[str, Any]) -> "SparseConfig":
         """
         Creates the object from its config.
 
@@ -112,7 +112,7 @@ class SparseConfigByScope:
     It includes the sparse structure config, and the target scopes it is applied to.
     """
 
-    def __init__(self, sparse_config: SparseConfig, target_scopes: Union[str, List[str]]):
+    def __init__(self, sparse_config: SparseConfig, target_scopes: Union[str, list[str]]):
         """
         Initializes the object that describes the sparse structure and the layers it matches.
 
@@ -123,7 +123,7 @@ class SparseConfigByScope:
         self.target_scopes = target_scopes
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "SparseConfigByScope":
+    def from_config(cls, config: dict[str, Any]) -> "SparseConfigByScope":
         """
         Creates the object from its representation.
 
@@ -169,7 +169,7 @@ class MovementSparsifier(nn.Module):
         self._importance_threshold = -math.inf
         self._importance_regularization_factor = 0.0
 
-        weight_shape: List[int] = get_weight_shape_legacy(target_module_node.layer_attributes)
+        weight_shape: list[int] = get_weight_shape_legacy(target_module_node.layer_attributes)
         assert len(weight_shape) == 2, "Unsupported module with weight shape not in 2D."
         self.weight_ctx = BinaryMask(weight_shape)
         self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
@@ -217,7 +217,7 @@ class MovementSparsifier(nn.Module):
 
     def forward(
         self, weight: torch.Tensor, bias: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
         if is_tracing_state():
             masked_weight = weight.mul(self.weight_ctx.binary_mask)
             masked_bias = None if bias is None else bias.mul(self.bias_ctx.binary_mask)
@@ -292,8 +292,8 @@ class MovementSparsifier(nn.Module):
 
     @staticmethod
     def _get_weight_importance_shape(
-        weight_shape: List[int], sparse_factors: Tuple[int, int], sparse_structure: SparseStructure
-    ) -> Tuple[int, int]:
+        weight_shape: list[int], sparse_factors: tuple[int, int], sparse_structure: SparseStructure
+    ) -> tuple[int, int]:
         if sparse_structure == SparseStructure.FINE:
             return weight_shape
 
@@ -312,7 +312,7 @@ class MovementSparsifier(nn.Module):
         raise nncf.InternalError(msg)
 
     @staticmethod
-    def _get_sparse_factors(weight_shape: List[int], sparse_config: SparseConfig) -> Tuple[int, int]:
+    def _get_sparse_factors(weight_shape: list[int], sparse_config: SparseConfig) -> tuple[int, int]:
         sparse_factors = sparse_config.sparse_factors
         if sparse_config.mode == SparseStructure.BLOCK:
             r, c = sparse_factors
@@ -337,7 +337,7 @@ class MaskCalculationHook:
     def __init__(self, module: nn.Module):
         self.hook = module._register_state_dict_hook(self.hook_fn)
 
-    def hook_fn(self, module, state_dict: Dict, prefix: str, local_metadata):
+    def hook_fn(self, module, state_dict: dict, prefix: str, local_metadata):
         state_dict[prefix + "weight_ctx._binary_mask"] = module.weight_ctx.binary_mask
         if module.prune_bias:
             state_dict[prefix + "bias_ctx._binary_mask"] = module.bias_ctx.binary_mask

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 import openvino as ov
 
@@ -31,10 +31,10 @@ class OVLayerwiseEngineBackend(LayerwiseEngineBackend):
     def create_layerwise_iterator(
         model: ov.Model,
         graph: NNCFGraph,
-        schedule: List[LayerwiseStep],
+        schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[Dict[NodeOutputPort, List[Tensor]]] = None,
+        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
     ) -> OVLayerwiseIterator:
         return OVLayerwiseIterator(model, graph, schedule, dataset, subset_size, cache)
 

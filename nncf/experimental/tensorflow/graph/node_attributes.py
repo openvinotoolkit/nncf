@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 
@@ -43,7 +42,7 @@ class TFWeightedNodeAttributes(TFNodeAttributes):
     Contains the TF-specific attributes of the NNCFNode with weight.
     """
 
-    def __init__(self, data_format: str, weight_shape: List[int]):
+    def __init__(self, data_format: str, weight_shape: list[int]):
         """
         Initializes the TF-specific attributes of the NNCFNode.
 
@@ -55,7 +54,7 @@ class TFWeightedNodeAttributes(TFNodeAttributes):
         super().__init__(data_format)
         self._weight_shape = weight_shape
 
-    def get_weight_shape(self) -> List[int]:
+    def get_weight_shape(self) -> list[int]:
         """
         Returns shape of the weight tensor.
 
