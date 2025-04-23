@@ -42,7 +42,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 
-REF_DIR = TEST_ROOT / "torch2" / "data" / "reference_graphs" / "compress_weights" / "fq_lora"
+REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "compress_weights" / "fq_lora"
 
 
 class ValidationMock:
