@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import onnx
@@ -76,7 +76,7 @@ class StatsFromOutput:
     Contains statistics that are parsed from the stdout.
     """
 
-    def get_stats(self) -> Dict[str, str]:
+    def get_stats(self) -> dict[str, str]:
         """
         Returns statistics collected from the stdout. Usually it parses execution time from the log of the progress bar.
         """
@@ -190,7 +190,7 @@ class RunInfo:
             return None
         return int(memory)
 
-    def get_result_dict(self) -> Dict[str, str]:
+    def get_result_dict(self) -> dict[str, str]:
         """Returns a dictionary with the results of the run."""
         ram_data = {}
         if self.compression_memory_usage_system is None:
@@ -342,7 +342,7 @@ class BaseTestPipeline(ABC):
         self.validate()
         self.run_bench()
 
-    def collect_errors(self) -> List[ErrorReport]:
+    def collect_errors(self) -> list[ErrorReport]:
         """
         Collects errors based on the pipeline's run information.
 
@@ -373,7 +373,7 @@ class BaseTestPipeline(ABC):
 
         return errors
 
-    def update_status(self, error_reports: List[ErrorReport]) -> List[str]:
+    def update_status(self, error_reports: list[ErrorReport]) -> list[str]:
         """
         Updates status of the pipeline based on the errors encountered during the run.
 
@@ -561,7 +561,7 @@ class PTQTestPipeline(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
 
-def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
+def get_num_fq_int4_int8(model: ov.Model) -> tuple[int, int, int]:
     num_fq = 0
     num_int8 = 0
     num_int4 = 0
@@ -579,14 +579,14 @@ def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
     return num_fq, num_int4, num_int8
 
 
-def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:
+def _are_exceptions_matched(report: ErrorReport, reference_exception: dict[str, str]) -> bool:
     return (
         reference_exception["error_message"] == report.msg.split(" | ")[1]
         and reference_exception["type"] == report.msg.split(" | ")[0]
     )
 
 
-def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> bool:
+def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: dict[str, dict[str, str]]) -> bool:
     if xfail_reason not in reference_data:
         return False
 
@@ -595,7 +595,7 @@ def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Di
     return True
 
 
-def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> str:
+def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: dict[str, dict[str, str]]) -> str:
     if report.reason == ErrorReason.EXCEPTION:
         return f"XFAIL: {reference_data[xfail_reason]['message']} - {report.msg}"
     return f"XFAIL: {xfail_reason} - {report.msg}"

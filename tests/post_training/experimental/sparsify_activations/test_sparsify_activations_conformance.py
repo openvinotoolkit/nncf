@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import pytest
 import yaml
@@ -37,7 +37,7 @@ def test_sparsify_activations(
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    result_data: Dict[str, RunInfo],
+    result_data: dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,

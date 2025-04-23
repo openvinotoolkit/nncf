@@ -11,7 +11,6 @@
 from abc import abstractmethod
 from collections import Counter
 from copy import deepcopy
-from typing import Dict
 
 import pytest
 
@@ -64,7 +63,7 @@ class ModelToTestOverflowFix:
     #          |
     #       Output_1
 
-    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype]):
+    def __init__(self, metatypes: dict[TestMetatype, OperatorMetatype]):
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
             NodeWithType("Input_2", InputNoopMetatype),
@@ -103,7 +102,7 @@ class ModelWithUnifiedScales:
     #           |
     #        Output_1
 
-    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype], nncf_graph_cls=NNCFGraph):
+    def __init__(self, metatypes: dict[TestMetatype, OperatorMetatype], nncf_graph_cls=NNCFGraph):
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
             NodeWithType("Conv_1", metatypes[Conv2dTestMetatype]),

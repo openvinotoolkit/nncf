@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import os
-from typing import List
 
 import pytest
 import torch
@@ -115,7 +114,7 @@ class MultiBranchesModelDesc(GeneralModelDesc):
         del self._config_update["compression"]["scope_overrides"]
         return self
 
-    def manual_precision(self, num_bits_for_weights: List[int], num_bits_for_activations: List[int]):
+    def manual_precision(self, num_bits_for_weights: list[int], num_bits_for_activations: list[int]):
         scopes_factory = self._get_scopes
         w_scopes, a_scopes = scopes_factory()
         bitwidth_per_scope = list(map(list, zip(num_bits_for_weights, w_scopes)))

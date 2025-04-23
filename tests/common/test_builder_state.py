@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
@@ -28,10 +28,10 @@ class A(BaseCompressionAlgorithmBuilder):
         super().__init__(config, should_init)
         self.state_value = state_value
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: dict[str, Any]):
         self.state_value = state_without_name.get(STATE_ATTR)
 
-    def _get_state_without_name(self) -> Dict[str, Any]:
+    def _get_state_without_name(self) -> dict[str, Any]:
         return {STATE_ATTR: self.state_value}
 
     def apply_to(self, model: TModel) -> TModel:
@@ -68,7 +68,7 @@ class CA(CompositeCompressionAlgorithmBuilder):
         pass
 
 
-def _get_mock_config(algo_name: Union[List[str], str]) -> NNCFConfig:
+def _get_mock_config(algo_name: Union[list[str], str]) -> NNCFConfig:
     config = NNCFConfig()
     config["input_info"] = {"sample_size": [1, 1]}
     if isinstance(algo_name, list):

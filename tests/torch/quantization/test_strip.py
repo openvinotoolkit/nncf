@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 import pytest
@@ -103,7 +103,7 @@ INPUT_TEST_SCALES = (
 )
 
 
-def range_mode_to_args(range_mode: str) -> Tuple[bool, bool]:
+def range_mode_to_args(range_mode: str) -> tuple[bool, bool]:
     """
     Get overflow_fix and narrow_range parameters by range_mode.
 

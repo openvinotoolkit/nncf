@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Callable, Tuple
+from typing import Callable
 
 import numpy as np
 import openvino as ov
@@ -153,11 +153,11 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 @dataclass
 class LayerAttributesTestCase:
     node_creator: Callable
-    input_shape: Tuple[int, ...]
+    input_shape: tuple[int, ...]
     act_port_id: int
     ref_layer_attrs: OVLayerAttributes
-    ref_weights_layout: Tuple[OVLayoutElem]
-    ref_acts_layout: Tuple[OVLayoutElem]
+    ref_weights_layout: tuple[OVLayoutElem]
+    ref_acts_layout: tuple[OVLayoutElem]
 
 
 TEST_CASES_CONV = [

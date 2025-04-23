@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Union
 
 import torch.fx
 import torch.nn.parallel
@@ -124,7 +124,7 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
 
 
 def get_torch_fx_model(
-    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]], dynamic_shapes=None
+    model: torch.nn.Module, ex_input: Union[torch.Tensor, tuple[torch.Tensor, ...]], dynamic_shapes=None
 ) -> torch.fx.GraphModule:
     """
     Converts given module to GraphModule.

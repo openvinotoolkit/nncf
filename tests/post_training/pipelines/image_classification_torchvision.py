@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Callable, Tuple
+from typing import Any, Callable
 
 import numpy as np
 import onnx
@@ -24,18 +24,18 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
 
 
-def _torch_export_for_training(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch.fx.GraphModule:
+def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
     return torch.export.export_for_training(model, args).module()
 
 
-def _torch_export(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch.fx.GraphModule:
+def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
     return torch.export.export(model, args).module()
 
 
 @dataclass
 class VisionModelParams:
     weights: models.WeightsEnum
-    export_fn: Callable[[torch.nn.Module, Tuple[Any, ...]], torch.fx.GraphModule]
+    export_fn: Callable[[torch.nn.Module, tuple[Any, ...]], torch.fx.GraphModule]
     export_torch_before_ov_convert: bool = False
 
 

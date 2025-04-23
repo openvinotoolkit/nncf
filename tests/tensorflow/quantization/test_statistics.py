@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -20,7 +20,7 @@ from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_empty_config
 
 
-def _get_basic_quantization_config(mode: str, granularity: str, input_sample_sizes: Optional[List[int]] = None):
+def _get_basic_quantization_config(mode: str, granularity: str, input_sample_sizes: Optional[list[int]] = None):
     config = get_empty_config(input_sample_sizes)
     per_channel = granularity == "per_channel"
 
@@ -46,7 +46,7 @@ class Case:
         self,
         model_name: str,
         model_builder,
-        input_sample_sizes: List[int],
+        input_sample_sizes: list[int],
         mode: str,
         granularity: str,
         expected: QuantizationStatistics,
