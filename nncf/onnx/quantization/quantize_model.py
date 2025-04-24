@@ -24,6 +24,9 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+from nncf.onnx.graph.model_metadata import MetadataKey
+from nncf.onnx.graph.model_metadata import remove_metadata
+from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.quantization.backend_parameters import get_external_data_dir
 from nncf.parameters import BackupMode
@@ -96,7 +99,7 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
             # Source: https://onnx.ai/onnx/repo-docs/ExternalData.html
             external_data_file_name = Path(info.location).name  # Extract only the filename
             data_path = external_data_dir / external_data_file_name
-            if not data_path.exist() or not data_path.is_file() or data_path.is_symlink():
+            if not data_path.exists() or not data_path.is_file() or data_path.is_symlink():
                 msg = (
                     f"Data of TensorProto (tensor name: {tensor.name}) should be stored in {str(data_path)}, "
                     "but it doesn't exist or is not accessible."
@@ -142,7 +145,7 @@ def quantize_impl(
     external_data_dir = get_external_data_dir(advanced_parameters)
     check_external_data_location(model, external_data_dir)
     if external_data_dir:
-        model.metadata_props.add(key="nncf.external_data_dir", value=external_data_dir)
+        set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, external_data_dir)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
@@ -157,6 +160,10 @@ def quantize_impl(
     graph = GraphConverter.create_nncf_graph(model)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+
+    if external_data_dir:
+        remove_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
+        remove_metadata(quantized_model, MetadataKey.EXTERNAL_DATA_DIR)
 
     return quantized_model
 
@@ -305,7 +312,7 @@ def compress_weights_impl(
     external_data_dir = get_external_data_dir(advanced_parameters)
     check_external_data_location(model, external_data_dir)
     if external_data_dir:
-        model.metadata_props.add(key="nncf.external_data_dir", value=external_data_dir)
+        set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, external_data_dir)
 
     compression_algorithm = WeightCompression(
         mode,
@@ -324,4 +331,10 @@ def compress_weights_impl(
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+
+    if external_data_dir:
+        remove_metadata(compressed_model, MetadataKey.EXTERNAL_DATA_DIR)
+
+    return compressed_model

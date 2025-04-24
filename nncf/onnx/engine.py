@@ -16,7 +16,8 @@ import onnxruntime as rt
 from onnx import ModelProto
 
 from nncf.common.engine import Engine
-from nncf.onnx.graph.onnx_helper import get_metadata_by_key
+from nncf.onnx.graph.model_metadata import MetadataKey
+from nncf.onnx.graph.model_metadata import get_metadata
 
 
 class ONNXEngine(Engine):
@@ -28,7 +29,7 @@ class ONNXEngine(Engine):
         self.input_names = set()
 
         sees_options = rt.SessionOptions()
-        external_data_dir = get_metadata_by_key(model, "nncf.external_data_dir")
+        external_data_dir = get_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
         if external_data_dir:
             sees_options.add_session_config_entry(
                 "session.model_external_initializers_file_folder_path", external_data_dir

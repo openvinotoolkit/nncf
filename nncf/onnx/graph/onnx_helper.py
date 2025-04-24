@@ -16,6 +16,8 @@ import onnx
 from onnx import numpy_helper
 
 import nncf
+from nncf.onnx.graph.model_metadata import MetadataKey
+from nncf.onnx.graph.model_metadata import get_metadata
 from nncf.tensor.definitions import TensorDataType
 
 NNCF_DTYPE_TO_ONNX_DTYPE = {
@@ -32,20 +34,6 @@ NNCF_DTYPE_TO_ONNX_DTYPE = {
 }
 
 ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
-
-
-def get_metadata_by_key(model: onnx.ModelProto, key: str) -> Optional[str]:
-    """
-    Returns the metadata value associated with the given key from the ONNX model.
-
-    :param model: The ONNX model.
-    :param key: The key of the metadata value to retrieve.
-    :return: The metadata value associated with the provided key, or None if the key is not found.
-    """
-    for metadata in model.metadata_props:
-        if metadata.key == key:
-            return metadata.value
-    return None
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
@@ -224,7 +212,7 @@ def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> n
     :param tensor: The specific tensor whose data is to be extracted.
     :return: A NumPy array containing the tensor's data.
     """
-    external_data_dir = get_metadata_by_key(model, "nncf.external_data_dir")
+    external_data_dir = get_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
     base_dir = external_data_dir if external_data_dir else ""
     return numpy_helper.to_array(tensor, base_dir)
 
