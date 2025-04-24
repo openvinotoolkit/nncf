@@ -187,7 +187,7 @@ class TestSparsifyActivationsAlgorithm:
         nncf_graph = build_nncf_graph(model, example_input)
         nx_graph = to_comparable_nx_graph(nncf_graph)
         dot_nncf_graph = to_pydot(nx_graph)
-        ref_file = Path(TEST_ROOT, "torch2", "data", "sparsify_activations", f"{file_name}.dot")
+        ref_file = Path(TEST_ROOT, "torch2", "data", "function_hook", "sparsify_activations", f"{file_name}.dot")
         compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)
 
     def test_export_openvino(self):

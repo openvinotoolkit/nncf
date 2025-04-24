@@ -29,7 +29,7 @@ from tests.torch.test_compressed_graph import ModelDesc
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 
-REF_DIR = TEST_ROOT / "torch2" / "data" / "quantization" / "test_quantized_graphs"
+REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quantization" / "test_quantized_graphs"
 
 
 TEST_MODELS_DESC = [

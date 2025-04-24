@@ -30,7 +30,7 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_random_mock_dataloader
 
-REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "reference_scales"
+REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quantization" / "reference_scales"
 
 
 def min_max_quantize_model(
