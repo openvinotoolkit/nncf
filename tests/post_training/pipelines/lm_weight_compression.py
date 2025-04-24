@@ -266,30 +266,6 @@ class LMWeightCompression(BaseTestPipeline):
         stats.fill(stdout)
         self.run_info.stats_from_output = stats
 
-    def _rename_files(self, folder_path, new_name):
-        model_folder = folder_path / "model"
-        bin_file = None
-        xml_file = None
-        if len(os.listdir(model_folder)) > 2:
-            msg = "Graph break encountered in torch compile!"
-            raise nncf.InternalError(msg)
-
-        for file in os.listdir(model_folder):
-            if file.endswith(".bin"):
-                bin_file = file
-            elif file.endswith(".xml"):
-                xml_file = file
-        if bin_file is None or xml_file is None:
-            msg = "Openvino Model Files Not Found!"
-            raise FileNotFoundError(msg)
-        bin_new_path = folder_path / f"{new_name}.bin"
-        xml_new_path = folder_path / f"{new_name}.xml"
-
-        os.rename(os.path.join(model_folder, bin_file), bin_new_path)
-        os.rename(os.path.join(model_folder, xml_file), xml_new_path)
-
-        os.rmdir(model_folder)
-
     def save_compressed_model(self) -> None:
         if self.backend == BackendType.FP32:
             return
@@ -315,7 +291,16 @@ class LMWeightCompression(BaseTestPipeline):
                     backend="openvino",
                     options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
                 )(example_input_ids, example_cache_position)
-                self._rename_files(self.output_model_dir, "openvino_model")
+
+                # Get the OV *.xml files in torch compile cache directory
+                cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))
+                if len(cached_ov_model_files) > 1:
+                    msg = "Graph break encountered in torch compile!"
+                    raise nncf.InternalError(msg)
+                elif len(cached_ov_model_files) == 0:
+                    msg = "Openvino Model Files Not Found!"
+                    raise FileNotFoundError(msg)
+                self.path_compressed_ir = cached_ov_model_files[0]
 
     def run_bench(self) -> None:
         pass
