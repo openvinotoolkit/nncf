@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Any, Callable, Dict, Type, TypeVar
+from typing import Any, Callable, TypeVar
 
 import pytest
 
@@ -57,7 +57,7 @@ class TemplateTestSQAlgorithm:
         """
 
     @abstractmethod
-    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+    def get_node_name_map(self, model_cls) -> dict[str, str]:
         """
         Return backend specific map from the given model class labels
         to nncf_grpah nodes names.
@@ -79,14 +79,14 @@ class TemplateTestSQAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def check_scales(model: TModel, reference_values: Dict[str, TTensor], model_cls) -> None:
+    def check_scales(model: TModel, reference_values: dict[str, TTensor], model_cls) -> None:
         """
         Checking scales from model with references.
         """
 
     @staticmethod
     @abstractmethod
-    def get_backend() -> Type[SmoothQuantAlgoBackend]:
+    def get_backend() -> type[SmoothQuantAlgoBackend]:
         """
         Returns backend-specific SmoothQuantAlgoBackend.
         """

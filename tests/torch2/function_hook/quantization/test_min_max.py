@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Tuple
 
 import pytest
 
@@ -45,7 +44,7 @@ class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 
 
 class TestTorchGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
-    def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
+    def get_nncf_graph(self, weight_port_id: int, weight_shape: tuple[int]) -> NNCFGraph:
         return NNCFGraphToTest(
             conv_metatype=PTConv2dMetatype, nncf_graph_cls=PTNNCFGraph, const_metatype=PTConstNoopMetatype
         ).nncf_graph
@@ -61,18 +60,18 @@ class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorit
         return PTLinearMetatype
 
     @staticmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> BaseLayerAttributes:
         # This method isn't needed for Torch backend
         return None
 
     @staticmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> BaseLayerAttributes:
         # This method isn't needed for Torch backend
         return None
 
     @staticmethod
     def get_matmul_node_attrs(
-        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+        weight_port_id: int, transpose_weight: tuple[int], weight_shape: tuple[int]
     ) -> BaseLayerAttributes:
         # This method isn't needed for Torch backend
         return None

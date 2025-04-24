@@ -14,7 +14,7 @@ from collections import Counter
 from collections import namedtuple
 from dataclasses import dataclass
 from itertools import permutations
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Optional
 
 import networkx as nx
 import pytest
@@ -177,9 +177,9 @@ class MultiQPSerializedDataForTest:
         self,
         target_type: TargetType,
         node_name: NNCFNodeName,
-        qconfigs: List[QuantizerConfig],
+        qconfigs: list[QuantizerConfig],
         input_port_id: int = None,
-        directly_quantized_op_node_names: List[NNCFNodeName] = None,
+        directly_quantized_op_node_names: list[NNCFNodeName] = None,
     ):
         self.target_type = target_type
         self.node_name = node_name
@@ -195,12 +195,12 @@ class RunOnIpGraphTestStruct:
     def __init__(
         self,
         base_nx_graph: nx.DiGraph,
-        retval_qp_data: Dict[QuantizationPointId, MultiQPSerializedDataForTest],
-        retval_unified_scale_qp_groups: List[Set[QuantizationPointId]],
-        retval_shared_input_operation_set_groups: List[Set[QuantizationPointId]],
+        retval_qp_data: dict[QuantizationPointId, MultiQPSerializedDataForTest],
+        retval_unified_scale_qp_groups: list[set[QuantizationPointId]],
+        retval_shared_input_operation_set_groups: list[set[QuantizationPointId]],
         expected_count_finished_quant: int,
         expected_count_active_quant: int,
-        ignored_scopes: Optional[List[str]],
+        ignored_scopes: Optional[list[str]],
     ):
         self.base_graph = get_nncf_graph_from_mock_nx_graph(base_nx_graph)
         self.retval_unified_scale_qp_groups = retval_unified_scale_qp_groups
@@ -208,7 +208,7 @@ class RunOnIpGraphTestStruct:
         self.expected_count_finished_quant = expected_count_finished_quant
         self.expected_count_active_quant = expected_count_active_quant
         self.ignored_scopes = ignored_scopes
-        self.retval_qps: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
+        self.retval_qps: dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
         for id_, qp_data in retval_qp_data.items():
             if qp_data.target_type is TargetType.OPERATION_WITH_WEIGHTS:
                 qip = WeightQuantizationInsertionPoint(qp_data.node_name)
@@ -926,7 +926,7 @@ class TestQuantizerPropagationSolver:
     @dataclass
     class BranchTransitionTestStruct:
         # Unspecified nodes are marked as quantization agnostic
-        init_node_to_trait_and_configs_dict: Dict[str, "TestQuantizerPropagationSolver.InitNodeTestStruct"]
+        init_node_to_trait_and_configs_dict: dict[str, "TestQuantizerPropagationSolver.InitNodeTestStruct"]
         starting_primary_quantizer_ip_node: str
         target_branching_node_for_primary_quantizer: str
         expected_status: TransitionStatus
@@ -1289,8 +1289,8 @@ class TestQuantizerPropagationSolver:
 
     @staticmethod
     def prepare_propagation_graph_state(
-        ip_graph: InsertionPointGraph, init_node_to_trait_configs_and_target_node_dict: Dict[str, Tuple]
-    ) -> Tuple[List[PropagatingQuantizer], QPSG]:
+        ip_graph: InsertionPointGraph, init_node_to_trait_configs_and_target_node_dict: dict[str, tuple]
+    ) -> tuple[list[PropagatingQuantizer], QPSG]:
         quant_prop_graph = QPSG(ip_graph)
         prop_quantizers = []
         for node in quant_prop_graph.nodes.values():

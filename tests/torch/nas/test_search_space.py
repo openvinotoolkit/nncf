@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
-from typing import Any, Dict, List, NamedTuple, Optional
+from typing import Any, NamedTuple, Optional
 
 import pytest
 
@@ -41,8 +41,8 @@ LIST_KERNEL_SS_DESCS = [
 
 class WidthSearchSpaceParams(NamedTuple):
     max_out_channels: int
-    params: Optional[Dict[str, Any]]
-    list_output_channels: List[int]
+    params: Optional[dict[str, Any]]
+    list_output_channels: list[int]
     width_indicator: int = -1
 
     def __str__(self):

@@ -11,7 +11,6 @@
 import logging
 import re
 from pathlib import Path
-from typing import List, Tuple
 from unittest.mock import Mock
 
 import pandas as pd
@@ -424,7 +423,7 @@ class TestStructuredMaskHandler:
                 assert re.fullmatch(r"\[[0-9]+ items\]", item) is not None
         assert Path(tmp_path, f"{file_name}.csv").is_file()
 
-    def _get_handler_from_ctrl(self, compression_ctrl) -> Tuple[StructuredMaskHandler, List[StructuredMaskContext]]:
+    def _get_handler_from_ctrl(self, compression_ctrl) -> tuple[StructuredMaskHandler, list[StructuredMaskContext]]:
         handler = compression_ctrl._structured_mask_handler
         all_ctxes = []
         for group in handler._structured_mask_ctx_groups:

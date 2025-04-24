@@ -12,14 +12,14 @@
 import inspect
 import os
 import subprocess
-from typing import Callable, Tuple
+from typing import Callable
 
 import pytest
 
 ISOLATION_RUN_ENV_VAR = "ISOLATION_RUN"
 
 
-def run_pytest_case_function_in_separate_process(fn: Callable) -> Tuple[int, str, str]:
+def run_pytest_case_function_in_separate_process(fn: Callable) -> tuple[int, str, str]:
     """
     Use this function for launching test cases that rely on global object behaviour such as module import
     order that cannot be reliably reset and/or isolated using regular pytest functionality. This will

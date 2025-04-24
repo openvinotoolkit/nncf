@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
-from typing import Dict, List, Tuple, Union
+from typing import Union
 
 import pytest
 
@@ -42,9 +42,9 @@ def test_unwrap_tensors(data, ref):
     (
         (1, int, 1),
         (1, Tensor, Tensor(1)),
-        ([1, 1], List[int], [1, 1]),
-        ([1, 1], List[Tensor], [Tensor(1), Tensor(1)]),
-        ((1, 1), Tuple[Tensor, int], (Tensor(1), 1)),
+        ([1, 1], list[int], [1, 1]),
+        ([1, 1], list[Tensor], [Tensor(1), Tensor(1)]),
+        ((1, 1), tuple[Tensor, int], (Tensor(1), 1)),
     ),
 )
 def test_wrap_output(data, ret_ann, ref):
@@ -74,10 +74,10 @@ def test_get_arg_type(data, ref):
     (
         (float, [float]),
         (Union[float, str], [float, str]),
-        (List[float], [float]),
-        (List[Union[float, str]], [float, str]),
-        (Dict[str, int], [int]),
-        (Dict[str, Union[float, int]], [float, int]),
+        (list[float], [float]),
+        (list[Union[float, str]], [float, str]),
+        (dict[str, int], [int]),
+        (dict[str, Union[float, int]], [float, int]),
     ),
 )
 def test_get_register_types(data, ref):

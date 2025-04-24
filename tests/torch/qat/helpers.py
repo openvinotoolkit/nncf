@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import gc
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import torch
@@ -40,7 +40,7 @@ def convert_quantization_mode(mode: Optional[str]) -> QuantizationScheme:
     raise RuntimeError(msg)
 
 
-def convert_quantization_params(conf: Optional[Dict[str, Any]]) -> QuantizationParameters:
+def convert_quantization_params(conf: Optional[dict[str, Any]]) -> QuantizationParameters:
     if conf is None:
         return QuantizationParameters()
 
@@ -77,7 +77,7 @@ def convert_quantization_preset(preset: str) -> QuantizationPreset:
     raise RuntimeError(msg)
 
 
-def get_range_init_type(config_quantization_params: Dict[str, Any]) -> RangeEstimatorParameters:
+def get_range_init_type(config_quantization_params: dict[str, Any]) -> RangeEstimatorParameters:
     if (
         "initializer" in config_quantization_params
         and "range" in config_quantization_params["initializer"]
@@ -90,13 +90,13 @@ def get_range_init_type(config_quantization_params: Dict[str, Any]) -> RangeEsti
     return RangeEstimatorParametersSet.MINMAX
 
 
-def get_quantization_preset(config_quantization_params: Dict[str, Any]) -> Optional[QuantizationPreset]:
+def get_quantization_preset(config_quantization_params: dict[str, Any]) -> Optional[QuantizationPreset]:
     if "preset" not in config_quantization_params:
         return None
     return convert_quantization_preset(config_quantization_params["preset"])
 
 
-def get_advanced_ptq_parameters(config_quantization_params: Dict[str, Any]) -> AdvancedQuantizationParameters:
+def get_advanced_ptq_parameters(config_quantization_params: dict[str, Any]) -> AdvancedQuantizationParameters:
     range_estimator_params = get_range_init_type(config_quantization_params)
     return AdvancedQuantizationParameters(
         overflow_fix=convert_overflow_fix_param(config_quantization_params.get("overflow_fix")),
@@ -107,7 +107,7 @@ def get_advanced_ptq_parameters(config_quantization_params: Dict[str, Any]) -> A
     )
 
 
-def get_num_samples(config_quantization_params: Dict[str, Any]) -> int:
+def get_num_samples(config_quantization_params: dict[str, Any]) -> int:
     if (
         "initializer" in config_quantization_params
         and "range" in config_quantization_params["initializer"]

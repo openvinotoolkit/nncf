@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Dict, Tuple, Type
 
 import pytest
 import tensorflow as tf
@@ -98,8 +97,8 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics_with_shape_convert(
         self,
-        collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
+        collector: type[TensorStatisticCollectorBase],
+        reduction_shapes_vs_ref_statistic: dict[tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
         for reduction_shape in reduction_shapes_vs_ref_statistic:
             collector_obj = collector(use_abs_max=True, reduction_shape=reduction_shape)
@@ -176,8 +175,8 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics(
         self,
-        collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
+        collector: type[TensorStatisticCollectorBase],
+        reduction_shapes_vs_ref_statistic: dict[ReductionAxes, TensorStatistic],
     ):
         for reduction_shape in reduction_shapes_vs_ref_statistic:
             collector_obj = collector(reduction_shape=reduction_shape)

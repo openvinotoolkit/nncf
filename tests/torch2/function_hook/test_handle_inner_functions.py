@@ -11,7 +11,6 @@
 
 import ast
 import inspect
-from typing import Tuple
 
 import pytest
 import torch
@@ -30,7 +29,7 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "handle_inner_functi
 
 class ReluModel(nn.Module):
     @staticmethod
-    def example_input() -> Tuple[torch.Tensor, ...]:
+    def example_input() -> tuple[torch.Tensor, ...]:
         return (torch.rand(1, 1, 1),)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -43,7 +42,7 @@ class ReluModel(nn.Module):
 
 class BatchNormModel(nn.Module):
     @staticmethod
-    def example_input() -> Tuple[torch.Tensor, ...]:
+    def example_input() -> tuple[torch.Tensor, ...]:
         return (torch.rand(1, 1, 1),)
 
     def __init__(self):
@@ -62,7 +61,7 @@ class MultiHeadAttention(nn.Module):
     num_heads = 4
 
     @classmethod
-    def example_input(cls) -> Tuple[torch.Tensor, ...]:
+    def example_input(cls) -> tuple[torch.Tensor, ...]:
         query = torch.rand((cls.seq_length, cls.batch_size, cls.embed_dim))
         key = torch.rand((cls.seq_length, cls.batch_size, cls.embed_dim))
         value = torch.rand((cls.seq_length, cls.batch_size, cls.embed_dim))

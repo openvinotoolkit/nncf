@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Type
 
 import numpy as np
 import pytest
@@ -47,13 +46,13 @@ class IdentityConv(nn.Module):
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @staticmethod
-    def get_min_max_algo_backend_cls() -> Type[FXMinMaxAlgoBackend]:
+    def get_min_max_algo_backend_cls() -> type[FXMinMaxAlgoBackend]:
         return FXMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
         pytest.skip("FXBiasCorrectionAlgoBackend is not implemented")
 
-    def get_fast_bias_correction_algo_backend_cls(self) -> Type[FXFastBiasCorrectionAlgoBackend]:
+    def get_fast_bias_correction_algo_backend_cls(self) -> type[FXFastBiasCorrectionAlgoBackend]:
         return FXFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
@@ -104,7 +103,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def is_backend_support_custom_estimators(self) -> bool:
         return True
 
-    def reducers_map(self) -> List[TensorReducerBase]:
+    def reducers_map(self) -> list[TensorReducerBase]:
         return None
 
     @pytest.mark.skip("Merging is not implemented yet")

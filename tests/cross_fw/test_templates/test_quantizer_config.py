@@ -12,7 +12,6 @@
 from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 
@@ -121,8 +120,8 @@ class TemplateTestQuantizerConfig:
         target_type: TargetType
         target_node_name: str
         batchwise_statistics: bool
-        ref_per_ch_reduction_axes: List[int]
-        ref_per_tensor_reduction_axes: List[int]
+        ref_per_ch_reduction_axes: list[int]
+        ref_per_tensor_reduction_axes: list[int]
 
     @pytest.fixture(
         params=[

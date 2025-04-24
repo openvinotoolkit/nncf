@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 import torch
@@ -70,7 +70,7 @@ TEST_MODELS_DESC = [
 @pytest.mark.parametrize(
     ("desc", "quantization_parameters"), TEST_MODELS_DESC, ids=[m[0].model_name for m in TEST_MODELS_DESC]
 )
-def test_quantized_graphs(desc: ModelDesc, quantization_parameters: Dict[str, Any], regen_ref_data: bool):
+def test_quantized_graphs(desc: ModelDesc, quantization_parameters: dict[str, Any], regen_ref_data: bool):
     model = desc.model_builder().eval()
 
     if isinstance(desc.input_sample_sizes, dict):
