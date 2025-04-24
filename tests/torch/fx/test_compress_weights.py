@@ -359,7 +359,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model: torch.fx.GraphModule, ref_ids: List[int]) -> None:
+    def check_weights(model: torch.fx.GraphModule, ref_ids: list[int]) -> None:
         all_names = list(model.graph.nodes)
         low_precision_nodes = list(map(lambda i: all_names[i].name, ref_ids))
         for node in model.graph.nodes:
@@ -368,7 +368,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     assert isinstance(getattr(model, node.target), INT4SymmetricWeightsDecompressor)
 
     @staticmethod
-    def get_not_supported_algorithms() -> List[str]:
+    def get_not_supported_algorithms() -> list[str]:
         return ["lora_correction", "gptq"]
 
     @staticmethod
@@ -436,7 +436,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         return {
             "linear_2": Tensor(
                 torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])

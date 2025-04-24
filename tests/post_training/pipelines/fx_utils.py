@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 import torch
 import torch.fx
@@ -47,7 +46,7 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
             self.prefill = None
             self.decode_one_token = None
 
-    def get_openvino_backend_options(self) -> Dict:
+    def get_openvino_backend_options(self) -> dict:
         return {
             "device": self._device,
             "aot_autograd": True,
