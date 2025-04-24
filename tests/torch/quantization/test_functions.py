@@ -677,8 +677,8 @@ def test_get_scale_zp_from_input_low_input_high(
 class CompatibilityTestDesc:
     def __init__(self, levels, level_low, level_high, is_asymmetric=False):
         self.input_ = torch.tensor([[-0.5, 0.5]])
-        self.input_low = torch.tensor([-0.5])
-        self.input_range = torch.tensor([1.0])
+        self.input_low = torch.tensor([[-0.5]])
+        self.input_range = torch.tensor([[1.0]])
         self.grad_output = torch.tensor([[-0.5, 0.5]])
         self.levels = levels
         self.level_low = level_low
@@ -743,7 +743,6 @@ def test_cpu_extension_reference_compatibility(desc):
 
 
 @pytest.mark.cuda
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 @pytest.mark.parametrize(
     "desc",
     [
