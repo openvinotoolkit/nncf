@@ -308,7 +308,6 @@ def compress_weights_impl(
         msg = "ONNX models with opset version < 21 do not support block-wise quantization."
         raise nncf.ValidationError(msg)
 
-    check_model_protobuf_size(model)
     external_data_dir = get_external_data_dir(advanced_parameters)
     check_external_data_location(model, external_data_dir)
     if external_data_dir:
