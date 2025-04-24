@@ -9,9 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 import onnx
+from onnx.external_data_helper import ExternalDataInfo
+from onnx.external_data_helper import _get_all_tensors
+from onnx.external_data_helper import uses_external_data
 
 import nncf
 from nncf.common.factory import NNCFGraphFactory
@@ -43,6 +48,49 @@ from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
+
+
+def check_model_protobuf_size(model: onnx.ModelProto) -> None:
+    """
+    Checks whether the serialized ONNX model exceeds the 2GB protobuf size limit.
+    If the size limit is exceeded, a `nncf.ValidationError` is raised.
+
+    :param model: The ONNX model to be checked.
+    """
+    MAXIMUM_PROTOBUF = 2000000000  # Limitation of single protobuf file is 2GB
+    protobuf_string = model.SerializeToString()
+    if sys.getsizeof(protobuf_string) > MAXIMUM_PROTOBUF:
+        msg = "The protobuf of onnx model is too large (>2GB). \
+               Please load the model with the `load_external_data` flag set to `False`. \
+               For more details, please visit: https://onnx.ai/onnx/repo-docs/ExternalData.html "
+        raise nncf.ValidationError(msg)
+
+
+def check_external_data_location(model: onnx.ModelProto, external_data_dir: Optional[str] = None) -> None:
+    """
+    Raises `nncf.ValidationError` if any referenced external data file does not exist, is not a regular file,
+    or is a symlink.
+
+    :param model: The ONNX model to validate.
+    :param external_data_dir: Path to the directory where the external data files are expected to be located.
+        If None, the current working directory is used.
+    """
+    # If external_data_dir is not provided, we should test against the current working directory.
+    external_data_dir = Path.cwd() if external_data_dir is None else Path(external_data_dir)
+
+    for tensor in _get_all_tensors(model):
+        if uses_external_data(tensor):
+            info = ExternalDataInfo(tensor)
+            # `info.location` field stores file path relative to the filesystem directory where
+            # the ONNX protobuf model was stored. Note, that up-directory path components such
+            # .. are disallowed and should be stripped when parsing.
+            # Source: https://onnx.ai/onnx/repo-docs/ExternalData.html
+            external_data_file_name = Path(info.location).name  # Extract only the filename
+            data_path = external_data_dir / external_data_file_name
+            if not data_path.exist() or not data_path.is_file() or data_path.is_symlink():
+                msg = f"Data of TensorProto (tensor name: {tensor.name}) should be stored in {str(data_path)}, \
+                        but it doesn't exist or is not accessible."
+                raise nncf.ValidationError(msg)
 
 
 def quantize_impl(
@@ -79,7 +127,9 @@ def quantize_impl(
         advanced_parameters.weights_quantization_params = QuantizationParameters(per_channel=False)
         advanced_parameters.activations_quantization_params = QuantizationParameters(per_channel=False)
 
+    check_model_protobuf_size(model)
     external_data_dir = get_external_data_dir(advanced_parameters)
+    check_external_data_location(model, external_data_dir)
     if external_data_dir:
         model.metadata_props.add(key="nncf.external_data_dir", value=external_data_dir)
 
@@ -240,7 +290,9 @@ def compress_weights_impl(
         msg = "ONNX models with opset version < 21 do not support block-wise quantization."
         raise nncf.ValidationError(msg)
 
+    check_model_protobuf_size(model)
     external_data_dir = get_external_data_dir(advanced_parameters)
+    check_external_data_location(model, external_data_dir)
     if external_data_dir:
         model.metadata_props.add(key="nncf.external_data_dir", value=external_data_dir)
 
