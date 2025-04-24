@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import pytest
 import torch
@@ -64,7 +63,7 @@ def test_remove_handle():
 
 
 class CheckPriority(nn.Module):
-    def __init__(self, storage: List, name: str):
+    def __init__(self, storage: list, name: str):
         super().__init__()
         self.storage = storage
         self.name = name

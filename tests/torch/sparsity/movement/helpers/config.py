@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 
 
-def convert_scheduler_params_to_dict(params: MovementSchedulerParams) -> Dict[str, Any]:
+def convert_scheduler_params_to_dict(params: MovementSchedulerParams) -> dict[str, Any]:
     result = {}
     for key, value in params.__dict__.items():
         if value is not None:
@@ -34,8 +34,8 @@ class MovementAlgoConfig:
     def __init__(
         self,
         scheduler_params: Optional[MovementSchedulerParams] = None,
-        sparse_structure_by_scopes: Optional[List[Dict]] = None,
-        ignored_scopes: Optional[List[str]] = None,
+        sparse_structure_by_scopes: Optional[list[dict]] = None,
+        ignored_scopes: Optional[list[str]] = None,
         compression_lr_multiplier: Optional[float] = None,
     ):
         self.scheduler_params = scheduler_params or deepcopy(MovementAlgoConfig.default_scheduler_params)
@@ -43,7 +43,7 @@ class MovementAlgoConfig:
         self.ignored_scopes = ignored_scopes or []
         self.compression_lr_multiplier = compression_lr_multiplier
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "algorithm": "movement_sparsity",
             "params": convert_scheduler_params_to_dict(self.scheduler_params),

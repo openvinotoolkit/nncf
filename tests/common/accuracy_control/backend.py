@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -26,31 +26,31 @@ from tests.common.quantization.metatypes import ShapeOfTestMetatype
 
 class AABackendForTests(AccuracyControlAlgoBackend):
     @staticmethod
-    def get_op_with_weights_metatypes() -> List[OperatorMetatype]:
+    def get_op_with_weights_metatypes() -> list[OperatorMetatype]:
         return WEIGHT_LAYER_METATYPES
 
     @staticmethod
-    def get_quantizer_metatypes() -> List[OperatorMetatype]:
+    def get_quantizer_metatypes() -> list[OperatorMetatype]:
         return QUANTIZER_METATYPES
 
     @staticmethod
-    def get_const_metatypes() -> List[OperatorMetatype]:
+    def get_const_metatypes() -> list[OperatorMetatype]:
         return CONSTANT_METATYPES
 
     @staticmethod
-    def get_quantizable_metatypes() -> List[OperatorMetatype]:
+    def get_quantizable_metatypes() -> list[OperatorMetatype]:
         return QUANTIZABLE_METATYPES
 
     @staticmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> list[NNCFNode]:
         return nncf_graph.get_input_nodes()
 
     @staticmethod
-    def get_quantize_agnostic_metatypes() -> List[OperatorMetatype]:
+    def get_quantize_agnostic_metatypes() -> list[OperatorMetatype]:
         return QUANTIZE_AGNOSTIC_METATYPES
 
     @staticmethod
-    def get_shapeof_metatypes() -> List[OperatorMetatype]:
+    def get_shapeof_metatypes() -> list[OperatorMetatype]:
         return [ShapeOfTestMetatype]
 
     @staticmethod
@@ -70,7 +70,7 @@ class AABackendForTests(AccuracyControlAlgoBackend):
         return None
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[Optional[int]]:
         return None
 
     @staticmethod

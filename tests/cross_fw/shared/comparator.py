@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Dict, List, TypeVar, Union
+from typing import Callable, TypeVar, Union
 
 import numpy as np
 
@@ -27,8 +27,8 @@ class BaseTensorListComparator(ABC):
     @classmethod
     def _check_assertion(
         cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
+        test: Union[TensorType, list[TensorType]],
+        reference: Union[TensorType, list[TensorType]],
         assert_fn: Callable[[np.ndarray, np.ndarray], bool],
     ):
         if not isinstance(test, list):
@@ -45,8 +45,8 @@ class BaseTensorListComparator(ABC):
     @classmethod
     def check_equal(
         cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
+        test: Union[TensorType, list[TensorType]],
+        reference: Union[TensorType, list[TensorType]],
         rtol: float = 1e-1,
         atol=0,
     ):
@@ -55,8 +55,8 @@ class BaseTensorListComparator(ABC):
     @classmethod
     def check_not_equal(
         cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
+        test: Union[TensorType, list[TensorType]],
+        reference: Union[TensorType, list[TensorType]],
         rtol: float = 1e-4,
     ):
         cls._check_assertion(
@@ -67,14 +67,14 @@ class BaseTensorListComparator(ABC):
 
     @classmethod
     def check_less(
-        cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]], rtol=1e-4
+        cls, test: Union[TensorType, list[TensorType]], reference: Union[TensorType, list[TensorType]], rtol=1e-4
     ):
         cls.check_not_equal(test, reference, rtol=rtol)
         cls._check_assertion(test, reference, np.testing.assert_array_less)
 
     @classmethod
     def check_greater(
-        cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]], rtol=1e-4
+        cls, test: Union[TensorType, list[TensorType]], reference: Union[TensorType, list[TensorType]], rtol=1e-4
     ):
         cls.check_not_equal(test, reference, rtol=rtol)
         cls._check_assertion(
@@ -82,7 +82,7 @@ class BaseTensorListComparator(ABC):
         )
 
 
-def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray]):
+def compare_stats(expected: dict[str, np.ndarray], actual: dict[str, np.ndarray]):
     assert len(expected) == len(actual)
     for ref_node_name, ref_stats in expected.items():
         actual_stats = actual[ref_node_name]

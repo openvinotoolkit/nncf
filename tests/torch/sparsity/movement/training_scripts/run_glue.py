@@ -11,7 +11,7 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import datasets
 import evaluate
@@ -45,7 +45,7 @@ task_to_sample_keys = {
 dataset_columns = ["labels", "input_ids", "token_type_ids", "attention_mask", "position_ids"]
 
 
-def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
+def parse_args() -> tuple[argparse.Namespace, TrainingArguments]:
     parser = argparse.ArgumentParser("GLUE")
     parser.add_argument(
         "--task_name",
@@ -100,7 +100,7 @@ class CompressionCallback(TrainerCallback):
         stats = self._gather_compression_stats(state.global_step, state.epoch)
         self.compression_logs.append(stats)
 
-    def _gather_compression_stats(self, step: int, epoch: Optional[float]) -> Dict[str, float]:
+    def _gather_compression_stats(self, step: int, epoch: Optional[float]) -> dict[str, float]:
         status = {"step": step}
         if epoch is not None:
             status["epoch"] = round(epoch, 2)
@@ -114,7 +114,7 @@ class CompressionTrainer(Trainer):
         self,
         compression_ctrl: Optional[CompressionAlgorithmController],
         *args,
-        callbacks: Optional[List[TrainerCallback]] = None,
+        callbacks: Optional[list[TrainerCallback]] = None,
         **kwargs,
     ):
         self.compression_ctrl = compression_ctrl
@@ -137,7 +137,7 @@ class CompressionTrainer(Trainer):
             loss = loss + loss_compress
         return (loss, outputs) if return_outputs else loss
 
-    def get_compression_logs(self) -> Optional[List[Dict[str, float]]]:
+    def get_compression_logs(self) -> Optional[list[dict[str, float]]]:
         if self._compression_callback is None:
             return None
         return self._compression_callback.compression_logs

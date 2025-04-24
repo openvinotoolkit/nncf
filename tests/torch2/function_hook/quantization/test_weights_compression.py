@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 import pytest
 import torch
@@ -475,7 +474,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
+    def check_weights(model: torch.nn.Module, ref_ids: list[int]) -> None:
         all_names = model.get_weight_names_in_exec_order()
         low_precision_nodes = list(map(lambda i: all_names[i], ref_ids))
         decompressed_modules = list(
@@ -487,7 +486,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
 
     @staticmethod
-    def get_not_supported_algorithms() -> List[str]:
+    def get_not_supported_algorithms() -> list[str]:
         return ["lora_correction", "gptq"]
 
     @staticmethod
@@ -547,7 +546,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         return {
             "linear3/linear/0": Tensor(
                 torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import numpy as np
 import pytest
@@ -46,8 +46,8 @@ RQ = ReferenceQuantize(backend_type=ReferenceBackendType.NUMPY)
 def generate_one_channel_input(
     input_low: np.ndarray,
     input_range: np.ndarray,
-    ch_idx: Optional[List[int]],
-    input_size: List[int],
+    ch_idx: Optional[list[int]],
+    input_size: list[int],
     bits: int,
     get_deviation: Callable[[], int],
     min_deviation: float,
@@ -75,7 +75,7 @@ def generate_one_channel_input(
 
 
 def generate_input(
-    input_size: List[int],
+    input_size: list[int],
     input_low: np.ndarray,
     input_range: np.ndarray,
     bits: int,

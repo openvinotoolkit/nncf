@@ -11,7 +11,6 @@
 
 
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import openvino as ov
@@ -131,7 +130,7 @@ def test_real_models_sq_placement(model_name_params, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
+def smooth_quant_model(ov_model: ov.Model, q_params: dict, quantize=True):
     dataset = get_dataset_for_test(ov_model)
     graph = GraphConverter.create_nncf_graph(ov_model)
 

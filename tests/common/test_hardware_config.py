@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 import pytest
 
@@ -32,7 +31,7 @@ def load_config_for_device(target_device: TargetDevice) -> HWConfig:
     return HWConfig.from_json(hw_config_path)
 
 
-def get_quantization_config(hw_config: HWConfig) -> Dict:
+def get_quantization_config(hw_config: HWConfig) -> dict:
     """
     Returns quantization config aggregated by types.
 

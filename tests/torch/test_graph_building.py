@@ -10,7 +10,7 @@
 # limitations under the License.
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 from unittest.mock import MagicMock
 
 import pytest
@@ -130,7 +130,7 @@ def test_forward_trace_function():
 
 
 @pytest.mark.parametrize("input_shape", ModelForGraphBuildingTest.INPUT_SHAPES)
-def test_activation_shape_tracing(input_shape: Tuple[int, ...]):
+def test_activation_shape_tracing(input_shape: tuple[int, ...]):
     model = ModelForGraphBuildingTest()
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
@@ -251,7 +251,7 @@ class MockModel(torch.nn.Module):
 
 
 class RandomRefTensor:
-    def __init__(self, shape: List[int]):
+    def __init__(self, shape: list[int]):
         self.tensor = torch.rand(shape)
 
 
@@ -268,7 +268,7 @@ class MockInputInfo(ModelInputInfo):
     MOCK_ARGS = (torch.Tensor([42.0]),)
     MOCK_KWARGS = {"foo": torch.ones([1, 3])}
 
-    def get_forward_inputs(self, device: str = None) -> Tuple[Tuple, Dict]:
+    def get_forward_inputs(self, device: str = None) -> tuple[tuple, dict]:
         return MockInputInfo.MOCK_ARGS, MockInputInfo.MOCK_KWARGS
 
 
@@ -301,9 +301,9 @@ def test_input_info_args_are_passed_into_forward(mock_model_with_stub_forward: M
 
 @dataclass
 class FillerInputInfoGenerationTestStruct:
-    config_input_info_subdict: Union[List[Dict], Dict]
-    ref_args: Tuple[torch.Tensor, ...]
-    ref_kwargs: Dict[str, torch.Tensor]
+    config_input_info_subdict: Union[list[dict], dict]
+    ref_args: tuple[torch.Tensor, ...]
+    ref_kwargs: dict[str, torch.Tensor]
 
 
 TEST_KEYWORD_1 = "keyword1"
@@ -387,7 +387,7 @@ def test_input_infos_respect_device_setting(input_info: ModelInputInfo, use_cuda
 
 
 class MockInitDataLoader(PTInitializingDataLoader):
-    def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
+    def get_inputs(self, dataloader_output: Any) -> tuple[tuple, dict]:
         return dataloader_output[0], dataloader_output[1]
 
     def get_target(self, dataloader_output: Any) -> Any:

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
+from typing import Any, Callable, NamedTuple, Optional
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import SingleElasticityBuilder
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import create_elasticity_builder_from_config
@@ -25,10 +25,10 @@ class ElasticityDesc:
         self,
         elasticity_dim: ElasticityDim,
         model_cls: Optional[Callable] = None,
-        ref_state: Optional[Dict[str, Any]] = None,
+        ref_state: Optional[dict[str, Any]] = None,
         name: Optional[str] = None,
-        params: Dict[str, Any] = None,
-        input_size: Optional[List[int]] = None,
+        params: dict[str, Any] = None,
+        input_size: Optional[list[int]] = None,
         ref_search_space: Optional[Any] = None,
         ref_output_fn: Optional[Callable] = None,
     ):
@@ -64,7 +64,7 @@ class ElasticityDesc:
     def create_builder(self) -> SingleElasticityBuilder:
         return create_elasticity_builder_from_config(self.params, self.elasticity_dim)
 
-    def create_builder_with_config(self, config: Dict[str, Any]) -> SingleElasticityBuilder:
+    def create_builder_with_config(self, config: dict[str, Any]) -> SingleElasticityBuilder:
         return create_elasticity_builder_from_config(config, self.elasticity_dim)
 
 
@@ -90,7 +90,7 @@ class ModelStats(NamedTuple):
     flops: int
     num_weights: int
 
-    def __eq__(self, other: Tuple[int, int]):
+    def __eq__(self, other: tuple[int, int]):
         return other[0] == self.flops and other[1] == self.num_weights
 
 
@@ -104,9 +104,9 @@ class RefModelStats(NamedTuple):
 class MultiElasticityTestDesc(NamedTuple):
     model_creator: Any
     ref_model_stats: RefModelStats = None
-    blocks_to_skip: List[List[str]] = None
-    input_sizes: List[int] = [1, 3, 32, 32]
-    algo_params: Dict = {}
+    blocks_to_skip: list[list[str]] = None
+    input_sizes: list[int] = [1, 3, 32, 32]
+    algo_params: dict = {}
     name: str = None
 
     def __str__(self):

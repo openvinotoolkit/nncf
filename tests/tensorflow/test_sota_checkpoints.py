@@ -16,7 +16,7 @@ import sys
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import openvino as ov
 import pandas as pd
@@ -74,7 +74,7 @@ class EvalRunParamsStruct:
     target_ov: float
     metric_type: str
     dataset_name: str
-    dataset_types: List[str]
+    dataset_types: list[str]
     sample_type: str
     resume_file: Optional[Path]
     weights: Optional[str]
@@ -121,7 +121,7 @@ class ResultInfo:
         }
 
 
-def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
+def read_reference_file(ref_path: Path) -> list[EvalRunParamsStruct]:
     """
     Reads the reference file to get a list of `EvalRunParamsStruct` objects.
 
@@ -261,7 +261,7 @@ class TestSotaCheckpoints:
         Fixture to collect information about tests in `ResultInfo` struct
         and dump it to `metrics_dump_dir / results.csv`.
         """
-        data: List[ResultInfo] = []
+        data: list[ResultInfo] = []
         yield data
         if metrics_dump_dir and data:
             path = metrics_dump_dir / "results.csv"
@@ -305,7 +305,7 @@ class TestSotaCheckpoints:
 
     def get_reference_fp32_metric(
         self, metrics_dump_path: Path, reference_name: str, dataset_type: Optional[str] = None
-    ) -> Tuple[Optional[float], bool]:
+    ) -> tuple[Optional[float], bool]:
         """
         Get reference metric to not compressed model.
         In case of exists reference data will get reference metric from it others reference data gets
@@ -353,7 +353,7 @@ class TestSotaCheckpoints:
     @staticmethod
     def get_weight_params(
         eval_test_struct: EvalRunParamsStruct, sota_checkpoints_dir: Path
-    ) -> Dict[str, Union[Path, bool]]:
+    ) -> dict[str, Union[Path, bool]]:
         if eval_test_struct.resume_file is not None:
             return {"resume_file_path": sota_checkpoints_dir / eval_test_struct.resume_file}
         elif eval_test_struct.weights:
@@ -386,7 +386,7 @@ class TestSotaCheckpoints:
         eval_test_struct: EvalRunParamsStruct,
         dataset_type: str,
         metrics_dump_dir: Path,
-        collected_data: List[ResultInfo],
+        collected_data: list[ResultInfo],
     ):
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
@@ -487,7 +487,7 @@ class TestSotaCheckpoints:
         sota_checkpoints_dir: Path,
         ov_data_dir: Path,
         openvino: bool,
-        collected_data: List[ResultInfo],
+        collected_data: list[ResultInfo],
     ):
         if not openvino:
             pytest.skip()

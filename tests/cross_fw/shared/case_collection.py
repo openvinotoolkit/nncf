@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 import pytest
 
@@ -19,7 +18,7 @@ COMMON_SCOPE_MARKS_VS_OPTIONS = {
 }
 
 
-def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: Dict[str, str]) -> None:
+def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: dict[str, str]) -> None:
     options_not_given = {mark: option for mark, option in marks_vs_options.items() if config.getoption(option) is None}
     for item in items:
         for mark, option in options_not_given.items():
@@ -29,6 +28,6 @@ def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: 
                 )
 
 
-def skip_if_backend_not_selected(backend: str, backends_list: List[str]):
+def skip_if_backend_not_selected(backend: str, backends_list: list[str]):
     if "all" not in backends_list and backend not in backends_list:
         pytest.skip("not selected for testing")

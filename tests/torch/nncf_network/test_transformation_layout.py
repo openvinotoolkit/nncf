@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import itertools
-from typing import Tuple, Type, Union
+from typing import Union
 
 import pytest
 import torch
@@ -41,8 +41,8 @@ def trace_parameters_fixture(request) -> bool:
     return request.param
 
 
-def _get_trace_params_target_types_command_builders_and_models_cls() -> Tuple[
-    bool, Type[torch.nn.Module], TargetType, callable
+def _get_trace_params_target_types_command_builders_and_models_cls() -> tuple[
+    bool, type[torch.nn.Module], TargetType, callable
 ]:
     """
     Returns list of all avaliable command builders
@@ -89,7 +89,7 @@ def _translate_target_types(trace_parameters: bool, command: Union[PTInsertionCo
     _get_trace_params_target_types_command_builders_and_models_cls(),
 )
 def test_get_applied_modification_commands(
-    model_cls: Type[torch.nn.Module], command_builder: callable, target_type: TargetType, trace_parameters: bool
+    model_cls: type[torch.nn.Module], command_builder: callable, target_type: TargetType, trace_parameters: bool
 ):
     model = model_cls()
     nncf_model = wrap_model(model, torch.zeros(model_cls.INPUT_SHAPE), trace_parameters=trace_parameters)
@@ -113,7 +113,7 @@ def test_get_applied_modification_commands(
     _get_trace_params_target_types_command_builders_and_models_cls(),
 )
 def test_priority_of_get_applied_modification_commands(
-    command_builder: callable, model_cls: Type[torch.nn.Module], target_type: TargetType, trace_parameters: bool
+    command_builder: callable, model_cls: type[torch.nn.Module], target_type: TargetType, trace_parameters: bool
 ):
     layout = PTTransformationLayout()
     commands = dict()
@@ -140,7 +140,7 @@ def test_priority_of_get_applied_modification_commands(
 
 @pytest.mark.parametrize("model_cls", InsertionCommandBuilder.AVAILABLE_MODELS)
 def test_all_possible_combinations_of_commands_for_get_applied_commands(
-    model_cls: Type[torch.nn.Module], trace_parameters: bool
+    model_cls: type[torch.nn.Module], trace_parameters: bool
 ):
     dummy_state = "DummyState"
     commands = InsertionCommandBuilder(model_cls).get_all_available_commands(
@@ -169,7 +169,7 @@ def test_all_possible_combinations_of_commands_for_get_applied_commands(
 @pytest.mark.parametrize("target_type", (TargetType.OPERATION_WITH_WEIGHTS, TargetType.OPERATOR_PRE_HOOK))
 @pytest.mark.parametrize("model_cls", InsertionCommandBuilder.AVAILABLE_MODELS)
 def test_get_applied_modification_commands_broken_call_hook(
-    model_cls: Type[torch.nn.Module], target_type: TargetType, trace_parameters: bool
+    model_cls: type[torch.nn.Module], target_type: TargetType, trace_parameters: bool
 ):
     model = model_cls()
     nncf_model = wrap_model(model, torch.zeros(model_cls.INPUT_SHAPE), trace_parameters=trace_parameters)

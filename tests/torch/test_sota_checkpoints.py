@@ -16,7 +16,7 @@ import sys
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pandas as pd
 import pytest
@@ -97,7 +97,7 @@ class ResultInfo:
         }
 
 
-def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
+def read_reference_file(ref_path: Path) -> list[EvalRunParamsStruct]:
     """
     Reads the reference file to get a list of `EvalRunParamsStruct` objects.
 
@@ -262,7 +262,7 @@ class TestSotaCheckpoints:
         Fixture to collect information about tests in `ResultInfo` struct
         and dump it to `metrics_dump_dir / results.csv`.
         """
-        data: List[ResultInfo] = []
+        data: list[ResultInfo] = []
         yield data
         if metrics_dump_dir and data:
             path = metrics_dump_dir / "results.csv"
@@ -324,7 +324,7 @@ class TestSotaCheckpoints:
         ]  # fmt: skip
         return " ".join(cmd)
 
-    def get_reference_fp32_metric(self, metrics_dump_path: Path, reference_name: str) -> Tuple[Optional[float], bool]:
+    def get_reference_fp32_metric(self, metrics_dump_path: Path, reference_name: str) -> tuple[Optional[float], bool]:
         """
         Get reference metric to not compressed model.
         In case of exists reference data will get reference metric from it others reference data gets
@@ -389,7 +389,7 @@ class TestSotaCheckpoints:
         sota_checkpoints_dir: str,
         sota_data_dir: str,
         eval_run_param: EvalRunParamsStruct,
-        collected_data: List[ResultInfo],
+        collected_data: list[ResultInfo],
         metrics_dump_dir: Path,
     ):
         """
@@ -521,7 +521,7 @@ class TestSotaCheckpoints:
         ov_data_dir: Path,
         openvino: bool,
         ov_config_dir: str,
-        collected_data: List[ResultInfo],
+        collected_data: list[ResultInfo],
         metrics_dump_dir: Path,
     ):
         """
@@ -622,7 +622,7 @@ class TestSotaCheckpoints:
         distributed_mode_sync_port: str,
         sota_data_dir: Path,
         sota_checkpoints_dir: Path,
-        collected_data: List[ResultInfo],
+        collected_data: list[ResultInfo],
         metrics_dump_dir: Path,
     ):
         """

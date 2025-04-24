@@ -12,7 +12,7 @@ import logging
 import math
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 
@@ -268,7 +268,7 @@ class TestSchedulerStatus:
             )
 
         ref_threshold, ref_factor = [], []
-        ref_state: Dict[str, Any] = {}
+        ref_state: dict[str, Any] = {}
         for _ in range(5):
             ref_scheduler.epoch_step()
             for _ in range(actual_steps_per_epoch):

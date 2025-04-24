@@ -11,7 +11,6 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 
@@ -43,8 +42,8 @@ class Edge:
 
 @dataclass
 class Graph:
-    nodes: List[Node]
-    edges: List[Edge]
+    nodes: list[Node]
+    edges: list[Edge]
 
 
 GRAPHS = {
@@ -206,8 +205,8 @@ class ParameterTestCase:
     """
 
     node_name: str
-    nodes: List[str]
-    ops: List[str]
+    nodes: list[str]
+    ops: list[str]
 
 
 TEST_CASES = {

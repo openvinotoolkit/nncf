@@ -10,7 +10,6 @@
 # limitations under the License.
 import json
 from collections import defaultdict
-from typing import Dict
 
 import numpy as np
 import pytest
@@ -28,7 +27,7 @@ from tests.cross_fw.test_templates.test_statistics_serializer import TemplateTes
 
 
 class TestNPStatisticsSerializer(TemplateTestStatisticsSerializer):
-    def _get_backend_statistics(self) -> Dict[str, Dict[str, np.ndarray]]:
+    def _get_backend_statistics(self) -> dict[str, dict[str, np.ndarray]]:
         return {
             "layer/1/activation": {"mean": Tensor(np.array([0.1, 0.2, 0.3]))},
             "layer/2/activation": {"variance": Tensor(np.array([0.05, 0.06, 0.07]))},
@@ -38,7 +37,7 @@ class TestNPStatisticsSerializer(TemplateTestStatisticsSerializer):
         # any backend for numpy tensor, e.g. OpenVINO
         return BackendType.OPENVINO
 
-    def is_equal(self, a1: Dict[str, Tensor], a2: Dict[str, Tensor]) -> bool:
+    def is_equal(self, a1: dict[str, Tensor], a2: dict[str, Tensor]) -> bool:
         for key in a1:
             if key not in a2:
                 return False

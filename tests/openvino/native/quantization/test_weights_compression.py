@@ -11,7 +11,7 @@
 
 import inspect
 import os
-from typing import Callable, Dict, List
+from typing import Callable
 from unittest.mock import patch
 
 import numpy as np
@@ -123,7 +123,7 @@ def get_next_node(node):
     return next_node
 
 
-def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
+def get_shape_for_second_input(op_with_weights: ov.Node) -> list[int]:
     return list(op_with_weights.inputs()[1].get_shape())
 
 
@@ -240,7 +240,7 @@ def check_int8_sym(op: ov.Node):
     return check_int8_node(op, mode=CompressWeightsMode.INT8_SYM)
 
 
-def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
+def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
     mapping = {node_name: check_int8_node for node_name in list_layers}
     primary_node_name = TEST_MODELS[IntegerModel][0]
     mapping[primary_node_name] = primary_fn
@@ -457,7 +457,7 @@ def test_shared_gather_all_layers(all_layers):
 
 @dataclass
 class QuantErrorDesc:
-    weight: List[float]
+    weight: list[float]
     ref_error: int = 0
     axis = (1,)
     name: str = ""
@@ -1559,13 +1559,13 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         raise NotImplementedError
 
     @staticmethod
-    def check_weights(model: ov.Model, ref_ids: List[int]) -> None:
+    def check_weights(model: ov.Model, ref_ids: list[int]) -> None:
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
 
     @staticmethod
-    def get_not_supported_algorithms() -> List[str]:
+    def get_not_supported_algorithms() -> list[str]:
         return []
 
     @staticmethod
@@ -1634,7 +1634,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         return {
             "MatMul_3": Tensor(
                 np.array(

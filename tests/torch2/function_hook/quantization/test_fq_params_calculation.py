@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pytest
@@ -30,11 +30,11 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_random_mock_dataloader
 
-REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "reference_scales"
+REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quantization" / "reference_scales"
 
 
 def min_max_quantize_model(
-    original_model: torch.nn.Module, quantization_params: Dict[str, Any] = None
+    original_model: torch.nn.Module, quantization_params: dict[str, Any] = None
 ) -> torch.nn.Module:
     config = nncf.NNCFConfig.from_dict({"input_info": {"sample_size": [1, 1, 10, 10]}})
 
@@ -61,7 +61,7 @@ def min_max_quantize_model(
     return quantized_model
 
 
-def get_fq_nodes(model: NNCFNetwork) -> Dict[Scope, torch.nn.Module]:
+def get_fq_nodes(model: NNCFNetwork) -> dict[Scope, torch.nn.Module]:
     quantization_types = tuple(class_type for class_type in QUANTIZATION_MODULES.registry_dict.values())
     ret = {}
     for name, module in model.named_modules():
@@ -70,7 +70,7 @@ def get_fq_nodes(model: NNCFNetwork) -> Dict[Scope, torch.nn.Module]:
     return ret
 
 
-def get_fq_nodes_params(nncf_module_quantizations: Dict[Scope, torch.nn.Module]) -> Dict[str, np.ndarray]:
+def get_fq_nodes_params(nncf_module_quantizations: dict[Scope, torch.nn.Module]) -> dict[str, np.ndarray]:
     output = {}
     for name, nncf_module_quantization in nncf_module_quantizations.items():
         input_low, input_high = nncf_module_quantization.get_input_low_input_high()
