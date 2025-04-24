@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
 import numpy as np
 import openvino as ov
@@ -30,7 +30,7 @@ from tests.torch.test_models.swin import SwinTransformerBlock
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 
 
-def get_torch_model_info(model_name: str) -> Tuple[Callable, Tuple[int]]:
+def get_torch_model_info(model_name: str) -> tuple[Callable, tuple[int]]:
     models = {
         "mobilenet-v2": (mobilenet_v2, (1, 3, 224, 224)),
         "mobilenet-v3-small": (mobilenet_v3_small, (1, 3, 224, 224)),

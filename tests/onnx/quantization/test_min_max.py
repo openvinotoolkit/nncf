@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Tuple
 
 import pytest
 
@@ -42,7 +41,7 @@ class TestONNXMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 
 
 class TestONNXGetTargetPointShape(TemplateTestGetTargetPointShape, TestONNXMinMaxAlgorithm):
-    def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
+    def get_nncf_graph(self, weight_port_id: int, weight_shape: tuple[int]) -> NNCFGraph:
         conv_layer_attrs = ONNXLayerAttributes(weight_attrs={weight_port_id: {"shape": weight_shape}}, bias_attrs={})
         return NNCFGraphToTest(ONNXConvolutionMetatype, conv_layer_attrs).nncf_graph
 
@@ -57,16 +56,16 @@ class TestONNXGetChannelAxesMinMaxAlgorithm(TemplateTestGetChannelAxes, TestONNX
         return ONNXGemmMetatype
 
     @staticmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ONNXLayerAttributes:
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> ONNXLayerAttributes:
         return ONNXLayerAttributes(weight_attrs={weight_port_id: {"shape": weight_shape}}, bias_attrs={})
 
     @staticmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ONNXLayerAttributes:
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> ONNXLayerAttributes:
         return TestONNXGetChannelAxesMinMaxAlgorithm.get_conv_node_attrs(weight_port_id, weight_shape)
 
     @staticmethod
     def get_matmul_node_attrs(
-        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+        weight_port_id: int, transpose_weight: tuple[int], weight_shape: tuple[int]
     ) -> ONNXLayerAttributes:
         weight_attrs = {weight_port_id: {"name": "dummy", "shape": weight_shape}}
         if weight_port_id == 0:

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable
 
 import numpy as np
 import openvino as ov
@@ -50,7 +50,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     def inplace_statistics(self, request) -> bool:
         return request.param
 
-    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+    def get_node_name_map(self, model_cls) -> dict[str, str]:
         if model_cls is LinearMultiShapeModel:
             return PT_LINEAR_MODEL_MM_MAP
         if model_cls is ConvTestModel:
@@ -90,7 +90,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         return transform_fn
 
     @staticmethod
-    def get_backend() -> Type[FXSmoothQuantAlgoBackend]:
+    def get_backend() -> type[FXSmoothQuantAlgoBackend]:
         return FXSmoothQuantAlgoBackend()
 
     @staticmethod
@@ -98,7 +98,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         return get_torch_fx_model_q_transformed(model, torch.ones(model.INPUT_SIZE))
 
     @staticmethod
-    def check_scales(model: torch.nn.Module, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+    def check_scales(model: torch.nn.Module, reference_values: dict[str, np.ndarray], model_cls) -> None:
         names_map = PT_LINEAR_MODEL_MM_MAP if model_cls is LinearMultiShapeModel else PT_CONV_MODEL_MM_MAP
         ops_list = {node.name: node for node in model.graph.nodes}
         for ref_names, ref_value in reference_values.items():

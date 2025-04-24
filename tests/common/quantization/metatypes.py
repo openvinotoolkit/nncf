@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -23,7 +22,7 @@ class TestMetatype(OperatorMetatype):
     name = None
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         assert cls.name is not None
         return [cls.name]
 

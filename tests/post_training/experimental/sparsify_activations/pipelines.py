@@ -12,7 +12,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 import openvino as ov
@@ -87,7 +87,6 @@ class SAPipelineMixin(BaseTestPipeline):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
-        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -102,7 +101,6 @@ class SAPipelineMixin(BaseTestPipeline):
             reference_data,
             no_eval,
             run_benchmark_app,
-            torch_compile_validation,
             params,
             batch_size,
             memory_monitor,
@@ -144,7 +142,7 @@ class SAPipelineMixin(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_int4 = num_int4
         self.run_info.num_compress_nodes.num_sparse_activations = num_sparse_activations
 
-    def collect_errors(self) -> List[ErrorReport]:
+    def collect_errors(self) -> list[ErrorReport]:
         errors = super().collect_errors()
         run_info = self.run_info
         reference_data = self.reference_data
@@ -214,7 +212,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     def get_transform_calibration_fn(self):
         process_one = super().get_transform_calibration_fn()
 
-        def transform_fn(chunk: List[Dict]):
+        def transform_fn(chunk: list[dict]):
             samples = [process_one(data, max_tokens=128, filter_bad_tokens=False) for data in chunk]
             inputs = {}
             for input_name, sample_value in samples[0].items():

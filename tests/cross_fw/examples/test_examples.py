@@ -14,7 +14,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -68,8 +68,8 @@ def _is_connection_error(txt: str) -> bool:
 def test_examples(
     tmp_path: Path,
     example_name: str,
-    example_params: Dict[str, Any],
-    backends_list: List[str],
+    example_params: dict[str, Any],
+    backends_list: list[str],
     is_check_performance: bool,
     ov_version_override: str,
     data: str,

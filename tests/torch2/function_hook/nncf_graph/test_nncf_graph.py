@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Union
 
 import networkx as nx
 import pytest
@@ -118,7 +118,7 @@ def test_convert_to_nncf_graph_multi_edges(regen_ref_data: bool):
 class ModelDesc:
     model_name: str
     model_builder: callable
-    inputs_info: Union[List[List[int]], Tuple[List[int], ...]]
+    inputs_info: Union[list[list[int]], tuple[list[int], ...]]
 
     def __str__(self):
         return self.model_name
@@ -233,7 +233,7 @@ def _no_missed_input_edge_for_conv() -> PTNNCFGraph:
         (_no_missed_input_edge_for_conv, []),
     ),
 )
-def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: List[str]):
+def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: list[str]):
     graph = graph_builder()
     ret = graph.get_nodes_with_missed_input_edges()
     ret_names = [node.node_name for node in ret]

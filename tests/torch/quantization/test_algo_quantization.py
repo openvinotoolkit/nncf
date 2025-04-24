@@ -10,7 +10,6 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
-from typing import List, Tuple
 
 import pytest
 import torch
@@ -155,7 +154,7 @@ def test_quantization_configs__custom():
 
 
 def compare_weights_activation_quantizers_pairs(
-    actual_pairs: List[Tuple[List[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
+    actual_pairs: list[tuple[list[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
 ):
     def get_wq_name(name):
         return "/".join([model_name, name])

@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import copy
-from typing import Dict, List
 
 import nncf
 from nncf import ModelType
@@ -555,7 +554,7 @@ WEIGHT_COMPRESSION_MODELS = [
 ]
 
 
-def generate_tests_scope(models_list: List[Dict]) -> Dict[str, dict]:
+def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """

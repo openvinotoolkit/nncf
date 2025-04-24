@@ -10,7 +10,7 @@
 # limitations under the License.
 from collections import OrderedDict
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import torch
@@ -36,7 +36,7 @@ class CompressionTrainer(Trainer):
         self,
         compression_ctrl: Optional[CompressionAlgorithmController],
         *args,
-        callbacks: Optional[List[TrainerCallback]] = None,
+        callbacks: Optional[list[TrainerCallback]] = None,
         **kwargs,
     ):
         self.compression_ctrl = compression_ctrl

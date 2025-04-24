@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 import pytest
 import torch
@@ -70,7 +69,7 @@ def get_model_size(model):
 
 
 def get_compressed_modules_weights(
-    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: Dict[str, int]
+    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: dict[str, int]
 ):
     n_target_modules = 0
     n_compressed_weights = 0

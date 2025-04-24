@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 import torch
@@ -163,7 +163,7 @@ class TestPolynomialSparsityScheduler:
 
     @staticmethod
     def run_epoch_with_per_step_sparsity_check(
-        steps_per_epoch: int, scheduler: PolynomialSparsityScheduler, set_sparsity_mock, ref_vals: List[Optional[float]]
+        steps_per_epoch: int, scheduler: PolynomialSparsityScheduler, set_sparsity_mock, ref_vals: list[Optional[float]]
     ):
         assert len(ref_vals) == steps_per_epoch + 1
         scheduler.epoch_step()

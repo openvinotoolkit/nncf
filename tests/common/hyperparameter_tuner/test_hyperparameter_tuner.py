@@ -12,7 +12,7 @@
 import copy
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -20,8 +20,8 @@ from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import apply_co
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import create_combinations
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import find_best_combination
 
-CombinationKey = Tuple[int, ...]
-Combination = Dict[str, Any]
+CombinationKey = tuple[int, ...]
+Combination = dict[str, Any]
 
 
 # =========================================================
@@ -107,7 +107,7 @@ Combination = Dict[str, Any]
     ],
 )
 def test_create_combinations(
-    param_settings: Dict[str, List[Any]], expected_combinations: Dict[CombinationKey, Combination]
+    param_settings: dict[str, list[Any]], expected_combinations: dict[CombinationKey, Combination]
 ):
     actual_combinations = create_combinations(param_settings)
     assert expected_combinations == actual_combinations
@@ -233,7 +233,7 @@ class ParamsC:
         "change_one_parameter_and_one_subparameter_depth_3",
     ],
 )
-def test_apply_combination(init_params: Dict[str, Any], combination: Combination, expected_params: Dict[str, Any]):
+def test_apply_combination(init_params: dict[str, Any], combination: Combination, expected_params: dict[str, Any]):
     init_params_copy = copy.deepcopy(init_params)
     actual_params = apply_combination(init_params, combination)
 
@@ -422,9 +422,9 @@ def test_apply_combination(init_params: Dict[str, Any], combination: Combination
     ],
 )
 def test_find_best_combination(
-    combinations: Dict[CombinationKey, Combination],
-    scores: Dict[CombinationKey, float],
-    param_settings: Dict[str, List[Any]],
+    combinations: dict[CombinationKey, Combination],
+    scores: dict[CombinationKey, float],
+    param_settings: dict[str, list[Any]],
     expected_combination_key: CombinationKey,
 ):
     combination_score_func = lambda x: scores[x]
