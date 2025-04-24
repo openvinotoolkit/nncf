@@ -17,7 +17,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 
 class BackendParameters:
     """
-    :param EXTERNAL_DATA_DIR:
+    :param EXTERNAL_DATA_DIR: An absolute path to the directory where the external data
+        files are stored. All external data files must be located in the same folder.
     """
 
     EXTERNAL_DATA_DIR = "external_data_dir"

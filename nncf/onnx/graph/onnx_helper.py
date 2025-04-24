@@ -218,9 +218,11 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
 
 def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> np.ndarray:
     """
-    :param model:
-    :param tensor:
-    :return:
+    Returns the data from an ONNX tensor as NumPy array.
+
+    :param model: The ONNX model containing the tensor.
+    :param tensor: The specific tensor whose data is to be extracted.
+    :return: A NumPy array containing the tensor's data.
     """
     external_data_dir = get_metadata_by_key(model, "nncf.external_data_dir")
     base_dir = external_data_dir if external_data_dir else ""

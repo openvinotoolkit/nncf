@@ -78,6 +78,11 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
     # If external_data_dir is not provided, we should test against the current working directory.
     external_data_dir = Path.cwd() if external_data_dir is None else Path(external_data_dir)
 
+    if not external_data_dir.is_absolute():
+        msg = f"BackendParameters.EXTERNAL_DATA_DIR should be an absolute path, but {str(external_data_dir)} \
+                was provided instead."
+        raise nncf.ValidationError(msg)
+
     for tensor in _get_all_tensors(model):
         if uses_external_data(tensor):
             info = ExternalDataInfo(tensor)
