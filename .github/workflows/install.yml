@@ -107,5 +107,6 @@ jobs:
         uses: ./.github/actions/add_job_link
         with:
           pull_request_number: ${{ inputs.pull_request_number }}
+          link_name: "Test_Install"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

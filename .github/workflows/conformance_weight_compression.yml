@@ -88,5 +88,6 @@ jobs:
         uses: ./.github/actions/add_job_link
         with:
           pull_request_number: ${{ inputs.pull_request_number }}
+          link_name: "Test_Weight_Compression"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

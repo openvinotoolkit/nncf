@@ -3,7 +3,9 @@ inputs:
   pull_request_number:
     description: 'Pull Request number'
     required: true
-
+  link_name:
+    description: 'Name of link, should contain only alphanumeric characters, dashes, and underscores'
+    required: true
 runs:
   using: "composite"
   steps:
@@ -13,7 +15,7 @@ runs:
         script: |
           const prNumber = parseInt(${{ inputs.pull_request_number }});
           const newLink = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
-          const newLine = `[${{ github.workflow }}](${newLink})`;
+          const newLine = `[${{ inputs.link_name }}](${newLink})`;
 
           const { data: pr } = await github.rest.pulls.get({
             owner: context.repo.owner,
@@ -22,7 +24,7 @@ runs:
           });
 
           let body = pr.body || '';
-          const regex = /\[${{ github.workflow }}\]\([^)]+\)/;
+          const regex = /\[${{ inputs.link_name }}\]\([^)]+\)/;
 
           if (regex.test(body)) {
             body = body.replace(regex, newLine);
