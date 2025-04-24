@@ -506,7 +506,7 @@ class PTQTestPipeline(BaseTestPipeline):
             mod = torch.compile(
                 exported_model.module(),
                 backend="openvino",
-                options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
+                options={"model_caching": True, "cache_dir": str(self.output_model_dir), "aot_autograd": True},
             )
             mod(self.dummy_tensor)
 
