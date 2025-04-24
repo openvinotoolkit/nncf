@@ -60,9 +60,11 @@ def check_model_protobuf_size(model: onnx.ModelProto) -> None:
     MAXIMUM_PROTOBUF = 2000000000  # Limitation of single protobuf file is 2GB
     protobuf_string = model.SerializeToString()
     if sys.getsizeof(protobuf_string) > MAXIMUM_PROTOBUF:
-        msg = "The protobuf of onnx model is too large (>2GB). \
-               Please load the model with the `load_external_data` flag set to `False`. \
-               For more details, please visit: https://onnx.ai/onnx/repo-docs/ExternalData.html "
+        msg = (
+            "The protobuf of onnx model is too large (>2GB). "
+            "Please load the model with the `load_external_data` flag set to `False`. "
+            "For more details, please visit: https://onnx.ai/onnx/repo-docs/ExternalData.html"
+        )
         raise nncf.ValidationError(msg)
 
 
@@ -79,8 +81,10 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
     external_data_dir = Path.cwd() if external_data_dir is None else Path(external_data_dir)
 
     if not external_data_dir.is_absolute():
-        msg = f"BackendParameters.EXTERNAL_DATA_DIR should be an absolute path, but {str(external_data_dir)} \
-                was provided instead."
+        msg = (
+            f"BackendParameters.EXTERNAL_DATA_DIR should be an absolute path, but {str(external_data_dir)} "
+            "was provided instead."
+        )
         raise nncf.ValidationError(msg)
 
     for tensor in _get_all_tensors(model):
@@ -93,8 +97,10 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
             external_data_file_name = Path(info.location).name  # Extract only the filename
             data_path = external_data_dir / external_data_file_name
             if not data_path.exist() or not data_path.is_file() or data_path.is_symlink():
-                msg = f"Data of TensorProto (tensor name: {tensor.name}) should be stored in {str(data_path)}, \
-                        but it doesn't exist or is not accessible."
+                msg = (
+                    f"Data of TensorProto (tensor name: {tensor.name}) should be stored in {str(data_path)}, "
+                    "but it doesn't exist or is not accessible."
+                )
                 raise nncf.ValidationError(msg)
 
 
