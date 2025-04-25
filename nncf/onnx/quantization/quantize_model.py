@@ -16,6 +16,7 @@ from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 import onnx
 from onnx.external_data_helper import ExternalDataInfo
 from onnx.external_data_helper import _get_all_tensors
+from onnx.external_data_helper import load_external_data_for_model
 from onnx.external_data_helper import uses_external_data
 
 import nncf
@@ -164,6 +165,7 @@ def quantize_impl(
     if external_data_dir:
         remove_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
         remove_metadata(quantized_model, MetadataKey.EXTERNAL_DATA_DIR)
+        load_external_data_for_model(quantized_model, external_data_dir)
 
     return quantized_model
 
@@ -335,5 +337,6 @@ def compress_weights_impl(
 
     if external_data_dir:
         remove_metadata(compressed_model, MetadataKey.EXTERNAL_DATA_DIR)
+        load_external_data_for_model(compressed_model, external_data_dir)
 
     return compressed_model
