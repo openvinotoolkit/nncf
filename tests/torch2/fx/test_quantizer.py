@@ -156,7 +156,7 @@ def test_quantized_model(
     )
 
     # Uncomment to visualize torch fx graph
-    # from tests.torch.fx.helpers import visualize_fx_model
+    # from tests.torch2.fx.helpers import visualize_fx_model
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
@@ -164,13 +164,14 @@ def test_quantized_model(
     nncf_graph = _normalize_nncf_graph(nncf_graph)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
     # Uncomment to visualize reference graphs
     # from torch.ao.quantization.quantize_pt2e import convert_pt2e
     # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)
     # ao_quantized_model = convert_pt2e(prepared_model)
-    # # visualize_fx_model(ao_quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_ao_int8.svg")
+    # visualize_fx_model(ao_quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_ao_int8.svg")
     # ao_nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
     # ao_nncf_graph.visualize_graph(f"ao_{quantizer.__class__.__name__}_{get_dot_filename(model_case.model_id)}")
 

@@ -36,6 +36,8 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.utils.api_marker import api
+from nncf.experimental.quantization.quantizer import ExtendedFXQuantizerSetup
+from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.quantization.advanced_parameters import FP8QuantizationParameters
@@ -135,9 +137,16 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
     def get_nncf_quantization_setup(
         self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph
-    ) -> SingleConfigQuantizerSetup:
+    ) -> ExtendedFXQuantizerSetup:
         self._min_max_algo._set_backend_entity(model)
-        return self._min_max_algo.find_quantization_setup(model, nncf_graph)
+        base_setup = self._min_max_algo.find_quantization_setup(model, nncf_graph)
+        dtype_map = {}
+        for id_, qp in base_setup.quantization_points.items():
+            dtype_map[id_] = None if qp.qconfig.mode == QuantizationScheme.SYMMETRIC else IntDtype.UINT8.value
+
+        state = base_setup.get_state()
+        state[ExtendedFXQuantizerSetup.QUANTIZER_DTYPE_NAME] = dtype_map
+        return ExtendedFXQuantizerSetup.from_state(state)
 
     def annotate(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         """
