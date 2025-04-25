@@ -12,7 +12,7 @@
 import torch.fx
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.experimental.quantization.quantizer import ExtendedFXQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 
@@ -28,5 +28,5 @@ class OpenVINOQuantizerAdapter(Quantizer):
     def transform_prior_quantization(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         return self._quantizer.transform_for_annotation(model)
 
-    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> ExtendedFXQuantizerSetup:
         return self._quantizer.get_nncf_quantization_setup(model, nncf_graph)

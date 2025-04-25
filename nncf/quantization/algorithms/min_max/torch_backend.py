@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import torch
 
@@ -156,6 +156,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_convert_insertion_command(
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
+        extra_params: dict[str, Any],
     ) -> TransformationCommand:
         msg = "FakeConvert insertion not implemented in PyTorch backend!"
         raise nncf.InternalError(msg)
@@ -281,6 +282,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_points: list[PTTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> list[PTSharedFnInsertionCommand]:
         scale_shape = PTMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_points[0], quantizer_config.per_channel
