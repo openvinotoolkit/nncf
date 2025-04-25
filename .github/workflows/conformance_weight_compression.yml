@@ -71,23 +71,3 @@ jobs:
         run: |
           pip install defusedxml==0.7.1
           python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
-
-  update-pr-description:
-    name: Update PR description
-    runs-on: ubuntu-22.04
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-        with:
-          sparse-checkout: .github/actions/add_job_link
-      - name: Update PR preview link
-        uses: ./.github/actions/add_job_link
-        with:
-          pull_request_number: ${{ inputs.pull_request_number }}
-          link_name: "Test_Weight_Compression"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
