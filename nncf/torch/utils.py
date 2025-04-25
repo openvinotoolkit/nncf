@@ -476,7 +476,7 @@ class CompilationWrapper:
     If it is not possible, it uses the original function without wrapping.
     """
 
-    def __init__(self, func: Callable) -> None:
+    def __init__(self, func: Callable[..., Any]) -> None:
         """
         :param func: The original function to wrap.
         """
