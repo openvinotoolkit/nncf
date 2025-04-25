@@ -9,14 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import pytest
 import torch
 
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
@@ -24,7 +23,7 @@ from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTest
 
 class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> torch.Tensor:
+    def list_to_backend_type(data: list) -> torch.Tensor:
         return torch.Tensor(data)
 
     @staticmethod
@@ -66,7 +65,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> torch.Tensor:
+    def list_to_backend_type(data: list) -> torch.Tensor:
         return torch.Tensor(data).cuda()
 
     @staticmethod

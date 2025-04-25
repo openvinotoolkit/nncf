@@ -11,7 +11,7 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import openvino as ov
 import torch
@@ -34,7 +34,7 @@ ROOT = Path(__file__).parent.resolve()
 
 def validate(
     model: ov.Model, data_loader: torch.utils.data.DataLoader, validator: DetectionValidator, num_samples: int = None
-) -> Tuple[Dict, int, int]:
+) -> tuple[dict, int, int]:
     validator.seen = 0
     validator.jdict = []
     validator.stats = dict(tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
@@ -53,7 +53,7 @@ def validate(
     return stats, validator.seen, validator.nt_per_class.sum()
 
 
-def print_statistics(stats: Dict[str, float], total_images: int, total_objects: int) -> None:
+def print_statistics(stats: dict[str, float], total_images: int, total_objects: int) -> None:
     mp, mr, map50, mean_ap = (
         stats["metrics/precision(B)"],
         stats["metrics/recall(B)"],
@@ -66,7 +66,7 @@ def print_statistics(stats: Dict[str, float], total_images: int, total_objects: 
     print(pf % ("all", total_images, total_objects, mp, mr, map50, mean_ap))
 
 
-def prepare_validation(model: YOLO, args: Any) -> Tuple[DetectionValidator, torch.utils.data.DataLoader]:
+def prepare_validation(model: YOLO, args: Any) -> tuple[DetectionValidator, torch.utils.data.DataLoader]:
     validator: DetectionValidator = model.task_map[model.task]["validator"](args=args)
     validator.data = check_det_dataset(args.data)
     validator.stride = 32
@@ -96,7 +96,7 @@ def benchmark_performance(model_path: Path, config) -> float:
     return float(match.group(1))
 
 
-def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path]:
+def prepare_openvino_model(model: YOLO, model_name: str) -> tuple[ov.Model, Path]:
     ir_model_path = ROOT / f"{model_name}_openvino_model" / f"{model_name}.xml"
     if not ir_model_path.exists():
         onnx_model_path = ROOT / f"{model_name}.onnx"
@@ -108,7 +108,7 @@ def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path
 
 
 def quantize(model: ov.Model, data_loader: torch.utils.data.DataLoader, validator: DetectionValidator) -> ov.Model:
-    def transform_fn(data_item: Dict):
+    def transform_fn(data_item: dict):
         """
         Quantization transform function. Extracts and preprocess input data from dataloader
         item for quantization.

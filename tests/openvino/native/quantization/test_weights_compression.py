@@ -11,15 +11,15 @@
 
 import inspect
 import os
-from typing import Callable, Dict, List
+from typing import Callable
 from unittest.mock import patch
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 import nncf
 import nncf.openvino.optimized_functions as opt_fns
@@ -44,7 +44,9 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -121,7 +123,7 @@ def get_next_node(node):
     return next_node
 
 
-def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
+def get_shape_for_second_input(op_with_weights: ov.Node) -> list[int]:
     return list(op_with_weights.inputs()[1].get_shape())
 
 
@@ -238,7 +240,7 @@ def check_int8_sym(op: ov.Node):
     return check_int8_node(op, mode=CompressWeightsMode.INT8_SYM)
 
 
-def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
+def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
     mapping = {node_name: check_int8_node for node_name in list_layers}
     primary_node_name = TEST_MODELS[IntegerModel][0]
     mapping[primary_node_name] = primary_fn
@@ -455,7 +457,7 @@ def test_shared_gather_all_layers(all_layers):
 
 @dataclass
 class QuantErrorDesc:
-    weight: List[float]
+    weight: list[float]
     ref_error: int = 0
     axis = (1,)
     name: str = ""
@@ -1507,6 +1509,22 @@ def test_disabled_optimized_compression(disabled):
             mock.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    "weight,scale", [(np.array([-0.07263] * 2, np.float16), np.array([0.08564102] * 2, np.float32))]
+)
+def test_nf4_quantization_mid_quant(weight, scale):
+    weight = Tensor(weight)
+    scale = Tensor(scale)
+    # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
+    norm_weight = calculate_normalized_weight(weight, scale)
+    nf4_quant = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)
+
+    norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
+    ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
+
+    np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
+
+
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_matmul_model() -> ov.Model:
@@ -1541,13 +1559,13 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         raise NotImplementedError
 
     @staticmethod
-    def check_weights(model: ov.Model, ref_ids: List[int]) -> None:
+    def check_weights(model: ov.Model, ref_ids: list[int]) -> None:
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
 
     @staticmethod
-    def get_not_supported_algorithms() -> List[str]:
+    def get_not_supported_algorithms() -> list[str]:
         return []
 
     @staticmethod
@@ -1616,7 +1634,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         return {
             "MatMul_3": Tensor(
                 np.array(

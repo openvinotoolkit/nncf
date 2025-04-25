@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import onnx
@@ -49,7 +49,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     return get_tensor_value(model, bias_name)
 
 
-def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
+def get_input_edges_mapping(nncf_graph: NNCFGraph) -> dict[str, tuple[str, int]]:
     """
     Returns mapping between NNCFGraph input nodes and following by ONNX nodes with corresponding input port ids.
 
@@ -68,8 +68,8 @@ def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]
 
 def get_input_edge(
     input_node_name: str,
-    input_edges_mapping: Dict[str, Tuple[str, int]],
-    node_mapping: Dict[str, onnx.NodeProto],
+    input_edges_mapping: dict[str, tuple[str, int]],
+    node_mapping: dict[str, onnx.NodeProto],
 ) -> str:
     """
     Returns input edge corresponding to the NNCF input node with the name input_node_name.
@@ -160,7 +160,7 @@ def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
 
 def _get_activation_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[Tuple[int, ...]]:
+) -> Optional[tuple[int, ...]]:
     """
     Returns shape of an activation tensor which is correspond to the target point and node.
     ONNX model can not have a shape of a edge, even after shape inference.
@@ -201,7 +201,7 @@ def _get_activation_tensor_shape(
 
 def get_quantized_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[Tuple[int, ...]]:
+) -> Optional[tuple[int, ...]]:
     """
     Returns quantized tensor shape corresponding to a target point with a node if shape - info is existed.
     If there is no shape info - returns None.

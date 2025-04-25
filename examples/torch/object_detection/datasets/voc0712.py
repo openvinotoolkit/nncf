@@ -12,7 +12,7 @@ import os
 import os.path
 from pathlib import Path
 from pathlib import PurePath
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Optional
 
 import cv2
 import defusedxml.ElementTree as ET
@@ -72,7 +72,7 @@ class VOCAnnotationTransform:
         self.class_to_ind = class_to_ind or dict(zip(VOC_CLASSES, range(len(VOC_CLASSES))))
         self.keep_difficult = keep_difficult
 
-    def __call__(self, image: Image, target: Dict, pull: bool = False):
+    def __call__(self, image: Image, target: dict, pull: bool = False):
         """
         Args:
             image (PIL.Image.Image) : image
@@ -135,7 +135,7 @@ class VOCDetection(data.Dataset):
     def __init__(
         self,
         root: str,
-        image_sets: Tuple = (("2007", "trainval"), ("2012", "trainval")),
+        image_sets: tuple = (("2007", "trainval"), ("2012", "trainval")),
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = VOCAnnotationTransform(keep_difficult=False),
         return_image_info: bool = False,

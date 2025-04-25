@@ -11,7 +11,6 @@
 
 
 from dataclasses import dataclass
-from typing import Tuple
 
 import numpy as np
 import openvino.torch  # noqa
@@ -53,7 +52,7 @@ MODELS = (
         "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth",
         55.30,
         30,
-        37,
+        30,
     ),
 )
 
@@ -88,7 +87,7 @@ def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, de
     return top1_avg
 
 
-def accuracy(output: torch.Tensor, target: torch.tensor, topk: Tuple[int, ...] = (1,)):
+def accuracy(output: torch.Tensor, target: torch.tensor, topk: tuple[int, ...] = (1,)):
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)

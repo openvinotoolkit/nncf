@@ -10,9 +10,9 @@
 # limitations under the License.
 
 from collections import deque
-from typing import List, Optional, Type
+from typing import Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
@@ -26,15 +26,15 @@ OV_OPERATOR_METATYPES = OperatorMetatypeRegistry("openvino_operator_metatypes")
 
 
 class OVOpMetatype(OperatorMetatype):
-    op_names: List[str] = []
-    subtypes: List[Type[OperatorMetatype]] = []
+    op_names: list[str] = []
+    subtypes: list[type[OperatorMetatype]] = []
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return cls.op_names
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return cls.subtypes
 
     @classmethod
@@ -42,7 +42,7 @@ class OVOpMetatype(OperatorMetatype):
         return node.op_type in cls.op_names
 
     @classmethod
-    def determine_subtype(cls, node: ov.Node) -> Optional[Type[OperatorMetatype]]:
+    def determine_subtype(cls, node: ov.Node) -> Optional[type[OperatorMetatype]]:
         matches = []
         for subtype in cls.get_subtypes():
             if subtype.matches(node):
@@ -683,6 +683,12 @@ class OVHSwishMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVSELUMetatype(OVOpMetatype):
+    name = "SeluOp"
+    op_names = ["Selu"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVClampMetatype(OVOpMetatype):
     name = "ClampOp"
     op_names = ["Clamp"]
@@ -739,7 +745,7 @@ class OVSinMetatype(OVOpMetatype):
     op_names = ["Sin"]
 
 
-def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
+def get_operator_metatypes() -> list[type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
     :return: List of operator metatypes .
@@ -819,7 +825,7 @@ def _is_embedding(node: ov.Node) -> bool:
     return False
 
 
-def get_node_metatype(node: ov.Node) -> Type[OperatorMetatype]:
+def get_node_metatype(node: ov.Node) -> type[OperatorMetatype]:
     """
     Determine NNCF meta type for OpenVINO node.
 

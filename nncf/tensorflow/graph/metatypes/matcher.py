@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Type
 
 import tensorflow as tf
 
@@ -19,7 +18,7 @@ from nncf.tensorflow.graph.metatypes.keras_layers import KERAS_LAYER_METATYPES
 from nncf.tensorflow.graph.metatypes.tf_ops import TF_OPERATION_METATYPES
 
 
-def get_keras_layer_metatype(layer: tf.keras.layers.Layer, determine_subtype: bool = True) -> Type[OperatorMetatype]:
+def get_keras_layer_metatype(layer: tf.keras.layers.Layer, determine_subtype: bool = True) -> type[OperatorMetatype]:
     """
     Returns a metatype of the Keras layer.
 
@@ -59,7 +58,7 @@ def get_keras_layer_metatype(layer: tf.keras.layers.Layer, determine_subtype: bo
     return layer_metatype
 
 
-def get_op_metatype(op_name: str) -> Type[OperatorMetatype]:
+def get_op_metatype(op_name: str) -> type[OperatorMetatype]:
     """
     Returns a metatype of the TF operation by operation name.
 

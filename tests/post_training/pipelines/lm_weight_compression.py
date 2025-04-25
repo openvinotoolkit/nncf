@@ -15,7 +15,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 import openvino as ov
@@ -72,7 +72,7 @@ class WCTimeStats(StatsFromOutput):
                     setattr(self, attr_name, match.group(1))
                 continue
 
-    def get_stats(self) -> Dict[str, str]:
+    def get_stats(self) -> dict[str, str]:
         VARS = [getattr(self, name) for name in self.VAR_NAMES]
         return dict(zip(self.STAT_NAMES, VARS))
 
@@ -103,7 +103,6 @@ class LMWeightCompression(BaseTestPipeline):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
-        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -118,7 +117,6 @@ class LMWeightCompression(BaseTestPipeline):
             reference_data,
             no_eval,
             run_benchmark_app,
-            torch_compile_validation,
             params,
             batch_size,
             memory_monitor,
@@ -355,13 +353,13 @@ class LMWeightCompression(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_int8 = num_int8
         self.run_info.num_compress_nodes.num_int4 = num_int4
 
-    def collect_errors(self) -> List[ErrorReport]:
+    def collect_errors(self) -> list[ErrorReport]:
         errors = super().collect_errors()
         errors.extend(collect_int4_int8_num_errors(self.run_info, self.reference_data))
         return errors
 
 
-def collect_int4_int8_num_errors(run_info: RunInfo, reference_data: dict) -> List[ErrorReport]:
+def collect_int4_int8_num_errors(run_info: RunInfo, reference_data: dict) -> list[ErrorReport]:
     errors = []
     num_int4_reference = reference_data.get("num_int4")
     num_int8_reference = reference_data.get("num_int8")

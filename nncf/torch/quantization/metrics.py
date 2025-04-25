@@ -12,7 +12,7 @@
 from collections import deque
 from copy import deepcopy
 from itertools import chain
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import networkx as nx
 import numpy as np
@@ -48,7 +48,7 @@ class QuantizationShareBuildTimeInfo:
         self.aq_potential_num = aq_potential_num
         self.wq_potential_num = wq_potential_num
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -58,7 +58,7 @@ class QuantizationShareBuildTimeInfo:
         return {"aq_potential_num": self.aq_potential_num, "wq_potential_num": self.wq_potential_num}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "QuantizationShareBuildTimeInfo":
+    def from_state(cls, state: dict[str, Any]) -> "QuantizationShareBuildTimeInfo":
         """
         Creates the object from its state.
 
@@ -74,8 +74,8 @@ class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
 
     def __init__(
         self,
-        weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-        non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
+        weight_quantizers: dict[WeightQuantizerId, WeightQuantizerInfo],
+        non_weight_quantizers: dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
         build_time_info: QuantizationShareBuildTimeInfo,
     ):
         """
@@ -85,7 +85,7 @@ class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
         self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
         self._info = build_time_info
 
-    def _collect_quantizers_descriptions(self) -> List[QuantizerDescription]:
+    def _collect_quantizers_descriptions(self) -> list[QuantizerDescription]:
         """
         Collects descriptions of the quantizers.
 
@@ -109,7 +109,7 @@ class PTQuantizationStatisticsCollector(QuantizationStatisticsCollector):
 
         return quantizers_descriptions
 
-    def _get_potential_quantizers_num(self) -> Tuple[int, int]:
+    def _get_potential_quantizers_num(self) -> tuple[int, int]:
         """
         Returns a potential number of quantizers for weights and activations.
 
@@ -134,8 +134,8 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
     def __init__(
         self,
         compressed_model: NNCFNetwork,
-        weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-        non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
+        weight_quantizers: dict[WeightQuantizerId, WeightQuantizerInfo],
+        non_weight_quantizers: dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
     ):
         """
         Initializes collector of the memory consumption statistics.
@@ -374,7 +374,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     @staticmethod
     def visualize_marked_graph(merged_original_graph):
         out_graph = nx.DiGraph()
-        for node_key, _ in merged_original_graph.nodes.items():
+        for node_key in merged_original_graph.nodes:
             out_graph.add_node(node_key)
         for u, v in merged_original_graph.edges:
             edge = merged_original_graph.edges[u, v]

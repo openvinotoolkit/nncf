@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import tensorflow as tf
 
@@ -22,7 +21,7 @@ from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 
-def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.keras.Model:
+def strip_model_from_masks(model: tf.keras.Model, op_names: list[str]) -> tf.keras.Model:
     if not isinstance(model, tf.keras.Model):
         msg = f"Expected model to be a `tf.keras.Model` instance but got: {type(model)}"
         raise ValueError(msg)

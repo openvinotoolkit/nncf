@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import pytest
 import torch
@@ -44,7 +44,7 @@ class TestHookHandles:
     @staticmethod
     def _prepare_hook_handles_test(
         target_type: TargetType, target_node_name: str, input_port_id: int
-    ) -> Tuple[NNCFNetwork, PTInsertionPoint, Callable[[List[HookHandle]], None]]:
+    ) -> tuple[NNCFNetwork, PTInsertionPoint, Callable[[list[HookHandle]], None]]:
         model = SimplestModel()
         example_input = torch.ones(SimplestModel.INPUT_SIZE)
         input_info = ExampleInputInfo.from_example_input(example_input)

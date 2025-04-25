@@ -10,7 +10,6 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
-from typing import List, Tuple
 
 import pytest
 import torch
@@ -155,7 +154,7 @@ def test_quantization_configs__custom():
 
 
 def compare_weights_activation_quantizers_pairs(
-    actual_pairs: List[Tuple[List[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
+    actual_pairs: list[tuple[list[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
 ):
     def get_wq_name(name):
         return "/".join([model_name, name])
@@ -191,7 +190,7 @@ def test_can_load_quant_algo__with_defaults():
     quant_model_conv = get_all_modules_by_type(quant_model, "NNCFConv2d")
     assert len(model_conv) == len(quant_model_conv)
 
-    for module_scope, _ in model_conv.items():
+    for module_scope in model_conv:
         quant_scope: Scope = deepcopy(module_scope)
         quant_scope.pop()
         quant_scope.push(ScopeElement("NNCFConv2d", "conv"))
@@ -295,9 +294,7 @@ def test_quantizers_have_proper_narrow_range_set():
             for op in module.pre_ops.values():
                 assert isinstance(op, (UpdateWeight, UpdateInputs))
                 assert op.operand.narrow_range == isinstance(op, UpdateWeight)
-    for _, aq in quant_model.nncf.get_compression_modules_by_type(
-        ExtraCompressionModuleType.EXTERNAL_QUANTIZER
-    ).items():
+    for aq in quant_model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER).values():
         assert aq.narrow_range is False
 
 

@@ -14,7 +14,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import torch
 import torch.nn
@@ -88,7 +88,7 @@ class BaseMockRunRecipe(ABC):
 
     @property
     @abstractmethod
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         pass
 
     @property
@@ -97,8 +97,8 @@ class BaseMockRunRecipe(ABC):
 
     def algo_config_(
         self,
-        sparse_structure_by_scopes: Union[List[Dict[str, Any]], _MISSING_TYPE] = MISSING,
-        ignored_scopes: Union[List[str], _MISSING_TYPE] = MISSING,
+        sparse_structure_by_scopes: Union[list[dict[str, Any]], _MISSING_TYPE] = MISSING,
+        ignored_scopes: Union[list[str], _MISSING_TYPE] = MISSING,
         compression_lr_multiplier: Union[float, None, _MISSING_TYPE] = MISSING,
     ):
         if sparse_structure_by_scopes is not MISSING:
@@ -196,7 +196,7 @@ class BaseMockRunRecipe(ABC):
         )[:num_samples]
         return Dataset.from_dict(input_dict)
 
-    def dumps_model_input_info(self, model_input_info: Optional[FillerInputInfo] = None) -> List[Dict[str, Any]]:
+    def dumps_model_input_info(self, model_input_info: Optional[FillerInputInfo] = None) -> list[dict[str, Any]]:
         if model_input_info is None:
             model_input_info = self.model_input_info
         result = []
@@ -211,7 +211,7 @@ class BaseMockRunRecipe(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         pass
 
     @abstractmethod
@@ -250,7 +250,7 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         return FillerInputInfo([FillerInputElement(shape=[1, 32], keyword="input_values")])
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         model_config = self.model_config
         return [
             TransformerBlockInfo(
@@ -262,7 +262,7 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         ]
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         modules = []
         for block in compressed_model.wav2vec2.encoder.layers:
             modules.append(
@@ -318,7 +318,7 @@ class BertRunRecipe(BaseMockRunRecipe):
         )
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         model_config = self.model_config
         return [
             TransformerBlockInfo(
@@ -330,7 +330,7 @@ class BertRunRecipe(BaseMockRunRecipe):
         ]
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         modules = []
         for block in compressed_model.bert.encoder.layer:
             modules.append(
@@ -379,14 +379,14 @@ class DistilBertRunRecipe(BaseMockRunRecipe):
         return FillerInputInfo([FillerInputElement(shape=[1, dim], type_str="long")] * 2)
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         pass
 
     def _create_model(self) -> torch.nn.Module:
         return AutoModelForSequenceClassification.from_config(self.model_config)
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         pass
 
 
@@ -412,14 +412,14 @@ class MobileBertRunRecipe(BaseMockRunRecipe):
         return FillerInputInfo([FillerInputElement(shape=[1, dim], type_str="long")] * 4)
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         pass
 
     def _create_model(self) -> torch.nn.Module:
         return AutoModelForSequenceClassification.from_config(self.model_config)
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         pass
 
 
@@ -445,14 +445,14 @@ class ClipVisionRunRecipe(BaseMockRunRecipe):
         return FillerInputInfo([FillerInputElement(shape=[1, num_channels, image_size, image_size], type_str="float")])
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         pass
 
     def _create_model(self) -> torch.nn.Module:
         return CLIPVisionModel(self.model_config)
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         pass
 
 
@@ -488,7 +488,7 @@ class SwinRunRecipe(BaseMockRunRecipe):
         )
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         model_config = self.model_config
         info_list = []
         for i, (depth, num_head) in enumerate(zip(model_config.depths, model_config.num_heads)):
@@ -506,7 +506,7 @@ class SwinRunRecipe(BaseMockRunRecipe):
         return info_list
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         modules = []
         for layer in compressed_model.swin.encoder.layers:
             for block in layer.blocks:
@@ -586,11 +586,11 @@ class LinearRunRecipe(BaseMockRunRecipe):
         return FillerInputInfo([FillerInputElement(shape=[1, self.model_config.input_size], keyword="tensor")])
 
     @property
-    def transformer_block_info(self) -> List[TransformerBlockInfo]:
+    def transformer_block_info(self) -> list[TransformerBlockInfo]:
         return []
 
     @staticmethod
-    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
+    def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> list[DictInTransformerBlockOrder]:
         return []
 
 

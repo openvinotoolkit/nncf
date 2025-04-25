@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Dict, Set, Tuple
 
 import networkx as nx
 
@@ -38,7 +37,7 @@ class BitwidthGraph:
         if add_flops:
             flops_per_module = model.nncf.get_flops_per_module()
 
-            flops_vs_node_group: Dict[int, Tuple[int, Set[NNCFNode]]] = defaultdict(set)
+            flops_vs_node_group: dict[int, tuple[int, set[NNCFNode]]] = defaultdict(set)
             for idx, module_node_name_and_flops in enumerate(flops_per_module.items()):
                 module_node_name, flops = module_node_name_and_flops
                 node_set = set(nncf_graph.get_op_nodes_in_scope(nncf_graph.get_scope_by_node_name(module_node_name)))
@@ -121,7 +120,7 @@ class BitwidthGraph:
         nncf_graph: NNCFGraph,
         quantizer_id: NonWeightQuantizerId,
         quantizer_info: NonWeightQuantizerInfo,
-        bitwidth_color_map: Dict[int, str],
+        bitwidth_color_map: dict[int, str],
         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
     ):
         affected_insertion_points_list = quantizer_info.affected_insertions

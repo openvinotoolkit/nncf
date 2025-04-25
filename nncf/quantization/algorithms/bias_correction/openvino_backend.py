@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Optional, Set, Tuple
+from typing import Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -47,7 +47,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]
+        input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(input_ids, output_ids)
 
@@ -69,7 +69,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_raw_stat_collector(num_samples)
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+    def process_model_output(raw_data: dict, output_name: str) -> Tensor:
         return Tensor(raw_data[output_name])
 
     @staticmethod

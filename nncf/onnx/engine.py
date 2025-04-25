@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import onnxruntime as rt
@@ -32,7 +32,7 @@ class ONNXEngine(Engine):
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
 
-    def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def infer(self, input_data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Runs model on the provided input via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.

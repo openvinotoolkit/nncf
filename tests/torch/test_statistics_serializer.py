@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 import torch
 
@@ -19,7 +18,7 @@ from tests.cross_fw.test_templates.test_statistics_serializer import TemplateTes
 
 
 class TestTorchStatisticsSerializer(TemplateTestStatisticsSerializer):
-    def _get_backend_statistics(self) -> Dict[str, Dict[str, Tensor]]:
+    def _get_backend_statistics(self) -> dict[str, dict[str, Tensor]]:
         return {
             "layer/1/activation": {"mean": Tensor(torch.tensor([0.1, 0.2, 0.3]))},
             "layer/2/activation": {"variance": Tensor(torch.tensor([0.05, 0.06, 0.07]))},
@@ -28,7 +27,7 @@ class TestTorchStatisticsSerializer(TemplateTestStatisticsSerializer):
     def _get_backend(self) -> TensorBackend:
         return BackendType.TORCH
 
-    def is_equal(self, a1: Dict[str, Tensor], a2: Dict[str, Tensor]) -> bool:
+    def is_equal(self, a1: dict[str, Tensor], a2: dict[str, Tensor]) -> bool:
         for key in a1:
             if key not in a2:
                 return False

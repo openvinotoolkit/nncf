@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import torch
 
@@ -50,7 +50,7 @@ def get_bn_for_conv_node_by_name(target_model: NNCFNetwork, conv_node_name: NNCF
     return bn_module
 
 
-def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
+def init_output_masks_in_graph(graph: NNCFGraph, nodes: list):
     """
     Initialize masks in graph for mask propagation algorithm
 
@@ -66,7 +66,7 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
         nncf_node.attributes["output_mask"] = PTNNCFTensor(mask)
 
 
-def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:
+def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> tuple[int, ...]:
     """
     Calculates output shape of convolution layer by input edge.
 
@@ -93,7 +93,7 @@ def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]
     return tuple(shape)
 
 
-def collect_output_shapes(graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
+def collect_output_shapes(graph: NNCFGraph) -> dict[NNCFNodeName, list[int]]:
     """
     Collects output dimension shapes for convolutions and fully connected layers
     from the connected edges in the NNCFGraph.

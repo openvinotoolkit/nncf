@@ -11,14 +11,13 @@
 
 from functools import reduce
 from operator import mul
-from typing import Tuple
 
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(stats: WCTensorStatistic, subset_size: int) -> Tuple[Tensor, Tensor]:
+def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, Tensor]:
     """
     A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 

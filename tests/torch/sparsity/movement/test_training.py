@@ -8,13 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import os
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, Union
+from typing import Union
 
-import jstyleson as json
 import pytest
 import torch.cuda
 from packaging import version
@@ -43,7 +43,7 @@ class MovementGlueHandler:
     def _get_main_filename(self) -> str:
         return "run_glue"
 
-    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str) -> Dict[str, Union[float, int]]:
+    def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str) -> dict[str, Union[float, int]]:
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir)
         result_path = checkpoint_path / "all_results.json"
         with open(result_path, encoding="utf-8") as f:
@@ -148,7 +148,7 @@ class MovementTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
     def get_validator(self):
         return MovementTrainingValidator(self)
 
-    def get_metric(self) -> Dict[str, float]:
+    def get_metric(self) -> dict[str, float]:
         return self.sample_handler.get_metric_value_from_checkpoint(self.output_dir)
 
     def __str__(self):

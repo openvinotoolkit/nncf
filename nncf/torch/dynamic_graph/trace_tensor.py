@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import torch
 
@@ -24,7 +24,7 @@ class TensorMeta:
         self,
         creator_id: Union[int, None],
         index: int,
-        shape: Union[List[int], Tuple[torch.Tensor, ...]],
+        shape: Union[list[int], tuple[torch.Tensor, ...]],
         dtype: Dtype = Dtype.FLOAT,
     ):
         """

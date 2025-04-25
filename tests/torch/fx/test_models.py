@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple, Type, Union
+from typing import Callable, Union
 
 import openvino.torch  # noqa
 import pytest
@@ -59,10 +59,10 @@ FX_DYNAMIC_QUANTIZED_COMPRESSED_DIR_NAME = FX_DYNAMIC_DIR / "post_quantization_c
 class ModelCase:
     model_builder: Callable[[], torch.nn.Module]
     model_id: str
-    input_shape: Tuple[int]
+    input_shape: tuple[int]
 
 
-def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
+def torchvision_model_case(model_id: str, input_shape: tuple[int,]):
     model = getattr(models, model_id)
     return ModelCase(partial(model, weights=None), model_id, input_shape)
 
@@ -94,8 +94,8 @@ def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str
 
 
 def get_ref_from_json(
-    model_name: str, model_metatypes: Dict[NNCFNodeName, Union[Type[OperatorMetatype], bool]], attributes=False
-) -> Dict[NNCFNodeName, Union[Type[OperatorMetatype], bool]]:
+    model_name: str, model_metatypes: dict[NNCFNodeName, Union[type[OperatorMetatype], bool]], attributes=False
+) -> dict[NNCFNodeName, Union[type[OperatorMetatype], bool]]:
     model_json_name = get_json_filename(model_name)
     complete_path = get_full_path_to_json(model_json_name, attributes)
 
@@ -137,19 +137,19 @@ TEST_MODELS_QUANIZED = (
     (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
-        [(46, 50), (23, 27)],
+        [(46, 46), (23, 23)],
         [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This Unet Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
         {},
-        [(51, 58), (30, 37)],
+        [(51, 51), (30, 30)],
         [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
         {},
-        [(97, 112), (61, 76)],
+        [(97, 97), (61, 61)],
         [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
@@ -195,7 +195,7 @@ def test_quantized_model(
     compress_weights: bool,
     compress_n_qdq: int,
     enable_dynamic_shapes: bool,
-    dynamic_shape_config: List[bool],
+    dynamic_shape_config: list[bool],
 ):
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32

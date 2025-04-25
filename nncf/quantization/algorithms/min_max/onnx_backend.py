@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import numpy as np
 
@@ -45,27 +45,27 @@ from nncf.quantization.range_estimator import StatisticsType
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def preserved_metatypes(self) -> List[OperatorMetatype]:
+    def preserved_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatypes(self) -> list[OperatorMetatype]:
         return MATMUL_METATYPES
 
     @property
-    def post_processing_metatypes(self) -> List[OperatorMetatype]:
+    def post_processing_metatypes(self) -> list[OperatorMetatype]:
         return [om.ONNXTopKMetatype, om.ONNXNonMaxSuppressionMetatype]
 
     @property
-    def conv_metatypes(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> list[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
 
     @property
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+    def elementwise_metatypes(self) -> list[OperatorMetatype]:
         return ELEMENTWISE_OPERATIONS
 
     @property
-    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+    def overflow_fix_metatypes(self) -> list[OperatorMetatype]:
         return [
             om.ONNXConvolutionMetatype,
             om.ONNXConvolutionTransposeMetatype,
@@ -73,31 +73,31 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     @property
-    def add_metatypes(self) -> List[OperatorMetatype]:
+    def add_metatypes(self) -> list[OperatorMetatype]:
         return [om.ONNXAddLayerMetatype]
 
     @property
-    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+    def group_conv_metatypes(self) -> list[OperatorMetatype]:
         return self.conv_metatypes
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> list[OperatorMetatype]:
         return [om.ONNXShapeMetatype]
 
     @property
-    def dropout_metatypes(self) -> List[OperatorMetatype]:
+    def dropout_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+    def read_variable_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+    def scaled_dot_product_attention_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+    def scales_unification_map(self) -> dict[OperatorMetatype, OperatorMetatype]:
         return {om.ONNXConcatMetatype: self.overflow_fix_metatypes + self.scaled_dot_product_attention_metatypes}
 
     @property
@@ -105,11 +105,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return ONNXHWConfig
 
     @property
-    def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
+    def quant_trait_op_dict(self) -> dict[int, OperatorMetatype]:
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
     @property
-    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+    def reducer_map(self) -> dict[StatisticsType, TensorReducerBase]:
         return REDUCERS_MAP
 
     @property
@@ -119,7 +119,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(
         nncf_graph: NNCFGraph,
-    ) -> List[NNCFNode]:
+    ) -> list[NNCFNode]:
         return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes(
             DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS]
         )
@@ -150,10 +150,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def create_unified_scales_quantizers_insertion_commands(
         nncf_graph: NNCFGraph,
-        target_points: List[ONNXTargetPoint],
+        target_points: list[ONNXTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> List[ONNXQuantizerInsertionCommand]:
+    ) -> list[ONNXQuantizerInsertionCommand]:
         return [
             ONNXMinMaxAlgoBackend.create_quantizer_insertion_command(
                 nncf_graph, target_point, quantizer_config, parameters
@@ -174,19 +174,19 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_input_edges_mapping(nncf_graph)
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int, ...]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint) -> tuple[int, ...]:
         return get_quantized_tensor_shape(nncf_graph, node, target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint, ndims: int) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint, ndims: int) -> tuple[int]:
         return (get_weight_quantization_axis(node, target_point.port_id),)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod
-    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> list[OperatorMetatype]:
         types = []
         if model_type == ModelType.TRANSFORMER:
             types = [
@@ -214,10 +214,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> set[str]:
         return set()
 
-    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> list[NNCFNode]:
         return [node for node in inference_nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
 
     @staticmethod
@@ -226,7 +226,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return nncf_graph.get_node_by_name(node_name).layer_attributes.weight_attrs[port_id]["name"]
 
     @staticmethod
-    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+    def should_quantize_weight(weight_name: str, quantized_weight_names: set[str]) -> bool:
         # If the nodes share one weight tensor, we should have only one quantizer on that
         return weight_name not in quantized_weight_names
 

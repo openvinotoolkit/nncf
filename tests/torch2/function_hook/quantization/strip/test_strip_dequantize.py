@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Type
+from typing import Any
 
 import pytest
 import torch
@@ -20,9 +20,9 @@ from torch import nn
 import nncf
 import nncf.torch
 from nncf.common.quantization.structs import QuantizationScheme
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor as INT4AsymDQ
@@ -39,7 +39,7 @@ from tests.torch.helpers import LinearModel
 
 def check_compression_modules(
     model: nn.Module,
-    expected_class: Type,
+    expected_class: type,
 ) -> None:
     hook_storage = get_hook_storage(model)
     hooks = list(hook_storage.named_hooks())
@@ -51,7 +51,7 @@ def check_compression_modules(
 @dataclass
 class ParamStripLora:
     mode: CompressWeightsMode
-    decompressor_class: Type
+    decompressor_class: type
     torch_dtype: torch.dtype
     atol: float
     weight_dtype: torch.dtype

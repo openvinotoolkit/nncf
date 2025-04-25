@@ -11,7 +11,6 @@
 
 from collections import namedtuple
 from pathlib import Path
-from typing import List
 
 import jsonschema
 import pytest
@@ -39,7 +38,7 @@ ConfigPathVsPassesSchemaVal = namedtuple("ConfigPathVsPassesSchemaVal", ("path",
 TEST_STRUCTS = []
 
 
-def get_all_jsons_from_sources(source_directories_list: List[Path]) -> List[Path]:
+def get_all_jsons_from_sources(source_directories_list: list[Path]) -> list[Path]:
     retval = []
     for source_dir in source_directories_list:
         files = source_dir.glob("**/*.json")

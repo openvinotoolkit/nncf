@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any, Callable, Optional
 
 import torch
 
@@ -78,7 +78,7 @@ class GraphBuilder:
 class GraphConverter:
     @staticmethod
     def convert(dynamic_graph: DynamicGraph, traced_parameters: bool) -> PTNNCFGraph:
-        module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
+        module_id_vs_known_op_addrs_map: dict[int, set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             # Skip const nodes to detect shared nodes
             if dynamic_graph_node.op_exec_context.operator_name != MODEL_CONST_OP_NAME:

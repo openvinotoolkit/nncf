@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, List, Type, Union
+from typing import Any, Union
 
 import numpy as np
 import pytest
@@ -63,15 +63,15 @@ class BCStatsCollectors(Enum):
 class TemplateTestStatisticsAggregator:
     @staticmethod
     @abstractmethod
-    def get_min_max_algo_backend_cls() -> Type[MinMaxAlgoBackend]:
+    def get_min_max_algo_backend_cls() -> type[MinMaxAlgoBackend]:
         pass
 
     @abstractmethod
-    def get_bias_correction_algo_backend_cls(self) -> Type[BiasCorrectionAlgoBackend]:
+    def get_bias_correction_algo_backend_cls(self) -> type[BiasCorrectionAlgoBackend]:
         pass
 
     @abstractmethod
-    def get_fast_bias_correction_algo_backend_cls(self) -> Type[FastBiasCorrectionAlgoBackend]:
+    def get_fast_bias_correction_algo_backend_cls(self) -> type[FastBiasCorrectionAlgoBackend]:
         pass
 
     @abstractmethod
@@ -122,7 +122,7 @@ class TemplateTestStatisticsAggregator:
         """
 
     @abstractmethod
-    def reducers_map(self) -> List[TensorReducerBase]:
+    def reducers_map(self) -> list[TensorReducerBase]:
         pass
 
     @pytest.fixture
@@ -130,7 +130,7 @@ class TemplateTestStatisticsAggregator:
         return [{"max": 1, "min": -10}, {"max": 0.1, "min": -1}, {"max": 128, "min": -128}]
 
     @staticmethod
-    def get_min_max_algo_cls() -> Type[MinMaxQuantization]:
+    def get_min_max_algo_cls() -> type[MinMaxQuantization]:
         return MinMaxQuantization
 
     @dataclass

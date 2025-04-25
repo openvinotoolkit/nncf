@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List
 
 import numpy as np
 
@@ -24,7 +23,7 @@ class WeightDescription:
     Contains information about the weight of the model.
     """
 
-    def __init__(self, name: str, shape: List[int], num_nonzero: int, is_sparse: bool):
+    def __init__(self, name: str, shape: list[int], num_nonzero: int, is_sparse: bool):
         """
         Initializes the description of the weight.
 
@@ -48,7 +47,7 @@ class WeightDescription:
         return self._name
 
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> list[int]:
         return self._shape
 
     @property
@@ -73,7 +72,7 @@ class WeightDescription:
 
 
 def _calculate_sparsity_level_for_model(
-    weight_descriptions: List[WeightDescription],
+    weight_descriptions: list[WeightDescription],
 ) -> float:
     """
     Calculates the sparsity level for the whole model.
@@ -94,7 +93,7 @@ class BaseSparseModelStatisticsCollector(StatisticsCollector):
     """
 
     @abstractmethod
-    def _collect_weights_descriptions(self) -> List[WeightDescription]:
+    def _collect_weights_descriptions(self) -> list[WeightDescription]:
         """
         Collects descriptions of the weights of the model.
 

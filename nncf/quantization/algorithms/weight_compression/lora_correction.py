@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -84,7 +84,7 @@ class LoraCorrectionAlgorithm:
     """
 
     def __init__(
-        self, statistics: Dict[str, WCTensorStatistic], lora_correction_params: AdvancedLoraCorrectionParameters
+        self, statistics: dict[str, WCTensorStatistic], lora_correction_params: AdvancedLoraCorrectionParameters
     ):
         """
         :param statistics: Input activation statistics for each node.
@@ -107,7 +107,7 @@ class LoraCorrectionAlgorithm:
 
     def calculate_adapters(
         self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
-    ) -> Tuple[Tensor, Tensor, List[float]]:
+    ) -> tuple[Tensor, Tensor, list[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
 
@@ -137,7 +137,7 @@ class LoraCorrectionAlgorithm:
         weight: Tensor,
         compressed_weight: CompressedWeight,
         compression_config: WeightCompressionConfig,
-        reduction_axes: Tuple[int, ...],
+        reduction_axes: tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
