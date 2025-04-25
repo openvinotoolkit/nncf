@@ -26,10 +26,11 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.quantization.quantizer import ExtendedFXQuantizerSetup
+from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 
@@ -47,7 +48,7 @@ class TorchAOQuantizerAdapter(Quantizer):
     def transform_prior_quantization(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         return self._quantizer.transform_for_annotation(model)
 
-    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> ExtendedFXQuantizerSetup:
         # Save model and nodes meta before the annotation
         original_meta = model.meta.copy()
         node_name_vs_meta = {}
@@ -116,14 +117,14 @@ class TorchAOQuantizerAdapter(Quantizer):
         return node.args
 
     @staticmethod
-    def get_quantizer_config_from_annotated_model(annotated: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
+    def get_quantizer_config_from_annotated_model(annotated: torch.fx.GraphModule) -> ExtendedFXQuantizerSetup:
         """
         Process a torch.fx.GraphModule annotated with quantization specifications
         (e.g., via torch.ao observers) and generates a corresponding NNCF quantization setup object,
         which maps quantization configurations to graph edges.
 
         :param annotated: A torch.fx.GraphModule that has been annotated with Torch quantization observers.
-        :return: A SingleConfigQuantizerSetup containing quantization points derived from the annotated model.
+        :return: A ExtendedFXQuantizerSetup containing quantization points derived from the annotated model.
         """
         edge_or_node_to_qspec = _get_edge_or_node_to_qspec(annotated)
         # Node means all output edges should be quantized.
@@ -142,7 +143,7 @@ class TorchAOQuantizerAdapter(Quantizer):
                 edge_or_node_to_qspec[edge_or_node], edge_or_node_to_qspec
             )
 
-        q_setup = SingleConfigQuantizerSetup()
+        q_setup = ExtendedFXQuantizerSetup()
         for group_id, edges in group_id_vs_edges.items():
             qspec = group_id_vs_qspec[group_id]
             if qspec is None:
@@ -159,7 +160,7 @@ class TorchAOQuantizerAdapter(Quantizer):
                 msg = f"Unknown qscheme: {qspec.qscheme}"
                 raise nncf.InternalError(msg)
 
-            signed = qspec.dtype is torch.int8
+            dtype = IntDtype.INT8 if qspec.dtype is torch.int8 else IntDtype.UINT8
             mode = (
                 QuantizationMode.SYMMETRIC
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
@@ -167,7 +168,7 @@ class TorchAOQuantizerAdapter(Quantizer):
             )
             narrow_range = qspec.quant_min % 2 != 0
             qconfig = QuantizerConfig(
-                mode=mode, signedness_to_force=signed, per_channel=per_channel, narrow_range=narrow_range
+                mode=mode, signedness_to_force=False, per_channel=per_channel, narrow_range=narrow_range
             )
 
             joined_edges = defaultdict(list)
@@ -179,7 +180,7 @@ class TorchAOQuantizerAdapter(Quantizer):
                 qps.extend(TorchAOQuantizerAdapter._get_quantization_points(from_node, to_nodes, annotated, qconfig))
             qp_ids = []
             for qp in qps:
-                qp_ids.append(q_setup.add_independent_quantization_point(qp))
+                qp_ids.append(q_setup.add_independent_quantization_point(qp, dtype))
             if len(qp_ids) > 1:
                 q_setup.register_unified_scale_group(qp_ids)
 

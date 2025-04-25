@@ -14,7 +14,6 @@ from typing import Optional
 
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
@@ -33,6 +32,7 @@ from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import O
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
+from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -132,7 +132,7 @@ def quantize_pt2e(
         else:
             constant_fold(quantized_model, _quant_node_constraint)
 
-    pm = PassManager([DuplicateDQPass()])
+    pm = PassManager([DuplicateDQPassNoAnnotations()])
 
     quantized_model = pm(quantized_model).graph_module
     pm = PassManager([PortNodeMetaForQDQ()])
