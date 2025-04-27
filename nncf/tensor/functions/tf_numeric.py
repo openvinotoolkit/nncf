@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Sequence, Union, list, tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -64,7 +64,7 @@ def _(a: tf.Tensor) -> TensorBackend:
 
 
 @numeric.squeeze.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.squeeze(a, axis)
 
@@ -76,13 +76,13 @@ def _(a: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.max.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reduce_max(a, axis=axis, keepdims=keepdims)
 
 
 @numeric.min.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reduce_min(a, axis=axis, keepdims=keepdims)
 
@@ -105,13 +105,13 @@ def _(a: tf.Tensor) -> TensorDataType:
 
 
 @numeric.reshape.register
-def _(a: tf.Tensor, shape: Union[int, Tuple[int, ...]]) -> tf.Tensor:
+def _(a: tf.Tensor, shape: Union[int, tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reshape(a, shape)
 
 
 @numeric.all.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         if axis is None:
             return tf.reduce_all(a)
@@ -127,7 +127,7 @@ def _(
 
 
 @numeric.any.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         if axis is None:
             return tf.reduce_any(a)
@@ -135,7 +135,7 @@ def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Te
 
 
 @numeric.count_nonzero.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.math.count_nonzero(a, axis=axis)
 
@@ -184,19 +184,19 @@ def _(a: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.stack.register
-def _(x: List[tf.Tensor], axis: int = 0) -> tf.Tensor:
+def _(x: list[tf.Tensor], axis: int = 0) -> tf.Tensor:
     with tf.device(x[0].device):
         return tf.stack(x, axis=axis)
 
 
 @numeric.concatenate.register
-def _(x: List[tf.Tensor], axis: int = 0) -> tf.Tensor:
+def _(x: list[tf.Tensor], axis: int = 0) -> tf.Tensor:
     with tf.device(x[0].device):
         return tf.concat(x, axis=axis)
 
 
 @numeric.unstack.register
-def _(x: tf.Tensor, axis: int = 0) -> List[tf.Tensor]:
+def _(x: tf.Tensor, axis: int = 0) -> list[tf.Tensor]:
     with tf.device(x.device):
         if not list(x.shape):
             tf.expand_dims(x, 0)
@@ -204,7 +204,7 @@ def _(x: tf.Tensor, axis: int = 0) -> List[tf.Tensor]:
 
 
 @numeric.moveaxis.register
-def _(a: tf.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> tf.Tensor:
+def _(a: tf.Tensor, source: Union[int, tuple[int, ...]], destination: Union[int, tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.experimental.numpy.moveaxis(a, source, destination)
 
@@ -212,7 +212,7 @@ def _(a: tf.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int,
 @numeric.mean.register
 def _(
     a: tf.Tensor,
-    axis: Optional[Union[Tuple[int, ...], int]] = None,
+    axis: Optional[Union[tuple[int, ...], int]] = None,
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
 ) -> tf.Tensor:
@@ -224,7 +224,7 @@ def _(
 @numeric.median.register
 def _(
     a: tf.Tensor,
-    axis: Optional[Union[Tuple[int, ...], int]] = None,
+    axis: Optional[Union[tuple[int, ...], int]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
     with tf.device(a.device):
@@ -274,8 +274,8 @@ def _(a: tf.Tensor, exponent: Union[tf.Tensor, float]) -> tf.Tensor:
 @numeric.quantile.register
 def quantile(
     a: tf.Tensor,
-    q: Union[float, List[float]],
-    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    q: Union[float, list[float]],
+    axis: Optional[Union[int, tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
     a_np = a.numpy()
@@ -287,8 +287,8 @@ def quantile(
 @numeric.percentile.register
 def _(
     a: tf.Tensor,
-    q: Union[float, List[float]],
-    axis: Optional[Union[Tuple[int, ...], int]],
+    q: Union[float, list[float]],
+    axis: Optional[Union[tuple[int, ...], int]],
     keepdims: bool = False,
 ) -> tf.Tensor:
     with tf.device(a.device):
@@ -340,7 +340,7 @@ def _(a: tf.Tensor) -> Union[int, float, bool]:
 
 
 @numeric.sum.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reduce_sum(a, axis=axis, keepdims=keepdims)
 
@@ -353,7 +353,7 @@ def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
 
 @numeric.var.register
 def _(
-    a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0
+    a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0
 ) -> tf.Tensor:
     with tf.device(a.device):
         tf_var = tf.math.reduce_variance(a, axis=axis, keepdims=keepdims)
@@ -381,7 +381,7 @@ def _(a: tf.Tensor, axis: int) -> tf.Tensor:
 
 
 @numeric.transpose.register
-def _(a: tf.Tensor, axes: Optional[Tuple[int, ...]] = None) -> tf.Tensor:
+def _(a: tf.Tensor, axes: Optional[tuple[int, ...]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.transpose(a, perm=axes)
 
@@ -414,7 +414,7 @@ def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
 
 @numeric.masked_mean.register
 def _(
-    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, Tuple[int, ...]]], keepdims: bool = False
+    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, tuple[int, ...]]], keepdims: bool = False
 ) -> tf.Tensor:
     if isinstance(axis, list):
         axis = tuple(axis)
@@ -434,7 +434,7 @@ def _(
 
 @numeric.masked_median.register
 def _(
-    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, Tuple[int, ...]]], keepdims: bool = False
+    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, tuple[int, ...]]], keepdims: bool = False
 ) -> tf.Tensor:
     if mask is None:
         return numeric.median(x, axis=axis, keepdims=keepdims)
@@ -452,7 +452,7 @@ def _(
 
 
 @numeric.expand_dims.register
-def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Union[int, tuple[int, ...]]) -> tf.Tensor:
     if not isinstance(axis, (tuple, list)):
         axis = (axis,)
 
@@ -497,7 +497,7 @@ def _(
 
 
 def zeros(
-    shape: Tuple[int, ...],
+    shape: tuple[int, ...],
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,

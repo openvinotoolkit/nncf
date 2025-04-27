@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional, dict
 
 import tensorflow as tf
 from safetensors.tensorflow import load_file as tf_load_file
@@ -21,7 +21,7 @@ from nncf.tensor.functions import io as io
 from nncf.tensor.functions.tf_numeric import DEVICE_MAP
 
 
-def load_file(file_path: Path, *, device: Optional[TensorDeviceType] = None) -> Dict[str, tf.Tensor]:
+def load_file(file_path: Path, *, device: Optional[TensorDeviceType] = None) -> dict[str, tf.Tensor]:
     loaded_tensors = tf_load_file(file_path)
 
     if device is not None:
@@ -33,7 +33,7 @@ def load_file(file_path: Path, *, device: Optional[TensorDeviceType] = None) -> 
 
 
 @io.save_file.register
-def _(data: Dict[str, tf.Tensor], file_path: Path) -> None:
+def _(data: dict[str, tf.Tensor], file_path: Path) -> None:
     if file_path.is_symlink():
         from nncf.errors import ValidationError
 

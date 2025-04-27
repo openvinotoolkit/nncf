@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import warnings
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Union, tuple
 
 import tensorflow as tf
 
@@ -21,7 +21,7 @@ from nncf.tensor.functions import linalg
 def _(
     a: tf.Tensor,
     ord: Union[Literal["fro", "nuc"], float, None] = None,
-    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    axis: Optional[Union[int, tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
     rank = tf.rank(a)
