@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Optional, dict
+from typing import Optional
 
 import tensorflow as tf
 from safetensors.tensorflow import load_file as tf_load_file

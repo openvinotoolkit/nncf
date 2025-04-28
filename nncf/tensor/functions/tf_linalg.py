@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import warnings
-from typing import Literal, Optional, Union, tuple
+from typing import Literal, Optional, Union
 
 import tensorflow as tf
 

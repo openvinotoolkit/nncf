@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Literal, Optional, Sequence, Union, list, tuple
+from typing import Any, Callable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
