@@ -91,6 +91,7 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
         )
         raise nncf.ValidationError(msg)
 
+    data_paths = set()
     for tensor in _get_all_tensors(model):
         if uses_external_data(tensor):
             info = ExternalDataInfo(tensor)
@@ -100,12 +101,14 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
             # Source: https://onnx.ai/onnx/repo-docs/ExternalData.html
             external_data_file_name = Path(info.location).name  # Extract only the filename
             data_path = external_data_dir / external_data_file_name
-            if not data_path.exists() or not data_path.is_file() or data_path.is_symlink():
-                msg = (
-                    f"Data of TensorProto (tensor name: {tensor.name}) should be stored in {str(data_path)}, "
-                    "but it doesn't exist or is not accessible."
-                )
-                raise nncf.ValidationError(msg)
+            data_paths.add(data_path)
+    for data_path in data_paths:
+        if not data_path.exists() or not data_path.is_file() or data_path.is_symlink():
+            msg = (
+                f"Data of TensorProto (tensor name: {tensor.name}) should be stored in {str(data_path)}, "
+                "but it doesn't exist or is not accessible."
+            )
+            raise nncf.ValidationError(msg)
 
 
 def quantize_impl(
