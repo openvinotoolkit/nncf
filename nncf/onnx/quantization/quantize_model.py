@@ -72,7 +72,7 @@ def check_model_protobuf_size(model: onnx.ModelProto) -> None:
         raise nncf.ValidationError(msg)
 
 
-def check_external_data_location(model: onnx.ModelProto, external_data_dir: Optional[str] = None) -> None:
+def check_external_data_location(model: onnx.ModelProto, external_data_dir: Optional[str] = None) -> Optional[str]:
     """
     Raises `nncf.ValidationError` if any referenced external data file does not exist, is not a regular file,
     or is a symlink.
@@ -80,6 +80,8 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
     :param model: The ONNX model to validate.
     :param external_data_dir: Path to the directory where the external data files are expected to be located.
         If None, the current working directory is used.
+    :return: Path to the directory where external data files are located, if the model uses external data.
+        Returns None if no external data is used.
     """
     # If external_data_dir is not provided, we should test against the current working directory.
     external_data_dir = Path.cwd() if external_data_dir is None else Path(external_data_dir)
@@ -109,6 +111,9 @@ def check_external_data_location(model: onnx.ModelProto, external_data_dir: Opti
                 "but it doesn't exist or is not accessible."
             )
             raise nncf.ValidationError(msg)
+
+    # If len(data_path) == 0, it means there are no tensors that use external data.
+    return str(external_data_dir) if data_paths else None
 
 
 def quantize_impl(
@@ -147,7 +152,7 @@ def quantize_impl(
 
     check_model_protobuf_size(model)
     external_data_dir = get_external_data_dir(advanced_parameters)
-    check_external_data_location(model, external_data_dir)
+    external_data_dir = check_external_data_location(model, external_data_dir)
     if external_data_dir:
         set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, external_data_dir)
 
@@ -314,7 +319,7 @@ def compress_weights_impl(
         raise nncf.ValidationError(msg)
 
     external_data_dir = get_external_data_dir(advanced_parameters)
-    check_external_data_location(model, external_data_dir)
+    external_data_dir = check_external_data_location(model, external_data_dir)
     if external_data_dir:
         set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, external_data_dir)
 

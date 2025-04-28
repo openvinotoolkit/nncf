@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import dataclasses
 from typing import Callable, Iterable, Optional
 
 import numpy as np
@@ -186,12 +185,6 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         if compression_format != CompressionFormat.DQ:
             msg = "Compression format is not supported for the ONNX backend"
             raise nncf.ValidationError(msg)
-        default = AdvancedCompressionParameters()
-        for field in dataclasses.fields(advanced_parameters):
-            name = field.name
-            if name != "backend_params" and getattr(default, name) != getattr(advanced_parameters, name):
-                msg = "Advanced parameters are not supported for the ONNX backend"
-                raise nncf.ValidationError(msg)
 
     def transform_model(
         self,
