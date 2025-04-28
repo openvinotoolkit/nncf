@@ -41,18 +41,18 @@ def main():
         
         return inputs
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, tokenizer=tokenizer))
-    with torch.no_grad():
-        model, model_config = convert_and_export_with_cache(model)
-        model = model.module()
-        # Comment this text to turn off model optimization and measure performance of baseline model
-        model = nncf.compress_weights(
-            model,
-            dataset=quantization_dataset,
-            mode=nncf.CompressWeightsMode.INT4_SYM,
-            ratio=0.8,
-            sensitivity_metric=nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
-        )
-        compressed_model_hf = FXAutoModelForCausalLM(model, model_config)
+
+    model, model_config = convert_and_export_with_cache(model)
+    model = model.module()
+    # Comment this text to turn off model optimization and measure performance of baseline model
+    model = nncf.compress_weights(
+        model,
+        dataset=quantization_dataset,
+        mode=nncf.CompressWeightsMode.INT4_SYM,
+        ratio=0.8,
+        sensitivity_metric=nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+    )
+    compressed_model_hf = FXAutoModelForCausalLM(model, model_config)
 
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
 
