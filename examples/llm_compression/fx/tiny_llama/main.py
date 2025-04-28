@@ -13,12 +13,17 @@ from functools import partial
 
 import torch
 from datasets import load_dataset
-from fx_utils import FXAutoModelForCausalLM
-from fx_utils import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
+
+try:
+    from fx_utils import FXAutoModelForCausalLM
+    from fx_utils import convert_and_export_with_cache
+except Exception:
+    from .fx_utils import FXAutoModelForCausalLM
+    from .fx_utils import convert_and_export_with_cache
 
 
 def main():
