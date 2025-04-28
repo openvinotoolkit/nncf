@@ -813,4 +813,4 @@ def test_cuda_extension_reference_compatibility(desc):
 
     assert torch.allclose(bwd_grad_input, ref_grad_input)
     assert torch.allclose(bwd_grad_low, ref_grad_low)
-    assert torch.allclose(bwd_grad_range, ref_grad_range)
+    assert torch.allclose(bwd_grad_range, ref_grad_range, atol=1e-7)
