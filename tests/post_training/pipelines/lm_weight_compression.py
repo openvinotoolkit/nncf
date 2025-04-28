@@ -38,6 +38,8 @@ from tests.post_training.pipelines.base import NumCompressNodes
 from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.base import StatsFromOutput
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
+from tests.post_training.pipelines.fx_utils import FXAutoModelForCausalLM
+from tests.post_training.pipelines.fx_utils import convert_and_export_with_cache
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -127,9 +129,9 @@ class LMWeightCompression(BaseTestPipeline):
         is_stateful = self.params.get("is_stateful", False)
 
         # load model
-        if self.backend == BackendType.TORCH:
+        if self.backend in [BackendType.TORCH, BackendType.FX_TORCH]:
             if is_stateful:
-                msg = f"is_stateful={is_stateful} is not supported for PyTorch backend."
+                msg = f"is_stateful={is_stateful} is not supported for {self.backend.value} backend."
                 raise RuntimeError(msg)
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
@@ -138,6 +140,9 @@ class LMWeightCompression(BaseTestPipeline):
                 device_map="cpu",  # TODO (kshpv): add support of 'cuda', when supported
             )
             self.model = self.model_hf
+            if self.backend == BackendType.FX_TORCH:
+                self.model, self.model_config = convert_and_export_with_cache(self.model)
+                self.model = self.model.module()
         elif self.backend == BackendType.OV:
             if is_stateful:
                 self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
@@ -209,6 +214,11 @@ class LMWeightCompression(BaseTestPipeline):
             if self.backend == BackendType.TORCH:
                 for input_name in inputs:
                     inputs[input_name] = torch.from_numpy(inputs[input_name]).to(self.model_hf.device)
+            elif self.backend == BackendType.FX_TORCH:
+                fx_inputs = ()
+                fx_inputs += (torch.from_numpy(inputs["input_ids"]).to(self.model_hf.device),)
+                fx_inputs += (torch.from_numpy(inputs["position_ids"]).to(self.model_hf.device).squeeze(0),)
+                inputs = fx_inputs
             return inputs
 
         return transform_fn
@@ -270,6 +280,25 @@ class LMWeightCompression(BaseTestPipeline):
                 compression_option="fp32",
                 device=self.model_hf.device,
             )
+        elif self.backend == BackendType.FX_TORCH:
+            with torch.no_grad():
+                example_input_ids = torch.ones(1, 8, dtype=torch.long)
+                example_cache_position = torch.arange(0, 8, dtype=torch.long)
+                torch.compile(
+                    self.compressed_model,
+                    backend="openvino",
+                    options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
+                )(example_input_ids, example_cache_position)
+
+                # Get the OV *.xml files in torch compile cache directory
+                cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))
+                if len(cached_ov_model_files) > 1:
+                    msg = "Graph break encountered in torch compile!"
+                    raise nncf.InternalError(msg)
+                elif len(cached_ov_model_files) == 0:
+                    msg = "Openvino Model Files Not Found!"
+                    raise FileNotFoundError(msg)
+                self.path_compressed_ir = cached_ov_model_files[0]
 
     def run_bench(self) -> None:
         pass
@@ -330,7 +359,7 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32:
+        if self.backend != BackendType.FP32 and self.backend != BackendType.FX_TORCH:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir,
                 trust_remote_code=True,
@@ -339,6 +368,8 @@ class LMWeightCompression(BaseTestPipeline):
                 stateful=is_stateful,
                 ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
             )
+        if self.backend == BackendType.FX_TORCH:
+            compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config)
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]

@@ -16,6 +16,7 @@ import numpy as np
 import torch
 
 import nncf
+from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
@@ -119,7 +120,11 @@ class ReferenceQuantize:
         return new_input_low, new_input_range
 
 
+torch_executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
+torch_forward = CompilationWrapper(torch_executor.forward)
+torch_backward = CompilationWrapper(torch_executor.backward)
+
+
 class ReferenceQuantizedFunctions:
-    _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    Quantize_forward = _executor.forward
-    Quantize_backward = _executor.backward
+    Quantize_forward = torch_forward
+    Quantize_backward = torch_backward
