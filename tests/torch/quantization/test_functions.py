@@ -742,7 +742,7 @@ def test_cpu_extension_reference_compatibility(desc):
     assert torch.allclose(bwd_grad_range, ref_grad_range)
 
 
-# @pytest.mark.cuda
+@pytest.mark.cuda
 @pytest.mark.parametrize(
     "desc",
     [
