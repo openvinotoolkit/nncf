@@ -12,7 +12,6 @@ import copy
 import logging
 import os
 from functools import reduce
-from typing import Dict, List
 
 import onnx
 import pytest
@@ -146,7 +145,7 @@ class ConfigCreator:
             self._config["compression"].append(algo_section)
         return copy.deepcopy(self._config)
 
-    def add_algo(self, name: str, params: Dict = None):
+    def add_algo(self, name: str, params: dict = None):
         self._algorithm_sections[name] = params
         return self
 
@@ -155,7 +154,7 @@ class ConfigCreator:
 
 
 class CompressionStageTestStruct:
-    def __init__(self, config_provider: "ConfigCreator", compression_stages: List[CompressionStage]):
+    def __init__(self, config_provider: "ConfigCreator", compression_stages: list[CompressionStage]):
         self.config_provider = config_provider
         self.compression_stages = compression_stages
 
@@ -438,7 +437,7 @@ def test_raise_validationerror_for_not_matched_scope_names(algo_name, validate_s
         ["magnitude_sparsity", "filter_pruning"],
     ),
 )
-def test_compressed_model_has_controller_references(algos: List[str]):
+def test_compressed_model_has_controller_references(algos: list[str]):
     model = BasicLinearTestModel()
     cc = ConfigCreator()
     for algo_name in algos:

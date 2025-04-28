@@ -11,7 +11,7 @@
 import copy
 import pathlib
 from collections import defaultdict
-from typing import Dict, Union
+from typing import Union
 
 import networkx as nx  # type: ignore
 
@@ -47,14 +47,14 @@ RESERVED_CHAR = ":"
 REPLACEMENT_CHAR = "^"
 
 
-def _maybe_escape_colons_in_attrs(data: Dict[str, str]) -> None:
+def _maybe_escape_colons_in_attrs(data: dict[str, str]) -> None:
     for attr_name in data:
         attr_val = str(data[attr_name])
         if RESERVED_CHAR in attr_val and not (attr_val[0] == '"' or attr_val[-1] == '"'):
             data[attr_name] = '"' + data[attr_name] + '"'  # escaped colons are allowed
 
 
-def _unescape_colons_in_attrs_with_colons(data: Dict[str, str]) -> None:
+def _unescape_colons_in_attrs_with_colons(data: dict[str, str]) -> None:
     for attr_name in data:
         attr_val = data[attr_name]
         if RESERVED_CHAR in attr_val and (attr_val[0] == '"' and attr_val[-1] == '"'):
@@ -69,7 +69,7 @@ def _remove_cosmetic_labels(graph: nx.DiGraph) -> None:
                 del node_data["label"]
 
 
-def _add_cosmetic_labels(graph: nx.DiGraph, relabeled_node_mapping: Dict[str, str]) -> None:
+def _add_cosmetic_labels(graph: nx.DiGraph, relabeled_node_mapping: dict[str, str]) -> None:
     for original_name, dot_name in relabeled_node_mapping.items():
         node_data = graph.nodes[dot_name]
         if "label" not in node_data:
@@ -97,7 +97,7 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
         __CHARACTER_REPLACE_FROM = REPLACEMENT_CHAR
         __CHARACTER_REPLACE_TO = RESERVED_CHAR
 
-    hits: Dict[str, int] = defaultdict(lambda: 0)
+    hits: dict[str, int] = defaultdict(lambda: 0)
     mapping = {}
     for original_name in nx_graph.nodes():
         if not isinstance(original_name, str):

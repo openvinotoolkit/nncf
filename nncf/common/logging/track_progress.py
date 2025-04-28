@@ -10,7 +10,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Union
+from typing import Any, Callable, Generic, Iterable, Iterator, Optional, Sequence, Union
 
 from rich.console import Console
 from rich.progress import BarColumn
@@ -140,7 +140,7 @@ class track(Generic[ProgressType]):
         update_period: float = 0.1,
         disable: bool = False,
         show_speed: bool = True,
-        weights: Optional[List[float]] = None,
+        weights: Optional[list[float]] = None,
     ):
         """
         Track progress by iterating over a sequence.
@@ -186,7 +186,7 @@ class track(Generic[ProgressType]):
         self.update_period = update_period
         self.task: Optional[TaskID] = None
 
-        self.columns: List[ProgressColumn] = (
+        self.columns: list[ProgressColumn] = (
             [TextColumn("[progress.description]{task.description}")] if description else []
         )
         self.columns.extend(
@@ -240,7 +240,7 @@ class track(Generic[ProgressType]):
             )
 
     def __enter__(self) -> track[ProgressType]:
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if self.weights is not None:
             kwargs["weights"] = self.weights
             kwargs["completed_steps"] = 0

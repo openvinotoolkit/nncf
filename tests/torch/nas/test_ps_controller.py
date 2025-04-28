@@ -11,7 +11,7 @@
 from copy import deepcopy
 from functools import partial
 from functools import reduce
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, NamedTuple
 
 import pytest
 import torch
@@ -31,9 +31,9 @@ from tests.torch.nas.test_scheduler import fixture_schedule_params  # noqa: F401
 
 class PSControllerTestDesc(NamedTuple):
     model_creator: Any
-    blocks_to_skip: List[List[str]] = None
-    input_sizes: List[int] = [1, 3, 32, 32]
-    algo_params: Dict = {}
+    blocks_to_skip: list[list[str]] = None
+    input_sizes: list[int] = [1, 3, 32, 32]
+    algo_params: dict = {}
     name: str = None
     mode: str = "auto"
 

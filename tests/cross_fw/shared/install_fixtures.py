@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Set
 
 import pytest
 
@@ -16,6 +15,6 @@ from tests.cross_fw.shared.helpers import create_venv_with_nncf
 
 
 @pytest.fixture(scope="function")
-def tmp_venv_with_nncf(tmp_path, package_type: str, venv_type: str, extras: Set[str]):
+def tmp_venv_with_nncf(tmp_path, package_type: str, venv_type: str, extras: set[str]):
     venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, backends=extras)
     return venv_path

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Union
 
 import torch
 from torch import nn
@@ -35,8 +35,8 @@ class PTEngine(Engine):
             self._model.eval()
 
     def infer(
-        self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]
-    ) -> Union[torch.Tensor, Dict[str, Any]]:
+        self, input_data: Union[torch.Tensor, tuple[torch.Tensor], dict[str, torch.Tensor]]
+    ) -> Union[torch.Tensor, dict[str, Any]]:
         """
         Runs Torch model on the provided input.
 

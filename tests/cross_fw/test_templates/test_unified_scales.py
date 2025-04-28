@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import TypeVar
 
 import pytest
 import torch
@@ -38,7 +38,7 @@ class TemplateTestUnifiedScales:
         ((ConcatSDPABlock, [["x", "y"]], [["/nncf_model_input_0", "/nncf_model_input_1"]]),),
     )
     def test_unified_groups(
-        self, model_cls: TModel, unified_group: List[List[str]], unified_group_nncf_network: List[List[str]]
+        self, model_cls: TModel, unified_group: list[list[str]], unified_group_nncf_network: list[list[str]]
     ):
         backend_model = self.get_backend_specific_model(model_cls())
         if isinstance(backend_model, torch.nn.Module) and not isinstance(backend_model, torch.fx.GraphModule):

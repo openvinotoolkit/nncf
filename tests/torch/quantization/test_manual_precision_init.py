@@ -11,7 +11,6 @@
 import os
 from copy import deepcopy
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -33,7 +32,7 @@ from tests.torch.test_models.synthetic import AddTwoConv
 
 
 class ManualConfigTestParamsBase:
-    def __init__(self, name: str, bit_stats: List[List[str]]):
+    def __init__(self, name: str, bit_stats: list[list[str]]):
         self.name = name
         self.bit_stats = bit_stats
 

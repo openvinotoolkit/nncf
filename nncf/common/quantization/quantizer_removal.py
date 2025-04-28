@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Set, Tuple, Type, TypeVar, cast
+from typing import Callable, TypeVar, cast
 
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -25,11 +25,11 @@ TModel = TypeVar("TModel")
 def find_quantizer_nodes_to_cut(
     graph: NNCFGraph,
     quantizer_node: NNCFNode,
-    quantizer_metatypes: List[Type[OperatorMetatype]],
-    const_metatypes: List[Type[OperatorMetatype]],
-    quantizable_metatypes: List[Type[OperatorMetatype]],
-    quantize_agnostic_metatypes: List[Type[OperatorMetatype]],
-) -> Tuple[List[NNCFNode], List[NNCFNode]]:
+    quantizer_metatypes: list[type[OperatorMetatype]],
+    const_metatypes: list[type[OperatorMetatype]],
+    quantizable_metatypes: list[type[OperatorMetatype]],
+    quantize_agnostic_metatypes: list[type[OperatorMetatype]],
+) -> tuple[list[NNCFNode], list[NNCFNode]]:
     """
     Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
     the correct model for inference. Returns the list of quantizer nodes (`quantizer_node` + nodes
@@ -90,12 +90,12 @@ def find_quantizer_nodes_to_cut(
         seen_list = seen_parents if is_parents else seen_children
         seen_list.append(node)
 
-    seen_children: List[NNCFNode] = []
-    seen_parents: List[NNCFNode] = []
-    to_see_children: List[NNCFNode] = [quantizer_node]
-    to_see_parents: List[NNCFNode] = []
+    seen_children: list[NNCFNode] = []
+    seen_parents: list[NNCFNode] = []
+    to_see_children: list[NNCFNode] = [quantizer_node]
+    to_see_parents: list[NNCFNode] = []
     to_cut = [quantizer_node]
-    ops_to_return_in_orig_prec: Set[NNCFNode] = set()
+    ops_to_return_in_orig_prec: set[NNCFNode] = set()
 
     while to_see_parents or to_see_children:
         if to_see_children:
@@ -107,14 +107,14 @@ def find_quantizer_nodes_to_cut(
 
 
 def revert_operations_to_floating_point_precision(
-    operations: List[NNCFNode],
-    quantizers: List[NNCFNode],
+    operations: list[NNCFNode],
+    quantizers: list[NNCFNode],
     quantized_model: TModel,
     quantized_model_graph: NNCFGraph,
     restore_mode: RestoreMode,
-    op_with_weights_metatypes: List[Type[OperatorMetatype]],
+    op_with_weights_metatypes: list[type[OperatorMetatype]],
     is_node_with_weight_fn: Callable[[NNCFNode], bool],
-    get_weight_tensor_port_ids_fn: Callable[[NNCFNode], List[int]],
+    get_weight_tensor_port_ids_fn: Callable[[NNCFNode], list[int]],
 ) -> TModel:
     """
     Reverts provided operations to floating-point precision by removing

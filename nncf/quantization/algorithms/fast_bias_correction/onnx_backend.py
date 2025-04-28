@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import onnx
@@ -46,7 +46,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+        input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]
     ) -> ONNXModelExtractionCommand:
         return ONNXModelExtractionCommand(input_ids, output_ids)
 
@@ -60,13 +60,13 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: onnx.ModelProto) -> tuple[str, str]:
         return subgraph.graph.input[0].name, subgraph.graph.output[0].name
 
     @staticmethod
     def create_input_data(
-        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
-    ) -> Dict[str, np.array]:
+        shape: tuple[int], data: list[Tensor], input_name: str, channel_axis: int
+    ) -> dict[str, np.array]:
         blob = np.zeros(shape, dtype=data[0].data.dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
@@ -79,7 +79,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return Tensor(get_bias_value(node, model))
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> tuple[int, int]:
         activation_port = 0
         if node.metatype.possible_weight_ports:
             activation_ports = deepcopy(node.metatype.possible_weight_ports)
@@ -91,7 +91,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return activation_port, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+    def process_model_output(raw_data: dict, output_name: str) -> Tensor:
         return Tensor(raw_data[output_name])
 
     @staticmethod
@@ -103,9 +103,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return is_node_with_bias(node) and node.metatype in OPERATIONS_WITH_BIAS_REDUCED
 
     @staticmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[str, str]:
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         return get_act_quantization_axis(node, port_id)

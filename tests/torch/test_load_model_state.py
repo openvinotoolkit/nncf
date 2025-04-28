@@ -11,7 +11,6 @@
 import logging
 import os
 import re
-from typing import Dict, List, Set
 
 import pytest
 import torch
@@ -104,12 +103,12 @@ class MatchKeyDesc:
         num_loaded=0,
         is_resume=True,
         expects_error=False,
-        state_dict_to_load: Dict[str, torch.Tensor] = None,
-        model_state_dict: Dict[str, torch.Tensor] = None,
+        state_dict_to_load: dict[str, torch.Tensor] = None,
+        model_state_dict: dict[str, torch.Tensor] = None,
     ):
         self.state_dict_to_load = state_dict_to_load if state_dict_to_load else {}
         self.model_state_dict = model_state_dict if model_state_dict else {}
-        self.new_dict: Dict[str, torch.Tensor] = {}
+        self.new_dict: dict[str, torch.Tensor] = {}
         self.num_loaded = num_loaded
         self.processed_keys = ProcessedKeys()
         self.ignored_keys = []
@@ -129,37 +128,37 @@ class MatchKeyDesc:
     def setup_test(self, mocker):
         pass
 
-    def keys_to_load(self, keys: List[str]):
+    def keys_to_load(self, keys: list[str]):
         for k in keys:
             self.state_dict_to_load[k] = self.MOCKED_VALUE
         return self
 
-    def model_keys(self, keys: List[str]):
+    def model_keys(self, keys: list[str]):
         for k in keys:
             self.model_state_dict[k] = self.MOCKED_VALUE
         return self
 
-    def keys_to_ignore(self, keys: List[str]):
+    def keys_to_ignore(self, keys: list[str]):
         self.ignored_keys = keys
         return self
 
-    def missing(self, keys: List[str]):
+    def missing(self, keys: list[str]):
         self.processed_keys.extend_keys(keys, ProcessedKeyStatus.MISSING)
         return self
 
-    def unexpected(self, keys: List[str]):
+    def unexpected(self, keys: list[str]):
         self.processed_keys.extend_keys(keys, ProcessedKeyStatus.UNEXPECTED)
         return self
 
-    def size_mismatched(self, keys: List[str]):
+    def size_mismatched(self, keys: list[str]):
         self.processed_keys.extend_keys(keys, ProcessedKeyStatus.SIZE_MISMATCHED)
         return self
 
-    def matched(self, keys: List[str]):
+    def matched(self, keys: list[str]):
         self.processed_keys.extend_keys(keys, ProcessedKeyStatus.MATCHED)
         return self
 
-    def skipped(self, keys: List[str]):
+    def skipped(self, keys: list[str]):
         self.processed_keys.extend_keys(keys, ProcessedKeyStatus.SKIPPED)
         return self
 
@@ -195,7 +194,7 @@ OP2_MIDDLE = f"{PREFIX}.{OP2}.{SUFFIX}"
 
 class OptionalMatchKeyDesc(MatchKeyDesc):
     def setup_test(self, mocker):
-        def fn() -> Set["str"]:
+        def fn() -> set["str"]:
             return {OP1, OP2}
 
         mocked_registry_get = mocker.patch.object(OPTIONAL_PARAMETERS_REGISTRY, "get_parameters_names")

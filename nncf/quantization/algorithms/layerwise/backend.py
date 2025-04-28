@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, TypeVar
+from typing import Optional, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -32,10 +32,10 @@ class LayerwiseEngineBackend(ABC):
     def create_layerwise_iterator(
         model: TModel,
         graph: NNCFGraph,
-        schedule: List[LayerwiseStep],
+        schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[Dict[NodeOutputPort, List[Tensor]]] = None,
+        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
     ) -> LayerwiseIterator:
         """
         Creates an iterator to iterate through layers according to a given schedule.

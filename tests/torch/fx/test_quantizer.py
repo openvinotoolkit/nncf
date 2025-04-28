@@ -12,7 +12,7 @@
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Tuple
+from typing import Any, Callable
 
 import pytest
 import torch
@@ -49,10 +49,10 @@ FX_QUANTIZED_DIR_NAME = Path("fx") / "experimental"
 class ModelCase:
     model_builder: Callable[[], torch.nn.Module]
     model_id: str
-    input_shape: Tuple[int]
+    input_shape: tuple[int]
 
 
-def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
+def torchvision_model_case(model_id: str, input_shape: tuple[int,]):
     model = getattr(models, model_id)
     return ModelCase(partial(model, weights=None), model_id, input_shape)
 
@@ -98,7 +98,7 @@ TEST_MODELS_QUANIZED = (
 )
 
 
-def _build_torch_fx_model(model_case: ModelCase) -> Tuple[torch.fx.GraphModule, torch.Tensor]:
+def _build_torch_fx_model(model_case: ModelCase) -> tuple[torch.fx.GraphModule, torch.Tensor]:
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
@@ -122,7 +122,7 @@ def _get_calibration_dataset(example_input: torch.Tensor) -> nncf.Dataset:
     "quantizer_builder", [get_x86_quantizer, get_openvino_quantizer], ids=["X86InductorQuantizer", "OpenVINOQuantizer"]
 )
 def test_quantized_model(
-    quantizer_builder: Callable[[Tuple[Any, ...]], Quantizer],
+    quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
     model_case: ModelCase,
     quantizer_params,
     pt2e_params,
@@ -201,8 +201,8 @@ TorchAOSharedQuantizationSpecTestCases = (
 )
 def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
     model_case: ModelCase,
-    unified_scale_node_names: Tuple[str, str],
-    ref_fq_params: Tuple[float, int, int, int, torch.dtype],
+    unified_scale_node_names: tuple[str, str],
+    ref_fq_params: tuple[float, int, int, int, torch.dtype],
 ):
     model_case.model_builder()(torch.ones(model_case.input_shape))
     fx_model, example_input = _build_torch_fx_model(model_case)

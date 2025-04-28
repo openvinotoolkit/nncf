@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import UserDict
-from typing import Any, Callable, Generator, Optional, Tuple, cast
+from typing import Any, Callable, Generator, Optional, cast
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -82,7 +82,7 @@ class StatisticPointsContainer(UserDict):  # type: ignore
 
     def get_tensor_collectors(
         self, filter_fn: Optional[Callable[[StatisticPoint], bool]] = None
-    ) -> Generator[Tuple[str, StatisticPoint, TensorCollector], None, None]:
+    ) -> Generator[tuple[str, StatisticPoint, TensorCollector], None, None]:
         """
         Returns iterable through all tensor collectors.
 

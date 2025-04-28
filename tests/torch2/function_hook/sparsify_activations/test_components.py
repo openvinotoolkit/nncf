@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 import torch
@@ -37,9 +36,9 @@ from tests.torch2.function_hook.sparsify_activations.helpers import convert_igno
 class SparsifierForwardTestDesc:
     target_sparsity: float
     alpha: float
-    input_batches: List[torch.Tensor]
-    ref_running_thresholds: List[torch.Tensor]
-    ref_outputs: List[torch.Tensor]
+    input_batches: list[torch.Tensor]
+    ref_running_thresholds: list[torch.Tensor]
+    ref_outputs: list[torch.Tensor]
 
 
 sparsifier_forward_during_calibration_test_descs = {
@@ -280,7 +279,7 @@ class TestTargetScope:
         assert hash(target_scope1) != hash(target_scope2)
 
     @pytest.mark.parametrize("target_scope,ref_target_names", TARGET_SCOPE_MATCH_DATA)
-    def test_get_target_node_names_from_target_scope(self, target_scope: TargetScope, ref_target_names: List[str]):
+    def test_get_target_node_names_from_target_scope(self, target_scope: TargetScope, ref_target_names: list[str]):
         nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
         target_names = get_target_node_names_from_target_scope(target_scope, nncf_graph)
         assert sorted(target_names) == sorted(ref_target_names)

@@ -12,7 +12,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import pytest
 import torch
@@ -62,7 +62,7 @@ from tests.torch.test_models.synthetic import ScalarCloneTestModel
 @dataclass
 class ModelExtractionTestCase:
     model: torch.nn.Module
-    input_shape: Tuple[int, ...]
+    input_shape: tuple[int, ...]
     command: PTModelExtractionCommand
 
 

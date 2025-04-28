@@ -14,7 +14,7 @@ import os
 import pathlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Hashable, List, Optional, Tuple, cast
+from typing import Any, Callable, Hashable, Optional, cast
 
 import networkx as nx  # type: ignore
 import networkx.algorithms.isomorphism as ism  # type: ignore
@@ -34,7 +34,7 @@ class Patterns:
     """
 
     def __init__(self) -> None:
-        self._patterns_dict: Dict[str, GraphPattern] = {}
+        self._patterns_dict: dict[str, GraphPattern] = {}
         self._full_pattern_graph = GraphPattern()
 
     def register(self, pattern: "GraphPattern", name: str, match: bool = True) -> None:
@@ -192,7 +192,7 @@ class GraphPattern:
         """
         self._unite_with_copy_of_graph(other.graph)
 
-    def join_patterns(self, other: "GraphPattern", edges: Optional[List[Tuple[Hashable, Hashable]]] = None) -> None:
+    def join_patterns(self, other: "GraphPattern", edges: Optional[list[tuple[Hashable, Hashable]]] = None) -> None:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
@@ -234,7 +234,7 @@ class GraphPattern:
                 remapped_edges.append(new_edge)
             self._graph.add_edges_from(remapped_edges)
 
-    def add_node(self, **attrs: Dict[str, Any]) -> int:
+    def add_node(self, **attrs: dict[str, Any]) -> int:
         if GraphPattern.METATYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
             attrs[GraphPattern.METATYPE_ATTR] = cast(Any, [attrs[GraphPattern.METATYPE_ATTR]])
         self._graph.add_node(self._node_counter, **attrs)
@@ -244,17 +244,17 @@ class GraphPattern:
     def add_edge(self, u_name: str, v_name: str) -> None:
         self._graph.add_edge(u_name, v_name)
 
-    def add_edges_from(self, ebunch_to_add: List[Any], **attr: Dict[str, Any]) -> None:
+    def add_edges_from(self, ebunch_to_add: list[Any], **attr: dict[str, Any]) -> None:
         self._graph.add_edges_from(ebunch_to_add, **attr)
 
-    def get_weakly_connected_subgraphs(self) -> List[nx.DiGraph]:
+    def get_weakly_connected_subgraphs(self) -> list[nx.DiGraph]:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]
 
     def dump_graph(self, path: str) -> None:
         write_dot_graph(self._graph, pathlib.Path(path))
 
 
-def merge_two_types_of_operations(first_op: Dict[str, Any], second_op: Dict[str, Any], label: str) -> Dict[str, Any]:
+def merge_two_types_of_operations(first_op: dict[str, Any], second_op: dict[str, Any], label: str) -> dict[str, Any]:
     if GraphPattern.METATYPE_ATTR in first_op and GraphPattern.METATYPE_ATTR in second_op:
         res = {GraphPattern.METATYPE_ATTR: first_op[GraphPattern.METATYPE_ATTR]}
         res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
@@ -279,8 +279,8 @@ class PatternDesc:
     """
 
     name: str
-    devices: Optional[List[TargetDevice]] = None
-    model_types: Optional[List[ModelType]] = None
+    devices: Optional[list[TargetDevice]] = None
+    model_types: Optional[list[ModelType]] = None
 
 
 class HWFusedPatternNames(Enum):

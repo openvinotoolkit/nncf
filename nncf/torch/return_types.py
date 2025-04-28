@@ -10,12 +10,12 @@
 # limitations under the License.
 
 import inspect
-from typing import Any, Tuple, Type, Union
+from typing import Any, Union
 
 import torch
 
 
-def __get_supported_torch_return_types() -> Tuple[Type[tuple], ...]:
+def __get_supported_torch_return_types() -> tuple[type[tuple], ...]:
     """
     Collects types from torch.return_type which can be wrapped/unwrapped by NNCF.
     NNCF can wrap/unwrap only return types that have two attributes, one of them

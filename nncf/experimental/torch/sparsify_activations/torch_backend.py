@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Type, TypeVar
+from typing import TypeVar
 
 import torch
 import torch.nn as nn
@@ -22,11 +22,11 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
-from nncf.experimental.torch2.commands import PT2InsertionCommand
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
 from nncf.tensor.functions.torch_numeric import quantile
+from nncf.torch.function_hook.commands import PT2InsertionCommand
+from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -128,7 +128,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     SUPPORTED_METATYPES = [om.PTLinearMetatype]
 
     @staticmethod
-    def get_sparsifiers(model: nn.Module) -> List[ActivationsSparsifier]:
+    def get_sparsifiers(model: nn.Module) -> list[ActivationsSparsifier]:
         """
         Finds all the activation sparsifiers in the model.
 
@@ -138,14 +138,14 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         return [m for _, m in get_hook_storage(model).named_hooks() if isinstance(m, ActivationsSparsifier)]
 
     @property
-    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def supported_metatypes(self) -> list[type[OperatorMetatype]]:
         return PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES
 
     def insert_sparsifiers(
         self,
         model: GraphModelWrapper,
         graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
+        target_sparsity_by_node: dict[NNCFNode, float],
     ) -> GraphModelWrapper:
         transformation_layout = PTTransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():

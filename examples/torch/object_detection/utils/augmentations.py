@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import types
-from typing import Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -58,7 +57,7 @@ class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, img: Image, target: Dict) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, img: Image, target: dict) -> tuple[np.ndarray, list[dict]]:
         for t in self.transforms:
             img, target = t(img, target)
         return img, target
@@ -71,12 +70,12 @@ class Lambda:
         assert isinstance(lambd, types.LambdaType)
         self.lambd = lambd
 
-    def __call__(self, img: np.ndarray, target: List[Dict]):
+    def __call__(self, img: np.ndarray, target: list[dict]):
         return self.lambd(img, target)
 
 
 class ConvertFromInts:
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         return image.astype(np.float32), target
 
 
@@ -86,7 +85,7 @@ class Normalize:
         self.std = np.array(std, dtype=np.float32)
         self.normalize_coef = normalize_coef
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         image = image.astype(np.float32)
         image /= self.normalize_coef
         image -= self.mean
@@ -95,7 +94,7 @@ class Normalize:
 
 
 class ToAbsoluteCoords:
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         boxes = np.asarray([x["bbox"] for x in target])
         height, width, _ = image.shape
         boxes[:, 0] *= width
@@ -108,7 +107,7 @@ class ToAbsoluteCoords:
 
 
 class ToPercentCoords:
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         boxes = np.asarray([x["bbox"] for x in target])
         height, width, _ = image.shape
         boxes[:, 0] /= width
@@ -124,7 +123,7 @@ class Resize:
     def __init__(self, size=300):
         self.size = size
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         image = cv2.resize(image, (self.size, self.size))
         return image, target
 
@@ -136,7 +135,7 @@ class RandomSaturation:
         assert self.upper >= self.lower, "contrast upper must be >= lower."
         assert self.lower >= 0, "contrast lower must be non-negative."
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if random.randint(2):
             image[:, :, 1] *= random.uniform(self.lower, self.upper)
         return image, target
@@ -147,7 +146,7 @@ class RandomHue:
         assert 0 <= delta <= 360.0
         self.delta = delta
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if random.randint(2):
             image[:, :, 0] += random.uniform(-self.delta, self.delta)
             image[:, :, 0][image[:, :, 0] > 360.0] -= 360.0
@@ -159,7 +158,7 @@ class RandomLightingNoise:
     def __init__(self):
         self.perms = ((0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0))
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if random.randint(2):
             idx = int(random.randint(len(self.perms)))
             swap = self.perms[idx]
@@ -173,7 +172,7 @@ class ConvertColor:
         self.transform = transform
         self.current = current
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if self.current == "BGR" and self.transform == "HSV":
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         elif self.current == "HSV" and self.transform == "BGR":
@@ -191,7 +190,7 @@ class RandomContrast:
         assert self.lower >= 0, "contrast lower must be non-negative."
 
     # expects float image
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if random.randint(2):
             alpha = random.uniform(self.lower, self.upper)
             image *= alpha
@@ -204,7 +203,7 @@ class RandomBrightness:
         assert delta <= 255.0
         self.delta = delta
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if random.randint(2):
             delta = random.uniform(-self.delta, self.delta)
             image += delta
@@ -212,12 +211,12 @@ class RandomBrightness:
 
 
 class ToCV2Image:
-    def __call__(self, tensor, target: List[Dict]):
+    def __call__(self, tensor, target: list[dict]):
         return tensor.cpu().numpy().astype(np.float32).transpose((1, 2, 0)), target
 
 
 class ToTensor:
-    def __call__(self, cvimage, target: List[Dict]):
+    def __call__(self, cvimage, target: list[dict]):
         return torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1), target
 
 
@@ -248,7 +247,7 @@ class RandomSampleCrop:
             (None, None),
         )
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         height, width, _ = image.shape
         while True:
             boxes = np.asarray([x["bbox"] for x in target])
@@ -334,7 +333,7 @@ class Expand:
     def __init__(self, mean):
         self.mean = mean
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         if random.randint(2):
             return image, target
         boxes = np.asarray([x["bbox"] for x in target])
@@ -369,7 +368,7 @@ class Expand:
 
 
 class RandomMirror:
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         boxes = np.asarray([x["bbox"] for x in target])
 
         _, width, _ = image.shape
@@ -423,7 +422,7 @@ class PhotometricDistort:
         self.rand_brightness = RandomBrightness()
         self.rand_light_noise = RandomLightingNoise()
 
-    def __call__(self, image: np.ndarray, target: List[Dict]) -> Tuple[np.ndarray, List[Dict]]:
+    def __call__(self, image: np.ndarray, target: list[dict]) -> tuple[np.ndarray, list[dict]]:
         im = image.copy()
         im, target = self.rand_brightness(im, target)
         if random.randint(2):
@@ -454,7 +453,7 @@ class SSDAugmentation:
             ]
         )
 
-    def __call__(self, img: Image, target: List[Dict]) -> Tuple[torch.Tensor, np.ndarray]:
+    def __call__(self, img: Image, target: list[dict]) -> tuple[torch.Tensor, np.ndarray]:
         res = self.augment(np.array(img)[:, :, ::-1], target)
         boxes = np.asarray([x["bbox"] for x in res[1]])
         labels = np.asarray([x["label_idx"] for x in res[1]])

@@ -11,7 +11,6 @@
 
 import math
 import time
-from typing import Dict, List
 
 import torch
 import torch.distributed as dist
@@ -27,7 +26,7 @@ def warmup(layer, input_, runs, forward_only=False):
             new_i[0].sum().backward()
 
 
-def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float) -> Dict[str, float]:
+def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float) -> dict[str, float]:
     input_ = torch.randn(input_size_, device=torch.device(device), dtype=dtype)
 
     # Force CUDA initialization & warm up
@@ -50,7 +49,7 @@ def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float)
     return {"forward + backward": fbtime}
 
 
-def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float) -> Dict[str, float]:
+def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torch.float) -> dict[str, float]:
     input_ = torch.randn(input_size_, device=torch.device(device), dtype=dtype)
 
     # Force CUDA initialization & warm up
@@ -99,7 +98,7 @@ def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torc
     }
 
 
-def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output: List[Dict[str, int]] = None):
+def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output: list[dict[str, int]] = None):
     dist.init_process_group(backend="nccl", init_method="tcp://127.0.0.1:8899", world_size=world_size, rank=gpu)
 
     device = torch.device(f"cuda:{gpu}")

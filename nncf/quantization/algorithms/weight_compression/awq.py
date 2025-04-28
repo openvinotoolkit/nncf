@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf import nncf_logger
@@ -85,7 +85,7 @@ class AWQ(Algorithm):
         self._scale_per_target_node = {}
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(
@@ -106,7 +106,10 @@ class AWQ(Algorithm):
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
 
             self._backend_entity = PTAWQAlgoAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQAlgoAlgoBackend
 
+            self._backend_entity = FXAWQAlgoAlgoBackend()
         else:
             msg = f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
@@ -116,9 +119,9 @@ class AWQ(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, WCTensorStatistic],
+        all_weight_params: list[WeightCompressionParameters],
+        nodes_to_compress: list[NNCFNode],
+        statistics: dict[str, WCTensorStatistic],
         wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> TModel:
         """

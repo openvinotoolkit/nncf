@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional
 
 import openvino as ov
 import pytest
@@ -25,10 +25,10 @@ import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgorithm
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import TargetScope
 from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.scopes import IgnoredScope
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_creation import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import set_torch_seed
@@ -44,9 +44,9 @@ class SparsifyActivationsAlgorithmTestDesc:
     name: str
     model_getter: Callable[[], nn.Module]
     dataset_getter: Callable[[torch.device], nncf.Dataset]
-    target_sparsity_by_scope: Dict[TargetScope, float]
+    target_sparsity_by_scope: dict[TargetScope, float]
     ignored_scope: Optional[nncf.IgnoredScope]
-    ref_sparsifier_target_sparsity: Dict[str, float]
+    ref_sparsifier_target_sparsity: dict[str, float]
     ref_num_batches_tracked: int
     ref_num_patterns_in_ov: int
 
@@ -187,7 +187,7 @@ class TestSparsifyActivationsAlgorithm:
         nncf_graph = build_nncf_graph(model, example_input)
         nx_graph = to_comparable_nx_graph(nncf_graph)
         dot_nncf_graph = to_pydot(nx_graph)
-        ref_file = Path(TEST_ROOT, "torch2", "data", "sparsify_activations", f"{file_name}.dot")
+        ref_file = Path(TEST_ROOT, "torch2", "data", "function_hook", "sparsify_activations", f"{file_name}.dot")
         compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)
 
     def test_export_openvino(self):
@@ -214,9 +214,9 @@ class TestSparsifyActivationsAlgorithm:
 
 @dataclass
 class TargetSparsityByNodeTestDesc:
-    target_sparsity_by_scope: Dict[TargetScope, float]
+    target_sparsity_by_scope: dict[TargetScope, float]
     ignored_scope: IgnoredScope
-    ref_target_sparsity_by_node_name: Optional[Dict[str, float]] = None
+    ref_target_sparsity_by_node_name: Optional[dict[str, float]] = None
     raised_error_message: Optional[str] = None
 
 

@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import List, Type
 
 import openvino as ov
 
@@ -71,7 +70,7 @@ class GraphConverter:
         return Dtype(conversion_map[type_name])
 
     @staticmethod
-    def _filter_weight_input_ports(inputs: List[ov.Input], metatype: Type[OperatorMetatype]) -> List[ov.Input]:
+    def _filter_weight_input_ports(inputs: list[ov.Input], metatype: type[OperatorMetatype]) -> list[ov.Input]:
         """
         Specifies the possible weight ports of the OpenVINO node.
 
@@ -140,7 +139,7 @@ class GraphConverter:
         )
 
     @staticmethod
-    def _get_ignored_algorithms(node: ov.Node) -> List[str]:
+    def _get_ignored_algorithms(node: ov.Node) -> list[str]:
         """
         Creates a list of the ignored algorithms corresponding with
         the ignored_algorithms option of add_nncf_node method.
