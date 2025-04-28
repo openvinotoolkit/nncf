@@ -11,11 +11,12 @@
 import time
 from functools import partial
 
-from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
-from fx_utils import convert_and_export_with_cache
+from datasets import load_dataset
 from fx_utils import FXAutoModelForCausalLM
+from fx_utils import convert_and_export_with_cache
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
 
 import nncf
 
@@ -37,9 +38,13 @@ def main():
         position_ids = torch.cumsum(attention_mask, axis=1) - 1
         position_ids[attention_mask == 0] = 1
 
-        inputs = (input_ids,position_ids.squeeze(0),)
-        
+        inputs = (
+            input_ids,
+            position_ids.squeeze(0),
+        )
+
         return inputs
+
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, tokenizer=tokenizer))
 
     model, model_config = convert_and_export_with_cache(model)
@@ -57,7 +62,7 @@ def main():
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
 
     start_t = time.time()
-    output = compressed_model_hf.generate(input_ids['input_ids'], max_new_tokens=100)
+    output = compressed_model_hf.generate(input_ids["input_ids"], max_new_tokens=100)
     print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])
