@@ -18,13 +18,8 @@ from transformers import AutoTokenizer
 
 import nncf
 
-try:
-    from fx_utils import FXAutoModelForCausalLM
-    from fx_utils import convert_and_export_with_cache
-except Exception:
-    # Example tests are called from another directory which gives error in imports
-    from .fx_utils import FXAutoModelForCausalLM
-    from .fx_utils import convert_and_export_with_cache
+from tests.cross_fw.shared.fx_utils import FXAutoModelForCausalLM
+from tests.cross_fw.shared.fx_utils import convert_and_export_with_cache
 
 
 def main():
