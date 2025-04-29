@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import numpy as np
 import onnx
@@ -25,7 +24,7 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from tests.onnx.models import NonShapeModel
 
 
-def check_engine_creation_and_inference(model: onnx.ModelProto, input_data: np.ndarray, reference_outputs: List[str]):
+def check_engine_creation_and_inference(model: onnx.ModelProto, input_data: np.ndarray, reference_outputs: list[str]):
     engine = ONNXEngine(model)
     outputs = engine.infer(input_data)
     for result_name in outputs:

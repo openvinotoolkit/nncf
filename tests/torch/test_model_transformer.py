@@ -14,7 +14,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import List
 
 import networkx as nx
 import pytest
@@ -261,7 +260,7 @@ class TestInsertionCommands:
         assert len(model.nncf._groups_vs_hooks_handlers[test_hook_group]) == 1
 
     @staticmethod
-    def check_order(iterable1: List, iterable2: List, ordering: List):
+    def check_order(iterable1: list, iterable2: list, ordering: list):
         for idx, order in enumerate(ordering):
             assert iterable1[idx] is iterable2[order]
 

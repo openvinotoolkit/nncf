@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from os import path as osp
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.utils.debug import set_debug_log_dir
@@ -24,8 +24,8 @@ from nncf.torch.utils import is_main_process
 
 
 def create_compressed_model_from_algo_names(
-    nncf_network: NNCFNetwork, config: NNCFConfig, algo_names: List[str], dump_graphs: bool = True
-) -> Tuple[BaseController, NNCFNetwork]:
+    nncf_network: NNCFNetwork, config: NNCFConfig, algo_names: list[str], dump_graphs: bool = True
+) -> tuple[BaseController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from empty NNCFNetwork,
     a configuration object and a list of compression algorithm names.
@@ -64,7 +64,7 @@ def create_compressed_model_from_algo_names(
 
 
 def resume_compression_algorithm_builder(
-    compression_state: Dict[str, Any], config: Optional[NNCFConfig] = None
+    compression_state: dict[str, Any], config: Optional[NNCFConfig] = None
 ) -> PTCompressionAlgorithmBuilder:
     """
     Resume compression builder from its state.
@@ -88,8 +88,8 @@ def resume_compression_algorithm_builder(
 
 
 def resume_compression_from_state(
-    nncf_network: NNCFNetwork, compression_state: Dict[str, Any], config: Optional[NNCFConfig] = None
-) -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
+    nncf_network: NNCFNetwork, compression_state: dict[str, Any], config: Optional[NNCFConfig] = None
+) -> tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     """
     Resumes compression model
 

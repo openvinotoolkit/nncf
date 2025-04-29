@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import openvino as ov
@@ -33,7 +33,7 @@ from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 
 class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> torch.Tensor:
+    def list_to_backend_type(data: list) -> torch.Tensor:
         return torch.tensor(data)
 
     @staticmethod
@@ -56,7 +56,7 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
+    def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
         if model_cls is ConvTestModel or model_cls is DepthwiseConvTestModel:
             return {"conv2d": ref_biases["/conv/Conv"]}
         if model_cls is TransposeConvTestModel:
@@ -76,7 +76,7 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
         return remove_fq_from_inputs(model, graph)
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: Dict) -> None:
+    def check_bias(model: ov.Model, ref_biases: dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)

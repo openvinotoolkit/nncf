@@ -10,7 +10,7 @@
 # limitations under the License.
 import os
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -26,7 +26,7 @@ from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 
-ReductionAxes = Union[int, Tuple[int, ...]]
+ReductionAxes = Union[int, tuple[int, ...]]
 
 NF4_QUANTILES = np.array(
     [
@@ -90,7 +90,7 @@ class CompressedWeight:
 
 def reshape_weight_for_grouped_quantization(
     weight: Tensor, reduction_axes: ReductionAxes, group_size: int
-) -> Tuple[Tensor, int]:
+) -> tuple[Tensor, int]:
     """
     Reshapes weight for group-wise quantization and return a reduction axis for collecting statistics per group
     dimension. Having a transposed weight with shapes [c_out, c_in] and group size = 128, shape of reshaped weight is
@@ -241,7 +241,7 @@ def calculate_normalized_weight_and_fp4_scale(
     group_size: int = -1,
     precomputed_scale: Tensor = None,
     mode: CompressWeightsMode = CompressWeightsMode.NF4,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Calculates scale for fp4 (nf4, e2m1) quantization and normalizes weights by the scale.
     Weights are reshaped in case of positive value of group size.
@@ -273,7 +273,7 @@ def calculate_integer_quantization_params(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Calculates the scale and zero point for uniform quantization (INT4, INT8), when the range of values is divided into
     equal intervals, and each interval is assigned a quant.
@@ -463,7 +463,7 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-) -> Tuple[Tensor, Tensor, Tensor]:
+) -> tuple[Tensor, Tensor, Tensor]:
     """
     Performs integer quantization on the given weight tensor.
 
@@ -524,7 +524,7 @@ def quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
+) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
     :param weight: The weight tensor to quantize-dequantize.

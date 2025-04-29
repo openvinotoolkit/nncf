@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 import torch
 from torch import Tensor
@@ -91,7 +91,7 @@ class InvertedResidual(nn.Module):
 
         self.use_res_connect = cnf.stride == 1 and cnf.input_channels == cnf.out_channels
 
-        layers: List[nn.Module] = []
+        layers: list[nn.Module] = []
         activation_layer = nn.Hardswish if cnf.use_hs else nn.ReLU
 
         # expand
@@ -148,7 +148,7 @@ class InvertedResidual(nn.Module):
 class MobileNetV3(nn.Module):
     def __init__(
         self,
-        inverted_residual_setting: List[InvertedResidualConfig],
+        inverted_residual_setting: list[InvertedResidualConfig],
         last_channel: int,
         num_classes: int = 1000,
         block: Optional[Callable[..., nn.Module]] = None,
@@ -182,7 +182,7 @@ class MobileNetV3(nn.Module):
         if norm_layer is None:
             norm_layer = partial(nn.BatchNorm2d, eps=0.001, momentum=0.01)
 
-        layers: List[nn.Module] = []
+        layers: list[nn.Module] = []
 
         # building first layer
         firstconv_output_channels = inverted_residual_setting[0].input_channels
@@ -249,7 +249,7 @@ class MobileNetV3(nn.Module):
         return self._forward_impl(x)
 
 
-def _mobilenet_v3_conf(arch: str, params: Dict[str, Any]):
+def _mobilenet_v3_conf(arch: str, params: dict[str, Any]):
     # non-public config parameters
     reduce_divider = 2 if params.pop("_reduced_tail", False) else 1
     dilation = 2 if params.pop("_dilated", False) else 1
@@ -301,7 +301,7 @@ def _mobilenet_v3_conf(arch: str, params: Dict[str, Any]):
 
 def _mobilenet_v3_model(
     arch: str,
-    inverted_residual_setting: List[InvertedResidualConfig],
+    inverted_residual_setting: list[InvertedResidualConfig],
     last_channel: int,
     pretrained: bool,
     progress: bool,

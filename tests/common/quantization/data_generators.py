@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -79,7 +78,7 @@ def generate_random_scale(min_scale: float = 0.1, max_scale: float = 1.0) -> flo
     return min_scale + np.random.random() * (max_scale - min_scale)
 
 
-def generate_random_scale_by_input_size(input_size: Tuple, is_per_channel: bool, is_weights: bool) -> np.array:
+def generate_random_scale_by_input_size(input_size: tuple, is_per_channel: bool, is_weights: bool) -> np.array:
     """
     Generate random scales for each channels.
 
@@ -110,7 +109,7 @@ def generate_random_scale_by_input_size(input_size: Tuple, is_per_channel: bool,
     return scales
 
 
-def generate_random_low_and_range(min_range: float = 0.1, max_range: float = 3.0) -> Tuple[float, float]:
+def generate_random_low_and_range(min_range: float = 0.1, max_range: float = 3.0) -> tuple[float, float]:
     """
     Generate random input_low and input_range.
 
@@ -125,8 +124,8 @@ def generate_random_low_and_range(min_range: float = 0.1, max_range: float = 3.0
 
 
 def generate_random_low_and_range_by_input_size(
-    input_size: Tuple, is_per_channel: bool, is_weights: bool
-) -> Tuple[np.array, np.array]:
+    input_size: tuple, is_per_channel: bool, is_weights: bool
+) -> tuple[np.array, np.array]:
     """
     Generate random input_low and input_range for each channels.
 
@@ -185,7 +184,7 @@ def get_points_near_of_mid_points(input_data: np.array, mid_points: np.array, at
     return is_near_mid_point
 
 
-def generate_lazy_sweep_data(shape: Tuple[int], min_val: float = -1.0, max_val: float = 1.0):
+def generate_lazy_sweep_data(shape: tuple[int], min_val: float = -1.0, max_val: float = 1.0):
     """
     Generate tensor that contains sweep values from -1.0 to 1.0.
 
@@ -203,7 +202,7 @@ def generate_lazy_sweep_data(shape: Tuple[int], min_val: float = -1.0, max_val: 
 
 def generate_sweep_for_one_channel(
     input_low, input_range, input_size, levels, rtol_for_mid_point
-) -> Tuple[np.array, np.array, np.array]:
+) -> tuple[np.array, np.array, np.array]:
     """
     Generate sorted array that include:
         - values from `input_low - input_range * 0.5` to `input_low + input_range * 1.05`
@@ -261,7 +260,7 @@ def generate_sweep_for_one_channel(
 
 
 def generate_sweep_data(
-    input_size: Tuple,
+    input_size: tuple,
     input_low: np.array,
     input_range: np.array,
     levels: int,
@@ -364,7 +363,7 @@ def check_outputs(arr_a: np.array, arr_b: np.array, is_near_mid_point: np.array,
 
 
 def scatter_plot(
-    data: Dict[str, np.array], x_column: str = None, vertical_lines: np.array = None, save_to_file: str = None
+    data: dict[str, np.array], x_column: str = None, vertical_lines: np.array = None, save_to_file: str = None
 ) -> None:
     """
     Function to render test data on scatter plot.

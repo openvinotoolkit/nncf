@@ -11,7 +11,7 @@
 
 import os
 from functools import partial
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import onnx
@@ -49,8 +49,8 @@ def run(
     output_model_path: str,
     dataset: nncf.Dataset,
     num_init_samples: int,
-    ignored_scopes: Optional[List[str]] = None,
-    disallowed_op_types: Optional[List[str]] = None,
+    ignored_scopes: Optional[list[str]] = None,
+    disallowed_op_types: Optional[list[str]] = None,
     convert_model_opset: bool = True,
 ):
     print("Post-Training Quantization Parameters:")

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, TypeVar
 
 import pytest
 
@@ -35,7 +35,7 @@ TTensor = TypeVar("TTensor")
 class TemplateTestBCAlgorithm:
     @staticmethod
     @abstractmethod
-    def list_to_backend_type(data: List) -> TTensor:
+    def list_to_backend_type(data: list) -> TTensor:
         """
         Convert list to backend specific type
 
@@ -64,7 +64,7 @@ class TemplateTestBCAlgorithm:
         Get transformation function for dataset.
         """
 
-    def get_dataset(self, input_size: Tuple) -> StaticDatasetMock:
+    def get_dataset(self, input_size: tuple) -> StaticDatasetMock:
         """
         Return backend specific random dataset.
 
@@ -81,13 +81,13 @@ class TemplateTestBCAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def check_bias(model: TModel, ref_biases: Dict) -> None:
+    def check_bias(model: TModel, ref_biases: dict) -> None:
         """
         Checks biases values.
         """
 
     @staticmethod
-    def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
+    def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
         """
         Returns backend-specific reference.
         """

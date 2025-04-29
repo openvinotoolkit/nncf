@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Tuple, TypeVar
+from typing import Any, Callable, TypeVar
 
 import torch
 
@@ -71,20 +71,20 @@ class TrainedSuperNet:
         elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         return TrainedSuperNet(elasticity_ctrl, model)
 
-    def get_search_space(self) -> Dict:
+    def get_search_space(self) -> dict:
         """
         :return: dictionary with possible values for elastic configurations.
         """
         return self._m_handler.get_search_space()
 
-    def get_design_vars_info(self) -> Tuple[int, List[int]]:
+    def get_design_vars_info(self) -> tuple[int, list[int]]:
         """
         :return: number of possible values in subnet configurations and
         the number of possible values for each elastic property.
         """
         self._m_handler.get_design_vars_info()
 
-    def eval_subnet_with_design_vars(self, design_config: List, eval_fn: ValFnType, **kwargs) -> Any:
+    def eval_subnet_with_design_vars(self, design_config: list, eval_fn: ValFnType, **kwargs) -> Any:
         """
 
         :return: the value produced by the user's function to evaluate the subnetwork.
@@ -146,7 +146,7 @@ class TrainedSuperNet:
         """
         self._elasticity_ctrl.export_model(f"{filename}.onnx")
 
-    def get_config_from_pymoo(self, pymoo_config: List) -> SubnetConfig:
+    def get_config_from_pymoo(self, pymoo_config: list) -> SubnetConfig:
         """
         Converts a Pymoo subnetwork configuration into a SubnetConfig.
 

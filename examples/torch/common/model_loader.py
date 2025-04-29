@@ -11,7 +11,7 @@
 import urllib.parse
 from functools import partial
 from os import path as osp
-from typing import Dict, Optional
+from typing import Optional
 
 import requests
 import torch
@@ -79,7 +79,7 @@ def load_resuming_checkpoint(resuming_checkpoint_path: str):
     raise FileNotFoundError(msg)
 
 
-def extract_model_and_compression_states(resuming_checkpoint: Optional[Dict] = None):
+def extract_model_and_compression_states(resuming_checkpoint: Optional[dict] = None):
     if resuming_checkpoint is None:
         return None, None
     compression_state = resuming_checkpoint.get(COMPRESSION_STATE_ATTR)

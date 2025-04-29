@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf import nncf_logger
@@ -88,7 +88,7 @@ class AWQ(Algorithm):
         self._scale_per_target_node = {}
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(
@@ -109,7 +109,10 @@ class AWQ(Algorithm):
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
 
             self._backend_entity = PTAWQAlgoAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQAlgoAlgoBackend
 
+            self._backend_entity = FXAWQAlgoAlgoBackend()
         else:
             msg = f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
@@ -119,9 +122,9 @@ class AWQ(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        statistics: Optional[Dict[str, WCTensorStatistic]] = None,
+        all_weight_params: list[WeightCompressionParameters],
+        nodes_to_compress: list[NNCFNode],
+        statistics: Optional[dict[str, WCTensorStatistic]] = None,
         wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> TModel:
         """
@@ -277,13 +280,13 @@ class AWQ(Algorithm):
         return 1 / scale
 
     def _get_awq_data(
-        self, graph: NNCFGraph, all_weight_params: List[WeightCompressionParameters], nodes_to_compress: List[NNCFNode]
-    ) -> Dict[str, AWQCompressionInfo]:
+        self, graph: NNCFGraph, all_weight_params: list[WeightCompressionParameters], nodes_to_compress: list[NNCFNode]
+    ) -> dict[str, AWQCompressionInfo]:
         """
         Finds awq patterns in graph and returns it.
         :param graph: Model graph.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
+        :param all_weight_params: list of all weight parameters.
+        :param nodes_to_compress: list of nodes for processing.
         :return: A dict with node names and matched AWQ patterns.
         """
         matches = []

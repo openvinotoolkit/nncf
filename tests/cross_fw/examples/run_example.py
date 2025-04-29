@@ -15,12 +15,12 @@ import sys
 import tarfile
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Union
 
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 
-def post_training_quantization_mobilenet_v2(example_root_dir: str) -> Dict[str, float]:
+def post_training_quantization_mobilenet_v2(example_root_dir: str) -> dict[str, float]:
     sys.path.append(example_root_dir)
     import main as mobilenet_v2
 
@@ -41,17 +41,17 @@ def post_training_quantization_mobilenet_v2(example_root_dir: str) -> Dict[str, 
     return metrics
 
 
-def post_training_quantization_onnx_mobilenet_v2() -> Dict[str, float]:
+def post_training_quantization_onnx_mobilenet_v2() -> dict[str, float]:
     example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "onnx" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
 
 
-def post_training_quantization_openvino_mobilenet_v2_quantize() -> Dict[str, float]:
+def post_training_quantization_openvino_mobilenet_v2_quantize() -> dict[str, float]:
     example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "openvino" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
 
 
-def post_training_quantization_tensorflow_mobilenet_v2() -> Dict[str, float]:
+def post_training_quantization_tensorflow_mobilenet_v2() -> dict[str, float]:
     import tensorflow_datasets as tfds
 
     tfds.display_progress_bar(enable=False)
@@ -60,12 +60,12 @@ def post_training_quantization_tensorflow_mobilenet_v2() -> Dict[str, float]:
     return post_training_quantization_mobilenet_v2(example_root)
 
 
-def post_training_quantization_torch_mobilenet_v2() -> Dict[str, float]:
+def post_training_quantization_torch_mobilenet_v2() -> dict[str, float]:
     example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "torch" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
 
 
-def format_results(results: Tuple[float]) -> Dict[str, float]:
+def format_results(results: tuple[float]) -> dict[str, float]:
     return {
         "fp32_mAP": results[0],
         "int8_mAP": results[1],
@@ -76,7 +76,7 @@ def format_results(results: Tuple[float]) -> Dict[str, float]:
     }
 
 
-def post_training_quantization_openvino_yolo8_quantize() -> Dict[str, float]:
+def post_training_quantization_openvino_yolo8_quantize() -> dict[str, float]:
     from examples.post_training_quantization.openvino.yolov8.main import main as yolo8_main
 
     results = yolo8_main()
@@ -84,7 +84,7 @@ def post_training_quantization_openvino_yolo8_quantize() -> Dict[str, float]:
     return format_results(results)
 
 
-def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -> Dict[str, float]:
+def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -> dict[str, float]:
     from examples.post_training_quantization.openvino.yolov8_quantize_with_accuracy_control.main import (
         main as yolo8_main,
     )
@@ -94,7 +94,7 @@ def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -
     return format_results(results)
 
 
-def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Dict[str, float]:
+def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> dict[str, float]:
     from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import (
         run_example as yolo8_main,
     )
@@ -122,7 +122,7 @@ def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Di
     }
 
 
-def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
+def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> dict[str, float]:
     from examples.post_training_quantization.openvino.anomaly_stfpm_quantize_with_accuracy_control.main import (
         run_example as anomaly_stfpm_main,
     )
@@ -142,7 +142,7 @@ def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_con
     }
 
 
-def post_training_quantization_torch_ssd300_vgg16() -> Dict[str, float]:
+def post_training_quantization_torch_ssd300_vgg16() -> dict[str, float]:
     from examples.post_training_quantization.torch.ssd300_vgg16.main import main as ssd300_vgg16_main
 
     results = ssd300_vgg16_main()
@@ -160,7 +160,7 @@ def post_training_quantization_torch_ssd300_vgg16() -> Dict[str, float]:
     }
 
 
-def llm_compression() -> Dict[str, float]:
+def llm_compression() -> dict[str, float]:
     from examples.llm_compression.openvino.tiny_llama.main import main as llm_compression_main
 
     result = llm_compression_main()
@@ -168,7 +168,7 @@ def llm_compression() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
-def llm_tune_params() -> Dict[str, float]:
+def llm_tune_params() -> dict[str, float]:
     from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
 
     awq, ratio, group_size = llm_tune_params_main()
@@ -176,7 +176,7 @@ def llm_tune_params() -> Dict[str, float]:
     return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
 
 
-def llm_compression_synthetic() -> Dict[str, float]:
+def llm_compression_synthetic() -> dict[str, float]:
     from examples.llm_compression.openvino.tiny_llama_synthetic_data.main import main as llm_compression_synthetic_main
 
     result = llm_compression_synthetic_main()
@@ -184,7 +184,7 @@ def llm_compression_synthetic() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
-def fp8_llm_quantization() -> Dict[str, float]:
+def fp8_llm_quantization() -> dict[str, float]:
     from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
 
     result = fp8_llm_quantization_main()
@@ -298,7 +298,7 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
     }
 
 
-def quantization_aware_training_tensorflow_mobilenet_v2() -> Dict[str, float]:
+def quantization_aware_training_tensorflow_mobilenet_v2() -> dict[str, float]:
     import tensorflow_datasets as tfds
 
     tfds.display_progress_bar(enable=False)

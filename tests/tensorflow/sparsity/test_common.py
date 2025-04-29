@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -139,7 +139,7 @@ class TestPolynomialSparsityScheduler:
         steps_per_epoch: int,
         scheduler: PolynomialSparsityScheduler,
         set_sparsity_mock,
-        ref_vals: List[Optional[float]],
+        ref_vals: list[Optional[float]],
         explicit,
         epoch,
     ):

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import numpy as np
 import scipy.optimize  # type: ignore[import-untyped]
@@ -42,7 +42,7 @@ class PruningScheduler(BaseCompressionScheduler):
       section of the NNCF config file .json section (https://openvinotoolkit.github.io/nncf/schema).
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         super().__init__()
         self._controller = controller
         self.initial_level = self._controller.pruning_init  # type: ignore[attr-defined]
@@ -111,7 +111,7 @@ class BaselinePruningScheduler(PruningScheduler):
     Then scheduler sets `target_level` and freezes the algorithm.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         super().__init__(controller, params)
         self.freeze_epoch = self.num_warmup_epochs
 
@@ -131,7 +131,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential decay schedule.
 
@@ -161,7 +161,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     where a, b, k is a params.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential (with bias) decay schedule.
 
@@ -177,7 +177,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         return min(current_level, self.target_level)
 
     @staticmethod
-    def _init_exp(epoch_idx: int, p_min: float, p_max: float, factor: float = 0.125) -> Tuple[float, float, float]:
+    def _init_exp(epoch_idx: int, p_min: float, p_max: float, factor: float = 0.125) -> tuple[float, float, float]:
         """
         Finds parameters a, b, k from the system:
             p_min = a + b

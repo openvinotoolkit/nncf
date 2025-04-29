@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Dict, Set, Union
+from typing import Callable, Union
 
 import torch
 
@@ -33,7 +33,7 @@ from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, target_point: PTTargetPoint, reduction_shapes: Set[ReductionAxes] = None):
+    def __init__(self, target_point: PTTargetPoint, reduction_shapes: set[ReductionAxes] = None):
         self.target_point = target_point
         self.reduction_shapes = reduction_shapes
 
@@ -71,7 +71,7 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(
         self,
         config: NNCFConfig,
-        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase],
+        observation_points_vs_collectors: dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase],
     ):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
@@ -102,13 +102,13 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def initialize(self, model: NNCFNetwork) -> None:
         pass
 
-    def _get_algo_specific_config_section(self) -> Dict:
+    def _get_algo_specific_config_section(self) -> dict:
         return {}
 
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(
-        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]
+        self, target_model: NNCFNetwork, ip_vs_collector_dict: dict[PTTargetPoint, TensorStatisticCollectorBase]
     ):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict

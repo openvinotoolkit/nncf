@@ -13,7 +13,7 @@ import operator
 from collections import OrderedDict
 from collections import defaultdict
 from functools import reduce
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar
+from typing import Any, Iterable, Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -80,7 +80,7 @@ def get_weight_compression_configuration(
     sensitivity_metric: Optional[SensitivityMetric] = None,
     backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
@@ -332,7 +332,7 @@ class WeightCompression(Algorithm):
         )
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def set_backend_entity(self, model: TModel) -> None:
@@ -354,11 +354,15 @@ class WeightCompression(Algorithm):
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
+
+            self._backend_entity = ONNXWeightCompressionAlgoBackend(model)
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
 
-    def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> list[NNCFNode]:
         """
         Collects nodes in the model's graph corresponding to the layers for weight compression.
 
@@ -383,8 +387,8 @@ class WeightCompression(Algorithm):
         return ordered_nodes_to_compress
 
     def _get_ratio_defining_params(
-        self, all_weight_params: List[WeightCompressionParameters], is_last_layer_shared: bool
-    ) -> List[WeightCompressionParameters]:
+        self, all_weight_params: list[WeightCompressionParameters], is_last_layer_shared: bool
+    ) -> list[WeightCompressionParameters]:
         """
         Returns the information about weights that are used for ratio calculation between primary
         and backup precisions.
@@ -423,7 +427,7 @@ class WeightCompression(Algorithm):
 
     def _set_weight_compression_config(
         self,
-        ratio_defining_params: List[WeightCompressionParameters],
+        ratio_defining_params: list[WeightCompressionParameters],
         model: TModel,
         graph: NNCFGraph,
         statistics_points: StatisticPointsContainer,
@@ -445,7 +449,7 @@ class WeightCompression(Algorithm):
             self._mixed_precision_algo.apply(model, graph, statistics_points, weight_params=ratio_defining_params)
 
     @staticmethod
-    def _proportion_str(num_weights_list: List[int], total_num_weights: int, total_num_params: int) -> str:
+    def _proportion_str(num_weights_list: list[int], total_num_weights: int, total_num_params: int) -> str:
         """
         Generates a string with proportion between target parameters and all model parameters by number of weights.
 
@@ -459,9 +463,9 @@ class WeightCompression(Algorithm):
 
     def _get_bitwidth_distribution_str(
         self,
-        all_params: List[WeightCompressionParameters],
-        ratio_defining_params: List[WeightCompressionParameters],
-        ignored_scope_weight_statistics: List[int],
+        all_params: list[WeightCompressionParameters],
+        ratio_defining_params: list[WeightCompressionParameters],
+        ignored_scope_weight_statistics: list[int],
     ) -> str:
         """
         Generates a table that shows the ratio of weights quantized to different number of bits.
@@ -507,7 +511,7 @@ class WeightCompression(Algorithm):
         pretty_string = f"Statistics of the bitwidth distribution:\n{table}"
         return pretty_string
 
-    def _get_ignored_scope_weight_statistics(self, model: TModel, graph: NNCFGraph) -> List[int]:
+    def _get_ignored_scope_weight_statistics(self, model: TModel, graph: NNCFGraph) -> list[int]:
         """
         Collect the weight statistics for nodes in the ignored scope.
 
@@ -562,7 +566,7 @@ class WeightCompression(Algorithm):
                 matmul_input_to_output_nodes_map, statistic_points
             )
 
-        all_weight_params: List[WeightCompressionParameters] = []
+        all_weight_params: list[WeightCompressionParameters] = []
         weight_names = set()
 
         is_last_layer_shared = False
@@ -711,7 +715,7 @@ class WeightCompression(Algorithm):
         )
         return transformed_model
 
-    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
+    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
         """
         This method returns the activation layer and corresponding port id for the node.
 
@@ -726,8 +730,8 @@ class WeightCompression(Algorithm):
         return activation_node, port_id
 
     def get_matmul_input_to_output_nodes_map(
-        self, matmul_nodes: List[NNCFNode], graph: NNCFGraph
-    ) -> Dict[Tuple[NNCFNode, int], List[NNCFNode]]:
+        self, matmul_nodes: list[NNCFNode], graph: NNCFGraph
+    ) -> dict[tuple[NNCFNode, int], list[NNCFNode]]:
         """
         Maps activation nodes to their corresponding MatMul nodes in the graph.
 
@@ -750,7 +754,7 @@ class WeightCompression(Algorithm):
 
     def get_compression_nodes_info(
         self, graph: NNCFGraph
-    ) -> Tuple[List[NNCFNode], Dict[Tuple[NNCFNode, int], List[NNCFNode]]]:
+    ) -> tuple[list[NNCFNode], dict[tuple[NNCFNode, int], list[NNCFNode]]]:
         """
         Retrieves the nodes to compress along with a mapping of activation nodes
         to their corresponding MatMul nodes.
@@ -798,7 +802,7 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -839,9 +843,9 @@ class WeightCompression(Algorithm):
 
     def _get_statistics_for_weights_compression(
         self,
-        matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+        matmul_input_to_output_nodes_map: dict[tuple[NNCFNode, int], list[NNCFNode]],
         statistic_points: StatisticPointsContainer,
-    ) -> Dict[str, WCTensorStatistic]:
+    ) -> dict[str, WCTensorStatistic]:
         """
         Retrieve collected statistics only for WeightCompression algorithm and not for MixedPrecision.
 

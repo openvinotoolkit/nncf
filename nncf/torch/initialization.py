@@ -12,7 +12,7 @@
 import math
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 from torch.nn.modules.loss import _Loss
@@ -61,7 +61,7 @@ class PTInitializingDataLoader(NNCFDataLoader):
     def __len__(self):
         return len(self._data_loader)
 
-    def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
+    def get_inputs(self, dataloader_output: Any) -> tuple[tuple, dict]:
         """Returns (args, kwargs) for the current model call to be made during the initialization process"""
         raise NotImplementedError
 
@@ -76,7 +76,7 @@ class PTInitializingDataLoader(NNCFDataLoader):
 
 
 class DefaultInitializingDataLoader(PTInitializingDataLoader):
-    def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
+    def get_inputs(self, dataloader_output: Any) -> tuple[tuple, dict]:
         return (dataloader_output[0],), {}
 
     def get_target(self, dataloader_output: Any):
@@ -209,7 +209,7 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         def save_original_bn_training_state(module: torch.nn.Module):
             self.original_training_state[module] = module.training
 
-        def set_bn_training_state(module: torch.nn.Module, state: Dict[str, bool]):
+        def set_bn_training_state(module: torch.nn.Module, state: dict[str, bool]):
             module.training = state
 
         def restore_original_bn_training_state(module: torch.nn.Module):
@@ -259,11 +259,11 @@ def register_default_init_args(
         ],
         type(None),
     ] = None,
-    validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], Tuple[float, float]] = None,
+    validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], tuple[float, float]] = None,
     val_loader: torch.utils.data.DataLoader = None,
     autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
     model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
-    distributed_callbacks: Tuple[Callable, Callable] = None,
+    distributed_callbacks: tuple[Callable, Callable] = None,
     execution_parameters: ExecutionParameters = None,
     legr_train_optimizer: torch.optim.Optimizer = None,
     device: str = None,

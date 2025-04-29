@@ -14,7 +14,7 @@ import sys
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
@@ -34,12 +34,12 @@ import nncf
 import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_creation import load_from_config
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
@@ -47,7 +47,7 @@ from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 warnings.filterwarnings("ignore", category=TracerWarning)
 
 
-def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> List[Tensor]:
+def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> list[Tensor]:
     """
     Loads and processes the Wikitext-2 dataset for training.
 
@@ -111,7 +111,7 @@ def measure_similarity(
 
 
 @torch.no_grad()
-def calc_hiddens(model: nn.Module, dataloader: List[Tensor]) -> List[Tensor]:
+def calc_hiddens(model: nn.Module, dataloader: list[Tensor]) -> list[Tensor]:
     """
     Calculate the hidden states for each input in the dataloader using the given model.
 
@@ -127,7 +127,7 @@ def calc_hiddens(model: nn.Module, dataloader: List[Tensor]) -> List[Tensor]:
     return orig_hiddens
 
 
-def get_model_input(input_ids: Tensor) -> Dict[str, Tensor]:
+def get_model_input(input_ids: Tensor) -> dict[str, Tensor]:
     """
     Prepares the model input dictionary with input IDs, attention mask, and position IDs.
 
@@ -158,7 +158,7 @@ def kl_div(student_hiddens: torch.Tensor, teacher_hiddens: torch.Tensor) -> torc
     )
 
 
-def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> List[Dict[str, Any]]:
+def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> list[dict[str, Any]]:
     """
     Sets the trainable parameters of the model for quantization-aware training with LoRA (Low-Rank Adaptation).
 
@@ -381,7 +381,7 @@ def main(argv) -> float:
             indices = indices.tolist()
             total_microbatches += 1
 
-            def form_batch(inputs: List[Tensor], model_input: bool):
+            def form_batch(inputs: list[Tensor], model_input: bool):
                 batch = torch.cat([inputs[i] for i in indices], dim=0)
                 return get_model_input(batch) if model_input else batch.to(device=device, dtype=torch_dtype)
 

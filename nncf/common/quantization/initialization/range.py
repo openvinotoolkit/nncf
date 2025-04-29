@@ -10,7 +10,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.initialization.dataloader import NNCFDataLoader
@@ -31,7 +31,7 @@ class RangeInitConfig:
         self,
         init_type: str,
         num_init_samples: int,
-        init_type_specific_params: Optional[Dict[str, int]] = None,
+        init_type_specific_params: Optional[dict[str, int]] = None,
     ):
         """
         Initializes the quantization range initialization parameters.
@@ -53,7 +53,7 @@ class RangeInitConfig:
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_dict(cls, dct: Dict[str, Any]) -> RangeInitConfig:
+    def from_dict(cls, dct: dict[str, Any]) -> RangeInitConfig:
         num_init_samples = dct.get("num_init_samples", NUM_INIT_SAMPLES)
         if num_init_samples < 0:
             msg = "Number of initialization samples must be >= 0"
@@ -71,8 +71,8 @@ class PerLayerRangeInitConfig(RangeInitConfig):
     def __init__(
         self,
         range_init_config: RangeInitConfig,
-        target_scopes: Optional[List[str]],
-        ignored_scopes: Optional[List[str]],
+        target_scopes: Optional[list[str]],
+        ignored_scopes: Optional[list[str]],
         target_quantizer_group: QuantizerGroup = None,
     ):
         """
@@ -101,10 +101,10 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         self.target_group = target_quantizer_group
 
     @classmethod
-    def from_dict(cls, dct: Dict[str, Any]) -> PerLayerRangeInitConfig:
+    def from_dict(cls, dct: dict[str, Any]) -> PerLayerRangeInitConfig:
         base_config = RangeInitConfig.from_dict(dct)
 
-        def get_list(dct: Dict[str, Any], attr_name: str) -> Optional[List[str]]:
+        def get_list(dct: dict[str, Any], attr_name: str) -> Optional[list[str]]:
             str_or_list = dct.get(attr_name)
             if str_or_list is None:
                 return None
@@ -135,7 +135,7 @@ class RangeInitParams:
         init_range_data_loader: NNCFDataLoader,
         device: str,
         global_init_config: Optional[RangeInitConfig],
-        per_layer_range_init_configs: List[PerLayerRangeInitConfig],
+        per_layer_range_init_configs: list[PerLayerRangeInitConfig],
     ):
         """
 
@@ -217,10 +217,10 @@ class RangeInitCollectorParams:
 
     def _get_reduction_axes(
         self,
-        shape_to_reduce: Union[Tuple[int, ...], List[int]],
-        quantization_axes: Union[Tuple[int, ...], List[int]],
-        aggregation_axes: Union[Tuple[int, ...], List[int]],
-    ) -> Tuple[int, ...]:
+        shape_to_reduce: Union[tuple[int, ...], list[int]],
+        quantization_axes: Union[tuple[int, ...], list[int]],
+        aggregation_axes: Union[tuple[int, ...], list[int]],
+    ) -> tuple[int, ...]:
         """
         Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
         from these axes only tensor related axes should be used for reducer.
@@ -234,7 +234,7 @@ class RangeInitCollectorParams:
         axes_to_keep.update(quantization_axes)
         return get_reduction_axes(list(axes_to_keep), shape_to_reduce)
 
-    def _get_aggregation_axes(self, batchwise_statistics: bool) -> Tuple[int, ...]:
+    def _get_aggregation_axes(self, batchwise_statistics: bool) -> tuple[int, ...]:
         """
         Returns axes for aggregator.
 
@@ -246,10 +246,10 @@ class RangeInitCollectorParams:
 
     def get_reduction_aggregation_axes(
         self,
-        shape_to_reduce: Union[Tuple[int, ...], List[int]],
-        quantization_axes: Union[Tuple[int, ...], List[int]],
+        shape_to_reduce: Union[tuple[int, ...], list[int]],
+        quantization_axes: Union[tuple[int, ...], list[int]],
         batchwise_statistics: bool,
-    ) -> Tuple[ReductionAxes, AggregationAxes]:
+    ) -> tuple[ReductionAxes, AggregationAxes]:
         """
         Calculates the reduction axes, aggregation axes for the tensor.
 

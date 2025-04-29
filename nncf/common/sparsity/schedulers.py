@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -51,7 +51,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         mask will be frozen and will not be trained.
     """
 
-    def __init__(self, controller: SparsityController, params: Dict[str, Any]) -> None:
+    def __init__(self, controller: SparsityController, params: dict[str, Any]) -> None:
         """
         Initializes the internal state of the sparsity scheduler.
 
@@ -115,7 +115,7 @@ class PolynomialSparsityScheduler(SparsityScheduler):
     after `steps_per_epoch` will be calculated.
     """
 
-    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
+    def __init__(self, controller: SparsityController, params: dict[str, Any]):
         """
         Initializes a sparsity scheduler with a polynomial decay schedule.
 
@@ -161,12 +161,12 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         local_step = max(self._steps_in_current_epoch - 1, 0)
         return self.schedule(self.current_epoch, local_step, self._steps_per_epoch)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         super().load_state(state)
         if self._update_per_optimizer_step:
             self._steps_per_epoch = state["_steps_per_epoch"]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state = super().get_state()
         if self._update_per_optimizer_step:
             state["_steps_per_epoch"] = self._steps_per_epoch
@@ -216,7 +216,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
+    def __init__(self, controller: SparsityController, params: dict[str, Any]):
         """
         Initializes a sparsity scheduler with an exponential decay schedule.
 
@@ -245,7 +245,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
     Sparsity scheduler with an adaptive schedule.
     """
 
-    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
+    def __init__(self, controller: SparsityController, params: dict[str, Any]):
         """
         Initializes a sparsity scheduler with an adaptive schedule.
 
@@ -286,12 +286,12 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
         return self._current_level
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         super().load_state(state)
         self.num_bad_epochs = state["num_bad_epochs"]
         self._current_level = state["current_sparsity_level"]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state = super().get_state()
         state["num_bad_epochs"] = self.num_bad_epochs
         state["current_sparsity_level"] = self._current_level
@@ -304,7 +304,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
     Sparsity scheduler with a piecewise constant schedule.
     """
 
-    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
+    def __init__(self, controller: SparsityController, params: dict[str, Any]):
         """
         Initializes a sparsity scheduler with a piecewise constant schedule.
 

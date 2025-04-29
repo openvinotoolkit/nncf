@@ -8,7 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypedDict, TypeVar, Union
+import warnings
+from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -21,7 +22,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -60,7 +60,7 @@ def warning_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> None:
     """
     Logs when is_model_no_batchwise_support(...) returns True.
@@ -80,7 +80,7 @@ def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
@@ -232,10 +232,7 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        if is_torch_tracing_by_torch_function_mode():
-            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
-        else:
-            from nncf.torch.quantization.quantize_model import quantize_impl
+        from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,
@@ -269,7 +266,7 @@ def quantize(
     raise nncf.UnsupportedBackendError(msg)
 
 
-def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., Tuple[Any, ...]]:
+def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., tuple[Any, ...]]:
     """
     Wraps validation function to support case when it only returns metric value.
 
@@ -277,7 +274,7 @@ def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., Tuple
     :return: Wrapped validation function.
     """
 
-    def wrapper(*args: Any, **kwargs: Any) -> Tuple[Any, ...]:
+    def wrapper(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
         retval = validation_fn(*args, **kwargs)
         if isinstance(retval, tuple):
             return retval
@@ -301,7 +298,7 @@ def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -568,8 +565,6 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
-            "awq": awq,
-            "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }
@@ -578,16 +573,6 @@ def compress_weights(
             msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
-            msg = (
-                "TorchFX backend only supports data-free sensitivity metric. "
-                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-
-        if dataset:
-            msg = "TorchFX only supports data-free weights compression. Set the 'dataset' option to None"
-            raise nncf.ParameterNotSupportedError(msg)
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "TorchFX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
@@ -595,6 +580,13 @@ def compress_weights(
         if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
             msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
             raise nncf.ParameterNotSupportedError(msg)
+
+        if (
+            mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
+            and dataset is not None
+        ):
+            warnings.warn("data-aware methods are not supported in INT8 modes. dataset is set to None")
+            dataset = None
 
         compression_weights_impl = fx_compression_weights_impl
 
@@ -619,6 +611,37 @@ def compress_weights(
 
         compression_weights_impl = ov_compress_weights_impl
 
+    elif backend == BackendType.ONNX:
+        from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
+
+        if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
+            msg = "ONNX backend does not support NF4 and E2M1 modes for weight compression."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        options = {
+            "awq": awq,
+            "scale_estimation": scale_estimation,
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_options = [name for name, value in options.items() if value is not None]
+        if unsupported_options:
+            msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
+            msg = (
+                "ONNX backend only supports data-free sensitivity metric. "
+                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
+            )
+            raise nncf.ParameterNotSupportedError(msg)
+        if dataset:
+            msg = "ONNX only supports data-free weights compression. Set the 'dataset' option to None"
+            raise nncf.ParameterNotSupportedError(msg)
+        if advanced_parameters and advanced_parameters.statistics_path:
+            msg = "ONNX does not supports statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
+        compression_weights_impl = onnx_compress_weights_impl
     if compression_weights_impl is None:
         msg = f"Unsupported type of backend: {backend}"
         raise nncf.UnsupportedBackendError(msg)
@@ -679,7 +702,7 @@ def quantize_with_tune_hyperparams(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,

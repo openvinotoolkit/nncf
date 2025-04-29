@@ -11,17 +11,16 @@
 
 import ast
 import inspect
-from typing import Tuple
 
 import pytest
 import torch
 import torch.nn.functional as F
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_visualization import to_pydot
-from nncf.experimental.torch2.function_hook.handle_inner_functions import MAP_HANDLER_TO_INNER_FUNCTION
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_visualization import to_pydot
+from nncf.torch.function_hook.handle_inner_functions import MAP_HANDLER_TO_INNER_FUNCTION
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.utils import compare_with_reference_file
 
@@ -30,7 +29,7 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "handle_inner_functi
 
 class ReluModel(nn.Module):
     @staticmethod
-    def example_input() -> Tuple[torch.Tensor, ...]:
+    def example_input() -> tuple[torch.Tensor, ...]:
         return (torch.rand(1, 1, 1),)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -43,7 +42,7 @@ class ReluModel(nn.Module):
 
 class BatchNormModel(nn.Module):
     @staticmethod
-    def example_input() -> Tuple[torch.Tensor, ...]:
+    def example_input() -> tuple[torch.Tensor, ...]:
         return (torch.rand(1, 1, 1),)
 
     def __init__(self):
@@ -62,7 +61,7 @@ class MultiHeadAttention(nn.Module):
     num_heads = 4
 
     @classmethod
-    def example_input(cls) -> Tuple[torch.Tensor, ...]:
+    def example_input(cls) -> tuple[torch.Tensor, ...]:
         query = torch.rand((cls.seq_length, cls.batch_size, cls.embed_dim))
         key = torch.rand((cls.seq_length, cls.batch_size, cls.embed_dim))
         value = torch.rand((cls.seq_length, cls.batch_size, cls.embed_dim))

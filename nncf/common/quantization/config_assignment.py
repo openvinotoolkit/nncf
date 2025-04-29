@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
@@ -19,7 +19,7 @@ from nncf.common.scopes import matches_any
 
 
 def get_scoped_quantizer_config(
-    base_config: QuantizerConfig, scope_str: str, scope_overrides: Optional[Dict[str, Any]] = None
+    base_config: QuantizerConfig, scope_str: str, scope_overrides: Optional[dict[str, Any]] = None
 ) -> QuantizerConfig:
     """
     Returns a QuantizerConfig which is based on a given config, which will have overrides
@@ -53,12 +53,12 @@ def get_scoped_quantizer_config(
 
 
 def assign_qconfig_lists_to_modules(
-    nodes_with_weights: List[NNCFNode],
+    nodes_with_weights: list[NNCFNode],
     default_weight_qconfig: QuantizerConfig,
     global_weight_constraints: QuantizationConstraints = None,
-    scope_overrides_dict: Optional[Dict[str, Any]] = None,
+    scope_overrides_dict: Optional[dict[str, Any]] = None,
     hw_config: Optional[HWConfig] = None,
-) -> Dict[NNCFNode, List[QuantizerConfig]]:
+) -> dict[NNCFNode, list[QuantizerConfig]]:
     """
     Assigns a list of possible quantizer configurations (as determined by HW config, defaults and overrides)
     to each weighted node that was passed.
@@ -74,7 +74,7 @@ def assign_qconfig_lists_to_modules(
     :return: A dict of each weighted node vs. the list of quantizer configs allowed for quantizing the associated
       weights
     """
-    retval: Dict[NNCFNode, List[QuantizerConfig]] = {}
+    retval: dict[NNCFNode, list[QuantizerConfig]] = {}
     default_qconfig = deepcopy(default_weight_qconfig)
     if global_weight_constraints is not None:
         default_qconfig = global_weight_constraints.apply_constraints_to(default_qconfig)
