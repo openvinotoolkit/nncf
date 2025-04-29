@@ -38,6 +38,8 @@ from tests.torch.helpers import get_grads
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.modules.seq2seq.gnmt import GNMT
 
+pytestmark = pytest.mark.legacy
+
 
 def replace_lstm(model):
     def replace_fn(module_):

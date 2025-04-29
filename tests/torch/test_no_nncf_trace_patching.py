@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -18,6 +19,8 @@ from nncf.torch import disable_tracing
 from nncf.torch.dynamic_graph.context import get_current_context
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
+
+pytestmark = pytest.mark.legacy
 
 
 class SimpleModel(nn.Module):

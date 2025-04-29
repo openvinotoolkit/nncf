@@ -9,12 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import torch
 import torch.nn.functional
 
 from nncf import NNCFConfig
 from nncf.torch import register_module
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
+
+pytestmark = pytest.mark.legacy
 
 
 @register_module()

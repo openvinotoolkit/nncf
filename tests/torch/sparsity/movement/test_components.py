@@ -31,6 +31,8 @@ from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
 
+pytestmark = pytest.mark.legacy
+
 
 class TestSparseConfigByScope:
     @pytest.mark.parametrize(
