@@ -17,7 +17,6 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
-
 from tests.cross_fw.shared.fx_utils import FXAutoModelForCausalLM
 from tests.cross_fw.shared.fx_utils import convert_and_export_with_cache
 
