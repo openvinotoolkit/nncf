@@ -195,6 +195,8 @@ def fp8_llm_quantization() -> dict[str, float]:
 def llm_compression_qat_with_lora() -> float:
     from examples.llm_compression.torch.qat_with_lora.main import main as qat_with_lora_main
 
+    set_torch_cuda_seed()
+
     args = [
         "--epochs=1",
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
