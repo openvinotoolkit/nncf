@@ -276,7 +276,8 @@ class AdvancedAWQParameters:
     :type alpha_max: float
     :param steps: The number of the steps in grid search.
     :type steps: int
-    :param prefer_data_aware_scaling: Determines whether to use activations to calculate scales if activations are presented.
+    :param prefer_data_aware_scaling: Determines whether to use activations to calculate scales if
+        activations are presented.
     :type prefer_data_aware_scaling: bool
     """
 
