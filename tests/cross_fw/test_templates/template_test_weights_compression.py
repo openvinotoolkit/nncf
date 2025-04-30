@@ -370,8 +370,8 @@ class TemplateWeightCompression(ABC):
         compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
 
     @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
-    @pytest.mark.parametrize("prefer_data_aware", [True, False])
-    def test_data_free_awq(self, dataset, prefer_data_aware, mocker):
+    @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, mocker):
         if dataset is None and not self.supports_data_free():
             pytest.skip("Skipping test for not supported dataset")
 
@@ -382,7 +382,7 @@ class TemplateWeightCompression(ABC):
         if dataset is not None:
             dataset = Dataset([self.to_tensor(dataset)])
 
-        fn_name = "_data_free_step" if dataset is None or not prefer_data_aware else "_data_aware_step"
+        fn_name = "_data_free_step" if dataset is None or not prefer_data_aware_scaling else "_data_aware_step"
 
         collect_spy = mocker.spy(AWQ, fn_name)
 
@@ -395,7 +395,7 @@ class TemplateWeightCompression(ABC):
             awq=True,
             advanced_parameters=CompressionParams(
                 awq_params=AWQParams(
-                    prefer_data_aware=prefer_data_aware,
+                    prefer_data_aware_scaling=prefer_data_aware_scaling,
                 )
             ),
         )
