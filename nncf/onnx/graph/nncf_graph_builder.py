@@ -337,7 +337,7 @@ class GraphConverter:
         return Dtype.FLOAT if onnx_dtype == int(onnx.TensorProto.FLOAT) else Dtype.INTEGER
 
     @staticmethod
-    def create_nncf_graph(onnx_model: onnx.ModelProto, infer_shapes: bool = True) -> NNCFGraph:
+    def create_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
         """
         Creates NNCFGraph from 'onnx_model'.
         Initially, ONNXGraph is built. All nodes from onnx_model which have valid metatype are added to NNCFGraph.
@@ -347,8 +347,7 @@ class GraphConverter:
         :return: NNCFGraph.
         """
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
-        if infer_shapes:
-            onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
+        onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
         parents_node_mapping = get_parents_node_mapping(onnx_model)
