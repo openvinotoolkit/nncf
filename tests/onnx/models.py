@@ -1879,3 +1879,21 @@ class RoPEModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "rope_model.dot")
+
+
+def build_matmul_model() -> onnx.ModelProto:
+    """
+    Builds an ONNX model that contains only a MatMul operation.
+    """
+    X = onnx.helper.make_tensor_value_info("X", onnx.TensorProto.FLOAT, [2, 3])
+    A = onnx.helper.make_tensor_value_info("A", onnx.TensorProto.FLOAT, [2, 2])
+    matmul = onnx.helper.make_node("MatMul", inputs=["X", "W"], outputs=["A"])
+
+    W_values = np.random.rand(3, 2).astype(np.float32)
+    W_initializer = onnx.helper.make_tensor(
+        name="W", data_type=onnx.TensorProto.FLOAT, dims=[3, 2], vals=W_values.tobytes(), raw=True
+    )
+
+    graph = onnx.helper.make_graph([matmul], "matmul-model", [X], [A], [W_initializer])
+    model = onnx.helper.make_model(graph)
+    return model

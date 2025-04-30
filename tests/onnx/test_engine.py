@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import tempfile
 
 import numpy as np
 import onnx
@@ -17,11 +18,14 @@ import pytest
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.engine import ONNXEngine
+from nncf.onnx.graph.model_metadata import MetadataKey
+from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from tests.onnx.models import NonShapeModel
+from tests.onnx.models import build_matmul_model
 
 
 def check_engine_creation_and_inference(model: onnx.ModelProto, input_data: np.ndarray, reference_outputs: list[str]):
@@ -56,3 +60,21 @@ def test_output_insertion(target_layers, target_layers_output):
 
     input_data = {"X": np.ones([1, 3, 32, 32]).astype(np.float32)}
     check_engine_creation_and_inference(transformed_model, input_data, target_layers_output)
+
+
+def test_infer_for_model_with_external_data():
+    with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as temp_dir:
+        model = build_matmul_model()
+        model_path = f"{temp_dir}/model.onnx"
+        onnx.save_model(
+            model,
+            model_path,
+            save_as_external_data=True,
+            all_tensors_to_one_file=True,
+            location="model.data",
+            size_threshold=0,
+            convert_attribute=False,
+        )
+        model = onnx.load_model(model_path, load_external_data=False)
+        set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, temp_dir)
+        check_engine_creation_and_inference(model, {"X": np.ones([2, 3], dtype=np.float32)}, ["A"])
