@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.onnx.quantization.backend_parameters`
+===================================================
+
+.. py:module:: nncf.onnx.quantization.backend_parameters
+
+

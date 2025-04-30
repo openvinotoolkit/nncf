@@ -461,7 +461,7 @@ It regulates the calculation of the smooth scale. The default value stored in Ad
 A negative value for each field switches off type smoothing. In case of inaccurate results,
 fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing for type.</p></li>
 <li><p><strong>smooth_quant_alpha</strong> (<em>float</em>) – Deprecated SmoothQuant-related parameter.</p></li>
-<li><p><strong>backend_params</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
+<li><p><strong>backend_params</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
 </ul>
 </dd>
 </dl>
@@ -549,6 +549,7 @@ precision. Defaults to True.</p></li>
 <li><p><strong>gptq_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedGPTQParameters" title="nncf.quantization.advanced_parameters.AdvancedGPTQParameters"><em>AdvancedGPTQParameters</em></a>) – Advanced parameters for GPTQ algorithm.</p></li>
 <li><p><strong>lora_correction_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><em>AdvancedLoraCorrectionParameters</em></a>) – Advanced parameters for Lora Correction algorithm.</p></li>
 <li><p><strong>lora_adapter_rank</strong> (<em>int</em>) – Rank of lora adapters for FQ_LORA format. Defaults to 256.</p></li>
+<li><p><strong>backend_params</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
 </ul>
 </dd>
 </dl>
