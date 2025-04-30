@@ -302,7 +302,7 @@ class WeightCompression(Algorithm):
                 awq_params.alpha_min,
                 awq_params.alpha_max,
                 awq_params.steps,
-                awq_params.prefer_data_aware,
+                awq_params.prefer_data_aware_scaling,
             )
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
@@ -325,7 +325,7 @@ class WeightCompression(Algorithm):
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
         self._data_aware_compression = (
-            (self._awq and self._advanced_parameters.awq_params.prefer_data_aware)
+            (self._awq and self._advanced_parameters.awq_params.prefer_data_aware_scaling)
             or self._scale_estimation
             or self._lora_correction
             or self._gptq
