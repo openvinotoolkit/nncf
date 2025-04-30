@@ -61,7 +61,7 @@ def check_model_protobuf_size(model: onnx.ModelProto) -> None:
 
     :param model: The ONNX model to be checked.
     """
-    MAXIMUM_PROTOBUF = 2000000000  # Limitation of single protobuf file is 2GB
+    MAXIMUM_PROTOBUF = 2147483648  # Limitation of single protobuf file is 2GB
     protobuf_string = model.SerializeToString()
     if sys.getsizeof(protobuf_string) > MAXIMUM_PROTOBUF:
         msg = (
@@ -344,6 +344,7 @@ def compress_weights_impl(
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
 
     if external_data_dir:
+        remove_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
         remove_metadata(compressed_model, MetadataKey.EXTERNAL_DATA_DIR)
         load_external_data_for_model(compressed_model, external_data_dir)
 
