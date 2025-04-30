@@ -61,9 +61,9 @@ def check_model_protobuf_size(model: onnx.ModelProto) -> None:
 
     :param model: The ONNX model to be checked.
     """
-    MAXIMUM_PROTOBUF = 2147483648  # Limitation of single protobuf file is 2GB
+    maximum_protobuf = 2147483648  # Limitation of single protobuf file is 2GB
     protobuf_string = model.SerializeToString()
-    if sys.getsizeof(protobuf_string) > MAXIMUM_PROTOBUF:
+    if sys.getsizeof(protobuf_string) > maximum_protobuf:
         msg = (
             "The protobuf of onnx model is too large (>2GB). "
             "Please load the model with the `load_external_data` flag set to `False`. "
