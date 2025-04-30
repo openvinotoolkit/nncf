@@ -77,6 +77,8 @@ from tests.torch.test_models import squeezenet1_1
 from tests.torch.test_models.mobilenet import MobileNetV2
 from tests.torch.test_models.mobilenet import mobilenet_v2
 
+pytestmark = pytest.mark.legacy
+
 
 def create_test_dataloaders(config: NNCFConfig, dataset_dir):
     input_info = FillerInputInfo.from_nncf_config(config).elements[0]

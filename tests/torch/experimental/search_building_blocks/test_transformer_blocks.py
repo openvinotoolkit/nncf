@@ -38,6 +38,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 
+pytestmark = pytest.mark.legacy
+
 
 def check_extended_blocks(name, actual_blocks: ExtendedBuildingBlocks):
     ref_file_dir = TEST_ROOT / "torch" / "data" / "search_building_block"

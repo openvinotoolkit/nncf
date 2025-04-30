@@ -34,6 +34,7 @@ from tests.torch.test_models.resnet import ResNet18
 from tests.torch.test_models.resnet import ResNet50
 from tests.torch.test_models.resnet import ResNet50__elastic
 
+pytestmark = pytest.mark.legacy
 ###########################
 # Helpers
 ###########################

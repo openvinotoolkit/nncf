@@ -56,6 +56,8 @@ from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nncf_network.helpers import SimplestModel
 from tests.torch.test_models.synthetic import ManyNonEvalModules
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.fixture()
 def _nncf_caplog(caplog):

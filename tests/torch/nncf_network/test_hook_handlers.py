@@ -22,6 +22,8 @@ from nncf.torch.nncf_network import PTInsertionPoint
 from tests.torch.helpers import HookChecker
 from tests.torch.nncf_network.helpers import SimplestModel
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.parametrize(
     "target_type, target_node_name, input_port_id",

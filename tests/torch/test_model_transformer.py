@@ -79,6 +79,8 @@ from tests.common.quantization.mock_graphs import get_two_branch_mock_model_grap
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import HookChecker
 
+pytestmark = pytest.mark.legacy
+
 
 class InsertionPointTestModel(nn.Module):
     def __init__(self):

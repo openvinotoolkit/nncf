@@ -19,6 +19,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.parametrize(
     ("aa_config", "must_raise"),

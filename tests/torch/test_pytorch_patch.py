@@ -36,6 +36,8 @@ from tests.torch.pytorch_patch_isolated import test_compile
 from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
 from tests.torch.pytorch_patch_isolated import test_jit_script_exception_preserves_patching_isolated
 
+pytestmark = pytest.mark.legacy
+
 
 def test_get_all_aliases_is_valid():
     operator_names_to_function_name = {}

@@ -25,6 +25,7 @@ from tests.torch.nas.test_elastic_depth import DepthBasicConvTestModel
 from tests.torch.test_models import DenseNet121
 from tests.torch.test_models import mobilenet_v2
 
+pytestmark = pytest.mark.legacy
 RESNET50_BLOCK_TO_SKIP = [
     [
         "ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2",
