@@ -36,11 +36,11 @@ from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from tests.torch import test_models
-from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
+from tests.torch2.fx.helpers import get_torch_fx_model
 
 FX_QUANTIZED_DIR_NAME = Path("fx") / "experimental"
 

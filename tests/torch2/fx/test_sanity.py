@@ -25,8 +25,7 @@ import torchvision.models as models
 
 import nncf
 from nncf.common.logging.track_progress import track
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-from tests.torch.fx.helpers import TinyImagenetDatasetManager
+from tests.torch2.fx.helpers import TinyImagenetDatasetManager
 
 IMAGE_SIZE = 64
 BATCH_SIZE = 128
@@ -117,27 +116,26 @@ def count_q_dq(model: torch.fx.GraphModule):
 
 @pytest.mark.parametrize("test_case", MODELS)
 def test_sanity(test_case: SanitySampleCase, tiny_imagenet_dataset):
-    with disable_patching():
-        torch.manual_seed(42)
-        device = torch.device("cpu")
-        model = get_model(test_case.model_id, test_case.checkpoint_url, device)
-        _, val_dataloader, calibration_dataset = tiny_imagenet_dataset
+    torch.manual_seed(42)
+    device = torch.device("cpu")
+    model = get_model(test_case.model_id, test_case.checkpoint_url, device)
+    _, val_dataloader, calibration_dataset = tiny_imagenet_dataset
 
-        def transform_fn(data_item):
-            return data_item[0].to(device)
+    def transform_fn(data_item):
+        return data_item[0].to(device)
 
-        calibration_dataset = nncf.Dataset(calibration_dataset, transform_fn)
+    calibration_dataset = nncf.Dataset(calibration_dataset, transform_fn)
 
-        with torch.no_grad():
-            ex_input = next(iter(calibration_dataset.get_inference_data()))
-            model.eval()
-            exported_model = torch.export.export_for_training(model, args=(ex_input,)).module()
-            quantized_model = nncf.quantize(exported_model, calibration_dataset)
-            quantized_model = torch.compile(quantized_model, backend="openvino")
+    with torch.no_grad():
+        ex_input = next(iter(calibration_dataset.get_inference_data()))
+        model.eval()
+        exported_model = torch.export.export_for_training(model, args=(ex_input,)).module()
+        quantized_model = nncf.quantize(exported_model, calibration_dataset)
+        quantized_model = torch.compile(quantized_model, backend="openvino")
 
-        top1_int8 = validate(val_dataloader, quantized_model, device)
-        assert np.isclose(top1_int8, test_case.top1_int8_ref, atol=0.1)
+    top1_int8 = validate(val_dataloader, quantized_model, device)
+    assert np.isclose(top1_int8, test_case.top1_int8_ref, atol=0.1)
 
-        num_q, num_dq = count_q_dq(quantized_model)
-        assert num_q == test_case.ref_num_q
-        assert num_dq == test_case.ref_num_dq
+    num_q, num_dq = count_q_dq(quantized_model)
+    assert num_q == test_case.ref_num_q
+    assert num_dq == test_case.ref_num_dq

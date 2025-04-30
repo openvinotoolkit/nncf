@@ -18,7 +18,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
-from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
+from tests.torch2.fx.helpers import get_torch_fx_model_q_transformed
 
 
 class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):

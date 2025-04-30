@@ -28,7 +28,7 @@ from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
-from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
+from tests.torch2.fx.helpers import get_torch_fx_model_q_transformed
 
 
 class TestFXBCAlgorithm(TemplateTestBCAlgorithm):

@@ -23,7 +23,7 @@ from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import F
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTTargetPoint
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
-from tests.torch.fx.helpers import get_torch_fx_model
+from tests.torch2.fx.helpers import get_torch_fx_model
 
 IDENTITY_NODE_NAME = "add"
 CONV_NODE_NAME = "conv2d"

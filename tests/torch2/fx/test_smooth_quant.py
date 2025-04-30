@@ -30,7 +30,7 @@ from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
 from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
-from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
+from tests.torch2.fx.helpers import get_torch_fx_model_q_transformed
 
 PT_LINEAR_MODEL_MM_MAP = {"Linear1": "linear_3", "Linear2": "linear_2", "Linear3": "linear", "Linear4": "linear_1"}
 

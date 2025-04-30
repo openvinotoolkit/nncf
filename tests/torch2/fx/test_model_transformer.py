@@ -45,10 +45,8 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
@@ -57,6 +55,7 @@ from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
 from tests.torch.test_models.synthetic import ScalarCloneTestModel
+from tests.torch2.fx.helpers import get_torch_fx_model
 
 
 @dataclass
@@ -555,10 +554,9 @@ def test_constant_folding_scalar_clone(use_cuda):
 
     ex_input = torch.ones(model.INPUT_SIZE).cuda()
     with torch.no_grad():
-        with disable_patching():
-            # Use export function instead of export_for_training to
-            # reproduce SWIN model capturing
-            captured_model = torch.export.export(model, args=(ex_input,)).run_decompositions(decomp_table={}).module()
+        # Use export function instead of export_for_training to
+        # reproduce SWIN model capturing
+        captured_model = torch.export.export(model, args=(ex_input,)).run_decompositions(decomp_table={}).module()
     assert captured_model.lifted_tensor_0.device == torch.device("cpu")
 
     folded_model = deepcopy(captured_model)
