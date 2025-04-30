@@ -61,7 +61,7 @@ def eliminate_nop_cast(model: onnx.ModelProto) -> onnx.ModelProto:
     return model
 
 
-def apply_preprocess_passes(model: onnx.ModelProto) -> None:
+def apply_preprocess_passes(model: onnx.ModelProto) -> onnx.ModelProto:
     """
     Preprocesses the provided ONNX model for quantization.
 
@@ -73,5 +73,7 @@ def apply_preprocess_passes(model: onnx.ModelProto) -> None:
     :return: A preprocessed ONNX model, ready for quantization.
     """
     preprocessed_model = onnx.shape_inference.infer_shapes(model)
+    # The `eliminate_nop_cast` pass should be applied after onnx.shape_inference.infer_shapes() call.
+    # Otherwise, not all no-op Cast nodes will be found.
     preprocessed_model = eliminate_nop_cast(preprocessed_model)
     return preprocessed_model

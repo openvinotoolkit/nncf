@@ -223,9 +223,9 @@ logicalor
 logicalxor
 logit
 loglikelihoods
+lspec
 lstmsequence
 lstsq
-lspec
 lyalyushkin
 mapillary
 maskrcnn
