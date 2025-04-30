@@ -26,7 +26,7 @@ jobs:
   tensorflow:
     runs-on: ubuntu-latest-8-cores
     if: github.repository_owner == 'openvinotoolkit'
-    timeout-minutes: 60
+    timeout-minutes: 100
     defaults:
       run:
         shell: bash
@@ -44,7 +44,7 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run TensorFlow precommit
-        run:  pytest tests/tensorflow -m 'nightly'
+        run: pytest tests/tensorflow -ra
 
   weight-compression:
     if: github.repository_owner == 'openvinotoolkit'
