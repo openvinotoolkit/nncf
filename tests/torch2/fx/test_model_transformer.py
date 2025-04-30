@@ -11,7 +11,6 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -47,7 +46,8 @@ from nncf.experimental.torch.fx.transformations import output_insertion_transfor
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from tests.torch.test_compressed_graph import check_graph
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
@@ -57,6 +57,11 @@ from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithCon
 from tests.torch.test_models.synthetic import ScalarCloneTestModel
 from tests.torch2.fx.helpers import get_torch_fx_model
 
+REF_DIR = TEST_ROOT / "torch2" / "data" / "fx"
+
+EXTRACTED_GRAPHS_DIR_NAME = REF_DIR / "extracted"
+TRANSFORMED_GRAPH_DIR_NAME = REF_DIR / "transformed"
+
 
 @dataclass
 class ModelExtractionTestCase:
@@ -64,9 +69,6 @@ class ModelExtractionTestCase:
     input_shape: tuple[int, ...]
     command: PTModelExtractionCommand
 
-
-EXTRACTED_GRAPHS_DIR_NAME = str(Path("fx") / "extracted")
-TRANSFORMED_GRAPH_DIR_NAME = str(Path("fx") / "transformed")
 
 MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
@@ -113,7 +115,10 @@ def _target_point_to_str(target_point: PTTargetPoint) -> str:
 def test_model_extraction(test_case: ModelExtractionTestCase):
     captured_model = get_torch_fx_model(test_case.model(), torch.ones(test_case.input_shape))
     _, nncf_graph = _extract_model(test_case, captured_model)
-    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
+
+    path_to_dot = EXTRACTED_GRAPHS_DIR_NAME / f"{get_test_id(test_case)}.dot"
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 @pytest.mark.parametrize(
@@ -177,7 +182,10 @@ def test_model_extraction_with_original_output(test_case: ModelExtractionTestCas
         output_node.args = (output_node.args[0][0],)
         captured_model.recompile()
     extracted_model, nncf_graph = _extract_model(test_case, captured_model)
-    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
+
+    path_to_dot = EXTRACTED_GRAPHS_DIR_NAME / f"{get_test_id(test_case)}.dot"
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     output_node = [node for node in extracted_model.graph.nodes if node.op == "output"][0]
     assert str(output_node.args[0]) == ref_output
@@ -218,7 +226,10 @@ def test_model_insertion_transformation(leaf: bool):
 
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     assert getattr(captured_model, target_node_name) is test_module_instance
-    check_graph(nncf_graph, f"model_insertion{'_leaf' if leaf else ''}.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / f"model_insertion{'_leaf' if leaf else ''}.dot"
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 @pytest.mark.parametrize("concat", [False, True])
@@ -240,12 +251,10 @@ def test_constant_update_transformation(concat: bool):
     assert get_tensor_constant_from_node(new_const_node, captured_model) == new_value
 
     transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    check_graph(
-        transformed_nncf_graph,
-        f"{'cat_' if concat else ''}constant_update.dot",
-        TRANSFORMED_GRAPH_DIR_NAME,
-        extended=True,
-    )
+
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / f"{'cat_' if concat else ''}constant_update.dot"
+    nx_graph = transformed_nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 def test_constant_update_transformation_no_constant():
@@ -344,12 +353,10 @@ class TestQDQInsertion:
         ref_name = (
             f"qdq_insert_{_target_point_to_str(target_point)}_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
         )
-        check_graph(
-            nncf_graph,
-            ref_name,
-            TRANSFORMED_GRAPH_DIR_NAME,
-            extended=True,
-        )
+
+        path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / ref_name
+        nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+        compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     @pytest.mark.parametrize(
         "target_points,weights",
@@ -402,12 +409,9 @@ class TestQDQInsertion:
             f"qdq_shared_insert_{'weights' if weights else 'activations'}"
             f"_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
         )
-        check_graph(
-            nncf_graph,
-            ref_name,
-            TRANSFORMED_GRAPH_DIR_NAME,
-            extended=True,
-        )
+        path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / ref_name
+        nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+        compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 def test_node_removal_transformation():
@@ -418,7 +422,9 @@ def test_node_removal_transformation():
     transformation = node_removal_transformation_builder(node, input_port_id=0)
     transformation(captured_model)
     transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    check_graph(transformed_nncf_graph, "node_removal_ref.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / "node_removal_ref.dot"
+    nx_graph = transformed_nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 @pytest.mark.parametrize("tuple_output", [False, True], ids=["node_out", "tuple_out"])
@@ -437,12 +443,10 @@ def test_output_insertion_transformation(tuple_output: bool, target_point: PTTar
 
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     ref_name = f"output_insertion_{_target_point_to_str(target_point)}.dot"
-    check_graph(
-        nncf_graph,
-        ref_name,
-        TRANSFORMED_GRAPH_DIR_NAME,
-        extended=True,
-    )
+
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / ref_name
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 def count_constants(model: torch.fx.GraphModule) -> int:
@@ -512,23 +516,18 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     insert_qdq_nodes(model_with_correct_pattern, correct_pattern=True, per_channel=is_per_channel)
     compress_post_quantize_transformation(model_with_correct_pattern)
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_valid.dot"
-    check_graph(
-        NNCFGraphFactory.create(model_with_correct_pattern),
-        graph_name,
-        TRANSFORMED_GRAPH_DIR_NAME,
-        extended=True,
-    )
+
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
+    nx_graph = NNCFGraphFactory.create(model_with_correct_pattern).get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     model_with_incorrect_pattern = get_torch_fx_model(model, ex_input)
     insert_qdq_nodes(model_with_incorrect_pattern, correct_pattern=False, per_channel=is_per_channel)
     compress_post_quantize_transformation(model_with_incorrect_pattern)
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_invalid.dot"
-    check_graph(
-        NNCFGraphFactory.create(model_with_incorrect_pattern),
-        graph_name,
-        TRANSFORMED_GRAPH_DIR_NAME,
-        extended=True,
-    )
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
+    nx_graph = NNCFGraphFactory.create(model_with_incorrect_pattern).get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 def test_constant_folding():
@@ -543,8 +542,10 @@ def test_constant_folding():
 
     assert torch.allclose(captured_model(*ex_inputs), folded_model(*ex_inputs))
 
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / "folded_model.dot"
     nncf_graph = GraphConverter.create_nncf_graph(folded_model)
-    check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 def test_constant_folding_scalar_clone(use_cuda):
@@ -563,8 +564,10 @@ def test_constant_folding_scalar_clone(use_cuda):
     constant_fold(folded_model)
     assert torch.allclose(captured_model(ex_input), folded_model(ex_input))
 
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / "folded_scalar_clone_model.dot"
     nncf_graph = GraphConverter.create_nncf_graph(folded_model)
-    check_graph(nncf_graph, "folded_scalar_clone_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 def test_constant_folding_with_constraints(is_per_channel):
@@ -583,4 +586,6 @@ def test_constant_folding_with_constraints(is_per_channel):
 
     nncf_graph = GraphConverter.create_nncf_graph(model_with_correct_pattern)
     dot_file_name = f"folded_model_with_constraints_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
-    check_graph(nncf_graph, dot_file_name, TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+    path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / dot_file_name
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
