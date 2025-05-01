@@ -16,6 +16,7 @@ import onnx
 import pytest
 
 import nncf
+from nncf.common.utils.os import is_windows
 from nncf.onnx.quantization.quantize_model import check_external_data_location
 from tests.onnx.models import build_matmul_model
 
@@ -55,6 +56,9 @@ def test_should_be_absolute():
 
 
 def test_not_accessible():
+    if is_windows():
+        pytest.skip("checked on linux only")
+
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as temp_dir:
         model = _build_model_with_external_data(temp_dir)
 
