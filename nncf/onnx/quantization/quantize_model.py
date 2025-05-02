@@ -29,6 +29,7 @@ from nncf.onnx.graph.model_metadata import MetadataKey
 from nncf.onnx.graph.model_metadata import remove_metadata
 from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.passes import apply_preprocess_passes
 from nncf.onnx.quantization.backend_parameters import get_external_data_dir
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
@@ -155,6 +156,7 @@ def quantize_impl(
     external_data_dir = check_external_data_location(model, external_data_dir)
     if external_data_dir:
         set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, external_data_dir)
+    model = apply_preprocess_passes(model)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
