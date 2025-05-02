@@ -13,12 +13,12 @@ from functools import partial
 
 import torch
 from datasets import load_dataset
+from fx_utils import FXAutoModelForCausalLM
+from fx_utils import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
-from tests.cross_fw.shared.fx_utils import FXAutoModelForCausalLM
-from tests.cross_fw.shared.fx_utils import convert_and_export_with_cache
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = AutoModelForCausalLM.from_pretrained(MODEL_ID)
+    model_hf = AutoModelForCausalLM.from_pretrained(MODEL_ID)
 
     def transform_fn(data, tokenizer):
         tokenized_text = tokenizer(data["text"], return_tensors="pt")
@@ -47,7 +47,7 @@ def main():
 
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, tokenizer=tokenizer))
 
-    model, model_config = convert_and_export_with_cache(model)
+    model, model_config, gen_config = convert_and_export_with_cache(model_hf)
     model = model.module()
     # Comment this text to turn off model optimization and measure performance of baseline model
     model = nncf.compress_weights(
@@ -57,16 +57,18 @@ def main():
         ratio=0.8,
         sensitivity_metric=nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
     )
-    compressed_model_hf = FXAutoModelForCausalLM(model, model_config)
+    compressed_model_hf = FXAutoModelForCausalLM(model, model_config, generation_config=gen_config)
 
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
+    output = compressed_model_hf.generate(input_ids["input_ids"])
 
     start_t = time.time()
-    output = compressed_model_hf.generate(input_ids["input_ids"], max_new_tokens=100)
+    output = compressed_model_hf.generate(input_ids["input_ids"], generation_config=gen_config)
     print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])
     print(output_text)
+
     return output_text
 
 
