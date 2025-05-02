@@ -27,7 +27,7 @@ def main():
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=True)
+    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
 
     def transform_fn(data, model, tokenizer):
         tokenized_text = tokenizer(data["text"], return_tensors="np")
@@ -67,7 +67,9 @@ def main():
     )
     model.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR)
+    model = OVModelForCausalLM.from_pretrained(
+        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"}
+    )
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
 
     start_t = time.time()
