@@ -374,7 +374,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return filter_func
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         return get_activation_channel_axis(node, port_id, input_shape)
 
 
