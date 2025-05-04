@@ -15,10 +15,13 @@
 
 
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 from nncf.torch.automl.agent.ddpg.memory import Memory
 from nncf.torch.automl.agent.ddpg.memory import SequentialMemory
+
+pytestmark = pytest.mark.legacy
 
 WINDOW_LENGTH = 5
 LIMIT = 5

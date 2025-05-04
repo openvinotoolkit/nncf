@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 from openvino import Type
 from openvino.properties.hint import inference_precision
 
@@ -69,31 +69,31 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Metatypes
 
     @staticmethod
-    def get_op_with_weights_metatypes() -> List[OVOpMetatype]:
+    def get_op_with_weights_metatypes() -> list[OVOpMetatype]:
         return OPERATIONS_WITH_WEIGHTS
 
     @staticmethod
-    def get_quantizer_metatypes() -> List[OVOpMetatype]:
+    def get_quantizer_metatypes() -> list[OVOpMetatype]:
         return FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
-    def get_const_metatypes() -> List[OVOpMetatype]:
+    def get_const_metatypes() -> list[OVOpMetatype]:
         return CONSTANT_OPERATIONS
 
     @staticmethod
-    def get_quantizable_metatypes() -> List[OVOpMetatype]:
+    def get_quantizable_metatypes() -> list[OVOpMetatype]:
         return INPUTS_QUANTIZABLE_OPERATIONS
 
     @staticmethod
-    def get_quantize_agnostic_metatypes() -> List[OVOpMetatype]:
+    def get_quantize_agnostic_metatypes() -> list[OVOpMetatype]:
         return QUANTIZE_AGNOSTIC_OPERATIONS + [OVConcatMetatype]
 
     @staticmethod
-    def get_shapeof_metatypes() -> List[OVOpMetatype]:
+    def get_shapeof_metatypes() -> list[OVOpMetatype]:
         return SHAPEOF_OPERATIONS
 
     @staticmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> list[NNCFNode]:
         return get_start_nodes_for_activation_path_tracing(nncf_graph)
 
     # Manipulations with bias value and weights
@@ -115,7 +115,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return get_weight_value(node_with_weight, model, port_id)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[Optional[int]]:
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod

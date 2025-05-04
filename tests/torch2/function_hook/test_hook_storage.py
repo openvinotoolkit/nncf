@@ -9,14 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import pytest
 import torch
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.hook_storage import decode_hook_name
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.hook_storage import decode_hook_name
 from tests.torch2.function_hook.helpers import CallCount
 
 
@@ -64,7 +63,7 @@ def test_remove_handle():
 
 
 class CheckPriority(nn.Module):
-    def __init__(self, storage: List, name: str):
+    def __init__(self, storage: list, name: str):
         super().__init__()
         self.storage = storage
         self.name = name

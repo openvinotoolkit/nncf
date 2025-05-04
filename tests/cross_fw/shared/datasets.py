@@ -9,13 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import List
 
 import numpy as np
 
 
 class MockDataset:
-    def __init__(self, shape: List[int]):
+    def __init__(self, shape: list[int]):
         self.n = 0
         self.shape = deepcopy(shape)
 

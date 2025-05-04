@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Generator, Iterable, Iterator, List, Optional, cast
+from typing import Any, Callable, Generator, Iterable, Iterator, Optional, cast
 
 from nncf.common.utils.api_marker import api
 
@@ -42,7 +42,7 @@ class Dataset:
         self._data_source = data_source
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
+    def get_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
         """
         Returns the iterable object that contains selected data items from the data source as-is.
 
@@ -53,7 +53,7 @@ class Dataset:
         """
         return DataProvider(self._data_source, None, indices)
 
-    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
+    def get_inference_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
         """
         Returns the iterable object that contains selected data items from the data source, for which
         the transformation function was applied. The item, which was returned per iteration from this
@@ -93,7 +93,7 @@ class DataProvider:
         self,
         data_source: Iterable[Any],
         transform_func: Optional[Callable[..., Any]],
-        indices: Optional[List[int]] = None,
+        indices: Optional[list[int]] = None,
     ):
         self._data_source = data_source
         if transform_func is None:
@@ -113,14 +113,14 @@ class DataProvider:
 
     @staticmethod
     def _get_iterator_for_map_style(
-        data_source: Iterable[Any], transform_func: Callable[..., Any], indices: List[int]
+        data_source: Iterable[Any], transform_func: Callable[..., Any], indices: list[int]
     ) -> Generator[Any, None, None]:
         for index in indices:
             yield transform_func(data_source[index])  # type: ignore[index]
 
     @staticmethod
     def _get_iterator_for_iter(
-        data_source: Iterable[Any], transform_func: Callable[..., Any], indices: List[int]
+        data_source: Iterable[Any], transform_func: Callable[..., Any], indices: list[int]
     ) -> Generator[Any, None, None]:
         pos = 0
         num_indices = len(indices)

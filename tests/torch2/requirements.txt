@@ -17,3 +17,4 @@ transformers==4.48.3
 sentence-transformers==4.0.2
 optimum-intel==1.22.0
 optimum==1.24.0
+accelerate==1.1.0

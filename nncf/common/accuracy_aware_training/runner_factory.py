@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, Union
+from typing import Union
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
@@ -39,7 +39,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, Union[float, int]],
+        accuracy_aware_training_params: dict[str, Union[float, int]],
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
         verbose: bool,
@@ -91,7 +91,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, Union[float, int]],
+        accuracy_aware_training_params: dict[str, Union[float, int]],
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
         verbose: bool,

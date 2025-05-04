@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -114,7 +114,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Runner info
@@ -152,8 +152,8 @@ jobs:
           sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - name: Download CUDA
         run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.4.0/local_installers/cuda_12.4.0_550.54.14_linux.run
-          sudo sh cuda_12.4.0_550.54.14_linux.run --toolkit --silent
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -185,35 +185,6 @@ jobs:
           export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           make test-torch-cuda
 
-  tensorflow:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest-8-cores
-    if: ${{ inputs.python_version != '3.12' }}
-    defaults:
-      run:
-        shell: bash
-    env:
-      DEBIAN_FRONTEND: noninteractive
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
-      - name: Install NNCF and test requirements
-        run: pip install . -r tests/tensorflow/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run TensorFlow precommit test scope
-        run: make test-tensorflow
-        env:
-          NUM_WORKERS: 6
-
   tools:
     timeout-minutes: 40
     runs-on: ubuntu-latest
@@ -224,7 +195,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install test requirements
@@ -244,7 +215,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -258,3 +229,52 @@ jobs:
         run: pip list
       - name: Run torch2 precommit test scope
         run: pytest -ra tests/torch2 -m "not cuda"
+
+  pytorch2-cuda:
+    timeout-minutes: 40
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    if: ${{ inputs.gpu_enabled == true }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          nvidia-smi
+          cat /proc/cpuinfo
+          nvcc --version
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          lfs: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ inputs.python_version }}
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
+      - name: Install NNCF and test requirements
+        run: pip install . -r tests/torch2/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Check CUDA
+        run: |
+          python -c "import torch; print(torch.cuda.is_available())"
+      - name: Run PyTorch precommit test scope
+        run: |
+          export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          pytest -ra tests/torch2 -m cuda

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Optional, Type
+from typing import Callable, Optional
 
 import pytest
 from torch import Size
@@ -67,7 +67,7 @@ from tests.torch.test_models.synthetic import ModelWithPermute
 class RefNodeDesc:
     def __init__(
         self,
-        metatype_cls: Type[OperatorMetatype],
+        metatype_cls: type[OperatorMetatype],
         layer_attributes: Optional[BaseLayerAttributes] = None,
         layer_attributes_comparator: Optional[Callable[[BaseLayerAttributes, BaseLayerAttributes], bool]] = None,
     ):
@@ -111,7 +111,7 @@ class LayerAttributesTestDesc:
         module_fn: nn.Module,
         model_input_info: ModelInputInfo,
         layer_attributes: BaseLayerAttributes,
-        metatype_cls: Type[OperatorMetatype],
+        metatype_cls: type[OperatorMetatype],
         layer_attributes_comparator: COMPARATOR_TYPE = default_comparator,
     ):
         self.module_fn = module_fn

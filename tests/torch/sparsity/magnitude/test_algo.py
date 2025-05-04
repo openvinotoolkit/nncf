@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import List
 
 import pytest
 import torch
@@ -32,6 +31,8 @@ from tests.torch.sparsity.const.test_algo import ref_mask_1
 from tests.torch.sparsity.const.test_algo import ref_mask_2
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
+
+pytestmark = pytest.mark.legacy
 
 
 def test_can_create_magnitude_sparse_algo__with_defaults():
@@ -137,7 +138,7 @@ def test_magnitude_algo_binary_masks_are_applied():
     config = get_empty_config()
     config["compression"] = {"algorithm": "magnitude_sparsity"}
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    minfo_list: List[SparseModuleInfo] = compression_ctrl.sparsified_module_info
+    minfo_list: list[SparseModuleInfo] = compression_ctrl.sparsified_module_info
     minfo: SparseModuleInfo = minfo_list[0]
 
     minfo.operand.binary_mask = torch.ones_like(minfo.module.weight)  # 1x1x2x2

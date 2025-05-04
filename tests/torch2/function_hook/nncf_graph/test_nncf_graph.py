@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Union
 
 import networkx as nx
 import pytest
@@ -20,20 +20,20 @@ import torch.nn.functional as F
 import torchvision.models as models
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import convert_to_nncf_graph
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_dtype
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_name_of_node
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_node_type
-from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_utils import ConstMeta
+from nncf.torch.function_hook.graph.graph_utils import FunctionMeta
+from nncf.torch.function_hook.graph.graph_utils import InOutMeta
+from nncf.torch.function_hook.graph.graph_utils import NodeType
+from nncf.torch.function_hook.graph.graph_utils import TensorMeta
+from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import convert_to_nncf_graph
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import get_dtype
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import get_name_of_node
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import get_node_type
+from nncf.torch.function_hook.wrapper import register_post_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -118,7 +118,7 @@ def test_convert_to_nncf_graph_multi_edges(regen_ref_data: bool):
 class ModelDesc:
     model_name: str
     model_builder: callable
-    inputs_info: Union[List[List[int]], Tuple[List[int], ...]]
+    inputs_info: Union[list[list[int]], tuple[list[int], ...]]
 
     def __str__(self):
         return self.model_name
@@ -233,7 +233,7 @@ def _no_missed_input_edge_for_conv() -> PTNNCFGraph:
         (_no_missed_input_edge_for_conv, []),
     ),
 )
-def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: List[str]):
+def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: list[str]):
     graph = graph_builder()
     ret = graph.get_nodes_with_missed_input_edges()
     ret_names = [node.node_name for node in ret]

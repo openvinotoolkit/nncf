@@ -12,7 +12,7 @@ from enum import Enum
 from functools import cmp_to_key
 from functools import partial
 from operator import itemgetter
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Optional
 
 import networkx as nx
 import torch
@@ -43,10 +43,10 @@ from nncf.torch.layers import NNCF_MODULES_OP_NAMES
 from nncf.torch.nncf_network import NNCFNetwork
 
 IgnoredNameOperators = [*PTDropoutMetatype.get_all_aliases(), MODEL_OUTPUT_OP_NAME]
-OrdinalIDs = List[List[int]]
-GroupedBlockIDs = Dict[int, List[int]]
+OrdinalIDs = list[list[int]]
+GroupedBlockIDs = dict[int, list[int]]
 
-ShapeVsNodesMap = Dict[str, Set[SearchGraphNode]]
+ShapeVsNodesMap = dict[str, set[SearchGraphNode]]
 
 
 class PotentialBuildingBlock:
@@ -80,7 +80,7 @@ class BuildingBlock:
     def __str__(self) -> str:
         return f"[START NODE: {self.start_node_name}, END_NODE: {self.end_node_name}]"
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -90,7 +90,7 @@ class BuildingBlock:
         return {"start_node_name": self.start_node_name, "end_node_name": self.end_node_name}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "BuildingBlock":
+    def from_state(cls, state: dict[str, Any]) -> "BuildingBlock":
         """
         Creates the object from its state.
 
@@ -136,8 +136,8 @@ class ExtendedBuildingBlock:
         self,
         basic_block: BuildingBlock,
         block_type: BuildingBlockType,
-        ordinal_ids: Optional[List[int]],
-        op_addresses: Optional[Set[OperationAddress]],
+        ordinal_ids: Optional[list[int]],
+        op_addresses: Optional[set[OperationAddress]],
     ):
         self.basic_block = basic_block
         self.block_type = block_type
@@ -158,7 +158,7 @@ class ExtendedBuildingBlock:
         return self.basic_block.end_node_name
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "ExtendedBuildingBlock":
+    def from_state(cls, state: dict[str, Any]) -> "ExtendedBuildingBlock":
         """
         Creates the object from its state.
 
@@ -178,7 +178,7 @@ class ExtendedBuildingBlock:
         }
         return cls(**kwargs)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -202,11 +202,11 @@ class ExtendedBuildingBlock:
         )
 
 
-BuildingBlocks = List[BuildingBlock]
-ExtendedBuildingBlocks = List[ExtendedBuildingBlock]
+BuildingBlocks = list[BuildingBlock]
+ExtendedBuildingBlocks = list[ExtendedBuildingBlock]
 
 
-def add_node_to_aux_struct(node: SearchGraphNode, shape: List[int], shape_map: ShapeVsNodesMap):
+def add_node_to_aux_struct(node: SearchGraphNode, shape: list[int], shape_map: ShapeVsNodesMap):
     """
     Add to shape_map key of node for corresponds shape.
     """
@@ -217,7 +217,7 @@ def add_node_to_aux_struct(node: SearchGraphNode, shape: List[int], shape_map: S
         shape_map[str_shape] = {node}
 
 
-def remove_duplicates(sorted_blocks: List[PotentialBuildingBlock]) -> List[PotentialBuildingBlock]:
+def remove_duplicates(sorted_blocks: list[PotentialBuildingBlock]) -> list[PotentialBuildingBlock]:
     """
     Removes identical blocks - that have the same nodes on boundaries
     :param sorted_blocks: a sorted list of block. Some determined order is required as soon as otherwise filtration
@@ -250,7 +250,7 @@ def compare_for_building_block(a: PotentialBuildingBlock, b: PotentialBuildingBl
 
 
 def get_building_block_for_original_graph(
-    building_blocks: List[PotentialBuildingBlock], orig_graph: PTNNCFGraph
+    building_blocks: list[PotentialBuildingBlock], orig_graph: PTNNCFGraph
 ) -> ExtendedBuildingBlocks:
     """
     Restore the original names and ids of the start and end of the block in original graph.
@@ -272,7 +272,7 @@ def get_building_block_for_original_graph(
     return building_block_in_orig_format
 
 
-def get_potential_candidate_for_block(search_graph: SearchGraph) -> Tuple[ShapeVsNodesMap, ShapeVsNodesMap]:
+def get_potential_candidate_for_block(search_graph: SearchGraph) -> tuple[ShapeVsNodesMap, ShapeVsNodesMap]:
     """
     Distributes all nodes to the same output and input shapes.
 
@@ -286,14 +286,14 @@ def get_potential_candidate_for_block(search_graph: SearchGraph) -> Tuple[ShapeV
     for node in search_graph.get_all_nodes():
         next_edges = search_graph.get_next_edges(node.node_key)
         prev_edges = search_graph.get_prev_edges(node.node_key)
-        for _, edge_attr in next_edges.items():
+        for edge_attr in next_edges.values():
             search_graph.set_node_attr(
                 node.node_key, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             )
             if not node.is_dummy:
                 add_node_to_aux_struct(node, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], act_output_shape)
             break
-        for _, edge_attr in prev_edges.items():
+        for edge_attr in prev_edges.values():
             search_graph.set_node_attr(
                 node.node_key, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             )
@@ -317,7 +317,7 @@ def is_target_block_type(
     start_node_id: int,
     end_node_id: int,
     orig_graph: NNCFGraph,
-    target_block_types: Optional[List[BuildingBlockType]] = None,
+    target_block_types: Optional[list[BuildingBlockType]] = None,
 ) -> bool:
     """
     Returns true if block has a type equal to one of the specified.
@@ -357,8 +357,8 @@ def get_building_blocks(
     min_block_size: int = 5,
     block_filter_strategy=BlockFilteringStrategy.KEEP_SEQUENTIAL,
     hw_fused_ops: bool = True,
-    target_block_types: Optional[List[BuildingBlockType]] = None,
-) -> Tuple[ExtendedBuildingBlocks, GroupedBlockIDs]:
+    target_block_types: Optional[list[BuildingBlockType]] = None,
+) -> tuple[ExtendedBuildingBlocks, GroupedBlockIDs]:
     """
     This algorithm finds building blocks based on the analysis of the transformed graph.
     A building block is a block that satisfies the following rules:
@@ -442,11 +442,11 @@ def get_potential_building_blocks(orig_graph: NNCFGraph, hw_fused_ops: bool, min
 
 
 def remove_overlapping_blocks(
-    building_blocks: List[PotentialBuildingBlock],
+    building_blocks: list[PotentialBuildingBlock],
     block_filter_strategy: BlockFilteringStrategy,
     orig_graph: NNCFGraph,
-    target_block_types: List[BuildingBlockType],
-) -> List[PotentialBuildingBlock]:
+    target_block_types: list[BuildingBlockType],
+) -> list[PotentialBuildingBlock]:
     """
     Applies the given filtering strategy to remove overlapping blocks - pairs of blocks that shares common operations.
     :param building_blocks: list of potential building blocks
@@ -502,11 +502,11 @@ def get_start_node_id(block: PotentialBuildingBlock, orig_graph: NNCFGraph) -> i
 
 
 def get_indexes_of_overlapping_blocks_seq(
-    start_ids: List[int],
-    end_ids: List[int],
-    num_ops_in_blocks: List[int],
+    start_ids: list[int],
+    end_ids: list[int],
+    num_ops_in_blocks: list[int],
     is_target_block_type_fn: Optional[Callable[[int, int], bool]] = None,
-) -> Set[int]:
+) -> set[int]:
     """
     The function takes coordinates of the building block (start and end ids) and finds indexes of overlapping blocks.
     After only disjoint blocks remain after filtering the found blocks.
@@ -554,11 +554,11 @@ def get_indexes_of_overlapping_blocks_seq(
 
 
 def get_indexes_of_overlapping_blocks_min(
-    start_ids: List[int],
-    end_ids: List[int],
-    num_ops_in_blocks: List[int],
+    start_ids: list[int],
+    end_ids: list[int],
+    num_ops_in_blocks: list[int],
     is_target_block_type_fn: Optional[Callable[[int, int], bool]] = None,
-) -> Set[int]:
+) -> set[int]:
     """
     The function takes coordinates of the building block (start and end ids) and finds indexes of overlapping blocks.
     After only disjoint blocks remain after filtering the found blocks.
@@ -638,7 +638,7 @@ def get_group_of_dependent_blocks(blocks: BuildingBlocks) -> GroupedBlockIDs:
     return groups
 
 
-def get_all_node_op_addresses_in_block(graph: NNCFGraph, block: BuildingBlock) -> Set[OperationAddress]:
+def get_all_node_op_addresses_in_block(graph: NNCFGraph, block: BuildingBlock) -> set[OperationAddress]:
     """
     Returns set of operation addresses of all layers included in the block.
 
@@ -658,8 +658,8 @@ def get_all_node_op_addresses_in_block(graph: NNCFGraph, block: BuildingBlock) -
 
 
 def get_all_modules_in_blocks(
-    compressed_model: NNCFNetwork, op_addresses_in_blocks: Set[OperationAddress]
-) -> List[torch.nn.Module]:
+    compressed_model: NNCFNetwork, op_addresses_in_blocks: set[OperationAddress]
+) -> list[torch.nn.Module]:
     """
     Returns set of all modules included in the block.
 
@@ -674,7 +674,7 @@ def get_all_modules_in_blocks(
     return modules
 
 
-def get_type_building_block(op_addresses_in_block: Set[OperationAddress]) -> BuildingBlockType:
+def get_type_building_block(op_addresses_in_block: set[OperationAddress]) -> BuildingBlockType:
     """
     Returns type of building block.
     """

@@ -20,11 +20,11 @@ import torch
 from addict import Dict
 from datasets import Dataset
 from onnx import numpy_helper
+from openvino import Core
+from openvino import serialize
 from openvino._offline_transformations import apply_fused_names_cleanup
 from openvino._offline_transformations import apply_moc_transformations
 from openvino._offline_transformations import apply_pruning_transformation
-from openvino.runtime import Core
-from openvino.runtime import serialize
 from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
@@ -44,6 +44,8 @@ from tests.torch.sparsity.movement.helpers import Wav2Vec2RunRecipe
 from tests.torch.sparsity.movement.helpers import build_compression_trainer
 from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
+
+pytestmark = pytest.mark.legacy
 
 
 @pytest.fixture(scope="function", autouse=True)

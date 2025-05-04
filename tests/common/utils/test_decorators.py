@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List, Optional, Type
+from typing import Optional
 from unittest.mock import patch
 
 import pytest
@@ -21,8 +21,8 @@ from nncf.common.utils.decorators import skip_if_dependency_unavailable
 
 @dataclass
 class StructForTest:
-    dependencies: List[str]
-    side_effect: Optional[Type[Exception]]
+    dependencies: list[str]
+    side_effect: Optional[type[Exception]]
     result_is_none: bool
     final_imported_dependencies: bool
 

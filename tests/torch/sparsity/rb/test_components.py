@@ -21,6 +21,8 @@ from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss
 
+pytestmark = pytest.mark.legacy
+
 
 class SingleLayerModel(nn.Module):
     def __init__(self, layer, frozen, size=1):

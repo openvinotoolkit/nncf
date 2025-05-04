@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Dict, List, Tuple, Union
+from typing import Union
 
 import torch
 import torch.fx
@@ -33,7 +33,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 
-EdgeOrNode = Union[Tuple[torch.fx.Node, torch.fx.Node]]
+EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
 
 
 class TorchAOQuantizerAdapter(Quantizer):
@@ -69,10 +69,10 @@ class TorchAOQuantizerAdapter(Quantizer):
     @staticmethod
     def _get_quantization_points(
         from_node: torch.fx.Node,
-        to_nodes: List[torch.fx.Node],
+        to_nodes: list[torch.fx.Node],
         annotated_model: torch.fx.GraphModule,
         qconfig: QuantizerConfig,
-    ) -> List[QuantizationPointBase]:
+    ) -> list[QuantizationPointBase]:
         to_n = to_nodes[0]
         if from_node.op == "get_attr":
             _, metatype = GraphConverter.get_node_type_and_metatype(to_n, annotated_model)
@@ -151,14 +151,14 @@ class TorchAOQuantizerAdapter(Quantizer):
 
 def _get_edge_or_node_to_qspec(
     model: torch.fx.GraphModule,
-) -> Dict[EdgeOrNode, QuantizationSpecBase]:
+) -> dict[EdgeOrNode, QuantizationSpecBase]:
     """
     Get a map from EdgeOrNode to quantization spec based on annotations on the nodes.
 
     :param model: torch.fx.GraphModule instance.
     :return: A map from EdgeOrNode to quantization spec based on annotations on the nodes.
     """
-    edge_or_node_to_qspec: Dict[EdgeOrNode, QuantizationSpecBase] = {}
+    edge_or_node_to_qspec: dict[EdgeOrNode, QuantizationSpecBase] = {}
     for n in model.graph.nodes:
         if hasattr(n, "meta") and "quantization_annotation" in n.meta:
             qa = n.meta["quantization_annotation"]

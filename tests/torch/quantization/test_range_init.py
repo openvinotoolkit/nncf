@@ -13,7 +13,7 @@ import re
 from collections import namedtuple
 from dataclasses import dataclass
 from functools import partial
-from typing import List, Tuple, Union
+from typing import Union
 
 import pytest
 import torch
@@ -123,7 +123,7 @@ def get_path_after_broadcast(tmp_path, rank):
 
 def save_params(model, out_file_path):
     gpu_scale_signed_params = []
-    for _, layer in utils.get_all_modules_by_type(model, "SymmetricQuantizer").items():
+    for layer in utils.get_all_modules_by_type(model, "SymmetricQuantizer").values():
         gpu_scale_signed_params.append(
             (layer.scale.to(torch.device("cpu")), layer.signed_tensor.to(torch.device("cpu")))
         )
@@ -528,13 +528,13 @@ def init_idfn(val):
 
 @dataclass
 class SymQuantizerScaleRef:
-    scale: Tuple[float, ...]
+    scale: tuple[float, ...]
 
 
 @dataclass
 class AsymQuantizerScaleRef:
-    input_low: Tuple[float, ...]
-    input_range: Tuple[float, ...]
+    input_low: tuple[float, ...]
+    input_range: tuple[float, ...]
 
 
 @dataclass
@@ -950,7 +950,7 @@ QUANTIZER_RANGE_INITIALIZERS = [
 
 
 class QuantizeRangeInitScaleShapeTestStruct:
-    def __init__(self, per_channel: bool, is_weights: bool, input_shape: List[int], ref_scale_shape: Tuple[int, ...]):
+    def __init__(self, per_channel: bool, is_weights: bool, input_shape: list[int], ref_scale_shape: tuple[int, ...]):
         self.per_channel = per_channel
         self.is_weights = is_weights
         self.input_shape = input_shape
@@ -990,7 +990,7 @@ def quantizer_range_init_test_struct(request):
     return request.param
 
 
-def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test_struct: Tuple[QRISSTS, str]):
+def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test_struct: tuple[QRISSTS, str]):
     test_struct = quantizer_range_init_test_struct[0]
     initializer_type = quantizer_range_init_test_struct[1]
     for quantization_mode in [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]:

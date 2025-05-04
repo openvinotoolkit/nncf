@@ -15,7 +15,7 @@ import os.path as osp
 import pathlib
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Optional, TypeVar, Union, cast
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
@@ -138,7 +138,7 @@ class TrainingRunner(ABC):
             float,
         ],
         validate_fn: Callable[[TModel], float],
-        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]],
+        configure_optimizers_fn: Optional[Callable[[], tuple[OptimizerType, LRSchedulerType]]],
         dump_checkpoint_fn: Optional[
             Callable[
                 [
@@ -213,7 +213,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, Union[float, int]],
+        accuracy_aware_training_params: dict[str, Union[float, int]],
         uncompressed_model_accuracy: float,
         verbose: bool = True,
         dump_checkpoints: bool = True,
@@ -245,8 +245,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_val_metric_value: float = 0
         self.current_loss: float = 0
 
-        self._compressed_training_history: List[Tuple[float, float]] = []
-        self._best_checkpoint: Optional[Tuple[Union[str, pathlib.Path], float]] = None
+        self._compressed_training_history: list[tuple[float, float]] = []
+        self._best_checkpoint: Optional[tuple[Union[str, pathlib.Path], float]] = None
 
         self._train_epoch_fn: Callable[
             [
@@ -259,7 +259,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
             float,
         ]
         self._validate_fn: Callable[[TModel], float]
-        self._configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]]
+        self._configure_optimizers_fn: Callable[[], tuple[OptimizerType, LRSchedulerType]]
         self._dump_checkpoint_fn: Optional[
             Callable[
                 [
@@ -356,7 +356,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
             float,
         ],
         validate_fn: Callable[[TModel], float],
-        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]],
+        configure_optimizers_fn: Optional[Callable[[], tuple[OptimizerType, LRSchedulerType]]],
         dump_checkpoint_fn: Optional[
             Callable[
                 [
@@ -477,7 +477,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, Union[float, int]],
+        accuracy_aware_training_params: dict[str, Union[float, int]],
         uncompressed_model_accuracy: float,
         verbose: bool = True,
         dump_checkpoints: bool = True,
@@ -515,7 +515,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.minimal_compression_rate = minimal_compression_rate
         self.maximal_compression_rate = maximal_compression_rate
 
-        self._best_checkpoints: Dict[float, Tuple[Union[str, pathlib.Path], float]] = {}
+        self._best_checkpoints: dict[float, tuple[Union[str, pathlib.Path], float]] = {}
         self._compression_rate_target: Optional[float] = None
         self.adaptive_controller: CompressionAlgorithmController
         self.was_compression_increased_on_prev_step: Optional[float] = None
@@ -586,8 +586,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             with noninteractive_plotting():
                 fig = plt.figure()
                 plt.plot(
-                    cast(List[float], self.compressed_training_history.keys()),
-                    cast(List[float], self.compressed_training_history.values()),
+                    cast(list[float], self.compressed_training_history.keys()),
+                    cast(list[float], self.compressed_training_history.values()),
                 )
                 buf = io.BytesIO()
                 plt.savefig(buf, format="jpeg")
@@ -601,8 +601,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                 plt.close(fig)
 
     @property
-    def compressed_training_history(self) -> Dict[float, float]:
+    def compressed_training_history(self) -> dict[float, float]:
         return dict(self._compressed_training_history)
 
-    def get_compression_rates_with_positive_acc_budget(self) -> List[float]:
+    def get_compression_rates_with_positive_acc_budget(self) -> list[float]:
         return [comp_rate for (comp_rate, acc_budget) in self._compressed_training_history if acc_budget >= 0]

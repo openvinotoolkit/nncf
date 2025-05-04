@@ -11,9 +11,10 @@
 import argparse
 import shutil
 import sys
+import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 import torch.nn.functional as F
@@ -23,12 +24,14 @@ from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from torch import Tensor
 from torch import nn
+from torch.jit import TracerWarning
 from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import TextEvaluator
 
 import nncf
+import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat
@@ -36,12 +39,15 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_creation import load_from_config
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 
+warnings.filterwarnings("ignore", category=TracerWarning)
 
-def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> List[Tensor]:
+
+def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> list[Tensor]:
     """
     Loads and processes the Wikitext-2 dataset for training.
 
@@ -105,7 +111,7 @@ def measure_similarity(
 
 
 @torch.no_grad()
-def calc_hiddens(model: nn.Module, dataloader: List[Tensor]) -> List[Tensor]:
+def calc_hiddens(model: nn.Module, dataloader: list[Tensor]) -> list[Tensor]:
     """
     Calculate the hidden states for each input in the dataloader using the given model.
 
@@ -121,7 +127,7 @@ def calc_hiddens(model: nn.Module, dataloader: List[Tensor]) -> List[Tensor]:
     return orig_hiddens
 
 
-def get_model_input(input_ids: Tensor) -> Dict[str, Tensor]:
+def get_model_input(input_ids: Tensor) -> dict[str, Tensor]:
     """
     Prepares the model input dictionary with input IDs, attention mask, and position IDs.
 
@@ -152,7 +158,7 @@ def kl_div(student_hiddens: torch.Tensor, teacher_hiddens: torch.Tensor) -> torc
     )
 
 
-def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> List[Dict[str, Any]]:
+def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> list[dict[str, Any]]:
     """
     Sets the trainable parameters of the model for quantization-aware training with LoRA (Low-Rank Adaptation).
 
@@ -169,15 +175,16 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> List[Dict[s
     model.requires_grad_(False)
     scales_to_train = []
     adapters_to_train = []
-    transformations = model.nncf.transformation_layout().transformations
-    for command in transformations:
-        quantizer = command.fn
-        if isinstance(quantizer, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (quantizer.num_bits == 4):
-            quantizer.enable_gradients()
-            params = quantizer.get_trainable_params()
-            adapters = quantizer.get_adapters()
+    hook_storage = get_hook_storage(model)
+
+    for _, module in hook_storage.named_hooks():
+        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits == 4):
+            module.enable_gradients()
+            params = module.get_trainable_params()
+            adapters = module.get_adapters()
             adapters_to_train.extend(adapters.values())
             scales_to_train.extend(param for name, param in params.items() if name not in adapters)
+
     params = list(model.parameters())
     trainable_params = sum(p.numel() for p in params if p.requires_grad)
     all_param = sum(p.numel() for p in params)
@@ -197,8 +204,8 @@ def save_checkpoint(model: nn.Module, ckpt_file: Path) -> None:
     :param model: The model to load the checkpoint into.
     :param ckpt_file: Path to the checkpoint file.
     """
-
-    ckpt = {"nncf_state_dict": model.nncf.state_dict(), "nncf_config": model.nncf.get_config()}
+    hook_storage = get_hook_storage(model)
+    ckpt = {"nncf_state_dict": hook_storage.state_dict(), "nncf_config": nncf.torch.get_config(model)}
     torch.save(ckpt, ckpt_file)
 
 
@@ -214,7 +221,8 @@ def load_checkpoint(model: nn.Module, example_input: Any, ckpt_file: Path) -> nn
     """
     ckpt = torch.load(ckpt_file, weights_only=False)
     model = load_from_config(model, ckpt["nncf_config"], example_input=example_input)
-    model.nncf.load_state_dict(ckpt["nncf_state_dict"])
+    hook_storage = get_hook_storage(model)
+    hook_storage.load_state_dict(ckpt["nncf_state_dict"])
     return model
 
 
@@ -234,7 +242,7 @@ def export_to_openvino(
     model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
     model_input = get_model_input(example_input.to("cpu"))
     model_to_eval = load_checkpoint(model_to_eval, model_input, ckpt_file)
-    model_to_eval = nncf.strip(model_to_eval, strip_format=StripFormat.DQ)
+    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ, example_input=model_input)
     export_from_model(model_to_eval, ir_dir, device="cpu")
     return OVModelForCausalLM.from_pretrained(
         model_id=ir_dir,
@@ -373,7 +381,7 @@ def main(argv) -> float:
             indices = indices.tolist()
             total_microbatches += 1
 
-            def form_batch(inputs: List[Tensor], model_input: bool):
+            def form_batch(inputs: list[Tensor], model_input: bool):
                 batch = torch.cat([inputs[i] for i in indices], dim=0)
                 return get_model_input(batch) if model_input else batch.to(device=device, dtype=torch_dtype)
 

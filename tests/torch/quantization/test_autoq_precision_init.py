@@ -35,6 +35,8 @@ from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
 from tests.torch.test_models.mobilenet import mobilenet_v2
 
+pytestmark = pytest.mark.legacy
+
 
 class AutoQConfigBuilder(BaseConfigBuilder):
     def __init__(

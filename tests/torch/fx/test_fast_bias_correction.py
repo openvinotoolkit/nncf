@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import pytest
 import torch
@@ -24,7 +23,7 @@ from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 
 class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> torch.Tensor:
+    def list_to_backend_type(data: list) -> torch.Tensor:
         return torch.Tensor(data)
 
     @staticmethod
@@ -68,7 +67,7 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestTorchFXCudaFBCAlgorithm(TestTorchFXFBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> torch.Tensor:
+    def list_to_backend_type(data: list) -> torch.Tensor:
         return torch.Tensor(data).cuda()
 
     @staticmethod

@@ -10,15 +10,16 @@
 # limitations under the License.
 
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.scopes import IgnoredScope
 
 
-def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
+def exclude_empty_fields(value: dict[str, Any]) -> dict[str, Any]:
     """
     Remove keys where value is empty and key is `validate`
 
@@ -33,7 +34,7 @@ def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def dump_parameters(
-    model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
+    model: ov.Model, parameters: dict, algo_name: Optional[str] = "quantization", path: Optional[list] = None
 ) -> None:
     """
     Dumps the given parameters into Model's meta section.
@@ -58,5 +59,6 @@ def dump_parameters(
 
             rt_path = ["nncf", algo_name] + path + [key]
             model.set_rt_info(str(value), rt_path)
+        model.set_rt_info(nncf.__version__, ["nncf", "version"])
     except RuntimeError as e:
         nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")

@@ -9,16 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Type
+from typing import Callable
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 import torch
 
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from tests.cross_fw.test_templates.helpers import ConvTestModel
@@ -56,7 +56,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     def inplace_statistics(self, request) -> bool:
         return request.param
 
-    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+    def get_node_name_map(self, model_cls) -> dict[str, str]:
         if model_cls is LinearMultiShapeModel:
             return PT_LINEAR_MODEL_MM_MAP
         if model_cls is ConvTestModel:
@@ -73,7 +73,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         return transform_fn
 
     @staticmethod
-    def get_backend() -> Type[PTSmoothQuantAlgoBackend]:
+    def get_backend() -> type[PTSmoothQuantAlgoBackend]:
         return PTSmoothQuantAlgoBackend()
 
     @staticmethod
@@ -81,7 +81,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         return GraphModelWrapper(wrap_model(model.eval()), torch.rand(model.INPUT_SIZE))
 
     @staticmethod
-    def check_scales(model: GraphModelWrapper, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+    def check_scales(model: GraphModelWrapper, reference_values: dict[str, np.ndarray], model_cls) -> None:
         names_map = PT_LINEAR_MODEL_SQ_MAP if model_cls is LinearMultiShapeModel else PT_CONV_MODEL_SQ_MAP
         data_map = {n: x for n, x in model.model.named_parameters()}
 

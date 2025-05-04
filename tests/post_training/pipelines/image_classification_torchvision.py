@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Callable, Tuple
+from typing import Any, Callable
 
 import numpy as np
 import onnx
@@ -18,25 +18,24 @@ import openvino as ov
 import torch
 from torchvision import models
 
-from nncf.torch import disable_patching
 from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
 
 
-def _torch_export_for_training(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch.fx.GraphModule:
+def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
     return torch.export.export_for_training(model, args).module()
 
 
-def _torch_export(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch.fx.GraphModule:
+def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
     return torch.export.export(model, args).module()
 
 
 @dataclass
 class VisionModelParams:
     weights: models.WeightsEnum
-    export_fn: Callable[[torch.nn.Module, Tuple[Any, ...]], torch.fx.GraphModule]
+    export_fn: Callable[[torch.nn.Module, tuple[Any, ...]], torch.fx.GraphModule]
     export_torch_before_ov_convert: bool = False
 
 
@@ -81,11 +80,10 @@ class ImageClassificationTorchvision(ImageClassificationBase):
 
         if self.backend in FX_BACKENDS:
             with torch.no_grad():
-                with disable_patching():
-                    if self.backend is BackendType.CUDA_FX_TORCH:
-                        model = model.cuda()
-                        self.dummy_tensor = self.dummy_tensor.cuda()
-                    self.model = self.model_params.export_fn(model, (self.dummy_tensor,))
+                if self.backend is BackendType.CUDA_FX_TORCH:
+                    model = model.cuda()
+                    self.dummy_tensor = self.dummy_tensor.cuda()
+                self.model = self.model_params.export_fn(model, (self.dummy_tensor,))
 
         elif self.backend in PT_BACKENDS:
             self.model = model
@@ -105,8 +103,7 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         elif self.backend in [BackendType.OV, BackendType.FP32]:
             with torch.no_grad():
                 if self.model_params.export_torch_before_ov_convert:
-                    with disable_patching():
-                        model = torch.export.export(model, (self.dummy_tensor,))
+                    model = torch.export.export(model, (self.dummy_tensor,))
                 self.model = ov.convert_model(model, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
@@ -120,18 +117,16 @@ class ImageClassificationTorchvision(ImageClassificationBase):
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
-            with disable_patching():
-                ov_model = ov.convert_model(
-                    self.model,
-                    example_input=self.dummy_tensor,
-                    input=self.input_size,
-                )
+            ov_model = ov.convert_model(
+                self.model,
+                example_input=self.dummy_tensor,
+                input=self.input_size,
+            )
             ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),))
-            ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size)
-            ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
+            torch.export.save(exported_model, self.fp32_model_dir / "fx_model_fp32.pt2")
 
             if self.backend is BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()

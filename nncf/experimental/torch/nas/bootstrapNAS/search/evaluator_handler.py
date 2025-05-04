@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import NoReturn, Optional, Tuple, TypeVar
+from typing import NoReturn, Optional, TypeVar
 
 from nncf.common.logging import nncf_logger
 
@@ -45,10 +45,10 @@ class BaseEvaluatorHandler:
     def current_value(self):
         return self.evaluator.current_value
 
-    def retrieve_from_cache(self, subnet_config_repr: Tuple[float, ...]) -> Tuple[bool, float]:
+    def retrieve_from_cache(self, subnet_config_repr: tuple[float, ...]) -> tuple[bool, float]:
         return self.evaluator.retrieve_from_cache(subnet_config_repr)
 
-    def evaluate_and_add_to_cache_from_pymoo(self, pymoo_repr: Tuple[float, ...]) -> float:
+    def evaluate_and_add_to_cache_from_pymoo(self, pymoo_repr: tuple[float, ...]) -> float:
         return self.evaluator.evaluate_and_add_to_cache_from_pymoo(pymoo_repr)
 
     def export_cache_to_csv(self, cache_file_path: str) -> NoReturn:

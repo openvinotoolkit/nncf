@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
@@ -56,39 +56,39 @@ from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def preserved_metatypes(self) -> List[OperatorMetatype]:
+    def preserved_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatypes(self) -> list[OperatorMetatype]:
         return MATMUL_METATYPES
 
     @property
-    def post_processing_metatypes(self) -> List[OperatorMetatype]:
+    def post_processing_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def dropout_metatypes(self) -> List[OperatorMetatype]:
+    def dropout_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTDropoutMetatype]
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+    def read_variable_metatypes(self) -> list[OperatorMetatype]:
         return []
 
     @property
-    def conv_metatypes(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
 
     @property
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+    def elementwise_metatypes(self) -> list[OperatorMetatype]:
         return ELEMENTWISE_OPERATIONS
 
     @property
-    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+    def overflow_fix_metatypes(self) -> list[OperatorMetatype]:
         return [
             om.PTConv1dMetatype,
             om.PTConv2dMetatype,
@@ -100,19 +100,19 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     @property
-    def add_metatypes(self) -> List[OperatorMetatype]:
+    def add_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTAddMetatype]
 
     @property
-    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+    def group_conv_metatypes(self) -> list[OperatorMetatype]:
         return self.conv_metatypes
 
     @property
-    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+    def scaled_dot_product_attention_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTScaledDotProductAttentionMetatype]
 
     @property
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+    def scales_unification_map(self) -> dict[OperatorMetatype, OperatorMetatype]:
         return {om.PTCatMetatype: self.overflow_fix_metatypes + self.scaled_dot_product_attention_metatypes}
 
     @property
@@ -120,11 +120,11 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTHWConfig
 
     @property
-    def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
+    def quant_trait_op_dict(self) -> dict[int, OperatorMetatype]:
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 
     @property
-    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+    def reducer_map(self) -> dict[StatisticsType, TensorReducerBase]:
         return REDUCERS_MAP
 
     @property
@@ -132,7 +132,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return False
 
     @staticmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> list[NNCFNode]:
         return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes(
             DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS]
         )
@@ -150,16 +150,16 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise nncf.InternalError(msg)
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: PTNNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
+    def get_target_point_shape(nncf_graph: PTNNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> tuple[int, ...]:
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> tuple[int]:
         # TODO(dlyakhov): support transpose conv and other cases
         return (0,)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
         return get_weight_tensor_port_ids(node, graph)
 
     @staticmethod
@@ -170,7 +170,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight.node_name
 
     @staticmethod
-    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+    def should_quantize_weight(weight_name: str, quantized_weight_names: set[str]) -> bool:
         # If the nodes share one weight tensor, we should have only one quantizer on that
         return weight_name not in quantized_weight_names
 
@@ -181,7 +181,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _get_input_scale_shape(
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, per_channel: bool
-    ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+    ) -> tuple[tuple[int, ...], tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             # TODO(dlyakhov): support transpose conv/ make channel_idx common
@@ -199,7 +199,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _create_quantizer(
         quantizer_config: QuantizerConfig,
-        scale_shape: Tuple,
+        scale_shape: tuple,
         parameters: FakeQuantizeParameters,
         target_type: TargetType,
     ) -> FakeQuantize:
@@ -257,10 +257,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def create_unified_scales_quantizers_insertion_commands(
         nncf_graph: NNCFGraph,
-        target_points: List[PTTargetPoint],
+        target_points: list[PTTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> List[PTSharedFnInsertionCommand]:
+    ) -> list[PTSharedFnInsertionCommand]:
         _, scale_shape, _ = FXMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_points[0], quantizer_config.per_channel
         )
@@ -276,7 +276,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return transformations
 
     @staticmethod
-    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> list[OperatorMetatype]:
         types = []
         if model_type == ModelType.TRANSFORMER:
             types = [
@@ -304,10 +304,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> set[str]:
         return set()
 
-    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> list[NNCFNode]:
         return get_weight_nodes(nncf_graph, inference_nncf_graph)
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

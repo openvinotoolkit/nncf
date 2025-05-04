@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
 
 import tensorflow as tf
 
@@ -31,8 +30,8 @@ def preprocess_for_eval(
     image: tf.Tensor,
     image_size: int = IMAGE_SIZE,
     dtype: tf.dtypes.DType = tf.float32,
-    means: Tuple[float, ...] = None,
-    stddev: Tuple[float, ...] = None,
+    means: tuple[float, ...] = None,
+    stddev: tuple[float, ...] = None,
 ) -> tf.Tensor:
     """
     Preprocesses the given image for evaluation.
@@ -57,8 +56,8 @@ def preprocess_for_train(
     num_channels: int = 3,
     padding: int = PADDING,
     dtype: tf.dtypes.DType = tf.float32,
-    means: Tuple[float, ...] = None,
-    stddev: Tuple[float, ...] = None,
+    means: tuple[float, ...] = None,
+    stddev: tuple[float, ...] = None,
 ) -> tf.Tensor:
     """
     Preprocesses the given image for training.
@@ -88,8 +87,8 @@ def preprocess_image(
     image_size: int = IMAGE_SIZE,
     is_training: bool = False,
     dtype: tf.dtypes.DType = tf.float32,
-    means: Tuple[float, ...] = None,
-    stddev: Tuple[float, ...] = None,
+    means: tuple[float, ...] = None,
+    stddev: tuple[float, ...] = None,
 ) -> tf.Tensor:
     """
     Preprocesses the given image.
@@ -113,8 +112,8 @@ def cifar10_preprocess_image(
     image_size: int = IMAGE_SIZE,
     is_training: bool = False,
     dtype: tf.dtypes.DType = tf.float32,
-    means: Tuple[float, ...] = CIFAR10_MEAN_RGB,
-    stddev: Tuple[float, ...] = CIFAR10_STDDEV_RGB,
+    means: tuple[float, ...] = CIFAR10_MEAN_RGB,
+    stddev: tuple[float, ...] = CIFAR10_STDDEV_RGB,
 ) -> tf.Tensor:
     """
     Preprocesses the given image using mean and standard deviation calculated by CIFAR10 dataset
@@ -138,8 +137,8 @@ def cifar100_preprocess_image(
     image_size: int = IMAGE_SIZE,
     is_training: bool = False,
     dtype: tf.dtypes.DType = tf.float32,
-    means: Tuple[float, ...] = CIFAR100_MEAN_RGB,
-    stddev: Tuple[float, ...] = CIFAR100_STDDEV_RGB,
+    means: tuple[float, ...] = CIFAR100_MEAN_RGB,
+    stddev: tuple[float, ...] = CIFAR100_STDDEV_RGB,
 ) -> tf.Tensor:
     """
     Preprocesses the given image using mean and standard deviation calculated by CIFAR100 dataset

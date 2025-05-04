@@ -9,9 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
-from typing import List
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -54,7 +53,7 @@ def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
     return model_transformer.transform(transformation_layout)
 
 
-def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> list[NNCFNode]:
     """
     Get a list of NNCFNodes to use as start nodes for activation path tracing.
 
@@ -103,7 +102,7 @@ def model_has_state(model: ov.Model) -> bool:
     return len(model.get_sinks()) > 0
 
 
-def copy_rt_info(model_source: ov.Model, model_dest: ov.Model, path: List[str]) -> None:
+def copy_rt_info(model_source: ov.Model, model_dest: ov.Model, path: list[str]) -> None:
     """
     Checks and copies the rt_info from the source to destination model.
 

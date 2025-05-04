@@ -11,7 +11,6 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
 
 import pytest
 import torch
@@ -55,7 +54,7 @@ from tests.cross_fw.shared.paths import PROJECT_ROOT
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs")).glob("*"))
 
 
-def _get_filtered_quantization_configs() -> List[Path]:
+def _get_filtered_quantization_configs() -> list[Path]:
     configs = []
     for quantization_config_path in CONFIGS:
         nncf_config = NNCFConfig.from_json(quantization_config_path)

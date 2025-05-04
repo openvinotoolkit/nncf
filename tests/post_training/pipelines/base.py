@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import onnx
@@ -76,7 +76,7 @@ class StatsFromOutput:
     Contains statistics that are parsed from the stdout.
     """
 
-    def get_stats(self) -> Dict[str, str]:
+    def get_stats(self) -> dict[str, str]:
         """
         Returns statistics collected from the stdout. Usually it parses execution time from the log of the progress bar.
         """
@@ -190,7 +190,7 @@ class RunInfo:
             return None
         return int(memory)
 
-    def get_result_dict(self) -> Dict[str, str]:
+    def get_result_dict(self) -> dict[str, str]:
         """Returns a dictionary with the results of the run."""
         ram_data = {}
         if self.compression_memory_usage_system is None:
@@ -233,7 +233,6 @@ class BaseTestPipeline(ABC):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
-        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -250,7 +249,6 @@ class BaseTestPipeline(ABC):
         self.memory_monitor = memory_monitor
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
-        self.torch_compile_validation = torch_compile_validation
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
@@ -342,7 +340,7 @@ class BaseTestPipeline(ABC):
         self.validate()
         self.run_bench()
 
-    def collect_errors(self) -> List[ErrorReport]:
+    def collect_errors(self) -> list[ErrorReport]:
         """
         Collects errors based on the pipeline's run information.
 
@@ -373,7 +371,7 @@ class BaseTestPipeline(ABC):
 
         return errors
 
-    def update_status(self, error_reports: List[ErrorReport]) -> List[str]:
+    def update_status(self, error_reports: list[ErrorReport]) -> list[str]:
         """
         Updates status of the pipeline based on the errors encountered during the run.
 
@@ -414,7 +412,6 @@ class PTQTestPipeline(BaseTestPipeline):
         reference_data,
         no_eval,
         run_benchmark_app,
-        torch_compile_validation=False,
         params=None,
         batch_size=1,
         memory_monitor=False,
@@ -429,7 +426,6 @@ class PTQTestPipeline(BaseTestPipeline):
             reference_data,
             no_eval,
             run_benchmark_app,
-            torch_compile_validation,
             params,
             batch_size,
             memory_monitor,
@@ -500,9 +496,29 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
-            ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
-            ov_model.reshape(self.input_size)
-            ov.serialize(ov_model, self.path_compressed_ir)
+            # Torch export is used to save the model because ov.convert_model does not fully claim support for
+            # Converting ExportedProgram
+            torch.export.save(exported_model, self.output_model_dir / "model.pt2")
+            # torch.compile is used to cache the OV model because this is the default user journey with Torch FX
+            # backend. This is also neccesary because PT FE translation in OV for convert_model
+            # and the translations used for torch.compile sometimes differ. This method can help
+            # ensure that the correct OV graph is being verified.
+            mod = torch.compile(
+                exported_model.module(),
+                backend="openvino",
+                options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
+            )
+            mod(self.dummy_tensor)
+
+            # Get the OV *.xml files in torch compile cache directory
+            cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))
+            if len(cached_ov_model_files) > 1:
+                msg = "Graph break encountered in torch compile!"
+                raise nncf.InternalError(msg)
+            elif len(cached_ov_model_files) == 0:
+                msg = "Openvino Model Files Not Found!"
+                raise FileNotFoundError(msg)
+            self.path_compressed_ir = cached_ov_model_files[0]
 
             if self.backend == BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()
@@ -561,7 +577,7 @@ class PTQTestPipeline(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
 
-def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
+def get_num_fq_int4_int8(model: ov.Model) -> tuple[int, int, int]:
     num_fq = 0
     num_int8 = 0
     num_int4 = 0
@@ -579,14 +595,14 @@ def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
     return num_fq, num_int4, num_int8
 
 
-def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:
+def _are_exceptions_matched(report: ErrorReport, reference_exception: dict[str, str]) -> bool:
     return (
         reference_exception["error_message"] == report.msg.split(" | ")[1]
         and reference_exception["type"] == report.msg.split(" | ")[0]
     )
 
 
-def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> bool:
+def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: dict[str, dict[str, str]]) -> bool:
     if xfail_reason not in reference_data:
         return False
 
@@ -595,7 +611,7 @@ def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Di
     return True
 
 
-def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> str:
+def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: dict[str, dict[str, str]]) -> str:
     if report.reason == ErrorReason.EXCEPTION:
         return f"XFAIL: {reference_data[xfail_reason]['message']} - {report.msg}"
     return f"XFAIL: {xfail_reason} - {report.msg}"

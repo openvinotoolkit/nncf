@@ -23,6 +23,8 @@ from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 
+pytestmark = pytest.mark.legacy
+
 FIRST_NNCF_CONV_SCOPE = "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0"
 FIRST_CONV_SCOPE = "TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0"
 

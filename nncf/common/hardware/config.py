@@ -8,14 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from abc import ABC
 from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Type
-
-import jstyleson as json  # type: ignore[import-untyped]
+from typing import Any, Optional
 
 import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -59,7 +58,7 @@ def get_hw_config_type(target_device: str) -> Optional[HWConfigType]:
     return HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
 
-class HWConfig(list[Dict[str, Any]], ABC):
+class HWConfig(list[dict[str, Any]], ABC):
     QUANTIZATION_ALGORITHM_NAME = "quantization"
     ATTRIBUTES_NAME = "attributes"
     SCALE_ATTRIBUTE_NAME = "scales"
@@ -70,11 +69,11 @@ class HWConfig(list[Dict[str, Any]], ABC):
 
     def __init__(self) -> None:
         super().__init__()
-        self.registered_algorithm_configs: Dict[str, Any] = {}
+        self.registered_algorithm_configs: dict[str, Any] = {}
         self.target_device = None
 
     @abstractmethod
-    def _get_available_operator_metatypes_for_matching(self) -> List[Type[OperatorMetatype]]:
+    def _get_available_operator_metatypes_for_matching(self) -> list[type[OperatorMetatype]]:
         pass
 
     @staticmethod
@@ -84,7 +83,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
         )
 
     @classmethod
-    def from_dict(cls, dct: Dict[str, Any]) -> "HWConfig":
+    def from_dict(cls, dct: dict[str, Any]) -> "HWConfig":
         hw_config = cls()
         hw_config.target_device = dct["target_device"]
 
@@ -103,7 +102,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
             for algorithm_name in op_dict:
                 if algorithm_name not in hw_config.registered_algorithm_configs:
                     continue
-                tmp_config: Dict[str, List[Dict[str, Any]]] = {}
+                tmp_config: dict[str, list[dict[str, Any]]] = {}
                 for algo_and_op_specific_field_name, algorithm_configs in op_dict[algorithm_name].items():
                     if not isinstance(algorithm_configs, list):
                         algorithm_configs = [algorithm_configs]
@@ -128,7 +127,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
         return hw_config
 
     @classmethod
-    def from_json(cls: type["HWConfig"], path: str) -> List[Dict[str, Any]]:
+    def from_json(cls: type["HWConfig"], path: str) -> list[dict[str, Any]]:
         file_path = Path(path).resolve()
         with safe_open(file_path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
@@ -153,7 +152,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
         raise nncf.ValidationError(msg)
 
     @staticmethod
-    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict[str, Any]) -> QuantizerConfig:
+    def get_qconf_from_hw_config_subdict(quantization_subdict: dict[str, Any]) -> QuantizerConfig:
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
@@ -168,20 +167,20 @@ class HWConfig(list[Dict[str, Any]], ABC):
         )
 
     @staticmethod
-    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]) -> bool:
+    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[list[QuantizerConfig]]) -> bool:
         return qconf_list is None
 
     @staticmethod
-    def is_wildcard_quantization(qconf_list: Optional[List[QuantizerConfig]]) -> bool:
+    def is_wildcard_quantization(qconf_list: Optional[list[QuantizerConfig]]) -> bool:
         # Corresponds to an op itself being specified in the HW config, but having no associated quantization
         # configs specified
         return qconf_list is not None and len(qconf_list) == 0
 
     def get_metatype_vs_quantizer_configs_map(
         self, for_weights: bool = False
-    ) -> Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]]:
+    ) -> dict[type[OperatorMetatype], Optional[list[QuantizerConfig]]]:
         # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
-        retval: Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]] = {
+        retval: dict[type[OperatorMetatype], Optional[list[QuantizerConfig]]] = {
             k: None for k in self._get_available_operator_metatypes_for_matching()
         }
         config_key = "weights" if for_weights else "activations"
@@ -212,8 +211,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
         return retval
 
     def _get_operations_with_attribute_values(
-        self, attribute_name_vs_required_value: Dict[str, Any]
-    ) -> Set[Type[OperatorMetatype]]:
+        self, attribute_name_vs_required_value: dict[str, Any]
+    ) -> set[type[OperatorMetatype]]:
         result = set()
         for op_dict in self:
             if self.ATTRIBUTES_NAME not in op_dict:
@@ -232,13 +231,13 @@ class HWConfig(list[Dict[str, Any]], ABC):
                     result.update(metatypes)
         return result
 
-    def get_operations_with_unified_scales(self) -> Set[Type[OperatorMetatype]]:
+    def get_operations_with_unified_scales(self) -> set[type[OperatorMetatype]]:
         return self._get_operations_with_attribute_values({self.SCALE_ATTRIBUTE_NAME: self.UNIFIED_TYPE_NAME})
 
-    def get_operations_with_adjusted_paddings(self) -> Set[Type[OperatorMetatype]]:
+    def get_operations_with_adjusted_paddings(self) -> set[type[OperatorMetatype]]:
         return self._get_operations_with_attribute_values({self.ADJUST_PADDING_ATTRIBUTE_NAME: True})
 
-    def _get_metatypes_for_hw_config_op(self, hw_config_op: HWConfigOpName) -> Set[Type[OperatorMetatype]]:
+    def _get_metatypes_for_hw_config_op(self, hw_config_op: HWConfigOpName) -> set[type[OperatorMetatype]]:
         metatypes = set()
         for op_meta in self._get_available_operator_metatypes_for_matching():
             if hw_config_op in op_meta.hw_config_names:

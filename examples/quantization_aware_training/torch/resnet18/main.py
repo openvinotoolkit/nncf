@@ -15,7 +15,6 @@ import subprocess
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import Tuple
 
 import openvino as ov
 import torch
@@ -121,7 +120,7 @@ def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, de
     return top1_avg
 
 
-def accuracy(output: torch.Tensor, target: torch.tensor, topk: Tuple[int, ...] = (1,)):
+def accuracy(output: torch.Tensor, target: torch.tensor, topk: tuple[int, ...] = (1,)):
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)
@@ -208,7 +207,7 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def run_benchmark(model_path: Path, shape: Tuple[int, ...]) -> float:
+def run_benchmark(model_path: Path, shape: tuple[int, ...]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),

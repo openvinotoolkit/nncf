@@ -25,6 +25,8 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 
+pytestmark = pytest.mark.legacy
+
 sub_tensor = torch.tensor([[[[1.0, 0.0], [0.0, 1.0]]]])
 ref_mask_1 = torch.cat((sub_tensor, sub_tensor), 0)
 sub_tensor = torch.tensor([[[[0.0, 1.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]]])

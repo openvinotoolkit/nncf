@@ -11,7 +11,6 @@
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 
@@ -34,6 +33,6 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-def dump_to_json(local_path: Path, data: Dict[str, np.ndarray]):
+def dump_to_json(local_path: Path, data: dict[str, np.ndarray]):
     with open(local_path, "w", encoding="utf8") as file:
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)

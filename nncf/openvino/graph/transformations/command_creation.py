@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import numpy as np
 
@@ -62,7 +61,7 @@ class OVCommandCreator(CommandCreator):
     @staticmethod
     def multiply_insertion_command(
         source_node: NNCFNode,
-        destination_nodes: List[NNCFNode],
+        destination_nodes: list[NNCFNode],
         source_out_port: int,
         scale_value: np.ndarray,
         multiply_node_name: str,

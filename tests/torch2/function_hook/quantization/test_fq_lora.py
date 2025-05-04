@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import pytest
 import torch
 from networkx.drawing.nx_pydot import to_pydot
@@ -22,27 +24,25 @@ from transformers import AutoTokenizer
 import nncf
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
-from nncf.scopes import IgnoredScope
 from nncf.torch import load_from_config
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.torch.model_creation import get_config
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.ptq.test_weights_compression import ShortTransformer
 from tests.torch.test_models.synthetic import LinearModel
+from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 
-REF_DIR = TEST_ROOT / "torch2" / "data" / "reference_graphs" / "compress_weights" / "fq_lora"
+REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "compress_weights" / "fq_lora"
 
 
 class ValidationMock:
@@ -153,7 +153,7 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         # Workaround till export from the optimum would be fixed - CVS-164159
         model = model.to(torch.float32)
 
-        model = nncf.strip(model, strip_format=StripFormat.DQ, example_input=example_inputs)
+        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_inputs)
         stripped_output = generate_control_output(model, tokenizer)
 
         model = get_ov_model(model, tmp_path)
@@ -168,36 +168,29 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
 
 
-@pytest.mark.cuda
-def test_checkpoint_loading(tmp_path):
-    device = "cuda"
-    device_map = "auto"
-    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    example_input = tokenizer("dummy", return_tensors="pt").to(device)
-    except_lm_head_and_5th_vproj = r"^(?!(gpt_neox/attention/query_key_value/linear/2|embed_out/linear/0)$).*"
+def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
+    device = "cuda" if use_cuda else "cpu"
+    model = ShortTransformer(8, 16, share_weights=True).to(device)
+    input_ids = torch.randint(0, 10, (8,)).to(device)
 
     model = compress_weights(
         model,
-        group_size=32,
+        group_size=4,
         mode=CompressWeightsMode.INT4_ASYM,
         backup_mode=CompressWeightsMode.INT8_ASYM,
-        dataset=Dataset([dict(example_input)]),
+        dataset=Dataset([input_ids]),
         compression_format=CompressionFormat.FQ_LORA,
-        ignored_scope=IgnoredScope(patterns=[except_lm_head_and_5th_vproj]),
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=2),
     )
-    ref_output = tokenizer.decode(
-        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0], skip_special_tokens=True
-    )
+    with torch.no_grad():
+        ref_output = model(input_ids)
 
     # save checkpoint
     ckpt_path = tmp_path / "nncf_ckpt.pth"
     torch.save(
         {
-            "nncf_state_dict": get_hook_storage(model).state_dict(),
             "nncf_config": get_config(model),
+            "model_state_dict": model.state_dict(),
         },
         ckpt_path,
     )
@@ -205,15 +198,13 @@ def test_checkpoint_loading(tmp_path):
 
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
-    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=dict(example_input))
-    get_hook_storage(model).load_state_dict(nncf_ckpt["nncf_state_dict"])
+    model = ShortTransformer(8, 16, share_weights=True).to(device)
+    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=input_ids)
+    model.load_state_dict(nncf_ckpt["model_state_dict"])
 
-    actual_output = tokenizer.decode(
-        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0],
-        skip_special_tokens=True,
-    )
-    assert actual_output == ref_output
+    with torch.no_grad():
+        actual_output = model(input_ids)
+    assert torch.all(actual_output == ref_output)
 
 
 def test_invalid_lora_rank():
