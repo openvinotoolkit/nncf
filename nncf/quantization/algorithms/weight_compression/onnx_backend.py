@@ -32,7 +32,8 @@ from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.model_transformer import remove_initializer
 from nncf.onnx.graph.model_transformer import set_initializer
-from nncf.onnx.graph.node_utils import get_act_quantization_axis, get_weight_quantization_axis
+from nncf.onnx.graph.node_utils import get_act_quantization_axis
+from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
@@ -239,7 +240,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         return filter_func
-    
+
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         return get_act_quantization_axis(node, port_id)
