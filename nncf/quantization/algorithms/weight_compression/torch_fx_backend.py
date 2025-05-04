@@ -285,6 +285,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         return node.metatype.output_channel_axis
 
+
 class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompressionAlgoBackend):
     @staticmethod
     def mean_variance_statistic_collector(
