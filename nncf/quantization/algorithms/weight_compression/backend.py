@@ -259,7 +259,7 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         """
         Returns axis number of the activation tensor which correspond to it channel.
 
