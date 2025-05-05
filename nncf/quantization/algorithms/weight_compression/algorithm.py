@@ -818,7 +818,9 @@ class WeightCompression(Algorithm):
                 )
                 # Reduce activations across all but the hidden dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
-                reduction_axes = tuple(set(range(n_dims)) - {input_channel_axis % n_dims})
+                # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
+                input_channel_axis = input_channel_axis % n_dims
+                reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
