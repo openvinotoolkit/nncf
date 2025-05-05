@@ -269,11 +269,9 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            activations = (
-                                [inp[..., (i1 + i) : (i1 + i + group_size), :] for inp in inputs]
-                                if input_channel_axis != (len(inputs[0].shape) - 1)
-                                else [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
-                            )
+                            slicing_along_axis = [slice(None)] * len(inputs[0].shape)
+                            slicing_along_axis[input_channel_axis] = slice(i1 + i, i1 + i + group_size)
+                            activations = [inp[tuple(slicing_along_axis)] for inp in inputs]
                             wc_statistics = ScaleEstimation.activations_to_wc_statistics(
                                 activations, input_channel_axis
                             )
