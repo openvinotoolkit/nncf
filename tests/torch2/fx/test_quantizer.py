@@ -11,7 +11,6 @@
 
 from dataclasses import dataclass
 from functools import partial
-from pathlib import Path
 from typing import Any, Callable
 
 import pytest
@@ -35,14 +34,15 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
-from tests.torch.fx.helpers import get_torch_fx_model
-from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
+from tests.torch2.fx.helpers import get_torch_fx_model
 
-FX_QUANTIZED_DIR_NAME = Path("fx") / "experimental"
+FX_QUANTIZED_DIR_NAME = TEST_ROOT / "torch2" / "data" / "fx"
 
 
 @dataclass
@@ -146,12 +146,10 @@ def test_quantized_model(
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-    check_graph(
-        nncf_graph,
-        get_dot_filename(model_case.model_id),
-        FX_QUANTIZED_DIR_NAME / quantizer.__class__.__name__,
-        extended=True,
-    )
+
+    path_to_dot = FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_dot_filename(model_case.model_id)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     # Uncomment to visualize reference graphs
     # from torch.ao.quantization.quantize_pt2e import convert_pt2e
@@ -177,12 +175,12 @@ def test_openvino_quantizer_with_torch_ao_convert_pt2e(model_case: ModelCase, qu
     prepared_model(example_input)
     ao_quantized_model = convert_pt2e(prepared_model)
     nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
-    check_graph(
-        nncf_graph,
-        get_dot_filename(model_case.model_id),
-        FX_QUANTIZED_DIR_NAME / "ao_export_quantization_OpenVINOQuantizer",
-        extended=True,
+
+    path_to_dot = (
+        FX_QUANTIZED_DIR_NAME / "ao_export_quantization_OpenVINOQuantizer" / get_dot_filename(model_case.model_id)
     )
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
 TorchAOSharedQuantizationSpecTestCases = (

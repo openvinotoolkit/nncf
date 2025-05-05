@@ -23,7 +23,6 @@ from fastdownload import FastDownload
 from torch.fx.passes.graph_drawer import FxGraphDrawer
 
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
@@ -150,8 +149,7 @@ def get_torch_fx_model(
 
     model.eval()
     with torch.no_grad():
-        with disable_patching():
-            return torch.export.export_for_training(model, args=device_ex_input, dynamic_shapes=dynamic_shapes).module()
+        return torch.export.export_for_training(model, args=device_ex_input, dynamic_shapes=dynamic_shapes).module()
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
