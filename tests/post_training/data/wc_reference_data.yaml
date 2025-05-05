@@ -102,3 +102,11 @@ tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH:
     type: "TypeError"
     error_message: "'function' object is not iterable"
     message: "Issue-165013"
+tinyllama_data_free_awq_backend_OV:
+  metric_value: 0.85466
+  num_int4: 188
+  num_int8: 124
+tinyllama_data_free_awq_backend_TORCH:
+  metric_value: 0.85466
+  num_int4: 188
+  num_int8: 124

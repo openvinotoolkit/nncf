@@ -17,6 +17,7 @@ from nncf import QuantizationPreset
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
+from nncf.quantization.advanced_parameters import AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -550,6 +551,21 @@ WEIGHT_COMPRESSION_MODELS = [
             "ignored_scope": nncf.IgnoredScope(types=["Gather"]),
         },
         "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_data_free_awq",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "awq": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=False)
+            ),
+        },
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
 ]
 

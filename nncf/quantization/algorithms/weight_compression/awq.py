@@ -339,7 +339,7 @@ class AWQ(Algorithm):
         return awq_data
 
     def update_statistics(self, statistics):
-        if statistics is None:
+        if not statistics:
             return statistics
 
         # Multiply activations by the computed scales
