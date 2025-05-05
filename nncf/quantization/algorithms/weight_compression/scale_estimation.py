@@ -382,7 +382,9 @@ class ScaleEstimation:
         shapes = []
         for act in activations:
             shapes.append(act.shape)
-            reduction_shape = tuple(set(range(len(act.shape))) - {input_channel_axis % len(act.shape)})
+            # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
+            input_channel_axis = input_channel_axis % len(act.shape) 
+            reduction_shape = tuple(i for i in range(len(act.shape)) if i != input_channel_axis)
             mean_values.append(fns.mean(act, axis=reduction_shape))
         wc_statistics = WCTensorStatistic(mean_values, shapes)
         return wc_statistics
