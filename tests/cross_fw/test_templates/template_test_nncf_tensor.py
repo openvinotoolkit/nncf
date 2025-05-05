@@ -410,6 +410,18 @@ class TemplateTestNNCFTensorOperators:
         for i, x in enumerate(nncf_tensor):
             assert x == arr[i]
             assert isinstance(x, Tensor)
+        assert i == 2
+
+        arr = [arr]
+        nested_nncf_tensor = Tensor(self.to_tensor(arr))
+        for i, x in enumerate(nested_nncf_tensor):
+            assert all(x == nncf_tensor)
+            assert isinstance(x, Tensor)
+
+        # Check a scalar tensor
+        nncf_tensor = Tensor(self.to_tensor(42))
+        with pytest.raises(StopIteration):
+            next(iter(nncf_tensor))
 
     # Math
 
