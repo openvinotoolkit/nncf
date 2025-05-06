@@ -228,7 +228,7 @@ class AdvancedQuantizationParameters:
     :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
     :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
-    :type backend_params: Dict[str, Any]
+    :type backend_params: dict[str, Any]
     """
 
     # General parameters
@@ -377,6 +377,8 @@ class AdvancedCompressionParameters:
     :type lora_correction_params: AdvancedLoraCorrectionParameters
     :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
     :type lora_adapter_rank: int
+    :param backend_params: Backend-specific parameters.
+    :type backend_params: dict[str, Any]
     """
 
     statistics_path: Optional[str] = None
@@ -387,6 +389,7 @@ class AdvancedCompressionParameters:
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
+    backend_params: dict[str, Any] = field(default_factory=dict)
 
 
 @api()

@@ -26,10 +26,8 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
-from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 from tests.torch2.function_hook.quantization.test_weights_compression import ALL_SENSITIVITY_METRICS
@@ -46,6 +44,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Fun
 from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
+from tests.torch2.fx.helpers import get_torch_fx_model
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -126,14 +125,13 @@ def test_compress_weights_graph_edge(mode):
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_shared_weights(mocker, mode):
-    with disable_patching():
-        model = ShortTransformer(8, 16, share_weights=True)
-        input_ids = torch.randint(0, 10, (8,))
-        exported_model = get_torch_fx_model(model, input_ids)
-        kwargs = {}
-        if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
-            kwargs["group_size"] = 4
-        compressed_model = compress_weights(exported_model, mode=mode, **kwargs)
+    model = ShortTransformer(8, 16, share_weights=True)
+    input_ids = torch.randint(0, 10, (8,))
+    exported_model = get_torch_fx_model(model, input_ids)
+    kwargs = {}
+    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+        kwargs["group_size"] = 4
+    compressed_model = compress_weights(exported_model, mode=mode, **kwargs)
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     n_compressed_weights = 0
     n_target_modules = 0

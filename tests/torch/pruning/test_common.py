@@ -20,6 +20,8 @@ from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.parametrize("algo", ("filter_pruning",))
 @pytest.mark.parametrize(

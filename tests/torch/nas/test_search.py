@@ -28,6 +28,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
 from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # noqa: F401
 
+pytestmark = pytest.mark.legacy
 SEARCH_ALGORITHMS = ["NSGA2", "RNSGA2"]
 
 

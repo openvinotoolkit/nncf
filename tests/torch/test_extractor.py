@@ -25,6 +25,8 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.parametrize(
     "model_cls, input_node_name, output_node_name",

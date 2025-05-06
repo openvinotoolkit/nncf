@@ -12,7 +12,7 @@
 import torch
 
 from tests.cross_fw.test_templates.test_unified_scales import TemplateTestUnifiedScales
-from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
+from tests.torch2.fx.helpers import get_torch_fx_model_q_transformed
 
 
 class TestUnifiedScales(TemplateTestUnifiedScales):

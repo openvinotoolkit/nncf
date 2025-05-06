@@ -70,6 +70,8 @@ from tests.torch.pruning.helpers import SplitPruningInvalidModel
 from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
+pytestmark = pytest.mark.legacy
+
 
 def create_nncf_model_and_pruning_builder(
     model: torch.nn.Module, config_params: dict

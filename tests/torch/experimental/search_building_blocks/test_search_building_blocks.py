@@ -37,6 +37,8 @@ from tests.torch.test_models import ssd_mobilenet
 from tests.torch.test_models.inceptionv3 import Inception3
 from tests.torch.test_models.resnet import ResNet50
 
+pytestmark = pytest.mark.legacy
+
 
 def check_blocks_and_groups(name, actual_blocks: BuildingBlocks, actual_group_dependent: GroupedBlockIDs):
     ref_file_dir = TEST_ROOT / "torch" / "data" / "search_building_block"

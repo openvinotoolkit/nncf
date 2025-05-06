@@ -36,6 +36,8 @@ from tests.torch.nas.test_elastic_width import BASIC_ELASTIC_WIDTH_PARAMS
 from tests.torch.nas.test_elastic_width import TwoConvAddConvTestModel
 from tests.torch.nas.test_elastic_width import TwoSequentialConvBNTestModel
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.fixture
 def _nncf_caplog(caplog):

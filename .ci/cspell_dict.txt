@@ -154,6 +154,7 @@ gacts
 gelsy
 gelu
 genai
+getsizeof
 gflop
 gflops
 giga

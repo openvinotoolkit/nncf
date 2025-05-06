@@ -144,7 +144,7 @@ def not_compilable_fn(x, y):
     "fn, is_compilation_successful",
     [
         (compilable_fn, True),
-        (not_compilable_fn, False),
+        pytest.param(not_compilable_fn, False, marks=pytest.mark.xfail(reason="Issue-166894")),
     ],
 )
 def test_compilation_wrapper(fn, is_compilation_successful):

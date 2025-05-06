@@ -37,16 +37,16 @@ from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackend
 from nncf.experimental.torch.fx.transformations import DEQUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
-from tests.torch.fx.helpers import get_torch_fx_model
-from tests.torch.fx.test_sanity import count_q_dq
-from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
+from tests.torch2.fx.helpers import get_torch_fx_model
+from tests.torch2.fx.test_sanity import count_q_dq
 
-FX_DIR_NAME = Path("fx")
+FX_DIR_NAME = TEST_ROOT / "torch2" / "data" / "fx"
 FX_QUANTIZED_DIR_NAME = FX_DIR_NAME / "quantized"
 FX_QUANTIZED_COMPRESSED_DIR_NAME = FX_DIR_NAME / "post_quantization_compressed"
 
@@ -88,7 +88,7 @@ def get_json_filename(model_name):
 
 def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str:
     property_to_check = "reference_metatypes" if not attributes else "reference_attributes"
-    path_to_dir = TEST_ROOT / "torch" / "data" / "reference_graphs" / "fx" / property_to_check
+    path_to_dir = TEST_ROOT / "torch2" / "data" / "fx" / property_to_check
     path_to_json = path_to_dir / model_json_name
     return path_to_json
 
@@ -124,8 +124,10 @@ def test_model(test_case: ModelCase):
     nncf_graph = GraphConverter.create_nncf_graph(exported_model)
 
     # Check NNCFGrpah
-    dot_filename = get_dot_filename(model_name)
-    check_graph(nncf_graph, dot_filename, FX_DIR_NAME, extended=True)
+    dot_file_name = get_dot_filename(model_name)
+    path_to_dot = FX_DIR_NAME / dot_file_name
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     # Check metatypes
     model_metatypes = {n.node_name: n.metatype.__name__ for n in nncf_graph.get_all_nodes()}
@@ -225,8 +227,11 @@ def test_quantized_model(
     else:
         save_dir = FX_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_QUANTIZED_DIR_NAME
 
+    path_to_dot = save_dir / get_dot_filename(model_case.model_id)
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-    check_graph(nncf_graph, get_dot_filename(model_case.model_id), save_dir, extended=True)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
     q_nodes, dq_nodes = count_q_dq(quantized_model)
     assert q_nodes == compress_n_qdq[compress_weights][0]
     assert dq_nodes == compress_n_qdq[compress_weights][1]

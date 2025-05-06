@@ -72,8 +72,11 @@ def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenize
 
 def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
     model = model.cpu()
-    export_from_model(model, tmp_path)
 
+    # TODO(AlexanderDokuchaev): WA for optimum patcher, remove after update optimum-intel>1.22.0
+    saved_ops = torch.ops._prepare_4d_causal_attention_mask_for_sdpa
+    export_from_model(model, tmp_path)
+    torch.ops._prepare_4d_causal_attention_mask_for_sdpa = saved_ops
     return OVModelForCausalLM.from_pretrained(
         model_id=tmp_path,
         trust_remote_code=True,

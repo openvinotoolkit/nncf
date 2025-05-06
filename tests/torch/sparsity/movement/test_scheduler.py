@@ -32,6 +32,8 @@ from tests.torch.sparsity.movement.helpers import SwinRunRecipe
 from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 
+pytestmark = pytest.mark.legacy
+
 
 class TestSchedulerParams:
     def test_minimal_valid_params(self):

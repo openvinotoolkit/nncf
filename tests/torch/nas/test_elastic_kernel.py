@@ -17,6 +17,7 @@ from tests.torch.nas.creators import create_single_conv_kernel_supernet
 from tests.torch.nas.helpers import do_conv2d
 from tests.torch.nas.helpers import ref_kernel_transform
 
+pytestmark = pytest.mark.legacy
 BASIC_ELASTIC_KERNEL_PARAMS = {"max_num_kernels": 2}
 
 

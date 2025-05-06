@@ -21,9 +21,9 @@ from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.cross_fw.test_templates.models import NNCFGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
-from tests.torch.fx.helpers import get_depthwise_conv_nncf_graph
-from tests.torch.fx.helpers import get_single_conv_nncf_graph
-from tests.torch.fx.helpers import get_sum_aggregation_nncf_graph
+from tests.torch2.fx.helpers import get_depthwise_conv_nncf_graph
+from tests.torch2.fx.helpers import get_single_conv_nncf_graph
+from tests.torch2.fx.helpers import get_sum_aggregation_nncf_graph
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):

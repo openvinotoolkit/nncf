@@ -45,6 +45,8 @@ from tests.torch.sparsity.movement.helpers import build_compression_trainer
 from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.fixture(scope="function", autouse=True)
 def safe_deterministic_state(_safe_deterministic_state):
