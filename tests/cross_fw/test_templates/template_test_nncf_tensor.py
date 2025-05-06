@@ -630,6 +630,13 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert res.dtype == TensorDataType.int8
 
+    def test_atleast_1d(self):
+        scalar = Tensor(self.to_tensor(42))
+        assert fns.atleast_1d(scalar).shape == (1,)
+
+        tensor = Tensor(self.to_tensor([[1, 2, 3]]))
+        assert fns.atleast_1d(tensor).shape == (1, 3)
+
     def test_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
         res = tensor.reshape((1, 2))

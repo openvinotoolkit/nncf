@@ -24,6 +24,7 @@ from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBias
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
@@ -66,6 +67,8 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
+        if model_cls is OneDimMM:
+            return ref_biases
         mapping = {f"{name}/WithoutBiases": val for name, val in ref_biases.items()}
         return mapping
 

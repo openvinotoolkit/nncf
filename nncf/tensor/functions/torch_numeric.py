@@ -113,6 +113,11 @@ def _(a: torch.Tensor, shape: T_SHAPE) -> torch.Tensor:
     return a.reshape(shape)
 
 
+@numeric.atleast_1d.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.atleast_1d(a)
+
+
 @numeric.all.register
 def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     if axis is None:

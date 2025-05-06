@@ -29,6 +29,7 @@ ascale
 ascontiguousarray
 asym
 asymm
+atleast
 atol
 atrous
 autocast
