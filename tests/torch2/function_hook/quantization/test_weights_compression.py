@@ -491,7 +491,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def supports_data_free() -> bool:
-        return False
+        return True
 
     @staticmethod
     def get_scale_estimation_ref():
