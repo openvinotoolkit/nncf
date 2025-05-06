@@ -109,6 +109,11 @@ def _(a: T_NUMPY) -> ov.Tensor:
     return ov.Tensor(a, a.shape, DTYPE_MAP[NUMPY_DTYPE_MAP_REV[a.dtype]])
 
 
+@numeric.as_openvino_tensor.register
+def _(a: ov.Tensor) -> ov.Tensor:
+    return a
+
+
 @numeric.finfo.register
 def _(a: ov.Tensor) -> TypeInfo:
     return numeric.finfo(a.data)

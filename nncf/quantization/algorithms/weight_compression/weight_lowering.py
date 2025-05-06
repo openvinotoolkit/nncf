@@ -157,7 +157,7 @@ def do_float_dequantization(compressed_weight: Tensor, scale: Tensor, reduction_
     """
     Dequantize the float-quantized weight tensor.
 
-    :param compressed_weight: Tensor with floating-point values, where each of them corresponds to 1 out of 16 quants.
+    :param compressed_weight: Tensor with floating-point values.
     :param scale: Scale tensor used for decompression.
     :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
         original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
@@ -179,7 +179,7 @@ def do_float_quantization(
     Computes quantization scale if not provided, and performs corresponding (nf4, e2m1) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
     For E2M1 currently returns normalized weight without quantization.
-    TODO: add support for E2M1 once ticket 164851 is resolved
+    TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
@@ -216,7 +216,7 @@ def do_float_quantization(
         else:
             compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
     else:
-        # TODO: add support for E2M1 once ticket 164851 is resolved
+        # TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
         compressed_weight = norm_weight
     return compressed_weight, scale
 

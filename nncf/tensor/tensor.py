@@ -206,7 +206,10 @@ class Tensor:
         return cast(Tensor, _call_function("as_numpy_tensor", self))
 
     def as_openvino_tensor(self) -> Tensor:
-        return cast(Tensor, _call_function("as_openvino_tensor", self))
+        x = self
+        if x.backend == TensorBackend.torch:
+            x = cast(Tensor, _call_function("as_numpy_tensor", x))
+        return cast(Tensor, _call_function("as_openvino_tensor", x))
 
 
 def _call_function(func_name: str, *args: Any) -> Any:

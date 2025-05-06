@@ -288,8 +288,8 @@ class GPTQ:
                 with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
                     # Because of the fact that compression if performed per-column, weight size is very small and
                     # optimized OV compression performs worse than numpy compression.
-                    # TODO: Remove this workaround by introducing logic that will control whether to execute
-                    #   optimized compression based on input size.
+                    # TODO(nikita-savelyevv): Remove this workaround by introducing logic that will control whether to
+                    #   execute optimized compression based on input size.
                     if block_compression_config.mode == CompressWeightsMode.NF4:
                         quantized_col = float_quantize_dequantize_weight(
                             fns.unsqueeze(weight_col, 1),
