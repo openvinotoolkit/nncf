@@ -14,6 +14,7 @@ import torch
 from torch import nn
 
 import nncf
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import is_windows
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 from nncf.torch.utils import CompilationWrapper
@@ -134,6 +135,7 @@ def compilable_fn(x, y):
 def not_compilable_fn(x, y):
     if torch.compiler.is_compiling():
         msg = "Controlled exception!"
+        nncf_logger.debug(msg)
         raise nncf.InternalError(msg)
     a = torch.sin(x)
     b = torch.cos(y)
@@ -144,7 +146,7 @@ def not_compilable_fn(x, y):
     "fn, is_compilation_successful",
     [
         (compilable_fn, True),
-        pytest.param(not_compilable_fn, False, marks=pytest.mark.xfail(reason="Issue-166894")),
+        (not_compilable_fn, False),
     ],
 )
 def test_compilation_wrapper(fn, is_compilation_successful):
