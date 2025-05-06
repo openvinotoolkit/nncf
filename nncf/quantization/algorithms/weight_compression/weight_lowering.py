@@ -240,7 +240,7 @@ def float_quantize_dequantize_weight(
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
     assert config.mode == CompressWeightsMode.NF4
-    # TODO: add support for f4e2m1 once ticket 164851 is resolved
+    # TODO(nikita-savelyevv): add support for f4e2m1 once ticket 164851 is resolved
 
     # Optimized implementation
     if _can_run_optimized(weight.backend):
