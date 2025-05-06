@@ -25,6 +25,10 @@ The most significant accuracy improvements are usually observed within the first
 
 ![alt text](/examples/llm_compression/torch/qat_with_lora/pics/training_pipeline.png)
 
+## Fine-tuning with SQFT's NLS with Downstream Tasks
+
+We also provide an example of fine-tuning with downstream tasks using SQFT's NLS. After installing the requirements, follow the instructions [here](./NLSDownstreamTasks.md).
+
 ## Install requirements
 
 To use this example:
