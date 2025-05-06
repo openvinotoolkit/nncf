@@ -9,16 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
 import numpy as np
 import openvino as ov
 import pytest
+import torch
 
 import nncf.tensor.functions as fns
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
 
 DATA = [1, 2, 3]
+
 
 @pytest.mark.parametrize(
     "tensor",
@@ -27,7 +28,7 @@ DATA = [1, 2, 3]
         Tensor(torch.tensor(DATA, dtype=torch.float32)),
         Tensor(ov.Tensor(np.array(DATA, np.float32), (len(DATA),), ov.Type.f32)),
     ],
-    ids=["from_numpy", "from_torch", "from_openvino"]
+    ids=["from_numpy", "from_torch", "from_openvino"],
 )
 def test_as_openvino_tensor(tensor: Tensor):
     ov_tensor = tensor.as_openvino_tensor()
