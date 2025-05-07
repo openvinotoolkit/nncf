@@ -115,7 +115,7 @@ def _(a: torch.Tensor, shape: T_SHAPE) -> torch.Tensor:
 
 @numeric.atleast_1d.register
 def _(a: torch.Tensor) -> torch.Tensor:
-    return torch.atleast_1d(a)
+    return torch.atleast_1d(a)  # type: ignore
 
 
 @numeric.all.register
