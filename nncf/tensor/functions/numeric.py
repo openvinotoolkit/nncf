@@ -812,13 +812,3 @@ def as_numpy_tensor(a: Tensor) -> Tensor:
     :param a: Tensor to change backend for.
     :return: Tensor in numpy backend.
     """
-
-
-@tensor_dispatcher
-def as_openvino_tensor(a: Tensor) -> Tensor:
-    """
-    Convert tensor to openvino backend.
-
-    :param a: Tensor to change backend for.
-    :return: Tensor in openvino backend.
-    """

@@ -209,7 +209,16 @@ class Tensor:
         x = self
         if x.backend == TensorBackend.torch:
             x = cast(Tensor, _call_function("as_numpy_tensor", x))
-        return cast(Tensor, _call_function("as_openvino_tensor", x))
+        if x.backend == TensorBackend.numpy:
+            import openvino as ov
+
+            from nncf.tensor.functions.openvino_numeric import DTYPE_MAP
+
+            x = Tensor(ov.Tensor(x.data, x.data.shape, DTYPE_MAP[x.dtype]))
+        if x.backend != TensorBackend.ov:
+            exception_string = f"Unsupported backend for OpenVINO conversion: {x.backend}."
+            raise NotImplementedError(exception_string)
+        return x
 
 
 def _call_function(func_name: str, *args: Any) -> Any:
