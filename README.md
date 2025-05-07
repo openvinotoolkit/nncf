@@ -86,7 +86,7 @@ The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorit
 
 ```python
 import nncf
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from torchvision import datasets, transforms
 
@@ -146,7 +146,6 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 import nncf
 import torch.fx
 from torchvision import datasets, models
-from nncf.torch import disable_patching
 
 # Instantiate your uncompressed model
 model = models.mobilenet_v2()
@@ -165,15 +164,13 @@ calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 
 # Step 3: Export model to TorchFX
 input_shape = (1, 3, 224, 224)
-with nncf.torch.disable_patching():
-    fx_model = torch.export.export_for_training(model, args=(ex_input,)).module()
-    # or
-    # fx_model = torch.export.export(model, args=(ex_input,)).module()
+fx_model = torch.export.export_for_training(model, args=(ex_input,)).module()
+# or
+# fx_model = torch.export.export(model, args=(ex_input,)).module()
 
-    # Step 4: Run the quantization pipeline
-    quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
-
- ```
+# Step 4: Run the quantization pipeline
+quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
+```
 
 </details>
 <details><summary><b>TensorFlow</b></summary>
@@ -384,7 +381,7 @@ Ready-to-run Jupyter* notebook tutorials and demos are available to explain and 
 | [BERT Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/language-quantize-bert)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/language-quantize-bert/language-quantize-bert.ipynb) |                               Post-Training Quantization                                |  OpenVINO  |                 NLP                 |
 | [MONAI Segmentation Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/ct-segmentation-quantize)<br>[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openvinotoolkit/openvino_notebooks/HEAD?filepath=notebooks%2Fct-segmentation-quantize%2Fct-scan-live-inference.ipynb)     |                               Post-Training Quantization                                |  OpenVINO  |            Segmentation             |
 | [PyTorch Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-post-training-quantization-nncf)                                                                                                                                                                                                      |                               Post-Training Quantization                                |  PyTorch   |        Image Classification         |
-| [Quantization with Accuracy Control](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/quantizing-model-with-accuracy-control)                                                                                                                                                                                               |                    Post-Training Quantization with Accuracy Control                     |  OpenVINO  | Speech-to-Text,<br>Object Detection |
+| [YOLOv11 Quantization with Accuracy Control](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov11-quantization-with-accuracy-control)                                                                                                                                                                                               |                    Post-Training Quantization with Accuracy Control                     |  OpenVINO  | Speech-to-Text,<br>Object Detection |
 | [PyTorch Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-quantization-aware-training)                                                                                                                                                                                                   |                                Training-Time Compression                                |  PyTorch   |        Image Classification         |
 | [TensorFlow Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/tensorflow-quantization-aware-training)                                                                                                                                                                                                       |                                Training-Time Compression                                | Tensorflow |        Image Classification         |
 | [Joint Pruning, Quantization and Distillation for BERT](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/sparsity-optimization)                                                                                                                                                                                             |                      Joint Pruning, Quantization and Distillation                       |  OpenVINO  |                 NLP                 |

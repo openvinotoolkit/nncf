@@ -85,7 +85,7 @@ files = [
     "nncf/data",
     "nncf/common",
     "nncf/config",
-    "nncf/experimental/torch2",
+    "nncf/torch/function_hook",
     "nncf/quantization/*py",
     "nncf/telemetry/",
     "nncf/tensor/",
@@ -102,7 +102,7 @@ disable_error_code = ["empty-body", "no-any-return"]
 line-length = 120
 exclude = [
     "nncf/tensorflow/__init__.py",
-    "nncf/experimental/torch2/function_hook/handle_inner_functions.py"
+    "nncf/torch/function_hook/handle_inner_functions.py"
 ]
 
 [tool.ruff.lint]
@@ -118,7 +118,6 @@ ignore = [
     "SIM117", # multiple-with-statements
     "SIM103", # needless-bool
     "NPY002", # numpy-legacy-random
-    "UP006", # non-pep585-annotation
     "UP007", # non-pep604-annotation-union
     "UP035", # deprecated-import
     "UP038", # non-pep604-isinstance
@@ -142,6 +141,9 @@ ignore = [
     "D413", # missing-blank-line-after-last-section
     "D415", # missing-terminal-punctuation
     "D417", # undocumented-param
+    "PERF203", # try-except-in-loop
+    "PERF401", # manual-list-comprehension
+    "PERF403", # manual-dict-comprehension
 ]
 select = [
     "CPY001", # copyright check
@@ -154,6 +156,7 @@ select = [
     "ISC", # flake8-implicit-str-concat
     "NPY", # numpy rules
     "UP", # pyupgrade
+    "PERF", # perflint
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify

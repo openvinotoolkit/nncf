@@ -11,7 +11,7 @@
 
 import functools
 import itertools
-from typing import Optional, Type
+from typing import Optional
 
 import torch
 
@@ -61,7 +61,7 @@ class InsertionCommandBuilder:
 
     AVAILABLE_MODELS = (TwoConvTestModel, TwoSharedConvTestModel)
 
-    def __init__(self, model_cls: Type[torch.nn.Module]):
+    def __init__(self, model_cls: type[torch.nn.Module]):
         self.model_cls = model_cls
 
     TRACE_VS_NODE_NAMES = {True: "CONV_NODES_NAMES", False: "NNCF_CONV_NODES_NAMES"}

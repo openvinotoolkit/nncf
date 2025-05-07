@@ -24,25 +24,25 @@ from transformers import AutoTokenizer
 import nncf
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch import load_from_config
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.torch.model_creation import get_config
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.ptq.test_weights_compression import ShortTransformer
 from tests.torch.test_models.synthetic import LinearModel
+from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 
-REF_DIR = TEST_ROOT / "torch2" / "data" / "reference_graphs" / "compress_weights" / "fq_lora"
+REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "compress_weights" / "fq_lora"
 
 
 class ValidationMock:
@@ -72,8 +72,11 @@ def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenize
 
 def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
     model = model.cpu()
-    export_from_model(model, tmp_path)
 
+    # TODO(AlexanderDokuchaev): WA for optimum patcher, remove after update optimum-intel>1.22.0
+    saved_ops = torch.ops._prepare_4d_causal_attention_mask_for_sdpa
+    export_from_model(model, tmp_path)
+    torch.ops._prepare_4d_causal_attention_mask_for_sdpa = saved_ops
     return OVModelForCausalLM.from_pretrained(
         model_id=tmp_path,
         trust_remote_code=True,

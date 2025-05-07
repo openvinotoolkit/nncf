@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Dict, List
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerId
@@ -17,18 +16,18 @@ from nncf.common.quantization.structs import QuantizerId
 
 class HardwareQuantizationConstraints:
     def __init__(self):
-        self._constraints: Dict[QuantizerId, List[QuantizerConfig]] = {}
+        self._constraints: dict[QuantizerId, list[QuantizerConfig]] = {}
 
-    def add(self, quantizer_id: QuantizerId, qconfigs: List[QuantizerConfig]):
+    def add(self, quantizer_id: QuantizerId, qconfigs: list[QuantizerConfig]):
         self._constraints[quantizer_id] = qconfigs
 
-    def get(self, quantizer_id: QuantizerId) -> List[QuantizerConfig]:
+    def get(self, quantizer_id: QuantizerId) -> list[QuantizerConfig]:
         if quantizer_id in self._constraints:
             return deepcopy(self._constraints[quantizer_id])
         return []
 
-    def get_bitwidth_vs_qconfigs_dict(self, quantizer_id: QuantizerId) -> Dict[int, List[QuantizerConfig]]:
-        bitwidths_vs_qconfigs: Dict[int, List[QuantizerConfig]] = {}
+    def get_bitwidth_vs_qconfigs_dict(self, quantizer_id: QuantizerId) -> dict[int, list[QuantizerConfig]]:
+        bitwidths_vs_qconfigs: dict[int, list[QuantizerConfig]] = {}
         for qc in self.get(quantizer_id):
             if qc.num_bits not in bitwidths_vs_qconfigs:
                 bitwidths_vs_qconfigs[qc.num_bits] = [qc]
@@ -36,11 +35,11 @@ class HardwareQuantizationConstraints:
                 bitwidths_vs_qconfigs[qc.num_bits].append(qc)
         return bitwidths_vs_qconfigs
 
-    def replace(self, quantizer_id: QuantizerId, qconfig_set: List[QuantizerConfig]):
+    def replace(self, quantizer_id: QuantizerId, qconfig_set: list[QuantizerConfig]):
         if quantizer_id in self._constraints:
             self._constraints[quantizer_id] = qconfig_set
 
-    def get_all_unique_bitwidths(self, qid: QuantizerId = None) -> List[int]:
+    def get_all_unique_bitwidths(self, qid: QuantizerId = None) -> list[int]:
         result = set()
         if qid is None:
             for qconfig_set in self._constraints.values():

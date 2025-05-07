@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 import numpy as np
 import onnx
@@ -39,7 +38,7 @@ def get_data_from_node(model: onnx.ModelProto, node_name: str):
 
 class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> np.ndarray:
+    def list_to_backend_type(data: list) -> np.ndarray:
         return np.array(data)
 
     @staticmethod
@@ -75,7 +74,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         return compare_nncf_graph(model, ref_path)
 
     @staticmethod
-    def check_bias(model: onnx.ModelProto, ref_biases: Dict) -> None:
+    def check_bias(model: onnx.ModelProto, ref_biases: dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)

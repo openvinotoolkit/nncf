@@ -10,7 +10,7 @@
 # limitations under the License.
 import functools
 from copy import deepcopy
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import torch
 from torch.nn import DataParallel
@@ -210,7 +210,7 @@ def _execute_op(
 
 def _collect_module_attrs_and_ignored_algorithms(
     ctx: TracingContext, op_name: str, args, kwargs
-) -> Tuple[BaseLayerAttributes, List[str]]:
+) -> tuple[BaseLayerAttributes, list[str]]:
     ignored_algos = []
     layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
 

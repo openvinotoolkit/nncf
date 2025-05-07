@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -22,11 +22,11 @@ from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.algorithm import Algorithm
 
 TModel = TypeVar("TModel")
-PipelineStep = List[Algorithm]
+PipelineStep = list[Algorithm]
 
 
 def collect_statistics(
-    containers: Union[StatisticPointsContainer, List[StatisticPointsContainer]],
+    containers: Union[StatisticPointsContainer, list[StatisticPointsContainer]],
     model: TModel,
     graph: NNCFGraph,
     dataset: Dataset,
@@ -66,14 +66,14 @@ class Pipeline:
     algorithms in this step.
     """
 
-    def __init__(self, pipeline_steps: List[PipelineStep]):
+    def __init__(self, pipeline_steps: list[PipelineStep]):
         """
         :param pipeline_steps: A sequence of pipeline steps to be executed in order.
         """
         self._pipeline_steps = pipeline_steps
 
     @property
-    def pipeline_steps(self) -> List[PipelineStep]:
+    def pipeline_steps(self) -> list[PipelineStep]:
         """
         Property that defines the sequence of distinct pipeline steps to
         be executed in order.
@@ -126,7 +126,7 @@ class Pipeline:
         dataset: Dataset,
         graph: Optional[NNCFGraph] = None,
         start_step_index: int = 0,
-        step_index_to_statistics: Optional[Dict[int, StatisticPointsContainer]] = None,
+        step_index_to_statistics: Optional[dict[int, StatisticPointsContainer]] = None,
     ) -> TModel:
         """
         Executes the pipeline from the specified pipeline step to the end.
@@ -188,7 +188,7 @@ class Pipeline:
 
         return container
 
-    def _remove_unsupported_algorithms(self, backend: BackendType) -> List[PipelineStep]:
+    def _remove_unsupported_algorithms(self, backend: BackendType) -> list[PipelineStep]:
         pipeline_steps = []
         for pipeline_step in self._pipeline_steps:
             step = []

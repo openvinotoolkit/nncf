@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import jsonschema
 
@@ -149,7 +149,7 @@ NNCF_CONFIG_SCHEMA = {
 
 
 def validate_single_compression_algo_schema(
-    single_compression_algo_dict: Dict[str, Any], ref_vs_algo_schema: Dict[str, Any]
+    single_compression_algo_dict: dict[str, Any], ref_vs_algo_schema: dict[str, Any]
 ) -> None:
     """
     single_compression_algo_dict must conform to BASIC_COMPRESSION_ALGO_SCHEMA (and possibly has other
@@ -174,7 +174,7 @@ def validate_single_compression_algo_schema(
         raise e
 
 
-def validate_accuracy_aware_training_schema(single_compression_algo_dict: Dict[str, Any]) -> None:
+def validate_accuracy_aware_training_schema(single_compression_algo_dict: dict[str, Any]) -> None:
     """
     Checks accuracy_aware_training section.
     """

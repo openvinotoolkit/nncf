@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf.common import factory
@@ -59,7 +59,7 @@ class SparsifyActivationsAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def supported_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes for supported layers.
         """
@@ -69,7 +69,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         self,
         model: TModel,
         graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
+        target_sparsity_by_node: dict[NNCFNode, float],
     ) -> TModel:
         """
         Inserts the activation sparsifiers to the model.
@@ -99,7 +99,7 @@ class SparsifyActivationsAlgorithm:
 
     def __init__(
         self,
-        target_sparsity_by_scope: Dict[TargetScope, float],
+        target_sparsity_by_scope: dict[TargetScope, float],
         ignored_scope: IgnoredScope,
     ):
         """
@@ -112,7 +112,7 @@ class SparsifyActivationsAlgorithm:
         self._backend_entity: SparsifyActivationsAlgoBackend = None
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         """
         Supported backends for this algorithm.
         """
@@ -141,7 +141,7 @@ class SparsifyActivationsAlgorithm:
         self,
         model: TModel,
         graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
+        target_sparsity_by_node: dict[NNCFNode, float],
         dataset: Dataset,
     ):
         """
@@ -173,7 +173,7 @@ class SparsifyActivationsAlgorithm:
             msg = f"{model_backend.value} backend is not supported for `sparsify_activations`."
             raise nncf.UnsupportedBackendError(msg)
 
-    def _get_target_sparsity_by_node(self, graph: NNCFGraph) -> Dict[NNCFNode, float]:
+    def _get_target_sparsity_by_node(self, graph: NNCFGraph) -> dict[NNCFNode, float]:
         """
         Collects nodes in the model's graph corresponding to the layers for sparsification.
 
@@ -206,7 +206,7 @@ class SparsifyActivationsAlgorithm:
 def sparsify_activations(
     model: TModel,
     dataset: Dataset,
-    target_sparsity_by_scope: Dict[TargetScope, float],
+    target_sparsity_by_scope: dict[TargetScope, float],
     ignored_scope: Optional[IgnoredScope] = None,
 ) -> TModel:
     """
@@ -260,4 +260,7 @@ def sparsify_activations(
 
     graph = NNCFGraphFactory.create(model)
     sparse_model = algorithm.apply(model, graph, dataset)
+
+    if backend == BackendType.TORCH:
+        sparse_model = sparse_model.model
     return sparse_model

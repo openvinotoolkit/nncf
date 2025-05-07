@@ -11,7 +11,6 @@
 
 from abc import ABC
 from pathlib import Path
-from typing import Dict
 
 import pytest
 import torch
@@ -25,6 +24,8 @@ from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor
 
+pytestmark = pytest.mark.legacy
+
 
 class PrecisionTestCaseDescriptor(SanityTestCaseDescriptor, ABC):
     def __init__(self):
@@ -36,7 +37,7 @@ class PrecisionTestCaseDescriptor(SanityTestCaseDescriptor, ABC):
     def config_directory(self) -> Path:
         return TEST_ROOT / "torch" / "data" / "configs" / "hawq"
 
-    def get_precision_section(self) -> Dict:
+    def get_precision_section(self) -> dict:
         raise NotImplementedError
 
     def get_compression_section(self):
@@ -91,7 +92,7 @@ class HAWQTestCaseDescriptor(PrecisionTestCaseDescriptor):
         result.update({"batch_size_init": self.batch_size_init_} if self.batch_size_init_ else {})
         return result
 
-    def get_precision_section(self) -> Dict:
+    def get_precision_section(self) -> dict:
         return {"type": "hawq", "num_data_points": 3, "iter_number": 1}
 
     def __str__(self):
@@ -146,7 +147,7 @@ class AutoQTestCaseDescriptor(PrecisionTestCaseDescriptor):
         self.debug_dump = debug_dump
         return self
 
-    def get_precision_section(self) -> Dict:
+    def get_precision_section(self) -> dict:
         return {
             "type": "autoq",
             "bits": self.BITS,
@@ -280,7 +281,7 @@ class ExportTestCaseDescriptor(PrecisionTestCaseDescriptor):
     def get_validator(self):
         return ExportSampleValidator(self)
 
-    def get_precision_section(self) -> Dict:
+    def get_precision_section(self) -> dict:
         return {}
 
     def get_sample_params(self):

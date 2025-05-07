@@ -12,7 +12,7 @@
 import json
 import os
 from functools import partial
-from typing import Callable, List, Optional, Type, Union
+from typing import Callable, Optional, Union
 
 import pytest
 import torch
@@ -36,6 +36,8 @@ from tests.torch.test_models import squeezenet1_0
 from tests.torch.test_models import ssd_mobilenet
 from tests.torch.test_models.inceptionv3 import Inception3
 from tests.torch.test_models.resnet import ResNet50
+
+pytestmark = pytest.mark.legacy
 
 
 def check_blocks_and_groups(name, actual_blocks: BuildingBlocks, actual_group_dependent: GroupedBlockIDs):
@@ -62,8 +64,8 @@ def check_blocks_and_groups(name, actual_blocks: BuildingBlocks, actual_group_de
 class BuildingBlockParamsCase:
     def __init__(
         self,
-        model_creator: Union[Type[torch.nn.Module], Callable[[], torch.nn.Module]],
-        input_sizes: List[int],
+        model_creator: Union[type[torch.nn.Module], Callable[[], torch.nn.Module]],
+        input_sizes: list[int],
         min_block_size: int = 5,
         max_block_size: int = 50,
         name: Optional[str] = None,

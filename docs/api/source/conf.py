@@ -14,7 +14,7 @@ import inspect
 import os
 import pkgutil
 import sys
-from typing import Any, Dict
+from typing import Any
 
 from sphinx.ext.autodoc import mock
 
@@ -51,9 +51,9 @@ exclude_patterns = []
 
 class APIInfo:
     def __init__(self):
-        self.api_names_vs_obj_dict: Dict[str, Any] = {}
-        self.fqn_vs_canonical_name: Dict[str, str] = {}
-        self.canonical_name_vs_fqn: Dict[str, str] = {}
+        self.api_names_vs_obj_dict: dict[str, Any] = {}
+        self.fqn_vs_canonical_name: dict[str, str] = {}
+        self.canonical_name_vs_fqn: dict[str, str] = {}
 
 
 def collect_api_entities() -> APIInfo:
@@ -66,7 +66,7 @@ def collect_api_entities() -> APIInfo:
     """
     retval = APIInfo()
     modules = {}
-    skipped_modules: Dict[str, str] = {}
+    skipped_modules: dict[str, str] = {}
     import nncf
 
     for _, modname, _ in pkgutil.walk_packages(path=nncf.__path__, prefix=nncf.__name__ + ".", onerror=lambda x: None):
@@ -146,6 +146,9 @@ mock_modules = [
     "nncf.tensor.functions.torch_io",
     "nncf.tensor.functions.numpy_io",
     "nncf.tensor.functions.openvino_numeric",
+    "nncf.tensor.functions.tf_numeric",
+    "nncf.tensor.functions.tf_io",
+    "nncf.tensor.functions.tf_linalg",
     "nncf.torch.dynamic_graph.patch_pytorch",
 ]
 

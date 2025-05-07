@@ -12,7 +12,6 @@
 import os
 from pathlib import Path
 from time import time
-from typing import Tuple
 
 # We need to import openvino.torch for torch.compile() with openvino backend to work.
 import openvino.torch  # noqa
@@ -33,7 +32,6 @@ import nncf
 import nncf.torch
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
-from nncf.torch import disable_patching
 
 IMAGE_SIZE = 64
 
@@ -99,7 +97,7 @@ def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, de
     return top1_avg
 
 
-def accuracy(output: torch.Tensor, target: torch.tensor, topk: Tuple[int, ...] = (1,)):
+def accuracy(output: torch.Tensor, target: torch.tensor, topk: tuple[int, ...] = (1,)):
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)
@@ -193,12 +191,11 @@ def main():
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
     example_input = torch.ones(*input_shape).to(device)
 
-    with disable_patching():
-        fx_model = torch.export.export_for_training(model.eval(), args=(example_input,)).module()
-        quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
-        quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
+    fx_model = torch.export.export_for_training(model.eval(), args=(example_input,)).module()
+    quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
+    quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
 
-        acc1_int8 = validate(val_loader, quantized_fx_model, device)
+    acc1_int8 = validate(val_loader, quantized_fx_model, device)
 
     print(f"Accuracy@1 of INT8 model: {acc1_int8:.3f}")
     print(f"Accuracy diff FP32 - INT8: {acc1_fp32 - acc1_int8:.3f}")
@@ -207,29 +204,26 @@ def main():
     # Step 3: Run benchmarks
     print(os.linesep + "[Step 3] Run benchmarks")
     print("Benchmark FP32 model compiled with default backend ...")
-    with disable_patching():
-        compiled_model = torch.compile(model)
-        try:
-            fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
-        except BackendCompilerFailed as exp:
-            if not is_windows():
-                raise exp
-            print(
-                "WARNING: Torch Inductor is currently unavailable on Windows. "
-                "For more information, visit https://github.com/pytorch/pytorch/issues/135954"
-            )
-            fp32_latency = float("nan")
+    compiled_model = torch.compile(model)
+    try:
+        fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+    except BackendCompilerFailed as exp:
+        if not is_windows():
+            raise exp
+        print(
+            "WARNING: Torch Inductor is currently unavailable on Windows. "
+            "For more information, visit https://github.com/pytorch/pytorch/issues/135954"
+        )
+        fp32_latency = float("nan")
     print(f"{fp32_latency:.3f} ms")
 
     print("Benchmark FP32 model compiled with openvino backend ...")
-    with disable_patching():
-        compiled_model = torch.compile(model, backend="openvino")
-        fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
+    compiled_model = torch.compile(model, backend="openvino")
+    fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_ov_latency:.3f} ms")
 
     print("Benchmark INT8 model compiled with openvino backend ...")
-    with disable_patching():
-        int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
+    int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
     print(f"{int8_latency:.3f} ms")
 
     print("[Step 4] Summary:")

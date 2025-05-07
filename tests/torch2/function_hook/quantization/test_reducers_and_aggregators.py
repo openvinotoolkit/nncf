@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import ABC
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import pytest
@@ -60,7 +60,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
         ref_ = torch.tensor(ref).to(val_.device)
         return torch.allclose(val_, ref_) and val_.shape == ref_.shape
 
-    def squeeze_tensor(self, ref_tensor: List[Any], axes: Optional[Tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
         if axes is None:
             return torch.tensor(ref_tensor).squeeze()
         return torch.tensor(ref_tensor).squeeze(axes)

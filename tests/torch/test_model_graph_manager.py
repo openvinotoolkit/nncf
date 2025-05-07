@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import pytest
 import torch
@@ -76,7 +75,7 @@ MODELS_LIST = [
 class TestManagerForOriginalModels:
     @pytest.fixture(autouse=True, scope="function")
     def init_models(self):
-        self.models: Dict[str, ModelDesc] = {
+        self.models: dict[str, ModelDesc] = {
             "ConvBiasBNTestModel": ModelDesc(helpers.ConvBiasBNTestModel, "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0"),
             "ConvBNTestModel": ModelDesc(helpers.ConvBNTestModel, "ConvBNTestModel/Conv2d[conv]/conv2d_0"),
             "ConvTestModel": ModelDesc(helpers.ConvTestModel, "ConvTestModel/Conv2d[conv]/conv2d_0"),
@@ -103,7 +102,7 @@ class TestManagerForOriginalModels:
     }
 
     @pytest.fixture(params=MODELS_LIST)
-    def model_desc(self, request) -> Tuple[str, ModelDesc]:
+    def model_desc(self, request) -> tuple[str, ModelDesc]:
         return request.param, self.models[request.param]
 
     def test_get_potential_fused_node(self, model_desc):

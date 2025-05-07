@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List, Tuple
 
 import numpy as np
 import onnx
@@ -160,7 +159,7 @@ def get_weight_fq_for_conv_node(node: onnx.NodeProto, graph: onnx.GraphProto):
 
 def get_input_low_input_high_for_wfq_node(
     wfq_node: onnx.NodeProto, graph: onnx.GraphProto
-) -> Tuple[onnx.AttributeProto, onnx.AttributeProto]:
+) -> tuple[onnx.AttributeProto, onnx.AttributeProto]:
     assert wfq_node.op_type == "FakeQuantize"
     conv_wfq_inputs = list(resolve_constant_node_inputs_to_values(wfq_node, graph).values())
     return conv_wfq_inputs[1], conv_wfq_inputs[2]
@@ -203,7 +202,7 @@ class ModelWithBranches(torch.nn.Module):
         return x1, x2, x3, x4
 
 
-def get_successors(node: onnx.NodeProto, graph: onnx.GraphProto) -> List[onnx.NodeProto]:
+def get_successors(node: onnx.NodeProto, graph: onnx.GraphProto) -> list[onnx.NodeProto]:
     retval = []
     for output_name in node.output:
         for target_node in graph.node:
@@ -245,8 +244,8 @@ def test_branching_fqs_are_not_chained(tmp_path, export_mode):
 
 
 def set_parameters_to_quantizer_and_get_attrs(
-    quantizer: BaseQuantizer, paramaters_to_set: Dict
-) -> Tuple[np.ndarray, np.ndarray, int]:
+    quantizer: BaseQuantizer, paramaters_to_set: dict
+) -> tuple[np.ndarray, np.ndarray, int]:
     if isinstance(quantizer, SymmetricQuantizer):
         return set_scale_to_sym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
     return set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(quantizer, **paramaters_to_set)
@@ -254,7 +253,7 @@ def set_parameters_to_quantizer_and_get_attrs(
 
 def set_scale_to_sym_quantizer_and_get_attrs(
     quantizer: SymmetricQuantizer, scale: float
-) -> Tuple[np.ndarray, np.ndarray, int]:
+) -> tuple[np.ndarray, np.ndarray, int]:
     scale = np.full(quantizer.scale.size(), scale)
     levels = quantizer.levels
     level_low = quantizer.level_low
@@ -268,7 +267,7 @@ def set_scale_to_sym_quantizer_and_get_attrs(
 
 def set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(
     quantizer: AsymmetricQuantizer, input_low: float, input_range: float
-) -> Tuple[np.ndarray, np.ndarray, int]:
+) -> tuple[np.ndarray, np.ndarray, int]:
     input_low = np.full(quantizer.input_low.size(), input_low)
     input_range = np.full(quantizer.input_low.size(), input_range)
     levels = quantizer.levels
@@ -279,7 +278,7 @@ def set_input_low_and_input_range_to_asym_quantizer_and_get_attrs(
 
 
 def generate_middle_quants(
-    size: List[int], input_low: np.ndarray, quant_len: np.ndarray, levels: np.ndarray
+    size: list[int], input_low: np.ndarray, quant_len: np.ndarray, levels: np.ndarray
 ) -> torch.Tensor:
     ref_weights = [input_low + (i + 0.5) * quant_len for i in range(levels)]
     elems = np.prod(size)

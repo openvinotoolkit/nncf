@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import tensorflow as tf
 from tensorflow.lite.python.util import get_grappler_config as _get_grappler_config
@@ -44,7 +44,7 @@ class TensorFlowGraphBuilder:
         self._model = model
         self._input_signature = tf.nest.flatten(input_signature)
 
-    def build(self, graph_optimizers: List[str]):
+    def build(self, graph_optimizers: list[str]):
         """
         :param graph_optimizers: A list of the strings that represent
             the list of optimizers.
@@ -133,7 +133,7 @@ class EdgeDesc:
         output_port_id: int,
         consumer_op_name: str,
         input_port_id: int,
-        tensor_shape: List[int],
+        tensor_shape: list[int],
         tensor_dtype: Dtype,
     ):
         """
@@ -166,9 +166,9 @@ class SubclassedConverter(TFModelConverter):
     def __init__(
         self,
         model: tf.keras.Model,
-        input_signature: List[tf.TensorSpec],
+        input_signature: list[tf.TensorSpec],
         training: bool = False,
-        graph_optimizers: Optional[List[str]] = None,
+        graph_optimizers: Optional[list[str]] = None,
     ):
         """
         Initializes the subclassed converter.
@@ -215,7 +215,7 @@ class SubclassedConverter(TFModelConverter):
         return nncf_graph
 
     @staticmethod
-    def _create_nncf_graph_from_descs(node_descs: List[NodeDesc], edge_descs: List[EdgeDesc]) -> NNCFGraph:
+    def _create_nncf_graph_from_descs(node_descs: list[NodeDesc], edge_descs: list[EdgeDesc]) -> NNCFGraph:
         """
         Creates the NNCF graph from the provided nodes and edges descriptions.
 
@@ -277,7 +277,7 @@ class SubclassedConverter(TFModelConverter):
         return tf.keras.backend.image_data_format()
 
     @staticmethod
-    def _collect_tfgraph_descs(graph: tf.Graph, op_names: List[str]) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
+    def _collect_tfgraph_descs(graph: tf.Graph, op_names: list[str]) -> tuple[list[NodeDesc], list[EdgeDesc]]:
         """
         Traverses the TF graph and collects information about nodes and edges
         which should be included to the NNCF graph.
@@ -294,9 +294,9 @@ class SubclassedConverter(TFModelConverter):
 
         # If `op_name` in `visited_ops` then operation `visited_ops[op_name]`
         # (i.e. operation with `op_name` name) is reachable from the `input_ops`.
-        input_ops: List[tf.Operation] = [graph.get_operation_by_name(name) for name in op_names]
+        input_ops: list[tf.Operation] = [graph.get_operation_by_name(name) for name in op_names]
         queue = deque(input_ops)
-        visited_ops: Dict[str, tf.Operation] = {op.name: op for op in input_ops}
+        visited_ops: dict[str, tf.Operation] = {op.name: op for op in input_ops}
         while len(queue) != 0:
             v = queue.popleft()
             # A successor of node `v` is a node `u` such that exists
@@ -384,8 +384,8 @@ class SubclassedConverter(TFModelConverter):
 
     @staticmethod
     def _get_op_name_to_const_op_names_map(
-        graph, marked_ops: Dict[str, tf.Operation]
-    ) -> Dict[str, List[Tuple[str, bool]]]:
+        graph, marked_ops: dict[str, tf.Operation]
+    ) -> dict[str, list[tuple[str, bool]]]:
         """
         Returns information about constant operations for the `marked_ops`.
 
@@ -399,7 +399,7 @@ class SubclassedConverter(TFModelConverter):
         """
         const_ops = [op for op in graph.get_operations() if op.type == "Const"]
 
-        const_op_name_to_op_names_map: Dict[str, List[str]] = {}
+        const_op_name_to_op_names_map: dict[str, list[str]] = {}
         for const_op in const_ops:
             # Traverse the `graph` from the `const_op` and find the reachable ops
             # which are marked as visited (i.e. it's name in `marked_ops` dict)
@@ -419,7 +419,7 @@ class SubclassedConverter(TFModelConverter):
                         queue.append(u)
                         visited_ops[u.name] = u
 
-        op_name_to_const_op_names_map: Dict[str, List[Tuple[str, bool]]] = {}
+        op_name_to_const_op_names_map: dict[str, list[tuple[str, bool]]] = {}
         for const_op_name, op_names in const_op_name_to_op_names_map.items():
             is_shared = len(op_names) > 1
             for op_name in op_names:

@@ -17,7 +17,7 @@ from copy import copy
 from copy import deepcopy
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Dict
+from typing import Any
 
 import defusedxml.ElementTree as dET
 import networkx as nx
@@ -63,8 +63,8 @@ def dict_to_xml(data: Any, parent: ET.Element):
         parent.text = str(data)
 
 
-def get_edges(xml_dict: Dict):
-    def add_edge(edges: Dict, from_layer: int, from_port: int, to_layer: int, to_port: int):
+def get_edges(xml_dict: dict):
+    def add_edge(edges: dict, from_layer: int, from_port: int, to_layer: int, to_port: int):
         if from_layer not in edges:
             edges[from_layer] = {}
         if from_port not in edges[from_layer]:
@@ -87,7 +87,7 @@ def get_edges(xml_dict: Dict):
     return edges
 
 
-def get_nodes(xml_dict: Dict, edges: Dict):
+def get_nodes(xml_dict: dict, edges: dict):
     all_node_names = set()
     nodes = {}
     for node in xml_dict["layers"]["layer"]:
@@ -145,7 +145,7 @@ def get_nodes(xml_dict: Dict, edges: Dict):
                     continue
                 else:
                     edge = edges[node_id][from_port]
-                for (to_node_id, to_port), edge_properties_dict in edge.items():
+                for edge_properties_dict in edge.values():
                     for name, value in zip(("precision", "shape", "is_input"), (precision, shape, is_input)):
                         assert name not in edge_properties_dict
                         edge_properties_dict[name] = value
@@ -156,11 +156,11 @@ def get_nodes(xml_dict: Dict, edges: Dict):
     return nodes
 
 
-def create_nx_graph(xml_dict: Dict):
-    def get_node_label(nodes: Dict, node_id: int):
+def create_nx_graph(xml_dict: dict):
+    def get_node_label(nodes: dict, node_id: int):
         return nodes[node_id]["name"]
 
-    def get_edge_label(edges: Dict, nodes: Dict, from_node: int, from_port: int, to_node: int, to_port: int):
+    def get_edge_label(edges: dict, nodes: dict, from_node: int, from_port: int, to_node: int, to_port: int):
         edge_properties = edges[from_node][from_port][(to_node, to_port)]
         return f'"{edge_properties["shape"]}\n{from_port}->{to_port}"'
 
@@ -189,7 +189,7 @@ def create_nx_graph(xml_dict: Dict):
     return G
 
 
-def write_xml(xml_dict: Dict, filepath: Path):
+def write_xml(xml_dict: dict, filepath: Path):
     write_root = ET.Element("net")
     dict_to_xml(xml_dict, write_root)
     xml_str = ET.tostring(write_root).decode()
@@ -198,7 +198,7 @@ def write_xml(xml_dict: Dict, filepath: Path):
         f.write(xml_str)
 
 
-def take_model_subgraph(xml_dict: Dict, source_node_name: str, distance: int):
+def take_model_subgraph(xml_dict: dict, source_node_name: str, distance: int):
     # Create networkx graph from IR xml dictionary
     G = create_nx_graph(xml_dict)
 

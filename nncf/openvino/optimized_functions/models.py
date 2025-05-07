@@ -13,14 +13,14 @@ import copy
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import openvino as ov
+from openvino import Node
+from openvino import opset13 as opset
 from openvino._pyopenvino.op import Parameter
 from openvino._pyopenvino.properties.hint import inference_precision
-from openvino.runtime import Node
-from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
@@ -34,9 +34,9 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
-TensorList = List[Tensor]
+TensorList = list[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
-ReductionAxes = Union[int, Tuple[int, ...]]
+ReductionAxes = Union[int, tuple[int, ...]]
 
 
 OV_MODEL_CACHE = ResultsCache()
@@ -60,8 +60,8 @@ class OVModelParameters:
         will be transformed at runtime to a*(1/b).
     """
 
-    input_dtypes: Dict[str, TensorDataType] = field(default_factory=dict)
-    output_dtypes: Dict[str, TensorDataType] = field(default_factory=dict)
+    input_dtypes: dict[str, TensorDataType] = field(default_factory=dict)
+    output_dtypes: dict[str, TensorDataType] = field(default_factory=dict)
     dynamic_shapes: bool = True
     release_memory: bool = True
     share_inputs: bool = True
@@ -111,14 +111,14 @@ class OVModelParameters:
         return copy.deepcopy(self)
 
 
-ModelAsNodes = Tuple[List[Parameter], List[Node], OVModelParameters]
+ModelAsNodes = tuple[list[Parameter], list[Node], OVModelParameters]
 
 
 def clear_ov_model_cache():
     OV_MODEL_CACHE.clear()
 
 
-def _compile_ov_model(model: ov.Model, device_name: str, config: Dict[str, str]) -> ov.CompiledModel:
+def _compile_ov_model(model: ov.Model, device_name: str, config: dict[str, str]) -> ov.CompiledModel:
     if is_lnl_cpu() and not is_openvino_at_least("2025.1"):
         with set_env_variable("DNNL_MAX_CPU_ISA", "AVX2_VNNI"):
             compiled_model = ov.compile_model(model, device_name=device_name, config=config)
@@ -170,11 +170,11 @@ def _infer_ov_model(
 
 def _prepare_compression_model_inputs(
     ov_model_params,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple],
-    zero_point_shape: Optional[Tuple],
+    weight_shape: tuple,
+    scale_shape: Optional[tuple],
+    zero_point_shape: Optional[tuple],
     reduction_axes: Optional[ReductionAxes],
-) -> Tuple[Tuple, Optional[Tuple], Optional[Tuple]]:
+) -> tuple[tuple, Optional[tuple], Optional[tuple]]:
     """
     Do some input checks and convert static shapes to dynamic shapes if needed.
     """
@@ -199,9 +199,9 @@ def _prepare_compression_model_inputs(
 def get_compress_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
-    zero_point_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
+    zero_point_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
@@ -236,9 +236,9 @@ def get_compress_weight_model(
 def get_compress_decompress_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
-    zero_point_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
+    zero_point_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
@@ -277,8 +277,8 @@ def get_compress_decompress_weight_model(
 def get_quantization_error_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    original_weight_shape: Tuple,
-    weight_shape: Tuple,
+    original_weight_shape: tuple,
+    weight_shape: tuple,
     original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
 ) -> ModelCallable:
@@ -307,9 +307,9 @@ def get_quantization_error_model(
 def _build_compress_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
-    zero_point_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
+    zero_point_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
@@ -457,9 +457,9 @@ def _build_compress_model(
 def _build_compress_decompress_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    weight_shape: Tuple,
-    scale_shape: Optional[Tuple] = None,
-    zero_point_shape: Optional[Tuple] = None,
+    weight_shape: tuple,
+    scale_shape: Optional[tuple] = None,
+    zero_point_shape: Optional[tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
     return_nodes: Optional[bool] = False,
@@ -517,8 +517,8 @@ def _build_compress_decompress_model(
 def _build_quantization_error_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    original_weight_shape: Tuple,
-    weight_shape: Tuple,
+    original_weight_shape: tuple,
+    weight_shape: tuple,
     original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
 ) -> ModelCallable:
@@ -548,7 +548,7 @@ def _build_quantization_error_model(
     return partial(_infer_ov_model, ov_model_params, compiled_model)
 
 
-def get_astype_model(ov_model_params: OVModelParameters, input_shape: Tuple) -> ModelCallable:
+def get_astype_model(ov_model_params: OVModelParameters, input_shape: tuple) -> ModelCallable:
     """
     Return a model that cast the input of the given shape to the given data type. Especially useful for
     casting from/to data types not supported by NumPy such as bfloat16, uint4 and int4.
@@ -566,7 +566,7 @@ def get_astype_model(ov_model_params: OVModelParameters, input_shape: Tuple) -> 
 
 
 @cache_results(OV_MODEL_CACHE)
-def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple) -> ModelCallable:
+def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: tuple) -> ModelCallable:
     input_dtypes = ov_model_params.input_dtypes
     if input_dtypes is None:
         msg = "Input dtypes must be provided."

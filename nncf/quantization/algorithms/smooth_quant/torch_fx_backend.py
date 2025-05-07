@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import torch.fx
 
@@ -49,7 +49,7 @@ class FXSQMultiply(torch.nn.Module):
 
 class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         return [
             om.PTConv1dMetatype,
             om.PTConv2dMetatype,
@@ -57,11 +57,11 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         ]
 
     @property
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTLinearMetatype]
 
     @property
-    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+    def quantize_agnostic_metatypes(self) -> list[OperatorMetatype]:
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.QUANTIZATION_AGNOSTIC]
 
     @staticmethod
@@ -85,7 +85,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
@@ -117,7 +117,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         source_node: NNCFNode,
         scale_value: torch.Tensor,
         source_output_port_id: int,
-        nodes: List[NNCFNode],
+        nodes: list[NNCFNode],
         scale_node_name: str,
     ) -> FXApplyTransformationCommand:
         input_port_id = 0

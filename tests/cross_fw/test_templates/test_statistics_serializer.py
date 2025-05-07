@@ -11,7 +11,6 @@
 import json
 from abc import abstractmethod
 from pathlib import Path
-from typing import Dict
 
 import pytest
 
@@ -25,7 +24,7 @@ from nncf.tensor.tensor import Tensor
 
 class TemplateTestStatisticsSerializer:
     @abstractmethod
-    def _get_backend_statistics(self) -> Dict[str, Dict[str, Tensor]]:
+    def _get_backend_statistics(self) -> dict[str, dict[str, Tensor]]:
         """Returns a dictionary of statistics for testing purposes."""
 
     @abstractmethod
@@ -33,7 +32,7 @@ class TemplateTestStatisticsSerializer:
         """Returns the backend used for testing."""
 
     @abstractmethod
-    def is_equal(self, a1: Dict[str, Tensor], a2: Dict[str, Tensor]) -> bool:
+    def is_equal(self, a1: dict[str, Tensor], a2: dict[str, Tensor]) -> bool:
         """Determine if two statistics are equal."""
 
     def test_load_no_statistics_file(self, tmp_path):

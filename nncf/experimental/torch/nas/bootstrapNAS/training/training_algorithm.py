@@ -10,7 +10,7 @@
 # limitations under the License.
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import torch
 
@@ -44,7 +44,7 @@ TrainEpochFnType = Callable[
     ],
     None,
 ]
-ValFnType = Callable[[TModel, DataLoaderType], Tuple[float, float, float]]
+ValFnType = Callable[[TModel, DataLoaderType], tuple[float, float, float]]
 
 
 class EBTrainAlgoStateNames:
@@ -70,7 +70,7 @@ class EpochBasedTrainingAlgorithm:
         self,
         nncf_network: NNCFNetwork,
         training_ctrl: BNASTrainingController,
-        checkpoint: Optional[Dict[str, Any]] = None,
+        checkpoint: Optional[dict[str, Any]] = None,
     ):
         """
         Initializes the training algorithm
@@ -112,7 +112,7 @@ class EpochBasedTrainingAlgorithm:
         checkpoint_save_dir: str,
         tensorboard_writer: Optional[TensorboardWriterType] = None,
         train_iters: Optional[float] = None,
-    ) -> Tuple[NNCFNetwork, ElasticityController]:
+    ) -> tuple[NNCFNetwork, ElasticityController]:
         """
         Implements a training loop for supernet training.
 

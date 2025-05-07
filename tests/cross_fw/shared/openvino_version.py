@@ -9,13 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
 
 import openvino as ov
 from packaging import version
 
 
-def get_openvino_major_minor_version() -> Tuple[int]:
+def get_openvino_major_minor_version() -> tuple[int]:
     ov_version = ov.__version__
     pos = ov_version.find("-")
     if pos != -1:

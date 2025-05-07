@@ -1,0 +1,20 @@
+strict digraph {
+input [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+weight [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
+bias [id=2, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"pre_hook__-linear-0__0[0]/abs/0" [id=3, type=abs, metatype=PTAbsMetatype];
+"__nncf_hooks.pre_hooks./linear/0__0.0.running_threshold" [id=4, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"pre_hook__-linear-0__0[0]/le/0" [id=5, type=le, metatype=UnknownMetatype];
+"pre_hook__-linear-0__0[0]/masked_fill/0" [id=6, type="masked_fill", metatype=PTScatterMetatype];
+"/linear/0" [id=7, type=linear, metatype=PTLinearMetatype];
+output [id=8, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+input -> "pre_hook__-linear-0__0[0]/abs/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+input -> "pre_hook__-linear-0__0[0]/masked_fill/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+weight -> "/linear/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=1];
+bias -> "/linear/0" [dtype=float, shape="(2,)", out_port_id=0, in_port_id=2];
+"pre_hook__-linear-0__0[0]/abs/0" -> "pre_hook__-linear-0__0[0]/le/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks./linear/0__0.0.running_threshold" -> "pre_hook__-linear-0__0[0]/le/0" [dtype=float, shape="()", out_port_id=0, in_port_id=1];
+"pre_hook__-linear-0__0[0]/le/0" -> "pre_hook__-linear-0__0[0]/masked_fill/0" [dtype=int, shape="(2, 4)", out_port_id=0, in_port_id=1];
+"pre_hook__-linear-0__0[0]/masked_fill/0" -> "/linear/0" [dtype=float, shape="(2, 4)", out_port_id=0, in_port_id=0];
+"/linear/0" -> output [dtype=float, shape="(2, 2)", out_port_id=0, in_port_id=0];
+}

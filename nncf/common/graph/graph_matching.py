@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List
 
 import networkx as nx  # type:ignore
 import networkx.algorithms.isomorphism as ism  # type:ignore
@@ -49,7 +48,7 @@ def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     return len(pattern) - len(non_pattern_nodes)
 
 
-def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgraph: Dict[str, str]) -> bool:
+def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgraph: dict[str, str]) -> bool:
     """
     Checks out whether the matched subgraph has:
     1) External predecessors of starting nodes.
@@ -104,7 +103,7 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
     return True
 
 
-def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_graph: GraphPattern) -> Dict[str, str]:
+def _copy_subgraph_excluding_non_pattern_node(subgraph: dict[str, str], pattern_graph: GraphPattern) -> dict[str, str]:
     """
     Copies a matching subgraph excluding the nodes having GraphPattern.NON_PATTERN_NODE_TYPE
        or GraphPattern.PATTERN_NODE_TO_EXCLUDE.
@@ -128,7 +127,7 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_
 
 def find_subgraphs_matching_pattern(
     graph: nx.DiGraph, pattern_graph: GraphPattern, strict: bool = True
-) -> List[List[str]]:
+) -> list[list[str]]:
     """
     Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
     Nodes in each subgraph is stored in lexicographical_topological_sort.

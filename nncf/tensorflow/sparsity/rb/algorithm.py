@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import List, Set
 
 import numpy as np
 import tensorflow as tf
@@ -59,7 +58,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         transformations = TFTransformationLayout()
 
-        processed_shared_layer_names: Set[str] = set()
+        processed_shared_layer_names: set[str] = set()
 
         for node in nncf_graph.get_all_nodes():
             if node.is_shared():
@@ -114,7 +113,7 @@ class RBSparsityController(BaseSparsityController):
     Controller class for regularization-based (RB) sparsity in TF.
     """
 
-    def __init__(self, target_model, config: NNCFConfig, op_names: List[str]):
+    def __init__(self, target_model, config: NNCFConfig, op_names: list[str]):
         super().__init__(target_model, op_names)
         algo_config = extract_algo_specific_config(config, "rb_sparsity")
         sparsity_init = algo_config.get("sparsity_init", SPARSITY_INIT)

@@ -11,20 +11,20 @@
 
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 import pytest
 import torch
 from pytest import FixtureRequest
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
-from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.torch.function_hook.hook_executor_mode import OpMeta
+from nncf.torch.function_hook.hook_executor_mode import generate_normalized_op_name
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.wrapper import register_pre_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 from tests.torch2.function_hook.helpers import CallCount
 from tests.torch2.function_hook.helpers import CounterHook
@@ -93,7 +93,7 @@ def test_get_current_executed_op_name():
 
 
 @pytest.fixture(params=["tensor", "list", "torch_return_type"])
-def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]:
+def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]:
     return {
         "tensor": torch.tensor(1),
         "list": [torch.tensor(1), torch.tensor([2])],
@@ -101,7 +101,7 @@ def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.T
     }.get(request.param)
 
 
-def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]):
+def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]):
     op_name = "/relu/0"
     hook_storage = HookStorage()
     hook_port_0 = CallCount()

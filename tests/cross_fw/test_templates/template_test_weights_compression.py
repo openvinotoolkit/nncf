@@ -12,7 +12,7 @@ import math
 import re
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, TypeVar
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -114,12 +114,12 @@ class TemplateWeightCompression(ABC):
         """Returns a backend tensor."""
 
     @abstractmethod
-    def check_weights(model: TModel, ref_ids: List[int]) -> None:
+    def check_weights(model: TModel, ref_ids: list[int]) -> None:
         """Checks that only weights with specified ids are compressed in int4 format."""
 
     @staticmethod
     @abstractmethod
-    def get_not_supported_algorithms() -> List[str]:
+    def get_not_supported_algorithms() -> list[str]:
         """
         Returns a list of not supported weight compression algorithms.
         """
@@ -303,7 +303,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
     def test_awq_scale_reference(self, monkeypatch):

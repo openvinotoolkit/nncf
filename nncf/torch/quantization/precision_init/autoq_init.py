@@ -18,7 +18,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -48,11 +48,11 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
         warmup_iter_number: int = None,
         compression_ratio: float = None,
         eval_subset_ratio: float = None,
-        ddpg_hparams_dict: Dict = None,
+        ddpg_hparams_dict: dict = None,
         hw_cfg_type: HWConfigType = None,
         skip_constraint: bool = False,
         finetune: bool = False,
-        bits: List[int] = None,
+        bits: list[int] = None,
     ):
         super().__init__(user_init_args)
         self.dump_autoq_data = dump_autoq_data
@@ -72,7 +72,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
     @classmethod
     def from_config(
         cls,
-        autoq_init_config_dict: Dict,
+        autoq_init_config_dict: dict,
         user_init_args: AutoQPrecisionInitArgs,
         target_hw_config_type: Optional[HWConfigType],
     ) -> "AutoQPrecisionInitParams":
@@ -214,7 +214,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         nncf_logger.info(f"[AutoQ] Elapsed time of AutoQ Precision Initialization (): {end_ts - start_ts}")
         return final_quantizer_setup
 
-    def _search(self, agent: DDPG, env: "QuantizationEnv") -> Tuple[pd.Series, float]:  # noqa: F821
+    def _search(self, agent: DDPG, env: "QuantizationEnv") -> tuple[pd.Series, float]:  # noqa: F821
         best_reward = -math.inf
         episode = 0
         episode_reward = 0.0
@@ -359,7 +359,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         return best_policy, best_reward
 
-    def _dump_best_episode(self, info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv"):  # noqa: F821
+    def _dump_best_episode(self, info_tuple: tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv"):  # noqa: F821
         if self._dump_autoq_data:
             episode = info_tuple[0]
             self.best_policy_dict[episode] = env.master_df["action"].astype("int")
@@ -385,7 +385,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
     def _dump_episode(
         self,
-        episodic_info_tuple: Tuple,
+        episodic_info_tuple: tuple,
         bit_stats_df: pd.DataFrame,
         env: "QuantizationEnv",  # noqa: F821
         agent: DDPG,
@@ -438,7 +438,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             if episode % int((self._iter_number + 10) / 10) == 0:
                 agent.save_model(self.dump_dir)
 
-    def _add_to_tensorboard(self, tb_writer: "SummaryWriter", log_tuple: Tuple):  # noqa: F821
+    def _add_to_tensorboard(self, tb_writer: "SummaryWriter", log_tuple: tuple):  # noqa: F821
         episode, final_reward, best_reward, accuracy, model_ratio, bop_ratio, value_loss, policy_loss, delta = log_tuple
 
         tb_writer.add_scalar("AutoQ/reward/last", final_reward, episode)
@@ -451,7 +451,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         tb_writer.add_scalar("AutoQ/agent/delta", delta, episode)
 
     def _generate_tensorboard_logging_string(
-        self, bit_stats_df: pd.DataFrame, master_df: pd.DataFrame, info_tuple: Tuple, skip_constraint=False
+        self, bit_stats_df: pd.DataFrame, master_df: pd.DataFrame, info_tuple: tuple, skip_constraint=False
     ) -> str:
         qdf = master_df  # For readability
         episode, reward, accuracy, model_ratio, bop_ratio = info_tuple

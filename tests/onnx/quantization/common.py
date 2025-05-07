@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import onnx
@@ -85,7 +85,7 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, len
     return Dataset(list(range(length)), transform_fn)
 
 
-def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str):
+def get_dataset_for_test(samples: list[tuple[np.ndarray, int]], input_name: str):
     def transform_fn(data_item):
         inputs = data_item
         return {input_name: [inputs]}
@@ -94,7 +94,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
 
 
 class ModelToTest:
-    def __init__(self, model_name: str, input_shape: Optional[List[int]] = None):
+    def __init__(self, model_name: str, input_shape: Optional[list[int]] = None):
         self.model_name = model_name
         self.path_ref_graph = self.model_name + ".dot"
         self.input_shape = input_shape
@@ -104,7 +104,7 @@ def min_max_quantize_model(
     original_model: onnx.ModelProto,
     convert_model_opset: bool = True,
     dataset_has_batch_size: bool = False,
-    quantization_params: Dict[str, Any] = None,
+    quantization_params: dict[str, Any] = None,
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
@@ -131,7 +131,7 @@ def ptq_quantize_model(
     original_model: onnx.ModelProto,
     convert_model_opset: bool = True,
     dataset_has_batch_size: bool = False,
-    quantization_params: Dict[str, Any] = None,
+    quantization_params: dict[str, Any] = None,
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
@@ -163,6 +163,6 @@ def compare_nncf_graph_onnx_models(quantized_model: onnx.ModelProto, _quantized_
     check_nx_graph(nx_graph, _nx_graph, check_edge_attrs=True)
 
 
-def find_ignored_scopes(disallowed_op_types: List[str], model: onnx.ModelProto) -> List[str]:
+def find_ignored_scopes(disallowed_op_types: list[str], model: onnx.ModelProto) -> list[str]:
     disallowed_op_types = set(disallowed_op_types)
     return [node.name for node in model.graph.node if node.op_type in disallowed_op_types]

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import tensorflow as tf
 
@@ -29,7 +28,7 @@ class TFSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
     Collects statistics for the sparse tf.keras.Model.
     """
 
-    def __init__(self, model: tf.keras.Model, operation_names: List[str]):
+    def __init__(self, model: tf.keras.Model, operation_names: list[str]):
         """
         Initializes statistics collector of the sparse tf.keras.Model.
 
@@ -41,7 +40,7 @@ class TFSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
         self._excluded_names = []
         self._sw_name_to_num_nonzero_map = {}
 
-    def _collect_weights_descriptions(self) -> List[WeightDescription]:
+    def _collect_weights_descriptions(self) -> list[WeightDescription]:
         weights_descriptions = []
         excluded_names = []
 

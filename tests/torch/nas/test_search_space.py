@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
-from typing import Any, Dict, List, NamedTuple, Optional
+from typing import Any, NamedTuple, Optional
 
 import pytest
 
@@ -25,6 +25,7 @@ from tests.torch.nas.test_state import COMMON_DEPTH_BASIC_DESC
 from tests.torch.nas.test_state import COMMON_DEPTH_SUPERNET_DESC
 from tests.torch.test_models import ResNet18
 
+pytestmark = pytest.mark.legacy
 KERNEL_SIZE_AND_SEARCH_SPACE = [(5, [5, 3]), (7, [7, 5, 3]), (1, [1])]
 
 LIST_KERNEL_SS_DESCS = [
@@ -41,8 +42,8 @@ LIST_KERNEL_SS_DESCS = [
 
 class WidthSearchSpaceParams(NamedTuple):
     max_out_channels: int
-    params: Optional[Dict[str, Any]]
-    list_output_channels: List[int]
+    params: Optional[dict[str, Any]]
+    list_output_channels: list[int]
     width_indicator: int = -1
 
     def __str__(self):

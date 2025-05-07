@@ -123,7 +123,7 @@ def test_synthetic_models_fc_scales(model_creator_func, mode):
     stat_nodes = get_fq_nodes_stats_algo(quantized_model)
 
     # Uncomment lines below to generate reference for new models.
-    # from tests.shared.helpers import dump_to_json
+    # from tests.cross_fw.shared.json import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
     compare_stats(ref_nodes, stat_nodes)
@@ -143,7 +143,7 @@ def test_overflow_fix_scales(overflow_fix):
     ref_stats_path = get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / ref_stats_name)
 
     # Uncomment lines below to generate reference for new models.
-    # from tests.shared.helpers import dump_to_json
+    # from tests.cross_fw.shared.json import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
@@ -167,7 +167,7 @@ def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path)
     ref_stats_path = get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / ref_stats_name)
 
     # Uncomment lines below to generate reference for new models.
-    # from tests.shared.helpers import dump_to_json
+    # from tests.cross_fw.shared.json import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)

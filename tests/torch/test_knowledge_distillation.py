@@ -12,7 +12,6 @@
 from collections.abc import Iterable
 from copy import deepcopy
 from functools import reduce
-from typing import List, Tuple
 
 import pytest
 import torch
@@ -34,6 +33,8 @@ from tests.torch.quantization.quantization_helpers import post_compression_test_
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
+
+pytestmark = pytest.mark.legacy
 
 KEY_TO_KD_PARAMETERS = "kd"
 
@@ -92,7 +93,7 @@ def test_knowledge_distillation_training_process(inference_type: str):
 
 def run_actual(
     model: nn.Module, config: NNCFConfig, inference_type: str, mock_dataloader: Iterable, ngpus_per_node=None
-) -> Tuple[List[torch.Tensor], NNCFNetwork]:
+) -> tuple[list[torch.Tensor], NNCFNetwork]:
     config = get_kd_config(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == "DDP":
@@ -115,7 +116,7 @@ def run_actual(
 
 def run_reference(
     model: nn.Module, config: NNCFConfig, inference_type: str, mock_dataloader: Iterable, ngpus_per_node=None
-) -> List[torch.Tensor]:
+) -> list[torch.Tensor]:
     model = deepcopy(model)
     kd_model = deepcopy(model)
     mse = torch.nn.MSELoss().cuda()
@@ -399,7 +400,7 @@ def run_training_for_device_testing(
 
 
 class KDOutputModel(torch.nn.Module):
-    def __init__(self, target_shapes: List[Tuple[int]]):
+    def __init__(self, target_shapes: list[tuple[int]]):
         super().__init__()
         self.mock_param = torch.nn.Parameter(torch.ones([1]))
         self.target_shapes = target_shapes
@@ -412,7 +413,7 @@ class KDOutputModel(torch.nn.Module):
 
 
 class CustomOutputWeightedModel(torch.nn.Module):
-    def __init__(self, input_shape: List[int], outputs_dim_numbers_list: List[int]):
+    def __init__(self, input_shape: list[int], outputs_dim_numbers_list: list[int]):
         super().__init__()
         self.outputs_dim_numbers_list = outputs_dim_numbers_list
         # linear layer would be compressed and will lead to different teacher (FP) and student (compressed) model
