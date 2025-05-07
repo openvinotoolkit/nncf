@@ -128,9 +128,9 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def supports_data_free() -> bool:
+    def wrap_model(model, data) -> CompressionParams:
         """
-        Returns True if data-free compression is supported, False otherwise.
+        Returns model wrapped with backend specific graph.
         """
 
     @pytest.mark.parametrize(
@@ -372,12 +372,12 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
     def test_data_free_awq(self, dataset, prefer_data_aware_scaling, mocker):
-        if dataset is None and not self.supports_data_free():
-            pytest.skip("Skipping test for not supported dataset")
+        input_data = np.ones([1, 8, 8], dtype=np.float32)
 
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
         model = self.get_awq_act_model(True, n_layers)
+        model = self.wrap_model(model, input_data)
 
         if dataset is not None:
             dataset = Dataset([self.to_tensor(dataset)])

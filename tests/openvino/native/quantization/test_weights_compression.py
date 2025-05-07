@@ -1568,8 +1568,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return []
 
     @staticmethod
-    def supports_data_free() -> bool:
-        return True
+    def wrap_model(model, data):
+        return model
 
     @staticmethod
     def get_scale_estimation_ref():

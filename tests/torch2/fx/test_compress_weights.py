@@ -370,11 +370,11 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return ["lora_correction", "gptq"]
 
     @staticmethod
-    def supports_data_free() -> bool:
-        """
-        Returns True if data-free compression is supported, False otherwise.
-        """
-        return False
+    def wrap_model(model, data):
+        if isinstance(model, torch.fx.GraphModule):
+            return model
+        data = torch.tensor(data)
+        return get_torch_fx_model(model, data)
 
     @staticmethod
     def get_scale_estimation_ref():
