@@ -1132,9 +1132,10 @@ class LoraMixin:
         :param rank: The rank to be set as active.
         """
         if rank > self._lspec.lora_rank:
-            raise ValueError(f"Activated rank {rank} cannot exceed the maximum LoRA rank {self._lspec.lora_rank}")
+            msg = f"Activated rank {rank} cannot exceed the maximum LoRA rank {self._lspec.lora_rank}"
+            raise ValueError(msg)
         self.active_lora_rank = rank
-    
+
     def enable_nls(self):
         """
         Enable the use of Neural Low-rank Adapter Search (NLS), which makes LoRA adapters elastic.
@@ -1147,8 +1148,8 @@ class LoraMixin:
 
         :return: A dictionary containing the active LoRA adapters.
         """
-        lora_A = self.lora_A[:self.active_lora_rank, :]
-        lora_B = self.lora_B[:, :self.active_lora_rank]
+        lora_A = self.lora_A[: self.active_lora_rank, :]
+        lora_B = self.lora_B[:, : self.active_lora_rank]
         return lora_A, lora_B
 
 
