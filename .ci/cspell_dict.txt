@@ -126,6 +126,7 @@ elts
 eltwise
 eltwises
 embeddingbag
+emnlp
 eprint
 eprinttype
 errstate
@@ -172,6 +173,7 @@ hardswish
 hardtanh
 hawq
 headport
+hellaswag
 hiddens
 hparam
 hparams
@@ -199,6 +201,7 @@ inputless
 interp
 ioff
 iterval
+jinjie
 junitxml
 keepdim
 keepdims
@@ -307,6 +310,7 @@ onnxp
 onnxqdq
 onnxroi
 onnxx
+openbookqa
 openvino
 openvinotoolkit
 oplambda
@@ -428,6 +432,7 @@ sparsifiers
 sparsifies
 sparsify
 sparsifying
+sqft
 squeezenet
 stabilityai_stablelm
 stdv
@@ -481,6 +486,7 @@ vtype
 weakrefs
 weightable
 whowhatbench
+winogrande
 xlabel
 xnli
 xticklabels

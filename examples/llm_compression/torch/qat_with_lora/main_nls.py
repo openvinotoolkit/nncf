@@ -21,10 +21,15 @@ from pathlib import Path
 from typing import Union
 
 import datasets
+import numpy as np
 import torch
 import transformers
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
+from main import get_model_input
+from main import load_checkpoint
+from main import save_checkpoint
+from main import set_trainable
 from torch import Tensor
 from torch import nn
 from torch.jit import TracerWarning
@@ -43,11 +48,6 @@ from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 
-from main import get_model_input
-from main import load_checkpoint
-from main import save_checkpoint
-from main import set_trainable
-
 warnings.filterwarnings("ignore", category=TracerWarning)
 
 
@@ -65,7 +65,7 @@ def get_gsm8k() -> list[str]:
     for sample in train_dataset:
         prompt = f"Question: {sample['question']}\nAnswer: {sample['answer']}"
         processed_train_dataset.append(prompt)
-    
+
     return processed_train_dataset
 
 
@@ -135,7 +135,7 @@ def get_winogrande() -> list[str]:
     for sample in train_dataset:
         pronoun_location = sample["sentence"].index("_")
         answer = sample["option" + sample["answer"]]
-        prompt = sample["sentence"][:pronoun_location] + answer + sample["sentence"][pronoun_location+1:]
+        prompt = sample["sentence"][:pronoun_location] + answer + sample["sentence"][pronoun_location + 1 :]
         processed_train_dataset.append(prompt)
 
     return processed_train_dataset
@@ -153,7 +153,7 @@ def get_arc(name: str = "ARC-Easy") -> list[str]:
         # Map numeric answer keys to letter representations.
         num_to_letter = {"1": "A", "2": "B", "3": "C", "4": "D", "5": "E"}
         sample["answerKey"] = num_to_letter.get(sample["answerKey"], sample["answerKey"])
-        
+
         # Process the ARC document to extract relevant fields.
         processed_document = {
             "id": sample["id"],
@@ -161,12 +161,12 @@ def get_arc(name: str = "ARC-Easy") -> list[str]:
             "choices": sample["choices"]["text"],
             "gold": ["A", "B", "C", "D", "E"].index(sample["answerKey"]),
         }
-        
+
         # Construct the prompt with the correct answer.
         answer = processed_document["choices"][processed_document["gold"]]
         prompt = processed_document["query"] + " " + answer
         processed_train_dataset.append(prompt)
-    
+
     return processed_train_dataset
 
 
@@ -188,10 +188,12 @@ def lm_eval(model: nn.Module, tokenizer: AutoTokenizer, task: str, batch_size: i
     return results[task]
 
 
-def tokenize(tokenizer: AutoTokenizer, prompt: str, add_eos_token: bool = True, max_length: int = 256) -> dict[str, list[int]]:
+def tokenize(
+    tokenizer: AutoTokenizer, prompt: str, add_eos_token: bool = True, max_length: int = 256
+) -> dict[str, list[int]]:
     """
     Tokenize the given prompt.
-    
+
     :param tokenizer: The tokenizer to use.
     :param prompt: The prompt to tokenize.
     :param add_eos_token: Whether to add an eos token.
@@ -205,11 +207,7 @@ def tokenize(tokenizer: AutoTokenizer, prompt: str, add_eos_token: bool = True, 
         padding=True,
         return_tensors=None,
     )
-    if (
-        result["input_ids"][-1] != tokenizer.eos_token_id
-        and len(result["input_ids"]) < max_length
-        and add_eos_token
-    ):
+    if result["input_ids"][-1] != tokenizer.eos_token_id and len(result["input_ids"]) < max_length and add_eos_token:
         result["input_ids"].append(tokenizer.eos_token_id)
         result["attention_mask"].append(1)
 
@@ -217,7 +215,9 @@ def tokenize(tokenizer: AutoTokenizer, prompt: str, add_eos_token: bool = True, 
     return result
 
 
-def get_layer_id_vs_lora_quantizers_map(model: nn.Module) -> dict[int, list[Union['AsymmetricLoraQuantizer', 'SymmetricLoraQuantizer']]]:
+def get_layer_id_vs_lora_quantizers_map(
+    model: nn.Module,
+) -> dict[int, list[Union["AsymmetricLoraQuantizer", "SymmetricLoraQuantizer"]]]:
     """
     Maps layer IDs to their corresponding LoRA quantizers.
 
@@ -226,48 +226,54 @@ def get_layer_id_vs_lora_quantizers_map(model: nn.Module) -> dict[int, list[Unio
     """
     hook_storage = get_hook_storage(model)
     layer_id_vs_lora_quantizers_map = defaultdict(list)
-    
+
     for name, module in hook_storage.named_hooks():
         if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits == 4):
-            layer_id = int(re.search(r'layers:(\d+):', name).group(1))
+            layer_id = int(re.search(r"layers:(\d+):", name).group(1))
             layer_id_vs_lora_quantizers_map[layer_id].append(module)
-    
+
     return layer_id_vs_lora_quantizers_map
 
 
-def enable_nls_for_lora_quantizers(layer_id_vs_lora_quantizers_map: dict[int, list[Union['AsymmetricLoraQuantizer', 'SymmetricLoraQuantizer']]]):
+def enable_nls_for_lora_quantizers(
+    layer_id_vs_lora_quantizers_map: dict[int, list[Union["AsymmetricLoraQuantizer", "SymmetricLoraQuantizer"]]],
+):
     """
     Enables NLS for all LoRA quantizers in the provided layer_id_vs_lora_quantizers_map.
 
     :param layer_id_vs_lora_quantizers_map: A dictionary mapping layer IDs to lists of LoRA quantizers.
     """
-    for layer, lora_quantizers in layer_id_vs_lora_quantizers_map.items():
+    for lora_quantizers in layer_id_vs_lora_quantizers_map.values():
         for lora_quantizer in lora_quantizers:
             lora_quantizer.enable_nls()
 
 
 @torch.no_grad()
 def configure_lora_adapters(
-    layer_id_vs_lora_quantizers_map: dict[int, list[Union['AsymmetricLoraQuantizer', 'SymmetricLoraQuantizer']]],
-    lora_rank_space: list[int] = None, 
-    adapter_strategy: str = None, 
-    specific_rank_config: list[int] = None
+    layer_id_vs_lora_quantizers_map: dict[int, list[Union["AsymmetricLoraQuantizer", "SymmetricLoraQuantizer"]]],
+    lora_rank_space: list[int] = None,
+    adapter_strategy: str = None,
+    specific_rank_config: list[int] = None,
 ) -> list[int]:
     """
     Configures sub-adapters with specified ranks (or adapter strategy) for each layer in the model.
 
     :param layer_id_vs_lora_quantizers_map: A dictionary mapping layer IDs to lists of LoRA quantizers.
     :param lora_rank_space: A list of possible ranks for the LoRA adapters.
-    :param adapter_strategy: Strategy to select the rank from the `lora_rank_space`. Options are 'maximal', 'median', 'minimal', 'random'.
+    :param adapter_strategy: Strategy to select the rank from the `lora_rank_space`.
+        Options are 'maximal', 'median', 'minimal', 'random'.
     :param specific_rank_config: A specific configuration of ranks for each layer.
     :return: A list of activated ranks for each layer.
     """
     # Ensure that either [`lora_rank_space` and `adapter_strategy`] or [`specific_rank_config`] is provided
     if specific_rank_config is None:
-        assert lora_rank_space and adapter_strategy, \
+        assert lora_rank_space and adapter_strategy, (
             "`specific_rank_config` is not provided, both `lora_rank_space` and `adapter_strategy` must be specified."
+        )
     else:
-        assert len(specific_rank_config) == len(layer_id_vs_lora_quantizers_map), "Length of specific_rank_config must match the number of layers."
+        assert len(specific_rank_config) == len(layer_id_vs_lora_quantizers_map), (
+            "Length of specific_rank_config must match the number of layers."
+        )
 
     activated_rank_config = []
     for layer, lora_quantizers in layer_id_vs_lora_quantizers_map.items():
@@ -281,15 +287,16 @@ def configure_lora_adapters(
             elif adapter_strategy == "minimal":
                 selected_rank = lora_rank_space[-1]
             elif adapter_strategy == "random":
-                selected_rank = random.choice(lora_rank_space)
+                selected_rank = int(np.random.choice(lora_rank_space))
             else:
-                raise ValueError("Invalid adapter strategy")
+                error_message = "Invalid adapter strategy"
+                raise ValueError(error_message)
 
         # Activate the sub-adapter with the selected rank
         for lora_quantizer in lora_quantizers:
             lora_quantizer.set_active_rank(selected_rank)
         activated_rank_config.append(selected_rank)
-    
+
     return activated_rank_config
 
 
@@ -322,19 +329,19 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
     # Downstream task
     parser.add_argument(
-        "--task", 
-        type=str, 
-        choices=["openbookqa", "winogrande", "arc_challenge", "arc_easy", "gsm8k", "hellaswag"], 
-        default="openbookqa", 
+        "--task",
+        type=str,
+        choices=["openbookqa", "winogrande", "arc_challenge", "arc_easy", "gsm8k", "hellaswag"],
+        default="openbookqa",
         help="Evaluation task",
     )
     parser.add_argument(
-        "--lm_eval_metric", 
-        type=str, 
-        default="acc_norm,none", 
+        "--lm_eval_metric",
+        type=str,
+        default="acc_norm,none",
         help="The metrics of the lm-eval task. Different tasks have different metrics.",
     )
-    
+
     # Training params
     parser.add_argument(
         "--lr",
@@ -357,10 +364,10 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--lora_rank_space",
         type=int,
-        nargs='+',
+        nargs="+",
         default=None,
         help="Search space for LoRA adapter ranks. For example, if the (maximum) rank is 32, "
-         "this can be [32, 24, 16] to specify the ranks to be used during NLS.",
+        "this can be [32, 24, 16] to specify the ranks to be used during NLS.",
     )
     parser.add_argument(
         "--disable_nls",
@@ -370,7 +377,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--custom_rank_config",
         type=int,
-        nargs='+',
+        nargs="+",
         default=None,
         help="Custom LoRA rank configuration (NLS) for evaluation.",
     )
@@ -379,7 +386,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
 def main(argv) -> float:
     """
-    Fine-tuning and evaluating a language model with quantization-aware training and LoRA adapters, 
+    Fine-tuning and evaluating a language model with quantization-aware training and LoRA adapters,
     including optional Neural Low-rank Adapter Search (NLS).
     """
     parser = get_argument_parser()
@@ -420,7 +427,7 @@ def main(argv) -> float:
     results_before_compression = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
     print(f"Results before compression={json.dumps(results_before_compression, indent=4)}")
     overall_result["results_before_compression"] = results_before_compression
-    
+
     # Dataset preparation
     train_dataset = None
     if args.task == "gsm8k":
@@ -436,7 +443,8 @@ def main(argv) -> float:
     elif args.task == "arc_easy":
         train_dataset = get_arc(name="ARC-Easy")
     else:
-        raise ValueError(f"Unsupported task: {args.task}.")
+        error_message = f"Unsupported task: {args.task}."
+        raise ValueError(error_message)
     example_input = tokenizer(train_dataset[0], return_tensors="pt").input_ids.to(device)
     model_input = get_model_input(example_input)
     train_dataset = [tokenize(tokenizer, sample) for sample in train_dataset]
@@ -472,9 +480,7 @@ def main(argv) -> float:
         )
         total_steps = (microbatches_per_epoch * args.epochs) // grad_accumulation_steps
         scheduler = get_cosine_schedule_with_warmup(
-            opt,
-            num_warmup_steps=int(0.1 * total_steps),
-            num_training_steps=total_steps
+            opt, num_warmup_steps=int(0.1 * total_steps), num_training_steps=total_steps
         )
 
         if args.disable_nls:
@@ -486,8 +492,12 @@ def main(argv) -> float:
             enable_nls_for_lora_quantizers(layer_id_vs_lora_quantizers_map)
 
             # Initialize the counter for tracking activation counts during training
-            maximal_lora_rank_config = configure_lora_adapters(layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="maximal")
-            activation_counter = [{rank: 0 for rank in args.lora_rank_space} for _ in range(len(maximal_lora_rank_config))]
+            maximal_lora_rank_config = configure_lora_adapters(
+                layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="maximal"
+            )
+            activation_counter = [
+                {rank: 0 for rank in args.lora_rank_space} for _ in range(len(maximal_lora_rank_config))
+            ]
 
             # Initialize the loss recorder for tracking losses during training (for each sub-adapter)
             loss_recorder = defaultdict(list)
@@ -495,11 +505,12 @@ def main(argv) -> float:
         for epoch in range(args.epochs):
             batch_indices_epoch = torch.randperm(num_samples)[:epoch_samples].chunk(microbatches_per_epoch)
             for indices in track(batch_indices_epoch, description=f"Train epoch {epoch}"):
-                
                 # If Neural Low-rank Adapter Search (NLS) is enabled,
                 # configure the LoRA adapters with a random rank configuration from the specified rank space.
                 if not args.disable_nls and grad_steps == 0:
-                    current_config = configure_lora_adapters(layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="random")
+                    current_config = configure_lora_adapters(
+                        layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="random"
+                    )
                     # Update the activation counter
                     for idx, rank in enumerate(current_config):
                         activation_counter[idx][rank] += 1
@@ -538,10 +549,15 @@ def main(argv) -> float:
 
                     current_lr = scheduler.get_last_lr()[0]
                     if total_microbatches % 10 == 0:
-                        print(f"Epoch: {epoch + 1}, Step: {total_microbatches}, Loss: {aggregated_loss:.4f}, Learning Rate: {current_lr:.6f}")
+                        print(
+                            f"Epoch: {epoch + 1}, "
+                            f"Step: {total_microbatches}, "
+                            f"Loss: {aggregated_loss:.4f}, "
+                            f"Learning Rate: {current_lr:.6f}"
+                        )
                     tb.add_scalar("learning_rate", current_lr, total_microbatches)
                     tb.add_scalar("loss", aggregated_loss, total_microbatches)
-                
+
             save_checkpoint(model, ckpt_file)
 
         # Finish training and load the trained checkpoint
@@ -550,8 +566,13 @@ def main(argv) -> float:
 
     # Start evaluation
     if args.disable_nls:
-        results_of_lora_finetuned_compressed_model = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
-        print(f"Results of quantization-aware-finetuned (LoRA) NNCF compressed model={json.dumps(results_of_lora_finetuned_compressed_model, indent=4)}")
+        results_of_lora_finetuned_compressed_model = lm_eval(
+            model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+        )
+        print(
+            f"Results of quantization-aware-finetuned (LoRA) NNCF compressed model="
+            f"{json.dumps(results_of_lora_finetuned_compressed_model, indent=4)}"
+        )
         overall_result["lora_results"] = results_of_lora_finetuned_compressed_model
         best_result = results_of_lora_finetuned_compressed_model[args.lm_eval_metric]
     else:
@@ -568,7 +589,7 @@ def main(argv) -> float:
                     most_frequent_rank = max(layer_counter, key=layer_counter.get)
                     most_frequent_config.append(most_frequent_rank)
                 return most_frequent_config
-            
+
             # Calculate the average loss for each configuration and select the top k with the minimum loss
             def get_top_k_min_loss_configs(loss_recorder, k=5):
                 avg_loss_configs = [(config, sum(losses) / len(losses)) for config, losses in loss_recorder.items()]
@@ -579,62 +600,83 @@ def main(argv) -> float:
             best_result = initial_result
             # Test the median configuration
             median_lora_rank_config = configure_lora_adapters(
-                layer_id_vs_lora_quantizers_map, 
-                lora_rank_space=args.lora_rank_space, 
+                layer_id_vs_lora_quantizers_map,
+                lora_rank_space=args.lora_rank_space,
                 adapter_strategy="median",
             )
-            results_of_nls_finetuned_compressed_model_median = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
-            print(f"Results of quantization-aware-finetuned (NLS-Median) NNCF compressed model={json.dumps(results_of_nls_finetuned_compressed_model_median, indent=4)}")
-            overall_result["nls_results"].append({
-                "type": "median",
-                "config": median_lora_rank_config,
-                "results": results_of_nls_finetuned_compressed_model_median,
-            })
+            results_of_nls_finetuned_compressed_model_median = lm_eval(
+                model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+            )
+            print(
+                f"Results of quantization-aware-finetuned (NLS-Median) NNCF compressed model="
+                f"{json.dumps(results_of_nls_finetuned_compressed_model_median, indent=4)}"
+            )
+            overall_result["nls_results"].append(
+                {
+                    "type": "median",
+                    "config": median_lora_rank_config,
+                    "results": results_of_nls_finetuned_compressed_model_median,
+                }
+            )
             best_result = max(best_result, results_of_nls_finetuned_compressed_model_median[args.lm_eval_metric])
 
             # Test the most frequent configuration
             most_frequent_lora_rank_config = get_most_frequent_config(activation_counter)
             configure_lora_adapters(
-                layer_id_vs_lora_quantizers_map, 
-                specific_rank_config=most_frequent_lora_rank_config
+                layer_id_vs_lora_quantizers_map, specific_rank_config=most_frequent_lora_rank_config
             )
-            results_of_nls_finetuned_compressed_model_most_frequent = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
-            print(f"Results of quantization-aware-finetuned (NLS-Most-Frequent) NNCF compressed model={json.dumps(results_of_nls_finetuned_compressed_model_most_frequent, indent=4)}")
-            overall_result["nls_results"].append({
-                "type": "most-frequent",
-                "config": most_frequent_lora_rank_config,
-                "results": results_of_nls_finetuned_compressed_model_most_frequent,
-            })
+            results_of_nls_finetuned_compressed_model_most_frequent = lm_eval(
+                model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+            )
+            print(
+                f"Results of quantization-aware-finetuned (NLS-Most-Frequent) NNCF compressed model="
+                f"{json.dumps(results_of_nls_finetuned_compressed_model_most_frequent, indent=4)}"
+            )
+            overall_result["nls_results"].append(
+                {
+                    "type": "most-frequent",
+                    "config": most_frequent_lora_rank_config,
+                    "results": results_of_nls_finetuned_compressed_model_most_frequent,
+                }
+            )
             best_result = max(best_result, results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric])
 
             # Test the top 5 min loss configurations
             top_5_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=5)
             for i, min_loss_config in enumerate(top_5_min_loss_configs):
-                configure_lora_adapters(
-                    layer_id_vs_lora_quantizers_map, 
-                    specific_rank_config=min_loss_config
+                configure_lora_adapters(layer_id_vs_lora_quantizers_map, specific_rank_config=min_loss_config)
+                results_of_nls_finetuned_compressed_model_min_loss = lm_eval(
+                    model, tokenizer, task=args.task, batch_size=args.eval_batch_size
                 )
-                results_of_nls_finetuned_compressed_model_min_loss = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
-                print(f"Results of quantization-aware-finetuned (NLS-Min-Loss-{i+1}) NNCF compressed model={json.dumps(results_of_nls_finetuned_compressed_model_min_loss, indent=4)}")
-                overall_result["nls_results"].append({
-                    "type": f"min-loss-{i+1}",
-                    "config": min_loss_config,
-                    "results": results_of_nls_finetuned_compressed_model_min_loss,
-                })
+                print(
+                    f"Results of quantization-aware-finetuned (NLS-Min-Loss-{i + 1}) NNCF compressed model="
+                    f"{json.dumps(results_of_nls_finetuned_compressed_model_min_loss, indent=4)}"
+                )
+                overall_result["nls_results"].append(
+                    {
+                        "type": f"min-loss-{i + 1}",
+                        "config": min_loss_config,
+                        "results": results_of_nls_finetuned_compressed_model_min_loss,
+                    }
+                )
                 best_result = max(best_result, results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric])
         else:
             assert args.custom_rank_config is not None, "Please provide `custom_rank_config` for evaluation."
-            configure_lora_adapters(
-                layer_id_vs_lora_quantizers_map, 
-                specific_rank_config=args.custom_rank_config
+            configure_lora_adapters(layer_id_vs_lora_quantizers_map, specific_rank_config=args.custom_rank_config)
+            results_of_nls_finetuned_compressed_model_custom = lm_eval(
+                model, tokenizer, task=args.task, batch_size=args.eval_batch_size
             )
-            results_of_nls_finetuned_compressed_model_custom = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
-            print(f"Results of quantization-aware-finetuned (NLS with custom config) NNCF compressed model={json.dumps(results_of_nls_finetuned_compressed_model_custom, indent=4)}")
-            overall_result["nls_results"].append({
-                "type": "custom",
-                "config": args.custom_rank_config,
-                "results": results_of_nls_finetuned_compressed_model_custom,
-            })
+            print(
+                f"Results of quantization-aware-finetuned (NLS with custom config) NNCF compressed model="
+                f"{json.dumps(results_of_nls_finetuned_compressed_model_custom, indent=4)}"
+            )
+            overall_result["nls_results"].append(
+                {
+                    "type": "custom",
+                    "config": args.custom_rank_config,
+                    "results": results_of_nls_finetuned_compressed_model_custom,
+                }
+            )
             best_result = results_of_nls_finetuned_compressed_model_custom[args.lm_eval_metric]
 
     print(f"Overall result: {json.dumps(overall_result, indent=4)}")

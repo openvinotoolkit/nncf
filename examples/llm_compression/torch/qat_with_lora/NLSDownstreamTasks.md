@@ -1,10 +1,10 @@
-# SQFT's NLS Tuning with Downstream Tasks 
+# NLS Tuning with Downstream Tasks
 
 <p align="center">
   <img src="/examples/llm_compression/torch/qat_with_lora/pics/lora_vs_nls.png" alt="alt text" width="400"/>
 </p>
 
-[main_nls.py](./main_nls.py) script supports fine-tuning and evaluating a language model with quantization-aware training and Neural Low-Rank Adapter Search (NLS) proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task `openbookqa`, you can use the following command:
+[main_nls.py](./main_nls.py) script supports fine-tuning and evaluating a language model with quantization-aware training and Neural Low-Rank Adapter Search (NLS) proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), you can use the following command:
 
 ```bash
 python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --do_train --task openbookqa --lr 1e-4 --epochs 3 --batch_size 16 --eval_batch_size 64 --lora_rank_space 32 24 16
@@ -14,10 +14,9 @@ python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --d
 - `--output_dir`: Path to the directory for storing logs, tuning checkpoints, compressed models, and evaluation results.
 - `--do_train`: Whether to perform training. If not specified, the script will only evaluate the compressed model.
 - `--task`: The evaluation task to be performed. Choices: ["gsm8k", "hellaswag", "openbookqa", "winogrande", "arc_challenge", "arc_easy"].
-- `--lr`: Learning rate for fine-tuning. 
-- `--epochs`: Number of epochs for training. 
-- `--batch_size`: Size of the training batch. 
-- `--microbatch_size`: Size of each training microbatch. Gradients will be accumulated until the batch size is reached.
+- `--lr`: Learning rate for fine-tuning.
+- `--epochs`: Number of epochs for training.
+- `--batch_size`: Size of the training batch.
 - `--eval_batch_size`: Size of the batch for evaluation.
 - `--lora_rank_space`: Specifies the search space for LoRA adapter ranks. For example, [32, 24, 16] indicates the ranks to be considered during NLS training and searching.
 
@@ -34,8 +33,7 @@ python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --r
 
 The table illustrates that Quantization-Aware Training integrated with absorbable QAT + LoRA / QAT + NLS substantially improves the performance of compressed models on downstream tasks, and QAT + NLS performs better than QAT + LoRA overall.
 
-The average score in the table represent the average accuracy of the four downstream tasks, `openbookqa`, `winogrande`, `arc_challenge` and `arc_easy` (all are "acc_norm" except `winogrande` which is "acc" of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)). For QAT + LoRA and QAT + NLS, we conducted experiments with epochs set to 3, 4, and 5, LoRA rank set to 16 and 32, the corresponding LoRA rank space of NLS set to `[16,12,8]` and `[32,24,16]`. We present the best results for each method. All quantization methods compressed the models to `INT4_ASYM` precision with a group size of `64`.
-
+The average score in the table represent the average accuracy of the four downstream tasks, [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), [winogrande](https://huggingface.co/datasets/allenai/winogrande), [arc_challenge](https://huggingface.co/datasets/allenai/ai2_arc) and [arc_easy](https://huggingface.co/datasets/allenai/ai2_arc) (all are "acc_norm" except winogrande which is "acc" of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)). For QAT + LoRA and QAT + NLS, we conducted experiments with epochs set to 3, 4, and 5, LoRA rank set to 16 and 32, the corresponding LoRA rank space of NLS set to `[16,12,8]` and `[32,24,16]`. We present the best results for each method. All quantization methods compressed the models to `INT4_ASYM` precision with a group size of `64`.
 
 | Model                                | Precision          | Average score |
 |--------------------------------------|--------------------|---------------|
@@ -73,11 +71,12 @@ The average score in the table represent the average accuracy of the four downst
 |                                      | INT4 (QAT + LoRA)  | 0.7356        |
 |                                      | INT4 (QAT + NLS)   | **0.7382**    |
 
-
 ## Citation
+
 If you find this code and the NLS technique helpful, please kindly cite:
+
 ```bibtex
-@inproceedings{munoz2025lowrank,
+@inproceedings{munoz2025low,
     title=Low-Rank Adapters Meet Neural Architecture Search for LLM Compression,
     author="Munoz, J. Pablo  and
       Yuan, Jinjie  and
@@ -87,15 +86,13 @@ If you find this code and the NLS technique helpful, please kindly cite:
     url={https://arxiv.org/abs/2501.16372}
 }
 ```
+
 ```bibtex
-@inproceedings{munoz-etal-2024-sqft,
+@inproceedings{munoz-2024-sqft,
     title = "{SQFT}: Low-cost Model Adaptation in Low-precision Sparse Foundation Models",
     author = "Munoz, Juan Pablo  and
       Yuan, Jinjie  and
       Jain, Nilesh",
-    editor = "Al-Onaizan, Yaser  and
-      Bansal, Mohit  and
-      Chen, Yun-Nung",
     booktitle = "Findings of the Association for Computational Linguistics: EMNLP 2024",
     month = nov,
     year = "2024",

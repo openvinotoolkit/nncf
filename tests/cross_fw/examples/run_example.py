@@ -225,7 +225,10 @@ def llm_compression_qat_with_nls() -> float:
         "--epochs=2",
         "--batch_size=16",
         "--lr=5e-4",
-        "--lora_rank_space", "16", "12", "8",
+        "--lora_rank_space",
+        "16",
+        "12",
+        "8",
     ]
 
     accuracy_diff = qat_with_nls_main(args)
