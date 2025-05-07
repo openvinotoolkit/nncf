@@ -362,24 +362,21 @@ class FunctionHookMode(TorchFunctionMode):
         :return: The modified arguments and keyword arguments after pre-hooks.
         """
         for idx, value in enumerate(args):
-            if isinstance(value, (list, tuple)):
-                is_tuple = isinstance(value, tuple)
-                list_args = list(value) if is_tuple else value
-                for list_idx, tensor in enumerate(list_args):
-                    list_args[list_idx] = self.execute_hooks_for_parameter(tensor)
-                args[idx] = tuple(list_args) if is_tuple else list_args
+            if isinstance(value, list):
+                for list_idx, tensor in enumerate(value):
+                    value[list_idx] = self.execute_hooks_for_parameter(tensor)
+                args[idx] = value
             else:
                 args[idx] = self.execute_hooks_for_parameter(value)
 
         for kw_name, value in kwargs.items():
-            if isinstance(value, (list, tuple)):
-                is_tuple = isinstance(value, tuple)
-                list_args = list(value) if is_tuple else value
-                for list_idx, tensor in enumerate(list_args):
-                    list_args[list_idx] = self.execute_hooks_for_parameter(tensor)
-                kwargs[kw_name] = tuple(list_args) if is_tuple else list_args
+            if isinstance(value, list):
+                for list_idx, tensor in enumerate(value):
+                    value[list_idx] = self.execute_hooks_for_parameter(tensor)
+                kwargs[kw_name] = value
             else:
                 kwargs[kw_name] = self.execute_hooks_for_parameter(value)
+
         return args, kwargs
 
     def execute_pre_hooks(
