@@ -147,3 +147,72 @@ def test_decode_hook_name(hook_name: str, ref: tuple[str, str, int]):
 def test_decode_hook_name_raise_error(hook_name: str):
     with pytest.raises(ValueError, match="Invalid hook name"):
         decode_hook_name(hook_name)
+
+
+def test_can_delete_hook():
+    hook_storage = HookStorage()
+    hook1 = nn.Identity()
+    hook2 = nn.Sequential(nn.Identity(), nn.Identity())
+
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.register_post_function_hook("foo", 0, hook2)
+    hook_storage.register_post_function_hook("foo", 0, hook1)
+
+    hook_storage.delete_hook(hook1, "pre_hooks.foo__0.0")
+    ret = list(hook_storage.named_hooks(remove_duplicate=False))
+    ref = [("post_hooks.foo__0.0", hook2), ("post_hooks.foo__0.1", hook1)]
+    assert ret == ref
+
+    hook_storage.delete_hook(hook2, "post_hooks.foo__0.0")
+    ret = list(hook_storage.named_hooks(remove_duplicate=False))
+    ref = [("post_hooks.foo__0.1", hook1)]
+    assert ret == ref
+
+
+def test_can_not_delete_hook_with_invalid_args():
+    hook_storage = HookStorage()
+    hook1 = nn.Identity()
+    hook2 = nn.Sequential(nn.Identity(), nn.Identity())
+
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.register_post_function_hook("foo", 0, hook2)
+    hook_storage.register_post_function_hook("foo", 0, hook1)
+
+    with pytest.raises(ValueError, match="Invalid hook name"):
+        hook_storage.delete_hook(hook1, "invalid_name")
+
+    with pytest.raises(ValueError, match="The specified hook"):
+        invalid_hook = hook2
+        hook_storage.delete_hook(invalid_hook, "pre_hooks.foo__0.0")
+
+    with pytest.raises(ValueError, match="No hook was found"):
+        not_existing_port = 1
+        valid_not_existing_name = f"pre_hooks.foo__{not_existing_port}.0"
+        hook_storage.delete_hook(hook1, valid_not_existing_name)
+
+    with pytest.raises(ValueError, match="Invalid hook name"):
+        invalid_hook = None
+        hook_storage.delete_hook(invalid_hook, "invalid_name")
+
+    ret = list(hook_storage.named_hooks(remove_duplicate=False))
+    ref = [
+        ("pre_hooks.foo__0.0", hook1),
+        ("pre_hooks.foo__0.1", hook1),
+        ("post_hooks.foo__0.0", hook2),
+        ("post_hooks.foo__0.1", hook1),
+    ]
+    assert ret == ref
+
+
+def test_can_not_delete_hook_twice():
+    hook_storage = HookStorage()
+    hook1 = nn.Identity()
+
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.delete_hook(hook1, "pre_hooks.foo__0.0")
+    ret = list(hook_storage.named_hooks(remove_duplicate=False))
+    assert ret == []
+    with pytest.raises(ValueError, match="No hook was found"):
+        hook_storage.delete_hook(hook1, "pre_hooks.foo__0.0")
