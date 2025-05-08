@@ -1107,8 +1107,6 @@ class LoraMixin:
             raise nncf.ValidationError(msg)
         self.lora_A = torch.nn.Parameter(torch.ones((rank, in_features), dtype=default_lora_dtype))
         self.lora_B = torch.nn.Parameter(torch.zeros((out_features, rank), dtype=default_lora_dtype))
-        self.use_nls = False
-        self.active_lora_rank = rank
 
     def enable_gradients(self):
         self.lora_A.requires_grad = True
@@ -1124,66 +1122,6 @@ class LoraMixin:
             self.LORA_A_PARAM_NAME: self.lora_A,
             self.LORA_B_PARAM_NAME: self.lora_B,
         }
-
-    def set_active_rank(self, rank):
-        """
-        Set the active rank for the LoRA adapters.
-
-        :param rank: The rank to be set as active.
-        """
-        if rank > self._lspec.lora_rank:
-            msg = f"Activated rank {rank} cannot exceed the maximum LoRA rank {self._lspec.lora_rank}"
-            raise ValueError(msg)
-        self.active_lora_rank = rank
-
-    def enable_nls(self):
-        """
-        Enable the use of Neural Low-rank Adapter Search (NLS), which makes LoRA adapters elastic.
-        """
-        self.use_nls = True
-
-    def get_active_adapters(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Get the currently active LoRA adapters.
-
-        :return: A dictionary containing the active LoRA adapters.
-        """
-        lora_A = self.lora_A[: self.active_lora_rank, :]
-        lora_B = self.lora_B[:, : self.active_lora_rank]
-        return lora_A, lora_B
-
-
-class LoraNLSMixin(LoraMixin):
-    """
-    Represents learnable LoRA (Low-Rank Adaptation) adapters for quantization modules,
-    and uses Neural Low-Rank Adapter Search (NLS) algorithm to make the adapter elastic.
-    """
-
-    def init_lora(self, lspec: PTLoraNLSSpec):
-        super().init_lora(lspec)
-        self.max_lora_rank = lspec.lora_rank
-        self.active_lora_rank = lspec.active_lora_rank
-
-    def set_active_rank(self, rank: int):
-        """
-        Set the active rank for the LoRA adapters.
-
-        :param rank: The rank to be set as active.
-        """
-        if rank > self.max_lora_rank:
-            msg = f"Activated rank {rank} cannot exceed the maximum LoRA rank {self.max_lora_rank}"
-            raise ValueError(msg)
-        self.active_lora_rank = rank
-
-    def get_active_adapters(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Get the currently active LoRA adapters.
-
-        :return: A dictionary containing the active LoRA adapters.
-        """
-        lora_A = self.lora_A[: self.active_lora_rank, :]
-        lora_B = self.lora_B[:, : self.active_lora_rank]
-        return lora_A, lora_B
 
 
 class LoraNLSMixin(LoraMixin):
@@ -1233,15 +1171,11 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
-        if self.use_nls:
-            lora_A, lora_B = self.get_active_adapters()
-        else:
-            lora_A, lora_B = self.lora_A, self.lora_B
         return asymmetric_quantize_lora(
             x,
             self._lspec.weight_shape,
-            lora_A,
-            lora_B,
+            self.lora_A,
+            self.lora_B,
             self.input_low,
             self.input_range,
             self.level_low,
@@ -1316,15 +1250,11 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
-        if self.use_nls:
-            lora_A, lora_B = self.get_active_adapters()
-        else:
-            lora_A, lora_B = self.lora_A, self.lora_B
         return symmetric_quantize_lora(
             x,
             self._lspec.weight_shape,
-            lora_A,
-            lora_B,
+            self.lora_A,
+            self.lora_B,
             self.scale,
             self.level_low,
             self.level_high,
