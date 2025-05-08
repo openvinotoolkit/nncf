@@ -45,8 +45,8 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch.function_hook.wrapper import get_hook_storage
-from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
-from nncf.torch.quantization.layers import SymmetricLoraQuantizer
+from nncf.torch.quantization.layers import AsymmetricLoraNLSQuantizer
+from nncf.torch.quantization.layers import SymmetricLoraNLSQuantizer
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 
@@ -217,7 +217,7 @@ def tokenize(
 
 def get_layer_id_vs_lora_quantizers_map(
     model: nn.Module,
-) -> dict[int, list[Union["AsymmetricLoraQuantizer", "SymmetricLoraQuantizer"]]]:
+) -> dict[int, list[Union["AsymmetricLoraNLSQuantizer", "SymmetricLoraNLSQuantizer"]]]:
     """
     Maps layer IDs to their corresponding LoRA quantizers.
 
@@ -228,29 +228,23 @@ def get_layer_id_vs_lora_quantizers_map(
     layer_id_vs_lora_quantizers_map = defaultdict(list)
 
     for name, module in hook_storage.named_hooks():
-        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits == 4):
-            layer_id = int(re.search(r"layers:(\d+):", name).group(1))
+        if isinstance(module, (AsymmetricLoraNLSQuantizer, SymmetricLoraNLSQuantizer)) and (module.num_bits == 4):
+            match = re.search(r"layers:(\d+):", name)
+            if match is None:
+                msg = (
+                    "Model is supposed to have a specific structure with Transformer blocks "
+                    "stored as follows: self.layers = nn.ModuleList(...)"
+                )
+                raise ValueError(msg)
+            layer_id = int(match.group(1))
             layer_id_vs_lora_quantizers_map[layer_id].append(module)
 
     return layer_id_vs_lora_quantizers_map
 
 
-def enable_nls_for_lora_quantizers(
-    layer_id_vs_lora_quantizers_map: dict[int, list[Union["AsymmetricLoraQuantizer", "SymmetricLoraQuantizer"]]],
-):
-    """
-    Enables NLS for all LoRA quantizers in the provided layer_id_vs_lora_quantizers_map.
-
-    :param layer_id_vs_lora_quantizers_map: A dictionary mapping layer IDs to lists of LoRA quantizers.
-    """
-    for lora_quantizers in layer_id_vs_lora_quantizers_map.values():
-        for lora_quantizer in lora_quantizers:
-            lora_quantizer.enable_nls()
-
-
 @torch.no_grad()
 def configure_lora_adapters(
-    layer_id_vs_lora_quantizers_map: dict[int, list[Union["AsymmetricLoraQuantizer", "SymmetricLoraQuantizer"]]],
+    layer_id_vs_lora_quantizers_map: dict[int, list[Union["AsymmetricLoraNLSQuantizer", "SymmetricLoraNLSQuantizer"]]],
     lora_rank_space: list[int] = None,
     adapter_strategy: str = None,
     specific_rank_config: list[int] = None,
@@ -370,11 +364,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "this can be [32, 24, 16] to specify the ranks to be used during NLS.",
     )
     parser.add_argument(
-        "--disable_nls",
-        action="store_true",
-        help="Whether to disable Neural Low-rank Adapter Search (NLS).",
-    )
-    parser.add_argument(
         "--custom_rank_config",
         type=int,
         nargs="+",
@@ -396,10 +385,12 @@ def main(argv) -> float:
     device = "cuda"
     torch_dtype = torch.bfloat16
     lora_rank = max(args.lora_rank_space)
+    disable_nls = len(args.lora_rank_space) == 1
+    compression_format = CompressionFormat.FQ_LORA if disable_nls else CompressionFormat.FQ_LORA_NLS
     compression_config = dict(
         mode=CompressWeightsMode.INT4_ASYM,
         group_size=64,
-        compression_format=CompressionFormat.FQ_LORA,
+        compression_format=compression_format,
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=lora_rank),
     )
 
@@ -463,6 +454,10 @@ def main(argv) -> float:
     else:
         save_checkpoint(model, ckpt_file)
 
+    layer_id_vs_lora_quantizers_map = None
+    if not disable_nls:
+        layer_id_vs_lora_quantizers_map = get_layer_id_vs_lora_quantizers_map(model)
+
     if args.do_train:
         fq_lr = args.lr / 10
         weight_decay = args.lr
@@ -483,14 +478,10 @@ def main(argv) -> float:
             opt, num_warmup_steps=int(0.1 * total_steps), num_training_steps=total_steps
         )
 
-        if args.disable_nls:
-            layer_id_vs_lora_quantizers_map = None
+        if disable_nls:
             activation_counter = None
             loss_recorder = None
         else:
-            layer_id_vs_lora_quantizers_map = get_layer_id_vs_lora_quantizers_map(model)
-            enable_nls_for_lora_quantizers(layer_id_vs_lora_quantizers_map)
-
             # Initialize the counter for tracking activation counts during training
             maximal_lora_rank_config = configure_lora_adapters(
                 layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="maximal"
@@ -507,7 +498,7 @@ def main(argv) -> float:
             for indices in track(batch_indices_epoch, description=f"Train epoch {epoch}"):
                 # If Neural Low-rank Adapter Search (NLS) is enabled,
                 # configure the LoRA adapters with a random rank configuration from the specified rank space.
-                if not args.disable_nls and grad_steps == 0:
+                if not disable_nls and grad_steps == 0:
                     current_config = configure_lora_adapters(
                         layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="random"
                     )
@@ -530,7 +521,7 @@ def main(argv) -> float:
                 loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
                 # Record the loss for the current configuration
-                if not args.disable_nls:
+                if not disable_nls:
                     loss_recorder[current_config_tuple].append(loss.item())
 
                 # Perform an optimization step after accumulating gradients over multiple minibatches.
@@ -560,12 +551,8 @@ def main(argv) -> float:
 
             save_checkpoint(model, ckpt_file)
 
-        # Finish training and load the trained checkpoint
-        model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map=device)
-        model = load_checkpoint(model, model_input, ckpt_file)
-
     # Start evaluation
-    if args.disable_nls:
+    if disable_nls:
         results_of_lora_finetuned_compressed_model = lm_eval(
             model, tokenizer, task=args.task, batch_size=args.eval_batch_size
         )
@@ -576,9 +563,6 @@ def main(argv) -> float:
         overall_result["lora_results"] = results_of_lora_finetuned_compressed_model
         best_result = results_of_lora_finetuned_compressed_model[args.lm_eval_metric]
     else:
-        layer_id_vs_lora_quantizers_map = get_layer_id_vs_lora_quantizers_map(model)
-        enable_nls_for_lora_quantizers(layer_id_vs_lora_quantizers_map)
-
         overall_result["nls_results"] = []
         # Use some of the signals from training to find some heuristic configurations for evaluation.
         if args.do_train:

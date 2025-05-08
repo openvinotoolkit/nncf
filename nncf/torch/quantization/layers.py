@@ -197,6 +197,27 @@ class PTLoraSpec:
         return {arg: getattr(self, arg) for arg in self._arg_names}
 
 
+class PTLoraNLSSpec(PTLoraSpec):
+    _arg_names = PTLoraSpec._arg_names + ["active_lora_rank"]
+
+    def __init__(
+        self,
+        lora_rank: int,
+        active_lora_rank: int,
+        orig_weight_shape: list[int],
+        weight_shape: list[int],
+    ):
+        """
+        :param lora_rank: The rank of the adapters.
+        :param active_lora_rank: The active rank of the adapters.
+        :param orig_weight_shape: The shape of the original weight tensor.
+        :param weight_shape: The shape of the weight tensor before applying quantization. In case of group-wise
+            quantization, weights are reshaped from [Cout, Cin] to [Cout, Cin // group_size, group_size].
+        """
+        super().__init__(lora_rank, orig_weight_shape, weight_shape)
+        self.active_lora_rank = active_lora_rank
+
+
 class PTQPointStateNames:
     QSPEC = "qspec"
     TARGET_POINT = "target_point"
@@ -1132,6 +1153,39 @@ class LoraMixin:
         return lora_A, lora_B
 
 
+class LoraNLSMixin(LoraMixin):
+    """
+    Represents learnable LoRA (Low-Rank Adaptation) adapters for quantization modules,
+    and uses Neural Low-Rank Adapter Search (NLS) algorithm to make the adapter elastic.
+    """
+
+    def init_lora(self, lspec: PTLoraNLSSpec):
+        super().init_lora(lspec)
+        self.max_lora_rank = lspec.lora_rank
+        self.active_lora_rank = lspec.active_lora_rank
+
+    def set_active_rank(self, rank: int):
+        """
+        Set the active rank for the LoRA adapters.
+
+        :param rank: The rank to be set as active.
+        """
+        if rank > self.max_lora_rank:
+            msg = f"Activated rank {rank} cannot exceed the maximum LoRA rank {self.max_lora_rank}"
+            raise ValueError(msg)
+        self.active_lora_rank = rank
+
+    def get_active_adapters(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Get the currently active LoRA adapters.
+
+        :return: A dictionary containing the active LoRA adapters.
+        """
+        lora_A = self.lora_A[: self.active_lora_rank, :]
+        lora_B = self.lora_B[:, : self.active_lora_rank]
+        return lora_A, lora_B
+
+
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA)
 class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
@@ -1188,6 +1242,36 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
 
 
 @COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA_NLS)
+class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
+    def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
+        lora_A, lora_B = self.get_active_adapters()
+        return asymmetric_quantize_lora(
+            x,
+            self._lspec.weight_shape,
+            lora_A,
+            lora_B,
+            self.input_low,
+            self.input_range,
+            self.level_low,
+            self.level_high,
+            self.levels,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
+
+    @classmethod
+    def from_config(cls, state) -> "AsymmetricLoraNLSQuantizer":
+        qspec = PTQuantizerSpec.from_state(state["qspec"])
+        lspec = PTLoraNLSSpec.from_state(state["lspec"])
+        return cls(qspec, lspec)
+
+
+@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA)
 class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
     def __init__(self, qspec: PTQuantizerSpec, lspec: PTLoraSpec):
@@ -1236,6 +1320,35 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
     def from_config(cls, state) -> "SymmetricLoraQuantizer":
         qspec = PTQuantizerSpec.from_state(state["qspec"])
         lspec = PTLoraSpec.from_state(state["lspec"])
+        return cls(qspec, lspec)
+
+
+@COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
+class SymmetricLoraNLSQuantizer(SymmetricQuantizer, LoraNLSMixin):
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
+        lora_A, lora_B = self.get_active_adapters()
+        return symmetric_quantize_lora(
+            x,
+            self._lspec.weight_shape,
+            lora_A,
+            lora_B,
+            self.scale,
+            self.level_low,
+            self.level_high,
+            self.levels,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
+
+    @classmethod
+    def from_config(cls, state) -> "SymmetricLoraNLSQuantizer":
+        qspec = PTQuantizerSpec.from_state(state["qspec"])
+        lspec = PTLoraNLSSpec.from_state(state["lspec"])
         return cls(qspec, lspec)
 
 

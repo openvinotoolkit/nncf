@@ -112,11 +112,15 @@ class CompressionFormat(StrEnum):
         the multiplication of adapters. This makes quantization-aware training (QAT) more efficient in terms of
         accuracy, as adapters can also be tuned and remain computationally affordable during training due to their
         small dimensions.
+    :param FQ_LORA_NLS: Represents the 'fake_quantize_with_lora_nls' format, which extends FQ_LORA with elastic
+        absorbable low-rank adapters (LoRA). Quantization is applied similarly to FQ_LORA, and utilizing NLS often
+        results in better performance for downstream task fine-tuning.
     """
 
     DQ = "dequantize"
     FQ = "fake_quantize"
     FQ_LORA = "fake_quantize_with_lora"
+    FQ_LORA_NLS = "fake_quantize_with_lora_nls"
 
 
 @api(canonical_alias="nncf.StripFormat")
