@@ -1186,6 +1186,39 @@ class LoraNLSMixin(LoraMixin):
         return lora_A, lora_B
 
 
+class LoraNLSMixin(LoraMixin):
+    """
+    Represents learnable LoRA (Low-Rank Adaptation) adapters for quantization modules,
+    and uses Neural Low-Rank Adapter Search (NLS) algorithm to make the adapter elastic.
+    """
+
+    def init_lora(self, lspec: PTLoraNLSSpec):
+        super().init_lora(lspec)
+        self.max_lora_rank = lspec.lora_rank
+        self.active_lora_rank = lspec.active_lora_rank
+
+    def set_active_rank(self, rank: int):
+        """
+        Set the active rank for the LoRA adapters.
+
+        :param rank: The rank to be set as active.
+        """
+        if rank > self.max_lora_rank:
+            msg = f"Activated rank {rank} cannot exceed the maximum LoRA rank {self.max_lora_rank}"
+            raise ValueError(msg)
+        self.active_lora_rank = rank
+
+    def get_active_adapters(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Get the currently active LoRA adapters.
+
+        :return: A dictionary containing the active LoRA adapters.
+        """
+        lora_A = self.lora_A[: self.active_lora_rank, :]
+        lora_B = self.lora_B[:, : self.active_lora_rank]
+        return lora_A, lora_B
+
+
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA)
 class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
