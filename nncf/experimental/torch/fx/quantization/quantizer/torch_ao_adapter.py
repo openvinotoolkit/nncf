@@ -117,6 +117,14 @@ class TorchAOQuantizerAdapter(Quantizer):
 
     @staticmethod
     def get_quantizer_config_from_annotated_model(annotated: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
+        """
+        Process a torch.fx.GraphModule annotated with quantization specifications
+        (e.g., via torch.ao observers) and generates a corresponding NNCF quantization setup object,
+        which maps quantization configurations to graph edges.
+
+        :param annotated: A torch.fx.GraphModule that has been annotated with Torch quantization observers.
+        :return: A SingleConfigQuantizerSetup containing quantization points derived from the annotated model.
+        """
         edge_or_node_to_qspec = _get_edge_or_node_to_qspec(annotated)
         # Node means all output edges should be quantized.
         # Edge means only one edge should be quantized.
@@ -127,9 +135,7 @@ class TorchAOQuantizerAdapter(Quantizer):
         for edge_or_node, group_id in edge_or_node_to_group_id.items():
             target_edges = [edge_or_node]
             if isinstance(edge_or_node, torch.fx.Node):
-                target_edges = []
-                for user in edge_or_node.users:
-                    target_edges.append((edge_or_node, user))
+                target_edges = [(edge_or_node, user) for user in edge_or_node.users]
             group_id_vs_edges[group_id].update(target_edges)
             # All qspecs should be aligned after the _get_edge_or_node_to_group_id call
             group_id_vs_qspec[group_id] = _unwrap_shared_qspec_safe(
