@@ -434,6 +434,18 @@ class TemplateTestNNCFTensorOperators:
         for i, x in enumerate(nncf_tensor):
             assert x == arr[i]
             assert isinstance(x, Tensor)
+        assert i == 2
+
+        arr = [arr]
+        nested_nncf_tensor = Tensor(self.to_tensor(arr))
+        for i, x in enumerate(nested_nncf_tensor):
+            assert all(x == nncf_tensor)
+            assert isinstance(x, Tensor)
+
+        # Check a scalar tensor
+        nncf_tensor = Tensor(self.to_tensor(42))
+        with pytest.raises(TypeError):
+            next(iter(nncf_tensor))
 
     # Math
 
@@ -648,6 +660,13 @@ class TemplateTestNNCFTensorOperators:
         res = fns.astype(tensor, TensorDataType.int8)
         assert isinstance(res, Tensor)
         assert res.dtype == TensorDataType.int8
+
+    def test_atleast_1d(self):
+        scalar = Tensor(self.to_tensor(42))
+        assert fns.atleast_1d(scalar).shape == (1,)
+
+        tensor = Tensor(self.to_tensor([[1, 2, 3]]))
+        assert fns.atleast_1d(tensor).shape == (1, 3)
 
     def test_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
