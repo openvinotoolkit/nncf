@@ -426,7 +426,7 @@ def main(argv) -> float:
                 loss_numerator = grad_steps = 0
             tb.add_scalar("loss", aggregated_loss, total_microbatches)
 
-        # Keep the best checkpoint for the lowest perplexity.
+        # Keep the best checkpoint with the lowest perplexity.
         save_checkpoint(model, ckpt_file)
         eval_model = model
         if args.fast_eval:
