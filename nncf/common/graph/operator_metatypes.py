@@ -65,7 +65,7 @@ class OperatorMetatype:
         return any(subtype.subtype_check(metatype) for subtype in subtypes)
 
     @classmethod
-    def get_target_input_ports(cls, is_fp8: bool = False) -> list[int]:
+    def get_target_input_ports(cls, is_fp8: bool = False) -> list[int] | None:
         """
         Returns the target input ports for FP8.
 
