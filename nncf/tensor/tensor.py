@@ -228,7 +228,10 @@ class TensorIterator(Iterator[Tensor]):
 
     def __next__(self) -> Tensor:
         tensor_shape = self._tensor.shape
-        if tensor_shape and self._index < tensor_shape[0]:
+        if not tensor_shape:
+            msg = "iteration over a 0-d tensor"
+            raise TypeError(msg)
+        if self._index < tensor_shape[0]:
             result = self._tensor[self._index]
             self._index += 1
             return result

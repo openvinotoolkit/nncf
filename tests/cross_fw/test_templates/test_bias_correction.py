@@ -148,10 +148,6 @@ class TemplateTestBCAlgorithm:
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
-        from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
-
-        if self.get_backend() is ONNXBiasCorrectionAlgoBackend and model_cls is OneDimMM:
-            pytest.skip("ONNX does not support BC with MM ops")
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 

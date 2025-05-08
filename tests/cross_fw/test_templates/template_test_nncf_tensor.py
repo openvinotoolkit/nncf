@@ -420,7 +420,7 @@ class TemplateTestNNCFTensorOperators:
 
         # Check a scalar tensor
         nncf_tensor = Tensor(self.to_tensor(42))
-        with pytest.raises(StopIteration):
+        with pytest.raises(TypeError):
             next(iter(nncf_tensor))
 
     # Math
