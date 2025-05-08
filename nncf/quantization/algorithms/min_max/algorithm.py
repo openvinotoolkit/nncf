@@ -289,11 +289,14 @@ class MinMaxQuantization(Algorithm):
             if getattr(self, self_name) is None:
                 setattr(self, self_name, default_value)
 
+    def _is_fp8(self):
+        return self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2)
+
     def _review_mode_based_params(self):
         """
         Reviews parameter values because mode option doesn't support them.
         """
-        if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2):
+        if self._is_fp8():
             nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
             if self._preset != QuantizationPreset.PERFORMANCE:
@@ -696,6 +699,7 @@ class MinMaxQuantization(Algorithm):
             metatypes_to_ignore=metatypes_to_ignore,
             scales_unification_map=self._backend_entity.scales_unification_map,
             scope_overrides=scope_overrides,
+            is_fp8=self._is_fp8(),
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph, self._backend_entity.elementwise_metatypes)

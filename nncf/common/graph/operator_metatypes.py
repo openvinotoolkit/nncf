@@ -64,6 +64,17 @@ class OperatorMetatype:
 
         return any(subtype.subtype_check(metatype) for subtype in subtypes)
 
+    @classmethod
+    def get_target_input_ports(cls, is_fp8: bool = False) -> list[int]:
+        """
+        Returns the target input ports for FP8.
+
+        :returns: A list of target input ports for FP8.
+        """
+        if is_fp8 and hasattr(cls, "target_input_ports_fp8"):
+            return cls.target_input_ports_fp8
+        return cls.target_input_ports
+
 
 class OperatorMetatypeRegistry(Registry):
     """
