@@ -29,7 +29,7 @@ from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
-from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -238,7 +238,7 @@ class TemplateWeightCompression(ABC):
             dataset=dataset,
         )
 
-        decompressed_weight_before_se = quantize_dequantize_weight(
+        decompressed_weight_before_se = integer_quantize_dequantize_weight(
             original_weight, config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1), reduction_axes=1
         )
         decompressed_weight_after_se = self.get_decompressed_weight(compressed_model, input)

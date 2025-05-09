@@ -19,6 +19,7 @@ from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric
+from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NUMPY
 
 DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.nf4: ov.Type.nf4,
@@ -37,6 +38,16 @@ DTYPE_MAP: dict[TensorDataType, ov.Type] = {
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
+
+
+def from_numpy(a: NDArray[Any]) -> ov.Tensor:
+    """
+    Convert a numpy array to an OpenVINO tensor.
+
+    :param a: Numpy array to convert.
+    :return: OpenVINO tensor.
+    """
+    return ov.Tensor(a, a.shape, DTYPE_MAP[DTYPE_MAP_REV_NUMPY[a.dtype]])
 
 
 @numeric.device.register

@@ -286,6 +286,10 @@ def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[...
         from nncf.tensor.functions import tf_numeric
 
         return getattr(tf_numeric, fn_name)
+    if backend == TensorBackend.ov:
+        from nncf.tensor.functions import openvino_numeric
+
+        return getattr(openvino_numeric, fn_name)
     msg = f"Unsupported backend type: {backend}"
     raise ValueError(msg)
 

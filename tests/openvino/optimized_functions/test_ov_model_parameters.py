@@ -18,9 +18,11 @@ from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
 from nncf.openvino.optimized_functions.models import get_astype_model
-from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
-from nncf.openvino.optimized_functions.models import get_compress_weight_model
-from nncf.openvino.optimized_functions.models import get_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_float_quantization_model
+from nncf.openvino.optimized_functions.models import get_float_quantize_dequantize_weight_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_model
+from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -45,7 +47,7 @@ class ModelGetter:
 
 MODEL_GETTERS = [
     ModelGetter(
-        get_model_fn=get_compress_weight_model,
+        get_model_fn=get_integer_quantization_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -62,7 +64,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_compress_weight_model,
+        get_model_fn=get_integer_quantization_model,
         ov_model_params_kwargs=dict(
             input_dtypes={"weight": TensorDataType.float32},
             output_dtypes={
@@ -78,7 +80,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_compress_decompress_weight_model,
+        get_model_fn=get_integer_quantize_dequantize_weight_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -97,7 +99,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_compress_decompress_weight_model,
+        get_model_fn=get_integer_quantize_dequantize_weight_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -131,7 +133,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_quantization_error_model,
+        get_model_fn=get_integer_quantization_error_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -143,6 +145,72 @@ MODEL_GETTERS = [
             weight_shape=(10, 2, 2),
             original_reduction_axes=(1,),
             reduction_axes=(2,),
+        ),
+    ),
+    ModelGetter(
+        get_model_fn=get_float_quantization_model,
+        ov_model_params_kwargs=dict(
+            input_dtypes={
+                "weight": TensorDataType.float32,
+                "scale": TensorDataType.float32,
+            },
+            output_dtypes={"compressed_weight": TensorDataType.float32},
+        ),
+        get_model_kwargs=dict(
+            config=WeightCompressionConfig(CompressWeightsMode.NF4),
+            weight_shape=(10, 4),
+            scale_shape=(10, 1),
+        ),
+    ),
+    ModelGetter(
+        get_model_fn=get_float_quantization_model,
+        ov_model_params_kwargs=dict(
+            input_dtypes={"weight": TensorDataType.float32},
+            output_dtypes={
+                "compressed_weight": TensorDataType.float32,
+                "scale": TensorDataType.float32,
+            },
+        ),
+        get_model_kwargs=dict(
+            config=WeightCompressionConfig(CompressWeightsMode.NF4),
+            weight_shape=(10, 4),
+            reduction_axes=(1,),
+        ),
+    ),
+    ModelGetter(
+        get_model_fn=get_float_quantize_dequantize_weight_model,
+        ov_model_params_kwargs=dict(
+            input_dtypes={
+                "weight": TensorDataType.float32,
+                "scale": TensorDataType.float32,
+            },
+            output_dtypes={
+                "decompressed_weight": TensorDataType.float32,
+            },
+        ),
+        get_model_kwargs=dict(
+            config=WeightCompressionConfig(CompressWeightsMode.NF4),
+            weight_shape=(10, 4),
+            scale_shape=(10, 1),
+        ),
+    ),
+    ModelGetter(
+        get_model_fn=get_float_quantize_dequantize_weight_model,
+        ov_model_params_kwargs=dict(
+            input_dtypes={
+                "weight": TensorDataType.float32,
+            },
+            output_dtypes={
+                "decompressed_weight": TensorDataType.float32,
+                "compressed_weight": TensorDataType.float32,
+                "scale": TensorDataType.float32,
+            },
+        ),
+        get_model_kwargs=dict(
+            config=WeightCompressionConfig(CompressWeightsMode.NF4),
+            weight_shape=(10, 4),
+            reduction_axes=(1,),
+            return_compressed_weight=True,
         ),
     ),
 ]
@@ -210,6 +278,50 @@ MODEL_GETTERS = [
             ],
             {False: 5, True: 2},
         ),
+        (
+            MODEL_GETTERS[6],
+            [
+                dict(weight_shape=(10, 4), scale_shape=(10, 1)),
+                dict(weight_shape=(20, 6), scale_shape=(20, 1)),
+                dict(weight_shape=(20, 8), scale_shape=(20, 1)),
+                dict(weight_shape=(10, 4, 4), scale_shape=(10, 4, 1)),
+                dict(weight_shape=(10, 8, 4), scale_shape=(10, 8, 1)),
+            ],
+            {False: 5, True: 2},
+        ),
+        (
+            MODEL_GETTERS[7],
+            [
+                dict(weight_shape=(10, 4)),
+                dict(weight_shape=(20, 6)),
+                dict(weight_shape=(20, 8)),
+                dict(weight_shape=(10, 4, 4)),
+                dict(weight_shape=(10, 8, 4)),
+            ],
+            {False: 5, True: 2},
+        ),
+        (
+            MODEL_GETTERS[8],
+            [
+                dict(weight_shape=(10, 4), scale_shape=(10, 1)),
+                dict(weight_shape=(20, 6), scale_shape=(20, 1)),
+                dict(weight_shape=(20, 8), scale_shape=(20, 1)),
+                dict(weight_shape=(10, 4, 4), scale_shape=(10, 4, 1)),
+                dict(weight_shape=(10, 8, 4), scale_shape=(10, 8, 1)),
+            ],
+            {False: 10, True: 4},
+        ),
+        (
+            MODEL_GETTERS[9],
+            [
+                dict(weight_shape=(10, 4)),
+                dict(weight_shape=(20, 6)),
+                dict(weight_shape=(20, 8)),
+                dict(weight_shape=(10, 4, 4)),
+                dict(weight_shape=(10, 8, 4)),
+            ],
+            {False: 10, True: 4},
+        ),
     ],
 )
 @pytest.mark.parametrize("dynamic_shapes", [False, True])
@@ -237,9 +349,12 @@ def test_recompile(model_getter, recompile):
         model_getter.get()
     if recompile:
         ref_size = 0
-    elif model_getter._get_model_fn == get_compress_decompress_weight_model:
+    elif model_getter._get_model_fn in [
+        get_integer_quantize_dequantize_weight_model,
+        get_float_quantize_dequantize_weight_model,
+    ]:
         ref_size = 2
-    elif model_getter._get_model_fn == get_quantization_error_model:
+    elif model_getter._get_model_fn == get_integer_quantization_error_model:
         ref_size = 3
     else:
         ref_size = 1
@@ -352,6 +467,6 @@ def test_convertable_divison(weight, convertable_division, ref_compressed_weight
 
     weight = np.array(weight, np.float32)
     ref_compressed_weight = np.array(ref_compressed_weight, np.uint8)
-    model_run_fn = get_compress_weight_model(ov_model_params, config, weight.shape, reduction_axes=(1,))
+    model_run_fn = get_integer_quantization_model(ov_model_params, config, weight.shape, reduction_axes=(1,))
     compressed_weight = model_run_fn([Tensor(weight)])[0]
     np.testing.assert_allclose(compressed_weight.data, ref_compressed_weight, atol=0, rtol=0)
