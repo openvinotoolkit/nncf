@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from dataclasses import dataclass
 from typing import Optional, Union
 
 import numpy as np
@@ -19,6 +18,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.backend import is_openvino_available
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
@@ -70,22 +70,6 @@ CENTER_OF_NF4_QUANTILES = np.array(
     ],
     dtype=np.float32,
 )
-
-
-@dataclass
-class CompressedWeight:
-    """
-    Compressed weight and decompression parameters.
-
-    :param tensor: The tensor with compressed weight.
-    :param scale: The decompression scale, in practice it is dequantization scale for the INT quantization.
-    :param zero_point: The zero-point, it is the value of the compression type corresponding to the value 0
-        in the non-compression realm. Applicable for INT quantization.
-    """
-
-    tensor: Tensor
-    scale: Tensor
-    zero_point: Optional[Tensor] = None
 
 
 def reshape_weight_for_grouped_quantization(
@@ -386,8 +370,7 @@ def compress_weight(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
-    precomputed_scale: Tensor = None,
-    precomputed_zero_point: Tensor = None,
+    compressed_weight: CompressedWeight = None,
 ) -> CompressedWeight:
     """
     Compress weight using compression configuration.
@@ -399,6 +382,8 @@ def compress_weight(
     :param precomputed_zero_point: Precomputed zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
+
+    precomputed_scale, precomputed_zero_point = compressed_weight.scale, compressed_weight.zero_point if compressed_weight else (None, None)
     if not config.is_integer:
         if weight.backend == TensorBackend.ov:
             weight = weight.as_numpy_tensor()

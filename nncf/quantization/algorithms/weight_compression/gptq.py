@@ -23,6 +23,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
@@ -85,7 +86,7 @@ class GPTQ:
         weight_compression_parameters: list[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> tuple[TModel, dict[str, Tensor], dict[str, Tensor]]:
+    ) -> tuple[TModel, dict[str, CompressedWeight]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
 
@@ -101,8 +102,7 @@ class GPTQ:
         if self._backend_entity is None:
             self._set_backend_entity(model)
 
-        scales = {}
-        zero_points = {}
+        res = {}
 
         target_nodes = []
         target_nodes_wc_params_map = {}
@@ -125,10 +125,9 @@ class GPTQ:
             _, input_tensors = next(iter(inputs.items()))
             hessian = self._calculate_hessian(node, input_tensors)
             scale, zero_point = self._quantize_weights(model, graph, wc_params, hessian, input_tensors)
-            scales[wc_params.weight_name] = scale
-            zero_points[wc_params.weight_name] = zero_point
+            res[wc_params.weight_name] = CompressedWeight(None, scale, zero_point, None)
 
-        return model, scales, zero_points
+        return model, res
 
     def get_statistic_points(
         self,
