@@ -436,8 +436,7 @@ def main(argv) -> float:
     else:
         error_message = f"Unsupported task: {args.task}."
         raise ValueError(error_message)
-    example_input = tokenizer(train_dataset[0], return_tensors="pt").input_ids.to(device)
-    model_input = get_model_input(example_input)
+    model_input = model.dummy_inputs
     train_dataset = [tokenize(tokenizer, sample) for sample in train_dataset]
     random.shuffle(train_dataset)
 
