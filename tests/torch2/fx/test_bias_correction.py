@@ -25,6 +25,7 @@ from nncf.quantization.algorithms.bias_correction.torch_fx_backend import FXBias
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
@@ -57,6 +58,8 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
+        if model_cls is OneDimMM:
+            return {"linear": ref_biases["/linear/MatMul"]}
         if model_cls is ConvTestModel or model_cls is DepthwiseConvTestModel:
             return {"conv2d": ref_biases["/conv/Conv"]}
         if model_cls is TransposeConvTestModel:

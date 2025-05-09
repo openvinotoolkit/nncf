@@ -23,6 +23,8 @@ from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -122,6 +124,13 @@ class TemplateWeightCompression(ABC):
     def get_not_supported_algorithms() -> list[str]:
         """
         Returns a list of not supported weight compression algorithms.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def wrap_model(model, data) -> CompressionParams:
+        """
+        Returns model wrapped with backend specific graph.
         """
 
     @pytest.mark.parametrize(
@@ -359,3 +368,38 @@ class TemplateWeightCompression(ABC):
         name_list = [name.strip('"') for name in names[0].split(",")]
 
         compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
+
+    @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
+    @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, mocker):
+        input_data = np.ones([1, 8, 8], dtype=np.float32)
+
+        n_layers = 8
+        n_awq_target = n_layers - 1  # first MatMul is always int8
+        model = self.get_awq_act_model(True, n_layers)
+        model = self.wrap_model(model, input_data)
+
+        if dataset is not None:
+            dataset = Dataset([self.to_tensor(dataset)])
+
+        fn_name = "_data_free_step" if dataset is None or not prefer_data_aware_scaling else "_data_aware_step"
+
+        collect_spy = mocker.spy(AWQ, fn_name)
+
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+            awq=True,
+            advanced_parameters=CompressionParams(
+                awq_params=AWQParams(
+                    prefer_data_aware_scaling=prefer_data_aware_scaling,
+                )
+            ),
+        )
+
+        n_awq = self.get_num_multiply_from_awq(compressed_model)
+        assert n_awq == n_awq_target
+        assert collect_spy.call_count == n_awq, f"Statistics should be collected {n_awq_target} times."

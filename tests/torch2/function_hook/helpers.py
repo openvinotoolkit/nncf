@@ -180,3 +180,12 @@ class HookWithState(torch.nn.Module, StatefulModuleInterface):
     @classmethod
     def from_config(cls, state: str):
         return cls(state)
+
+
+class ModelGRU(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.gru = torch.nn.GRU(3, 4, batch_first=True)
+
+    def forward(self, x):
+        return self.gru(x)

@@ -139,6 +139,17 @@ def reshape(a: Tensor, shape: T_SHAPE) -> Tensor:
 
 
 @tensor_dispatcher
+def atleast_1d(a: Tensor) -> Tensor:
+    """
+    Convert input to tensor with at least one dimension.
+
+    Scalar inputs is converted to 1-dimensional tensor, whilst higher-dimensional inputs are preserved.
+    :param a: Input tensor.
+    :return: Tensor with at least 1-dimension.
+    """
+
+
+@tensor_dispatcher
 def all(a: Tensor, axis: T_AXIS = None) -> Tensor:
     """
     Test whether all tensor elements along a given axis evaluate to True.
