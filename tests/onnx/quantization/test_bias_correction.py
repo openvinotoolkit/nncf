@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 import numpy as np
 import onnx
@@ -24,6 +23,7 @@ from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCo
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
@@ -39,7 +39,7 @@ def get_data_from_node(model: onnx.ModelProto, node_name: str):
 
 class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> np.ndarray:
+    def list_to_backend_type(data: list) -> np.ndarray:
         return np.array(data)
 
     @staticmethod
@@ -48,6 +48,8 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
+        if isinstance(model, OneDimMM):
+            pytest.skip("ONNX does not support BC with MM ops")
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
@@ -75,7 +77,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         return compare_nncf_graph(model, ref_path)
 
     @staticmethod
-    def check_bias(model: onnx.ModelProto, ref_biases: Dict) -> None:
+    def check_bias(model: onnx.ModelProto, ref_biases: dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)

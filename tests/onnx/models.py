@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import numpy as np
 import onnx
@@ -31,7 +30,7 @@ def create_initializer_tensor(
 
 
 class ONNXReferenceModel:
-    def __init__(self, onnx_model, input_shape: List[List[int]], graph_path):
+    def __init__(self, onnx_model, input_shape: list[list[int]], graph_path):
         self.onnx_model = onnx_model
         self.onnx_model.ir_version = 9
         self.input_shape = input_shape
@@ -1880,3 +1879,40 @@ class RoPEModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "rope_model.dot")
+
+
+def build_matmul_model() -> onnx.ModelProto:
+    """
+    Builds an ONNX model that contains only a MatMul operation.
+    """
+    X = onnx.helper.make_tensor_value_info("X", onnx.TensorProto.FLOAT, [2, 3])
+    A = onnx.helper.make_tensor_value_info("A", onnx.TensorProto.FLOAT, [2, 2])
+    matmul = onnx.helper.make_node("MatMul", inputs=["X", "W"], outputs=["A"])
+
+    W_values = np.random.rand(3, 2).astype(np.float32)
+    W_initializer = onnx.helper.make_tensor(
+        name="W", data_type=onnx.TensorProto.FLOAT, dims=[3, 2], vals=W_values.tobytes(), raw=True
+    )
+
+    graph = onnx.helper.make_graph([matmul], "matmul-model", [X], [A], [W_initializer])
+    model = onnx.helper.make_model(graph)
+    return model
+
+
+def build_matmul_model_with_nop_cast() -> onnx.ModelProto:
+    """
+    Builds an ONNX model that contains a MatMul operation with a no-op Cast applied to the input.
+    """
+    X = onnx.helper.make_tensor_value_info("X", onnx.TensorProto.FLOAT, [2, 3])
+    A = onnx.helper.make_tensor_value_info("A", onnx.TensorProto.FLOAT, [2, 2])
+    cast = onnx.helper.make_node("Cast", inputs=["X"], outputs=["X_cast"], name="cast", to=onnx.TensorProto.FLOAT)
+    matmul = onnx.helper.make_node("MatMul", inputs=["X_cast", "W"], outputs=["A"], name="matmul")
+
+    W_values = np.random.rand(3, 2).astype(np.float32)
+    W_initializer = onnx.helper.make_tensor(
+        name="W", data_type=onnx.TensorProto.FLOAT, dims=[3, 2], vals=W_values.tobytes(), raw=True
+    )
+
+    graph = onnx.helper.make_graph([cast, matmul], "matmul-model", [X], [A], [W_initializer])
+    model = onnx.helper.make_model(graph)
+    return model

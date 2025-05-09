@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import warnings
 from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
@@ -564,8 +565,6 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
-            "awq": awq,
-            "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }
@@ -574,16 +573,6 @@ def compress_weights(
             msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
-            msg = (
-                "TorchFX backend only supports data-free sensitivity metric. "
-                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-
-        if dataset:
-            msg = "TorchFX only supports data-free weights compression. Set the 'dataset' option to None"
-            raise nncf.ParameterNotSupportedError(msg)
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "TorchFX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
@@ -592,18 +581,24 @@ def compress_weights(
             msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
+        if (
+            mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
+            and dataset is not None
+        ):
+            warnings.warn("data-aware methods are not supported in INT8 modes. dataset is set to None")
+            dataset = None
+
         compression_weights_impl = fx_compression_weights_impl
 
     elif backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((awq, scale_estimation, gptq, lora_correction)) and (
-            dataset is None or mode == CompressWeightsMode.E2M1
-        ):
-            msg = (
-                "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
-                "but dataset is None or mode is E2M1."
-            )
+        if any((scale_estimation, gptq, lora_correction)) and dataset is None:
+            msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if any((awq, scale_estimation, gptq, lora_correction)) and mode == CompressWeightsMode.E2M1:
+            msg = "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode is E2M1."
             raise nncf.ParameterNotSupportedError(msg)
 
         if gptq and lora_correction:

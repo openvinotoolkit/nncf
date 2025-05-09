@@ -41,6 +41,8 @@ from tests.cross_fw.shared.paths import get_accuracy_aware_checkpoint_dir_path
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
 
+pytestmark = pytest.mark.legacy
+
 NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
 
 SANITY_ENV = ROOT_PYTHONPATH_ENV.copy()

@@ -11,7 +11,6 @@
 
 import inspect
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
 
 import pytest
 import torch
@@ -26,6 +25,8 @@ from tests.torch.helpers import ModelWithReloadedForward
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
+
+pytestmark = pytest.mark.legacy
 
 TENSOR_1 = torch.ones([1]) * (-1)
 TENSOR_2 = torch.ones([1]) * (-2)
@@ -44,9 +45,9 @@ def forward(arg1=None, arg2=None, arg3=None, arg4=None, arg5=TENSOR_DEFAULT):
 @dataclass
 class InputWrappingTestStruct:
     input_info: ModelInputInfo
-    model_args: Tuple
-    model_kwargs: Dict
-    ref_wrapping_sequence: List[torch.Tensor]
+    model_args: tuple
+    model_kwargs: dict
+    ref_wrapping_sequence: list[torch.Tensor]
     case_id: str
 
     def get_case_id(self) -> str:

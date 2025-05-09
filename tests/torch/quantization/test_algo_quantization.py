@@ -10,7 +10,6 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
-from typing import List, Tuple
 
 import pytest
 import torch
@@ -59,6 +58,8 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
+
+pytestmark = pytest.mark.legacy
 
 
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
@@ -155,7 +156,7 @@ def test_quantization_configs__custom():
 
 
 def compare_weights_activation_quantizers_pairs(
-    actual_pairs: List[Tuple[List[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
+    actual_pairs: list[tuple[list[WeightQuantizerId], NonWeightQuantizerId]], algo, ref_pair_names, model_name
 ):
     def get_wq_name(name):
         return "/".join([model_name, name])

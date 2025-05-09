@@ -11,7 +11,6 @@
 import os
 from copy import deepcopy
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -31,9 +30,11 @@ from tests.torch.quantization.quantization_helpers import get_quantization_confi
 from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.torch.test_models.synthetic import AddTwoConv
 
+pytestmark = pytest.mark.legacy
+
 
 class ManualConfigTestParamsBase:
-    def __init__(self, name: str, bit_stats: List[List[str]]):
+    def __init__(self, name: str, bit_stats: list[list[str]]):
         self.name = name
         self.bit_stats = bit_stats
 

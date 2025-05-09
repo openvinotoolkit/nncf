@@ -427,8 +427,8 @@ class ShapeReducer(TensorReducerBase):
     def __init__(self, inplace: bool = False):
         super().__init__(inplace=inplace)
 
-    def _reduce_out_of_place(self, x: list[TensorType]) -> list[TensorType]:
-        return [Tensor(x[0].shape)]
+    def _reduce_out_of_place(self, x: list[TensorType]) -> list[tuple[int, ...]]:
+        return [x[0].shape]
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None

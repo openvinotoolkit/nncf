@@ -29,6 +29,8 @@ from tests.torch.sample_test_validator import BaseSampleValidator
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.test_sanity_sample import update_compression_algo_dict_with_legr_save_load_params
 
+pytestmark = pytest.mark.legacy
+
 
 class CompressionTrainingValidator(BaseSampleValidator):
     def __init__(self, desc: "CompressionTrainingTestDescriptor"):

@@ -231,6 +231,10 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
 
             self._backend_entity = PTMixedPrecisionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXMixedPrecisionAlgoBackend
+
+            self._backend_entity = FXMixedPrecisionAlgoBackend()
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)

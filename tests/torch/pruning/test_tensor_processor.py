@@ -15,6 +15,8 @@ import torch
 from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.tensor import PTNNCFTensor
 
+pytestmark = pytest.mark.legacy
+
 
 def test_ones(use_cuda):
     if use_cuda and not torch.cuda.is_available():

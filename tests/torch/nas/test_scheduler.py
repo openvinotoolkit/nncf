@@ -10,7 +10,6 @@
 # limitations under the License.
 from collections import OrderedDict
 from functools import partial
-from typing import List
 
 import pytest
 
@@ -34,6 +33,7 @@ from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.helpers import MockModel
 
+pytestmark = pytest.mark.legacy
 LIST_STAGES__K_KW_KWD = [
     [ElasticityDim.KERNEL],
     [ElasticityDim.KERNEL, ElasticityDim.WIDTH],
@@ -200,9 +200,9 @@ class TestScheduler:
 class SchedulerTestDesc:
     def __init__(
         self,
-        list_stage_dims: List[List[ElasticityDim]],
-        progressivity_of_elasticity: List[ElasticityDim],
-        available_elasticity_dims: List[ElasticityDim],
+        list_stage_dims: list[list[ElasticityDim]],
+        progressivity_of_elasticity: list[ElasticityDim],
+        available_elasticity_dims: list[ElasticityDim],
         name: str = "",
         error_in_scheduler: bool = False,
         error_in_builder: bool = False,

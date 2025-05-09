@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Type
 
 import pytest
 
@@ -33,7 +32,7 @@ from tests.cross_fw.test_templates.test_channel_alignment import TemplateTestCha
 
 
 class TestOVChannelAlignment(TemplateTestChannelAlignment):
-    def get_backend_cls(self) -> Type[OVChannelAlignmentAlgoBackend]:
+    def get_backend_cls(self) -> type[OVChannelAlignmentAlgoBackend]:
         return OVChannelAlignmentAlgoBackend
 
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

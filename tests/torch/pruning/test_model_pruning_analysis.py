@@ -12,7 +12,7 @@
 
 from collections import Counter
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Callable, Optional, Union
 
 import pytest
 import torch
@@ -70,10 +70,12 @@ from tests.torch.pruning.helpers import SplitPruningInvalidModel
 from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
+pytestmark = pytest.mark.legacy
+
 
 def create_nncf_model_and_pruning_builder(
-    model: torch.nn.Module, config_params: Dict
-) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
+    model: torch.nn.Module, config_params: dict
+) -> tuple[NNCFNetwork, FilterPruningBuilder]:
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config["compression"]["algorithm"] = "filter_pruning"
     for key, value in config_params.items():
@@ -85,13 +87,13 @@ def create_nncf_model_and_pruning_builder(
 class GroupPruningModulesTestStruct:
     def __init__(
         self,
-        model: Union[Type[torch.nn.Module], Callable[[], torch.nn.Module]],
-        non_pruned_module_nodes: List[NNCFNodeName],
-        pruned_groups: List[List[NNCFNodeName]],
-        pruned_groups_by_node_id: List[List[int]],
-        can_prune_after_analysis: Dict[int, bool],
-        final_can_prune: Dict[int, PruningAnalysisDecision],
-        prune_params: Tuple[bool, bool],
+        model: Union[type[torch.nn.Module], Callable[[], torch.nn.Module]],
+        non_pruned_module_nodes: list[NNCFNodeName],
+        pruned_groups: list[list[NNCFNodeName]],
+        pruned_groups_by_node_id: list[list[int]],
+        can_prune_after_analysis: dict[int, bool],
+        final_can_prune: dict[int, PruningAnalysisDecision],
+        prune_params: tuple[bool, bool],
         name: Optional[str] = None,
     ):
         self.model = model
@@ -839,7 +841,7 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
 
 
 class ModulePrunableTestStruct:
-    def __init__(self, model: NNCFNetwork, config_params: dict, is_module_prunable: Dict[NNCFNodeName, bool]):
+    def __init__(self, model: NNCFNetwork, config_params: dict, is_module_prunable: dict[NNCFNodeName, bool]):
         self.model = model
         self.config_params = config_params
         self.is_module_prunable = is_module_prunable

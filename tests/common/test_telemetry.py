@@ -11,7 +11,6 @@
 import importlib
 import os
 import sys
-from typing import Tuple
 from unittest import mock
 from unittest.mock import MagicMock
 from unittest.mock import call
@@ -77,7 +76,7 @@ def test_telemetry_is_mocked_if_env_vars_defined(env_var_to_define, hide_pytest)
 
 
 @pytest.fixture(name="spies")
-def spies_(request, mocker) -> Tuple[MagicMock, MagicMock, MagicMock]:
+def spies_(request, mocker) -> tuple[MagicMock, MagicMock, MagicMock]:
     from nncf.telemetry import telemetry
 
     send_event_spy = mocker.spy(telemetry, "send_event")

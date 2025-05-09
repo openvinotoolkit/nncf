@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List
 
 import openvino as ov
 import pytest
@@ -37,10 +36,10 @@ class InputTestData:
     """
 
     quantized_model: ov.Model
-    operations: List[str]
-    quantizers: List[str]
+    operations: list[str]
+    quantizers: list[str]
     restore_mode: RestoreMode
-    expected_remaining_quantizers: List[str]
+    expected_remaining_quantizers: list[str]
 
 
 TEST_CASES = [

@@ -65,7 +65,7 @@ def test_generate_text_data_functional():
     generated_data = [tokenizer.encode(d) for d in generated_data]
 
     # Uncomment lines below to generate reference for new models.
-    # from tests.shared.helpers import dump_to_json
+    # from tests.cross_fw.shared.json import dump_to_json
     # dump_to_json(GENERATED_TEXT_REF, generated_data)
 
     reference_data = load_json(GENERATED_TEXT_REF)

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Tuple, TypeVar
+from typing import Callable, Optional, TypeVar
 
 import numpy as np
 import torch
@@ -34,7 +34,7 @@ class StaticDatasetMock:
 
     def __init__(
         self,
-        input_size: Tuple,
+        input_size: tuple,
         fn_to_type: Callable = None,
         length: int = 1,
     ):
@@ -43,7 +43,7 @@ class StaticDatasetMock:
         self._input_size = input_size
         self._fn_to_type = fn_to_type
 
-    def __getitem__(self, _) -> Tuple[TTensor, int]:
+    def __getitem__(self, _) -> tuple[TTensor, int]:
         np.random.seed(0)
         data = np.random.rand(*tuple(self._input_size)).astype(np.float32)
         if self._fn_to_type:
@@ -55,7 +55,7 @@ class StaticDatasetMock:
 
 
 def get_static_dataset(
-    input_size: Tuple, transform_fn: Callable, fn_to_type: Optional[Callable] = None, length: int = 1
+    input_size: tuple, transform_fn: Callable, fn_to_type: Optional[Callable] = None, length: int = 1
 ) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.
@@ -466,6 +466,20 @@ class TransposeConvTestModel(nn.Module):
 
     def forward(self, x):
         return self.conv(x)
+
+
+class OneDimMM(nn.Module):
+    INPUT_SIZE = [3]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.linear = nn.Linear(3, 3, bias=True)
+            self.linear.weight.data = torch.randn([3, 3])
+            self.linear.bias.data = torch.randn([3])
+
+    def forward(self, x):
+        return self.linear(x)
 
 
 class RoPEModel(nn.Module):

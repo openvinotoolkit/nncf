@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
 
 import pytest
 import torch
@@ -27,10 +26,12 @@ from tests.torch.helpers import create_random_mock_dataloader
 from tests.torch.helpers import set_torch_seed
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 
 def create_initialized_lenet_model_and_dataloader(
     config: NNCFConfig,
-) -> Tuple[nn.Module, DataLoader, CompressionAlgorithmController]:
+) -> tuple[nn.Module, DataLoader, CompressionAlgorithmController]:
     with set_torch_seed():
         train_loader = create_random_mock_dataloader(config, num_samples=10)
         model = LeNet()

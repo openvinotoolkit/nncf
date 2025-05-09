@@ -11,7 +11,7 @@
 
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 import pytest
 import torch
@@ -93,7 +93,7 @@ def test_get_current_executed_op_name():
 
 
 @pytest.fixture(params=["tensor", "list", "torch_return_type"])
-def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]:
+def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]:
     return {
         "tensor": torch.tensor(1),
         "list": [torch.tensor(1), torch.tensor([2])],
@@ -101,7 +101,7 @@ def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.T
     }.get(request.param)
 
 
-def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]):
+def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]):
     op_name = "/relu/0"
     hook_storage = HookStorage()
     hook_port_0 = CallCount()

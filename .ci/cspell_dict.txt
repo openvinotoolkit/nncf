@@ -29,6 +29,7 @@ ascale
 ascontiguousarray
 asym
 asymm
+atleast
 atol
 atrous
 autocast
@@ -148,11 +149,13 @@ frobenius
 fsolve
 funcs
 fval
+fxawq
 fxsq
 gacts
 gelsy
 gelu
 genai
+getsizeof
 gflop
 gflops
 giga

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import onnx
@@ -34,6 +34,7 @@ from tests.torch.test_models.resnet import ResNet18
 from tests.torch.test_models.resnet import ResNet50
 from tests.torch.test_models.resnet import ResNet50__elastic
 
+pytestmark = pytest.mark.legacy
 ###########################
 # Helpers
 ###########################
@@ -79,7 +80,7 @@ class DepthBasicConvTestModel(nn.Module):
         output = self.last_conv(output)
         return output
 
-    def set_skipped_layers(self, skipped_layers: Optional[List] = None):
+    def set_skipped_layers(self, skipped_layers: Optional[list] = None):
         if skipped_layers is None:
             skipped_layers = []
         self._skipped_layers = skipped_layers

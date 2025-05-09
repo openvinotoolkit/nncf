@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, TypeVar
 
 import pytest
 
@@ -24,6 +24,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import StaticDatasetMock
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
@@ -35,7 +36,7 @@ TTensor = TypeVar("TTensor")
 class TemplateTestBCAlgorithm:
     @staticmethod
     @abstractmethod
-    def list_to_backend_type(data: List) -> TTensor:
+    def list_to_backend_type(data: list) -> TTensor:
         """
         Convert list to backend specific type
 
@@ -64,7 +65,7 @@ class TemplateTestBCAlgorithm:
         Get transformation function for dataset.
         """
 
-    def get_dataset(self, input_size: Tuple) -> StaticDatasetMock:
+    def get_dataset(self, input_size: tuple) -> StaticDatasetMock:
         """
         Return backend specific random dataset.
 
@@ -81,13 +82,13 @@ class TemplateTestBCAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def check_bias(model: TModel, ref_biases: Dict) -> None:
+    def check_bias(model: TModel, ref_biases: dict) -> None:
         """
         Checks biases values.
         """
 
     @staticmethod
-    def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
+    def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
         """
         Returns backend-specific reference.
         """
@@ -143,6 +144,7 @@ class TemplateTestBCAlgorithm:
             (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
             (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
             (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
+            (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):

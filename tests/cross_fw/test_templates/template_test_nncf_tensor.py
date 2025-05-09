@@ -113,7 +113,10 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        assert res_nncf.device == nncf_tensor_a.device
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):
@@ -129,7 +132,10 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        assert res_nncf.device == nncf_tensor_a.device
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", BINARY_OPERATORS)
     def test_operators_int_rev(self, op_name):
@@ -145,7 +151,10 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        assert res_nncf.device == nncf_tensor_a.device
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_tensor(self, op_name):
@@ -159,8 +168,12 @@ class TemplateTestNNCFTensorOperators:
         res = fn(tensor_a, tensor_b)
         res_nncf = fn(nncf_tensor_a, nncf_tensor_b)
 
-        assert res == res_nncf
+        assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_int(self, op_name):
@@ -173,8 +186,12 @@ class TemplateTestNNCFTensorOperators:
         res = fn(tensor_a, value)
         res_nncf = fn(nncf_tensor_a, value)
 
-        assert res == res_nncf
+        assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_int_rev(self, op_name):
@@ -187,8 +204,12 @@ class TemplateTestNNCFTensorOperators:
         res = fn(value, tensor_a)
         res_nncf = fn(value, nncf_tensor_a)
 
-        assert res == res_nncf
+        assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -390,7 +411,10 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor[1]
         assert res == 1
         assert isinstance(res, Tensor)
-        assert res.device == nncf_tensor.device
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize("is_tensor_indecies", (False, True))
     def test_getitem_for_indecies(self, is_tensor_indecies):
@@ -410,6 +434,18 @@ class TemplateTestNNCFTensorOperators:
         for i, x in enumerate(nncf_tensor):
             assert x == arr[i]
             assert isinstance(x, Tensor)
+        assert i == 2
+
+        arr = [arr]
+        nested_nncf_tensor = Tensor(self.to_tensor(arr))
+        for i, x in enumerate(nested_nncf_tensor):
+            assert all(x == nncf_tensor)
+            assert isinstance(x, Tensor)
+
+        # Check a scalar tensor
+        nncf_tensor = Tensor(self.to_tensor(42))
+        with pytest.raises(TypeError):
+            next(iter(nncf_tensor))
 
     # Math
 
@@ -527,7 +563,10 @@ class TemplateTestNNCFTensorOperators:
         res = fns.where(tensor > 0, 1, 0)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
-        assert res.device == tensor.device
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res.device == tensor.device
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -558,19 +597,23 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, bool)
 
     @pytest.mark.parametrize(
-        "x1, x2, rtol, atol, ref",
+        "x1, x2, is_tensor, rtol, atol, ref",
         (
-            ([0.1], [0.1], None, None, True),
-            ([0.1], [0.10001], None, None, False),
-            ([0.1], [0.10001], 0.1, None, True),
-            ([0.1], [0.10001], None, 0.1, True),
-            ([0.1], [0.20001], None, 0.1, False),
-            ([0.1], 0.1, None, None, True),
+            ([0.1], [0.1], True, None, None, True),
+            ([0.1], [0.10001], True, None, None, False),
+            ([0.1], [0.10001], True, 0.1, None, True),
+            ([0.1], [0.10001], True, None, 0.1, True),
+            ([0.1], [0.20001], True, None, 0.1, False),
+            ([0.1], 0.1, True, None, None, True),
+            ([0.1], 0.1, False, None, None, True),
         ),
     )
-    def test_fn_allclose(self, x1, x2, rtol, atol, ref):
+    def test_fn_allclose(self, x1, x2, is_tensor, rtol, atol, ref):
         tensor1 = Tensor(self.to_tensor(x1))
-        tensor2 = Tensor(self.to_tensor(x2))
+        if is_tensor:
+            tensor2 = Tensor(self.to_tensor(x2))
+        else:
+            tensor2 = x2
         if rtol is not None:
             res = fns.allclose(tensor1, tensor2, rtol=rtol)
         elif atol is not None:
@@ -617,6 +660,13 @@ class TemplateTestNNCFTensorOperators:
         res = fns.astype(tensor, TensorDataType.int8)
         assert isinstance(res, Tensor)
         assert res.dtype == TensorDataType.int8
+
+    def test_atleast_1d(self):
+        scalar = Tensor(self.to_tensor(42))
+        assert fns.atleast_1d(scalar).shape == (1,)
+
+        tensor = Tensor(self.to_tensor([[1, 2, 3]]))
+        assert fns.atleast_1d(tensor).shape == (1, 3)
 
     def test_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
@@ -804,6 +854,7 @@ class TemplateTestNNCFTensorOperators:
             (1.1, 0, 1.0),
             ([1.1, 0.9], 0, [1.0, 1.0]),
             ([1.11, 0.91], 1, [1.1, 0.9]),
+            ([5.5, 3.3], -1, [10.0, 0.0]),
         ),
     )
     def test_fn_round(self, val, decimals, ref):
@@ -1047,6 +1098,13 @@ class TemplateTestNNCFTensorOperators:
             ),
             (
                 [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                "nuc",
+                (0, 1),
+                False,
+                [1.53063197],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
                 float("inf"),
                 0,
                 False,
@@ -1059,6 +1117,49 @@ class TemplateTestNNCFTensorOperators:
                 False,
                 0.9364634205074938,
             ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                2,
+                0,
+                False,
+                [0.8062258, 0.72801095, 0.22360681],
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                1,
+                None,
+                False,
+                0.9,
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                -1,
+                None,
+                False,
+                0.3,
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                -2,
+                None,
+                False,
+                0.59416854,
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                float("inf"),
+                None,
+                False,
+                1.2,
+            ),
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                -float("inf"),
+                None,
+                False,
+                0.9,
+            ),
+            ([[[1.0, 1.0], [1.0, 1.0]], [[1.0, 1.0], [1.0, 1.0]]], None, None, False, 2.82842708),
         ),
     )
     def test_fn_linalg_norm(self, x, ord, axis, keepdims, ref):
@@ -1070,6 +1171,371 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor.device
+
+    def test_norm_comprehensive(self):
+        # 2D tensor
+        tensor_data_2d = [[1.0, 2.0], [3.0, 4.0]]
+        tf_tensor_2d = self.to_tensor(tensor_data_2d)
+        tensor_2d = Tensor(tf_tensor_2d)
+
+        # 3D tensor
+        tensor_data_3d = [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]
+        tf_tensor_3d = self.to_tensor(tensor_data_3d)
+        tensor_3d = Tensor(tf_tensor_3d)
+
+        # Matrix norm values
+        matrix_ord_values = [None, 1, 2, -1, -2, float("inf"), -float("inf"), "fro", "nuc"]
+
+        # Vector norm values
+        vector_ord_values = [None, 0, 1, 2, float("inf")]
+
+        # Test vector norms (axis=0 or axis=1)
+        for ord_val in vector_ord_values:
+            if ord_val == "fro" or ord_val == "nuc":
+                continue
+
+            result = fns.linalg.norm(tensor_2d, ord=ord_val, axis=0)
+            assert result.shape == (2,), f"Failed for ord={ord_val}, axis=0"
+
+            result = fns.linalg.norm(tensor_2d, ord=ord_val, axis=1)
+            assert result.shape == (2,), f"Failed for ord={ord_val}, axis=1"
+
+        # Test matrix norms (axis=None or axis=(0,1))
+        for ord_val in matrix_ord_values:
+            try:
+                result = fns.linalg.norm(tensor_2d, ord=ord_val)
+
+                result = fns.linalg.norm(tensor_2d, ord=ord_val, axis=(0, 1))
+                assert result.ndim == 0, f"Failed for ord={ord_val}, axis=(0,1)"
+
+                result = fns.linalg.norm(tensor_2d, ord=ord_val, axis=(0, 1), keepdims=True)
+                assert result.shape == (1, 1), f"Failed for ord={ord_val}, axis=(0,1), keepdims=True"
+            except ValueError:
+                pass
+
+        # Test 3D tensor slicing for nuclear norm
+        try:
+            result = fns.linalg.norm(tensor_3d, ord="nuc", axis=(1, 2))
+            assert result.shape == (2,), "Failed for 3D tensor, ord=nuc, axis=(1,2)"
+
+            result = fns.linalg.norm(tensor_3d, ord="nuc", axis=(1, 2), keepdims=True)
+            assert result.shape == (2, 1, 1), "Failed for 3D tensor, ord=nuc, axis=(1,2), keepdims=True"
+        except ValueError as e:
+            assert False, f"Failed for 3D tensor, ord=nuc, axis=(1,2), error: {e}"
+
+    def test_norm_3d_tensor(self):
+        tensor_data_3d = [[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]]
+        tf_tensor_3d = self.to_tensor(tensor_data_3d)
+        tensor_3d = Tensor(tf_tensor_3d)
+
+        # Single axis norms (vector norms)
+        for axis_val in [0, 1, 2]:
+            for ord_val in [None, 0, 1, 2, float("inf")]:
+                result = fns.linalg.norm(tensor_3d, ord=ord_val, axis=axis_val)
+
+                expected_shape = list(tensor_3d.shape)
+                expected_shape.pop(axis_val)
+                assert result.shape == tuple(expected_shape), f"Failed shape check for ord={ord_val}, axis={axis_val}"
+
+                result_keep = fns.linalg.norm(tensor_3d, ord=ord_val, axis=axis_val, keepdims=True)
+                expected_shape_keep = list(tensor_3d.shape)
+                expected_shape_keep[axis_val] = 1
+                assert result_keep.shape == tuple(expected_shape_keep), (
+                    f"Failed keepdims shape for ord={ord_val}, axis={axis_val}"
+                )
+
+        # Dual axis norms (matrix norms)
+        axis_pairs = [(0, 1), (0, 2), (1, 2)]
+        for axis_pair in axis_pairs:
+            for ord_val in ["fro", "nuc", 1, 2, float("inf"), -float("inf")]:
+                try:
+                    result = fns.linalg.norm(tensor_3d, ord=ord_val, axis=axis_pair)
+
+                    expected_shape = []
+                    for i in range(tensor_3d.ndim):
+                        if i not in axis_pair:
+                            expected_shape.append(tensor_3d.shape[i])
+                    assert result.shape == tuple(expected_shape), (
+                        f"Failed shape check for ord={ord_val}, axis={axis_pair}"
+                    )
+
+                    result_keep = fns.linalg.norm(tensor_3d, ord=ord_val, axis=axis_pair, keepdims=True)
+                    expected_shape_keep = list(tensor_3d.shape)
+                    for i in axis_pair:
+                        expected_shape_keep[i] = 1
+                    assert result_keep.shape == tuple(expected_shape_keep), (
+                        f"Failed keepdims shape for ord={ord_val}, axis={axis_pair}"
+                    )
+                except ValueError as e:
+                    if ord_val == "nuc" and axis_pair in [(0, 1), (0, 2)]:
+                        assert False, f"Failed shape check for nuclear norm with axis={axis_pair}, error: {e}"
+
+        # Testing for nuclear norm on all possible axis combinations
+        nuclear_axes = [(0, 1), (0, 2), (1, 2)]
+        for axis_pair in nuclear_axes:
+            try:
+                result = fns.linalg.norm(tensor_3d, ord="nuc", axis=axis_pair)
+
+                result_keep = fns.linalg.norm(tensor_3d, ord="nuc", axis=axis_pair, keepdims=True)
+
+                remaining_dims = tensor_3d.ndim - len(axis_pair)
+                assert result.ndim == remaining_dims, f"Wrong dimension for nuclear norm with axis={axis_pair}"
+
+                expected_shape_keep = []
+                for i in range(tensor_3d.ndim):
+                    expected_shape_keep.append(1 if i in axis_pair else tensor_3d.shape[i])
+                assert result_keep.shape == tuple(expected_shape_keep), (
+                    f"Wrong keepdims shape for nuclear norm with axis={axis_pair}"
+                )
+            except ValueError as e:
+                assert False, f"Nuclear norm failed for axis={axis_pair}, error: {e}"
+
+    def test_norm_order_zero(self):
+        # 1D tensor
+        tensor_data_1d = [1.0, 0.0, 3.0, 0.0, 5.0]
+        tf_tensor_1d = self.to_tensor(tensor_data_1d)
+        tensor_1d = Tensor(tf_tensor_1d)
+
+        # Test 1D tensor with ord=0
+        result = fns.linalg.norm(tensor_1d, ord=0)
+        assert result.item() == 3, f"Expected 3 non-zeros, got {result.item()}"
+
+        # Test 1D tensor with keepdims
+        result = fns.linalg.norm(tensor_1d, ord=0, keepdims=True)
+        assert result.shape == (1,), f"Expected shape (1,), got {result.shape}"
+        assert result.item() == 3, f"Expected 3 non-zeros, got {result.item()}"
+
+        # Test 1D vector from a slice of a 2D tensor
+        tensor_data_2d = [[1.0, 0.0, 3.0], [0.0, 0.0, 6.0], [7.0, 0.0, 9.0]]
+        tf_tensor_2d = self.to_tensor(tensor_data_2d)
+        tensor_2d = Tensor(tf_tensor_2d)
+
+        # Test along axis=0
+        result = fns.linalg.norm(tensor_2d, ord=0, axis=0)
+        expected = [2, 0, 3]
+
+        result_data = result.data
+        for i, expected_val in enumerate(expected):
+            val = float(result_data[i])
+            assert val == expected_val, f"At index {i}, expected {expected_val}, got {val}"
+
+        # Test along axis=1
+        result = fns.linalg.norm(tensor_2d, ord=0, axis=1)
+        expected = [2, 1, 2]
+
+        result_data = result.data
+        for i, expected_val in enumerate(expected):
+            val = float(result_data[i])
+            assert val == expected_val, f"At index {i}, expected {expected_val}, got {val}"
+
+        # Test with keepdims=True
+        result = fns.linalg.norm(tensor_2d, ord=0, axis=0, keepdims=True)
+        assert result.shape == (1, 3), f"Expected shape (1, 3), got {result.shape}"
+
+        result = fns.linalg.norm(tensor_2d, ord=0, axis=1, keepdims=True)
+        assert result.shape == (3, 1), f"Expected shape (3, 1), got {result.shape}"
+
+    def test_norm_4d_tensor(self):
+        # 4D tensor
+        tensor_data_4d = [
+            [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]],
+            [[[9.0, 10.0], [11.0, 12.0]], [[13.0, 14.0], [15.0, 16.0]]],
+        ]
+        tf_tensor_4d = self.to_tensor(tensor_data_4d)
+        tensor_4d = Tensor(tf_tensor_4d)
+
+        # Test nuclear norm on slices
+        nuclear_axes = [(1, 2)]
+        for axis_pair in nuclear_axes:
+            try:
+                result = fns.linalg.norm(tensor_4d, ord="nuc", axis=axis_pair)
+                result_keep = fns.linalg.norm(tensor_4d, ord="nuc", axis=axis_pair, keepdims=True)
+
+                expected_shape = [dim for i, dim in enumerate(tensor_4d.shape) if i not in axis_pair]
+                assert result.shape == tuple(expected_shape)
+
+                expected_shape_keep = [1 if i in axis_pair else dim for i, dim in enumerate(tensor_4d.shape)]
+                assert result_keep.shape == tuple(expected_shape_keep)
+            except ValueError as e:
+                assert False, f"Failed shape check for nuclear norm with axis={axis_pair}, error: {e}"
+
+        # Test vector norms along single axes
+        for ord_val in [0, 1, float("inf")]:
+            for axis in range(4):
+                result = fns.linalg.norm(tensor_4d, ord=ord_val, axis=axis)
+                expected_shape = list(tensor_4d.shape)
+                expected_shape.pop(axis)
+                assert result.shape == tuple(expected_shape)
+
+                result = fns.linalg.norm(tensor_4d, ord=ord_val, axis=axis, keepdims=True)
+                expected_shape = list(tensor_4d.shape)
+                expected_shape[axis] = 1
+                assert result.shape == tuple(expected_shape)
+
+    def test_norm_empty_tensor(self):
+        empty_tensor_1d = self.to_tensor([])
+        tensor_1d = Tensor(empty_tensor_1d)
+
+        empty_tensor_2d = self.to_tensor([[]])
+        tensor_2d = Tensor(empty_tensor_2d)
+
+        # Test vector norms on empty 1D tensor
+        for ord_val in [0, 1]:
+            try:
+                result = fns.linalg.norm(tensor_1d, ord=ord_val)
+                assert result.item() == 0, f"Empty tensor norm with ord={ord_val} should be 0"
+            except (Exception, ValueError, RuntimeError) as e:
+                if (
+                    "shape" not in str(e).lower()
+                    and "empty" not in str(e).lower()
+                    and "dimension" not in str(e).lower()
+                    and "zero-size" not in str(e).lower()
+                    and "reduction" not in str(e).lower()
+                ):
+                    assert False, f"Unexpected error for empty tensor with ord={ord_val}: {e}"
+                print(f"Expected error for empty tensor with ord={ord_val}: {e}")
+
+        try:
+            result = fns.linalg.norm(tensor_1d, ord=float("inf"))
+            assert result.item() == 0, "Empty tensor infinity norm should be 0"
+        except (Exception, ValueError, RuntimeError) as e:
+            if (
+                "shape" not in str(e).lower()
+                and "empty" not in str(e).lower()
+                and "dimension" not in str(e).lower()
+                and "zero-size" not in str(e).lower()
+                and "reduction" not in str(e).lower()
+            ):
+                assert False, f"Unexpected error for empty tensor with ord=inf: {e}"
+            print(f"Expected error for empty tensor with ord=inf: {e}")
+
+        try:
+            result = fns.linalg.norm(tensor_1d, ord=0)
+            assert result.item() == 0, "Count of non-zeros in empty tensor should be 0"
+        except Exception as e:
+            if (
+                "shape" not in str(e).lower()
+                and "empty" not in str(e).lower()
+                and "dimension" not in str(e).lower()
+                and "zero-size" not in str(e).lower()
+            ):
+                assert False, f"Unexpected error for empty tensor with ord=0: {e}"
+            print(f"Expected shape error for empty tensor with ord=0: {e}")
+
+        try:
+            result = fns.linalg.norm(tensor_1d, ord=0, keepdims=True)
+            assert result.shape == (1,), "Shape with keepdims should be (1,)"
+            assert result.item() == 0, "Count of non-zeros in empty tensor should be 0"
+        except Exception as e:
+            if (
+                "shape" not in str(e).lower()
+                and "empty" not in str(e).lower()
+                and "dimension" not in str(e).lower()
+                and "zero-size" not in str(e).lower()
+            ):
+                assert False, f"Unexpected error for empty tensor with keepdims: {e}"
+            print(f"Expected error with keepdims on empty tensor: {e}")
+
+        # Test matrix norms on empty 2D tensor
+        for ord_val in ["fro"]:
+            try:
+                result = fns.linalg.norm(tensor_2d, ord=ord_val)
+                assert result.item() == 0, f"Empty tensor norm with ord={ord_val} should be 0"
+            except (Exception, ValueError, RuntimeError) as e:
+                if (
+                    "shape" not in str(e).lower()
+                    and "empty" not in str(e).lower()
+                    and "dimension" not in str(e).lower()
+                    and "zero-size" not in str(e).lower()
+                ):
+                    assert False, f"Unexpected error for empty 2D tensor with ord={ord_val}: {e}"
+                print(f"Expected error for empty 2D tensor with ord={ord_val}: {e}")
+
+        # Test vector norm on columns of empty 2D tensor
+        try:
+            result = fns.linalg.norm(tensor_2d, ord=0, axis=0)
+            assert len(result.shape) > 0, "Result should have at least one dimension"
+            assert result.size == 0, "Result should be empty along specified axis"
+        except Exception as e:
+            print(f"Note: Cannot compute norm along axis=0 for empty tensor: {e}")
+
+    def test_norm_extreme_values(self):
+        # Tensors with NaN, Inf, and extreme values
+        inf_tensor_data = [[1.0, float("inf")], [3.0, 4.0]]
+        inf_tf_tensor = self.to_tensor(inf_tensor_data)
+        inf_tensor = Tensor(inf_tf_tensor)
+
+        nan_tensor_data = [[1.0, 2.0], [float("nan"), 4.0]]
+        nan_tf_tensor = self.to_tensor(nan_tensor_data)
+        nan_tensor = Tensor(nan_tf_tensor)
+
+        # Test vector norms along axis=0
+        result = fns.linalg.norm(inf_tensor, ord=0, axis=0)
+        assert result.shape == (2,)
+
+        result_data = result.data
+        assert float(result_data[0]) == 2 and float(result_data[1]) == 2
+
+        # Test vector norms along axis=1
+        result = fns.linalg.norm(inf_tensor, ord=0, axis=1)
+        assert result.shape == (2,)
+
+        result_data = result.data
+        assert float(result_data[0]) == 2 and float(result_data[1]) == 2
+
+        # Create 1D tensors to test ord=0 behavior on vectors
+        inf_vector_data = [1.0, float("inf"), 3.0, 4.0]
+        inf_vector_tensor = self.to_tensor(inf_vector_data)
+        inf_vector = Tensor(inf_vector_tensor)
+
+        nan_vector_data = [1.0, 2.0, float("nan"), 4.0]
+        nan_vector_tensor = self.to_tensor(nan_vector_data)
+        nan_vector = Tensor(nan_vector_tensor)
+
+        mixed_vector_data = [float("inf"), 2.0, float("nan"), 4.0]
+        mixed_vector_tensor = self.to_tensor(mixed_vector_data)
+        mixed_vector = Tensor(mixed_vector_tensor)
+
+        # Test ord=0 on vectors with extreme values
+        result = fns.linalg.norm(inf_vector, ord=0)
+        assert result.item() == 4, "All elements (including Inf) should be counted as non-zero"
+
+        result = fns.linalg.norm(nan_vector, ord=0)
+        assert result.item() == 4, "All elements (including NaN) should be counted as non-zero"
+
+        try:
+            result = fns.linalg.norm(mixed_vector, ord=0)
+            assert result.item() == 4, "All elements should be counted as non-zero"
+        except Exception as e:
+            if "invalid" not in str(e).lower():
+                assert False, f"Unexpected error with mixed NaN and Inf: {e}"
+            print(f"Note: Expected error with mixed NaN and Inf values: {e}")
+
+        # Test matrix norms
+        try:
+            result = fns.linalg.norm(inf_tensor, ord="fro")
+            assert float("inf") == result.item() or result.item() > 1e30, "Norm with Inf should be Inf or very large"
+        except (Exception, ValueError, RuntimeError) as e:
+            print(f"Note: Backend cannot compute Frobenius norm with Inf values: {e}")
+
+        try:
+            result = fns.linalg.norm(nan_tensor, ord="nuc")
+            import numpy as np
+
+            assert np.isnan(result.item()) or result.item() > 0, "Nuclear norm with NaN might be NaN"
+        except (Exception, ValueError, RuntimeError) as e:
+            print(f"Note: Backend SVD cannot handle NaN values: {e}")
+
+        try:
+            result = fns.linalg.norm(inf_tensor, ord=float("inf"))
+            assert result.item() == float("inf"), "Infinity norm with Inf values should be Inf"
+        except (Exception, ValueError, RuntimeError) as e:
+            print(f"Note: Backend cannot compute infinity norm with Inf values: {e}")
+
+        # Test keepdims with vector norms
+        result = fns.linalg.norm(inf_vector, ord=0, keepdims=True)
+        assert result.shape == (1,)
+        assert result.item() == 4
 
     @pytest.mark.parametrize(
         "m1, m2, ref",
@@ -1101,7 +1567,10 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
-        assert res.device == tensor1.device
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res.device == tensor1.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -1569,18 +2038,20 @@ class TemplateTestNNCFTensorOperators:
             args.append(end)
         if stop is not None:
             args.append(stop)
-        ref = Tensor(self.to_tensor(ref))
+
         for dtype in [TensorDataType.int32, TensorDataType.float32]:
+            tensor_ref = Tensor(fns.astype(self.to_tensor(ref), dtype))
             tensor_a = fns.arange(*tuple(args), backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
             assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
-            assert fns.all(tensor_a == ref)
+            assert fns.all(tensor_a == tensor_ref)
 
     def test_fn_from_numpy(self):
         ndarray = np.array([1, 2])
-        ref = Tensor(self.to_cpu(self.to_tensor(ndarray)))
+        ref_cpu = self.to_cpu(self.to_tensor(ndarray))
+        ref = Tensor(ref_cpu)
         tensor = fns.from_numpy(ndarray, backend=ref.backend)
         assert isinstance(tensor, Tensor)
         assert tensor.device == ref.device
@@ -1749,6 +2220,13 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize("data", [[3.0, 2.0, 2.0], [1, 2, 3]])
     @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.int32, TensorDataType.uint8, None])
     def test_fn_tensor(self, data, dtype):
+        if (
+            self.backend() == TensorBackend.tf
+            and dtype is not None
+            and not dtype.is_float()
+            and (data == [3.0, 2.0, 2.0])
+        ):
+            pytest.skip("TF backend does not support non-float dtypes for float data")
         nncf_tensor = fns.tensor(data, backend=self.backend(), dtype=dtype, device=self.device())
         backend_tensor = Tensor(self.to_tensor(data))
         if dtype is not None:

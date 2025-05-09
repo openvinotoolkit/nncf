@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, Tuple
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -31,6 +31,8 @@ from tests.torch.sparsity.movement.helpers import LinearRunRecipe
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
 
+pytestmark = pytest.mark.legacy
+
 
 class TestSparseConfigByScope:
     @pytest.mark.parametrize(
@@ -45,7 +47,7 @@ class TestSparseConfigByScope:
             {"mode": "per_dim", "axis": 1, "target_scopes": ["prune_column", "{re}another_block"]},
         ],
     )
-    def test_create_sparse_config_by_scope(self, config: Dict[str, Any]):
+    def test_create_sparse_config_by_scope(self, config: dict[str, Any]):
         sparse_config_by_scope = SparseConfigByScope.from_config(config)
         assert isinstance(sparse_config_by_scope, SparseConfigByScope)
         ref_target_scopes = config.pop("target_scopes")
@@ -291,7 +293,7 @@ class TestSparsifier:
         ],
     )
     def test_get_importance_shape(
-        self, sparse_cfg: SparseConfig, bias: bool, ref_weight_importance_shape: Tuple[int, int]
+        self, sparse_cfg: SparseConfig, bias: bool, ref_weight_importance_shape: tuple[int, int]
     ):
         weight_shape = (4, 6)
         operand = MovementSparsifier(

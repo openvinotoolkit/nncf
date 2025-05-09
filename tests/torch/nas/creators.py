@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 
@@ -47,7 +47,7 @@ from tests.torch.test_models import mobilenet_v3_small
 # TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
 def create_bootstrap_training_model_and_ctrl(
     model, nncf_config: NNCFConfig, register_bn_adapt: bool = True
-) -> Tuple[NNCFNetwork, BNASTrainingController]:
+) -> tuple[NNCFNetwork, BNASTrainingController]:
     algo_name = nncf_config.get("bootstrapNAS", {}).get("training", {}).get("algorithm", "progressive_shrinking")
     nncf_network = create_nncf_network(model, nncf_config)
     if register_bn_adapt:
@@ -110,7 +110,7 @@ NAS_MODEL_DESCS = {
 }
 
 
-def create_bootstrap_nas_training_algo(model_name) -> Tuple[NNCFNetwork, ProgressiveShrinkingController, Callable]:
+def create_bootstrap_nas_training_algo(model_name) -> tuple[NNCFNetwork, ProgressiveShrinkingController, Callable]:
     model = NAS_MODEL_DESCS[model_name][0]()
     nncf_config = get_empty_config(input_sample_sizes=NAS_MODEL_DESCS[model_name][1])
     nncf_config["bootstrapNAS"] = {"training": {"algorithm": "progressive_shrinking"}}
@@ -123,8 +123,8 @@ def create_bootstrap_nas_training_algo(model_name) -> Tuple[NNCFNetwork, Progres
 
 
 def create_supernet(
-    model_creator: Callable, input_sample_sizes: List[int], elasticity_params: Optional[Dict[str, Any]] = None
-) -> Tuple[MultiElasticityHandler, NNCFNetwork]:
+    model_creator: Callable, input_sample_sizes: list[int], elasticity_params: Optional[dict[str, Any]] = None
+) -> tuple[MultiElasticityHandler, NNCFNetwork]:
     params = {} if elasticity_params is None else elasticity_params
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
     config["bootstrapNAS"] = {"training": {"elasticity": params}}
@@ -135,7 +135,7 @@ def create_supernet(
 
 def create_single_conv_kernel_supernet(
     kernel_size=5, out_channels=1, padding=2
-) -> Tuple[ElasticKernelHandler, NNCFNetwork]:
+) -> tuple[ElasticKernelHandler, NNCFNetwork]:
     params = {"available_elasticity_dims": [ElasticityDim.KERNEL.value]}
     model_creator = partial(BasicConvTestModel, 1, out_channels=out_channels, kernel_size=kernel_size, padding=padding)
     input_sample_sizes = [1, 1, kernel_size, kernel_size]

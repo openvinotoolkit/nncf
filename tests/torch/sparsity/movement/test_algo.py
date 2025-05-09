@@ -59,6 +59,7 @@ from tests.torch.sparsity.movement.helpers import initialize_sparsifier_paramete
 from tests.torch.sparsity.movement.helpers import is_roughly_non_decreasing
 from tests.torch.sparsity.movement.helpers import is_roughly_of_same_value
 
+pytestmark = pytest.mark.legacy
 desc_sparse_structures = {
     "explicit_mixed": [
         {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},

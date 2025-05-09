@@ -65,7 +65,7 @@ class Tensor:
         return bool(self.data)
 
     def __iter__(self) -> Iterator[Tensor]:
-        return TensorIterator(self.data)
+        return TensorIterator(self)
 
     def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]]) -> Tensor:
         return Tensor(self.data[unwrap_index(index)])
@@ -236,10 +236,14 @@ class TensorIterator(Iterator[Tensor]):
         self._index = 0
 
     def __next__(self) -> Tensor:
-        if self._index < len(self._tensor):
+        tensor_shape = self._tensor.shape
+        if not tensor_shape:
+            msg = "iteration over a 0-d tensor"
+            raise TypeError(msg)
+        if self._index < tensor_shape[0]:
             result = self._tensor[self._index]
             self._index += 1
-            return Tensor(result)
+            return result
 
         raise StopIteration
 

@@ -16,7 +16,7 @@ import traceback
 from collections import OrderedDict
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import pandas as pd
 import pytest
@@ -54,7 +54,7 @@ def _parse_version(s: Path):
     return version.parse(version_str)
 
 
-def ref_data_correction(data: Dict, file_name: str):
+def ref_data_correction(data: dict, file_name: str):
     """
     Apply corrections from reference YAML files according current of OV version to the provided data dictionary.
 
@@ -108,7 +108,7 @@ def fixture_wc_reference_data():
 
 @pytest.fixture(scope="session", name="result_data")
 def fixture_report_data(output_dir, run_benchmark_app, forked):
-    data: Dict[str, RunInfo] = {}
+    data: dict[str, RunInfo] = {}
     yield data
     if data:
         columns_to_drop = ["FPS"] if not run_benchmark_app else []
@@ -195,7 +195,7 @@ def run_pipeline(
     test_case_name: str,
     reference_data: dict,
     test_cases: dict,
-    result_data: Dict[str, RunInfo],
+    result_data: dict[str, RunInfo],
     output_dir: Path,
     data_dir: Optional[Path],
     no_eval: bool,
@@ -204,7 +204,6 @@ def run_pipeline(
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
-    torch_compile_validation: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
@@ -224,7 +223,6 @@ def run_pipeline(
             "data_dir": data_dir,
             "no_eval": no_eval,
             "run_benchmark_app": run_benchmark_app,
-            "torch_compile_validation": torch_compile_validation,
             "batch_size": batch_size or test_model_param.get("batch_size", 1),
             "memory_monitor": memory_monitor,
         }
@@ -269,14 +267,13 @@ def test_ptq_quantization(
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    result_data: Dict[str, RunInfo],
+    result_data: dict[str, RunInfo],
     no_eval: bool,
     batch_size: Optional[int],
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
-    torch_compile_validation: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
@@ -294,7 +291,6 @@ def test_ptq_quantization(
         run_torch_cuda_backend,
         subset_size,
         run_benchmark_app,
-        torch_compile_validation,
         capsys,
         extra_columns,
         memory_monitor,
@@ -306,7 +302,7 @@ def test_weight_compression(
     wc_reference_data: dict,
     test_case_name: str,
     output_dir: Path,
-    result_data: Dict[str, RunInfo],
+    result_data: dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,
@@ -331,7 +327,6 @@ def test_weight_compression(
         run_torch_cuda_backend,
         subset_size,
         run_benchmark_app,
-        False,  # torch_compile_validation is not used in WC
         capsys,
         extra_columns,
         memory_monitor,

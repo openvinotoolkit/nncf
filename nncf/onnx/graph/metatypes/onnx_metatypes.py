@@ -17,6 +17,7 @@ import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
+from nncf.onnx.graph.onnx_helper import get_array_from_tensor
 from nncf.onnx.graph.onnx_helper import get_parent
 from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
@@ -801,7 +802,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     initializer_name = get_tensor_edge_name(model, node, 1, get_parents_node_mapping(model))
     for init in model.graph.initializer:
         if init.name == initializer_name:
-            weight_tensor_value = onnx.numpy_helper.to_array(init)
+            weight_tensor_value = get_array_from_tensor(model, init)
     if weight_tensor_value is None:
         return False
     conv_out_channels = weight_tensor_value.shape[0]

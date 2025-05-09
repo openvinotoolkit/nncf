@@ -15,6 +15,8 @@ import torch
 
 from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 
+pytestmark = pytest.mark.legacy
+
 STUB = 0
 N_STATE = 5
 N_ACTION = 2
