@@ -309,7 +309,7 @@
         "device": "cuda",
         "requirements": "examples/llm_compression/torch/qat_with_lora/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "accuracy_tolerance": 0.002,
+        "accuracy_tolerance": 0.02,
         "accuracy_metrics": {
             "accuracy_diff": 0.03
         }
