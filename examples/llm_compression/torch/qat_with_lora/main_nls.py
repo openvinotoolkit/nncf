@@ -188,7 +188,10 @@ def lm_eval(model: nn.Module, tokenizer: AutoTokenizer, task: str, batch_size: i
 
 
 def tokenize(
-    tokenizer: AutoTokenizer, prompt: str, add_eos_token: bool = True, max_length: int = 256
+    tokenizer: AutoTokenizer,
+    prompt: str,
+    add_eos_token: bool = True,
+    max_length: int = 256,
 ) -> dict[str, list[int]]:
     """
     Tokenize the given prompt.
@@ -324,7 +327,14 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--task",
         type=str,
-        choices=["openbookqa", "winogrande", "arc_challenge", "arc_easy", "gsm8k", "hellaswag"],
+        choices=[
+            "openbookqa",
+            "winogrande",
+            "arc_challenge",
+            "arc_easy",
+            "gsm8k",
+            "hellaswag",
+        ],
         default="openbookqa",
         help="Evaluation task",
     )
@@ -439,7 +449,11 @@ def main(argv) -> float:
     train_dataset = [tokenize(tokenizer, sample) for sample in train_dataset]
     random.shuffle(train_dataset)
 
-    model = compress_weights(model, dataset=Dataset([model_input]), **compression_config)
+    model = compress_weights(
+        model,
+        dataset=Dataset([{k: v.to(device) for k, v in model_input.items()}]),
+        **compression_config,
+    )
     results_of_compressed_model = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
     print(f"Results of NNCF compressed model={json.dumps(results_of_compressed_model, indent=4)}")
     overall_result["results_of_compressed_model"] = results_of_compressed_model
@@ -482,7 +496,9 @@ def main(argv) -> float:
         else:
             # Initialize the counter for tracking activation counts during training
             maximal_lora_rank_config = configure_lora_adapters(
-                layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="maximal"
+                layer_id_vs_lora_quantizers_map,
+                lora_rank_space=args.lora_rank_space,
+                adapter_strategy="maximal",
             )
             activation_counter = [
                 {rank: 0 for rank in args.lora_rank_space} for _ in range(len(maximal_lora_rank_config))
@@ -498,7 +514,9 @@ def main(argv) -> float:
                 # configure the LoRA adapters with a random rank configuration from the specified rank space.
                 if not disable_nls and grad_steps == 0:
                     current_config = configure_lora_adapters(
-                        layer_id_vs_lora_quantizers_map, lora_rank_space=args.lora_rank_space, adapter_strategy="random"
+                        layer_id_vs_lora_quantizers_map,
+                        lora_rank_space=args.lora_rank_space,
+                        adapter_strategy="random",
                     )
                     # Update the activation counter
                     for idx, rank in enumerate(current_config):
@@ -600,12 +618,16 @@ def main(argv) -> float:
                     "results": results_of_nls_finetuned_compressed_model_median,
                 }
             )
-            best_result = max(best_result, results_of_nls_finetuned_compressed_model_median[args.lm_eval_metric])
+            best_result = max(
+                best_result,
+                results_of_nls_finetuned_compressed_model_median[args.lm_eval_metric],
+            )
 
             # Test the most frequent configuration
             most_frequent_lora_rank_config = get_most_frequent_config(activation_counter)
             configure_lora_adapters(
-                layer_id_vs_lora_quantizers_map, specific_rank_config=most_frequent_lora_rank_config
+                layer_id_vs_lora_quantizers_map,
+                specific_rank_config=most_frequent_lora_rank_config,
             )
             results_of_nls_finetuned_compressed_model_most_frequent = lm_eval(
                 model, tokenizer, task=args.task, batch_size=args.eval_batch_size
@@ -621,12 +643,18 @@ def main(argv) -> float:
                     "results": results_of_nls_finetuned_compressed_model_most_frequent,
                 }
             )
-            best_result = max(best_result, results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric])
+            best_result = max(
+                best_result,
+                results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric],
+            )
 
             # Test the top 5 min loss configurations
             top_5_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=5)
             for i, min_loss_config in enumerate(top_5_min_loss_configs):
-                configure_lora_adapters(layer_id_vs_lora_quantizers_map, specific_rank_config=min_loss_config)
+                configure_lora_adapters(
+                    layer_id_vs_lora_quantizers_map,
+                    specific_rank_config=min_loss_config,
+                )
                 results_of_nls_finetuned_compressed_model_min_loss = lm_eval(
                     model, tokenizer, task=args.task, batch_size=args.eval_batch_size
                 )
@@ -641,10 +669,16 @@ def main(argv) -> float:
                         "results": results_of_nls_finetuned_compressed_model_min_loss,
                     }
                 )
-                best_result = max(best_result, results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric])
+                best_result = max(
+                    best_result,
+                    results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric],
+                )
         else:
             assert args.custom_rank_config is not None, "Please provide `custom_rank_config` for evaluation."
-            configure_lora_adapters(layer_id_vs_lora_quantizers_map, specific_rank_config=args.custom_rank_config)
+            configure_lora_adapters(
+                layer_id_vs_lora_quantizers_map,
+                specific_rank_config=args.custom_rank_config,
+            )
             results_of_nls_finetuned_compressed_model_custom = lm_eval(
                 model, tokenizer, task=args.task, batch_size=args.eval_batch_size
             )
