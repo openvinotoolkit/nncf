@@ -22,7 +22,7 @@ python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --d
 - `--resume`: Whether to resume training from a checkpoint. If specified, the script will load the trained checkpoint and continue training or evaluation.
 - `--custom_rank_config`: Specifies the LoRA rank of adapters per layer.
 
-Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This strategy takes advantage of some information from the training phase and does not require any overhead. More powerful elastic LoRA NLS configurations can be optionally obtained through more advanced search algorithms. We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
+Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This default strategy takes advantage of some information from the training phase and requires the evaluation of only 7 suggested configurations. This is automatically done in the example script, and only the best configuration from these candidates is returned to the user. More powerful elastic LoRA NLS configurations can be optionally obtained through more advanced search algorithms. We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
 
 ```bash
 python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --resume --task openbookqa --lora_rank_space 32 24 16 --custom_rank_config 32 24 16 24 24 32 24 32 32 16 24 16 24 32 24 16 24 24 32 32 24 32 32 16 32 32 24 32

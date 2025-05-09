@@ -26,10 +26,6 @@ import torch
 import transformers
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
-from main import get_model_input
-from main import load_checkpoint
-from main import save_checkpoint
-from main import set_trainable
 from torch import Tensor
 from torch import nn
 from torch.jit import TracerWarning
@@ -38,6 +34,10 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from transformers import get_cosine_schedule_with_warmup
 
+from examples.llm_compression.torch.qat_with_lora.main import get_model_input
+from examples.llm_compression.torch.qat_with_lora.main import load_checkpoint
+from examples.llm_compression.torch.qat_with_lora.main import save_checkpoint
+from examples.llm_compression.torch.qat_with_lora.main import set_trainable
 from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat
