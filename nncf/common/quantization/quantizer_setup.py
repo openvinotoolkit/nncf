@@ -247,12 +247,13 @@ class QuantizerSetupBase:
         self._next_unified_scale_gid = 0
         self._next_shared_inputs_gid = 0
 
-    def add_independent_quantization_point(self, qp: QuantizationPointBase) -> None:
+    def add_independent_quantization_point(self, qp: QuantizationPointBase) -> int:
         if self.quantization_points.keys():
             new_id = max(self.quantization_points.keys()) + 1
         else:
             new_id = 0
         self.quantization_points[new_id] = qp
+        return new_id
 
     def register_unified_scale_group(self, qp_group: list[QuantizationPointId]) -> int:
         for qp_id in qp_group:
