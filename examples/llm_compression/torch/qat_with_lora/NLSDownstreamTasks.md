@@ -1,7 +1,7 @@
 # NLS Tuning with Downstream Tasks
 
 <p align="center">
-  <img src="/examples/llm_compression/torch/qat_with_lora/pics/lora_vs_nls.png" alt="alt text" width="400"/>
+  <img src="/examples/llm_compression/torch/qat_with_lora/pics/lora_vs_nls.png" alt="LoRA vs NLS" width="400"/>
 </p>
 
 [main_nls.py](./main_nls.py) script supports fine-tuning and evaluating a language model with quantization-aware training and **Neural Low-Rank Adapter Search (NLS)** proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), you can use the following command:
@@ -19,17 +19,16 @@ python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --d
 - `--batch_size`: Size of the training batch.
 - `--eval_batch_size`: Size of the batch for evaluation.
 - `--lora_rank_space`: Specifies the search space for LoRA adapter ranks. For example, [32, 24, 16] indicates the ranks to be considered during NLS training and searching.
+- `--resume`: Whether to resume training from a checkpoint. If specified, the script will load the trained checkpoint and continue training or evaluation.
+- `--custom_rank_config`: Specifies the LoRA rank of adapters per layer.
 
-Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This strategy takes advantage of some information from the training phase, and does not require any overhead. More powerful LoRA rank configurations can be optionally obtained through more advanced search algorithms (which takes some time). We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
+Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This strategy takes advantage of some information from the training phase and does not require any overhead. More powerful elastic LoRA NLS configurations can be optionally obtained through more advanced search algorithms. We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
 
 ```bash
 python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --resume --task openbookqa --lora_rank_space 32 24 16 --custom_rank_config 32 24 16 24 24 32 24 32 32 16 24 16 24 32 24 16 24 24 32 32 24 32 32 16 32 32 24 32
 ```
 
 This script also supports running the vanilla LoRA method. We only need to pass a single number for `--lora_rank_space`, such as `--lora_rank_space 32`. In addition, the training time of LoRA and NLS is very similar, and there is almost no overhead in activating different sub-adapters during training. For instance, fine-tuning the compressed Llama-3.2-3B-Instruct model for 3 epochs on [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc) takes 161.83 seconds with LoRA and 164.89 seconds with NLS.
-
-- `--resume`: Whether to resume training from a checkpoint. If specified, the script will load the trained checkpoint and continue training or evaluation.
-- `--custom_rank_config`: Specifies the LoRA rank of adapters per layer.
 
 ## Results
 
