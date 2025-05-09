@@ -12,10 +12,11 @@ import argparse
 import shutil
 import sys
 import warnings
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Optional, Union
+from typing import Any, Generator, Optional, Union
 
 import torch
 import torch.nn.functional as F
@@ -73,6 +74,43 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
         inp = trainenc.input_ids[:, i:j].to(device)
         trainloader.append(inp)
     return trainloader
+
+
+@contextmanager
+def create_eval_model(
+    model: AutoModelForCausalLM,
+    fast_eval: bool,
+    pretrained: str,
+    torch_dtype: torch.dtype,
+    ckpt_file: Path,
+    example_input: dict,
+) -> Generator[AutoModelForCausalLM, None, None]:
+    """
+    Context manager for creating an evaluation model with appropriate cleanup.
+
+    If fast_eval is True, creates a new model for evaluation that will be
+    automatically deleted when the context exits. Otherwise, uses the provided model.
+
+    :param model: Original model to use if fast_eval is False.
+    :param fast_eval: Whether to create a new optimized model for evaluation.
+    :param pretrained: Pretrained model identifier or path for AutoModelForCausalLM.
+    :param torch_dtype: PyTorch data type to use for the model (e.g., torch.bfloat16).
+    :param ckpt_file: Path to the checkpoint file to load weights from.
+    :param example_input: Example input for model tracing with NNCF.
+    :yields: Model to use for evaluation, either the new loaded model or the given one.
+    """
+    if fast_eval:
+        eval_model = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch_dtype, device_map="auto")
+        eval_model = load_checkpoint(eval_model, ckpt_file)
+        eval_model = nncf.strip(
+            eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
+        )
+        try:
+            yield eval_model
+        finally:
+            del eval_model
+    else:
+        yield model
 
 
 def measure_perplexity(
@@ -365,20 +403,10 @@ def main(argv) -> float:
     param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
     opt = torch.optim.AdamW(param_to_train, weight_decay=weight_decay)
 
-    eval_model = model
-    if args.fast_eval:
-        # Enable faster evaluation by applying in-place quantization to the model weights.
-        # This method uses additional GPU memory for model copying.
-        eval_model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map="auto")
-        eval_model = load_checkpoint(eval_model, ckpt_file)
-        eval_model = nncf.strip(
-            eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
+    with create_eval_model(model, args.fast_eval, args.pretrained, ckpt_file, example_input, torch_dtype) as eval_model:
+        initial_perplexity = best_perplexity = measure_perplexity(
+            eval_model, task_manager, args.eval_seqlen, args.limit
         )
-
-    initial_perplexity = best_perplexity = measure_perplexity(eval_model, task_manager, args.eval_seqlen, args.limit)
-    if args.fast_eval:
-        del eval_model
-
     tb.add_scalar("perplexity", best_perplexity, 0)
     print(f"Initial word perplexity on wikitext (validation) = {best_perplexity:.4f}")
 
@@ -428,24 +456,16 @@ def main(argv) -> float:
 
         # Keep the best checkpoint with the lowest perplexity.
         save_checkpoint(model, ckpt_file)
-        eval_model = model
-        if args.fast_eval:
-            eval_model = AutoModelForCausalLM.from_pretrained(
-                args.pretrained, torch_dtype=torch_dtype, device_map="auto"
-            )
-            eval_model = load_checkpoint(eval_model, ckpt_file)
-            eval_model = nncf.strip(
-                eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
-            )
-        perplexity = measure_perplexity(eval_model, task_manager, args.eval_seqlen, args.limit)
-        if args.fast_eval:
-            del eval_model
-        tb.add_scalar("perplexity", perplexity, total_microbatches)
-        print(f"[Epoch {epoch}], word perplexity on wikitext (validation) = {perplexity:.4f}")
-        if perplexity < best_perplexity:
-            print(f"New best word perplexity = {perplexity:.4f}")
-            best_perplexity = perplexity
-            shutil.copytree(last_dir, best_dir, dirs_exist_ok=True)
+        with create_eval_model(
+            model, args.fast_eval, args.pretrained, ckpt_file, example_input, torch_dtype
+        ) as eval_model:
+            perplexity = measure_perplexity(eval_model, task_manager, args.eval_seqlen, args.limit)
+            tb.add_scalar("perplexity", perplexity, total_microbatches)
+            print(f"[Epoch {epoch}], word perplexity on wikitext (validation) = {perplexity:.4f}")
+            if perplexity < best_perplexity:
+                print(f"New best word perplexity = {perplexity:.4f}")
+                best_perplexity = perplexity
+                shutil.copytree(last_dir, best_dir, dirs_exist_ok=True)
 
     del model
     # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
