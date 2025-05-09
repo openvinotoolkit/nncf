@@ -218,8 +218,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_port_id: int,
         const_dtype,
         should_add_convert_node: bool,
-        layer_scales: Optional[Tensor] = None,
-        layer_zero_points: Optional[Tensor] = None,
+        compressed_weight: Optional[CompressedWeight] = None,
     ):
         scale_dtype = ov.Type.f16
         if compression_config.mode == CompressWeightsMode.NF4:
@@ -245,8 +244,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 weight,
                 reduction_axes,
                 compression_config,
-                layer_scales,
-                layer_zero_points,
+                compressed_weight,
             )
         compressed_const = create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
@@ -308,10 +306,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            layer_scales = None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name)
-            layer_zero_points = (
-                None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name)
-            )
+            compressed_weight = None if compressed_weights is None else compressed_weights.get(wc_params.weight_name)
             try:
                 mul, compressed_weight = self._create_compression_subgraph(
                     weight=weight,
@@ -321,8 +316,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     weight_port_id=wc_params.weight_port_id,
                     const_dtype=const_dtype,
                     should_add_convert_node=should_add_convert_node,
-                    layer_scales=layer_scales,
-                    layer_zero_points=layer_zero_points,
+                    compressed_weight=compressed_weight,
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error

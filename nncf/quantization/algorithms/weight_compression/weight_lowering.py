@@ -382,8 +382,10 @@ def compress_weight(
     :param precomputed_zero_point: Precomputed zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
-
-    precomputed_scale, precomputed_zero_point = compressed_weight.scale, compressed_weight.zero_point if compressed_weight else (None, None)
+    precomputed_scale, precomputed_zero_point = (
+        compressed_weight.scale,
+        compressed_weight.zero_point if compressed_weight else (None, None),
+    )
     if not config.is_integer:
         if weight.backend == TensorBackend.ov:
             weight = weight.as_numpy_tensor()

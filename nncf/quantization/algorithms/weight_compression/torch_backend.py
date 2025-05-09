@@ -45,10 +45,10 @@ from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
-from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -432,8 +432,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: Union[GraphModelWrapper, torch.nn.Module],
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: dict[str, Tensor] = None,
-        precomputed_zero_points: dict[str, Tensor] = None,
+        compressed_weights: dict[str, CompressedWeight] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
@@ -470,8 +469,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     Tensor(weight),
                     wc_params.reduction_axes,
                     compression_config,
-                    None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
-                    None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
+                    None if compressed_weights is None else compressed_weights.get(wc_params.weight_name),
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error
