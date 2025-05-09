@@ -207,25 +207,15 @@ class Tensor:
 
     def as_openvino_tensor(self) -> Tensor:
         x = self
-        if x.backend == TensorBackend.torch:
-            x = cast(Tensor, _call_function("as_numpy_tensor", x))
         if x.backend == TensorBackend.numpy:
-            try:
-                import openvino as ov  # type: ignore
-            except ImportError:
-                msg = "OpenVINO is not installed. Please install OpenVINO to cast a tensor to OpenVINO."
-                raise ImportError(msg)
-
-            from nncf.tensor.functions.openvino_numeric import DTYPE_MAP
-
-            x = Tensor(ov.Tensor(x.data, x.data.shape, DTYPE_MAP[x.dtype]))
+            x = cast(Tensor, _call_function("from_numpy", x.data, backend=TensorBackend.ov))
         if x.backend != TensorBackend.ov:
             msg = f"Unsupported backend for OpenVINO conversion: {x.backend}."
             raise NotImplementedError(msg)
         return x
 
 
-def _call_function(func_name: str, *args: Any) -> Any:
+def _call_function(func_name: str, *args: Any, **kwargs: Any) -> Any:
     """
     Call function from functions.py to avoid circular imports.
 
@@ -235,7 +225,7 @@ def _call_function(func_name: str, *args: Any) -> Any:
     from nncf.tensor.functions import numeric
 
     fn = getattr(numeric, func_name)
-    return fn(*args)
+    return fn(*args, **kwargs)
 
 
 class TensorIterator(Iterator[Tensor]):
