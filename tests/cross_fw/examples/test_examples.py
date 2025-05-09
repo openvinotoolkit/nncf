@@ -108,6 +108,10 @@ def test_examples(
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
+    if backend == "torchfx":  # This is required for FX backend where a dependecy is inside the example dir
+        env["PYTHONPATH"] = (
+            env["PYTHONPATH"] + ":" + str(PROJECT_ROOT / "examples" / "llm_compression" / "torch_fx" / "tiny_llama")
+        )
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
     if device != "cuda":
         env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
