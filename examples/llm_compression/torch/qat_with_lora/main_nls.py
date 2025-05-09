@@ -34,7 +34,6 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from transformers import get_cosine_schedule_with_warmup
 
-from examples.llm_compression.torch.qat_with_lora.main import get_model_input
 from examples.llm_compression.torch.qat_with_lora.main import load_checkpoint
 from examples.llm_compression.torch.qat_with_lora.main import save_checkpoint
 from examples.llm_compression.torch.qat_with_lora.main import set_trainable
