@@ -83,7 +83,6 @@ def create_eval_model(
     pretrained: str,
     torch_dtype: torch.dtype,
     ckpt_file: Path,
-    example_input: dict,
 ) -> Generator[AutoModelForCausalLM, None, None]:
     """
     Context manager for creating an evaluation model with appropriate cleanup.
@@ -96,14 +95,13 @@ def create_eval_model(
     :param pretrained: Pretrained model identifier or path for AutoModelForCausalLM.
     :param torch_dtype: PyTorch data type to use for the model (e.g., torch.bfloat16).
     :param ckpt_file: Path to the checkpoint file to load weights from.
-    :param example_input: Example input for model tracing with NNCF.
     :yields: Model to use for evaluation, either the new loaded model or the given one.
     """
     if fast_eval:
         eval_model = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch_dtype, device_map="auto")
         eval_model = load_checkpoint(eval_model, ckpt_file)
         eval_model = nncf.strip(
-            eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
+            eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=eval_model.dummy_inputs
         )
         try:
             yield eval_model
@@ -124,9 +122,11 @@ def measure_perplexity(
     Measure perplexity on the Wikitext dataset, via rolling loglikelihoods for a given model.
 
     :param optimum_model: A model to be evaluated.
+    :param task_manager: The TaskManager instance that handles dataset loading and processing.
     :param max_length: The maximum sequence length for evaluation.
     :param limit: Limit the number of examples per task (only use this for testing).
         If <1, limit is a percentage of the total number of examples.
+    :param task: The evaluation task name to use, defaults to "wikitext_validation".
     :return: The similarity score as a float.
     """
     print("#" * 50 + " Evaluate via lm-eval-harness " + "#" * 50)
@@ -240,7 +240,6 @@ def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
     with absorbable LoRA adapters and loads their parameters.
 
     :param model: The model to load the checkpoint into.
-    :param example_input: An example input that will be used for model tracing. It's required to insert and run FQs.
     :param ckpt_file: Path to the checkpoint file.
     :returns: The model with the loaded NNCF state from checkpoint.
     """
@@ -252,22 +251,19 @@ def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
 
 
 @torch.no_grad()
-def export_to_openvino(
-    pretrained: str, example_input: torch.Tensor, ckpt_file: Path, ir_dir: Path
-) -> OVModelForCausalLM:
+def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVModelForCausalLM:
     """
     Create a wrapper of OpenVINO model from the checkpoint for evaluation on CPU via WWB.
 
     :param pretrained: The name or path of the pretrained model.
-    :param example_input: A tensor representing an example input for the model.
     :param ckpt_file: The path to the checkpoint file to load the model weights and NNCF configurations.
     :param last_dir: The directory where the OpenVINO model will be saved.
     :return: A wrapper of OpenVINO model ready for evaluation.
     """
     model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
-    model_input = get_model_input(example_input.to("cpu"))
+    example_input = model_to_eval.dummy_inputs
     model_to_eval = load_checkpoint(model_to_eval, ckpt_file)
-    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ, example_input=model_input)
+    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ, example_input=example_input)
     export_from_model(model_to_eval, ir_dir, device="cpu")
     return OVModelForCausalLM.from_pretrained(
         model_id=ir_dir,
@@ -392,7 +388,7 @@ def main(argv) -> float:
     orig_hiddens = calc_hiddens(model, train_loader)
 
     # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
-    example_input = get_model_input(train_loader[0])
+    example_input = model.dummy_inputs
     if args.resume and ckpt_file.exists():
         model = load_checkpoint(model, ckpt_file)
     else:
@@ -403,7 +399,7 @@ def main(argv) -> float:
     param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
     opt = torch.optim.AdamW(param_to_train, weight_decay=weight_decay)
 
-    with create_eval_model(model, args.fast_eval, args.pretrained, ckpt_file, example_input, torch_dtype) as eval_model:
+    with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
         initial_perplexity = best_perplexity = measure_perplexity(
             eval_model, task_manager, args.eval_seqlen, args.limit
         )
@@ -416,12 +412,11 @@ def main(argv) -> float:
     epoch_samples = num_samples - num_samples % args.microbatch_size
     microbatches_per_epoch = epoch_samples // args.microbatch_size
     aggregated_loss = float("nan")
-    loss_numerator = grad_steps = total_microbatches = 0
+    loss_numerator = grad_steps = total_steps = 0
     for epoch in range(args.epochs):
         batch_indices_epoch = torch.randperm(num_samples)[:epoch_samples].chunk(microbatches_per_epoch)
         for indices in track(batch_indices_epoch, description=f"Train epoch {epoch}"):
             indices = indices.tolist()
-            total_microbatches += 1
 
             def form_batch(inputs: list[Tensor], model_input: bool):
                 batch = torch.cat([inputs[i] for i in indices], dim=0)
@@ -452,15 +447,14 @@ def main(argv) -> float:
                 opt.zero_grad()
                 aggregated_loss = loss_numerator / grad_steps
                 loss_numerator = grad_steps = 0
-            tb.add_scalar("loss", aggregated_loss, total_microbatches)
+                total_steps += 1
+                tb.add_scalar("loss", aggregated_loss, total_steps)
 
         # Keep the best checkpoint with the lowest perplexity.
         save_checkpoint(model, ckpt_file)
-        with create_eval_model(
-            model, args.fast_eval, args.pretrained, ckpt_file, example_input, torch_dtype
-        ) as eval_model:
+        with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
             perplexity = measure_perplexity(eval_model, task_manager, args.eval_seqlen, args.limit)
-            tb.add_scalar("perplexity", perplexity, total_microbatches)
+            tb.add_scalar("perplexity", perplexity, total_steps)
             print(f"[Epoch {epoch}], word perplexity on wikitext (validation) = {perplexity:.4f}")
             if perplexity < best_perplexity:
                 print(f"New best word perplexity = {perplexity:.4f}")
@@ -470,7 +464,7 @@ def main(argv) -> float:
     del model
     # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
     best_ckpt_file = best_dir / "nncf_checkpoint.pth"
-    model_for_eval = export_to_openvino(args.pretrained, train_loader[0], best_ckpt_file, best_dir)
+    model_for_eval = export_to_openvino(args.pretrained, best_ckpt_file, best_dir)
     ov_perplexity = measure_perplexity(model_for_eval, task_manager, args.eval_seqlen, args.limit, task="wikitext")
     tb.add_scalar("ov_perplexity", ov_perplexity, 0)
     print(
