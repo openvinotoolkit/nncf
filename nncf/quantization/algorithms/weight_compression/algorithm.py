@@ -199,8 +199,12 @@ def check_user_compression_configuration(
             requires a dataset, but it's not provided."
         raise nncf.ValidationError(msg)
 
-    if lora_correction and compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-        msg = "LoRA Correction algorithm is not compatible with FQ and FQ_LORA compression formats."
+    if lora_correction and compression_format in [
+        CompressionFormat.FQ,
+        CompressionFormat.FQ_LORA,
+        CompressionFormat.FQ_LORA_NLS,
+    ]:
+        msg = "LoRA Correction algorithm is not compatible with FQ, FQ_LORA and FQ_LORA_NLS compression formats."
         raise nncf.ValidationError(msg)
 
 
