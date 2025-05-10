@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Optional
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -127,6 +127,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters)
 
@@ -136,6 +137,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_points: list[OVTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> list[OVQuantizerInsertionCommand]:
         return [OVQuantizerInsertionCommand(target_point, parameters) for target_point in target_points]
 

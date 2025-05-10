@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Optional
 
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
@@ -23,9 +23,12 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.experimental.quantization.quantizer import ExtendedFXQuantizerSetup
+from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
@@ -46,12 +49,9 @@ from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_matmul_with_constant
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
+from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -145,6 +145,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_convert_insertion_command(
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
+        extra_params: dict[str, Any],
     ) -> TransformationCommand:
         msg = "FakeConvert insertion not implemented in PyTorch backend!"
         raise nncf.InternalError(msg)
@@ -179,49 +180,83 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return config
 
     @staticmethod
-    def _get_input_scale_shape(
-        nncf_graph: NNCFGraph, target_point: PTTargetPoint, per_channel: bool
-    ) -> tuple[tuple[int, ...], tuple[int, ...], int]:
-        is_weights = target_point.is_weight_target_point()
-        if is_weights:
+    def _get_channel_axis(target_point: PTTargetPoint, per_channel: bool) -> int:
+        if not per_channel:
+            return 0
+        if target_point.is_weight_target_point():
             # TODO(dlyakhov): support transpose conv/ make channel_idx common
-            channel_idx = 0
-        else:
-            channel_idx = 1  # channel dim for activations
-
-        input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
-        scale_shape = tuple(
-            get_scale_shape(input_shape, is_weights=is_weights, per_channel=per_channel, channel_idx=channel_idx)
-        )
-
-        return input_shape, scale_shape, channel_idx
+            return 0
+        return 1
 
     @staticmethod
     def _create_quantizer(
         quantizer_config: QuantizerConfig,
-        scale_shape: tuple,
+        channel_axis: int,
         parameters: FakeQuantizeParameters,
         target_type: TargetType,
+        dtype: IntDtype,
     ) -> FakeQuantize:
-        mode = quantizer_config.mode
-        quantizer_cls = QUANTIZATION_MODULES.get(mode)
-        quantizer_spec = PTQuantizerSpec.from_config(
-            quantizer_config,
-            narrow_range=quantizer_config.narrow_range,
-            scale_shape=scale_shape,
-            half_range=False,
-            logarithm_scale=False,
-            is_quantized_on_export=False,
-            compression_lr_multiplier=None,
-        )
-        quantizer = quantizer_cls(quantizer_spec)
+        per_channel = quantizer_config.per_channel
+        eps = 1e-16
+        if dtype is None:
+            if quantizer_config.mode != QuantizationScheme.SYMMETRIC:
+                msg = (
+                    "Wrong usage of dtype parameter: it should be specified for the QuantizationScheme.ASYMMETRIC mode"
+                )
+                raise nncf.InternalError(msg)
+            dtype = (
+                IntDtype.INT8
+                if quantizer_config.signedness_to_force or torch.any(parameters.input_low.data < 0.0)
+                else IntDtype.UINT8
+            )
 
-        # Fill it with minmax
-        # TODO(dlyakhov) Prevent creation of intermediate objects like nncf quantizer.
-        FXMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters, quantizer_spec.scale_shape)
-        # Convert to the torch fake quantizer
-        torch_fq = convert_to_torch_fakequantizer(quantizer)
-        return torch_fq
+        if per_channel:
+            observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+        else:
+            observer = torch.ao.quantization.observer.MinMaxObserver
+
+        levels = 256
+        if dtype is IntDtype.INT8:
+            level_high = (levels // 2) - 1
+            level_low = -(levels // 2)
+        else:
+            level_high = levels - 1
+            level_low = 0
+
+        if quantizer_config.narrow_range:
+            if level_low < 0:
+                level_low += 1
+            else:
+                level_high -= 1
+
+        if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
+            qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
+        else:
+            qscheme = torch.per_channel_affine if per_channel else torch.per_tensor_affine
+
+        scale, zero_point = get_scale_zp_from_input_low_input_high(
+            level_low, level_high, parameters.input_low.data, parameters.input_high.data
+        )
+        fakequantizer = FakeQuantize(
+            observer=observer,
+            quant_max=level_high,
+            quant_min=level_low,
+            dtype=torch.qint8 if dtype is IntDtype.INT8 else torch.quint8,
+            qscheme=qscheme,
+            eps=eps,
+        )
+
+        if not per_channel:
+            scale = scale.squeeze()
+            zero_point = zero_point.squeeze()
+
+        fakequantizer.scale = scale
+        fakequantizer.ch_axis = channel_axis
+        fakequantizer.zero_point = zero_point
+
+        # Disable observer to save parameters
+        fakequantizer.disable_observer()
+        return fakequantizer
 
     @staticmethod
     def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape) -> None:
@@ -243,13 +278,16 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> FXApplyTransformationCommand:
-        _, scale_shape, _ = FXMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_point, quantizer_config.per_channel
-        )
+        channel_axis = FXMinMaxAlgoBackend._get_channel_axis(target_point, quantizer_config.per_channel)
 
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
-            quantizer_config, scale_shape, parameters, target_point.target_type
+            quantizer_config,
+            channel_axis,
+            parameters,
+            target_point.target_type,
+            extra_params[ExtendedFXQuantizerSetup.QUANTIZER_DTYPE_NAME],
         )
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
         return FXApplyTransformationCommand(transformation)
@@ -260,13 +298,16 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_points: list[PTTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> list[PTSharedFnInsertionCommand]:
-        _, scale_shape, _ = FXMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_points[0], quantizer_config.per_channel
-        )
+        channel_axis = FXMinMaxAlgoBackend._get_channel_axis(target_points[0], quantizer_config.per_channel)
 
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
-            quantizer_config, scale_shape, parameters, target_points[0].target_type
+            quantizer_config,
+            channel_axis,
+            parameters,
+            target_points[0].target_type,
+            extra_params[ExtendedFXQuantizerSetup.QUANTIZER_DTYPE_NAME],
         )
 
         transformations = []
