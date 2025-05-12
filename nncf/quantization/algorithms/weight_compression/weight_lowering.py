@@ -482,6 +482,7 @@ def integer_quantize_dequantize_weight(
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor to integer dtype and then dequantizes it back to obtain float32 values.
+
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
     :param reduction_axes: Axes along which to reduce (collect) statistics (e.g., min, max). Not required if

@@ -134,6 +134,7 @@ def _infer_ov_model(
 ) -> TensorList:
     """
     Run compiled OpenVINO model inference on the given inputs.
+
     :param ov_model_params: OV model related parameters.
     :param compiled_model: Compiled OpenVINO model.
     :param inputs: Input tensors.
@@ -207,6 +208,7 @@ def get_integer_quantization_model(
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights using the given configuration.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
@@ -243,6 +245,7 @@ def get_float_quantization_model(
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights to float (currently only nf4) destination type using the given configuration.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
@@ -274,6 +277,7 @@ def get_float_quantize_dequantize_weight_model(
 ) -> ModelCallable:
     """
     Get a model that performs float (currently only nf4) compression and decompression of the given weight.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
@@ -310,6 +314,7 @@ def get_integer_quantize_dequantize_weight_model(
 ) -> ModelCallable:
     """
     Get a model that performs compression and decompression of the given weight.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
@@ -754,6 +759,7 @@ def get_astype_model(ov_model_params: OVModelParameters, input_shape: tuple) -> 
         - bfloat16 -> np.float16,
         - uint4 -> uint8,
         - int4 -> int8.
+
     :param ov_model_params: OV model related parameters.
     :param input_shape: Shape of the tensor to cast.
     :return: A model callable that casts the input tensor to the given data type.
