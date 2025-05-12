@@ -104,7 +104,7 @@ def reshape_weight_for_grouped_quantization(
     return reshaped_weight, reduction_axes
 
 
-def calculate_nf4_scale(weight: Tensor, reduction_axes: ReductionAxes) -> Tensor:
+def calculate_nf4_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=1.0) -> Tensor:
     """
     Calculates the scale for nf4 quantization.
 
@@ -115,7 +115,7 @@ def calculate_nf4_scale(weight: Tensor, reduction_axes: ReductionAxes) -> Tensor
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
+    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True) / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
     eps = fns.finfo(weight).eps
@@ -134,7 +134,7 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
     :param to_e8m0: Defines convert scale to e8m0 or not.
     :return: Scale tensor of float32 type for e2m1 quantization.
     """
-    scale = calculate_nf4_scale(weight, reduction_axes) / max_val
+    scale = calculate_nf4_scale(weight, reduction_axes, max_val)
 
     scale = fns.log2(scale)
     scale = fns.ceil(scale)
@@ -219,12 +219,13 @@ def do_nf4_dequantization(nf4_weight: Tensor, scale: Tensor, reduction_axis: int
     return decompressed_weight
 
 
-def calculate_normalized_weight_and_fp4_scale(
+def calculate_normalized_weight_and_scale(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     group_size: int = -1,
     precomputed_scale: Tensor = None,
     mode: CompressWeightsMode = CompressWeightsMode.NF4,
+    max_val=1.0,
 ) -> tuple[Tensor, Tensor]:
     """
     Calculates scale for fp4 (nf4, e2m1) quantization and normalizes weights by the scale.
@@ -235,9 +236,10 @@ def calculate_normalized_weight_and_fp4_scale(
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping. Defaults to -1.
     :param precomputed_scale: Precomputed scale.
+    :parm max_val: Max value of compressed type for normalization.
     :return: Normalized weight tensor of float32 type and nf4 scale tensor of float32 type.
     """
-    assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+    assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
@@ -245,10 +247,14 @@ def calculate_normalized_weight_and_fp4_scale(
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
 
-    if mode == CompressWeightsMode.NF4:
-        scale = calculate_nf4_scale(weight, reduction_axes) if precomputed_scale is None else precomputed_scale
-    if mode == CompressWeightsMode.E2M1:
+    if mode in [CompressWeightsMode.NF4, CompressWeightsMode.CODEBOOK]:
+        scale = calculate_nf4_scale(weight, reduction_axes, max_val) if precomputed_scale is None else precomputed_scale
+    elif mode == CompressWeightsMode.E2M1:
         scale = calculate_e2m1_scale(weight, reduction_axes) if precomputed_scale is None else precomputed_scale
+    else:
+        msg = f"Unsupported mode {mode} for weight compression."
+        raise ValueError(msg)
+
     norm_weight = calculate_normalized_weight(weight, scale)
     return norm_weight, scale
 
@@ -383,14 +389,14 @@ def compress_weight(
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     precomputed_scale, precomputed_zero_point = (
-        compressed_weight.scale,
-        compressed_weight.zero_point if compressed_weight else (None, None),
+        (compressed_weight.scale, compressed_weight.zero_point) if compressed_weight else (None, None)
     )
+
     if not config.is_integer:
         if weight.backend == TensorBackend.ov:
             weight = weight.as_numpy_tensor()
 
-        compressed_weight, scale = calculate_normalized_weight_and_fp4_scale(
+        compressed_weight, scale = calculate_normalized_weight_and_scale(
             weight, reduction_axes, config.group_size, precomputed_scale, config.mode
         )
         return CompressedWeight(compressed_weight, scale)
