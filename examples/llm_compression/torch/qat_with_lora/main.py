@@ -100,8 +100,10 @@ def create_eval_model(
     if fast_eval:
         eval_model = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch_dtype, device_map="auto")
         eval_model = load_checkpoint(eval_model, ckpt_file)
+        device = next(model.parameters()).device
+        example_input = {k: v.to(device) for k, v in eval_model.dummy_inputs.items()}
         eval_model = nncf.strip(
-            eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=eval_model.dummy_inputs
+            eval_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
         )
         try:
             yield eval_model
@@ -388,7 +390,7 @@ def main(argv) -> float:
     orig_hiddens = calc_hiddens(model, train_loader)
 
     # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
-    example_input = model.dummy_inputs
+    example_input = {k: v.to(device) for k, v in model.dummy_inputs.items()}
     if args.resume and ckpt_file.exists():
         model = load_checkpoint(model, ckpt_file)
     else:
