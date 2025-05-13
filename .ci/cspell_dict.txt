@@ -72,7 +72,6 @@ ckpt
 clusterization
 cmap
 cnode
-codebook
 coeffs
 concr
 confs
