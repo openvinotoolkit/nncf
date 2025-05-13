@@ -165,7 +165,7 @@ def apply_compression_in_place(model: TModel, graph: NNCFGraph) -> TModel:
     """
     hook_storage = get_hook_storage(model)
 
-    hooks_to_delete = {}
+    hooks_to_delete = []
     for name, hook in hook_storage.named_hooks():
         if not isinstance(hook, (SymmetricQuantizer, AsymmetricQuantizer)):
             continue
@@ -190,9 +190,9 @@ def apply_compression_in_place(model: TModel, graph: NNCFGraph) -> TModel:
         weight_param.requires_grad = False
         weight_param.data = fq_weight
 
-        hooks_to_delete[name] = hook
+        hooks_to_delete.append(name)
 
-    for name, hook in hooks_to_delete.items():
-        hook_storage.delete_hook(hook, name)
+    for hook in hooks_to_delete:
+        hook_storage.delete_hook(hook)
 
     return model
