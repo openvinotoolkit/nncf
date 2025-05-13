@@ -1,13 +1,16 @@
-# NLS Tuning with Downstream Tasks
+# Quantization-aware NLS Tuning for improving accuracy on downstream Tasks
+
+This example demonstrates how to improve accuracy of Large Language Models (LLMs) with 4bit weights by
+quantization-aware-training with **Neural Low-Rank Adapter Search (NLS)** on downstream tasks.
 
 <p align="center">
-  <img src="/examples/llm_compression/torch/qat_with_lora/pics/lora_vs_nls.png" alt="LoRA vs NLS" width="400"/>
+  <img src="/examples/llm_compression/torch/qat_with_nls_downstream/pics/lora_vs_nls.png" alt="LoRA vs NLS" width="400"/>
 </p>
 
-[main_nls.py](./main_nls.py) script supports fine-tuning and evaluating a language model with quantization-aware training and **Neural Low-Rank Adapter Search (NLS)** proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), you can use the following command:
+[main.py](main.py) supports fine-tuning and evaluating a language model with quantization-aware training and **Neural Low-Rank Adapter Search (NLS)** proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), you can use the following command:
 
 ```bash
-python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --do_train --task openbookqa --lr 1e-4 --epochs 3 --batch_size 16 --eval_batch_size 64 --lora_rank_space 32 24 16
+python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --do_train --task openbookqa --lr 1e-4 --epochs 3 --batch_size 16 --eval_batch_size 64 --lora_rank_space 32 24 16
 ```
 
 - `--pretrained`: The model ID or path of a pretrained Hugging Face model configuration.
@@ -25,7 +28,7 @@ python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --d
 Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This default strategy takes advantage of some information from the training phase and requires the evaluation of only 7 suggested configurations. This is automatically done in the example script, and only the best configuration from these candidates is returned to the user. More powerful elastic LoRA NLS configurations can be optionally obtained through more advanced search algorithms. We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
 
 ```bash
-python main_nls.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --resume --task openbookqa --lora_rank_space 32 24 16 --custom_rank_config 32 24 16 24 24 32 24 32 32 16 24 16 24 32 24 16 24 24 32 32 24 32 32 16 32 32 24 32
+python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --resume --task openbookqa --lora_rank_space 32 24 16 --custom_rank_config 32 24 16 24 24 32 24 32 32 16 24 16 24 32 24 16 24 24 32 32 24 32 32 16 32 32 24 32
 ```
 
 This script also supports running the vanilla LoRA method. We only need to pass a single number for `--lora_rank_space`, such as `--lora_rank_space 32`. In addition, the training time of LoRA and NLS is very similar, and there is almost no overhead in activating different sub-adapters during training. For instance, fine-tuning the compressed Llama-3.2-3B-Instruct model for 3 epochs on [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc) takes 161.83 seconds with LoRA and 164.89 seconds with NLS.

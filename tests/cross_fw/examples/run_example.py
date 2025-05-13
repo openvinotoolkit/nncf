@@ -214,7 +214,7 @@ def llm_compression_qat_with_lora() -> float:
 
 
 def llm_compression_qat_with_nls() -> float:
-    from examples.llm_compression.torch.qat_with_lora.main_nls import main as qat_with_nls_main
+    from examples.llm_compression.torch.qat_with_nls_downstream.main import main as qat_with_nls_main
 
     set_torch_cuda_seed()
 
