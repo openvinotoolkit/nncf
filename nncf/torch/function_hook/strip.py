@@ -192,7 +192,7 @@ def apply_compression_in_place(model: TModel, graph: NNCFGraph) -> TModel:
 
         hooks_to_delete.append(name)
 
-    for hook in hooks_to_delete:
-        hook_storage.delete_hook(hook)
+    for hook_name in hooks_to_delete:
+        hook_storage.delete_hook(hook_name)
 
     return model
