@@ -820,10 +820,12 @@ The functionality of the model object is still preserved as a compressed model.<
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>NATIVE</strong> – Returns the model with as much custom NNCF additions as possible.</p></li>
-<li><p><strong>DQ</strong> – Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
-precision using fake quantize parameters. This is the default format for deployment of models with compressed
-weights.</p></li>
+<li><p><strong>NATIVE</strong> – Preserves as many custom NNCF additions as possible in the model.</p></li>
+<li><p><strong>DQ</strong> – Replaces FakeQuantize operations with a dequantization subgraph and stores compressed weights
+in low-bit precision using fake quantize parameters. This is the default format for deploying models
+with compressed weights.</p></li>
+<li><p><strong>IN_PLACE</strong> – Directly applies fake quantizers to the weights, replacing the original weights with their
+fake quantized versions.</p></li>
 </ul>
 </dd>
 </dl>
