@@ -12,7 +12,7 @@ torchvision
 
 addict>=2.4.0
 efficientnet_pytorch==0.7.1
-transformers==4.48.3
+transformers==4.51.3
 
 sentence-transformers==4.0.2
 optimum-intel==1.22.0
