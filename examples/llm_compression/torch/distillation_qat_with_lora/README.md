@@ -13,10 +13,6 @@ where an uncompressed model teaches a compressed student model without task-spec
 
 For detailed information about the methodology and format, please refer to this [page](../../../../docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md).
 
-## Fine-tuning with NLS for Downstream Tasks
-
-We also provide an example of fine-tuning with downstream tasks using Neural Low-Rank Adapter Search (NLS). After installing the requirements, follow the instructions [here](./NLSDownstreamTasks.md).
-
 ## Install requirements
 
 To use this example:
