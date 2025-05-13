@@ -188,6 +188,30 @@ class HookStorage(nn.Module):
             if name.count(".") == 2:
                 yield f"{prefix}.{name}" if prefix else name, cast(nn.Module, module)
 
+    def delete_hook(self, hook_name: str) -> None:
+        """
+        Deletes a hook from the storage corresponding to the specified name.
+
+        :param hook_name: The name of the hook to be deleted, which includes
+            information about the hook type, operation name, and port ID.
+
+        :raises ValueError: If no hook is found for the given hook name.
+        :raises ValueError: If the specified hook instance cannot be located for the provided hook name.
+        """
+        hook_type, op_name, port_id = decode_hook_name(hook_name)
+        storage_dict = getattr(self, hook_type)
+        hook_key = self._generate_key(op_name, port_id)
+        if hook_key not in storage_dict:
+            msg = f"No hook was found for a given hook name={hook_name}"
+            raise ValueError(msg)
+
+        hook_id = hook_name.split(".")[-1]
+        if hook_id not in storage_dict[hook_key]:
+            msg = f"No hook was found for a given hook name={hook_name} and hook id={hook_name}"
+            raise ValueError(msg)
+
+        del storage_dict[hook_key][hook_id]
+
 
 def decode_hook_name(hook_name: str) -> tuple[str, str, int]:
     """
