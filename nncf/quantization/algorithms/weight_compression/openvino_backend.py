@@ -32,6 +32,7 @@ from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import convert_op
+from nncf.openvino.graph.node_utils import create_ov_codebook_subgraph
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
@@ -234,31 +235,46 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compression_dtype = ov.Type.i8
         elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
             compression_dtype = ov.Type.u8
+        elif compression_config.mode == CompressWeightsMode.CODEBOOK:
+            if compressed_weight is None or not compressed_weight.is_codebook():
+                msg = "Codebook compression requires pre-computed codebook."
+                raise nncf.ValidationError(msg)
+            compression_dtype = ov.Type.u8 if compressed_weight.tensor.max() > 4 else ov.Type.u4
         else:
             msg = f"{compression_config.mode.value} is not supported."
             raise nncf.ParameterNotSupportedError(msg)
 
         original_shape = weight.shape
-        with disable_results_caching(OV_MODEL_CACHE):
-            compressed_weight = compress_weight(
-                weight,
-                reduction_axes,
-                compression_config,
-                compressed_weight,
-            )
-        compressed_const = create_ov_const_from_tensor(
-            compressed_weight.tensor, compression_dtype, name=const_node_name
-        )
-        converted_const = opset.convert(compressed_const, ov.Type.f16)
 
-        if compressed_weight.zero_point is not None:
-            zero_point_const = create_ov_const_from_tensor(
-                compressed_weight.zero_point, compression_dtype, name=f"{const_node_name}/zero_point"
+        if compression_config.mode == CompressWeightsMode.CODEBOOK:
+            converted_const = create_ov_codebook_subgraph(
+                codebook=compressed_weight.codebook[0],
+                indexes=compressed_weight.tensor,
+                dtype=compression_dtype,
+                codebook_dtype=compressed_weight.codebook[1],
+                name=const_node_name,
             )
-            zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
-            converted_const = opset.subtract(
-                converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
+        else:
+            with disable_results_caching(OV_MODEL_CACHE):
+                compressed_weight = compress_weight(
+                    weight,
+                    reduction_axes,
+                    compression_config,
+                    compressed_weight,
+                )
+            compressed_const = create_ov_const_from_tensor(
+                compressed_weight.tensor, compression_dtype, name=const_node_name
             )
+            converted_const = opset.convert(compressed_const, ov.Type.f16)
+
+            if compressed_weight.zero_point is not None:
+                zero_point_const = create_ov_const_from_tensor(
+                    compressed_weight.zero_point, compression_dtype, name=f"{const_node_name}/zero_point"
+                )
+                zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
+                converted_const = opset.subtract(
+                    converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
+                )
 
         scale_const = create_ov_const_from_tensor(compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale")
         scale_const = convert_op(scale_const, ov.Type.f16)

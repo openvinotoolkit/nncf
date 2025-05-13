@@ -38,6 +38,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
+from nncf.quantization.algorithms.weight_compression.codebook import Codebook
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -288,6 +289,7 @@ class WeightCompression(Algorithm):
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
+        self._codebook = mode == CompressWeightsMode.CODEBOOK
 
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
@@ -319,6 +321,12 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.initial_steps,
                 scale_estimation_params.scale_steps,
                 scale_estimation_params.weight_penalty,
+            )
+        if self._codebook:
+            codebook_params = self._advanced_parameters.codebook_params
+            self._codebook_algo = Codebook(
+                initial_codebook=codebook_params.codebook,
+                dst_type=codebook_params.dst_type,
             )
 
         self._data_aware_mixed_precision = (
@@ -652,6 +660,13 @@ class WeightCompression(Algorithm):
         compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
+        if self._codebook:
+            compressed_weights = self._codebook_algo.apply(
+                model=model,
+                graph=graph,
+                all_weight_params=all_weight_params,
+                backend_entity=self._backend_entity,
+            )
         if self._gptq:
             del statistics
             model, compressed_weights = self._gptq_algo.apply(

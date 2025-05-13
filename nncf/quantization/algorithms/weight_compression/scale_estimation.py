@@ -25,7 +25,7 @@ from nncf.quantization.algorithms.weight_compression.common import CompressedWei
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
@@ -215,7 +215,7 @@ class ScaleEstimation:
 
         original_weight = fns.zeros_like(weight) + weight
         if config.mode == CompressWeightsMode.NF4:
-            norm_weight, scale = calculate_normalized_weight_and_fp4_scale(
+            norm_weight, scale = calculate_normalized_weight_and_scale(
                 original_weight, reduction_axis, cur_config.group_size
             )
             compressed_weights = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)

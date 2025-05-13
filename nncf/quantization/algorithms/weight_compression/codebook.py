@@ -10,13 +10,14 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -38,12 +39,14 @@ class Codebook:
     def __init__(
         self,
         initial_codebook: Tensor,
+        dst_type: Any,
     ):
         """
         :param initial_codebook: codebook for compression.
         """
         super().__init__()
-        self._initial_codebook = initial_codebook.flatten()
+        self._initial_codebook = initial_codebook
+        self._dst_type = dst_type
 
     @property
     def available_backends(self) -> list[BackendType]:
@@ -95,7 +98,10 @@ class Codebook:
         invalid_node_names = []
         first_caught_error = None
         for wp in track(all_weight_params, description="Applying Codebook Compression"):
+            if wp.compression_config.mode != CompressWeightsMode.CODEBOOK:
+                continue
             weight_name = wp.weight_name
+            print(weight_name)
             config = wp.compression_config
 
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
@@ -107,7 +113,7 @@ class Codebook:
 
             try:
                 indexes, scale, codebook = self.calculate_quantization_params(weight, wp.reduction_axes, config)
-                res[weight_name] = CompressedWeight(indexes, scale, None, codebook)
+                res[weight_name] = CompressedWeight(indexes, scale, None, (codebook, self._dst_type))
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error
                 invalid_node_names.append(wp.node_with_weight.node_name)
@@ -144,6 +150,10 @@ class Codebook:
 
         weight = weight.astype(TensorDataType.float32)
 
+        codebook = fns.tensor(
+            self._initial_codebook, backend=weight.backend, dtype=TensorDataType.float32, device=weight.device
+        )
+
         if reduction_axis == 0:
             weight = fns.transpose(weight)
             reduction_axis = 1
@@ -152,7 +162,7 @@ class Codebook:
         cur_config = deepcopy(config)
         cur_config.group_size = group_size
 
-        max_val = fns.max(fns.abs(weight))
+        max_val = fns.max(fns.abs(codebook))
         norm_weight, scale = calculate_normalized_weight_and_scale(
             weight, reduction_axis, cur_config.group_size, max_val=max_val
         )
@@ -161,9 +171,9 @@ class Codebook:
 
         norm_weight = fns.unsqueeze(norm_weight.flatten(), 1)
 
-        dist = (norm_weight - fns.unsqueeze(self._initial_codebook, 0)) ** 2
+        dist = (norm_weight - fns.unsqueeze(codebook, 0)) ** 2
 
-        indexes = fns.argmin(dist, axis=1)[0]
+        indexes = dist.data.argmin(-1)
         indexes = fns.reshape(indexes, orig_shape)
 
-        return indexes, scale, self._initial_codebook
+        return indexes, scale, codebook

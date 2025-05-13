@@ -20,6 +20,8 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
+import openvino.runtime as ov
+
 import nncf
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -361,6 +363,40 @@ class AdvancedLoraCorrectionParameters:
 
 @api()
 @dataclass
+class AdvancedCodebookParameters:
+    """
+    Contains advanced parameters for codebook compression algorithm.
+    :param codebook: The codebook (LUT) for the weight compression.
+        Applicable for vector quantization.
+    :type codebook: list[Any]
+    :param dts_type: The type of the codebook.
+    """
+
+    codebook: list[Any] = field(
+        default_factory=lambda: [
+            -3.5,
+            -2.5,
+            -1.875,
+            -1.375,
+            -1.0,
+            -0.625,
+            -0.3125,
+            0.0,
+            0.2812,
+            0.5625,
+            0.875,
+            1.125,
+            1.5,
+            2.0,
+            2.5,
+            3.5,
+        ]
+    )
+    dst_type: Any = ov.Type.f8e4m3
+
+
+@api()
+@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -390,6 +426,7 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
     backend_params: dict[str, Any] = field(default_factory=dict)
+    codebook_params: AdvancedCodebookParameters = field(default_factory=AdvancedCodebookParameters)
 
 
 @api()

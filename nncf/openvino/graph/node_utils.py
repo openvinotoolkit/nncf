@@ -685,3 +685,26 @@ def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] =
         return opset.constant(x.data, name=name, shared_memory=True)
     const = opset.constant(x.data, dtype=dtype, name=name)
     return const
+
+
+def create_ov_codebook_subgraph(
+    codebook: Tensor, indexes: Tensor, dtype: ov.Type, codebook_dtype: ov.Type, name: Optional[str] = None
+) -> op.Constant:
+    """
+    Create an OpenVINO subgraph with gather from the given codebook and indexes tensors.
+    :param codebook: Codebook tensor.
+    :param indexes: Indexes tensor.
+    :param dtype: Data type of the indexes.
+    :param codebook_dtype: Data type of the codebook.
+    :param name: Optional name of the constant.
+    :return: OpenVINO subgraph.
+    """
+    cobebook_const = opset.constant(codebook.data, dtype=codebook_dtype)
+    if codebook_dtype != ov.Type.f16:
+        cobebook_const = opset.convert(cobebook_const, destination_type=ov.Type.f16)
+    codebook_indexes = opset.constant(indexes.data, dtype=dtype)
+    if dtype == ov.Type.u4:
+        codebook_indexes = opset.convert(codebook_indexes, destination_type=ov.Type.u8)
+
+    const = opset.gather(cobebook_const, codebook_indexes, 0, name=name)
+    return const
