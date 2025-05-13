@@ -19,6 +19,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.common import Codebook
 from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -31,7 +32,7 @@ from nncf.tensor import functions as fns
 TModel = TypeVar("TModel")
 
 
-class Codebook:
+class CodebookCompression:
     """
     Codebook estimation algorithm implementation.
     """
@@ -113,7 +114,7 @@ class Codebook:
 
             try:
                 indexes, scale, codebook = self.calculate_quantization_params(weight, wp.reduction_axes, config)
-                res[weight_name] = CompressedWeight(indexes, scale, None, (codebook, self._dst_type))
+                res[weight_name] = CompressedWeight(indexes, scale, None, Codebook(codebook, self._dst_type))
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error
                 invalid_node_names.append(wp.node_with_weight.node_name)

@@ -239,7 +239,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             if compressed_weight is None or not compressed_weight.is_codebook():
                 msg = "Codebook compression requires pre-computed codebook."
                 raise nncf.ValidationError(msg)
-            compression_dtype = ov.Type.u8 if compressed_weight.tensor.max() > 4 else ov.Type.u4
+            compression_dtype = ov.Type.u8 if compressed_weight.tensor.max() > 15 else ov.Type.u4
         else:
             msg = f"{compression_config.mode.value} is not supported."
             raise nncf.ParameterNotSupportedError(msg)
@@ -248,10 +248,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         if compression_config.mode == CompressWeightsMode.CODEBOOK:
             converted_const = create_ov_codebook_subgraph(
-                codebook=compressed_weight.codebook[0],
+                codebook=compressed_weight.codebook.codebook,
                 indexes=compressed_weight.tensor,
                 dtype=compression_dtype,
-                codebook_dtype=compressed_weight.codebook[1],
+                codebook_dtype=compressed_weight.codebook.dst_type,
                 name=const_node_name,
             )
         else:

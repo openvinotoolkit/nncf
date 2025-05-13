@@ -38,7 +38,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
-from nncf.quantization.algorithms.weight_compression.codebook import Codebook
+from nncf.quantization.algorithms.weight_compression.codebook import CodebookCompression
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -324,7 +324,7 @@ class WeightCompression(Algorithm):
             )
         if self._codebook:
             codebook_params = self._advanced_parameters.codebook_params
-            self._codebook_algo = Codebook(
+            self._codebook_algo = CodebookCompression(
                 initial_codebook=codebook_params.codebook,
                 dst_type=codebook_params.dst_type,
             )
