@@ -72,15 +72,7 @@ CENTER_OF_NF4_QUANTILES = np.array(
 )
 
 
-MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = int(1e5)
-import os
-if os.environ.get("MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION", None):
-    try:
-        MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = int(os.environ["MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION"])
-    except ValueError:
-        nncf_logger.warning(
-            "Environment variable MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION is not an integer. Using default value."
-        )
+MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 10000
 
 
 @dataclass
