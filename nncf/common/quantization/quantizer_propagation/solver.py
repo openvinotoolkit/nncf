@@ -333,6 +333,7 @@ class QuantizerPropagationSolver:
         post_processing_marker_metatypes: Optional[list[type[OperatorMetatype]]] = None,
         metatypes_to_ignore: Optional[list[type[OperatorMetatype]]] = None,
         scales_unification_map: Optional[dict[type[OperatorMetatype], list[type[OperatorMetatype]]]] = None,
+        is_fp8: bool = False,
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
@@ -386,6 +387,7 @@ class QuantizerPropagationSolver:
             which should be automatically ignored.
         :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
             that can be unified if it so requires based on metatype.
+        :param is_fp8: Whether the quantization is done in FP8 mode.
         """
         if default_trait_to_metatype_map is None:
             self._default_trait_to_metatype_map = {}
@@ -409,6 +411,7 @@ class QuantizerPropagationSolver:
         self._weight_quantizable_node_names_vs_qconfigs = self._filter_by_weight_ignored_target_scopes(
             quantizable_layer_nodes, weight_ignored_scopes, weight_target_scopes
         )
+        self._is_fp8 = is_fp8
 
         if scope_overrides is None:
             self._scope_overrides: dict[str, Any] = {}
@@ -1147,7 +1150,8 @@ class QuantizerPropagationSolver:
             if input_port_id in metatype.ignored_input_ports:
                 continue
 
-            if metatype.target_input_ports is not None and input_port_id not in metatype.target_input_ports:
+            target_input_ports = metatype.get_target_input_ports(self._is_fp8)
+            if target_input_ports is not None and input_port_id not in target_input_ports:
                 continue
 
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
