@@ -29,6 +29,7 @@ from nncf.common.utils.caching import cache_results
 from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
@@ -109,9 +110,46 @@ def openvino_available(available: bool):
     import nncf.common.utils.backend
 
     original_openvino_available_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
+    original_min_size_value = (
+        nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
+    )
+
     nncf.common.utils.backend._OPENVINO_AVAILABLE = available
+    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 0
+
     yield
+
     nncf.common.utils.backend._OPENVINO_AVAILABLE = original_openvino_available_value
+    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = (
+        original_min_size_value
+    )
+
+
+@pytest.mark.parametrize(
+    "weight_shape,is_disabled",
+    [
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4, 4), True),
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4 + 1, 4), False),
+    ],
+)
+@pytest.mark.parametrize("quantization_task", [QuantizationTask.Q, QuantizationTask.Q_DQ, QuantizationTask.Q_DQ_RQ])
+def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantization_task):
+    weight = get_random_float_tensor(weight_shape, TensorDataType.float32, TensorBackend.numpy)
+    config = WeightCompressionConfig(CompressWeightsMode.INT8_ASYM)
+
+    fn_to_call, fn_to_patch = _get_compression_fn_from_quantization_task(quantization_task, config)
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        kwargs = {}
+        if quantization_task == QuantizationTask.Q_DQ_RQ:
+            kwargs["return_compressed_weight"] = True
+
+        fn_to_call(weight, config, reduction_axes=1)
+
+        if is_disabled:
+            mock.assert_not_called()
+        else:
+            mock.assert_called_once()
 
 
 @pytest.mark.xfail(
