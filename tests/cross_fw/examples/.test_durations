@@ -3,7 +3,7 @@
     "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression_synthetic]": 717,
     "tests/cross_fw/examples/test_examples.py::test_examples[llm_tune_params]": 824,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_onnx_mobilenet_v2]": 207,
-    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_onnx_yolo8_quantize_with_accuracy_control]": 1221,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_onnx_yolo8_quantize_with_accuracy_control]": 800,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control]": 455,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_mobilenet_v2_quantize]": 171,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_yolo8_quantize]": 192,
