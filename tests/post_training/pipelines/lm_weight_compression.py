@@ -366,7 +366,7 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
+                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
         if self.backend == BackendType.FX_TORCH:
             compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config)
