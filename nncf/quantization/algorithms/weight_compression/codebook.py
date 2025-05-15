@@ -102,7 +102,6 @@ class CodebookCompression:
             if wp.compression_config.mode != CompressWeightsMode.CODEBOOK:
                 continue
             weight_name = wp.weight_name
-            print(weight_name)
             config = wp.compression_config
 
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)

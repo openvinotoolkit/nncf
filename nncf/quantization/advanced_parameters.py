@@ -20,7 +20,7 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule

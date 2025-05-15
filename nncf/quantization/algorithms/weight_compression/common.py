@@ -10,7 +10,8 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Any, Optional
+
 from nncf.tensor import Tensor
 
 
@@ -21,6 +22,7 @@ class Codebook:
     :param codebook: The initial codebook for compression.
     :param dst_type: The destination type for the codebook.
     """
+
     codebook: Optional[Tensor] = None
     dst_type: Optional[Any] = None
 
