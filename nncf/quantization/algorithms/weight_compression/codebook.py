@@ -24,7 +24,7 @@ from nncf.quantization.algorithms.weight_compression.common import CompressedWei
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_scale
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
@@ -164,9 +164,7 @@ class CodebookCompression:
         cur_config.group_size = group_size
 
         max_val = fns.max(fns.abs(codebook))
-        norm_weight, scale = calculate_normalized_weight_and_scale(
-            weight, reduction_axis, cur_config.group_size, max_val=max_val
-        )
+        norm_weight, scale = do_float_quantization(weight, cur_config, reduction_axis, max_val=max_val)
 
         orig_shape = norm_weight.shape
 

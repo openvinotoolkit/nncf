@@ -45,9 +45,9 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_nf4_quantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -1114,7 +1114,7 @@ def test_compressed_weighs_range(mode, data):
     w = Tensor(data)
 
     config = WeightCompressionConfig(mode=mode)
-    compressed_weighs, _, _ = do_int_quantization(w, config, -1)
+    compressed_weighs, _, _ = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
 
@@ -1146,14 +1146,16 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
 
     if raises:
         with pytest.raises(ValueError) as exc_info:
-            _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+            _, scale, zero_point = do_integer_quantization(
+                weight, config, -1, precomputed_scale, precomputed_zero_point
+            )
             assert exc_info.value == (
                 "If precomputed quantization parameters are provided, both scale and zero point "
                 "are required for asymmetric quantization."
             )
         return
     else:
-        _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+        _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
@@ -1566,12 +1568,12 @@ def test_compression_with_transposed_activations(kwargs):
 )
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
-    model = LMLinearModel().ov_model
+    model = LMLinearModel(input_shape=[1, 24, 5000]).ov_model
 
     def run_compression():
         compress_weights(model, mode=CompressWeightsMode.INT8)
 
-    fn_to_patch = opt_fns.do_int_quantization
+    fn_to_patch = opt_fns.do_integer_quantization
     patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
     with patch(patch_path, side_effect=fn_to_patch) as mock:
         if disabled:
@@ -1590,8 +1592,8 @@ def test_nf4_quantization_mid_quant(weight, scale):
     weight = Tensor(weight)
     scale = Tensor(scale)
     # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
-    norm_weight = calculate_normalized_weight(weight, scale)
-    nf4_quant = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)
+    norm_weight = _calculate_normalized_weight(weight, scale)
+    nf4_quant = _calculate_nf4_quantized_weight(norm_weight)
 
     norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
     ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()

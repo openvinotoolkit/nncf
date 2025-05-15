@@ -23,6 +23,7 @@ import torch.utils.data.distributed
 import torchvision.models as models
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+from torch.ao.quantization.quantizer import xnnpack_quantizer
 from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
 from torch.ao.quantization.quantizer.quantizer import Quantizer
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
@@ -30,8 +31,9 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQu
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
+from nncf.common.graph import NNCFGraph
+from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
-from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
@@ -64,6 +66,12 @@ def get_dot_filename(model_name):
 def get_x86_quantizer(*args, **kwarsg) -> X86InductorQuantizer:
     quantizer = X86InductorQuantizer()
     quantizer.set_global(get_default_x86_inductor_quantization_config())
+    return quantizer
+
+
+def get_xnnpack_quantizer(*args, **kwargs) -> xnnpack_quantizer.XNNPACKQuantizer:
+    quantizer = xnnpack_quantizer.XNNPACKQuantizer()
+    quantizer.set_global(xnnpack_quantizer.get_symmetric_quantization_config())
     return quantizer
 
 
@@ -119,7 +127,13 @@ def _get_calibration_dataset(example_input: torch.Tensor) -> nncf.Dataset:
     ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
 @pytest.mark.parametrize(
-    "quantizer_builder", [get_x86_quantizer, get_openvino_quantizer], ids=["X86InductorQuantizer", "OpenVINOQuantizer"]
+    "quantizer_builder",
+    [
+        get_xnnpack_quantizer,
+        get_x86_quantizer,
+        get_openvino_quantizer,
+    ],
+    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
 )
 def test_quantized_model(
     quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
@@ -146,21 +160,63 @@ def test_quantized_model(
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-
     path_to_dot = FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_dot_filename(model_case.model_id)
+    nncf_graph = _normalize_nncf_graph(nncf_graph)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
-
     # Uncomment to visualize reference graphs
     # from torch.ao.quantization.quantize_pt2e import convert_pt2e
     # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
-    # from tests.torch.fx.helpers import visualize_fx_model
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)
     # ao_quantized_model = convert_pt2e(prepared_model)
-    # visualize_fx_model(ao_quantized_model, f"{model_case.model_id}ao_int8.svg")
+    # # visualize_fx_model(ao_quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_ao_int8.svg")
     # ao_nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
-    # ao_nncf_graph.visualize_graph("ao_" + get_dot_filename(model_case.model_id))
+    # ao_nncf_graph.visualize_graph(f"ao_{quantizer.__class__.__name__}_{get_dot_filename(model_case.model_id)}")
+
+
+def _normalize_nncf_graph(nncf_graph: NNCFGraph):
+    """
+    Normalizes the given NNCFGraph by renaming quantize/dequantize nodes to ensure consistent naming across runs.
+    XNNPACKQuantizer and X86InductorQuantizer quantizers insert quantize and dequantize nodes
+    with inconsistent names across runs. This function assigns standardized names to such nodes
+    to maintain consistency.
+
+    :param nncf_graph: The given NNCFGraph instance.
+    :return: The normalized version of the given NNCFGraph.
+    """
+    idx = 0
+    q_dq_types = ["quantize_per_tensor", "dequantize_per_tensor", "quantize_per_channel", "dequantize_per_channel"]
+    norm_nncf_graph = NNCFGraph()
+    node_names_map = {}
+    for node in nncf_graph.topological_sort():
+        attrs = node._attributes.copy()
+        if node.node_type in q_dq_types:
+            new_node_name = f"{node.node_type}_{idx}"
+            node_names_map[node.node_name] = new_node_name
+            attrs[node.NODE_NAME_ATTR] = new_node_name
+            idx += 1
+        norm_nncf_graph.add_nncf_node(
+            node_name=attrs[node.NODE_NAME_ATTR],
+            node_type=attrs[node.NODE_TYPE_ATTR],
+            node_metatype=attrs[node.METATYPE_ATTR],
+            layer_attributes=node.layer_attributes,
+        )
+
+    for edge in nncf_graph.get_all_edges():
+        from_node_name = node_names_map.get(edge.from_node.node_name, edge.from_node.node_name)
+        to_node_name = node_names_map.get(edge.to_node.node_name, edge.to_node.node_name)
+        from_node, to_node = [norm_nncf_graph.get_node_by_name(name) for name in (from_node_name, to_node_name)]
+        norm_nncf_graph.add_edge_between_nncf_nodes(
+            from_node.node_id,
+            to_node.node_id,
+            tensor_shape=edge.tensor_shape,
+            input_port_id=edge.input_port_id,
+            output_port_id=edge.output_port_id,
+            dtype=edge.dtype,
+            parallel_input_port_ids=edge.parallel_input_port_ids,
+        )
+    return norm_nncf_graph
 
 
 @pytest.mark.parametrize(

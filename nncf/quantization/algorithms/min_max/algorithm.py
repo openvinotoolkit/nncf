@@ -272,9 +272,9 @@ class MinMaxQuantization(Algorithm):
                 weight_bits = self._weights_quantization_params.num_bits
 
             quant_scheme_a8w8 = act_bits == 8 and weight_bits == 8
-            if self._target_device == TargetDevice.NPU and quant_scheme_a8w8:
+            if self._target_device in [TargetDevice.GPU, TargetDevice.NPU] and quant_scheme_a8w8:
                 self._target_device = TargetDevice.CPU
-                nncf_logger.debug("Target device NPU was changed to CPU!")
+                nncf_logger.debug(f"Target device {self._target_device} was changed to CPU!")
 
             if self._overflow_fix is None and not quant_scheme_a8w8:
                 self._overflow_fix = OverflowFix.DISABLE
