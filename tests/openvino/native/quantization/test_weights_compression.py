@@ -36,6 +36,7 @@ from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedCodebookParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
@@ -696,6 +697,20 @@ def test_raise_error_with_unsupported_params_for_e2m1(algo):
         compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
 
 
+@pytest.mark.parametrize(
+    "algo",
+    (
+        "lora_correction",
+        "awq",
+        "scale_estimation",
+        "gptq",
+    ),
+)
+def test_raise_error_with_unsupported_params_for_codebook(algo):
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.CODEBOOK, **{algo: True})
+
+
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "algo",
@@ -1021,6 +1036,66 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
+
+
+@pytest.mark.parametrize(
+    ("mode", "all_layers", "ratio", "ref_ids"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
+    ),
+)
+def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        ratio=ratio,
+        group_size=1,
+        all_layers=all_layers,
+        sensitivity_metric=mode,
+    )
+    names_codebook = {
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_element_type() == ov.Type.f8e4m3 and not op.get_friendly_name().startswith("Const")
+    }
+    ref_codebook_nodes = {f"weights_{i}" for i in ref_ids}
+
+    assert ref_codebook_nodes == names_codebook
+
+
+@pytest.mark.parametrize(
+    ("codebook", "dst_type", "n_layers"),
+    (
+        ([i for i in range(-8, 8)], ov.Type.i4, 2 * 5),
+        ([i for i in range(-(2**6), 2**6)], ov.Type.i8, 2 * 5),
+        ([i for i in range(-(2**6), 2**6)], ov.Type.f8e4m3, 2 * 5),
+    ),
+)
+def test_codebook(codebook, dst_type, n_layers):
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        ratio=1.0,
+        group_size=1,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(
+            codebook_params=AdvancedCodebookParameters(codebook=codebook, dst_type=dst_type)
+        ),
+    )
+    names_codebook = [
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == dst_type
+    ]
+
+    assert len(names_codebook) == n_layers
 
 
 @pytest.mark.parametrize(
