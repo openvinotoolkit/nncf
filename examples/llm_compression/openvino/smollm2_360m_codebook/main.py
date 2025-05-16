@@ -100,7 +100,7 @@ def custom_codebook_example(MODEL_ID, OUTPUT_DIR):
         model.model,
         mode=nncf.CompressWeightsMode.CODEBOOK,
         ratio=1.0,
-        group_size=64,
+        group_size=-1,
         advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
     )
     model.save_pretrained(OUTPUT_DIR)
