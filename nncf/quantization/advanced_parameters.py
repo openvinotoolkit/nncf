@@ -20,8 +20,6 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
-import openvino as ov
-
 import nncf
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -392,7 +390,7 @@ class AdvancedCodebookParameters:
             3.5,
         ]
     )
-    dst_type: Any = ov.Type.f8e4m3
+    dst_type: Any = None
 
 
 @api()
