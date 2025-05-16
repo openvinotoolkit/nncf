@@ -316,9 +316,6 @@ def compress_weights_impl(
     if model.opset_import[0].version < 13:
         msg = "ONNX models with opset version < 13 do not support per-channel quantization."
         raise nncf.ValidationError(msg)
-    if model.opset_import[0].version < 21 and group_size > 0:
-        msg = "ONNX models with opset version < 21 do not support block-wise quantization."
-        raise nncf.ValidationError(msg)
 
     external_data_dir = get_external_data_dir(advanced_parameters)
     external_data_dir = check_external_data_location(model, external_data_dir)
