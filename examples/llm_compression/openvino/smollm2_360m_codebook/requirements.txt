@@ -1,0 +1,4 @@
+openvino==2025.1
+optimum-intel[openvino]>=1.22.0
+transformers>=4.48.0
+onnx==1.17.0

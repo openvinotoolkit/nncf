@@ -9,40 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import openvino as ov
-from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
-
-
-def transform_fn(data, model, tokenizer):
-    tokenized_text = tokenizer(data["text"], return_tensors="np")
-    input_ids = tokenized_text["input_ids"]
-    attention_mask = tokenized_text["attention_mask"]
-
-    inputs = {}
-    inputs["input_ids"] = input_ids
-    inputs["attention_mask"] = tokenized_text["attention_mask"]
-    position_ids = np.cumsum(attention_mask, axis=1) - 1
-    position_ids[attention_mask == 0] = 1
-
-    # The magic forms KV cache as model inputs
-    batch_size = input_ids.shape[0]
-    for input_name in model.key_value_input_names:
-        model_inputs = model.model.input(input_name)
-        shape = model_inputs.get_partial_shape()
-        shape[0] = batch_size
-        if shape[2].is_dynamic:
-            shape[2] = 0
-        else:
-            shape[1] = 0
-        inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
-    inputs["position_ids"] = position_ids
-    return inputs
 
 
 def generate_answers(questions, model, tokenizer, max_new_tokens=50):
@@ -70,14 +41,7 @@ def generate_answers(questions, model, tokenizer, max_new_tokens=50):
     return answers_by_questions
 
 
-def main():
-    MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
-    OUTPUT_DIR = "smollm2_360m_compressed_codebook"
-
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-    # Filtering to remove empty samples from the dataset
-    dataset = dataset.filter(lambda example: len(example["text"]) > 1)
-
+def default_codebook_example(MODEL_ID, OUTPUT_DIR):
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = OVModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -107,7 +71,54 @@ def main():
     )
     answers_by_questions = generate_answers(questions, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
-    return answers_by_questions
+
+
+def custom_codebook_example(MODEL_ID, OUTPUT_DIR):
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    model = OVModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        export=True,
+        load_in_8bit=False,
+        compile=False,
+        stateful=False,
+        ov_config={"INFERENCE_PRECISION_HINT": "f32"},
+    )
+
+    questions = [
+        "What is the capital of France?",
+        "What is the highest peak in the Alps?",
+        "What is the largest city in Canada?",
+        "What is the most visited city in Japan?",
+    ]
+
+    answers_by_questions = generate_answers(questions, model, tokenizer)
+    print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
+
+    codebook_params = nncf.AdvancedCodebookParameters([-8, -4, -2, -1, 0, 1, 2, 4, 8], ov.Type.i8)
+
+    model.model = nncf.compress_weights(
+        model.model,
+        mode=nncf.CompressWeightsMode.CODEBOOK,
+        ratio=1.0,
+        group_size=64,
+        advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
+    )
+    model.save_pretrained(OUTPUT_DIR)
+    tokenizer.save_pretrained(OUTPUT_DIR)
+
+    model = OVModelForCausalLM.from_pretrained(
+        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
+    )
+    answers_by_questions = generate_answers(questions, model, tokenizer)
+    print(f"Optimized model outputs:\n{answers_by_questions}\n")
+
+
+def main():
+    MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
+    OUTPUT_DIR = "smollm2_360m_compressed_codebook"
+
+    default_codebook_example(MODEL_ID, OUTPUT_DIR)
+    custom_codebook_example(MODEL_ID, OUTPUT_DIR + "_custom")
 
 
 if __name__ == "__main__":
