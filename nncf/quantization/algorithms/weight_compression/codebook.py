@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy
 from typing import Any, Optional, TypeVar
 
 import nncf
@@ -158,12 +157,8 @@ class CodebookCompression:
             weight = fns.transpose(weight)
             reduction_axis = 1
 
-        group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
-        cur_config = deepcopy(config)
-        cur_config.group_size = group_size
-
         max_val = fns.max(fns.abs(codebook))
-        norm_weight, scale = do_float_quantization(weight, cur_config, reduction_axis, max_val=max_val)
+        norm_weight, scale = do_float_quantization(weight, config, reduction_axis, max_val=max_val)
 
         orig_shape = norm_weight.shape
 
