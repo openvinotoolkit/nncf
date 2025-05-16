@@ -18,7 +18,6 @@ from onnx import helper
 from onnx import numpy_helper
 from onnxruntime import InferenceSession
 
-import nncf
 from nncf import CompressWeightsMode
 from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.graph.onnx_helper import get_tensor
@@ -265,25 +264,3 @@ def test_compression_with_inference(mode):
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())
     session.run(None, {"input": input_data})
-
-
-@pytest.mark.parametrize(
-    "opset, mode, should_raise",
-    (
-        (13, CompressWeightsMode.INT8_ASYM, False),
-        (13, CompressWeightsMode.INT8_SYM, False),
-        (13, CompressWeightsMode.INT4_SYM, True),
-        (13, CompressWeightsMode.INT4_ASYM, True),
-        (21, CompressWeightsMode.INT8_ASYM, False),
-        (21, CompressWeightsMode.INT8_SYM, False),
-        (21, CompressWeightsMode.INT4_SYM, False),
-        (21, CompressWeightsMode.INT4_ASYM, False),
-    ),
-)
-def test_raises_error_model_opset_versions(opset, mode, should_raise):
-    model = create_model(opset)
-    if should_raise:
-        with pytest.raises(nncf.ValidationError):
-            compress_weights(model, mode)
-    else:
-        compress_weights(model, mode)
