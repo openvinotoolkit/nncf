@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from dataclasses import dataclass
 from typing import Optional, Union
 
 import numpy as np
@@ -19,6 +18,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.backend import is_openvino_available
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
@@ -72,22 +72,6 @@ CENTER_OF_NF4_QUANTILES = np.array(
 )
 
 
-@dataclass
-class CompressedWeight:
-    """
-    Compressed weight and decompression parameters.
-
-    :param tensor: The tensor with compressed weight.
-    :param scale: The decompression scale, in practice it is dequantization scale for the INT quantization.
-    :param zero_point: The zero-point, it is the value of the compression type corresponding to the value 0
-        in the non-compression realm. Applicable for INT quantization.
-    """
-
-    tensor: Tensor
-    scale: Tensor
-    zero_point: Optional[Tensor] = None
-
-
 def reshape_weight_for_grouped_quantization(
     weight: Tensor, reduction_axes: ReductionAxes, group_size: int
 ) -> tuple[Tensor, int]:
@@ -132,19 +116,20 @@ def calculate_float_quantization_params(
     :param max_val: Maximal value of e2m1 type.
     :return: Scale tensor of float32 type for float quantization.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
 
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
     scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
+    if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]:
+        scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
     eps = fns.finfo(weight).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
     if config.mode == CompressWeightsMode.E2M1:
-        scale = scale / max_val
         scale = fns.log2(scale)
         scale = fns.ceil(scale)
         scale = fns.clip(scale, -127, 127)
@@ -174,20 +159,22 @@ def do_float_quantization(
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
+    max_val: float = 6.0,
 ) -> tuple[Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding (nf4, e2m1) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For E2M1 currently returns normalized weight without quantization.
+    For E2M1 and CODEBOOK currently returns normalized weight without quantization.
     TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor.
+    :param max_val: Maximal value of destination type.
+    :return: Returns quantized (for codebook and e2m1 normalized) weight tensor and corresponding scale tensor.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
 
     if config.group_size != -1 and reduction_axes is not None:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
@@ -207,7 +194,7 @@ def do_float_quantization(
 
     scale = precomputed_scale
     if scale is None:
-        scale = calculate_float_quantization_params(weight, reduction_axes, config)
+        scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
         if original_weight_backend == TensorBackend.ov:
@@ -347,8 +334,7 @@ def compress_weight(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
-    precomputed_scale: Tensor = None,
-    precomputed_zero_point: Tensor = None,
+    compressed_weight: CompressedWeight = None,
 ) -> CompressedWeight:
     """
     Compress weight using compression configuration.
@@ -360,6 +346,10 @@ def compress_weight(
     :param precomputed_zero_point: Precomputed zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
+    precomputed_scale, precomputed_zero_point = (
+        (compressed_weight.scale, compressed_weight.zero_point) if compressed_weight else (None, None)
+    )
+
     if not config.is_integer:
         compressed_weight, scale = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
         return CompressedWeight(compressed_weight, scale)

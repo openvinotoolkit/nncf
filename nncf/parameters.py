@@ -85,6 +85,7 @@ class CompressWeightsMode(StrEnum):
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     :param E2M1: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
+    :param CODEBOOK: Codebook (LUT) quantization format.
     """
 
     INT8_SYM = "int8_sym"
@@ -94,6 +95,7 @@ class CompressWeightsMode(StrEnum):
     NF4 = "nf4"
     INT8 = "int8"  # Deprecated mode
     E2M1 = "e2m1"
+    CODEBOOK = "codebook"
 
 
 @api(canonical_alias="nncf.CompressionFormat")
