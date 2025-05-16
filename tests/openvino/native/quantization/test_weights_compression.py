@@ -1041,14 +1041,14 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
 @pytest.mark.parametrize(
     ("mode", "all_layers", "ratio", "ref_ids"),
     (
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, 5),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, 3),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, 1),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, 0),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, 4),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, 3),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, 1),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, 0),
     ),
 )
 def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
@@ -1064,28 +1064,28 @@ def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
     names_codebook = {
         op.get_friendly_name()
         for op in compressed_model.get_ordered_ops()
-        if op.get_element_type() == ov.Type.f8e4m3 and not op.get_friendly_name().startswith("Const")
+        if op.get_element_type() == ov.Type.f8e4m3 and op.get_friendly_name().startswith("Const")
     }
-    ref_codebook_nodes = {f"weights_{i}" for i in ref_ids}
 
-    assert ref_codebook_nodes == names_codebook
+    assert ref_ids == len(names_codebook)
 
 
 @pytest.mark.parametrize(
     ("codebook", "dst_type", "n_layers"),
     (
-        ([i for i in range(-8, 8)], ov.Type.i4, 2 * 5),
-        ([i for i in range(-(2**6), 2**6)], ov.Type.i8, 2 * 5),
-        ([i for i in range(-(2**6), 2**6)], ov.Type.f8e4m3, 2 * 5),
+        ([i for i in range(-8, 8)], ov.Type.i4, 5),
+        ([i for i in range(-(2**6), 2**6)], ov.Type.i8, 5),
+        ([i for i in range(-(2**6), 2**6)], ov.Type.f8e4m3, 5),
     ),
 )
-def test_codebook(codebook, dst_type, n_layers):
+@pytest.mark.parametrize("group_size", (1, -1))
+def test_codebook(codebook, dst_type, n_layers, group_size):
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.CODEBOOK,
         ratio=1.0,
-        group_size=1,
+        group_size=group_size,
         all_layers=True,
         advanced_parameters=AdvancedCompressionParameters(
             codebook_params=AdvancedCodebookParameters(codebook=codebook, dst_type=dst_type)
