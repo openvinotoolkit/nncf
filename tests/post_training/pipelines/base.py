@@ -23,12 +23,12 @@ from typing import Optional
 
 import numpy as np
 import onnx
-import openvino as ov
 import torch
 from memory_profiler import memory_usage
 from optimum.intel import OVQuantizer
 
 import nncf
+import openvino as ov
 from nncf import TargetDevice
 from tests.cross_fw.shared.command import Command
 from tools.memory_monitor import MemoryType
