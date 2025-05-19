@@ -13,7 +13,9 @@ import tempfile
 
 import numpy as np
 import onnx
+import onnxruntime
 import pytest
+from packaging import version
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -62,6 +64,7 @@ def test_output_insertion(target_layers, target_layers_output):
     check_engine_creation_and_inference(transformed_model, input_data, target_layers_output)
 
 
+@pytest.mark.skipif(version.parse(onnxruntime.__version__) < version.parse("1.21.1"), reason="Requires onnx >= 1.21.1")
 def test_infer_for_model_with_external_data():
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as temp_dir:
         model = build_matmul_model()

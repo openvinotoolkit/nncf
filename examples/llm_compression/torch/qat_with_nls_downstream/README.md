@@ -35,34 +35,29 @@ This script also supports running the vanilla LoRA method. We only need to pass 
 
 ## Results
 
-The table illustrates that Quantization-Aware Training integrated with absorbable QAT + LoRA / QAT + NLS substantially improves the performance of compressed models on downstream tasks, and QAT + NLS performs better than QAT + LoRA overall.
+The table below illustrates the performance improvements achieved by integrating Quantization-Aware Training (QAT) with absorbable LoRA and NLS on compressed models across various downstream tasks. Our evaluation encompasses 11 large language models and 4 downstream tasks: [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), [winogrande](https://huggingface.co/datasets/allenai/winogrande), [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc), and [arc-easy](https://huggingface.co/datasets/allenai/ai2_arc). The value in the table represents the mean accuracy of these tasks, with "acc_norm" used for all except winogrande, which uses "acc" ([lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)).
 
-The average score in the table represent the average accuracy of the four downstream tasks, [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), [winogrande](https://huggingface.co/datasets/allenai/winogrande), [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc) and [arc-easy](https://huggingface.co/datasets/allenai/ai2_arc) (all are "acc_norm" except winogrande which is "acc" of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)). For QAT + LoRA and QAT + NLS, we conducted experiments with epochs set to 3, 4, and 5, LoRA rank set to 16 and 32, the corresponding LoRA rank space of NLS set to `[16,12,8]` and `[32,24,16]`. We present the best results for each method. All quantization methods compressed the models to `INT4_ASYM` precision with a group size of `64`.
+To ensure a fair and comprehensive comparison, we conducted experiments with epochs set to 3, 4, and 5, LoRA rank set to 16 and 32, and the corresponding LoRA rank space of NLS set to `[16,12,8]` and `[32,24,16]`. We present the best results.
+INT4 (LoRA + PTWC) results are derived from the best BF16 (LoRA) model using the OpenVINO PTWC (AWQ + Scale Estimation + GPTQ) method. All quantization methods compressed the models to `INT4_ASYM` precision with a group size of 64. For BF16 model + LoRA finetuning, we used [PEFT](https://github.com/huggingface/peft) for inserting the LoRA adapters, ensuring consistent adapter placement with QAT.
 
-| Model                                | Precision          | Average score |
-|--------------------------------------|--------------------|---------------|
-| google/gemma-2-2b-it                 | INT4 (QAT + LoRA)  | 0.6801        |
-|                                      | INT4 (QAT + NLS)   | **0.6843**    |
-| Qwen/Qwen2.5-3B-Instruct             | INT4 (QAT + LoRA)  | 0.6916        |
-|                                      | INT4 (QAT + NLS)   | **0.6966**    |
-| mistralai/Mistral-7B-v0.3            | INT4 (QAT + LoRA)  | 0.7164        |
-|                                      | INT4 (QAT + NLS)   | **0.7291**    |
-| meta-llama/Llama-3.2-3B-Instruct     | INT4 (QAT + LoRA)  | 0.6510        |
-|                                      | INT4 (QAT + NLS)   | **0.6570**    |
-| HuggingFaceTB/SmolLM-1.7B-Instruct   | INT4 (QAT + LoRA)  | **0.5765**    |
-|                                      | INT4 (QAT + NLS)   | 0.5733        |
-| meta-llama/Meta-Llama-3-8B           | INT4 (QAT + LoRA)  | 0.7236        |
-|                                      | INT4 (QAT + NLS)   | **0.7350**    |
-| meta-llama/Meta-Llama-3-8B-Instruct  | INT4 (QAT + LoRA)  | 0.7076        |
-|                                      | INT4 (QAT + NLS)   | **0.7128**    |
-| meta-llama/Llama-3.1-8B              | INT4 (QAT + LoRA)  | 0.7243        |
-|                                      | INT4 (QAT + NLS)   | **0.7297**    |
-| meta-llama/Llama-3.1-8B-Instruct     | INT4 (QAT + LoRA)  | 0.7140        |
-|                                      | INT4 (QAT + NLS)   | **0.7166**    |
-| Qwen/Qwen2.5-7B                      | INT4 (QAT + LoRA)  | 0.7366        |
-|                                      | INT4 (QAT + NLS)   | **0.7408**    |
-| Qwen/Qwen2.5-7B-Instruct             | INT4 (QAT + LoRA)  | 0.7356        |
-|                                      | INT4 (QAT + NLS)   | **0.7382**    |
+**Conclusion:** The results indicate a performance comparison among the methods:
+**BF16 < INT4 (LoRA + PTWC) < INT4 (QAT + LoRA) < INT4 (QAT + NLS) ≲ BF16 (LoRA)**. This demonstrates that QAT + NLS generally provides the best performance among the quantized models, closely approaching the performance of BF16 (LoRA).
+
+\* We highlight the best of the INT4 results.
+
+| Model                                | BF16  | BF16 (LoRA) | INT4 (LoRA + PTWC) | INT4 (QAT + LoRA) | INT4 (QAT + NLS) |
+|--------------------------------------|-------|-------------|--------------------|-------------------|------------------|
+| meta-llama/Meta-Llama-3-8B           | 0.6233| 0.7277      | 0.7167             | 0.7236            | **0.7350**       |
+| meta-llama/Meta-Llama-3-8B-Instruct  | 0.6286| 0.7148      | 0.7098             | 0.7076            | **0.7128**       |
+| meta-llama/Llama-3.1-8B              | 0.6310| 0.7330      | 0.7201             | 0.7243            | **0.7297**       |
+| meta-llama/Llama-3.1-8B-Instruct     | 0.6297| 0.7197      | 0.7160             | 0.7140            | **0.7166**       |
+| Qwen/Qwen2.5-7B                      | 0.6207| 0.7344      | 0.7269             | 0.7366            | **0.7408**       |
+| Qwen/Qwen2.5-7B-Instruct             | 0.6401| 0.7305      | 0.7234             | 0.7356            | **0.7382**       |
+| mistralai/Mistral-7B-v0.3            | 0.6209| 0.7208      | 0.7115             | 0.7164            | **0.7291**       |
+| Qwen/Qwen2.5-3B-Instruct             | 0.5814| 0.7003      | 0.6839             | 0.6916            | **0.6966**       |
+| meta-llama/Llama-3.2-3B-Instruct     | 0.5435| 0.6515      | 0.6503             | 0.6510            | **0.6570**       |
+| HuggingFaceTB/SmolLM-1.7B-Instruct   | 0.4934| 0.5759      | 0.5751             | **0.5765**        | 0.5733           |
+| google/gemma-2-2b-it                 | 0.6133| 0.6806      | 0.6658             | 0.6801            | **0.6843**       |
 
 ## Citation
 

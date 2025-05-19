@@ -130,14 +130,17 @@ class StripFormat(StrEnum):
     operations added during the compression process, resulting in a clean model ready for deployment.
     The functionality of the model object is still preserved as a compressed model.
 
-    :param NATIVE: Returns the model with as much custom NNCF additions as possible.
-    :param DQ: Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
-        precision using fake quantize parameters. This is the default format for deployment of models with compressed
-        weights.
+    :param NATIVE: Preserves as many custom NNCF additions as possible in the model.
+    :param DQ: Replaces FakeQuantize operations with a dequantization subgraph and stores compressed weights
+        in low-bit precision using fake quantize parameters. This is the default format for deploying models
+        with compressed weights.
+    :param IN_PLACE: Directly applies fake quantizers to the weights, replacing the original weights with their
+        fake quantized versions.
     """
 
     NATIVE = "native"
     DQ = "dequantize"
+    IN_PLACE = "in_place"
 
 
 @api(canonical_alias="nncf.BackupMode")

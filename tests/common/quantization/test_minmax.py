@@ -248,17 +248,21 @@ def test_min_max_caching():
 
 
 @pytest.mark.parametrize(
-    "target_device", [target_device for target_device in TargetDevice if target_device != TargetDevice.NPU]
+    "num_bits, target_device, ref_hw_target_device",
+    [
+        (8, target_device, target_device)
+        for target_device in TargetDevice
+        if target_device not in [TargetDevice.GPU, TargetDevice.NPU]
+    ]
+    + [
+        (8, TargetDevice.NPU, TargetDevice.CPU),
+        (8, TargetDevice.GPU, TargetDevice.CPU),
+        (4, TargetDevice.NPU, TargetDevice.NPU),
+    ],
 )
-def test_target_device(target_device):
-    min_max_algo = MinMaxQuantization(target_device=target_device)
-    assert min_max_algo._target_device == target_device
-
-
-@pytest.mark.parametrize("num_bits, ref_hw_target_device", zip([8, 4], [TargetDevice.CPU, TargetDevice.NPU]))
-def test_npu_target_device(num_bits, ref_hw_target_device):
+def test_target_device(num_bits, target_device, ref_hw_target_device):
     min_max_algo = MinMaxQuantization(
-        target_device=TargetDevice.NPU,
+        target_device=target_device,
         activations_quantization_params=QuantizationParameters(num_bits=num_bits),
         weights_quantization_params=QuantizationParameters(num_bits=num_bits),
     )

@@ -24,6 +24,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import StaticDatasetMock
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
@@ -143,6 +144,7 @@ class TemplateTestBCAlgorithm:
             (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
             (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
             (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
+            (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):

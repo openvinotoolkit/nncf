@@ -361,10 +361,20 @@ class FunctionHookMode(TorchFunctionMode):
         :param kwargs: The keyword arguments to the function.
         :return: The modified arguments and keyword arguments after pre-hooks.
         """
+
+        def _execute_hooks_for_parameter(value: Any) -> Any:
+            if not isinstance(value, list):
+                return self.execute_hooks_for_parameter(value)
+            for list_idx, tensor in enumerate(value):
+                value[list_idx] = self.execute_hooks_for_parameter(tensor)
+            return value
+
         for idx, value in enumerate(args):
-            args[idx] = self.execute_hooks_for_parameter(value)
+            args[idx] = _execute_hooks_for_parameter(value)
+
         for kw_name, value in kwargs.items():
-            kwargs[kw_name] = self.execute_hooks_for_parameter(value)
+            kwargs[kw_name] = _execute_hooks_for_parameter(value)
+
         return args, kwargs
 
     def execute_pre_hooks(

@@ -110,6 +110,11 @@ def _(a: tf.Tensor, shape: Union[int, tuple[int, ...]]) -> tf.Tensor:
         return tf.reshape(a, shape)
 
 
+@numeric.atleast_1d.register
+def _(a: tf.Tensor) -> tf.Tensor:
+    return tf.experimental.numpy.atleast_1d(a)
+
+
 @numeric.all.register
 def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):

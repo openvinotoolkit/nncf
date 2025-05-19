@@ -29,6 +29,7 @@ ascale
 ascontiguousarray
 asym
 asymm
+atleast
 atol
 atrous
 autocast
@@ -406,6 +407,7 @@ rtype
 sacts
 sanh
 savelyev
+savelyevv
 savetxt
 sdpa
 sdxl
