@@ -31,6 +31,8 @@ from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_gra
 from tests.torch.test_compressed_graph import GeneralModelDesc
 from tests.torch.test_models.synthetic import MultiBranchesModel
 
+pytestmark = pytest.mark.legacy
+
 
 class MultiBranchesModelDesc(GeneralModelDesc):
     NUM_WEIGHTS = 5

@@ -18,3 +18,4 @@ sentence-transformers==4.0.2
 optimum-intel==1.22.0
 optimum==1.24.0
 accelerate==1.1.0
+fastdownload==0.0.7

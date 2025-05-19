@@ -59,6 +59,8 @@ from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
 
+pytestmark = pytest.mark.legacy
+
 
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
     assert qspec.narrow_range == quantizer.narrow_range

@@ -11,6 +11,7 @@
 import numpy as np
 import onnx
 import onnxruntime as rt
+import pytest
 import torch
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -21,6 +22,8 @@ from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
 from tests.torch.nas.helpers import ref_kernel_transform
 from tests.torch.nas.test_all_elasticity import ThreeConvModel
 from tests.torch.nas.test_all_elasticity import create_bnas_model_and_ctrl_by_test_desc
+
+pytestmark = pytest.mark.legacy
 
 
 def check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, expected_num_nodes):

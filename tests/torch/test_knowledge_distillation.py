@@ -34,6 +34,8 @@ from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_spar
 from tests.torch.test_models.synthetic import ContainersOutputsModel
 from tests.torch.test_models.synthetic import PartlyNonDifferentialOutputsModel
 
+pytestmark = pytest.mark.legacy
+
 KEY_TO_KD_PARAMETERS = "kd"
 
 

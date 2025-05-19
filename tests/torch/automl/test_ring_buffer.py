@@ -18,6 +18,8 @@ import pytest
 
 from nncf.torch.automl.agent.ddpg.memory import RingBuffer
 
+pytestmark = pytest.mark.legacy
+
 MAX_LEN = 3
 
 

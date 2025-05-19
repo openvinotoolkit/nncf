@@ -75,6 +75,8 @@ from tests.torch.test_models.synthetic import ScaledDotProductModel
 from tests.torch.test_models.synthetic import ShiftScaleParametrized
 from tests.torch.test_models.synthetic import TransposeModel
 
+pytestmark = pytest.mark.legacy
+
 
 def get_basic_quantization_config(
     quantization_type="symmetric", input_sample_sizes=None, input_info: Union[list, dict] = None

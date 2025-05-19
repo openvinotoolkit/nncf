@@ -36,6 +36,7 @@ from tests.torch.sparsity.movement.helpers import SwinRunRecipe
 from tests.torch.sparsity.movement.helpers import Wav2Vec2RunRecipe
 from tests.torch.sparsity.movement.helpers import mock_linear_nncf_node
 
+pytestmark = pytest.mark.legacy
 STRUCTURED_MASK_SUPPORTED_RECIPES = [
     BertRunRecipe().model_config_(hidden_size=4, intermediate_size=3),
     BertRunRecipe().model_config_(hidden_size=4, intermediate_size=3, mhsa_qkv_bias=False),

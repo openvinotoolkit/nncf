@@ -21,6 +21,8 @@ from tests.torch.test_compressed_graph import QuantizeTestCaseConfiguration
 from tests.torch.test_compressed_graph import check_model_graph
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 
+pytestmark = pytest.mark.legacy
+
 TEST_MODELS = [
     (("alexnet.dot", "lenet.dot"), (test_models.AlexNet, test_models.LeNet), ([1, 3, 32, 32], [1, 3, 32, 32]))
 ]

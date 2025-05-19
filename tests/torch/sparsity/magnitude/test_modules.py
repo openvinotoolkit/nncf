@@ -25,6 +25,8 @@ from tests.torch.helpers import fill_bias
 from tests.torch.helpers import fill_conv_weight
 from tests.torch.helpers import fill_linear_weight
 
+pytestmark = pytest.mark.legacy
+
 
 class SingleLayerModel(nn.Module):
     def __init__(self, layer):

@@ -33,6 +33,7 @@ from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.helpers import MockModel
 
+pytestmark = pytest.mark.legacy
 LIST_STAGES__K_KW_KWD = [
     [ElasticityDim.KERNEL],
     [ElasticityDim.KERNEL, ElasticityDim.WIDTH],

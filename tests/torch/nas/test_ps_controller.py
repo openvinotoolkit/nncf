@@ -28,6 +28,8 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import ThreeConvModelMode
 from tests.torch.nas.test_scheduler import fixture_schedule_params  # noqa: F401
 
+pytestmark = pytest.mark.legacy
+
 
 class PSControllerTestDesc(NamedTuple):
     model_creator: Any

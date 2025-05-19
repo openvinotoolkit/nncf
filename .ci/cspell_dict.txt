@@ -29,6 +29,7 @@ ascale
 ascontiguousarray
 asym
 asymm
+atleast
 atol
 atrous
 autocast
@@ -154,6 +155,7 @@ gacts
 gelsy
 gelu
 genai
+getsizeof
 gflop
 gflops
 giga
@@ -401,6 +403,7 @@ rtype
 sacts
 sanh
 savelyev
+savelyevv
 savetxt
 sdpa
 sdxl

@@ -25,6 +25,7 @@ from tests.torch.nas.test_state import COMMON_DEPTH_BASIC_DESC
 from tests.torch.nas.test_state import COMMON_DEPTH_SUPERNET_DESC
 from tests.torch.test_models import ResNet18
 
+pytestmark = pytest.mark.legacy
 KERNEL_SIZE_AND_SEARCH_SPACE = [(5, [5, 3]), (7, [7, 5, 3]), (1, [1])]
 
 LIST_KERNEL_SS_DESCS = [

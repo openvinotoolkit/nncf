@@ -77,6 +77,8 @@ from tests.torch.test_models import squeezenet1_1
 from tests.torch.test_models.mobilenet import MobileNetV2
 from tests.torch.test_models.mobilenet import mobilenet_v2
 
+pytestmark = pytest.mark.legacy
+
 
 def create_test_dataloaders(config: NNCFConfig, dataset_dir):
     input_info = FillerInputInfo.from_nncf_config(config).elements[0]
@@ -475,7 +477,6 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
         model = model.cuda()
         criterion = criterion.cuda()
         ref_trace = params.cuda_ref_trace
-        rtol = 1e-6
 
     if not dataset_dir:
         dataset_dir = str(tmp_path)
