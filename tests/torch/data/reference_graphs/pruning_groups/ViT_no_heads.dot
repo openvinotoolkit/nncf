@@ -1,23 +1,23 @@
-strict digraph  {
-0 [color=red, label="Block: S:1__O:0
+strict digraph {
+0 [label="Block: S:1__O:0
 Producers: 8
-Consumers: ", style=filled];
-1 [color=red, label="Block: S:1__O:0
-Producers: 9
-Consumers: ", style=filled];
-2 [color=red, label="Block: S:1__O:0
-Producers: 12
-Consumers: ", style=filled];
-3 [color=red, label="Block: S:1__O:0
-Producers: 21
-Consumers: ", style=filled];
-4 [color=green, label="Block: S:1__O:0
-Producers: 25
-Consumers: 27", style=filled];
-5 [color=red, label="Block: S:1__O:0
-Producers: 27
-Consumers: ", style=filled];
-6 [color=red, label="Block: S:1__O:0
-Producers: 32
-Consumers: ", style=filled];
+Consumers: ", color=red, style=filled];
+1 [label="Block: S:1__O:0
+Producers: 11
+Consumers: ", color=red, style=filled];
+2 [label="Block: S:1__O:0
+Producers: 14
+Consumers: ", color=red, style=filled];
+3 [label="Block: S:1__O:0
+Producers: 24
+Consumers: ", color=red, style=filled];
+4 [label="Block: S:1__O:0
+Producers: 28
+Consumers: 30", color=green, style=filled];
+5 [label="Block: S:1__O:0
+Producers: 30
+Consumers: ", color=red, style=filled];
+6 [label="Block: S:1__O:0
+Producers: 35
+Consumers: ", color=red, style=filled];
 }
