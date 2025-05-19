@@ -13,8 +13,8 @@ from functools import partial
 
 import torch
 from datasets import load_dataset
-from fx_utils import FXAutoModelForCausalLM
-from fx_utils import convert_and_export_with_cache
+from modelling import FXAutoModelForCausalLM
+from modelling import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
