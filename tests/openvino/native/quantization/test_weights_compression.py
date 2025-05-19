@@ -756,7 +756,7 @@ def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
 
 def test_data_type_for_num_weights(mocker):
     stub = mocker.stub()
-    params = WeightCompressionParameters(stub, stub, stub, np.int32(1), stub)
+    params = WeightCompressionParameters(stub, stub, stub, stub, np.int32(1), stub)
     assert isinstance(params.num_weights, np.uint64)
 
 
@@ -789,15 +789,27 @@ def check_compressed_matmul_subgraph(start_node, activation_dtype, weight_dtype,
         (ov.Type.f32, ov.Type.f32),
         (ov.Type.f16, ov.Type.f32),
         (ov.Type.bf16, ov.Type.f32),
+        (ov.Type.f8e4m3, ov.Type.f32),
+        (ov.Type.f8e5m2, ov.Type.f32),
         (ov.Type.f16, ov.Type.f16),
+        (ov.Type.f8e4m3, ov.Type.f32),
+        (ov.Type.f8e5m2, ov.Type.f32),
         (ov.Type.bf16, ov.Type.bf16),
+        (ov.Type.f8e4m3, ov.Type.f32),
+        (ov.Type.f8e5m2, ov.Type.f32),
     ],
     ids=[
         "w32a32",
         "w16a32",
         "wb16a32",
+        "wf8e4m3a32",
+        "wf8e5m2a32",
         "w16a16",
+        "wf8e4m3a16",
+        "wf8e5m2a16",
         "wb16a16",
+        "wf8e4m3ab16",
+        "wf8e5m2ab16",
     ],
 )
 class TestActivationWeightDtype:
@@ -1235,8 +1247,14 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, apply_regularization, is_pe
         (ov.Type.f32, ov.Type.f32),
         (ov.Type.f32, ov.Type.f16),
         (ov.Type.f32, ov.Type.bf16),
+        (ov.Type.f32, ov.Type.f8e4m3),
+        (ov.Type.f32, ov.Type.f8e5m2),
         (ov.Type.f16, ov.Type.f16),
+        (ov.Type.f16, ov.Type.f8e4m3),
+        (ov.Type.f16, ov.Type.f8e5m2),
         (ov.Type.bf16, ov.Type.bf16),
+        (ov.Type.bf16, ov.Type.f8e4m3),
+        (ov.Type.bf16, ov.Type.f8e5m2),
     ],
 )
 def test_compression_with_lora_for_different_dtypes(activation_dtype, weight_dtype):
