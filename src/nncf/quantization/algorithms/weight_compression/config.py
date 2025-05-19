@@ -18,6 +18,7 @@ import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.parameters import CompressWeightsMode
+from nncf.tensor.definitions import TensorDataType
 
 TWeightType = TypeVar("TWeightType")
 TTensor = TypeVar("TTensor")
@@ -96,6 +97,7 @@ class WeightCompressionParameters:
     weight_name: str
     node_with_weight: NNCFNode
     weight_port_id: int
+    weight_dtype: TensorDataType
     weight_shape: tuple[int, ...]
     reduction_axes: tuple[int, ...]
     compression_config: Optional[WeightCompressionConfig] = field(default_factory=WeightCompressionConfig)
