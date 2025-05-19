@@ -537,7 +537,7 @@ class WeightCompression(Algorithm):
                 continue
             for _, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if weight_dtype in SUPPORTED_DATA_TYPES:
+                if weight_dtype not in SUPPORTED_DATA_TYPES:
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
