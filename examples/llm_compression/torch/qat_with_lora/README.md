@@ -64,28 +64,37 @@ Where:
 - `PPL_PTWC` is the perplexity after applying the best Post-Training Weight Compression method identified
 for each specific model: this was "AWQ + Scale Estimation + GPTQ" for "HuggingFaceTB/SmolLM-1.7B-Instruct",
 and "AWQ + Scale Estimation" for all other models evaluated.
-- `PPL_QAT+LoRA` is the perplexity after applying Quantization-Aware Training with LoRA.
+- `PPL_QAT+LoRA` is the perplexity after applying Quantization-Aware Training with LoRA for 10 epochs.
 
 All quantization methods compressed the models to `INT4_ASYM` precision with a group size of `64`.
 
-| Model                              | Precision         | Wikitext,<br>word_ppl | Improvement |
-|------------------------------------|-------------------|-----------------------|-------------|
-| google/gemma-2-2b-it               | BF16              | 15.02                 |             |
-| google/gemma-2-2b-it               | INT4 (QAT + LoRA) | 15.13                 | 86%         |
-| google/gemma-2-2b-it               | INT4 (best PTWC)  | 15.80                 |             |
-| microsoft/phi3-mini-4k-instruct    | BF16              | 9.49                  |             |
-| microsoft/phi3-mini-4k-instruct    | INT4 (QAT + LoRA) | 10.12                 | 27%         |
-| microsoft/phi3-mini-4k-instruct    | INT4 (best PTWC)  | 10.36                 |             |
-| Qwen/Qwen2.5-3B-Instruct           | BF16              | 11.01                 |             |
-| Qwen/Qwen2.5-3B-Instruct           | INT4 (QAT + LoRA) | 11.49                 | 25%         |
-| Qwen/Qwen2.5-3B-Instruct           | INT4 (best PTWC)  | 11.65                 |             |
-| HuggingFaceTB/SmolLM-1.7B-Instruct | BF16              | 19.11                 |             |
-| HuggingFaceTB/SmolLM-1.7B-Instruct | INT4 (QAT + LoRA) | 19.25                 | 79%         |
-| HuggingFaceTB/SmolLM-1.7B-Instruct | INT4 (best PTWC)  | 19.79                 |             |
-| mistralai/Mistral-7B-v0.3          | BF16              | 8.21                  |             |
-| mistralai/Mistral-7B-v0.3          | INT4 (QAT + LoRA) | 8.38                  | 12%         |
-| mistralai/Mistral-7B-v0.3          | INT4 (best PTWC)  | 8.40                  |             |
-| meta-llama/Llama-3.2-3B-Instruct   | BF16              | 12.67                 |             |
-| meta-llama/Llama-3.2-3B-Instruct   | INT4 (QAT + LoRA) | 12.82                 | 73%         |
-| meta-llama/Llama-3.2-3B-Instruct   | INT4 (best PTWC)  | 13.22                 |             |
-|                                    |                   |               Average | 50.4%       |
+| Model                               | Precision         | Wikitext,<br>word_ppl | Improvement |
+|-------------------------------------|-------------------|-----------------------|-------------|
+| google/gemma-2-2b-it                | BF16              | 15.02                 |             |
+| google/gemma-2-2b-it                | INT4 (QAT + LoRA) | 15.09                 | 91%         |
+| google/gemma-2-2b-it                | INT4 (best PTWC)  | 15.80                 |             |
+| microsoft/phi3-mini-4k-instruct     | BF16              | 9.49                  |             |
+| microsoft/phi3-mini-4k-instruct     | INT4 (QAT + LoRA) | 10.04                 | 37%         |
+| microsoft/phi3-mini-4k-instruct     | INT4 (best PTWC)  | 10.36                 |             |
+| Qwen/Qwen2.5-3B-Instruct            | BF16              | 11.01                 |             |
+| Qwen/Qwen2.5-3B-Instruct            | INT4 (QAT + LoRA) | 11.44                 | 33%         |
+| Qwen/Qwen2.5-3B-Instruct            | INT4 (best PTWC)  | 11.65                 |             |
+| HuggingFaceTB/SmolLM-1.7B-Instruct  | BF16              | 19.11                 |             |
+| HuggingFaceTB/SmolLM-1.7B-Instruct  | INT4 (QAT + LoRA) | 19.34                 | 66%         |
+| HuggingFaceTB/SmolLM-1.7B-Instruct  | INT4 (best PTWC)  | 19.79                 |             |
+| mistralai/Mistral-7B-v0.3           | BF16              | 8.21                  |             |
+| mistralai/Mistral-7B-v0.3           | INT4 (QAT + LoRA) | 8.36                  | 20%         |
+| mistralai/Mistral-7B-v0.3           | INT4 (best PTWC)  | 8.40                  |             |
+| meta-llama/Llama-3.2-1B-Instruct    | BF16              | 16.30                 |             |
+| meta-llama/Llama-3.2-1B-Instruct    | INT4 (QAT + LoRA) | 17.12                 | 40%         |
+| meta-llama/Llama-3.2-1B-Instruct    | INT4 (best PTWC)  | 17.67                 |             |
+| meta-llama/Llama-3.2-3B-Instruct    | BF16              | 12.67                 |             |
+| meta-llama/Llama-3.2-3B-Instruct    | INT4 (QAT + LoRA) | 13.00                 | 39%         |
+| meta-llama/Llama-3.2-3B-Instruct    | INT4 (best PTWC)  | 13.22                 |             |
+| meta-llama/Meta-Llama-3-8B-Instruct | BF16              | 10.22                 |             |
+| meta-llama/Meta-Llama-3-8B-Instruct | INT4 (QAT + LoRA) | 10.30                 | 62%         |
+| meta-llama/Meta-Llama-3-8B-Instruct | INT4 (best PTWC)  | 10.45                 |             |
+| microsoft/phi3.5-mini-instruct      | BF16              | 10.00                 |             |
+| microsoft/phi3.5-mini-instruct      | INT4 (QAT + LoRA) | 10.53                 | 37%         |
+| microsoft/phi3.5-mini-instruct      | INT4 (best PTWC)  | 10.71                 |             |
+|                                     |                   |               Average | 46%         |
