@@ -38,7 +38,6 @@ from transformers import AutoTokenizer
 from transformers import get_cosine_schedule_with_warmup
 
 import nncf
-from examples.llm_compression.torch.qat_with_lora.main import export_to_openvino
 from examples.llm_compression.torch.qat_with_lora.main import load_checkpoint
 from examples.llm_compression.torch.qat_with_lora.main import save_checkpoint
 from examples.llm_compression.torch.qat_with_lora.main import set_trainable
@@ -318,12 +317,12 @@ def export_to_openvino(
     specific_rank_config: list[int] = None,
 ) -> OVModelForCausalLM:
     """
-    Create a wrapper of OpenVINO model from the checkpoint for evaluation on CPU via WWB.
+    Create a wrapper of OpenVINO model from the checkpoint for evaluation on CPU.
 
     :param pretrained: The name or path of the pretrained model.
     :param ckpt_file: The path to the checkpoint file to load the model weights and NNCF configurations.
     :param ir_dir: The directory where the OpenVINO model will be saved.
-    :param specific_rank_config: A specific configuration of ranks for each layer.
+    :param specific_rank_config: A specific configuration of ranks for each layer (only needed if NLS is enabled).
     :return: A wrapper of OpenVINO model ready for evaluation.
     """
     model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
@@ -456,6 +455,7 @@ def main(argv) -> float:
     output_dir = Path(args.output_dir)
     tensorboard_dir = output_dir / "tb" / datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
     last_dir = output_dir / "last"
+    ov_dir = output_dir / "ov"
     result_file = output_dir / "result.json"
 
     if not args.resume:
@@ -473,7 +473,7 @@ def main(argv) -> float:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    results_before_compression = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
+    results_before_compression = lm_eval(model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer)
     print(f"Results before compression={json.dumps(results_before_compression, indent=4)}")
     overall_result["results_before_compression"] = results_before_compression
 
@@ -503,7 +503,7 @@ def main(argv) -> float:
         dataset=Dataset([{k: v.to(device) for k, v in model_input.items()}]),
         **compression_config,
     )
-    results_of_compressed_model = lm_eval(model, tokenizer, task=args.task, batch_size=args.eval_batch_size)
+    results_of_compressed_model = lm_eval(model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer)
     print(f"Results of NNCF compressed model={json.dumps(results_of_compressed_model, indent=4)}")
     overall_result["results_of_compressed_model"] = results_of_compressed_model
     initial_result = results_of_compressed_model[args.lm_eval_metric]
@@ -619,7 +619,7 @@ def main(argv) -> float:
     # Start evaluation
     if disable_nls:
         results_of_lora_finetuned_compressed_model = lm_eval(
-            model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+            model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer
         )
         print(
             f"Results of quantization-aware-finetuned (LoRA) NNCF compressed model="
@@ -646,7 +646,7 @@ def main(argv) -> float:
                 top_k_configs = [list(config) for config, _ in avg_loss_configs[:k]]
                 return top_k_configs
 
-            best_result = float('-inf')
+            best_result = float("-inf")
             best_config = None
 
             # Test the median configuration
@@ -656,7 +656,7 @@ def main(argv) -> float:
                 adapter_strategy="median",
             )
             results_of_nls_finetuned_compressed_model_median = lm_eval(
-                model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+                model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer
             )
             print(
                 f"Results of quantization-aware-finetuned (NLS-Median) NNCF compressed model="
@@ -680,7 +680,7 @@ def main(argv) -> float:
                 specific_rank_config=most_frequent_lora_rank_config,
             )
             results_of_nls_finetuned_compressed_model_most_frequent = lm_eval(
-                model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+                model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer
             )
             print(
                 f"Results of quantization-aware-finetuned (NLS-Most-Frequent) NNCF compressed model="
@@ -705,7 +705,7 @@ def main(argv) -> float:
                     specific_rank_config=min_loss_config,
                 )
                 results_of_nls_finetuned_compressed_model_min_loss = lm_eval(
-                    model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+                    model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer
                 )
                 print(
                     f"Results of quantization-aware-finetuned (NLS-Min-Loss-{i + 1}) NNCF compressed model="
@@ -728,7 +728,7 @@ def main(argv) -> float:
                 specific_rank_config=args.custom_rank_config,
             )
             results_of_nls_finetuned_compressed_model_custom = lm_eval(
-                model, tokenizer, task=args.task, batch_size=args.eval_batch_size
+                model, task=args.task, batch_size=args.eval_batch_size, tokenizer=tokenizer
             )
             print(
                 f"Results of quantization-aware-finetuned (NLS with custom config) NNCF compressed model="
@@ -741,28 +741,29 @@ def main(argv) -> float:
                     "results": results_of_nls_finetuned_compressed_model_custom,
                 }
             )
-            best_result = results_of_nls_finetuned_compressed_model_custom[args.lm_eval_metric]
             best_config = args.custom_rank_config
 
     if disable_nls:
-        model_for_eval = export_to_openvino(args.pretrained, ckpt_file, last_dir)
+        ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir)
     else:
-        model_for_eval = export_to_openvino(args.pretrained, ckpt_file, last_dir, best_config)
-    results_of_nls_finetuned_compressed_ov_model = lm_eval(
-        model_for_eval, task=args.task, batch_size=args.eval_batch_size,
+        ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir, best_config)
+    ov_result = lm_eval(
+        ov_model,
+        task=args.task,
+        batch_size=args.eval_batch_size,
     )
-    overall_result["best_ov_results"] = {
-        "config": best_config,
-        "result": results_of_nls_finetuned_compressed_ov_model,
+    overall_result["ov_result"] = {
+        "result": ov_result,
     }
+    if not disable_nls:
+        overall_result["ov_result"]["config"] = best_config
     print(f"Overall result: {json.dumps(overall_result, indent=4)}")
-    best_result = results_of_nls_finetuned_compressed_ov_model[args.lm_eval_metric]
-    tb.add_scalar("ov_result", best_result, 0)
-
     # Save results
     with open(result_file, "w") as f:
         json.dump(overall_result, f, indent=4)
 
+    best_result = ov_result[args.lm_eval_metric]
+    tb.add_scalar("ov_results", best_result, 0)
     result_diff = best_result - initial_result
     result_diff = round(result_diff, 2)
     return result_diff
