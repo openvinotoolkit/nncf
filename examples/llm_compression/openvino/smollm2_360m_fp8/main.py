@@ -116,9 +116,7 @@ def main():
     model.save_pretrained(OUTPUT_DIR)
     tokenizer.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(
-        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
-    )
+    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"INFERENCE_PRECISION_HINT": "f32"})
     answers_by_questions = generate_answers(questions, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
     return answers_by_questions
