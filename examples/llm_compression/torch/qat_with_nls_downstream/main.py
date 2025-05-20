@@ -26,6 +26,9 @@ import torch
 import transformers
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
+from lm_eval.models.optimum_lm import OptimumLM
+from optimum.exporters.openvino.convert import export_from_model
+from optimum.intel.openvino import OVModelForCausalLM
 from torch import Tensor
 from torch import nn
 from torch.jit import TracerWarning
@@ -34,6 +37,8 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from transformers import get_cosine_schedule_with_warmup
 
+import nncf
+from examples.llm_compression.torch.qat_with_lora.main import export_to_openvino
 from examples.llm_compression.torch.qat_with_lora.main import load_checkpoint
 from examples.llm_compression.torch.qat_with_lora.main import save_checkpoint
 from examples.llm_compression.torch.qat_with_lora.main import set_trainable
@@ -41,6 +46,7 @@ from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
+from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch.function_hook.wrapper import get_hook_storage
@@ -169,7 +175,12 @@ def get_arc(name: str = "ARC-Easy") -> list[str]:
     return processed_train_dataset
 
 
-def lm_eval(model: nn.Module, tokenizer: AutoTokenizer, task: str, batch_size: int = 1) -> dict[str, any]:
+def lm_eval(
+    model: nn.Module,
+    task: str,
+    batch_size: int = 1,
+    tokenizer: AutoTokenizer = None,
+) -> dict[str, any]:
     """
     Evaluates a language model on a specified task using the lm-eval library.
 
@@ -182,8 +193,11 @@ def lm_eval(model: nn.Module, tokenizer: AutoTokenizer, task: str, batch_size: i
     :param batch_size: The batch size to be used during evaluation.
     :return: A dictionary containing the evaluation results.
     """
-    lm = HFLM(pretrained=model, tokenizer=tokenizer, batch_size=batch_size)
-    results = evaluator.simple_evaluate(lm, tasks=task, log_samples=False)["results"]
+    if isinstance(model, OVModelForCausalLM):
+        lm_obj = OptimumLM(pretrained=model, batch_size=batch_size)
+    else:
+        lm_obj = HFLM(pretrained=model, tokenizer=tokenizer, batch_size=batch_size)
+    results = evaluator.simple_evaluate(lm_obj, tasks=task, log_samples=False)["results"]
     return results[task]
 
 
@@ -294,6 +308,41 @@ def configure_lora_adapters(
         activated_rank_config.append(selected_rank)
 
     return activated_rank_config
+
+
+@torch.no_grad()
+def export_to_openvino(
+    pretrained: str,
+    ckpt_file: Path,
+    ir_dir: Path,
+    specific_rank_config: list[int] = None,
+) -> OVModelForCausalLM:
+    """
+    Create a wrapper of OpenVINO model from the checkpoint for evaluation on CPU via WWB.
+
+    :param pretrained: The name or path of the pretrained model.
+    :param ckpt_file: The path to the checkpoint file to load the model weights and NNCF configurations.
+    :param ir_dir: The directory where the OpenVINO model will be saved.
+    :param specific_rank_config: A specific configuration of ranks for each layer.
+    :return: A wrapper of OpenVINO model ready for evaluation.
+    """
+    model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
+    example_input = model_to_eval.dummy_inputs
+    model_to_eval = load_checkpoint(model_to_eval, ckpt_file)
+    if specific_rank_config is not None:
+        configure_lora_adapters(
+            get_layer_id_vs_lora_quantizers_map(model_to_eval),
+            specific_rank_config=specific_rank_config,
+        )
+    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ, example_input=example_input)
+    export_from_model(model_to_eval, ir_dir, device="cpu")
+    return OVModelForCausalLM.from_pretrained(
+        model_id=ir_dir,
+        trust_remote_code=True,
+        load_in_8bit=False,
+        compile=True,
+        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+    )
 
 
 def get_argument_parser() -> argparse.ArgumentParser:
@@ -462,7 +511,7 @@ def main(argv) -> float:
     # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
     if args.resume and ckpt_file.exists():
         model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map=device)
-        model = load_checkpoint(model, model_input, ckpt_file)
+        model = load_checkpoint(model, ckpt_file)
     else:
         save_checkpoint(model, ckpt_file)
 
@@ -597,7 +646,9 @@ def main(argv) -> float:
                 top_k_configs = [list(config) for config, _ in avg_loss_configs[:k]]
                 return top_k_configs
 
-            best_result = initial_result
+            best_result = float('-inf')
+            best_config = None
+
             # Test the median configuration
             median_lora_rank_config = configure_lora_adapters(
                 layer_id_vs_lora_quantizers_map,
@@ -618,10 +669,9 @@ def main(argv) -> float:
                     "results": results_of_nls_finetuned_compressed_model_median,
                 }
             )
-            best_result = max(
-                best_result,
-                results_of_nls_finetuned_compressed_model_median[args.lm_eval_metric],
-            )
+            if results_of_nls_finetuned_compressed_model_median[args.lm_eval_metric] > best_result:
+                best_result = results_of_nls_finetuned_compressed_model_median[args.lm_eval_metric]
+                best_config = median_lora_rank_config
 
             # Test the most frequent configuration
             most_frequent_lora_rank_config = get_most_frequent_config(activation_counter)
@@ -643,10 +693,9 @@ def main(argv) -> float:
                     "results": results_of_nls_finetuned_compressed_model_most_frequent,
                 }
             )
-            best_result = max(
-                best_result,
-                results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric],
-            )
+            if results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric] > best_result:
+                best_result = results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric]
+                best_config = most_frequent_lora_rank_config
 
             # Test the top 5 min loss configurations
             top_5_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=5)
@@ -669,10 +718,9 @@ def main(argv) -> float:
                         "results": results_of_nls_finetuned_compressed_model_min_loss,
                     }
                 )
-                best_result = max(
-                    best_result,
-                    results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric],
-                )
+                if results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric] > best_result:
+                    best_result = results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric]
+                    best_config = min_loss_config
         else:
             assert args.custom_rank_config is not None, "Please provide `custom_rank_config` for evaluation."
             configure_lora_adapters(
@@ -694,8 +742,23 @@ def main(argv) -> float:
                 }
             )
             best_result = results_of_nls_finetuned_compressed_model_custom[args.lm_eval_metric]
+            best_config = args.custom_rank_config
 
+    if disable_nls:
+        model_for_eval = export_to_openvino(args.pretrained, ckpt_file, last_dir)
+    else:
+        model_for_eval = export_to_openvino(args.pretrained, ckpt_file, last_dir, best_config)
+    results_of_nls_finetuned_compressed_ov_model = lm_eval(
+        model_for_eval, task=args.task, batch_size=args.eval_batch_size,
+    )
+    overall_result["best_ov_results"] = {
+        "config": best_config,
+        "result": results_of_nls_finetuned_compressed_ov_model,
+    }
     print(f"Overall result: {json.dumps(overall_result, indent=4)}")
+    best_result = results_of_nls_finetuned_compressed_ov_model[args.lm_eval_metric]
+    tb.add_scalar("ov_result", best_result, 0)
+
     # Save results
     with open(result_file, "w") as f:
         json.dump(overall_result, f, indent=4)
