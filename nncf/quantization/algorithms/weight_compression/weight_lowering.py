@@ -616,7 +616,7 @@ def _calculate_integer_quantized_weight(
 def _can_run_optimized(input_size: int, input_backend: TensorBackend) -> bool:
     if (
         input_backend in [TensorBackend.ov, TensorBackend.numpy]
-        and input_size > MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
+        and input_size >= MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
         and os.environ.get("NNCF_DISABLE_OPTIMIZED_COMPRESSION") is None
     ):
         if is_openvino_available():
