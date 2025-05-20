@@ -10,6 +10,9 @@
 # limitations under the License.
 import re
 
+# Notes: the file was taken as is from lm-eval-harness:
+# https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/wikitext/preprocess_wikitext.py
+
 
 def wikitext_detokenizer(doc):
     string = doc["page"]
