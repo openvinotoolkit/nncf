@@ -12,19 +12,24 @@
 from dataclasses import dataclass
 from typing import Any
 
+import openvino as ov
 import pytest
 import torch
+from openvino._pyopenvino.properties.hint import inference_precision
+from openvino.tools.ovc import convert_model
 from pytest_mock import MockerFixture
 from torch import nn
 
 import nncf
 import nncf.torch
 from nncf.common.quantization.structs import QuantizationScheme
+from nncf.openvino.optimized_functions.models import _compile_ov_model
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor as INT4AsymDQ
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor as INT4SymDQ
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor as INT8AsymDQ
@@ -53,7 +58,8 @@ class ParamStripLora:
     mode: CompressWeightsMode
     decompressor_class: type
     torch_dtype: torch.dtype
-    atol: float
+    torch_atol: float
+    ov_atol: float
     weight_dtype: torch.dtype
 
     def __str__(self) -> str:
@@ -76,17 +82,14 @@ class ParamStripLora:
 @pytest.mark.parametrize(
     ("param"),
     (
-        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float32, 1e-3, torch.uint8),
-        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 1e-8, torch.uint8),
-        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.bfloat16, 1e-2, torch.uint8),
-        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 1e-3, torch.uint8),
-        # torch.compile introduces bigger diff for sym
-        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-3, torch.uint8),
-        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.bfloat16, 1e-2, torch.uint8),
-        # int8 uses per-channel vs int4 group-wise
-        ParamStripLora(CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 1e-2, torch.int8),
-        # int8 uses per-channel vs int4 group-wise
-        ParamStripLora(CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 1e-8, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float32, 1e-3, 1e-3, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 1e-3, 1e-3, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.bfloat16, 1e-8, 1e-1, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 1e-3, 1e-3, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-8, 1e-3, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.bfloat16, 1e-8, 1e-2, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 1e-2, 1e-3, torch.int8),
+        ParamStripLora(CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 1e-8, 1e-3, torch.uint8),
     ),
     ids=str,
 )
@@ -114,12 +117,24 @@ def test_nncf_strip_lora_model(param: ParamStripLora, mocker: MockerFixture):
             compressed_model, do_copy=True, strip_format=StripFormat.DQ, example_input=example_input
         )
         stripped_output = strip_compressed_model(example_input)
-
         assert pack_weight_spy.call_count == param.num_call_pack_weight
         assert strip_compressed_model.linear.weight.dtype == param.weight_dtype
 
         check_compression_modules(strip_compressed_model, param.decompressor_class)
-        assert torch.allclose(compressed_output, stripped_output, atol=param.atol)
+        assert torch.allclose(compressed_output, stripped_output, atol=param.torch_atol)
+
+        example_input = example_input.type(torch.float32)
+        hook_storage = get_hook_storage(strip_compressed_model)
+        for _, module in hook_storage.named_hooks():
+            if isinstance(module, BaseWeightsDecompressor):
+                module.result_dtype = torch.float32
+        ov_model = convert_model(strip_compressed_model, example_input=example_input)
+        compiled_model = _compile_ov_model(ov_model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+        infer_request = compiled_model.create_infer_request()
+        res = infer_request.infer(example_input)
+        out_name = compiled_model.outputs[0]
+        ov_output = torch.from_numpy(res[out_name])
+        assert torch.allclose(compressed_output.type(torch.float32), ov_output, atol=param.ov_atol)
 
 
 SIGNED_WEIGHT_SAMPLE = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75]
@@ -155,7 +170,7 @@ def test_sym_fq_to_decompressor(param: ParamSymFQ):
 
     scale_shape = (1, 1)
     scale = torch.tensor(SCALE_SAMPLE)
-    scale = scale.expand(scale_shape).to(torch.float16)
+    scale = scale.expand(scale_shape)
 
     # reference scale calculates with this formula:
     # levels = (2 ** num_bits)
@@ -246,10 +261,10 @@ def test_asym_fq_to_decompressor(param: ParamAsymFQ):
     ref_zero_point = ref_zero_point.expand(scale_shape).to(torch.uint8)
 
     input_low = torch.tensor(INPUT_LOW_SAMPLE)
-    input_low = input_low.expand(scale_shape).to(param.torch_dtype)
+    input_low = input_low.expand(scale_shape)
 
     input_range = torch.tensor(INPUT_RANGE_SAMPLE)
-    input_range = input_range.expand(scale_shape).to(param.torch_dtype)
+    input_range = input_range.expand(scale_shape)
 
     qspec = PTQuantizerSpec(
         num_bits=param.num_bits,

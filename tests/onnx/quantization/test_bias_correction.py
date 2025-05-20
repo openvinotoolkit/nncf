@@ -23,6 +23,7 @@ from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCo
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
@@ -47,6 +48,8 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
+        if isinstance(model, OneDimMM):
+            pytest.skip("ONNX does not support BC with MM ops")
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)

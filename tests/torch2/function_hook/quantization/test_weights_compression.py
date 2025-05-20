@@ -490,6 +490,13 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return ["lora_correction", "gptq"]
 
     @staticmethod
+    def wrap_model(model, data):
+        model = wrap_model(model)
+        data = torch.tensor(data)
+        wrapped_model = GraphModelWrapper(model, example_input=data)
+        return wrapped_model
+
+    @staticmethod
     def get_scale_estimation_ref():
         return torch.tensor(
             [

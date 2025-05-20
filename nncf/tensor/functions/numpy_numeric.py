@@ -102,6 +102,11 @@ def _(a: T_NUMPY, shape: T_SHAPE) -> T_NUMPY:
     return a.reshape(shape)
 
 
+@numeric.atleast_1d.register
+def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
+    return np.atleast_1d(a)
+
+
 @numeric.all.register
 def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
     return np.array(np.all(a, axis=axis))
