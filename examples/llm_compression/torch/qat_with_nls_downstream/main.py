@@ -416,7 +416,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--lora_rank_space",
         type=int,
         nargs="+",
-        default=None,
+        default=[32, 24, 16],
         help="Search space for LoRA adapter ranks. For example, if the (maximum) rank is 32, "
         "this can be [32, 24, 16] to specify the ranks to be used during NLS.",
     )
