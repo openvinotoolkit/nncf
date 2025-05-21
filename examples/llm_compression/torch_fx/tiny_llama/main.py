@@ -17,34 +17,34 @@ from modelling import FXAutoModelForCausalLM
 from modelling import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
+from transformers.models.llama import LlamaTokenizerFast
 
 import nncf
 
+MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+
+
+def transform_fn(data: str, tokenizer: LlamaTokenizerFast):
+    tokenized_text = tokenizer(data["text"], return_tensors="pt")
+    input_ids = tokenized_text["input_ids"]
+    attention_mask = tokenized_text["attention_mask"]
+
+    position_ids = torch.cumsum(attention_mask, axis=1) - 1
+    position_ids[attention_mask == 0] = 1
+
+    inputs = (
+        input_ids,
+        position_ids.squeeze(0),
+    )
+
+    return inputs
+
 
 def main():
-    MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
-
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model_hf = AutoModelForCausalLM.from_pretrained(MODEL_ID)
-
-    def transform_fn(data, tokenizer):
-        tokenized_text = tokenizer(data["text"], return_tensors="pt")
-        input_ids = tokenized_text["input_ids"]
-        attention_mask = tokenized_text["attention_mask"]
-
-        inputs = ()
-        position_ids = torch.cumsum(attention_mask, axis=1) - 1
-        position_ids[attention_mask == 0] = 1
-
-        inputs = (
-            input_ids,
-            position_ids.squeeze(0),
-        )
-
-        return inputs
-
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, tokenizer=tokenizer))
 
     model, model_config, gen_config = convert_and_export_with_cache(model_hf)

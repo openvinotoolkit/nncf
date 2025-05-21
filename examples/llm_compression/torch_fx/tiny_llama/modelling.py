@@ -81,35 +81,32 @@ class TorchExportableModuleWithStaticCacheDynamicShape(TorchExportableModuleWith
         return outs.logits
 
 
-def convert_and_export_with_cache(model: PreTrainedModel, re_export=False):
+@torch.no_grad()
+def convert_and_export_with_cache(model: PreTrainedModel):
     """
     Convert a `PreTrainedModel` into an exportable module and export it using `torch.export`
     or `torch._export.capture_pre_autograd_graph`.
     """
 
-    with torch.no_grad():
-        example_input_ids = torch.ones(1, 8, dtype=torch.long)
-        example_cache_position = torch.arange(0, 8, dtype=torch.long)
-        model_config = None
-        gen_config = None
-        if not re_export:
-            model.generation_config.cache_implementation = "static"
-            model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
-            model.generation_config.max_new_tokens = 100
-            gen_config = model.generation_config
-            model(example_input_ids)
-            model_config = model.config
-            model = TorchExportableModuleWithStaticCacheDynamicShape(model)
+    example_input_ids = torch.ones(1, 8, dtype=torch.long)
+    example_cache_position = torch.arange(0, 8, dtype=torch.long)
+    model_config = None
+    gen_config = None
+    model.generation_config.cache_implementation = "static"
+    model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
+    model.generation_config.max_new_tokens = 100
+    gen_config = model.generation_config
+    model_config = model.config
+    model = TorchExportableModuleWithStaticCacheDynamicShape(model)
 
-        # sequence_length = torch.export.Dim("sequence_length", min=1, max=512)
-        dynamic_shapes = {"input_ids": {1: torch.export.Dim.DYNAMIC}, "cache_position": {0: torch.export.Dim.DYNAMIC}}
+    dynamic_shapes = {"input_ids": {1: torch.export.Dim.DYNAMIC}, "cache_position": {0: torch.export.Dim.DYNAMIC}}
 
-        exported_program = torch.export.export_for_training(
-            model,
-            args=(
-                example_input_ids,
-                example_cache_position,
-            ),
-            dynamic_shapes=dynamic_shapes,
-        ).run_decompositions(decomp_table={})
-        return exported_program, model_config, gen_config
+    exported_program = torch.export.export_for_training(
+        model,
+        args=(
+            example_input_ids,
+            example_cache_position,
+        ),
+        dynamic_shapes=dynamic_shapes,
+    ).run_decompositions(decomp_table={})
+    return exported_program, model_config, gen_config
