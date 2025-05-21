@@ -368,7 +368,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--eval_only",
-        action='store_true',
+        action="store_true",
         help="Whether to perform evaluation only. If specified, the model will be loaded from the checkpoint.",
     )
 
