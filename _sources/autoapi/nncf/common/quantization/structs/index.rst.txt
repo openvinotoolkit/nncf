@@ -27,7 +27,11 @@ Classes
        representing the lower and upper boundaries of the range, respectively.
    :param SYMMETRIC_LORA: Symmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
        the multiplication of low-rank adapters.
+   :param SYMMETRIC_LORA_NLS: Symmetric quantization with Low-Rank Adapters (LoRA) and Neural Low-Rank Adapter Search
+       (NLS), involving the sum of weights and the multiplication of low-rank adapters.
    :param ASYMMETRIC_LORA: Asymmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
        the multiplication of low-rank adapters.
+   :param ASYMMETRIC_LORA_NLS: Asymmetric quantization with Low-Rank Adapters (LoRA) and Neural Low-Rank Adapter Search
+       (NLS), involving the sum of weights and the multiplication of low-rank adapters.
 
 

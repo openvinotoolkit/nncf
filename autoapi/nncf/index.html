@@ -697,6 +697,9 @@ with absorbable low-rank adapters (LoRA). Quantization is applied to the sum of 
 the multiplication of adapters. This makes quantization-aware training (QAT) more efficient in terms of
 accuracy, as adapters can also be tuned and remain computationally affordable during training due to their
 small dimensions.</p></li>
+<li><p><strong>FQ_LORA_NLS</strong> – Represents the ‘fake_quantize_with_lora_nls’ format, which extends FQ_LORA with elastic
+absorbable low-rank adapters (LoRA). Quantization is applied similarly to FQ_LORA, and utilizing NLS often
+results in better performance for downstream task fine-tuning.</p></li>
 </ul>
 </dd>
 </dl>
