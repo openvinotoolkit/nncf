@@ -18,12 +18,14 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import onnx
 import openvino as ov
 import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
+from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
@@ -93,6 +95,7 @@ class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
+    ONNX_MODEL_NAME = "model.onnx"
 
     def __init__(
         self,
@@ -157,6 +160,19 @@ class LMWeightCompression(BaseTestPipeline):
                     self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
                 )
             self.model = self.model_hf.model
+        elif self.backend == BackendType.ONNX:
+            if is_stateful:
+                msg = f"is_stateful={is_stateful} is not supported for {self.backend.value} backend."
+                raise RuntimeError(msg)
+
+            if not (self.fp32_model_dir / self.ONNX_MODEL_NAME).exists():
+                self.model_hf = ORTModelForCausalLM.from_pretrained(self.model_id, export=True)
+                self.model_hf.save_pretrained(self.fp32_model_dir)
+            else:
+                self.model_hf = ORTModelForCausalLM.from_pretrained(self.fp32_model_dir, trust_remote_code=True)
+
+            self.model = onnx.load(self.fp32_model_dir / self.ONNX_MODEL_NAME, load_external_data=False)
+
         else:
             msg = f"backend={self.backend.value} is not supported."
             raise RuntimeError(msg)
@@ -299,6 +315,27 @@ class LMWeightCompression(BaseTestPipeline):
                     msg = "Openvino Model Files Not Found!"
                     raise FileNotFoundError(msg)
                 self.path_compressed_ir = cached_ov_model_files[0]
+        elif self.backend == BackendType.ONNX:
+            self.model_hf._save_config(self.output_model_dir)
+            onnx.save(
+                self.compressed_model,
+                str(self.output_model_dir / self.ONNX_MODEL_NAME),
+                save_as_external_data=True,
+                location="model.onnx_data",
+            )
+            # compressed_model_hf = OVModelForCausalLM.from_pretrained(
+            #     self.output_model_dir,
+            #     trust_remote_code=True,
+            #     load_in_8bit=False,
+            #     compile=False,
+            #     stateful=False,
+            #     ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
+            #     export=False,
+            #     from_onnx=True,
+            # )
+            # compressed_model_hf.save_pretrained(self.output_model_dir)
+            # ov_model = ov.convert_model(self.output_model_dir / self.ONNX_MODEL_NAME)
+            # ov.serialize(ov_model, self.path_compressed_ir)
 
     def run_bench(self) -> None:
         pass
@@ -322,11 +359,25 @@ class LMWeightCompression(BaseTestPipeline):
         """
         Actual call of weight compression
         """
-        self.compressed_model = nncf.compress_weights(
-            self.model,
-            dataset=self.calibration_dataset,
-            **self.compression_params,
-        )
+        if self.backend == BackendType.ONNX:
+            from nncf.onnx.quantization.backend_parameters import BackendParameters
+
+            advanced_params = self.compression_params.setdefault(
+                "advanced_parameters", nncf.AdvancedCompressionParameters()
+            )
+            advanced_params.backend_params = {BackendParameters.EXTERNAL_DATA_DIR: str(self.fp32_model_dir.absolute())}
+
+            self.compressed_model = nncf.compress_weights(
+                self.model,
+                dataset=None,  # ONNX backend supports only data free compression
+                **self.compression_params,
+            )
+        else:
+            self.compressed_model = nncf.compress_weights(
+                self.model,
+                dataset=self.calibration_dataset,
+                **self.compression_params,
+            )
 
     def _validate(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
@@ -337,18 +388,24 @@ class LMWeightCompression(BaseTestPipeline):
             inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
             core.set_property("CPU", properties={"INFERENCE_NUM_THREADS": str(inference_num_threads)})
 
-        gt_data_path = TEST_ROOT / "post_training" / "data" / "wwb_ref_answers" / self.fp32_model_name / "ref_qa.csv"
+        filename = "ref_qa_onnx.csv" if self.backend == BackendType.ONNX else "ref_qa.csv"
+        gt_data_path = TEST_ROOT / "post_training" / "data" / "wwb_ref_answers" / self.fp32_model_name / filename
         gt_data_path.parent.mkdir(parents=True, exist_ok=True)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
-            model_gold = OVModelForCausalLM.from_pretrained(
-                self.fp32_model_dir,
-                trust_remote_code=True,
-                load_in_8bit=False,
-                compile=False,
-                stateful=is_stateful,
-                ov_config={"KV_CACHE_PRECISION": "f16"},
-            )
+            if self.backend == BackendType.ONNX:
+                model_gold = ORTModelForCausalLM.from_pretrained(
+                    self.fp32_model_dir, trust_remote_code=True, provider="OpenVINOExecutionProvider"
+                )
+            else:
+                model_gold = OVModelForCausalLM.from_pretrained(
+                    self.fp32_model_dir,
+                    trust_remote_code=True,
+                    load_in_8bit=False,
+                    compile=False,
+                    stateful=is_stateful,
+                    ov_config={"KV_CACHE_PRECISION": "f16"},
+                )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
             print("Saving ground-truth validation data:", gt_data_path.resolve())
@@ -359,7 +416,11 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32 and self.backend != BackendType.FX_TORCH:
+        if (
+            self.backend != BackendType.FP32
+            and self.backend != BackendType.FX_TORCH
+            and self.backend != BackendType.ONNX
+        ):
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir,
                 trust_remote_code=True,
@@ -370,6 +431,19 @@ class LMWeightCompression(BaseTestPipeline):
             )
         if self.backend == BackendType.FX_TORCH:
             compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config)
+
+        if self.backend == BackendType.ONNX:
+            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+                self.output_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=False,
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
+                export=False,
+                from_onnx=True,
+            )
+
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
@@ -377,8 +451,22 @@ class LMWeightCompression(BaseTestPipeline):
         self.run_info.metric_value = round(similarity, 5)
 
     def get_num_compressed(self) -> None:
-        ie = ov.Core()
-        model = ie.read_model(model=self.path_compressed_ir)
+        if self.backend == BackendType.ONNX:
+            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+                self.output_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=False,
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
+                export=False,
+                from_onnx=True,
+            )
+            model = compressed_model_hf.model
+        else:
+            ie = ov.Core()
+            model = ie.read_model(model=self.path_compressed_ir)
+
         _, num_int4, num_int8 = get_num_fq_int4_int8(model)
 
         self.run_info.num_compress_nodes.num_int8 = num_int8

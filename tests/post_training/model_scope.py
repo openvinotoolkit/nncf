@@ -403,7 +403,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_SYM,
             "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware",
