@@ -41,6 +41,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
+from nncf.quantization.algorithms.weight_compression.codebook import CodebookCompression
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -1117,6 +1118,30 @@ def test_compressed_weighs_range(mode, data):
     compressed_weighs, _, _ = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
+
+
+@pytest.mark.parametrize(
+    ("data"),
+    (
+        ([-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
+        ([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+        ([-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
+        ([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5]),
+    ),
+)
+def test_codebook_weighs_range(data):
+    data = np.array(data).astype(np.float32)
+    max_diff = 0.1
+    w = Tensor(data + (np.random.rand(*data.shape) - 0.5) * max_diff)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK)
+    codebook_compression = CodebookCompression(initial_codebook=data, dst_type=None)
+    indexes, scale, codebook = codebook_compression.calculate_quantization_params(w, [-1], config)
+    uncompressed_data = codebook[indexes] * scale
+
+    indexes = indexes.flatten()
+    target = np.arange(indexes.shape[0])
+    assert np.allclose(indexes.data, target)
+    assert np.all(np.abs(uncompressed_data.data - data) <= max_diff)
 
 
 @pytest.mark.parametrize(
