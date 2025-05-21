@@ -245,29 +245,6 @@ def llm_compression_qat_with_nls() -> float:
     return {"accuracy_diff": accuracy_diff}
 
 
-def llm_compression_qat_with_nls() -> float:
-    from examples.llm_compression.torch.qat_with_nls_downstream.main import main as qat_with_nls_main
-
-    set_torch_cuda_seed()
-
-    args = [
-        "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
-        "--do_train",
-        "--task=arc_challenge",
-        "--epochs=2",
-        "--batch_size=16",
-        "--lr=5e-4",
-        "--lora_rank_space",
-        "16",
-        "12",
-        "8",
-    ]
-
-    accuracy_diff = qat_with_nls_main(args)
-
-    return {"accuracy_diff": accuracy_diff}
-
-
 def post_training_quantization_torch_fx_resnet18():
     from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
