@@ -745,6 +745,23 @@ class WeightCompression(Algorithm):
                 ignored_scope_weight_statistics.append(weight_size)
         return ignored_scope_weight_statistics
 
+    @staticmethod
+    def is_weight_compression_supported(weight_dtype: TensorDataType, compression_mode: CompressWeightsMode) -> bool:
+        """
+        Determines if a given weight data type and compression mode combination is supported for weight compression.
+
+        :param weight_dtype: The data type of the weights to be compressed.
+        :param compression_mode: The compression mode to be applied.
+        :return: True if the combination of weight_dtype and compression_mode is supported for compression,
+            False otherwise. Specifically, returns False if the data type is one of the supported
+            float8 types and the mode is an INT8 mode (i.e., same-bit compression is not supported).
+        """
+        is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
+        is_same_bit_compression = (
+            weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and compression_mode in INT8_MODES
+        )
+        return is_supported_dtype and not is_same_bit_compression
+
     def apply(
         self,
         model: TModel,
@@ -775,12 +792,16 @@ class WeightCompression(Algorithm):
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
+<<<<<<< HEAD:src/nncf/quantization/algorithms/weight_compression/algorithm.py
                 is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
                 is_same_bit_compression = (
                     weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and self._mode in INT8_MODES
                 )
                                
                 if is_target_node and is_supported_dtype and not is_same_bit_compression:
+=======
+                if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
+>>>>>>> 029437d67 (fixed backup precsion):nncf/quantization/algorithms/weight_compression/algorithm.py
                     if (
                         self._group_size != -1
                         and self._all_layers
