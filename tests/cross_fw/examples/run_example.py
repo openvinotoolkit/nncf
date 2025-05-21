@@ -222,7 +222,6 @@ def llm_compression_qat_with_nls() -> float:
 
     args = [
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
-        "--do_train",
         "--task=arc_challenge",
         "--epochs=2",
         "--batch_size=16",
