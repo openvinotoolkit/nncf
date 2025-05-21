@@ -544,6 +544,23 @@ class WeightCompression(Algorithm):
                 ignored_scope_weight_statistics.append(weight_size)
         return ignored_scope_weight_statistics
 
+    @staticmethod
+    def is_weight_compression_supported(weight_dtype: TensorDataType, compression_mode: CompressWeightsMode) -> bool:
+        """
+        Determines if a given weight data type and compression mode combination is supported for weight compression.
+
+        :param weight_dtype: The data type of the weights to be compressed.
+        :param compression_mode: The compression mode to be applied.
+        :return: True if the combination of weight_dtype and compression_mode is supported for compression,
+            False otherwise. Specifically, returns False if the data type is one of the supported
+            float8 types and the mode is an INT8 mode (i.e., same-bit compression is not supported).
+        """
+        is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
+        is_same_bit_compression = (
+            weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and compression_mode in INT8_MODES
+        )
+        return is_supported_dtype and not is_same_bit_compression
+
     def apply(
         self,
         model: TModel,
@@ -577,11 +594,7 @@ class WeightCompression(Algorithm):
                 weight_size = reduce(operator.mul, weight_shape, 1)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
-                is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
-                is_same_bit_compression = (
-                    weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and self._mode in INT8_MODES
-                )
-                if is_target_node and is_supported_dtype and not is_same_bit_compression:
+                if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
                     if (
                         self._group_size != -1
                         and self._all_layers
@@ -599,26 +612,26 @@ class WeightCompression(Algorithm):
                             f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                         )
 
-                    if self._backup_mode == BackupMode.NONE:
-                        wc_config = None
-                    else:
+                    wc_config = None
+                    if self._backup_mode != BackupMode.NONE:
                         mode = (
                             CompressWeightsMode.INT8_ASYM
                             if self._backup_mode == BackupMode.INT8_ASYM
                             else CompressWeightsMode.INT8_SYM
                         )
-                        wc_config = WeightCompressionConfig(mode=mode)
+                        if self.is_weight_compression_supported(weight_dtype, mode):
+                            wc_config = WeightCompressionConfig(mode=mode)
                     weight_params = WeightCompressionParameters(
                         weight_name, node, weight_port_id, weight_dtype, weight_size, reduction_axes, wc_config
                     )
                     all_weight_params.append(weight_params)
+                    weight_names.add(weight_name)
                 else:
                     skipped_weight_params.append(
                         WeightCompressionParameters(
                             weight_name, node, weight_port_id, weight_dtype, weight_size, reduction_axes, None
                         )
                     )
-                weight_names.add(weight_name)
 
         # get subset nodes to define compression ratio
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
