@@ -367,10 +367,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "start from scratch by post-training weight compression initialization.",
     )
     parser.add_argument(
-        "--do_train",
-        type=bool,
-        default=True,
-        help="Whether to perform training. Defaults to True.",
+        "--eval_only",
+        action='store_true',
+        help="Whether to perform evaluation only. If specified, the model will be loaded from the checkpoint.",
     )
 
     # Downstream task
@@ -445,6 +444,7 @@ def main(argv) -> float:
     torch_dtype = torch.bfloat16
     lora_rank = max(args.lora_rank_space)
     disable_nls = len(args.lora_rank_space) == 1
+    do_train = not args.eval_only
     compression_format = CompressionFormat.FQ_LORA if disable_nls else CompressionFormat.FQ_LORA_NLS
     compression_config = dict(
         mode=CompressWeightsMode.INT4_ASYM,
@@ -461,7 +461,7 @@ def main(argv) -> float:
     ov_dir = output_dir / "ov"
     result_file = output_dir / "result.json"
 
-    if not args.do_train:
+    if not do_train:
         assert args.resume and ckpt_file.exists(), (
             "Only supports evaluating trained models when do_train is False. "
             "Please enable --resume and ensure that a checkpoint exists in output_dir/last."
@@ -528,7 +528,7 @@ def main(argv) -> float:
     if not disable_nls:
         layer_id_vs_lora_quantizers_map = get_layer_id_vs_lora_quantizers_map(model)
 
-    if args.do_train:
+    if do_train:
         fq_lr = args.lr / 10
         weight_decay = args.lr
         param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
@@ -639,7 +639,7 @@ def main(argv) -> float:
     else:
         overall_result["nls_results"] = []
         # Use some of the signals from training to find some heuristic configurations for evaluation.
-        if args.do_train:
+        if do_train:
             # Extract the most frequently activated configuration
             def get_most_frequent_config(activation_counter):
                 most_frequent_config = []
