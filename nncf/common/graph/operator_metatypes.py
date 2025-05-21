@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -65,7 +65,7 @@ class OperatorMetatype:
         return any(subtype.subtype_check(metatype) for subtype in subtypes)
 
     @classmethod
-    def get_target_input_ports(cls, is_fp8: bool = False) -> Union[list[int], None]:
+    def get_target_input_ports(cls, is_fp8: bool = False) -> list[int]:
         """
         Returns the target input ports for FP8.
 
