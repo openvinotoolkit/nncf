@@ -368,7 +368,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--do_train",
-        action="store_true",
+        type=bool,
+        default=True,
+        help="Whether to perform training. Defaults to True.",
     )
 
     # Downstream task
@@ -455,20 +457,27 @@ def main(argv) -> float:
     output_dir = Path(args.output_dir)
     tensorboard_dir = output_dir / "tb" / datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
     last_dir = output_dir / "last"
+    ckpt_file = last_dir / "nncf_checkpoint.pth"
     ov_dir = output_dir / "ov"
     result_file = output_dir / "result.json"
+
+    if not args.do_train:
+        assert args.resume and ckpt_file.exists(), (
+            "Only supports evaluating trained models when do_train is False. "
+            "Please enable --resume and ensure that a checkpoint exists in output_dir/last."
+        )
+        assert disable_nls or args.custom_rank_config is not None, "Please provide `custom_rank_config` for evaluation."
 
     if not args.resume:
         shutil.rmtree(output_dir, ignore_errors=True)
     for path in [output_dir, tensorboard_dir, last_dir]:
         path.mkdir(exist_ok=True, parents=True)
-    ckpt_file = last_dir / "nncf_checkpoint.pth"
     print(f"To visualize the loss, open Tensorboard using the logs from: {tensorboard_dir}")
     tb = SummaryWriter(tensorboard_dir, "QAT with absorbable LoRA")
     overall_result = {}
 
     # Load original model and tokenizer.
-    model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map=device)
+    model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map="auto")
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -722,7 +731,6 @@ def main(argv) -> float:
                     best_result = results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric]
                     best_config = min_loss_config
         else:
-            assert args.custom_rank_config is not None, "Please provide `custom_rank_config` for evaluation."
             configure_lora_adapters(
                 layer_id_vs_lora_quantizers_map,
                 specific_rank_config=args.custom_rank_config,
@@ -742,6 +750,7 @@ def main(argv) -> float:
                 }
             )
             best_config = args.custom_rank_config
+        overall_result["nls_best_config"] = best_config
 
     if disable_nls:
         ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir)
@@ -752,15 +761,15 @@ def main(argv) -> float:
         task=args.task,
         batch_size=args.eval_batch_size,
     )
-    overall_result["ov_result"] = {
-        "result": ov_result,
-    }
-    if not disable_nls:
-        overall_result["ov_result"]["config"] = best_config
+    overall_result["ov_result"] = ov_result
     print(f"Overall result: {json.dumps(overall_result, indent=4)}")
+
     # Save results
     with open(result_file, "w") as f:
         json.dump(overall_result, f, indent=4)
+
+    print(f"The finetuned model has been exported to OpenVINO and saved at: {ov_dir.resolve()}")
+    print(f"Results have been saved to: {result_file.resolve()}")
 
     best_result = ov_result[args.lm_eval_metric]
     tb.add_scalar("ov_results", best_result, 0)
