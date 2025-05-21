@@ -577,8 +577,8 @@ def compress_weights(
             msg = "TorchFX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-            msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
+            msg = "Torch FX backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
         if (
@@ -605,8 +605,8 @@ def compress_weights(
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-            msg = "OpenVINO backend does not support FQ and FQ_LORA compression formats."
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
+            msg = "OpenVINO backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
         compression_weights_impl = ov_compress_weights_impl
