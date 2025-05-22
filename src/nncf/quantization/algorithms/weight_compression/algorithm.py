@@ -881,20 +881,18 @@ class WeightCompression(Algorithm):
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        if self._backup_mode == BackupMode.NONE:
-            # Filter all_weight_params and nodes_to_compress by excluding nodes
-            # that should remain in their original floating-point precision
-            nodes_names_to_exclude = {
-                w_params.node_with_weight.node_name
-                for w_params in all_weight_params
-                if w_params.compression_config is None
-            }
-            all_weight_params = list(
-                filter(
-                    lambda w_params: w_params.node_with_weight.node_name not in nodes_names_to_exclude,
-                    all_weight_params,
-                )
+        # Filter all_weight_params and nodes_to_compress by excluding nodes
+        # that should remain in their original floating-point precision
+        nodes_names_to_exclude = {
+            w_params.node_with_weight.node_name for w_params in all_weight_params if w_params.compression_config is None
+        }
+        all_weight_params = list(
+            filter(
+                lambda w_params: w_params.node_with_weight.node_name not in nodes_names_to_exclude,
+                all_weight_params,
             )
+        )
+
         if self._awq:
             self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
