@@ -333,13 +333,21 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
             new_initializers.append(zero_point_initializer)
 
-        dequantize_node = helper.make_node(
-            "DequantizeLinear",
-            inputs=deq_inputs,
-            outputs=[dequantized_weight_output],
-            block_size=block_size,
-            axis=axis,
-        )
+        if block_size != 0:
+            dequantize_node = helper.make_node(
+                "DequantizeLinear",
+                inputs=deq_inputs,
+                outputs=[dequantized_weight_output],
+                block_size=block_size,
+                axis=axis,
+            )
+        else:
+            dequantize_node = helper.make_node(
+                "DequantizeLinear",
+                inputs=deq_inputs,
+                outputs=[dequantized_weight_output],
+                axis=axis,
+            )
 
         # Add the node and initializers to the model
         model.graph.initializer.extend(new_initializers)
