@@ -264,3 +264,24 @@ def test_compression_with_inference(mode):
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())
     session.run(None, {"input": input_data})
+
+
+def test_matmulnbits():
+    np.random.seed(42)
+    model_opset21 = create_model()
+
+    np.random.seed(42)
+    model_opset19 = create_model(opset_version=19)
+
+    compressed_model_opset21 = compress_weights(model_opset21, mode=CompressWeightsMode.INT4_SYM, group_size=16)
+    compressed_model_opset19 = compress_weights(model_opset19, mode=CompressWeightsMode.INT4_SYM, group_size=16)
+
+    dummy_input = np.random.rand(100, 1280).astype(np.float32)
+
+    sess21 = InferenceSession(compressed_model_opset21.SerializeToString())
+    sess19 = InferenceSession(compressed_model_opset19.SerializeToString())
+
+    output21 = sess21.run(None, {"input": dummy_input})[0]
+    output19 = sess19.run(None, {"input": dummy_input})[0]
+
+    assert np.allclose(output21, output19, rtol=1e-5, atol=1e-6)
