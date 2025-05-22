@@ -45,20 +45,15 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
-          PYTEST_ARGS="${{ github.event.inputs.pytest_args || '' }}"
-
           python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 4 \
             --group ${{ matrix.group }} \
-            $PYTEST_ARGS
+            ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
-          if [ $ret -eq 5 ] && [ -n "$PYTEST_ARGS" ]; then
-            exit 0
-          fi
-          exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
           HOME_HF: "/home/runner/hf_home"
