@@ -17,8 +17,6 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
 
-pytestmark = pytest.mark.legacy
-
 
 @pytest.mark.parametrize("registred", list(QUANTIZATION_MODULES.registry_dict.items()))
 def test_quantizer_layers_accepts_return_type(registred):
