@@ -128,8 +128,8 @@ def openvino_available(available: bool):
 @pytest.mark.parametrize(
     "weight_shape,is_disabled",
     [
-        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4, 4), True),
-        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4 + 1, 4), False),
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4 - 1, 4), True),
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4, 4), False),
     ],
 )
 @pytest.mark.parametrize("quantization_task", [QuantizationTask.Q, QuantizationTask.Q_DQ, QuantizationTask.Q_DQ_RQ])
