@@ -11,11 +11,7 @@ pytest-split
 librosa==0.10.0
 memory-profiler==0.61.0
 optimum-intel==1.23.0
-<<<<<<< HEAD
 optimum==1.25.0
-=======
-optimum==1.25.3
->>>>>>> test
 scikit-learn>=1.2.2,<=1.5.0
 soundfile==0.12.1
 tensorboard==2.13.0
