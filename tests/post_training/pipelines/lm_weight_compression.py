@@ -330,19 +330,6 @@ class LMWeightCompression(BaseTestPipeline):
                 save_as_external_data=True,
                 location="model.onnx_data",
             )
-            # compressed_model_hf = OVModelForCausalLM.from_pretrained(
-            #     self.output_model_dir,
-            #     trust_remote_code=True,
-            #     load_in_8bit=False,
-            #     compile=False,
-            #     stateful=False,
-            #     ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
-            #     export=False,
-            #     from_onnx=True,
-            # )
-            # compressed_model_hf.save_pretrained(self.output_model_dir)
-            # ov_model = ov.convert_model(self.output_model_dir / self.ONNX_MODEL_NAME)
-            # ov.serialize(ov_model, self.path_compressed_ir)
 
     def run_bench(self) -> None:
         pass
