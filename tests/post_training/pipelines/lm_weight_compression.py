@@ -23,6 +23,7 @@ import openvino as ov
 import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
+from optimum.exporters.onnx import main_export
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
@@ -166,8 +167,14 @@ class LMWeightCompression(BaseTestPipeline):
                 raise RuntimeError(msg)
 
             if not (self.fp32_model_dir / self.ONNX_MODEL_NAME).exists():
-                self.model_hf = ORTModelForCausalLM.from_pretrained(self.model_id, export=True)
-                self.model_hf.save_pretrained(self.fp32_model_dir)
+                opset_version = self.params.get("opset", None)
+                if opset_version:
+                    main_export(self.model_id, self.fp32_model_dir, opset=opset_version)
+                    self.model_hf = ORTModelForCausalLM.from_pretrained(self.fp32_model_dir, trust_remote_code=True)
+                else:
+                    self.model_hf = ORTModelForCausalLM.from_pretrained(self.model_id, export=True)
+                    self.model_hf.save_pretrained(self.fp32_model_dir)
+
             else:
                 self.model_hf = ORTModelForCausalLM.from_pretrained(self.fp32_model_dir, trust_remote_code=True)
 
