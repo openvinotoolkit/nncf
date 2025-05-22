@@ -11,7 +11,6 @@
 
 import inspect
 import os
-from contextlib import contextmanager
 from typing import Callable
 from unittest.mock import patch
 
@@ -1495,30 +1494,22 @@ def test_compression_with_transposed_activations(kwargs):
 )
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
-    @contextmanager
-    def without_lru_cache(obj, method_name):
-        cached_method = getattr(obj, method_name)
-        original_method = cached_method.__wrapped__
-        with patch.object(obj, method_name, original_method):
-            yield
-
     hidden_dim = (MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // LMLinearModel.OUTPUT_DIM) + 1
     model = LMLinearModel(input_shape=[1, 24, hidden_dim]).ov_model
 
     def run_compression():
         compress_weights(model, mode=CompressWeightsMode.INT8)
 
-    with without_lru_cache(nncf.quantization.algorithms.weight_compression.weight_lowering, "_can_run_optimized"):
-        fn_to_patch = opt_fns.do_integer_quantization
-        patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
-        with patch(patch_path, side_effect=fn_to_patch) as mock:
-            if disabled:
-                with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
-                    run_compression()
-                mock.assert_not_called()
-            else:
+    fn_to_patch = opt_fns.do_integer_quantization
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        if disabled:
+            with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
                 run_compression()
-                mock.assert_called_once()
+            mock.assert_not_called()
+        else:
+            run_compression()
+            mock.assert_called_once()
 
 
 @pytest.mark.parametrize(

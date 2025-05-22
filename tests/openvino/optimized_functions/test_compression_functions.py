@@ -107,17 +107,29 @@ def get_random_integer_tensor(shape, low, high, dtype, backend, seed=0):
 
 @contextmanager
 def openvino_available(available: bool):
-    import nncf.quantization.algorithms.weight_compression.weight_lowering as lowering
+    import nncf.common.utils.backend
 
-    with patch.object(lowering, "_can_run_optimized", return_value=available):
-        yield
+    original_openvino_available_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
+    original_min_size_value = (
+        nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
+    )
+
+    nncf.common.utils.backend._OPENVINO_AVAILABLE = available
+    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 0
+
+    yield
+
+    nncf.common.utils.backend._OPENVINO_AVAILABLE = original_openvino_available_value
+    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = (
+        original_min_size_value
+    )
 
 
 @pytest.mark.parametrize(
     "weight_shape,is_disabled",
     [
-        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4 - 1, 4), True),
-        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4, 4), False),
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4, 4), True),
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4 + 1, 4), False),
     ],
 )
 @pytest.mark.parametrize("quantization_task", [QuantizationTask.Q, QuantizationTask.Q_DQ, QuantizationTask.Q_DQ_RQ])
