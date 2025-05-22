@@ -55,7 +55,7 @@ jobs:
             --group ${{ matrix.group }} \
             $PYTEST_ARGS
           ret=$?
-          if [ $ret -eq 5 ] && [ -n "$PYTEST_ARGS"]; then
+          if [ $ret -eq 5 ] && [ -n "$PYTEST_ARGS" ]; then
             exit 0
           fi
           exit $ret
