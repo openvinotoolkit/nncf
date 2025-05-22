@@ -107,22 +107,10 @@ def get_random_integer_tensor(shape, low, high, dtype, backend, seed=0):
 
 @contextmanager
 def openvino_available(available: bool):
-    import nncf.common.utils.backend
+    import nncf.quantization.algorithms.weight_compression.weight_lowering as lowering
 
-    original_openvino_available_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
-    original_min_size_value = (
-        nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
-    )
-
-    nncf.common.utils.backend._OPENVINO_AVAILABLE = available
-    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 0
-
-    yield
-
-    nncf.common.utils.backend._OPENVINO_AVAILABLE = original_openvino_available_value
-    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = (
-        original_min_size_value
-    )
+    with patch.object(lowering, "_can_run_optimized", return_value=available):
+        yield
 
 
 @pytest.mark.parametrize(
