@@ -559,7 +559,13 @@ def _build_float_quantization_model(
     output_scale_dtype = ov_model_params.output_dtypes["scale"]
 
     # Validate input dtypes
-    valid_weight_dtypes = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
+    valid_weight_dtypes = [
+        TensorDataType.float32,
+        TensorDataType.float16,
+        TensorDataType.bfloat16,
+        TensorDataType.f8e4m3,
+        TensorDataType.f8e5m2,
+    ]
     if weight_dtype not in valid_weight_dtypes:
         msg = f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
         raise ValueError(msg)
