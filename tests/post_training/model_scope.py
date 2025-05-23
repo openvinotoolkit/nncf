@@ -403,7 +403,20 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_SYM,
             "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.ONNX],
+    },
+    {
+        "reported_name": "tinyllama_data_free_opset19",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        },
+        "params": {"opset": 19},
+        "backends": [BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware",

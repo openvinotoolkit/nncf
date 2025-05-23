@@ -17,6 +17,7 @@ from onnx import numpy_helper
 
 import nncf
 import nncf.onnx.graph.metatypes.onnx_metatypes as metatypes
+import nncf.tensor.functions as fns
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -31,6 +32,7 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.model_transformer import remove_initializer
+from nncf.onnx.graph.model_transformer import remove_node
 from nncf.onnx.graph.model_transformer import set_initializer
 from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
@@ -39,6 +41,7 @@ from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
+from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -46,6 +49,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -75,34 +79,40 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(msg)
         return dtype
 
-    def _preprocess_compressed_weight_shapes(
-        self, compressed_weight: Tensor, weight_shape: tuple[int], dequantize_block_size: int
+    def _preprocess_compressed_weight(
+        self,
+        compressed_weight: CompressedWeight,
+        weight_shape: tuple[int],
+        dequantize_block_size: Optional[int] = None,
+        apply_transpose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
         """
-        Helper function to preprocess the tensor shapes for the compressed weight tensors to ONNX shapes expectations.
-        The function reshapes the weight tensor and squeezes the scale and zero point tensors based on the
-        dequantize_block_size parameter.
+        Preprocess compressed weight tensor to ONNX-compatible form.
 
-        :param compressed_weight: The compressed weight tensor.
-        :param weight_shape: The original shape of the weight tensor.
-        :param dequantize_block_size: The block size for dequantization.
+        :param compressed_weight: Compressed weight struct.
+        :param weight_shape: Target shape for the weight tensor.
+        :param dequantize_block_size: If given, affects squeezing shape for scale and zero_point.
+        :param apply_transpose: Whether to transpose scale and zero_point.
         :return: A tuple containing the reshaped weight tensor, scale tensor, and zero point tensor (if applicable).
         """
-        weight_tensor = compressed_weight.tensor
-        weight_tensor = weight_tensor.reshape(weight_shape)
+        tensor = compressed_weight.tensor.reshape(weight_shape)
         scale = compressed_weight.scale
         zero_point = compressed_weight.zero_point
+
+        axis = 1 if dequantize_block_size else None
+        scale = scale.squeeze(axis=axis)
         if zero_point is not None:
-            zero_point = zero_point.astype(weight_tensor.dtype)
-        if dequantize_block_size:
-            scale = scale.squeeze(axis=1)
+            zero_point = zero_point.squeeze(axis=axis)
+
+        if apply_transpose:
+            scale = fns.transpose(scale)
             if zero_point is not None:
-                zero_point = zero_point.squeeze(axis=1)
-        else:
-            scale = scale.squeeze()
-            if zero_point is not None:
-                zero_point = zero_point.squeeze()
-        return weight_tensor.data, scale.data, zero_point.data if zero_point is not None else None
+                zero_point = fns.transpose(zero_point)
+
+        if zero_point is not None:
+            zero_point = zero_point.astype(tensor.dtype)
+
+        return tensor.data, scale.data, zero_point.data if zero_point is not None else None
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
@@ -198,6 +208,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> onnx.ModelProto:
         self._check_arguments_for_transform_model(lora_correction_algo, compression_format, advanced_parameters)
+        opset_version = model.opset_import[0].version
+
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             node = wc_params.node_with_weight
@@ -210,23 +222,43 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
-            compressed_weight, scale, zero_point = self._preprocess_compressed_weight_shapes(
-                compressed_weight, weight.shape, dequantize_block_size
-            )
-
             dequantize_axis = (
                 get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size <= 0 else 0
             )  # axis = 0 when blockwise
-            self._add_dequantize_linear_layer(
-                model,
-                compressed_weight,
-                scale,
-                zero_point,
-                dequantize_axis,
-                dequantize_block_size,
-                wc_params.weight_name,
-                self._get_weight_dtype(compression_config.mode),
-            )
+
+            # NOTE: The `DequantizeLinear` operation supports the `block_size` attribute only starting from opset 21.
+            # For opsets earlier than 21, we use the `MatMulNBits` operation from ONNX Runtime contrib operators.
+            # See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md
+            if opset_version < 21 and dequantize_block_size > 0:
+                compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
+                    compressed_weight, weight.shape, dequantize_block_size=None, apply_transpose=True
+                )
+                self._replace_matmul_with_matmulnbits(
+                    model,
+                    wc_params,
+                    compressed_weight,
+                    weight,
+                    scale,
+                    zero_point,
+                    dequantize_axis,
+                    dequantize_block_size,
+                    wc_params.weight_name,
+                    self._get_weight_dtype(compression_config.mode),
+                )
+            else:
+                compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
+                    compressed_weight, weight.shape, dequantize_block_size=dequantize_block_size
+                )
+                self._add_dequantize_linear_layer(
+                    model,
+                    compressed_weight,
+                    scale,
+                    zero_point,
+                    dequantize_axis,
+                    dequantize_block_size,
+                    wc_params.weight_name,
+                    self._get_weight_dtype(compression_config.mode),
+                )
         return model
 
     @staticmethod
@@ -301,13 +333,21 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
             new_initializers.append(zero_point_initializer)
 
-        dequantize_node = helper.make_node(
-            "DequantizeLinear",
-            inputs=deq_inputs,
-            outputs=[dequantized_weight_output],
-            block_size=block_size,
-            axis=axis,
-        )
+        if block_size != 0:
+            dequantize_node = helper.make_node(
+                "DequantizeLinear",
+                inputs=deq_inputs,
+                outputs=[dequantized_weight_output],
+                block_size=block_size,
+                axis=axis,
+            )
+        else:
+            dequantize_node = helper.make_node(
+                "DequantizeLinear",
+                inputs=deq_inputs,
+                outputs=[dequantized_weight_output],
+                axis=axis,
+            )
 
         # Add the node and initializers to the model
         model.graph.initializer.extend(new_initializers)
@@ -328,3 +368,94 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Update the node mapping
         self.name_to_node_map[dequantize_node.name] = dequantize_node
         return model
+
+    def _replace_matmul_with_matmulnbits(
+        self,
+        model: onnx.ModelProto,
+        weight_compression_parameters: WeightCompressionParameters,
+        quantized_weights: np.ndarray,
+        orig_weight,
+        scale: np.ndarray,
+        zero_point: Optional[np.ndarray],
+        axis: int,
+        block_size: int,
+        weight_name: str,
+        weight_dtype: onnx.TensorProto.DataType,
+        scale_dtype: onnx.TensorProto.DataType = onnx.TensorProto.FLOAT,
+    ):
+        if weight_dtype == onnx.TensorProto.INT4:
+            quantized_weights = pack_int4_to_uint8(quantized_weights, block_size, signed=True)
+        elif weight_dtype == onnx.TensorProto.UINT4:
+            quantized_weights = pack_int4_to_uint8(quantized_weights, block_size, signed=False)
+
+        quantized_weight_name = weight_name + "_quantized"
+        scale_name = weight_name + "_scale"
+        zero_point_name = weight_name + "_zero_point"
+
+        quantized_weights_initializer = onnx.helper.make_tensor(
+            quantized_weight_name,
+            onnx.TensorProto.UINT8,
+            quantized_weights.shape,
+            quantized_weights.tobytes(),
+            raw=True,
+        )
+
+        # Create initializers for the quantized weights, scale, and zero point
+        scale_initializer = numpy_helper.from_array(
+            np.array(scale, dtype=helper.tensor_dtype_to_np_dtype(scale_dtype)), name=scale_name
+        )
+        new_initializers = [quantized_weights_initializer, scale_initializer]
+        if zero_point is not None:
+            zero_point_initializer = onnx.helper.make_tensor(
+                zero_point_name, onnx.TensorProto.UINT8, zero_point.shape, zero_point.tobytes(), raw=True
+            )
+            new_initializers.append(zero_point_initializer)
+
+        original_matmul = self.name_to_node_map[weight_compression_parameters.node_with_weight.node_name]
+
+        activation_input_name = None
+        for input_name in original_matmul.input:
+            if input_name != weight_name:
+                activation_input_name = input_name
+        assert activation_input_name is not None, "Activation input name not found in original matmul node"
+
+        # Create MatMulNBits
+        inputs = [activation_input_name, quantized_weight_name, scale_name]
+        if zero_point is not None:
+            inputs.append(zero_point_name)
+
+        K, N = orig_weight.shape[0], orig_weight.shape[1]
+        matmul_n_bits = helper.make_node(
+            op_type="MatMulNBits",
+            inputs=inputs,
+            outputs=[original_matmul.output[0]],
+            K=K,
+            N=N,
+            accuracy_level=0,
+            bits=weight_compression_parameters.compression_config.num_bits,
+            block_size=weight_compression_parameters.compression_config.group_size,
+            domain="com.microsoft",
+            name=original_matmul.name + "_compressed_matmul",
+        )
+
+        # Add the node and initializers to the model
+        model.graph.initializer.extend(new_initializers)
+
+        # Insert the MatMulNBits node before the consumer nodes
+        insert_index = len(model.graph.node)
+
+        for i, node in enumerate(model.graph.node):
+            for j, input_name in enumerate(node.input):
+                if input_name == original_matmul.name:
+                    insert_index = min(insert_index, get_node_index(model, node.name))
+                    node.input[j] = matmul_n_bits
+
+        # Insert the MatMulNBits node before the first consumer node
+        model.graph.node.insert(insert_index, matmul_n_bits)
+        # Remove original weight initializer
+        remove_initializer(weight_name, model)
+        # Remove original matmul
+        remove_node(original_matmul.name, model)
+        del self.name_to_node_map[original_matmul.name]
+        # Update the node mapping
+        self.name_to_node_map[matmul_n_bits.name] = matmul_n_bits
