@@ -36,10 +36,12 @@ from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedCodebookParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
+from nncf.quantization.algorithms.weight_compression.codebook import CodebookCompression
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -696,6 +698,20 @@ def test_raise_error_with_unsupported_params_for_e2m1(algo):
         compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
 
 
+@pytest.mark.parametrize(
+    "algo",
+    (
+        "lora_correction",
+        "awq",
+        "scale_estimation",
+        "gptq",
+    ),
+)
+def test_raise_error_with_unsupported_params_for_codebook(algo):
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.CODEBOOK, **{algo: True})
+
+
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "algo",
@@ -1024,6 +1040,66 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
 
 
 @pytest.mark.parametrize(
+    ("mode", "all_layers", "ratio", "ref_ids"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, 5),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, 3),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, 1),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, 0),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, 4),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, 3),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, 1),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, 0),
+    ),
+)
+def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        ratio=ratio,
+        group_size=1,
+        all_layers=all_layers,
+        sensitivity_metric=mode,
+    )
+    names_codebook = {
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_element_type() == ov.Type.f8e4m3 and op.get_friendly_name().startswith("Const")
+    }
+
+    assert ref_ids == len(names_codebook)
+
+
+@pytest.mark.parametrize(
+    ("codebook", "dst_type", "n_layers"),
+    (
+        ([i for i in range(-8, 8)], ov.Type.i4, 5),
+        ([i for i in range(-(2**6), 2**6)], ov.Type.i8, 5),
+        ([i for i in range(-(2**6), 2**6)], ov.Type.f8e4m3, 5),
+    ),
+)
+@pytest.mark.parametrize("group_size", (1, -1))
+def test_codebook(codebook, dst_type, n_layers, group_size):
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        ratio=1.0,
+        group_size=group_size,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(
+            codebook_params=AdvancedCodebookParameters(codebook=codebook, dst_type=dst_type)
+        ),
+    )
+    names_codebook = [
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == dst_type
+    ]
+
+    assert len(names_codebook) == n_layers
+
+
+@pytest.mark.parametrize(
     ("mode", "data"),
     (
         (CompressWeightsMode.INT4_SYM, [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
@@ -1042,6 +1118,30 @@ def test_compressed_weighs_range(mode, data):
     compressed_weighs, _, _ = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
+
+
+@pytest.mark.parametrize(
+    ("data"),
+    (
+        ([-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
+        ([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+        ([-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
+        ([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5]),
+    ),
+)
+def test_codebook_weighs_range(data):
+    data = np.array(data).astype(np.float32)
+    max_diff = 0.1
+    w = Tensor(data + (np.random.rand(*data.shape) - 0.5) * max_diff)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK)
+    codebook_compression = CodebookCompression(initial_codebook=data, dst_type=None)
+    indexes, scale, codebook = codebook_compression.calculate_quantization_params(w, [-1], config)
+    uncompressed_data = codebook[indexes] * scale
+
+    indexes = indexes.flatten()
+    target = np.arange(indexes.shape[0])
+    assert np.allclose(indexes.data, target)
+    assert np.all(np.abs(uncompressed_data.data - data) <= max_diff)
 
 
 @pytest.mark.parametrize(

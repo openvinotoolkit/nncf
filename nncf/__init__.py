@@ -52,6 +52,7 @@ from nncf.quantization.advanced_parameters import (
 )
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters as AdvancedBiasCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedCodebookParameters as AdvancedCodebookParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as AdvancedGPTQParameters
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as AdvancedLoraCorrectionParameters
