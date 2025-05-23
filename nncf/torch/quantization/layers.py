@@ -1288,7 +1288,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
-class SymmetricLoraNLSQuantizer(SymmetricQuantizer, LoraNLSMixin):
+class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
         # TODO: (dokuchaev) remove within new tracing (ticket-163869)
         with DisableTorchFunction():
