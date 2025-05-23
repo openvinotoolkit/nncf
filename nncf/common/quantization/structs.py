@@ -35,14 +35,20 @@ class QuantizationScheme(StrEnum):
         representing the lower and upper boundaries of the range, respectively.
     :param SYMMETRIC_LORA: Symmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
         the multiplication of low-rank adapters.
+    :param SYMMETRIC_LORA_NLS: Symmetric quantization with Low-Rank Adapters (LoRA) and Neural Low-Rank Adapter Search
+        (NLS), involving the sum of weights and the multiplication of low-rank adapters.
     :param ASYMMETRIC_LORA: Asymmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
         the multiplication of low-rank adapters.
+    :param ASYMMETRIC_LORA_NLS: Asymmetric quantization with Low-Rank Adapters (LoRA) and Neural Low-Rank Adapter Search
+        (NLS), involving the sum of weights and the multiplication of low-rank adapters.
     """
 
     SYMMETRIC = "symmetric"
     ASYMMETRIC = "asymmetric"
     SYMMETRIC_LORA = "symmetric_lora"
+    SYMMETRIC_LORA_NLS = "symmetric_lora_nls"
     ASYMMETRIC_LORA = "asymmetric_lora"
+    ASYMMETRIC_LORA_NLS = "asymmetric_lora_nls"
 
 
 class QuantizerConfig:

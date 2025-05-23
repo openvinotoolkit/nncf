@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# The MIT License (MIT)
+# Copyright (c) 2016 Matthias Plappert
 
 import random
 from collections import deque
@@ -18,7 +21,8 @@ import numpy as np
 import nncf
 from nncf import nncf_logger
 
-# [reference] https://github.com/matthiasplappert/keras-rl/blob/master/rl/memory.py
+# Modification Notes:
+# this file is adapted from https://github.com/matthiasplappert/keras-rl/blob/master/rl/memory.py
 
 # This is to be understood as a transition: Given `state0`, performing `action`
 # yields `reward` and results in `state1`, which might be `terminal`.

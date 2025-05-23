@@ -205,8 +205,17 @@ class Tensor:
     def as_numpy_tensor(self) -> Tensor:
         return cast(Tensor, _call_function("as_numpy_tensor", self))
 
+    def as_openvino_tensor(self) -> Tensor:
+        x = self
+        if x.backend == TensorBackend.numpy:
+            x = cast(Tensor, _call_function("from_numpy", x.data, backend=TensorBackend.ov))
+        if x.backend != TensorBackend.ov:
+            msg = f"Unsupported backend for OpenVINO conversion: {x.backend}."
+            raise NotImplementedError(msg)
+        return x
 
-def _call_function(func_name: str, *args: Any) -> Any:
+
+def _call_function(func_name: str, *args: Any, **kwargs: Any) -> Any:
     """
     Call function from functions.py to avoid circular imports.
 
@@ -216,7 +225,7 @@ def _call_function(func_name: str, *args: Any) -> Any:
     from nncf.tensor.functions import numeric
 
     fn = getattr(numeric, func_name)
-    return fn(*args)
+    return fn(*args, **kwargs)
 
 
 class TensorIterator(Iterator[Tensor]):

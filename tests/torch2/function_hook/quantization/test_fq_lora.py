@@ -82,7 +82,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
         trust_remote_code=True,
         load_in_8bit=False,
         compile=True,
-        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+        ov_config={"KV_CACHE_PRECISION": "f16"},
     )
 
 
@@ -166,9 +166,10 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
         tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
 
-        atol = 0.03 if mode == nncf.CompressWeightsMode.INT4_SYM else 0.01  # torch.compile introduces bigger diff
-        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=atol)
-        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
+        # torch.compiled version of FQ+LoRA leads to a small error
+        atol = 1e-2
+        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol)
+        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol)
 
 
 def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):

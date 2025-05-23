@@ -201,16 +201,40 @@ def llm_compression_qat_with_lora() -> float:
         "--epochs=1",
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
         "--num_train_samples=128",
-        "--seqlen=128",
+        "--calib_seqlen=128",
         "--lora_rank=8",
         "--batch_size=16",
         "--microbatch_size=4",
         "--lr=5e-4",
+        "--fast_eval",
+        "--limit=0.2",
     ]
 
-    similarity_diff = qat_with_lora_main(args)
+    perplexity_diff_torch, best_ov_perplexity = qat_with_lora_main(args)
 
-    return {"similarity_diff": similarity_diff}
+    return {"perplexity_diff_torch": perplexity_diff_torch, "best_ov_perplexity": best_ov_perplexity}
+
+
+def llm_compression_qat_with_nls() -> float:
+    from examples.llm_compression.torch.qat_with_nls_downstream.main import main as qat_with_nls_main
+
+    set_torch_cuda_seed()
+
+    args = [
+        "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
+        "--task=arc_challenge",
+        "--epochs=2",
+        "--batch_size=16",
+        "--lr=5e-4",
+        "--lora_rank_space",
+        "16",
+        "12",
+        "8",
+    ]
+
+    accuracy_diff = qat_with_nls_main(args)
+
+    return {"accuracy_diff": accuracy_diff}
 
 
 def post_training_quantization_torch_fx_resnet18():
