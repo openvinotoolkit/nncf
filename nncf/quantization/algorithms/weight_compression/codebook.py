@@ -158,15 +158,42 @@ class CodebookCompression:
             reduction_axis = 1
 
         max_val = fns.max(fns.abs(codebook))
-        norm_weight, scale = do_float_quantization(weight, config, reduction_axis, max_val=max_val)
+        if True:
+            norm_weight, scale, indexes = do_float_quantization(weight, config, reduction_axis, max_val=max_val, quantiles=codebook)
 
-        orig_shape = norm_weight.shape
+            orig_shape = norm_weight.shape
 
-        norm_weight = fns.unsqueeze(norm_weight.flatten(), 1)
+            # norm_weight = fns.unsqueeze(norm_weight.flatten(), 1)
 
-        dist = (norm_weight - fns.unsqueeze(codebook, 0)) ** 2
+            # dist = (norm_weight - fns.unsqueeze(codebook, 0)) ** 2
 
-        indexes = dist.data.argmin(-1)
+            # indexes = dist.data.argmin(-1)
+        else:
+            norm_weight, scale = do_float_quantization(weight, config, reduction_axis, max_val=max_val, quantiles=codebook)
+
+            orig_shape = norm_weight.shape
+
+            norm_weight = fns.unsqueeze(norm_weight.flatten(), 1)
+
+            dist = (norm_weight - fns.unsqueeze(codebook, 0)) ** 2
+
+            indexes = dist.data.argmin(-1)
+        
+        
+        # norm_weight, scale, indexes = do_float_quantization(weight, config, reduction_axis, max_val=max_val, quantiles=codebook)
+
+        # norm_weight_, scale_ = do_float_quantization(weight, config, reduction_axis, max_val=max_val)
+
+        # orig_shape = norm_weight_.shape
+
+        # norm_weight_ = fns.unsqueeze(norm_weight_.flatten(), 1)
+
+        # dist = (norm_weight_ - fns.unsqueeze(codebook, 0)) ** 2
+
+        # indexes_ = dist.data.argmin(-1)
+        # import numpy as np
+        # print(np.count_nonzero(indexes_ != indexes.flatten()))
+
         indexes = fns.reshape(indexes, orig_shape)
 
         return indexes, scale, codebook

@@ -49,7 +49,7 @@ class WeightCompressionConfig:
         """
         :return: True if compression type in integer, else False.
         """
-        return self.mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+        return self.mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
 
     def __hash__(self):
         return hash((self.mode.value, self.group_size))

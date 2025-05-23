@@ -322,12 +322,12 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.scale_steps,
                 scale_estimation_params.weight_penalty,
             )
-        if self._codebook:
-            codebook_params = self._advanced_parameters.codebook_params
-            self._codebook_algo = CodebookCompression(
-                initial_codebook=codebook_params.codebook,
-                dst_type=codebook_params.dst_type,
-            )
+        # if self._codebook:
+        #     codebook_params = self._advanced_parameters.codebook_params
+        #     self._codebook_algo = CodebookCompression(
+        #         initial_codebook=codebook_params.codebook,
+        #         dst_type=codebook_params.dst_type,
+        #     )
 
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
@@ -660,13 +660,13 @@ class WeightCompression(Algorithm):
         compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
-        if self._codebook:
-            compressed_weights = self._codebook_algo.apply(
-                model=model,
-                graph=graph,
-                all_weight_params=all_weight_params,
-                backend_entity=self._backend_entity,
-            )
+        # if self._codebook:
+        #     compressed_weights = self._codebook_algo.apply(
+        #         model=model,
+        #         graph=graph,
+        #         all_weight_params=all_weight_params,
+        #         backend_entity=self._backend_entity,
+        #     )
         if self._gptq:
             del statistics
             model, compressed_weights = self._gptq_algo.apply(

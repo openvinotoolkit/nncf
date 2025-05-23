@@ -159,8 +159,9 @@ def do_float_quantization(
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
+    quantiles: Optional[Tensor] = None,
     max_val: float = 6.0,
-) -> tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding (nf4, e2m1) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
@@ -172,7 +173,7 @@ def do_float_quantization(
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
     :param max_val: Maximal value of destination type.
-    :return: Returns quantized (for codebook and e2m1 normalized) weight tensor and corresponding scale tensor.
+    :return: Returns quantized (for codebook and e2m1 normalized) weight tensor and corresponding scale tensor and optional indexes for codebook.
     """
     assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
 
@@ -194,6 +195,8 @@ def do_float_quantization(
 
     scale = precomputed_scale
     if scale is None:
+        if quantiles is not None:
+            max_val = max(quantiles)
         scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
@@ -202,10 +205,13 @@ def do_float_quantization(
             compressed_weight = norm_weight.as_openvino_tensor().astype(TensorDataType.nf4)
         else:
             compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
+    elif config.mode == CompressWeightsMode.CODEBOOK and quantiles is not None:
+        compressed_weight, indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=quantiles)
+        return compressed_weight, scale, indexes
     else:
         # TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
         compressed_weight = norm_weight
-    return compressed_weight, scale
+    return compressed_weight, scale, None
 
 
 def float_quantize_dequantize_weight(
@@ -346,13 +352,16 @@ def compress_weight(
     :param precomputed_zero_point: Precomputed zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
-    precomputed_scale, precomputed_zero_point = (
-        (compressed_weight.scale, compressed_weight.zero_point) if compressed_weight else (None, None)
+    precomputed_scale, precomputed_zero_point, quantiles = (
+        (compressed_weight.scale, compressed_weight.zero_point, compressed_weight.codebook) if compressed_weight else (None, None, None)
     )
 
     if not config.is_integer:
-        compressed_weight, scale = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
-        return CompressedWeight(compressed_weight, scale)
+        compressed_weight, scale, indexes = do_float_quantization(weight, config, reduction_axes, precomputed_scale, quantiles=quantiles)
+        if quantiles is not None and indexes is not None:
+            return CompressedWeight(indexes, scale, None, fns.from_numpy(np.array(quantiles), backend=compressed_weight.backend))
+        else:
+            return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_integer_quantization(
         weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
@@ -522,6 +531,25 @@ def _calculate_nf4_quantized_weight(norm_weight: Tensor) -> Tensor:
     nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=indexes.backend)
     quantized_weight = nf4_quantiles[indexes]
     return quantized_weight
+
+
+def _calculate_codebook_quantized_weight(norm_weight: Tensor, quantiles: Tensor = None, center_of_quantiles: Tensor = None) -> Tensor:
+    """
+    Performs quantization by quantiles (if center_of_quantiles is None). Look-up table is used to "round" or "quantize" to the closest quant.
+
+    :param norm_weight: Weight tensor to quantize already normalized to quantiles range.
+    :return: Tensor with floating-point values, where each of them corresponds to elements from quantiles.
+    """
+    assert quantiles is not None or center_of_quantiles is not None, "Either quantiles or center_of_quantiles should be provided"
+
+    if center_of_quantiles is None:
+        quantiles = np.array(quantiles)
+        center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
+    center_of_quantiles = fns.from_numpy(center_of_quantiles, backend=norm_weight.backend)
+    indexes = fns.searchsorted(center_of_quantiles, norm_weight)
+    quantiles = fns.from_numpy(quantiles, backend=indexes.backend)
+    quantized_weight = quantiles[indexes]
+    return quantized_weight, indexes
 
 
 def _calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
