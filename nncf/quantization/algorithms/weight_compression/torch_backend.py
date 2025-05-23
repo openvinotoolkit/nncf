@@ -72,6 +72,7 @@ from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import PTLoraNLSSpec
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
 
@@ -303,6 +304,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         if is_all_8bit and compression_format == CompressionFormat.FQ_LORA:
             mode_vs_schema_map[CompressWeightsMode.INT8_ASYM] = QuantizationScheme.ASYMMETRIC_LORA
             mode_vs_schema_map[CompressWeightsMode.INT8_SYM] = QuantizationScheme.SYMMETRIC_LORA
+        if compression_format == CompressionFormat.FQ_LORA_NLS:
+            mode_vs_schema_map[CompressWeightsMode.INT4_ASYM] = QuantizationScheme.ASYMMETRIC_LORA_NLS
+            mode_vs_schema_map[CompressWeightsMode.INT4_SYM] = QuantizationScheme.SYMMETRIC_LORA_NLS
+            if is_all_8bit:
+                mode_vs_schema_map[CompressWeightsMode.INT8_ASYM] = QuantizationScheme.ASYMMETRIC_LORA_NLS
+                mode_vs_schema_map[CompressWeightsMode.INT8_SYM] = QuantizationScheme.SYMMETRIC_LORA_NLS
 
         schema = mode_vs_schema_map[compression_config.mode]
 
@@ -322,10 +329,23 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         )
 
         quantizer_cls = QUANTIZATION_MODULES.get(schema)
-        if schema in [QuantizationScheme.ASYMMETRIC_LORA, QuantizationScheme.SYMMETRIC_LORA]:
-            lora_spec = PTLoraSpec(
-                lora_rank=lora_adapter_rank, orig_weight_shape=orig_weight_shape, weight_shape=weight_shape
-            )
+        if schema in [
+            QuantizationScheme.ASYMMETRIC_LORA,
+            QuantizationScheme.ASYMMETRIC_LORA_NLS,
+            QuantizationScheme.SYMMETRIC_LORA,
+            QuantizationScheme.SYMMETRIC_LORA_NLS,
+        ]:
+            if schema in [QuantizationScheme.ASYMMETRIC_LORA, QuantizationScheme.SYMMETRIC_LORA]:
+                lora_spec = PTLoraSpec(
+                    lora_rank=lora_adapter_rank, orig_weight_shape=orig_weight_shape, weight_shape=weight_shape
+                )
+            else:
+                lora_spec = PTLoraNLSSpec(
+                    lora_rank=lora_adapter_rank,
+                    active_lora_rank=lora_adapter_rank,
+                    orig_weight_shape=orig_weight_shape,
+                    weight_shape=weight_shape,
+                )
             quantizer = quantizer_cls(quantizer_spec, lora_spec)
             lora_dtype = quantizer.lora_A.dtype
             svd_residual = torch.rand(weight_shape).to(device) * scale / 100  # value on [0,1] * (1/100 of quant size)
@@ -337,7 +357,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             quantizer = quantizer_cls(quantizer_spec)
 
         levels = quantizer.levels
-        if schema in [QuantizationScheme.ASYMMETRIC_LORA, QuantizationScheme.ASYMMETRIC]:
+        if schema in [
+            QuantizationScheme.ASYMMETRIC_LORA,
+            QuantizationScheme.ASYMMETRIC_LORA_NLS,
+            QuantizationScheme.ASYMMETRIC,
+        ]:
             zero_point = compressed_weight.zero_point.data
             dtype = quantizer.input_low.dtype
             # NOTE: Lose some accuracy, because of inversion of round

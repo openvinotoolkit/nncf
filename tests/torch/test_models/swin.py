@@ -8,8 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# MIT License
+# Copyright (c) Microsoft Corporation.
 
-# Implementation is taken from https://github.com/microsoft/Swin-Transformer/blob/main/models/swin_transformer.py
+# Modification Notes: Implementation is taken from https://github.com/microsoft/Swin-Transformer/blob/main/models/swin_transformer.py
 # and https://github.com/rwightman/pytorch-image-models
 
 import torch
