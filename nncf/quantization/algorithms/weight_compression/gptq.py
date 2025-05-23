@@ -20,7 +20,6 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.helpers import set_env_variable
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -285,24 +284,19 @@ class GPTQ:
                         scales.append(scale)
                         zero_points.append(zero_point)
 
-                with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
-                    # Because of the fact that compression if performed per-column, weight size is very small and
-                    # optimized OV compression performs worse than numpy compression.
-                    # TODO(nikita-savelyevv): Remove this workaround by introducing logic that will control whether to
-                    #   execute optimized compression based on input size.
-                    if block_compression_config.mode == CompressWeightsMode.NF4:
-                        quantized_col = float_quantize_dequantize_weight(
-                            fns.unsqueeze(weight_col, 1),
-                            block_compression_config,
-                            precomputed_scale=scales[-1],
-                        )
-                    else:
-                        quantized_col = integer_quantize_dequantize_weight(
-                            fns.unsqueeze(weight_col, 1),
-                            block_compression_config,
-                            precomputed_scale=scales[-1],
-                            precomputed_zero_point=zero_points[-1],
-                        )
+                if block_compression_config.mode == CompressWeightsMode.NF4:
+                    quantized_col = float_quantize_dequantize_weight(
+                        fns.unsqueeze(weight_col, 1),
+                        block_compression_config,
+                        precomputed_scale=scales[-1],
+                    )
+                else:
+                    quantized_col = integer_quantize_dequantize_weight(
+                        fns.unsqueeze(weight_col, 1),
+                        block_compression_config,
+                        precomputed_scale=scales[-1],
+                        precomputed_zero_point=zero_points[-1],
+                    )
                 quantized_col = fns.flatten(quantized_col)
                 quantized_block[:, i] = quantized_col
                 loss_block[:, i] = (weight_col - quantized_col) ** 2 / hessian_diag_val**2
