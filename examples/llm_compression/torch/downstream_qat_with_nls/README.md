@@ -9,14 +9,30 @@ For detailed information about the methodology and format, please refer to this 
   <img src="/examples/llm_compression/torch/downstream_qat_with_nls/pics/lora_vs_nls.png" alt="LoRA vs NLS" width="400"/>
 </p>
 
+## Install requirements
+
+To use this example:
+
+- Create a separate Python* environment and activate it: `python3 -m venv nncf_env && source nncf_env/bin/activate`
+- Install dependencies:
+
+```bash
+pip install -U pip
+pip install -r requirements.txt
+pip install -e ../../../../
+```
+
+## Run Example
+
 [main.py](main.py) supports fine-tuning and evaluating a language model with quantization-aware training and **Neural Low-Rank Adapter Search (NLS)** proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), you can use the following command:
 
 ```bash
-python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --task openbookqa --lr 1e-4 --epochs 3 --batch_size 16 --eval_batch_size 64 --lora_rank_space 32 24 16
+python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --fast_eval --task openbookqa --lr 1e-4 --epochs 3 --batch_size 16 --eval_batch_size 64 --lora_rank_space 32 24 16
 ```
 
 - `--pretrained`: The model ID or path of a pretrained Hugging Face model configuration.
 - `--output_dir`: Path to the directory for storing logs, tuning checkpoints, compressed models, and evaluation results.
+- `--fast_eval`: Enable faster evaluation by applying in-place quantization to the model weights.
 - `--task`: The evaluation task to be performed. Choices: ["gsm8k", "hellaswag", "openbookqa", "winogrande", "arc_challenge", "arc_easy"].
 - `--lr`: Learning rate for fine-tuning.
 - `--epochs`: Number of epochs for training.
@@ -26,11 +42,12 @@ python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --task 
 - `--eval_only`: Whether to perform evaluation only. If specified, the model will be loaded from the checkpoint for evaluation.
 - `--resume`: Whether to resume training from a checkpoint. If specified, the script will load the trained checkpoint and continue training or evaluation.
 - `--custom_rank_config`: Specifies the LoRA rank of adapters per layer.
+- `--num_min_loss_configs`: Number of configurations to evaluate for the min loss heuristic.
 
-Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This default strategy takes advantage of some information from the training phase and requires the evaluation of only 7 suggested configurations. This is automatically done in the example script, and only the best configuration from these candidates is returned to the user. More powerful elastic LoRA NLS configurations can be optionally obtained through more advanced search algorithms. We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
+Regarding evaluation, the script will automatically use a heuristic to obtain a good configuration for evaluation. This default strategy takes advantage of some information from the training phase and requires the evaluation of only 7 suggested configurations (median + frequent + 5 min loss). This is automatically done in the example script, and only the best configuration from these candidates is returned to the user. More powerful elastic LoRA NLS configurations can be optionally obtained through more advanced search algorithms. We also support testing a custom configuration for evaluation after training. The following command will load the trained checkpoint and test the specified LoRA rank configuration:
 
 ```bash
-python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --eval_only --resume --task openbookqa --lora_rank_space 32 24 16 --custom_rank_config 32 24 16 24 24 32 24 32 32 16 24 16 24 32 24 16 24 24 32 32 24 32 32 16 32 32 24 32
+python main.py --pretrained Qwen/Qwen2.5-3B-Instruct --output_dir output --fast_eval --resume --eval_only --task openbookqa --lora_rank_space 32 24 16 --custom_rank_config 32 24 16 24 24 32 24 32 32 16 24 16 24 32 24 16 24 24 32 32 24 32 32 16 32 32 24 32
 ```
 
 This script also supports running the vanilla LoRA method. We only need to pass a single number for `--lora_rank_space`, such as `--lora_rank_space 32`. In addition, the training time of LoRA and NLS is very similar, and there is almost no overhead in activating different sub-adapters during training. For instance, fine-tuning the compressed Llama-3.2-3B-Instruct model for 3 epochs on [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc) takes 161.83 seconds with LoRA and 164.89 seconds with NLS.
