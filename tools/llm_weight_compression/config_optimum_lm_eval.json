@@ -1,0 +1,23 @@
+{
+    "compression": {
+        "backend": "optimum_cli",
+        "params": [
+            {
+                "task": ["text-generation"],
+                "weight_format": ["int4"],
+                "ratio": [0.2, 0.4],
+                "group_size": [64, 128],
+                "awq": [false, true],
+                "dataset": ["auto"]
+            }
+        ]
+    },
+    "evaluation": {
+        "backend": "lm_eval",
+        "params": {
+            "tasks": ["wikitext"],
+            "device": "cpu",
+            "limit": 3
+        }
+    }
+}
