@@ -11,10 +11,6 @@
 #
 # MIT License
 # Copyright (c) Microsoft Corporation.
-#
-#          Apache License
-#    Version 2.0, January 2004
-# http://www.apache.org/licenses/
 
 # Modification Notes: Implementation is taken from https://github.com/microsoft/Swin-Transformer/blob/main/models/swin_transformer.py
 # and https://github.com/rwightman/pytorch-image-models
