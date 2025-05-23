@@ -332,6 +332,7 @@ pbar
 perchannel
 pertensor
 pinv
+plappert
 popleft
 pqid
 pratap
