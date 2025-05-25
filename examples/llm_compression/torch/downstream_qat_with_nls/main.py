@@ -285,6 +285,11 @@ def create_eval_model(
         finally:
             del eval_model
     else:
+        if specific_rank_config is not None:
+            configure_lora_adapters(
+                get_layer_id_vs_lora_quantizers_map(model),
+                specific_rank_config=specific_rank_config,
+            )
         yield model
 
 
