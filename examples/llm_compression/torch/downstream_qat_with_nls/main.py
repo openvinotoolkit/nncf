@@ -808,7 +808,7 @@ def main(argv) -> float:
                 return most_frequent_config
 
             # Calculate the average loss for each configuration and select the top k with the minimum loss
-            def get_top_k_min_loss_configs(loss_recorder, k=args.num_min_loss_configs):
+            def get_top_k_min_loss_configs(loss_recorder, k=5):
                 avg_loss_configs = [(config, sum(losses) / len(losses)) for config, losses in loss_recorder.items()]
                 avg_loss_configs.sort(key=lambda x: x[1])
                 top_k_configs = [list(config) for config, _ in avg_loss_configs[:k]]
@@ -868,9 +868,9 @@ def main(argv) -> float:
                 best_result = results_of_nls_finetuned_compressed_model_most_frequent
                 best_config = most_frequent_lora_rank_config
 
-            # Test the top 5 min loss configurations
-            top_5_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=5)
-            for i, min_loss_config in enumerate(top_5_min_loss_configs):
+            # Test the top k min loss configurations
+            top_k_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=args.num_min_loss_configs)
+            for i, min_loss_config in enumerate(top_k_min_loss_configs):
                 with create_eval_model(
                     model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, min_loss_config
                 ) as eval_model:
