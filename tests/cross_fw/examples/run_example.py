@@ -234,6 +234,7 @@ def llm_compression_qat_with_nls() -> float:
         "--task=arc_challenge",
         "--epochs=2",
         "--batch_size=16",
+        "--num_min_loss_configs=5",
         "--lr=5e-4",
         "--lora_rank_space",
         "16",
