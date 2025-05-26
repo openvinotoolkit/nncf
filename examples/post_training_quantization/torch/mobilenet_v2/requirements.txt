@@ -3,4 +3,3 @@ openvino==2025.1
 scikit-learn
 torch==2.7.0
 torchvision==0.22.0
-setuptools<=72.1.0
