@@ -139,6 +139,17 @@ def reshape(a: Tensor, shape: T_SHAPE) -> Tensor:
 
 
 @tensor_dispatcher
+def atleast_1d(a: Tensor) -> Tensor:
+    """
+    Convert input to tensor with at least one dimension.
+
+    Scalar inputs is converted to 1-dimensional tensor, whilst higher-dimensional inputs are preserved.
+    :param a: Input tensor.
+    :return: Tensor with at least 1-dimension.
+    """
+
+
+@tensor_dispatcher
 def all(a: Tensor, axis: T_AXIS = None) -> Tensor:
     """
     Test whether all tensor elements along a given axis evaluate to True.
@@ -806,7 +817,7 @@ def as_numpy_tensor(a: Tensor) -> Tensor:
     Convert tensor to numpy.
     In certain cases, this conversion may involve data copying, depending on the
     data type or device. Specifically:
-      - OV: if tensors data type is bf16, u4 or i4.
+      - OV: if tensors data type is bfloat16, f8e4m3, f8e5m2, nf4, uint4 or int4.
       - PT: if tensors on the GPU or data type is not supported on Numpy.
 
     :param a: Tensor to change backend for.

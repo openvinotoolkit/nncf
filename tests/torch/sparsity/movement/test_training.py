@@ -28,6 +28,8 @@ from tests.torch.sparsity.movement.helpers import LINEAR_LAYER_SPARSITY_NAME_IN_
 from tests.torch.sparsity.movement.helpers import MRPC_CONFIG_FILE_NAME
 from tests.torch.sparsity.movement.helpers import TRAINING_SCRIPTS_PATH
 
+pytestmark = pytest.mark.legacy
+
 
 class MovementGlueHandler:
     def get_executable(self) -> Path:

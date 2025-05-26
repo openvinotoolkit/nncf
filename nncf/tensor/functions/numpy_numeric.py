@@ -27,7 +27,7 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore [type-arg]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]
 
 DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -100,6 +100,11 @@ def _(a: T_NUMPY) -> TensorDataType:
 @numeric.reshape.register
 def _(a: T_NUMPY, shape: T_SHAPE) -> T_NUMPY:
     return a.reshape(shape)
+
+
+@numeric.atleast_1d.register
+def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
+    return np.atleast_1d(a)
 
 
 @numeric.all.register

@@ -185,9 +185,6 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         if compression_format != CompressionFormat.DQ:
             msg = "Compression format is not supported for the ONNX backend"
             raise nncf.ValidationError(msg)
-        if advanced_parameters != AdvancedCompressionParameters():
-            msg = "Advanced parameters are not supported for the ONNX backend"
-            raise nncf.ValidationError(msg)
 
     def transform_model(
         self,

@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# The MIT License (MIT)
+# Copyright (c) 2016 Matthias Plappert
 
 # Modification Notes:
 # This unit test is adapted from:
@@ -15,10 +18,13 @@
 
 
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
 from nncf.torch.automl.agent.ddpg.memory import Memory
 from nncf.torch.automl.agent.ddpg.memory import SequentialMemory
+
+pytestmark = pytest.mark.legacy
 
 WINDOW_LENGTH = 5
 LIMIT = 5

@@ -28,6 +28,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import fill_params_of_model_by_normal
 from tests.torch.helpers import get_empty_config
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.parametrize("algo", ("magnitude_sparsity", "rb_sparsity"))
 @pytest.mark.parametrize(

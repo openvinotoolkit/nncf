@@ -468,6 +468,20 @@ class TransposeConvTestModel(nn.Module):
         return self.conv(x)
 
 
+class OneDimMM(nn.Module):
+    INPUT_SIZE = [3]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.linear = nn.Linear(3, 3, bias=True)
+            self.linear.weight.data = torch.randn([3, 3])
+            self.linear.bias.data = torch.randn([3])
+
+    def forward(self, x):
+        return self.linear(x)
+
+
 class RoPEModel(nn.Module):
     INPUT_SIZE = [1, 10]
 

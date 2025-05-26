@@ -27,6 +27,7 @@ from tests.torch.helpers import commands_are_equal
 from tests.torch.nncf_network.helpers import AVAILABLE_TARGET_TYPES
 from tests.torch.nncf_network.helpers import InsertionCommandBuilder
 
+pytestmark = pytest.mark.legacy
 TARGET_TYPE_VS_TARGET_TYPE_DICT_FOR_NOT_REPLACED_MODULES = {
     TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
     TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,

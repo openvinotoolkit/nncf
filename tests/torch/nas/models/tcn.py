@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm
 
-# This file is adapted from
+# Modification Notes: this file is adapted from
 # https://github.com/intel-analytics/analytics-zoo/blob/bb58d5f62b0ed2b02b50cc748bc3e4301548a3e2/pyzoo/zoo/automl/model/tcn.py
 
 

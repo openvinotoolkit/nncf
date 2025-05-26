@@ -29,6 +29,7 @@ ascale
 ascontiguousarray
 asym
 asymm
+atleast
 atol
 atrous
 autocast
@@ -126,6 +127,7 @@ elts
 eltwise
 eltwises
 embeddingbag
+emnlp
 eprint
 eprinttype
 errstate
@@ -154,6 +156,7 @@ gacts
 gelsy
 gelu
 genai
+getsizeof
 gflop
 gflops
 giga
@@ -171,6 +174,7 @@ hardswish
 hardtanh
 hawq
 headport
+hellaswag
 hiddens
 hparam
 hparams
@@ -198,6 +202,7 @@ inputless
 interp
 ioff
 iterval
+jinjie
 junitxml
 keepdim
 keepdims
@@ -306,6 +311,7 @@ onnxp
 onnxqdq
 onnxroi
 onnxx
+openbookqa
 openvino
 openvinotoolkit
 oplambda
@@ -326,6 +332,7 @@ pbar
 perchannel
 pertensor
 pinv
+plappert
 popleft
 pqid
 pratap
@@ -401,6 +408,7 @@ rtype
 sacts
 sanh
 savelyev
+savelyevv
 savetxt
 sdpa
 sdxl
@@ -427,6 +435,7 @@ sparsifiers
 sparsifies
 sparsify
 sparsifying
+sqft
 squeezenet
 stabilityai_stablelm
 stdv
@@ -480,6 +489,7 @@ vtype
 weakrefs
 weightable
 whowhatbench
+winogrande
 xlabel
 xnli
 xticklabels

@@ -19,6 +19,7 @@ from nncf.tensor.functions.numeric import arange as arange
 from nncf.tensor.functions.numeric import argsort as argsort
 from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
+from nncf.tensor.functions.numeric import atleast_1d as atleast_1d
 from nncf.tensor.functions.numeric import ceil as ceil
 from nncf.tensor.functions.numeric import clip as clip
 from nncf.tensor.functions.numeric import concatenate as concatenate
@@ -73,6 +74,11 @@ def _initialize_backends() -> None:
     import nncf.tensor.functions.numpy_io
     import nncf.tensor.functions.numpy_linalg
     import nncf.tensor.functions.numpy_numeric
+
+    with contextlib.suppress(ImportError):
+        import nncf.tensor.functions.tf_io
+        import nncf.tensor.functions.tf_linalg
+        import nncf.tensor.functions.tf_numeric
 
     with contextlib.suppress(ImportError):
         import nncf.tensor.functions.torch_io

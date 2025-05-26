@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from nncf.config import NNCFConfig
 from nncf.torch.composite_compression import CompositeCompressionAlgorithmController
 from nncf.torch.module_operations import UpdateWeight
@@ -20,6 +22,8 @@ from nncf.torch.utils import get_all_modules_by_type
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
+
+pytestmark = pytest.mark.legacy
 
 
 def get_basic_sparsity_plus_quantization_config(input_sample_size=None):

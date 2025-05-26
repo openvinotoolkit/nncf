@@ -21,6 +21,8 @@ from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
 from tests.torch.helpers import create_random_mock_dataloader
 
+pytestmark = pytest.mark.legacy
+
 
 class ModelWithChangedTrain(nn.Module):
     def __init__(

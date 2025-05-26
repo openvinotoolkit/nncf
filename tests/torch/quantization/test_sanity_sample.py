@@ -24,6 +24,8 @@ from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor
 
+pytestmark = pytest.mark.legacy
+
 
 class PrecisionTestCaseDescriptor(SanityTestCaseDescriptor, ABC):
     def __init__(self):

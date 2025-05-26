@@ -26,6 +26,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 
+pytestmark = pytest.mark.legacy
+
 TENSOR_1 = torch.ones([1]) * (-1)
 TENSOR_2 = torch.ones([1]) * (-2)
 TENSOR_3 = torch.ones([1]) * (-3)

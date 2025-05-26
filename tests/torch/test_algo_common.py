@@ -36,6 +36,8 @@ from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_spar
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 
+pytestmark = pytest.mark.legacy
+
 
 class BasicLinearTestModel(nn.Module):
     def __init__(self, size=4):

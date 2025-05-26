@@ -577,8 +577,8 @@ def compress_weights(
             msg = "TorchFX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-            msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
+            msg = "Torch FX backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
         if (
@@ -593,21 +593,20 @@ def compress_weights(
     elif backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((awq, scale_estimation, gptq, lora_correction)) and (
-            dataset is None or mode == CompressWeightsMode.E2M1
-        ):
-            msg = (
-                "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
-                "but dataset is None or mode is E2M1."
-            )
+        if any((scale_estimation, gptq, lora_correction)) and dataset is None:
+            msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if any((awq, scale_estimation, gptq, lora_correction)) and mode == CompressWeightsMode.E2M1:
+            msg = "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode is E2M1."
             raise nncf.ParameterNotSupportedError(msg)
 
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-            msg = "OpenVINO backend does not support FQ and FQ_LORA compression formats."
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
+            msg = "OpenVINO backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
         compression_weights_impl = ov_compress_weights_impl

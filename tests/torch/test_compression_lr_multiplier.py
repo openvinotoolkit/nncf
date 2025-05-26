@@ -31,6 +31,8 @@ from tests.torch.helpers import set_torch_seed
 from tests.torch.quantization.test_algo_quantization import get_quantization_config_without_range_init
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 ALGO_NAME_TO_PATH_MAP = {
     "quantization": "nncf.torch.quantization",
     "rb_sparsity": "nncf.torch.sparsity.rb",

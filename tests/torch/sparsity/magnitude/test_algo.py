@@ -32,6 +32,8 @@ from tests.torch.sparsity.const.test_algo import ref_mask_2
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 
 def test_can_create_magnitude_sparse_algo__with_defaults():
     model = MagnitudeTestModel()
