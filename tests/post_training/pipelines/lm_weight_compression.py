@@ -382,24 +382,18 @@ class LMWeightCompression(BaseTestPipeline):
             inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
             core.set_property("CPU", properties={"INFERENCE_NUM_THREADS": str(inference_num_threads)})
 
-        filename = "ref_qa_onnx.csv" if self.backend == BackendType.ONNX else "ref_qa.csv"
-        gt_data_path = TEST_ROOT / "post_training" / "data" / "wwb_ref_answers" / self.fp32_model_name / filename
+        gt_data_path = TEST_ROOT / "post_training" / "data" / "wwb_ref_answers" / self.fp32_model_name / "ref_qa.csv"
         gt_data_path.parent.mkdir(parents=True, exist_ok=True)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
-            if self.backend == BackendType.ONNX:
-                model_gold = ORTModelForCausalLM.from_pretrained(
-                    self.fp32_model_dir, trust_remote_code=True, provider="OpenVINOExecutionProvider"
-                )
-            else:
-                model_gold = OVModelForCausalLM.from_pretrained(
-                    self.fp32_model_dir,
-                    trust_remote_code=True,
-                    load_in_8bit=False,
-                    compile=False,
-                    stateful=is_stateful,
-                    ov_config={"KV_CACHE_PRECISION": "f16"},
-                )
+            model_gold = OVModelForCausalLM.from_pretrained(
+                self.fp32_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"KV_CACHE_PRECISION": "f16"},
+            )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
             print("Saving ground-truth validation data:", gt_data_path.resolve())

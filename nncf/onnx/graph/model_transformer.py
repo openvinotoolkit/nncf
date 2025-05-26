@@ -486,6 +486,7 @@ def remove_initializer(initializer_name: str, model: onnx.ModelProto) -> None:
 def remove_node(node_name: str, model: onnx.ModelProto) -> None:
     """
     Removes the node from the ONNX model.
+
     :param node_name: Name of the node to remove.
     :param model: ONNX model.
     """
