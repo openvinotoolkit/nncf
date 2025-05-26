@@ -41,10 +41,10 @@ def generate_answers(questions, model, tokenizer, max_new_tokens=50):
     return answers_by_questions
 
 
-def default_codebook_example(MODEL_ID, OUTPUT_DIR):
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+def default_codebook_example(model_id, output_dir):
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = OVModelForCausalLM.from_pretrained(
-        MODEL_ID,
+        model_id,
         export=True,
         load_in_8bit=False,
         compile=False,
@@ -63,20 +63,20 @@ def default_codebook_example(MODEL_ID, OUTPUT_DIR):
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
     model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CODEBOOK, ratio=1.0, group_size=64)
-    model.save_pretrained(OUTPUT_DIR)
-    tokenizer.save_pretrained(OUTPUT_DIR)
+    model.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
 
     model = OVModelForCausalLM.from_pretrained(
-        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
+        output_dir, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "64", "INFERENCE_PRECISION_HINT": "f32"}
     )
     answers_by_questions = generate_answers(questions, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
 
 
-def custom_codebook_example(MODEL_ID, OUTPUT_DIR):
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+def custom_codebook_example(model_id, output_dir):
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = OVModelForCausalLM.from_pretrained(
-        MODEL_ID,
+        model_id,
         export=True,
         load_in_8bit=False,
         compile=False,
@@ -103,22 +103,22 @@ def custom_codebook_example(MODEL_ID, OUTPUT_DIR):
         group_size=-1,
         advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
     )
-    model.save_pretrained(OUTPUT_DIR)
-    tokenizer.save_pretrained(OUTPUT_DIR)
+    model.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
 
     model = OVModelForCausalLM.from_pretrained(
-        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
+        output_dir, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "64", "INFERENCE_PRECISION_HINT": "f32"}
     )
     answers_by_questions = generate_answers(questions, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
 
 
 def main():
-    MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
-    OUTPUT_DIR = "smollm2_360m_compressed_codebook"
+    model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
+    output_dir = "smollm2_360m_compressed_codebook"
 
-    default_codebook_example(MODEL_ID, OUTPUT_DIR)
-    custom_codebook_example(MODEL_ID, OUTPUT_DIR + "_custom")
+    default_codebook_example(model_id, output_dir)
+    custom_codebook_example(model_id, output_dir + "_custom")
 
 
 if __name__ == "__main__":
