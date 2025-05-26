@@ -141,7 +141,7 @@ class LMWeightCompression(BaseTestPipeline):
             )
             self.model = self.model_hf
             if self.backend == BackendType.FX_TORCH:
-                self.model, self.model_config = convert_and_export_with_cache(self.model)
+                self.model, self.model_config, self.gen_config = convert_and_export_with_cache(self.model)
                 self.model = self.model.module()
         elif self.backend == BackendType.OV:
             if is_stateful:
@@ -369,7 +369,7 @@ class LMWeightCompression(BaseTestPipeline):
                 ov_config={"KV_CACHE_PRECISION": "f16"},
             )
         if self.backend == BackendType.FX_TORCH:
-            compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config)
+            compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config, generation_config=self.gen_config)
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
