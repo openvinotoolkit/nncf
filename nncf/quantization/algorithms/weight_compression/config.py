@@ -10,7 +10,7 @@
 # limitations under the License.
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Any
 
 import numpy as np
 
@@ -32,6 +32,7 @@ class WeightCompressionConfig:
 
     mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
     group_size: Optional[int] = -1
+    user_data: Optional[Any] = None
 
     @property
     def num_bits(self):

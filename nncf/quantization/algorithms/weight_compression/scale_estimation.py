@@ -301,7 +301,7 @@ class ScaleEstimation:
 
             if i < initial_steps - 1:
                 if config.mode == CompressWeightsMode.NF4:
-                    out, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
+                    out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
                 else:
                     out, _, _ = do_integer_quantization(
                         original_weight,
@@ -319,7 +319,7 @@ class ScaleEstimation:
             scaled_scale = factor * scale
 
             if config.mode == CompressWeightsMode.NF4:
-                out, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
+                out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
             else:
                 out, _, _ = do_integer_quantization(
                     original_weight,

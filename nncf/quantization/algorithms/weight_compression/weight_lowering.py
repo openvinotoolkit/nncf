@@ -159,7 +159,6 @@ def do_float_quantization(
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
-    quantiles: Optional[Tensor] = None,
     max_val: float = 6.0,
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
@@ -195,8 +194,8 @@ def do_float_quantization(
 
     scale = precomputed_scale
     if scale is None:
-        if quantiles is not None:
-            max_val = max(quantiles)
+        if config.mode == CompressWeightsMode.CODEBOOK:
+            max_val = max(config.user_data)
         scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
@@ -205,8 +204,8 @@ def do_float_quantization(
             compressed_weight = norm_weight.as_openvino_tensor().astype(TensorDataType.nf4)
         else:
             compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
-    elif config.mode == CompressWeightsMode.CODEBOOK and quantiles is not None:
-        compressed_weight, indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=quantiles)
+    elif config.mode == CompressWeightsMode.CODEBOOK:
+        compressed_weight, indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=config.user_data)
         return compressed_weight, scale, indexes
     else:
         # TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
@@ -250,7 +249,7 @@ def float_quantize_dequantize_weight(
         )
 
     # Reference implementation
-    compressed_weight, scale = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
+    compressed_weight, scale, _ = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
     decompressed_weight = do_float_dequantization(compressed_weight, scale)
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale
@@ -352,14 +351,14 @@ def compress_weight(
     :param precomputed_zero_point: Precomputed zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
-    precomputed_scale, precomputed_zero_point, quantiles = (
-        (compressed_weight.scale, compressed_weight.zero_point, compressed_weight.codebook) if compressed_weight else (None, None, None)
+    precomputed_scale, precomputed_zero_point = (
+        (compressed_weight.scale, compressed_weight.zero_point) if compressed_weight else (None, None)
     )
 
     if not config.is_integer:
-        compressed_weight, scale, indexes = do_float_quantization(weight, config, reduction_axes, precomputed_scale, quantiles=quantiles)
-        if quantiles is not None and indexes is not None:
-            return CompressedWeight(indexes, scale, None, fns.from_numpy(np.array(quantiles), backend=compressed_weight.backend))
+        compressed_weight, scale, indexes = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
+        if indexes is not None:
+            return CompressedWeight(indexes, scale, None, fns.from_numpy(np.array(config.user_data), backend=compressed_weight.backend))
         else:
             return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_integer_quantization(

@@ -237,24 +237,25 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
             compression_dtype = ov.Type.u8
         elif compression_config.mode == CompressWeightsMode.CODEBOOK:
-            compression_dtype = None #ov.Type.u8 if compressed_weight.tensor.max() > 15 else ov.Type.u4
+            compression_dtype = None
         else:
             msg = f"{compression_config.mode.value} is not supported."
             raise nncf.ParameterNotSupportedError(msg)
 
         original_shape = weight.shape
 
-        if compression_config.mode == CompressWeightsMode.CODEBOOK:
-            codebook_params = advanced_parameters.codebook_params
-            if compressed_weight is None:
-                compressed_weight = CompressedWeight(codebook=codebook_params.codebook)
+        with disable_results_caching(OV_MODEL_CACHE):
             compressed_weight = compress_weight(
-                    weight,
-                    reduction_axes,
-                    compression_config,
-                    compressed_weight,
-                )
+                weight,
+                reduction_axes,
+                compression_config,
+                compressed_weight,
+            )
 
+        if compression_config.mode == CompressWeightsMode.CODEBOOK:
+            n_quants = compressed_weight.tensor.max()
+            compression_dtype = ov.Type.u16 if n_quants > 255 else (ov.Type.u8 if n_quants > 15 else ov.Type.u4)
+            codebook_params = advanced_parameters.codebook_params
             converted_const = create_ov_codebook_subgraph(
                 codebook=compressed_weight.codebook,
                 indexes=compressed_weight.tensor,
@@ -265,13 +266,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 name=const_node_name,
             )
         else:
-            with disable_results_caching(OV_MODEL_CACHE):
-                compressed_weight = compress_weight(
-                    weight,
-                    reduction_axes,
-                    compression_config,
-                    compressed_weight,
-                )
             compressed_const = create_ov_const_from_tensor(
                 compressed_weight.tensor, compression_dtype, name=const_node_name
             )
