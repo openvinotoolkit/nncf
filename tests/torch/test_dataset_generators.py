@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import pytest
+from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -45,12 +46,13 @@ def test_generate_text_data_usage(model, tokenizer, usage_error):
             assert isinstance(e, nncf.ValidationError), "Expected exception."
 
 
-def test_generate_text_data_functional():
+@pytest.mark.parametrize("model_cls", [AutoModelForCausalLM, OVModelForCausalLM])
+def test_generate_text_data_functional(model_cls):
     seq_len = 12
     max_seq_len = seq_len + seq_len // 2
     dataset_size = 6
 
-    model = AutoModelForCausalLM.from_pretrained(BASE_TEST_MODEL_ID)
+    model = model_cls.from_pretrained(BASE_TEST_MODEL_ID)
     tokenizer = AutoTokenizer.from_pretrained(BASE_TEST_MODEL_ID)
 
     with set_torch_seed(0):
