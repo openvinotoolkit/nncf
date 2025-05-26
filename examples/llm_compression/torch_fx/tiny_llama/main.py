@@ -18,6 +18,7 @@ from modelling import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from transformers.models.llama import LlamaTokenizerFast
+import warnings
 
 import nncf
 
@@ -59,12 +60,13 @@ def main():
     )
     compressed_model_hf = FXAutoModelForCausalLM(model, model_config, generation_config=gen_config)
 
-    input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
-    output = compressed_model_hf.generate(input_ids["input_ids"])
+    with warnings.catch_warnings(action="ignore"):
+        input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
+        output = compressed_model_hf.generate(input_ids["input_ids"])
 
-    start_t = time.time()
-    output = compressed_model_hf.generate(input_ids["input_ids"], generation_config=gen_config)
-    print("Elapsed time: ", time.time() - start_t)
+        start_t = time.time()
+        output = compressed_model_hf.generate(input_ids["input_ids"])
+        print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])
     print(output_text)
