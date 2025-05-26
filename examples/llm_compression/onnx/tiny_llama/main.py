@@ -34,7 +34,7 @@ def main():
     # Load the exported pretrained model as an ONNX model. For models larger than 2GB,
     # set `load_external_data=False` to load only the model's topology without the weights.
     # The weights will be loaded on the fly during compression. To enable this, specify the
-    # `BackendParameters.EXTERNAL_DATA_DIR` parameter, which should be  the absolute path to
+    # `BackendParameters.EXTERNAL_DATA_DIR` parameter, which should be the absolute path to
     # the directory containing the model’s external data files.
     onnx_model = onnx.load(OUTPUT_DIR / "model.onnx", load_external_data=False)
 
