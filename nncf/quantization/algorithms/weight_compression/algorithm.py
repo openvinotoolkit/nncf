@@ -293,7 +293,7 @@ class WeightCompression(Algorithm):
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
 
-        primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
+        primary_config = self._get_primary_config()
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
@@ -429,6 +429,11 @@ class WeightCompression(Algorithm):
 
         return ratio_defining_params
 
+    def _get_primary_config(self):
+        return WeightCompressionConfig(
+            mode=self._mode, group_size=self._group_size, user_data=self._advanced_parameters.codebook_params.codebook
+        )
+
     def _set_weight_compression_config(
         self,
         ratio_defining_params: list[WeightCompressionParameters],
@@ -445,9 +450,7 @@ class WeightCompression(Algorithm):
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
         """
-        primary_config = WeightCompressionConfig(
-            mode=self._mode, group_size=self._group_size, user_data=self._advanced_parameters.codebook_params.codebook
-        )
+        primary_config = self._get_primary_config()
         if self._ratio == 1:
             for weight_param in ratio_defining_params:
                 weight_param.compression_config = primary_config

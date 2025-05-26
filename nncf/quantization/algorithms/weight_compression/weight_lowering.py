@@ -199,7 +199,7 @@ def do_float_quantization(
     scale = precomputed_scale
     if scale is None:
         if config.mode == CompressWeightsMode.CODEBOOK:
-            max_val = max(config.user_data)
+            max_val = max(np.abs(np.array(config.user_data)))
         scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:

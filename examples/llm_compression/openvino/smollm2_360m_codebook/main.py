@@ -41,6 +41,14 @@ def generate_answers(questions, model, tokenizer, max_new_tokens=50):
     return answers_by_questions
 
 
+QUESTIONS = [
+    "What is the capital of France?",
+    "What is the highest peak in the Alps?",
+    "What is the largest city in Canada?",
+    "What is the most visited city in Japan?",
+]
+
+
 def default_codebook_example(model_id, output_dir):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = OVModelForCausalLM.from_pretrained(
@@ -52,14 +60,7 @@ def default_codebook_example(model_id, output_dir):
         ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
 
-    questions = [
-        "What is the capital of France?",
-        "What is the highest peak in the Alps?",
-        "What is the largest city in Canada?",
-        "What is the most visited city in Japan?",
-    ]
-
-    answers_by_questions = generate_answers(questions, model, tokenizer)
+    answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
     model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CODEBOOK, ratio=1.0, group_size=64)
@@ -69,7 +70,7 @@ def default_codebook_example(model_id, output_dir):
     model = OVModelForCausalLM.from_pretrained(
         output_dir, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "64", "INFERENCE_PRECISION_HINT": "f32"}
     )
-    answers_by_questions = generate_answers(questions, model, tokenizer)
+    answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
 
 
@@ -84,14 +85,7 @@ def custom_codebook_example(model_id, output_dir):
         ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
 
-    questions = [
-        "What is the capital of France?",
-        "What is the highest peak in the Alps?",
-        "What is the largest city in Canada?",
-        "What is the most visited city in Japan?",
-    ]
-
-    answers_by_questions = generate_answers(questions, model, tokenizer)
+    answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
     codebook_params = nncf.AdvancedCodebookParameters([-8, -4, -2, -1, 0, 1, 2, 4, 8], ov.Type.i8)
@@ -109,7 +103,7 @@ def custom_codebook_example(model_id, output_dir):
     model = OVModelForCausalLM.from_pretrained(
         output_dir, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "64", "INFERENCE_PRECISION_HINT": "f32"}
     )
-    answers_by_questions = generate_answers(questions, model, tokenizer)
+    answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
 
 

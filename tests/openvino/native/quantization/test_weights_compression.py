@@ -41,7 +41,6 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
-from nncf.quantization.algorithms.weight_compression.codebook import CodebookCompression
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -49,6 +48,7 @@ from nncf.quantization.algorithms.weight_compression.openvino_backend import OVW
 from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_nf4_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -699,20 +699,6 @@ def test_raise_error_with_unsupported_params_for_e2m1(algo):
         compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
 
 
-@pytest.mark.parametrize(
-    "algo",
-    (
-        "lora_correction",
-        "awq",
-        "scale_estimation",
-        "gptq",
-    ),
-)
-def test_raise_error_with_unsupported_params_for_codebook(algo):
-    with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.CODEBOOK, **{algo: True})
-
-
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "algo",
@@ -1132,12 +1118,12 @@ def test_compressed_weighs_range(mode, data):
 )
 def test_codebook_weighs_range(data):
     data = np.array(data).astype(np.float32)
+    codebook = data
     max_diff = 0.1
     w = Tensor(data + (np.random.rand(*data.shape) - 0.5) * max_diff)
-    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK)
-    codebook_compression = CodebookCompression(initial_codebook=data, dst_type=None)
-    indexes, scale, codebook = codebook_compression.calculate_quantization_params(w, [-1], config)
-    uncompressed_data = codebook[indexes] * scale
+    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, user_data=data)
+    _, scale, indexes = do_float_quantization(w, config, -1)
+    uncompressed_data = codebook[indexes.data] * scale.data
 
     indexes = indexes.flatten()
     target = np.arange(indexes.shape[0])
