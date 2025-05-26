@@ -18,7 +18,7 @@ import warnings
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import datasets
 import numpy as np
@@ -38,9 +38,6 @@ from transformers import AutoTokenizer
 from transformers import get_cosine_schedule_with_warmup
 
 import nncf
-from examples.llm_compression.torch.qat_with_lora.main import load_checkpoint
-from examples.llm_compression.torch.qat_with_lora.main import save_checkpoint
-from examples.llm_compression.torch.qat_with_lora.main import set_trainable
 from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat
@@ -49,10 +46,80 @@ from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.model_creation import load_from_config
 from nncf.torch.quantization.layers import AsymmetricLoraNLSQuantizer
+from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricLoraNLSQuantizer
+from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 
 warnings.filterwarnings("ignore", category=TracerWarning)
+
+
+def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> list[dict[str, Any]]:
+    """
+    Sets the trainable parameters of the model for quantization-aware training with LoRA (Low-Rank Adaptation).
+
+    This function disables gradients for all parameters in the model, then selectively enables gradients for
+    specific quantizers (AsymmetricLoraQuantizer, SymmetricLoraQuantizer) that have 4-bit quantization.
+    It collects the trainable parameters and adapters from these quantizers and returns them in a format
+    suitable for an optimizer.
+
+    :param model: The model to be trained.
+    :param lora_lr: Learning rate for the LoRA adapters.
+    :param fq_lr: Learning rate for the quantizer scales.
+    :return: A list of dictionaries containing the parameters to be optimized and their corresponding learning rates.
+    """
+    model.requires_grad_(False)
+    scales_to_train = []
+    adapters_to_train = []
+    hook_storage = get_hook_storage(model)
+
+    for _, module in hook_storage.named_hooks():
+        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits == 4):
+            module.enable_gradients()
+            params = module.get_trainable_params()
+            adapters = module.get_adapters()
+            adapters_to_train.extend(adapters.values())
+            scales_to_train.extend(param for name, param in params.items() if name not in adapters)
+
+    params = list(model.parameters())
+    trainable_params = sum(p.numel() for p in params if p.requires_grad)
+    all_param = sum(p.numel() for p in params)
+    print(
+        f"trainable params: {trainable_params:,d} || "
+        f"all params: {all_param:,d} || "
+        f"trainable%: {100 * trainable_params / all_param:.4f}"
+    )
+    model.train()
+    return [{"params": adapters_to_train, "lr": lora_lr}, {"params": scales_to_train, "lr": fq_lr}]
+
+
+def save_checkpoint(model: nn.Module, ckpt_file: Path) -> None:
+    """
+    Saves the state of a tuned model from a checkpoint.
+
+    :param model: The model to load the checkpoint into.
+    :param ckpt_file: Path to the checkpoint file.
+    """
+    hook_storage = get_hook_storage(model)
+    ckpt = {"nncf_state_dict": hook_storage.state_dict(), "nncf_config": nncf.torch.get_config(model)}
+    torch.save(ckpt, ckpt_file)
+
+
+def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
+    """
+    Loads the state of a tuned model from a checkpoint. This function restores the placement of Fake Quantizers (FQs)
+    with absorbable LoRA adapters and loads their parameters.
+
+    :param model: The model to load the checkpoint into.
+    :param ckpt_file: Path to the checkpoint file.
+    :returns: The model with the loaded NNCF state from checkpoint.
+    """
+    ckpt = torch.load(ckpt_file, weights_only=False, map_location="cpu")
+    model = load_from_config(model, ckpt["nncf_config"])
+    hook_storage = get_hook_storage(model)
+    hook_storage.load_state_dict(ckpt["nncf_state_dict"])
+    return model
 
 
 def get_gsm8k() -> list[str]:
