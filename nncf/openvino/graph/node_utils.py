@@ -699,7 +699,7 @@ def create_ov_codebook_subgraph(
     :param name: Optional name of the constant.
     :return: OpenVINO subgraph.
     """
-    codebook_const = opset.constant(codebook.data, dtype=codebook_dtype) #create_ov_const_from_tensor(codebook, codebook_dtype)# 
+    codebook_const = opset.constant(codebook.data, dtype=codebook_dtype)
     if codebook_dtype != ov.Type.f16:
         codebook_const = opset.convert(codebook_const, destination_type=ov.Type.f16)
 

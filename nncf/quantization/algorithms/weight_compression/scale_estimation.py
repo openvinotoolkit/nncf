@@ -18,7 +18,6 @@ from nncf.common.logging.track_progress import track
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
-from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
@@ -213,7 +212,7 @@ class ScaleEstimation:
         cur_config.group_size = group_size
 
         original_weight = fns.zeros_like(weight) + weight
-        if config.mode == CompressWeightsMode.NF4:
+        if not config.is_integer:
             q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
                 original_weight, cur_config, reduction_axis, return_compressed_weight=True
             )
@@ -262,7 +261,7 @@ class ScaleEstimation:
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
-            if config.mode == CompressWeightsMode.NF4:
+            if not config.is_integer:
                 out = float_quantize_dequantize_weight(
                     original_weight,
                     config,
@@ -300,7 +299,7 @@ class ScaleEstimation:
             result_scale = near_to_ideal_scale
 
             if i < initial_steps - 1:
-                if config.mode == CompressWeightsMode.NF4:
+                if not config.is_integer:
                     out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
                 else:
                     out, _, _ = do_integer_quantization(
@@ -318,7 +317,7 @@ class ScaleEstimation:
             factor = 1.0 - 0.05 * scale_step
             scaled_scale = factor * scale
 
-            if config.mode == CompressWeightsMode.NF4:
+            if not config.is_integer:
                 out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
             else:
                 out, _, _ = do_integer_quantization(
@@ -334,7 +333,7 @@ class ScaleEstimation:
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
-            if config.mode == CompressWeightsMode.NF4:
+            if not config.is_integer:
                 out = float_quantize_dequantize_weight(original_weight, config, precomputed_scale=near_to_ideal_scale)
             else:
                 out = integer_quantize_dequantize_weight(

@@ -445,7 +445,9 @@ class WeightCompression(Algorithm):
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
         """
-        primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size, user_data=self._advanced_parameters.codebook_params.codebook)
+        primary_config = WeightCompressionConfig(
+            mode=self._mode, group_size=self._group_size, user_data=self._advanced_parameters.codebook_params.codebook
+        )
         if self._ratio == 1:
             for weight_param in ratio_defining_params:
                 weight_param.compression_config = primary_config

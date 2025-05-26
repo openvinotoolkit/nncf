@@ -235,7 +235,9 @@ class GPTQ:
             else weight_tensor.shape[1]
         )
         reduction_axes = wc_params.reduction_axes
-        block_compression_config = WeightCompressionConfig(mode=wc_params.compression_config.mode)
+        block_compression_config = WeightCompressionConfig(
+            mode=wc_params.compression_config.mode, user_data=wc_params.compression_config.user_data
+        )
 
         damp = self._damp_percent * fns.mean(fns.diag(hessian))
         diag_indices = fns.arange(columns, backend=hessian.backend, device=hessian.device)
@@ -260,7 +262,7 @@ class GPTQ:
                 hessian_diag_val = hessian_inv_block[i, i]
 
                 if (i1 + i) % group_size == 0:
-                    if block_compression_config.mode == CompressWeightsMode.NF4:
+                    if not block_compression_config.is_integer:
                         scale = calculate_float_quantization_params(
                             weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
                         )
@@ -289,7 +291,7 @@ class GPTQ:
                     # optimized OV compression performs worse than numpy compression.
                     # TODO(nikita-savelyevv): Remove this workaround by introducing logic that will control whether to
                     #   execute optimized compression based on input size.
-                    if block_compression_config.mode == CompressWeightsMode.NF4:
+                    if not block_compression_config.is_integer:
                         quantized_col = float_quantize_dequantize_weight(
                             fns.unsqueeze(weight_col, 1),
                             block_compression_config,

@@ -10,7 +10,7 @@
 # limitations under the License.
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Optional, TypeVar, Any
+from typing import Any, Optional, TypeVar
 
 import numpy as np
 

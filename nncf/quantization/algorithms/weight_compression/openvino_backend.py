@@ -260,9 +260,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 codebook=compressed_weight.codebook,
                 indexes=compressed_weight.tensor,
                 dtype=compression_dtype,
-                codebook_dtype=codebook_params.dst_type
-                if codebook_params.dst_type
-                else ov.Type.f8e4m3,
+                codebook_dtype=codebook_params.dst_type if codebook_params.dst_type else ov.Type.f8e4m3,
                 name=const_node_name,
             )
         else:
@@ -337,7 +335,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     const_dtype=const_dtype,
                     should_add_convert_node=should_add_convert_node,
                     compressed_weight=compressed_weight,
-                    advanced_parameters=advanced_parameters
+                    advanced_parameters=advanced_parameters,
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error

@@ -599,7 +599,6 @@ def compress_weights(
 
         if any((awq, scale_estimation, gptq, lora_correction)) and mode in [
             CompressWeightsMode.E2M1,
-            CompressWeightsMode.CODEBOOK,
         ]:
             msg = f"AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode is {mode}."
             raise nncf.ParameterNotSupportedError(msg)
