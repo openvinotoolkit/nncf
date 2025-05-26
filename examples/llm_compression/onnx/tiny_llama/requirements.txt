@@ -1,0 +1,4 @@
+transformers
+openvino==2025.1
+optimum-intel[openvino]
+onnx
