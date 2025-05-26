@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
+import warnings
 from functools import partial
 
 import torch
@@ -18,7 +19,6 @@ from modelling import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from transformers.models.llama import LlamaTokenizerFast
-import warnings
 
 import nncf
 
@@ -60,7 +60,8 @@ def main():
     )
     compressed_model_hf = FXAutoModelForCausalLM(model, model_config, generation_config=gen_config)
 
-    with warnings.catch_warnings(action="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
         output = compressed_model_hf.generate(input_ids["input_ids"])
 
