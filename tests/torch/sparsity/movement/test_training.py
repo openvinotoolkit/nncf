@@ -187,7 +187,7 @@ class MovementTrainingValidator(BaseSampleValidator):
             "do_train": True,
             "do_eval": True,
             "num_train_epochs": self._desc.num_train_epochs_,
-            "evaluation_strategy": "epoch",
+            "eval_strategy": "epoch",
             "output_dir": self._desc.output_dir,
             "seed": self._desc.seed_,
             "learning_rate": self._desc.learning_rate_,
