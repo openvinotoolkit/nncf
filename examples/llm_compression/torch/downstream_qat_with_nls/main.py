@@ -939,7 +939,6 @@ def main(argv) -> float:
     )
     if disable_nls or do_train:
         finetuning_results["ov_result"] = ov_result
-        overall_result["finetuning_results"] = finetuning_results
     else:
         finetuning_results["other_evals"][-1]["ov_result"] = ov_result
     overall_result["finetuning_results"] = finetuning_results
