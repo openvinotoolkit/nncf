@@ -28,18 +28,16 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         config: PretrainedConfig,
         generation_config: GenerationConfig,
         device: str = "cpu",
-        compile: bool = True,
     ):
         super().__init__(model, config)
-        if compile:
-            self.model = torch.compile(model, backend="openvino", options={"aot_autograd": True})
+        self.model = torch.compile(model, backend="openvino", options={"aot_autograd": True})
         self.generation_config = generation_config
         self.main_input_name = "input_ids"
         self._device = device.upper()
 
     @property
     def device(self) -> torch.device:
-        return torch.device(self._device.lower())
+        return torch.device(self._device)
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
         cache_position = kwargs["cache_position"]
