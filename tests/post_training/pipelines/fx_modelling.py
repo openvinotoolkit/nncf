@@ -53,7 +53,7 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         self,
         input_ids: torch.Tensor,
         cache_position: torch.Tensor,
-        attention_mask: torch.Tensor=None,
+        attention_mask: torch.Tensor = None,
         **kwargs,
     ) -> CausalLMOutputWithPast:
         logits = self.model(input_ids, cache_position)
