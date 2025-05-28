@@ -248,7 +248,6 @@ def main():
         "PERFORMANCE_HINT": "LATENCY",
         "NUM_STREAMS": "1",
         "CACHE_DIR": "",
-        "KV_CACHE_PRECISION": "f16",
     }
     model = OVModelForCausalLM.from_pretrained(
         model_id,

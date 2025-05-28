@@ -392,7 +392,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -415,7 +414,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
         if self.backend == BackendType.FX_TORCH:
             compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config)
@@ -427,7 +425,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=False,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
                 export=False,
                 from_onnx=True,
             )
@@ -446,7 +443,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=False,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
                 export=False,
                 from_onnx=True,
             )

@@ -57,7 +57,7 @@ def main():
     )
     model.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"KV_CACHE_PRECISION": "f16"})
+    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR)
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
 
     start_t = time.time()

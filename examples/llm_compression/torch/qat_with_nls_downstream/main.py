@@ -407,7 +407,6 @@ def export_to_openvino(
         trust_remote_code=True,
         load_in_8bit=False,
         compile=True,
-        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
     )
 
 

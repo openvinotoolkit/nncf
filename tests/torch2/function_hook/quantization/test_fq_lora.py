@@ -82,7 +82,6 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
         trust_remote_code=True,
         load_in_8bit=False,
         compile=True,
-        ov_config={"KV_CACHE_PRECISION": "f16"},
     )
 
 
