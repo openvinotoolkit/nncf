@@ -1232,7 +1232,7 @@ class QuantizerPropagationSolver:
             op_node = quant_prop_graph.nodes[op_node_key]
 
             # Check all branches have a quantizer on it before the merge
-            if op_node["op_meta"].ignored_input_ports:
+            if op_node["op_meta"].target_input_ports is not None:
                 all_branches_are_quantized = quant_prop_graph.all_outputs_are_quantized(branching_node_key)
                 if not all_branches_are_quantized:
                     return TransitionStatus.SHOULD_NOT_TRANSITION
