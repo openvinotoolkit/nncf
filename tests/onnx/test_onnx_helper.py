@@ -71,6 +71,22 @@ def test_pack_int4_to_uint8_unsigned_even_block():
     assert_array_equal(packed, expected)
 
 
+def test_pack_int4_to_uint8_unsigned_odd_block():
+    weight = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]], dtype=np.uint8)  # shape (5, 2)
+
+    packed = pack_int4_to_uint8(weight, block_size=4, signed=False)
+    expected = np.array(
+        [
+            [[(3 << 4) | 1, (7 << 4) | 5], [(0 << 4) | 9, 0]],
+            [[(4 << 4) | 2, (8 << 4) | 6], [(0 << 4) | 10, 0]],
+        ],
+        dtype=np.uint8,
+    )
+
+    assert packed.shape == (2, 2, 2)
+    assert_array_equal(packed, expected)
+
+
 def test_pack_int4_to_uint8_signed():
     weight = np.array([[-8, -7], [-1, 0], [1, 2], [7, 7]], dtype=np.int8)
 

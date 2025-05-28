@@ -353,19 +353,26 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
 
     packed_weight = np.zeros((N, n_blocks_per_col, blob_size), dtype=np.uint8)
 
-    for n in range(N):
-        for block_num in range(n_blocks_per_col):
-            begin = block_num * block_size
-            end = min(begin + block_size, K)
-            block = weight[begin:end, n]
+    if signed:
+        assert weight.dtype == np.int8
+        weight = weight + 8  # [-8, 7] -> [0, 15]
+        weight = weight.astype(np.uint8)
 
-            for packed_idx, i in enumerate(range(0, len(block), 2)):
-                # 2 x 4bit is stored in one uint8
-                val_1 = block[i] + 8 if signed else block[i]
-                if i + 1 < len(block):
-                    val_2 = block[i + 1] + 8 if signed else block[i + 1]
-                    packed_weight[n, block_num, packed_idx] = ((val_2 & 0x0F) << 4) | (val_1 & 0x0F)
-                else:
-                    packed_weight[n, block_num, packed_idx] = val_1 & 0x0F
+    K_padded = n_blocks_per_col * block_size
+    pad_len = K_padded - K
+    if pad_len > 0:
+        padding = np.zeros((pad_len, N), dtype=weight.dtype)
+        weight = np.vstack([weight, padding])
+
+    weight_blocks = weight.reshape(n_blocks_per_col, block_size, N)
+
+    even = weight_blocks[:, 0::2, :]
+    odd = weight_blocks[:, 1::2, :]
+    if odd.shape[1] < even.shape[1]:
+        pad = np.zeros((1, N), dtype=weight.dtype)
+        odd = np.concatenate([odd, pad[None, :, :]], axis=0)
+
+    packed = ((odd & 0x0F) << 4) | (even & 0x0F)  # (n_blocks_per_col, blob_size, N)
+    packed_weight = packed.transpose(2, 0, 1)
 
     return packed_weight
