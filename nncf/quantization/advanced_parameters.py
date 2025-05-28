@@ -364,6 +364,7 @@ class AdvancedLoraCorrectionParameters:
 class AdvancedCodebookParameters:
     """
     Contains advanced parameters for codebook compression algorithm.
+
     :param codebook: The codebook (LUT) for the weight compression.
         Applicable for vector quantization.
     :type codebook: list[Any]
