@@ -48,7 +48,7 @@ learning frameworks.
 | Compression algorithm                                                                                      | PyTorch      | TensorFlow    |
 | :--------------------------------------------------------------------------------------------------------- | :----------: | :-----------: |
 | [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md) | Supported    | Supported     |
-| [Weight-Only Quantization Aware Training with LoRA](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    | Not Supported     |
+| [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    | Not Supported     |
 | [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
 | [Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md)                            | Supported    | Supported     |
 | [Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md)                       | Supported    | Supported     |
