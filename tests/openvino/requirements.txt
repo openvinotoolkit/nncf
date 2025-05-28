@@ -13,6 +13,6 @@ addict>=2.4.0
 timm==0.9.2
 efficientnet_pytorch==0.7.1
 datasets==3.0.1
-transformers==4.48.3
-optimum-intel==1.22.0
-optimum==1.24.0
+transformers==4.51.3
+optimum-intel==1.23.0
+optimum==1.25.0

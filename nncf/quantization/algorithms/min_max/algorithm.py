@@ -638,10 +638,14 @@ class MinMaxQuantization(Algorithm):
             )
         ]
 
+        target_input_ports = [0, 1, 2] if self._is_fp8() else [0, 1]
+
         scope_overrides_activations = {}
+        scope_overrides_operations = {}
         for node_name in scaled_dot_product_attention_node_names:
             scope_overrides_activations[node_name] = {"mode": "symmetric"}
-        return {"activations": scope_overrides_activations}
+            scope_overrides_operations[node_name] = {"target_input_ports": target_input_ports}
+        return {"activations": scope_overrides_activations, "operations": scope_overrides_operations}
 
     def _get_quantizer_setup(
         self,
@@ -699,7 +703,6 @@ class MinMaxQuantization(Algorithm):
             metatypes_to_ignore=metatypes_to_ignore,
             scales_unification_map=self._backend_entity.scales_unification_map,
             scope_overrides=scope_overrides,
-            is_fp8=self._is_fp8(),
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph, self._backend_entity.elementwise_metatypes)

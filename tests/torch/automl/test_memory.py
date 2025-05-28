@@ -8,6 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# The MIT License (MIT)
+# Copyright (c) 2016 Matthias Plappert
 
 # Modification Notes:
 # This unit test is adapted from:

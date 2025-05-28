@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, cast
+from typing import Callable, Optional
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -63,17 +63,6 @@ class OperatorMetatype:
             return True
 
         return any(subtype.subtype_check(metatype) for subtype in subtypes)
-
-    @classmethod
-    def get_target_input_ports(cls, is_fp8: bool = False) -> Optional[list[int]]:
-        """
-        Returns the target input ports for FP8.
-
-        :returns: A list of target input ports for FP8.
-        """
-        if is_fp8 and hasattr(cls, "target_input_ports_fp8"):
-            return cast(Optional[list[int]], cls.target_input_ports_fp8)
-        return cls.target_input_ports
 
 
 class OperatorMetatypeRegistry(Registry):

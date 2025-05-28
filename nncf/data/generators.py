@@ -54,7 +54,7 @@ def generate_text_data(
         raise nncf.ModuleNotFoundError(msg)
 
     try:
-        from transformers import PreTrainedModel  # type: ignore
+        from transformers import GenerationMixin  # type: ignore
         from transformers import PreTrainedTokenizerBase
         from transformers.utils import logging  # type: ignore
 
@@ -63,8 +63,8 @@ def generate_text_data(
         msg = "transformers is required in order to generate text data: `pip install transformers`."
         raise nncf.ModuleNotFoundError(msg)
 
-    if not isinstance(model, PreTrainedModel.__bases__):
-        msg = "Model should be instance of the `transformers.PreTrainedModel`."
+    if not isinstance(model, GenerationMixin):
+        msg = "Model should be instance of the `transformers.GenerationMixin`."
         raise nncf.ValidationError(msg)
 
     if not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):

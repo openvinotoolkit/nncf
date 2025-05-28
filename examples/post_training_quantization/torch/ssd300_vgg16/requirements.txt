@@ -6,4 +6,3 @@ torch==2.7.0
 torchmetrics==1.0.1
 torchvision==0.22.0
 numpy<2
-setuptools<=72.1.0

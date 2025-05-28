@@ -127,6 +127,7 @@ elts
 eltwise
 eltwises
 embeddingbag
+emnlp
 eprint
 eprinttype
 errstate
@@ -164,6 +165,7 @@ googlenet
 gptq
 graphdef
 groupnormalization
+groupsize
 groupwise
 grusequence
 gscale
@@ -173,6 +175,7 @@ hardswish
 hardtanh
 hawq
 headport
+hellaswag
 hiddens
 hparam
 hparams
@@ -200,6 +203,7 @@ inputless
 interp
 ioff
 iterval
+jinjie
 junitxml
 keepdim
 keepdims
@@ -231,6 +235,7 @@ lyalyushkin
 mapillary
 maskrcnn
 mathbb
+matmulnbits
 matmuls
 maxcolwidths
 maxpool
@@ -308,10 +313,12 @@ onnxp
 onnxqdq
 onnxroi
 onnxx
+openbookqa
 openvino
 openvinotoolkit
 oplambda
 opset
+opsets
 outgate
 ovawq
 overcalled
@@ -328,6 +335,7 @@ pbar
 perchannel
 pertensor
 pinv
+plappert
 popleft
 pqid
 pratap
@@ -430,6 +438,7 @@ sparsifiers
 sparsifies
 sparsify
 sparsifying
+sqft
 squeezenet
 stabilityai_stablelm
 stdv
@@ -483,6 +492,7 @@ vtype
 weakrefs
 weightable
 whowhatbench
+winogrande
 xlabel
 xnli
 xticklabels

@@ -333,7 +333,6 @@ class QuantizerPropagationSolver:
         post_processing_marker_metatypes: Optional[list[type[OperatorMetatype]]] = None,
         metatypes_to_ignore: Optional[list[type[OperatorMetatype]]] = None,
         scales_unification_map: Optional[dict[type[OperatorMetatype], list[type[OperatorMetatype]]]] = None,
-        is_fp8: bool = False,
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
@@ -387,7 +386,6 @@ class QuantizerPropagationSolver:
             which should be automatically ignored.
         :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
             that can be unified if it so requires based on metatype.
-        :param is_fp8: Whether the quantization is done in FP8 mode.
         """
         if default_trait_to_metatype_map is None:
             self._default_trait_to_metatype_map = {}
@@ -411,7 +409,6 @@ class QuantizerPropagationSolver:
         self._weight_quantizable_node_names_vs_qconfigs = self._filter_by_weight_ignored_target_scopes(
             quantizable_layer_nodes, weight_ignored_scopes, weight_target_scopes
         )
-        self._is_fp8 = is_fp8
 
         if scope_overrides is None:
             self._scope_overrides: dict[str, Any] = {}
@@ -1102,11 +1099,20 @@ class QuantizerPropagationSolver:
             qconf_list = deepcopy(self.default_global_qconfig_list)
         assert qconf_list is not None
 
+        nncf_node_name = next(
+            iter(quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[operator_node_key])
+        ).node_name
         if not HWConfig.is_wildcard_quantization(qconf_list):
-            nncf_node_ref = next(iter(quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[operator_node_key]))
-            qconf_list = self._filter_qconfigs_according_to_scope(qconf_list, nncf_node_ref.node_name)
+            qconf_list = self._filter_qconfigs_according_to_scope(qconf_list, nncf_node_name)
         else:
             qconf_list = [deepcopy(DEFAULT_QUANTIZER_CONFIG)]
+
+        op_override_params = {}
+        op_scope_overrides = self._scope_overrides.get("operations", {})
+        for overridden_scope, scoped_override_dict in op_scope_overrides.items():
+            if matches_any(nncf_node_name, overridden_scope):
+                op_override_params.update(scoped_override_dict)
+        target_input_ports = op_override_params.get("target_input_ports", metatype.target_input_ports)
 
         is_unified_scale = metatype in self._unified_scales_operation_set
         if is_unified_scale:
@@ -1150,7 +1156,6 @@ class QuantizerPropagationSolver:
             if input_port_id in metatype.ignored_input_ports:
                 continue
 
-            target_input_ports = metatype.get_target_input_ports(self._is_fp8)
             if target_input_ports is not None and input_port_id not in target_input_ports:
                 continue
 
@@ -1227,7 +1232,7 @@ class QuantizerPropagationSolver:
             op_node = quant_prop_graph.nodes[op_node_key]
 
             # Check all branches have a quantizer on it before the merge
-            if op_node["op_meta"].target_input_ports is not None:
+            if op_node["op_meta"].ignored_input_ports:
                 all_branches_are_quantized = quant_prop_graph.all_outputs_are_quantized(branching_node_key)
                 if not all_branches_are_quantized:
                     return TransitionStatus.SHOULD_NOT_TRANSITION
