@@ -180,7 +180,7 @@ class DequantizeTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class ScaledDotProductAttentionMetatype(TestMetatype):
     name = "scaled_dot_product_attention"
-    target_input_ports = [0, 1]
+    ignored_input_ports = [2]
 
 
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
