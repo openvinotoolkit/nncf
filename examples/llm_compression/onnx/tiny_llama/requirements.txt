@@ -1,4 +1,4 @@
 transformers
 openvino==2025.1
 optimum-intel[openvino]
-onnx
+onnx==1.17.0

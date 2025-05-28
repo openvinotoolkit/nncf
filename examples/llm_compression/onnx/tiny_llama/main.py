@@ -22,10 +22,11 @@ from nncf.onnx.quantization.backend_parameters import BackendParameters
 ROOT = Path(__file__).parent.resolve()
 
 
-def main():
-    MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
-    OUTPUT_DIR = ROOT / "tinyllama_compressed"
+MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+OUTPUT_DIR = ROOT / "tinyllama_compressed"
 
+
+def main():
     # Export the pretrained model in ONNX format. The OUTPUT_DIR directory
     # will contain model.onnx, model.onnx_data, and some metadata files.
     model = ORTModelForCausalLM.from_pretrained(MODEL_ID, export=True)
