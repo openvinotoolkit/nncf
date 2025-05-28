@@ -294,7 +294,7 @@ class TestQuantizerPropagationSolver:
             node = qp_graph.nodes[sdpa_node_key]
             pred_ip_node = qp_graph.nodes[pred_ip_key]
             prop_quant = pred_ip_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR]
-            if port_id not in ScaledDotProductAttentionMetatype.ignored_input_ports:
+            if port_id in ScaledDotProductAttentionMetatype.target_input_ports:
                 assert prop_quant is not None
                 assert node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR][port_id] == prop_quant
 
@@ -1251,12 +1251,8 @@ class TestQuantizerPropagationSolver:
             if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                 target_input_ports = [0]
                 metatype = quant_prop_graph.nodes[node_key]["op_meta"]
-                if metatype.ignored_input_ports:
-                    target_input_ports = [
-                        port
-                        for port in range(len(quant_prop_graph.pred[node_key]))
-                        if port not in metatype.ignored_input_ports
-                    ]
+                if metatype.target_input_ports is not None:
+                    target_input_ports = metatype.target_input_ports
 
                 for input_port_id in target_input_ports:
                     ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key, input_port_id=input_port_id)

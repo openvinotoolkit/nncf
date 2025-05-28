@@ -635,13 +635,15 @@ class MinMaxQuantization(Algorithm):
             )
         ]
 
-        ignored_input_ports = [] if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2) else [2]
+        target_input_ports = (
+            [0, 1, 2] if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2) else [0, 1]
+        )
 
         scope_overrides_activations = {}
         scope_overrides_operations = {}
         for node_name in scaled_dot_product_attention_node_names:
             scope_overrides_activations[node_name] = {"mode": "symmetric"}
-            scope_overrides_operations[node_name] = {"ignored_input_ports": ignored_input_ports}
+            scope_overrides_operations[node_name] = {"target_input_ports": target_input_ports}
         return {"activations": scope_overrides_activations, "operations": scope_overrides_operations}
 
     def _get_quantizer_setup(

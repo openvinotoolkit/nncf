@@ -1112,7 +1112,7 @@ class QuantizerPropagationSolver:
         for overridden_scope, scoped_override_dict in op_scope_overrides.items():
             if matches_any(nncf_node_name, overridden_scope):
                 op_override_params.update(scoped_override_dict)
-        ignored_input_ports = op_override_params.get("ignored_input_ports", metatype.ignored_input_ports)
+        target_input_ports = op_override_params.get("target_input_ports", metatype.target_input_ports)
 
         is_unified_scale = metatype in self._unified_scales_operation_set
         if is_unified_scale:
@@ -1153,7 +1153,10 @@ class QuantizerPropagationSolver:
 
             ip = pred_node[QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR]
             input_port_id = ip.input_port_id
-            if input_port_id in ignored_input_ports:
+            if input_port_id in metatype.ignored_input_ports:
+                continue
+
+            if target_input_ports is not None and input_port_id not in target_input_ports:
                 continue
 
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
