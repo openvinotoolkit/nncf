@@ -43,6 +43,7 @@ from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -431,7 +432,11 @@ class WeightCompression(Algorithm):
 
     def _get_primary_config(self):
         return WeightCompressionConfig(
-            mode=self._mode, group_size=self._group_size, user_data=self._advanced_parameters.codebook_params.codebook
+            mode=self._mode,
+            group_size=self._group_size,
+            user_data=CB4_QUANTILES
+            if self._mode == CompressWeightsMode.CB4_F8E4M3
+            else self._advanced_parameters.codebook_params.codebook,
         )
 
     def _set_weight_compression_config(

@@ -50,6 +50,28 @@ NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
+CB4_QUANTILES = np.array(
+    [
+        -3.5,
+        -2.5,
+        -1.875,
+        -1.375,
+        -1.0,
+        -0.625,
+        -0.3125,
+        0.0,
+        0.2812,
+        0.5625,
+        0.875,
+        1.125,
+        1.5,
+        2.0,
+        2.5,
+        3.5,
+    ],
+    dtype=np.float32,
+)
+
 CENTER_OF_NF4_QUANTILES = np.array(
     [
         -0.84809643,
@@ -119,13 +141,13 @@ def calculate_float_quantization_params(
     :param max_val: Maximal value of e2m1 type.
     :return: Scale tensor of float32 type for float quantization.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
+    assert not config.is_integer
 
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
     scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
-    if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]:
+    if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
         scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
@@ -178,7 +200,7 @@ def do_float_quantization(
     :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor and
              optional indexes for codebook.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
+    assert not config.is_integer
 
     if config.group_size != -1 and reduction_axes is not None:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
@@ -198,7 +220,7 @@ def do_float_quantization(
 
     scale = precomputed_scale
     if scale is None:
-        if config.mode == CompressWeightsMode.CODEBOOK:
+        if config.is_codebook:
             max_val = max(np.abs(np.array(config.user_data)))
         scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
     norm_weight = _calculate_normalized_weight(weight, scale)
@@ -208,7 +230,7 @@ def do_float_quantization(
             compressed_weight = norm_weight.as_openvino_tensor().astype(TensorDataType.nf4)
         else:
             compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
-    elif config.mode == CompressWeightsMode.CODEBOOK:
+    elif config.is_codebook:
         compressed_weight, indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=config.user_data)
         return compressed_weight, scale, indexes
     else:

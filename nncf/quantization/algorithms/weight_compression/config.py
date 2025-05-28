@@ -50,7 +50,19 @@ class WeightCompressionConfig:
         """
         :return: True if compression type in integer, else False.
         """
-        return self.mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK]
+        return self.mode not in [
+            CompressWeightsMode.NF4,
+            CompressWeightsMode.E2M1,
+            CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.CB4_F8E4M3,
+        ]
+
+    @property
+    def is_codebook(self):
+        """
+        :return: True if compression type is codebook, else False.
+        """
+        return self.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
 
     def __hash__(self):
         return hash((self.mode.value, self.group_size))

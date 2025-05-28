@@ -236,7 +236,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compression_dtype = ov.Type.i8
         elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
             compression_dtype = ov.Type.u8
-        elif compression_config.mode == CompressWeightsMode.CODEBOOK:
+        elif compression_config.is_codebook:
             compression_dtype = None
         else:
             msg = f"{compression_config.mode.value} is not supported."
@@ -252,7 +252,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 compressed_weight,
             )
 
-        if compression_config.mode == CompressWeightsMode.CODEBOOK:
+        if compression_config.is_codebook:
             n_quants = compressed_weight.tensor.max()
             compression_dtype = ov.Type.u16 if n_quants > 255 else (ov.Type.u8 if n_quants > 15 else ov.Type.u4)
             codebook_params = advanced_parameters.codebook_params

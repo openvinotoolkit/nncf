@@ -63,7 +63,7 @@ def default_codebook_example(model_id, output_dir):
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
-    model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CODEBOOK, ratio=1.0, group_size=64)
+    model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CB4_F8E4M3, ratio=1.0, group_size=64)
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
@@ -88,7 +88,9 @@ def custom_codebook_example(model_id, output_dir):
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
-    codebook_params = nncf.AdvancedCodebookParameters([-8, -4, -2, -1, 0, 1, 2, 4, 8], ov.Type.i8)
+    codebook_params = nncf.AdvancedCodebookParameters(
+        [-64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64], ov.Type.i8
+    )
 
     model.model = nncf.compress_weights(
         model.model,
