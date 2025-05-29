@@ -13,8 +13,10 @@ import tempfile
 
 import numpy as np
 import onnx
+import pytest
 from numpy.testing import assert_array_equal
 
+import nncf
 from nncf.onnx.graph.model_metadata import MetadataKey
 from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.onnx_helper import get_array_from_tensor
@@ -120,3 +122,12 @@ def test_pack_int4_to_uint8_multiple_blocks():
 
     assert packed.shape == (1, 2, 2)
     assert_array_equal(packed, expected)
+
+
+def test_pack_int4_to_uint8_raises_on_invalid_signed_dtype():
+    weight = np.array([[1, 2], [3, 4]], dtype=np.uint8)
+
+    with pytest.raises(nncf.ValidationError) as exc_info:
+        pack_int4_to_uint8(weight, block_size=2, signed=True)
+
+    assert "Expected weight dtype to be np.int8" in str(exc_info.value)
