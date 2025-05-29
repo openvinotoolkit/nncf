@@ -390,6 +390,7 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
     backend_params: dict[str, Any] = field(default_factory=dict)
+    flexible_group_size: bool = False
 
 
 @api()

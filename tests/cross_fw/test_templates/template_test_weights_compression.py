@@ -363,6 +363,7 @@ class TemplateWeightCompression(ABC):
         with pytest.raises(InvalidGroupSizeError) as exc_info:
             compress_weights(**kwargs)
 
+        # TODO: update message
         names = re.findall(r"IgnoredScope\(names=\[(.*?)\]\)", re.sub(r"[\n\t]", "", str(exc_info.value)))
         assert len(names) == 1, f"Error message should contain ignored scope to avoid issue: {str(exc_info.value)}"
         name_list = [name.strip('"') for name in names[0].split(",")]
