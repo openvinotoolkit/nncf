@@ -55,16 +55,7 @@ def main():
     # Infer Model.
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
-    ov_model = OVModelForCausalLM.from_pretrained(
-        OUTPUT_DIR,
-        trust_remote_code=True,
-        load_in_8bit=False,
-        compile=False,
-        stateful=False,
-        ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
-        export=False,
-        from_onnx=True,
-    )
+    ov_model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, from_onnx=True)
 
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
 
