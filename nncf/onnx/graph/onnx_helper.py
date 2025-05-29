@@ -365,8 +365,8 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
     even = weight_blocks[:, 0::2, :]
     odd = weight_blocks[:, 1::2, :]
     if odd.shape[1] < even.shape[1]:
-        pad = np.zeros((1, N), dtype=weight.dtype)
-        odd = np.concatenate([odd, pad[None, :, :]], axis=0)
+        pad_width = [(0, 0), (0, even.shape[1] - odd.shape[1]), (0, 0)]
+        odd = np.pad(odd, pad_width, mode="constant", constant_values=0)
 
     packed = ((odd & 0x0F) << 4) | (even & 0x0F)  # (n_blocks_per_col, blob_size, N)
     packed_weight = packed.transpose(2, 0, 1)
