@@ -235,6 +235,7 @@ lyalyushkin
 mapillary
 maskrcnn
 mathbb
+mathrm
 matmulnbits
 matmuls
 maxcolwidths
