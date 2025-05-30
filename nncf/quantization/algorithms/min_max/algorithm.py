@@ -289,11 +289,14 @@ class MinMaxQuantization(Algorithm):
             if getattr(self, self_name) is None:
                 setattr(self, self_name, default_value)
 
+    def _is_fp8(self):
+        return self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2)
+
     def _review_mode_based_params(self):
         """
         Reviews parameter values because mode option doesn't support them.
         """
-        if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2):
+        if self._is_fp8():
             nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
             if self._preset != QuantizationPreset.PERFORMANCE:
@@ -635,10 +638,14 @@ class MinMaxQuantization(Algorithm):
             )
         ]
 
+        target_input_ports = [0, 1, 2] if self._is_fp8() else [0, 1]
+
         scope_overrides_activations = {}
+        scope_overrides_operations = {}
         for node_name in scaled_dot_product_attention_node_names:
             scope_overrides_activations[node_name] = {"mode": "symmetric"}
-        return {"activations": scope_overrides_activations}
+            scope_overrides_operations[node_name] = {"target_input_ports": target_input_ports}
+        return {"activations": scope_overrides_activations, "operations": scope_overrides_operations}
 
     def _get_quantizer_setup(
         self,
