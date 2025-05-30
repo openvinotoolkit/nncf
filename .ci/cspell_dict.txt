@@ -165,6 +165,7 @@ googlenet
 gptq
 graphdef
 groupnormalization
+groupsize
 groupwise
 grusequence
 gscale
@@ -235,6 +236,7 @@ mapillary
 maskrcnn
 mathbb
 mathrm
+matmulnbits
 matmuls
 maxcolwidths
 maxpool
@@ -317,6 +319,7 @@ openvino
 openvinotoolkit
 oplambda
 opset
+opsets
 outgate
 ovawq
 overcalled
