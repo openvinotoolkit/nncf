@@ -10,6 +10,7 @@ Use NNCF to achieve accurate LLMs with weights compressed to 4-bit via Weight-On
 
 - Combines post-training compression & efficient LoRA fine-tuning.
 - Achieve lossless fusion of LoRA adapters into INT4 weights with zero inference overhead.
+- Introduces Neural Low-Rank Adapter Search (NLS) for improved performance on downstream tasks.
 - Greatly mitigates accuracy degradation associated with quantization.
 
 ## When to apply
