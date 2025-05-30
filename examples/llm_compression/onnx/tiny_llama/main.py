@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 import onnx
+from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -53,11 +54,13 @@ def main():
 
     # Infer Model.
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    ort_model = ORTModelForCausalLM.from_pretrained(OUTPUT_DIR)
+
+    ov_model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, from_onnx=True)
+
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
 
     start_t = time.time()
-    output = ort_model.generate(**input_ids, max_new_tokens=100)
+    output = ov_model.generate(**input_ids, max_new_tokens=100)
     print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])

@@ -1,6 +1,6 @@
 # Large Language Models Weight Compression Example
 
-This example demonstrates how to optimize Large Language Models (LLMs) in ONNX format using NNCF weight compression API. The example applies 4/8-bit mixed-precision quantization to weights of Linear (Fully-connected) layers of [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model. This leads to a significant decrease in model footprint and performance improvement with ONNX Runtime.
+This example demonstrates how to optimize Large Language Models (LLMs) in ONNX format using NNCF weight compression API. The example applies 4/8-bit mixed-precision quantization to weights of Linear (Fully-connected) layers of [TinyLlama/TinyLlama-1.1B-Chat-v1.0](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) model. This leads to a significant decrease in model footprint and performance improvement with OpenVINO Runtime.
 
 ## Prerequisites
 
