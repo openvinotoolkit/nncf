@@ -371,26 +371,7 @@ class AdvancedCodebookParameters:
     :param dts_type: The type of the codebook.
     """
 
-    codebook: list[Any] = field(
-        default_factory=lambda: [
-            -3.5,
-            -2.5,
-            -1.875,
-            -1.375,
-            -1.0,
-            -0.625,
-            -0.3125,
-            0.0,
-            0.2812,
-            0.5625,
-            0.875,
-            1.125,
-            1.5,
-            2.0,
-            2.5,
-            3.5,
-        ]
-    )
+    codebook: list[Any] = None
     dst_type: Any = None
 
 

@@ -50,4 +50,4 @@ class CompressedWeight:
 
         :return: True if the compressed weight is a codebook, False otherwise.
         """
-        return not (self.codebook is None or self.tensor is None or self.scale is None)
+        return self.codebook is not None and self.tensor is not None and self.scale is not None

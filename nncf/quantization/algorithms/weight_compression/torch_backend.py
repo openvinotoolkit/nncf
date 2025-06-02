@@ -456,8 +456,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: Union[GraphModelWrapper, torch.nn.Module],
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        compressed_weights: dict[str, CompressedWeight] = None,
-        lora_correction_algo: LoraCorrectionAlgorithm = None,
+        compressed_weights: Optional[dict[str, CompressedWeight]] = None,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> NNCFNetwork:
