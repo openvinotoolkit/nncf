@@ -209,7 +209,7 @@ def check_user_compression_configuration(
         raise nncf.ValidationError(msg)
 
     if mode == CompressWeightsMode.CODEBOOK and (
-        advanced_parameters is None or advanced_parameters.codebook_params.codebook is not None
+        advanced_parameters is None or advanced_parameters.codebook_params.codebook is None
     ):
         msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
