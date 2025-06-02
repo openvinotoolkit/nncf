@@ -371,7 +371,7 @@ class AdvancedCodebookParameters:
     :param dts_type: The type of the codebook.
     """
 
-    codebook: list[Any] = None
+    codebook: Optional[list[Any]] = None
     dst_type: Any = None
 
 

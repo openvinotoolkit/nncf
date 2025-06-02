@@ -1043,7 +1043,7 @@ def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(
         model,
-        mode=CompressWeightsMode.CODEBOOK,
+        mode=CompressWeightsMode.CB4_F8E4M3,
         ratio=ratio,
         group_size=1,
         all_layers=all_layers,
