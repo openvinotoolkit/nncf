@@ -54,7 +54,7 @@ This script also supports running the vanilla LoRA method. We only need to pass 
 
 ## Results
 
-The table below illustrates the performance improvements achieved by integrating Quantization-Aware Training (QAT) with absorbable LoRA and NLS on compressed models across various downstream tasks. Our evaluation encompasses 11 large language models and 4 downstream tasks: [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), [winogrande](https://huggingface.co/datasets/allenai/winogrande), [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc), and [arc-easy](https://huggingface.co/datasets/allenai/ai2_arc). The value in the table represents the mean accuracy of these tasks, with "acc_norm" used for all except winogrande, which uses "acc" ([lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)).
+The table below illustrates the performance improvements achieved by integrating Quantization-Aware Training (QAT) with absorbable LoRA and NLS on compressed models across various downstream tasks before exporting to OpenVINO. Our evaluation encompasses 11 large language models and 4 downstream tasks: [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), [winogrande](https://huggingface.co/datasets/allenai/winogrande), [arc-challenge](https://huggingface.co/datasets/allenai/ai2_arc), and [arc-easy](https://huggingface.co/datasets/allenai/ai2_arc). The value in the table represents the mean accuracy of these tasks, with "acc_norm" used for all except winogrande, which uses "acc" ([lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)).
 
 To ensure a fair and comprehensive comparison, we conducted experiments with epochs set to 3, 4, and 5, LoRA rank set to 16 and 32, and the corresponding LoRA rank space of NLS set to `[16,12,8]` and `[32,24,16]`. We present the best results.
 INT4 (LoRA + PTWC) results are derived from the best BF16 (LoRA) model using the OpenVINO PTWC (AWQ + Scale Estimation + GPTQ) method. All quantization methods compressed the models to `INT4_ASYM` precision with a group size of 64. For BF16 model + LoRA finetuning, we used [PEFT](https://github.com/huggingface/peft) for inserting the LoRA adapters, ensuring consistent adapter placement with QAT.
@@ -64,20 +64,19 @@ INT4 (LoRA + PTWC) results are derived from the best BF16 (LoRA) model using the
 
 \* We highlight the best of the INT4 results.
 
-| Model                                | BF16  | BF16 (LoRA) | INT4 (LoRA + PTWC) | INT4 (QAT + LoRA) | INT4 (QAT + NLS) | INT4 (QAT + NLS) |
-|--------------------------------------|-------|-------------|--------------------|-------------------|------------------|------------------|
-|                                      | **Torch** | **Torch**       | **OpenVINO**           | **Torch**             | **Torch**            | **OpenVINO**         |
-| meta-llama/Meta-Llama-3-8B           | 0.6233| 0.7277      | 0.7167             | 0.7286            | **0.7344**       | 0.7299           |
-| meta-llama/Meta-Llama-3-8B-Instruct  | 0.6286| 0.7148      | 0.7098             | 0.7116            | **0.7160**       | 0.7117           |
-| meta-llama/Llama-3.1-8B              | 0.6310| 0.7330      | 0.7201             | 0.7216            | **0.7306**       | 0.7267           |
-| meta-llama/Llama-3.1-8B-Instruct     | 0.6297| 0.7197      | 0.7160             | 0.7152            | **0.7183**       | 0.7178           |
-| Qwen/Qwen2.5-7B                      | 0.6207| 0.7344      | 0.7269             | 0.7317            | **0.7369**       | 0.7350           |
-| Qwen/Qwen2.5-7B-Instruct             | 0.6401| 0.7305      | 0.7234             | 0.7301            | 0.7380           | **0.7395**       |
-| mistralai/Mistral-7B-v0.3            | 0.6209| 0.7208      | 0.7115             | 0.7219            | **0.7246**       | 0.7234           |
-| Qwen/Qwen2.5-3B-Instruct             | 0.5814| 0.7003      | 0.6839             | 0.6914            | **0.6940**       | 0.6885           |
-| meta-llama/Llama-3.2-3B-Instruct     | 0.5435| 0.6515      | 0.6503             | 0.6564            | **0.6612**       | 0.6588           |
-| HuggingFaceTB/SmolLM-1.7B-Instruct   | 0.4934| 0.5759      | **0.5751**         | 0.5714            | 0.5695           | 0.5657           |
-| google/gemma-2-2b-it                 | 0.6133| 0.6806      | 0.6658             | 0.6721            | **0.6768**       | 0.6727           |
+| Model                                | BF16  | BF16 (LoRA) | INT4 (LoRA + PTWC) | INT4 (QAT + LoRA) | INT4 (QAT + NLS) |
+|--------------------------------------|-------|-------------|--------------------|-------------------|------------------|
+| meta-llama/Meta-Llama-3-8B           | 0.6233| 0.7277      | 0.7167             | 0.7286            | **0.7344**       |
+| meta-llama/Meta-Llama-3-8B-Instruct  | 0.6286| 0.7148      | 0.7098             | 0.7116            | **0.7160**       |
+| meta-llama/Llama-3.1-8B              | 0.6310| 0.7330      | 0.7201             | 0.7216            | **0.7306**       |
+| meta-llama/Llama-3.1-8B-Instruct     | 0.6297| 0.7197      | 0.7160             | 0.7152            | **0.7183**       |
+| Qwen/Qwen2.5-7B                      | 0.6207| 0.7344      | 0.7269             | 0.7317            | **0.7369**       |
+| Qwen/Qwen2.5-7B-Instruct             | 0.6401| 0.7305      | 0.7234             | 0.7301            | **0.7380**       |
+| mistralai/Mistral-7B-v0.3            | 0.6209| 0.7208      | 0.7115             | 0.7219            | **0.7246**       |
+| Qwen/Qwen2.5-3B-Instruct             | 0.5814| 0.7003      | 0.6839             | 0.6914            | **0.6940**       |
+| meta-llama/Llama-3.2-3B-Instruct     | 0.5435| 0.6515      | 0.6503             | 0.6564            | **0.6612**       |
+| HuggingFaceTB/SmolLM-1.7B-Instruct   | 0.4934| 0.5759      | **0.5751**         | 0.5714            | 0.5695           |
+| google/gemma-2-2b-it                 | 0.6133| 0.6806      | 0.6658             | 0.6721            | **0.6768**       |
 
 ## Citation
 

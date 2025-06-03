@@ -9,13 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-import copy
 import json
 import random
 import re
 import shutil
 import sys
-import tempfile
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
@@ -459,6 +457,193 @@ def export_to_openvino(
     )
 
 
+def evaluate_after_training(
+    model: nn.Module,
+    args: argparse.Namespace,
+    torch_dtype: torch.dtype,
+    ckpt_file: Path,
+    ov_dir: Path,
+    layer_id_vs_lora_quantizers_map: dict,
+    do_train: bool,
+    disable_nls: bool,
+    activation_counter: list = None,
+    loss_recorder: dict = None,
+    overall_result: dict = None,
+) -> tuple[dict, dict]:
+    """
+    Evaluate the model after training.
+
+    This function performs all post-training evaluations, including:
+    - LoRA evaluation (if NLS is disabled)
+    - NLS heuristic evaluations (median, most-frequent, min-loss) if enabled and in training mode
+    - Custom rank config evaluation in eval-only mode
+    - OpenVINO export and evaluation
+    """
+    if overall_result is None:
+        overall_result = {}
+
+    finetuning_results = overall_result.get(
+        "finetuning_results",
+        {
+            "method": None,
+            "torch_result": None,
+            "ov_result": None,
+        },
+    )
+
+    if disable_nls:
+        finetuning_results["method"] = "LoRA"
+        with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
+            results_of_lora_finetuned_compressed_model = lm_eval(
+                eval_model, task=args.task, batch_size=args.eval_batch_size
+            )
+        print(f"QAT-LoRA torch result={json.dumps(results_of_lora_finetuned_compressed_model, indent=4)}")
+        finetuning_results["torch_result"] = results_of_lora_finetuned_compressed_model
+        finalized_lora_rank_config = None
+    else:
+        finetuning_results["method"] = "NLS"
+        if do_train:
+
+            def get_most_frequent_config(activation_counter):
+                most_frequent_config = []
+                for layer_counter in activation_counter:
+                    most_frequent_rank = max(layer_counter, key=layer_counter.get)
+                    most_frequent_config.append(most_frequent_rank)
+                return most_frequent_config
+
+            def get_top_k_min_loss_configs(loss_recorder, k=5):
+                avg_loss_configs = [(config, sum(losses) / len(losses)) for config, losses in loss_recorder.items()]
+                avg_loss_configs.sort(key=lambda x: x[1])
+                top_k_configs = [list(config) for config, _ in avg_loss_configs[:k]]
+                return top_k_configs
+
+            heuristic_results = []
+
+            # Median configuration evaluation
+            median_lora_rank_config = configure_lora_adapters(
+                layer_id_vs_lora_quantizers_map,
+                lora_rank_space=args.lora_rank_space,
+                adapter_strategy="median",
+            )
+            with create_eval_model(
+                model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, median_lora_rank_config
+            ) as eval_model:
+                results_of_nls_finetuned_compressed_model_median = lm_eval(
+                    eval_model, task=args.task, batch_size=args.eval_batch_size
+                )
+            print(
+                f"QAT-NLS (median rank config) torch result="
+                f"{json.dumps(results_of_nls_finetuned_compressed_model_median, indent=4)}"
+            )
+            heuristic_results.append(
+                {
+                    "type": "median",
+                    "config": median_lora_rank_config,
+                    "torch_result": results_of_nls_finetuned_compressed_model_median,
+                }
+            )
+            best_result = results_of_nls_finetuned_compressed_model_median
+            best_config = median_lora_rank_config
+
+            # Most-frequent configuration evaluation
+            most_frequent_lora_rank_config = get_most_frequent_config(activation_counter)
+            with create_eval_model(
+                model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, most_frequent_lora_rank_config
+            ) as eval_model:
+                results_of_nls_finetuned_compressed_model_most_frequent = lm_eval(
+                    eval_model, task=args.task, batch_size=args.eval_batch_size
+                )
+            print(
+                f"QAT-NLS (most-frequent rank config) torch result="
+                f"{json.dumps(results_of_nls_finetuned_compressed_model_most_frequent, indent=4)}"
+            )
+            heuristic_results.append(
+                {
+                    "type": "most-frequent",
+                    "config": most_frequent_lora_rank_config,
+                    "torch_result": results_of_nls_finetuned_compressed_model_most_frequent,
+                }
+            )
+            if (
+                results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric]
+                > best_result[args.lm_eval_metric]
+            ):
+                best_result = results_of_nls_finetuned_compressed_model_most_frequent
+                best_config = most_frequent_lora_rank_config
+
+            # Top-k min-loss configuration evaluation
+            top_k_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=args.num_min_loss_configs)
+            for i, min_loss_config in enumerate(top_k_min_loss_configs):
+                with create_eval_model(
+                    model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, min_loss_config
+                ) as eval_model:
+                    results_of_nls_finetuned_compressed_model_min_loss = lm_eval(
+                        eval_model, task=args.task, batch_size=args.eval_batch_size
+                    )
+                print(
+                    f"QAT-NLS (min-loss-{i + 1} rank config) torch result="
+                    f"{json.dumps(results_of_nls_finetuned_compressed_model_min_loss, indent=4)}"
+                )
+                heuristic_results.append(
+                    {
+                        "type": f"min-loss-{i + 1}",
+                        "config": min_loss_config,
+                        "torch_result": results_of_nls_finetuned_compressed_model_min_loss,
+                    }
+                )
+                if (
+                    results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric]
+                    > best_result[args.lm_eval_metric]
+                ):
+                    best_result = results_of_nls_finetuned_compressed_model_min_loss
+                    best_config = min_loss_config
+
+            finetuning_results["heuristic_results"] = heuristic_results
+            finetuning_results["best_heuristic_rank_config"] = best_config
+            finetuning_results["torch_result"] = best_result
+            finalized_lora_rank_config = best_config
+        else:
+            if "other_evals" not in finetuning_results:
+                finetuning_results["other_evals"] = []
+            with create_eval_model(
+                model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, args.custom_rank_config
+            ) as eval_model:
+                results_of_nls_finetuned_compressed_model_custom = lm_eval(
+                    eval_model, task=args.task, batch_size=args.eval_batch_size
+                )
+            print(
+                f"QAT-NLS (your custom config) torch result="
+                f"{json.dumps(results_of_nls_finetuned_compressed_model_custom, indent=4)}"
+            )
+            finetuning_results["other_evals"].append(
+                {
+                    "rank_config": args.custom_rank_config,
+                    "torch_result": results_of_nls_finetuned_compressed_model_custom,
+                    "ov_result": None,
+                }
+            )
+            finalized_lora_rank_config = args.custom_rank_config
+
+    del model
+    # Export the tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
+    if disable_nls:
+        ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir)
+    else:
+        ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir, finalized_lora_rank_config)
+    ov_result = lm_eval(
+        ov_model,
+        task=args.task,
+        batch_size=args.eval_batch_size,
+    )
+    if disable_nls or do_train:
+        finetuning_results["ov_result"] = ov_result
+    else:
+        finetuning_results["other_evals"][-1]["ov_result"] = ov_result
+    overall_result["finetuning_results"] = finetuning_results
+    print(f"Overall result: {json.dumps(overall_result, indent=4)}")
+    return overall_result, ov_result
+
+
 def get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=True)
 
@@ -642,26 +827,6 @@ def main(argv) -> float:
 
     # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
     if args.resume and ckpt_file.exists():
-        # Initial results (before fine-tuning) are needed to compare the improvements after fine-tuning.
-        # If the previous results are not saved, we will get them again and should use the compressed model
-        # without fine-tuning instead of the resume model.
-        if "torch_result_compression_before_finetuning" not in overall_result:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmp_ckpt_file = Path(tmpdir) / "temp_ckpt.pth"
-                tmp_model = copy.deepcopy(model)
-                tmp_model = compress_weights(
-                    tmp_model,
-                    dataset=Dataset([{k: v.to(device) for k, v in tmp_model.dummy_inputs.items()}]),
-                    **compression_config,
-                )
-                save_checkpoint(tmp_model, tmp_ckpt_file)
-                with create_eval_model(
-                    tmp_model, args.fast_eval, args.pretrained, torch_dtype, tmp_ckpt_file
-                ) as eval_model:
-                    results_compression_before_finetuning = lm_eval(
-                        eval_model, task=args.task, batch_size=args.eval_batch_size
-                    )
-                overall_result["torch_result_compression_before_finetuning"] = results_compression_before_finetuning
         model = load_checkpoint(model, ckpt_file)
     else:
         model = compress_weights(
@@ -670,14 +835,16 @@ def main(argv) -> float:
             **compression_config,
         )
         save_checkpoint(model, ckpt_file)
-        with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
-            results_compression_before_finetuning = lm_eval(eval_model, task=args.task, batch_size=args.eval_batch_size)
-        print(
-            f"Torch result of NNCF compression (round-to-nearest) before finetuning="
-            f"{json.dumps(results_compression_before_finetuning, indent=4)}"
-        )
-        overall_result["torch_result_compression_before_finetuning"] = results_compression_before_finetuning
+
+    with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
+        results_compression_before_finetuning = lm_eval(eval_model, task=args.task, batch_size=args.eval_batch_size)
+    print(
+        f"Torch result of NNCF compression (round-to-nearest) before finetuning="
+        f"{json.dumps(results_compression_before_finetuning, indent=4)}"
+    )
+    overall_result["torch_result_compression_before_finetuning"] = results_compression_before_finetuning
     initial_result = overall_result["torch_result_compression_before_finetuning"][args.lm_eval_metric]
+    tb.add_scalar("initial_results", initial_result, 0)
 
     layer_id_vs_lora_quantizers_map = None
     if not disable_nls:
@@ -780,169 +947,20 @@ def main(argv) -> float:
 
             save_checkpoint(model, ckpt_file)
 
-    # Start evaluation
-    finetuning_results = overall_result.get(
-        "finetuning_results",
-        {
-            "method": None,  # LoRA or NLS
-            "torch_result": None,
-            "ov_result": None,
-        },
+    # Evaluate after training using a dedicated function
+    overall_result, ov_result = evaluate_after_training(
+        model,
+        args,
+        torch_dtype,
+        ckpt_file,
+        ov_dir,
+        layer_id_vs_lora_quantizers_map,
+        do_train,
+        disable_nls,
+        activation_counter if not disable_nls and do_train else None,
+        loss_recorder if not disable_nls and do_train else None,
+        overall_result,
     )
-
-    # Torch model evaluation
-    if disable_nls:
-        finetuning_results["method"] = "LoRA"
-        with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
-            results_of_lora_finetuned_compressed_model = lm_eval(
-                eval_model, task=args.task, batch_size=args.eval_batch_size
-            )
-        print(f"QAT-LoRA torch result={json.dumps(results_of_lora_finetuned_compressed_model, indent=4)}")
-        finetuning_results["torch_result"] = results_of_lora_finetuned_compressed_model
-    else:
-        finetuning_results["method"] = "NLS"
-
-        # Use some of the signals from training to find some heuristic configurations for evaluation.
-        if do_train:
-            # Extract the most frequently activated configuration
-            def get_most_frequent_config(activation_counter):
-                most_frequent_config = []
-                for layer_counter in activation_counter:
-                    most_frequent_rank = max(layer_counter, key=layer_counter.get)
-                    most_frequent_config.append(most_frequent_rank)
-                return most_frequent_config
-
-            # Calculate the average loss for each configuration and select the top k with the minimum loss
-            def get_top_k_min_loss_configs(loss_recorder, k=5):
-                avg_loss_configs = [(config, sum(losses) / len(losses)) for config, losses in loss_recorder.items()]
-                avg_loss_configs.sort(key=lambda x: x[1])
-                top_k_configs = [list(config) for config, _ in avg_loss_configs[:k]]
-                return top_k_configs
-
-            heuristic_results = []
-
-            # Test the median configuration
-            median_lora_rank_config = configure_lora_adapters(
-                layer_id_vs_lora_quantizers_map,
-                lora_rank_space=args.lora_rank_space,
-                adapter_strategy="median",
-            )
-            with create_eval_model(
-                model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, median_lora_rank_config
-            ) as eval_model:
-                results_of_nls_finetuned_compressed_model_median = lm_eval(
-                    eval_model, task=args.task, batch_size=args.eval_batch_size
-                )
-            print(
-                f"QAT-NLS (median rank config) torch result="
-                f"{json.dumps(results_of_nls_finetuned_compressed_model_median, indent=4)}"
-            )
-            heuristic_results.append(
-                {
-                    "type": "median",
-                    "config": median_lora_rank_config,
-                    "torch_result": results_of_nls_finetuned_compressed_model_median,
-                }
-            )
-            best_result = results_of_nls_finetuned_compressed_model_median
-            best_config = median_lora_rank_config
-
-            # Test the most frequent configuration
-            most_frequent_lora_rank_config = get_most_frequent_config(activation_counter)
-            with create_eval_model(
-                model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, most_frequent_lora_rank_config
-            ) as eval_model:
-                results_of_nls_finetuned_compressed_model_most_frequent = lm_eval(
-                    eval_model, task=args.task, batch_size=args.eval_batch_size
-                )
-            print(
-                f"QAT-NLS (most-frequent rank config) torch result="
-                f"{json.dumps(results_of_nls_finetuned_compressed_model_most_frequent, indent=4)}"
-            )
-            heuristic_results.append(
-                {
-                    "type": "most-frequent",
-                    "config": most_frequent_lora_rank_config,
-                    "torch_result": results_of_nls_finetuned_compressed_model_most_frequent,
-                }
-            )
-            if (
-                results_of_nls_finetuned_compressed_model_most_frequent[args.lm_eval_metric]
-                > best_result[args.lm_eval_metric]
-            ):
-                best_result = results_of_nls_finetuned_compressed_model_most_frequent
-                best_config = most_frequent_lora_rank_config
-
-            # Test the top k min loss configurations
-            top_k_min_loss_configs = get_top_k_min_loss_configs(loss_recorder, k=args.num_min_loss_configs)
-            for i, min_loss_config in enumerate(top_k_min_loss_configs):
-                with create_eval_model(
-                    model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, min_loss_config
-                ) as eval_model:
-                    results_of_nls_finetuned_compressed_model_min_loss = lm_eval(
-                        eval_model, task=args.task, batch_size=args.eval_batch_size
-                    )
-                print(
-                    f"QAT-NLS (min-loss-{i + 1} rank config) torch result="
-                    f"{json.dumps(results_of_nls_finetuned_compressed_model_min_loss, indent=4)}"
-                )
-                heuristic_results.append(
-                    {
-                        "type": f"min-loss-{i + 1}",
-                        "config": min_loss_config,
-                        "torch_result": results_of_nls_finetuned_compressed_model_min_loss,
-                    }
-                )
-                if (
-                    results_of_nls_finetuned_compressed_model_min_loss[args.lm_eval_metric]
-                    > best_result[args.lm_eval_metric]
-                ):
-                    best_result = results_of_nls_finetuned_compressed_model_min_loss
-                    best_config = min_loss_config
-
-            finetuning_results["heuristic_results"] = heuristic_results
-            finetuning_results["best_heuristic_rank_config"] = best_config
-            finetuning_results["torch_result"] = best_result
-            finalized_lora_rank_config = best_config
-        else:  # eval-only mode for NLS
-            # finetuning_results["other_evals"] records the evaluation results of custom LoRA rank configurations
-            if "other_evals" not in finetuning_results:
-                finetuning_results["other_evals"] = []
-            with create_eval_model(
-                model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file, args.custom_rank_config
-            ) as eval_model:
-                results_of_nls_finetuned_compressed_model_custom = lm_eval(
-                    eval_model, task=args.task, batch_size=args.eval_batch_size
-                )
-            print(
-                f"QAT-NLS (your custom config) torch result="
-                f"{json.dumps(results_of_nls_finetuned_compressed_model_custom, indent=4)}"
-            )
-            finetuning_results["other_evals"].append(
-                {
-                    "rank_config": args.custom_rank_config,
-                    "torch_result": results_of_nls_finetuned_compressed_model_custom,
-                    "ov_result": None,
-                }
-            )
-            finalized_lora_rank_config = args.custom_rank_config
-
-    # OpenVINO model evaluation
-    if disable_nls:
-        ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir)
-    else:
-        ov_model = export_to_openvino(args.pretrained, ckpt_file, ov_dir, finalized_lora_rank_config)
-    ov_result = lm_eval(
-        ov_model,
-        task=args.task,
-        batch_size=args.eval_batch_size,
-    )
-    if disable_nls or do_train:
-        finetuning_results["ov_result"] = ov_result
-    else:
-        finetuning_results["other_evals"][-1]["ov_result"] = ov_result
-    overall_result["finetuning_results"] = finetuning_results
-    print(f"Overall result: {json.dumps(overall_result, indent=4)}")
 
     # Save results
     with open(result_file, "w") as f:
