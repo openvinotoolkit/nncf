@@ -132,6 +132,7 @@ eprint
 eprinttype
 errstate
 evals
+execu
 extendleft
 facecolors
 fakequantizer
