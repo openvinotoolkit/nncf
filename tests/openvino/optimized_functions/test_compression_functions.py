@@ -113,6 +113,10 @@ def openvino_available(available: bool):
         yield
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize(
     "weight_shape,is_disabled",
     [

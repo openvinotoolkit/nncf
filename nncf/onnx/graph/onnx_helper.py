@@ -334,7 +334,7 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
     Returns `weight` that is stored as uint8 with shape (N, n_blocks_per_col, blob_size) in which:
         - n_blocks_per_col = CeilDiv(K, block_size)
         - blob_size = CeilDiv(block_size * bits, 8)
-        - bits = 4
+        - bits = 4 (Number of bits used for weight quantization)
 
     See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#commicrosoftmatmulnbits
     for more details.
@@ -345,27 +345,30 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
     :return: A packed weight that can be used as `B` input for `com.microsoft.MatMulNBits` operation.
     """
     ceil_div = lambda a, b: (a + b - 1) // b
-    bits = 4  # Number of bits used for weight quantization
-
     K, N = weight.shape
     n_blocks_per_col = ceil_div(K, block_size)
-    blob_size = ceil_div(block_size * bits, 8)
 
-    packed_weight = np.zeros((N, n_blocks_per_col, blob_size), dtype=np.uint8)
+    if signed:
+        if weight.dtype != np.int8:
+            msg = f"Expected weight dtype to be np.int8 for signed weight tensor, but got {weight.dtype}"
+            raise nncf.ValidationError(msg)
+        weight = weight + 8  # [-8, 7] -> [0, 15]
+        weight = weight.astype(np.uint8)
 
-    for n in range(N):
-        for block_num in range(n_blocks_per_col):
-            begin = block_num * block_size
-            end = min(begin + block_size, K)
-            block = weight[begin:end, n]
+    K_padded = n_blocks_per_col * block_size
+    pad_len = K_padded - K
+    if pad_len > 0:
+        weight = np.pad(weight, ((0, pad_len), (0, 0)), mode="constant", constant_values=0)
 
-            for packed_idx, i in enumerate(range(0, len(block), 2)):
-                # 2 x 4bit is stored in one uint8
-                val_1 = block[i] + 8 if signed else block[i]
-                if i + 1 < len(block):
-                    val_2 = block[i + 1] + 8 if signed else block[i + 1]
-                    packed_weight[n, block_num, packed_idx] = ((val_2 & 0x0F) << 4) | (val_1 & 0x0F)
-                else:
-                    packed_weight[n, block_num, packed_idx] = val_1 & 0x0F
+    weight_blocks = weight.reshape(n_blocks_per_col, block_size, N)
+
+    even = weight_blocks[:, 0::2, :]
+    odd = weight_blocks[:, 1::2, :]
+    if odd.shape[1] < even.shape[1]:
+        pad_width = [(0, 0), (0, even.shape[1] - odd.shape[1]), (0, 0)]
+        odd = np.pad(odd, pad_width, mode="constant", constant_values=0)
+
+    packed = ((odd & 0x0F) << 4) | (even & 0x0F)  # (n_blocks_per_col, blob_size, N)
+    packed_weight = packed.transpose(2, 0, 1)
 
     return packed_weight

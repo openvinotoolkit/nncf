@@ -48,6 +48,7 @@ learning frameworks.
 | Compression algorithm                                                                                      | PyTorch      | TensorFlow    |
 | :--------------------------------------------------------------------------------------------------------- | :----------: | :-----------: |
 | [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md) | Supported    | Supported     |
+| [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    | Not Supported     |
 | [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
 | [Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md)                            | Supported    | Supported     |
 | [Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md)                       | Supported    | Supported     |
@@ -448,7 +449,19 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
+  
+- [Ultralytics](https://docs.ultralytics.com/integrations/openvino)
 
+  NNCF is integrated into the Intel OpenVINO export pipeline, enabling quantization for the exported models.
+
+- [ExecuTorch](https://github.com/pytorch/executorch/blob/main/examples/openvino/README.md)
+
+  NNCF is used as primary quantization framework for the [ExecuTorch OpenVINO integration](https://docs.pytorch.org/executorch/main/build-run-openvino.html).
+  
+- [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
+
+  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+  
 <a id="installation-guide"></a>
 
 ## Installation Guide
