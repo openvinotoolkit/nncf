@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import onnx
+import onnxruntime
 import pytest
 from onnx import TensorProto
 from onnx import helper
@@ -267,6 +268,10 @@ def test_compression_with_inference(mode):
 
 
 def test_matmulnbits():
+    rtol = 1e-5
+    if onnxruntime.__version__ < "1.21.1":
+        rtol = 1e-3
+
     np.random.seed(42)
     model_opset21 = create_model()
 
