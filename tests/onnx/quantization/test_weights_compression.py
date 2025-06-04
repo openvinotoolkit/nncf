@@ -289,4 +289,4 @@ def test_matmulnbits():
     output21 = sess21.run(None, {"input": dummy_input})[0]
     output19 = sess19.run(None, {"input": dummy_input})[0]
 
-    assert np.allclose(output21, output19, rtol=1e-3, atol=1e-6)
+    assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
