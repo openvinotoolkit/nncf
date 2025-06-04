@@ -13,7 +13,7 @@ Post-training Quantization:
   - (ONNX) Added support for data-free weight compression using INT4 (INT8) in the ONNX backend.
   - (ONNX) Added the `BackendParameters.EXTERNAL_DATA_DIR` parameter for the ONNX backend. This parameter specifies the absolute path to the directory where the model’s external data files are stored. All external data files must be located in the same directory. It should be used when the model is loaded without external data using `onnx.load("model.onnx", load_external_data=False)`, and the external data files are not in the current working directory of the process. This parameter can be omitted if the external data files are located in the current working directory of the process.
 - Fixes:
-  - ...
+  - Fixed BiasCorrection failures with models without a batch dimention.
 - Improvements:
   - ...
 - Deprecations/Removals:
