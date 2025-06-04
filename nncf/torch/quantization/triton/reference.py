@@ -26,13 +26,13 @@ from torch._inductor.runtime.triton_helpers import libdevice
 )
 @triton.jit
 def forward_kernel(
-    input__ptr: torch.tensor,
-    input_low_ptr: torch.tensor,
-    input_range_ptr: torch.tensor,
-    levels: int,
-    output_ptr: torch.tensor,
-    last_dim: int,
-    is_per_tensor: bool,
+    input__ptr,
+    input_low_ptr,
+    input_range_ptr,
+    levels,
+    output_ptr,
+    last_dim,
+    is_per_tensor,
     BLOCK_SIZE: tl.constexpr,
 ) -> None:
     """
@@ -101,18 +101,18 @@ def forward_kernel(
 )
 @triton.jit
 def backward_kernel(
-    grad_output_ptr: torch.tensor,
-    input__ptr: torch.tensor,
-    input_low_ptr: torch.tensor,
-    input_range_ptr: torch.tensor,
-    levels: int,
-    level_low: int,
-    level_high: int,
-    grad_input_ptr: torch.tensor,
-    grad_low_ptr: torch.tensor,
-    grad_range_ptr: torch.tensor,
-    last_dim: int,
-    is_per_tensor: bool,
+    grad_output_ptr,
+    input__ptr,
+    input_low_ptr,
+    input_range_ptr,
+    levels,
+    level_low,
+    level_high,
+    grad_input_ptr,
+    grad_low_ptr,
+    grad_range_ptr,
+    last_dim,
+    is_per_tensor,
     BLOCK_SIZE: tl.constexpr,
 ) -> None:
     """
