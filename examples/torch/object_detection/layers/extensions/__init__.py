@@ -13,8 +13,8 @@ import os.path
 
 import torch
 
-from nncf.torch.extensions import CudaNotAvailableStub
 from nncf.torch.extensions import get_build_directory_for_extension
+from nncf.torch.utils import CudaNotAvailableStub
 
 ext_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 if torch.cuda.is_available():

@@ -8,3 +8,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from typing import Callable
+
+import torch
+
+from nncf.torch.quantization.triton.reference import backward
+from nncf.torch.quantization.triton.reference import forward
+from nncf.torch.utils import CudaNotAvailableStub
+
+
+class TritonFunctionsWrapper:
+    def __init__(self):
+        self.Quantize_forward = forward
+        self.Quantize_backward = backward
+
+    def get(self, fn_name: str) -> Callable:
+        return getattr(self, fn_name)
+
+
+if torch.cuda.is_available():
+    QuantizedFunctionsCUDA = TritonFunctionsWrapper()
+else:
+    QuantizedFunctionsCUDA = CudaNotAvailableStub()

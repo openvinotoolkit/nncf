@@ -19,13 +19,13 @@ from torch.distributions.uniform import Uniform
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.os import is_windows
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
-from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.quantization.reference import ReferenceBackendType
 from nncf.torch.quantization.reference import ReferenceQuantize
 from nncf.torch.quantization.reference import ReferenceQuantizedFunctions
+from nncf.torch.quantization.triton import QuantizedFunctionsCUDA
 from tests.torch.helpers import PTTensorListComparator
 from tests.torch.helpers import get_grads
 

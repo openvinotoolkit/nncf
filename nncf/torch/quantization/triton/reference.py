@@ -302,8 +302,3 @@ def backward(
         )
 
     return grad_input, grad_low, grad_range
-
-
-class TritonQuantizedFunctions:
-    Quantize_forward = forward
-    Quantize_backward = backward
