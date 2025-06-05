@@ -478,6 +478,19 @@ def evaluate_after_training(
     - NLS heuristic evaluations (median, most-frequent, min-loss) if enabled and in training mode
     - Custom rank config evaluation in eval-only mode
     - OpenVINO export and evaluation
+
+    :param model: The model to be evaluated.
+    :param args: Command-line arguments containing all run configurations.
+    :param torch_dtype: PyTorch model data type (e.g., torch.bfloat16).
+    :param ckpt_file: Path to the checkpoint file for loading model weights.
+    :param ov_dir: Directory to save the exported OpenVINO model.
+    :param layer_id_vs_lora_quantizers_map: Mapping from layer IDs to LoRA quantizers (required if NLS is enabled).
+    :param do_train: Whether this is post-training evaluation (True) or eval-only mode (False).
+    :param disable_nls: Whether to disable NLS (True for LoRA, False to enable NLS).
+    :param activation_counter: (Optional) Counter for rank activation of each layer (required for NLS during training).
+    :param loss_recorder: (Optional) Dictionary recording loss for each rank config (required for NLS during training).
+    :param overall_result: (Optional) Dictionary to store all evaluation results.
+    :return: Tuple of (overall_result, ov_result), the overall evaluation results and OpenVINO model evaluation results.
     """
     if overall_result is None:
         overall_result = {}
