@@ -29,7 +29,6 @@ from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
-from whowhatbench import Evaluator
 
 import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
@@ -46,6 +45,9 @@ from tests.post_training.pipelines.fx_modelling import convert_and_export_with_c
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
+
+# from whowhatbench import Evaluator
+Evaluator = None
 
 
 @dataclass
