@@ -4,5 +4,5 @@ openvino==2025.1
 pycocotools==2.0.7
 torch==2.7.1
 torchmetrics==1.0.1
-torchvision==0.22.0
+torchvision==0.22.1
 numpy<2
