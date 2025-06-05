@@ -18,6 +18,7 @@ from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
 from onnxruntime import InferenceSession
+from packaging import version
 
 from nncf import CompressWeightsMode
 from nncf.onnx.graph.onnx_helper import get_edge_shape
@@ -269,7 +270,7 @@ def test_compression_with_inference(mode):
 
 def test_matmulnbits():
     rtol = 1e-5
-    if onnxruntime.__version__ < "1.21.1":
+    if version.parse(onnxruntime.__version__) < version.parse("1.21.1"):
         rtol = 1e-3
 
     np.random.seed(42)
