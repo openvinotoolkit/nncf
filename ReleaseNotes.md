@@ -20,7 +20,14 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of MiniCPM-o 2.6 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-omnimodal-chatbot/minicpm-o-omnimodal-chatbot.ipynb)
+  - [Post-Training Optimization of Qwen2.5-Omni Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2.5-omni-chatbot/qwen2.5-omni-chatbot.ipynb)
+  - [Post-Training Optimization of InternVideo2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/intern-video2-classiciation/intern-video2-classification.ipynb)
+  - [Post-Training Optimization of OpenVoice2 and MeloTTS Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/openvoice2-and-melotts/openvoice2-and-melotts.ipynb)
+  - [Post-Training Optimization of Flex.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flex.2-image-generation/flex.2-image-generation.ipynb)
+  - [Post-Training Optimization of Wan2.1 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.1-text-to-video/wan2.1-text-to-video.ipynb)
+  - [Post-Training Optimization of Phi-4-mini Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/phi4-agent/phi4_agent.py)
+  - [Post-Training Optimization of Torch.FX Stable Diffusion v3 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-v3-torch-fx/stable-diffusion-v3-torch-fx.ipynb)
 - Known issues:
   - ...
 
