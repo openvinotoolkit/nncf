@@ -13,13 +13,18 @@ from typing import Callable
 
 import torch
 
-from nncf.torch.quantization.triton.reference import backward
-from nncf.torch.quantization.triton.reference import forward
 from nncf.torch.utils import CudaNotAvailableStub
 
 
 class TritonFunctionsWrapper:
     def __init__(self):
+        """
+        Wrapper that handles Triton kernel imports since it would trigger compilation.
+        To prevent issues with non-CUDA environment.
+        """
+        from nncf.torch.quantization.triton.reference import backward
+        from nncf.torch.quantization.triton.reference import forward
+
         self.Quantize_forward = forward
         self.Quantize_backward = backward
 
