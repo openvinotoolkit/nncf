@@ -10,6 +10,7 @@
 # limitations under the License.
 from abc import abstractmethod
 from collections import Counter
+from collections import defaultdict
 from copy import deepcopy
 
 import pytest
@@ -361,6 +362,7 @@ class TemplateTestPTQParams:
 
         algo._quantization_target_points_to_qconfig = q_tp_vs_qcf
         algo._unified_scale_groups = [unified_scales_group]
+        algo._extra_params = defaultdict(lambda: defaultdict(lambda: None))
 
         mock_transformer = mocker.MagicMock()
         mocker.patch(
@@ -407,9 +409,9 @@ class TemplateTestPTQParams:
 
         dummy_tp = {target_point: QuantizerConfig()}
         if mode == "target_point":
-            dummy_tps = (dummy_tp, {})
+            dummy_tps = (dummy_tp, {}, defaultdict(lambda: None))
         else:
-            dummy_tps = ({}, ((target_point,),))
+            dummy_tps = ({}, ((target_point,),), defaultdict(lambda: None))
         stat_points.add_statistic_point(
             StatisticPoint(target_point, DummyMinMaxTensorCollector(None, None), algo._algorithm_key)
         )

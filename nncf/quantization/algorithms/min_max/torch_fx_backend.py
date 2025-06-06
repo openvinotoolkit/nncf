@@ -200,15 +200,13 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         eps = 1e-16
         if dtype is None:
             if quantizer_config.mode != QuantizationScheme.SYMMETRIC:
-                msg = (
-                    "Wrong usage of dtype parameter: it should be specified for the QuantizationScheme.ASYMMETRIC mode"
+                dtype = IntDtype.UINT8
+            else:
+                dtype = (
+                    IntDtype.INT8
+                    if quantizer_config.signedness_to_force or torch.any(parameters.input_low.data < 0.0)
+                    else IntDtype.UINT8
                 )
-                raise nncf.InternalError(msg)
-            dtype = (
-                IntDtype.INT8
-                if quantizer_config.signedness_to_force or torch.any(parameters.input_low.data < 0.0)
-                else IntDtype.UINT8
-            )
 
         if per_channel:
             observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
@@ -237,6 +235,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         scale, zero_point = get_scale_zp_from_input_low_input_high(
             level_low, level_high, parameters.input_low.data, parameters.input_high.data
         )
+
+        scale = scale.view(-1)
+        zero_point = zero_point.view(-1)
+
         fakequantizer = FakeQuantize(
             observer=observer,
             quant_max=level_high,

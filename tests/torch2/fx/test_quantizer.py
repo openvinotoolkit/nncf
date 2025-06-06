@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import os
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
@@ -32,8 +34,11 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x
 
 import nncf
 from nncf.common.graph import NNCFGraph
+from nncf.common.utils.os import safe_open
+from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
@@ -59,8 +64,12 @@ def torchvision_model_case(model_id: str, input_shape: tuple[int,]):
     return ModelCase(partial(model, weights=None), model_id, input_shape)
 
 
-def get_dot_filename(model_name):
+def get_dot_filename(model_name: str) -> str:
     return model_name + ".dot"
+
+
+def get_ref_q_dq_refs_filename(model_name: str) -> str:
+    return model_name + "_ref_q_dq_dtype.json"
 
 
 def get_x86_quantizer(*args, **kwarsg) -> X86InductorQuantizer:
@@ -157,17 +166,18 @@ def test_quantized_model(
 
     # Uncomment to visualize torch fx graph
     # from tests.torch2.fx.helpers import visualize_fx_model
-    # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
+    # visualize_fx_model(quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     path_to_dot = FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_dot_filename(model_case.model_id)
-    nncf_graph = _normalize_nncf_graph(nncf_graph)
+    nncf_graph = _normalize_nncf_graph(nncf_graph, quantized_model.graph)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     # Uncomment to visualize reference graphs
     # from torch.ao.quantization.quantize_pt2e import convert_pt2e
     # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+    # from tests.torch2.fx.helpers import visualize_fx_model
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)
     # ao_quantized_model = convert_pt2e(prepared_model)
@@ -175,8 +185,27 @@ def test_quantized_model(
     # ao_nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
     # ao_nncf_graph.visualize_graph(f"ao_{quantizer.__class__.__name__}_{get_dot_filename(model_case.model_id)}")
 
+    # Check q dq intermediate dtypes are correct
+    q_dq_types = {}
+    for edge in nncf_graph.get_all_edges():
+        if edge.to_node.node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
+            q_dq_types[edge.to_node.node_name] = edge.dtype.value
 
-def _normalize_nncf_graph(nncf_graph: NNCFGraph):
+    path_to_refs_q_dq_dtypes = (
+        FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_ref_q_dq_refs_filename(model_case.model_id)
+    )
+    if os.getenv("NNCF_TEST_REGEN_JSON") is not None:
+        with safe_open(path_to_refs_q_dq_dtypes, "w") as file:
+            json.dump(q_dq_types, file, indent=4)
+
+    with safe_open(path_to_refs_q_dq_dtypes, "r") as file:
+        ref_q_dq_types = json.load(file)
+    assert len(ref_q_dq_types) == len(q_dq_types)
+    for node_name, ref_dtype in ref_q_dq_types.items():
+        assert q_dq_types[node_name] == ref_dtype
+
+
+def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
     """
     Normalizes the given NNCFGraph by renaming quantize/dequantize nodes to ensure consistent naming across runs.
     XNNPACKQuantizer and X86InductorQuantizer quantizers insert quantize and dequantize nodes
@@ -187,6 +216,8 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph):
     :return: The normalized version of the given NNCFGraph.
     """
     idx = 0
+    dtypes_map = {}
+
     q_dq_types = ["quantize_per_tensor", "dequantize_per_tensor", "quantize_per_channel", "dequantize_per_channel"]
     norm_nncf_graph = NNCFGraph()
     node_names_map = {}
@@ -197,6 +228,9 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph):
             node_names_map[node.node_name] = new_node_name
             attrs[node.NODE_NAME_ATTR] = new_node_name
             idx += 1
+            if node.node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
+                source_node = get_graph_node_by_name(fx_graph, node.node_name)
+                dtypes_map[new_node_name] = IntDtype.INT8 if source_node.args[-1] == torch.int8 else IntDtype.UINT8
         norm_nncf_graph.add_nncf_node(
             node_name=attrs[node.NODE_NAME_ATTR],
             node_type=attrs[node.NODE_TYPE_ATTR],
@@ -208,13 +242,14 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph):
         from_node_name = node_names_map.get(edge.from_node.node_name, edge.from_node.node_name)
         to_node_name = node_names_map.get(edge.to_node.node_name, edge.to_node.node_name)
         from_node, to_node = [norm_nncf_graph.get_node_by_name(name) for name in (from_node_name, to_node_name)]
+        dtype = dtypes_map.get(to_node.node_name, edge.dtype)
         norm_nncf_graph.add_edge_between_nncf_nodes(
             from_node.node_id,
             to_node.node_id,
             tensor_shape=edge.tensor_shape,
             input_port_id=edge.input_port_id,
             output_port_id=edge.output_port_id,
-            dtype=edge.dtype,
+            dtype=dtype,
             parallel_input_port_ids=edge.parallel_input_port_ids,
         )
     return norm_nncf_graph
