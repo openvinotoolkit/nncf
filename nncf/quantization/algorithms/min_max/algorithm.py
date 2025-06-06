@@ -718,7 +718,7 @@ class MinMaxQuantization(Algorithm):
 
     def _add_weight_quantization_target_point(
         self, quantization_point: SingleConfigQuantizationPoint, nncf_graph: NNCFGraph
-    ) -> TargetPoint:
+    ) -> list[TargetPoint]:
         """
         Adds weight quantization target point to the set of existing points.
 
@@ -728,7 +728,7 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_points = self._get_weight_quantization_target_points(quantization_point, nncf_graph)
         for weight_quantization_target_point in weight_quantization_target_points:
             self._quantization_target_points_to_qconfig[weight_quantization_target_point] = quantization_point.qconfig
-        return weight_quantization_target_point
+        return weight_quantization_target_points
 
     def _add_activation_quantization_target_point(
         self, quantization_point: SingleConfigQuantizationPoint, nncf_graph: NNCFGraph
@@ -854,17 +854,19 @@ class MinMaxQuantization(Algorithm):
         if isinstance(quantizer_setup, ExtendedQuantizerSetup):
             extra_params = quantizer_setup.get_extra_params()
         else:
-            extra_params = collections.defaultdict(lambda: collections.defaultdict(None))
+            extra_params = collections.defaultdict(lambda: collections.defaultdict(lambda: None))
 
         for id_, quantization_point in quantization_points:
             if quantization_point.is_weight_quantization_point():
-                tp = self._add_weight_quantization_target_point(quantization_point, nncf_graph)
+                tps = self._add_weight_quantization_target_point(quantization_point, nncf_graph)
             elif quantization_point.is_activation_quantization_point():
                 tp = self._add_activation_quantization_target_point(quantization_point, nncf_graph)
+                tps = [tp]
             else:
                 msg = "Incorrect quantization point"
                 raise nncf.InternalError(msg)
-            self._extra_params[tp] = extra_params[id_]
+            for tp in tps:
+                self._extra_params[tp] = extra_params[id_]
 
         return self._quantization_target_points_to_qconfig, self._unified_scale_groups, self._extra_params
 

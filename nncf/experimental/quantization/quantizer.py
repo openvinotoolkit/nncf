@@ -23,6 +23,10 @@ TModel = TypeVar("TModel")
 
 
 class IntDtype(Enum):
+    """
+    Enum of possible integer types.
+    """
+
     INT8 = "INT8"
     UINT8 = "UINT8"
 
@@ -112,7 +116,7 @@ class Quantizer(ABC):
         """
 
     @abstractmethod
-    def get_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> ExtendedFXQuantizerSetup:
+    def get_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Builds SingleConfigQuantizerSetup for the given model.
 

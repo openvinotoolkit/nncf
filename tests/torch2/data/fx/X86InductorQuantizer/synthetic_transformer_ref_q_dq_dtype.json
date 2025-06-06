@@ -1,0 +1,6 @@
+{
+    "dequantize_per_tensor_1": "UINT8",
+    "dequantize_per_channel_2": "INT8",
+    "dequantize_per_tensor_4": "UINT8",
+    "dequantize_per_channel_5": "INT8"
+}
