@@ -1,10 +1,12 @@
 # Quantization-aware NLS Tuning for improving accuracy on downstream Tasks
 
-This example demonstrates how to improve accuracy of Large Language Models (LLMs) with 4bit weights by
-quantization-aware-training with **Neural Low-Rank Adapter Search (NLS)** on downstream tasks.
+This example demonstrates how to improve accuracy of Large Language Models (LLMs) with 4-bit weights by
+quantization-aware training with **Neural Low-Rank Adapter Search (NLS)** on downstream tasks.
+It uses **absorbable LoRA adapters** and the **`FQ_LORA_NLS`** compression format.
+For detailed information about the methodology and format, please refer to this [page](../../../../docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md).
 
 <p align="center">
-  <img src="/examples/llm_compression/torch/qat_with_nls_downstream/pics/lora_vs_nls.png" alt="LoRA vs NLS" width="400"/>
+  <img src="/examples/llm_compression/torch/downstream_qat_with_nls/pics/lora_vs_nls.png" alt="LoRA vs NLS" width="400"/>
 </p>
 
 [main.py](main.py) supports fine-tuning and evaluating a language model with quantization-aware training and **Neural Low-Rank Adapter Search (NLS)** proposed by [Shears](https://arxiv.org/abs/2404.10934) and [SQFT](https://arxiv.org/abs/2410.03750) on various downstream tasks. For example, to run the script for the task [openbookqa](https://huggingface.co/datasets/allenai/openbookqa), you can use the following command:

@@ -31,6 +31,7 @@ from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import UnifiedScalesModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import get_torch_model_info
@@ -215,3 +216,21 @@ def test_fq_precision_orig_fp32model(const_dtype, input_dtype, inplace_statistic
             fq_input_node = inp_node.get_source_output().get_node()
             if fq_input_node.get_type_name() == "Constant":
                 assert op.get_element_type() == input_dtype
+
+
+@pytest.mark.parametrize(
+    "mode, num_quantizers, quantizer_name",
+    (
+        (QuantizationMode.FP8_E4M3, 7, "FakeConvert"),  # 3 for weights + 1 activation + 3 for SDPA
+        (QuantizationMode.FP8_E5M2, 7, "FakeConvert"),  # 3 for weights + 1 activation + 3 for SDPA
+        (None, 6, "FakeQuantize"),  # 3 for weights + 1 activation + 2 for SDPA
+    ),
+)
+@pytest.mark.parametrize("model_creator_func", [ScaledDotProductAttentionModel])
+def test_sdpa_layer(mode, num_quantizers, quantizer_name, model_creator_func):
+    model = model_creator_func(with_weights=True)
+    quantized_model = quantize_model(model.ov_model, {"mode": mode})
+
+    stat_nodes = get_fq_nodes_stats_algo(quantized_model)
+
+    assert len(stat_nodes) == num_quantizers, f"Expected {num_quantizers} {quantizer_name}, but got {len(stat_nodes)}"

@@ -168,6 +168,14 @@ def llm_compression() -> dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def llm_compression_onnx() -> dict[str, float]:
+    from examples.llm_compression.onnx.tiny_llama.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
 def llm_tune_params() -> dict[str, float]:
     from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
 
@@ -198,8 +206,8 @@ def codebook_llm_compression() -> list[str]:
     return codebook_llm_compression_main()
 
 
-def llm_compression_qat_with_lora() -> float:
-    from examples.llm_compression.torch.qat_with_lora.main import main as qat_with_lora_main
+def llm_compression_distillation_qat_with_lora() -> float:
+    from examples.llm_compression.torch.distillation_qat_with_lora.main import main as distillation_qat_with_lora_main
 
     set_torch_cuda_seed()
 
@@ -216,13 +224,13 @@ def llm_compression_qat_with_lora() -> float:
         "--limit=0.2",
     ]
 
-    perplexity_diff_torch, best_ov_perplexity = qat_with_lora_main(args)
+    perplexity_diff_torch, best_ov_perplexity = distillation_qat_with_lora_main(args)
 
     return {"perplexity_diff_torch": perplexity_diff_torch, "best_ov_perplexity": best_ov_perplexity}
 
 
 def llm_compression_qat_with_nls() -> float:
-    from examples.llm_compression.torch.qat_with_nls_downstream.main import main as qat_with_nls_main
+    from examples.llm_compression.torch.downstream_qat_with_nls.main import main as qat_with_nls_main
 
     set_torch_cuda_seed()
 
