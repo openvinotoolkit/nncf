@@ -67,11 +67,11 @@ def default_codebook_example(model_id, output_dir):
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
-    model = OVModelForCausalLM.from_pretrained(
-        output_dir, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "64", "INFERENCE_PRECISION_HINT": "f32"}
-    )
+    model = OVModelForCausalLM.from_pretrained(output_dir, ov_config={"INFERENCE_PRECISION_HINT": "f32"})
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
+
+    return list(answers_by_questions.values())
 
 
 def custom_codebook_example(model_id, output_dir):
@@ -102,19 +102,20 @@ def custom_codebook_example(model_id, output_dir):
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
-    model = OVModelForCausalLM.from_pretrained(
-        output_dir, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "64", "INFERENCE_PRECISION_HINT": "f32"}
-    )
+    model = OVModelForCausalLM.from_pretrained(output_dir, ov_config={"INFERENCE_PRECISION_HINT": "f32"})
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
+
+    return list(answers_by_questions.values())
 
 
 def main():
     model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
     output_dir = "smollm2_360m_compressed_codebook"
 
-    default_codebook_example(model_id, output_dir)
-    custom_codebook_example(model_id, output_dir + "_custom")
+    res = default_codebook_example(model_id, output_dir)
+    res += custom_codebook_example(model_id, output_dir + "_custom")
+    return res
 
 
 if __name__ == "__main__":

@@ -1121,7 +1121,7 @@ def test_codebook_weighs_range(data):
     codebook = data
     max_diff = 0.1
     w = Tensor(data + (np.random.rand(*data.shape) - 0.5) * max_diff)
-    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, user_data=data)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=data)
     _, scale, indexes = do_float_quantization(w, config, -1)
     uncompressed_data = codebook[indexes.data] * scale.data
 

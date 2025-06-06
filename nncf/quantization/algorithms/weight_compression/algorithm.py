@@ -440,7 +440,7 @@ class WeightCompression(Algorithm):
         return WeightCompressionConfig(
             mode=self._mode,
             group_size=self._group_size,
-            user_data=CB4_QUANTILES
+            codebook_values=CB4_QUANTILES
             if self._mode == CompressWeightsMode.CB4_F8E4M3
             else self._advanced_parameters.codebook_params.codebook,
         )

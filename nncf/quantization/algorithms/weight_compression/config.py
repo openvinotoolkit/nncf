@@ -32,7 +32,7 @@ class WeightCompressionConfig:
 
     mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
     group_size: Optional[int] = -1
-    user_data: Optional[Any] = None
+    codebook_values: Optional[Any] = None
 
     @property
     def num_bits(self):

@@ -192,6 +192,12 @@ def fp8_llm_quantization() -> dict[str, float]:
     return {"answers": list(result.values())}
 
 
+def codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_codebook.main import main as codebook_llm_compression_main
+
+    return codebook_llm_compression_main()
+
+
 def llm_compression_qat_with_lora() -> float:
     from examples.llm_compression.torch.qat_with_lora.main import main as qat_with_lora_main
 
