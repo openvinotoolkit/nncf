@@ -1,0 +1,8 @@
+{
+    "dequantize_per_tensor_1": "INT8",
+    "dequantize_per_tensor_2": "INT8",
+    "dequantize_per_tensor_4": "INT8",
+    "dequantize_per_tensor_6": "INT8",
+    "dequantize_per_tensor_7": "INT8",
+    "dequantize_per_tensor_9": "INT8"
+}

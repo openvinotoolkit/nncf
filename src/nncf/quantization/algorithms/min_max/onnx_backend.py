@@ -158,7 +158,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> list[ONNXQuantizerInsertionCommand]:
         return [
             ONNXMinMaxAlgoBackend.create_quantizer_insertion_command(
-                nncf_graph, target_point, quantizer_config, parameters
+                nncf_graph, target_point, quantizer_config, parameters, extra_params
             )
             for target_point in target_points
         ]

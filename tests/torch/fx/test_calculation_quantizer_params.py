@@ -16,7 +16,6 @@ import numpy as np
 import pytest
 import torch
 
-import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -24,7 +23,6 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
-from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import Tensor
 
@@ -68,6 +66,13 @@ SYM_CASES = (
         narrow_range=True,
         quant_group=QuantizerGroup.WEIGHTS,
         ref_scale=torch.tensor([0.003937008, 0.0031496063, 0.0023622047]),
+    ),
+    CaseQuantParams(
+        stat=MinMaxTensorStatistic(Tensor(torch.tensor([-0.5])), Tensor(torch.tensor([0.5]))),
+        per_channel=True,
+        narrow_range=True,
+        quant_group=QuantizerGroup.WEIGHTS,
+        ref_scale=torch.tensor([0.003937008]),
     ),
 )
 
@@ -278,6 +283,17 @@ SYM_CASES_SIGNEDNESS_TO_FORSE = (
         True,
         True,
     ),
+    (
+        CaseQuantParams(
+            stat=MinMaxTensorStatistic(Tensor(torch.tensor([-0.5])), Tensor(torch.tensor([0.5]))),
+            per_channel=True,
+            narrow_range=True,
+            quant_group=QuantizerGroup.ACTIVATIONS,
+            ref_scale=torch.tensor([0.00393701]),
+        ),
+        True,
+        True,
+    ),
 )
 
 
@@ -305,25 +321,6 @@ def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool
     assert np.allclose(scale, case_to_test.ref_scale)
 
     _check_q_min_q_max(quantizer, signed, narrow_range)
-
-
-def test_quantizer_params_asym_nr():
-    qconfig = QuantizerConfig(
-        num_bits=8,
-        mode=QuantizationMode.ASYMMETRIC,
-        per_channel=True,
-        narrow_range=False,
-        signedness_to_force=None,
-    )
-    fq_params = FakeQuantizeParameters(
-        Tensor(torch.tensor(-0.49920455, dtype=torch.float32)),
-        Tensor(torch.tensor(0.49530452, dtype=torch.float32)),
-        Tensor(torch.tensor(-0.49920455, dtype=torch.float32)),
-        Tensor(torch.tensor(0.49530452, dtype=torch.float32)),
-        256,
-    )
-    with pytest.raises(nncf.InternalError):
-        FXMinMaxAlgoBackend._create_quantizer(qconfig, (1,), fq_params, TargetType.PRE_LAYER_OPERATION, dtype=None)
 
 
 ASYM_CASES = (
@@ -366,6 +363,16 @@ ASYM_CASES = (
             ref_scale=torch.tensor([0.00395251, 0.0023622, 0.0011811]),
         ),
         [0, -42, -127],
+    ),
+    (
+        CaseQuantParams(
+            stat=MinMaxTensorStatistic(Tensor(torch.tensor([-0.5])), Tensor(torch.tensor([0.5]))),
+            per_channel=True,
+            quant_group=QuantizerGroup.WEIGHTS,
+            narrow_range=True,
+            ref_scale=torch.tensor([0.00395251]),
+        ),
+        [0],
     ),
 )
 

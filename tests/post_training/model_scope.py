@@ -90,9 +90,8 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
         },
-        "backends": [
-            BackendType.FX_TORCH,
-            BackendType.CUDA_FX_TORCH,
+        "backends": FX_BACKENDS
+        + [
             BackendType.TORCH,
             BackendType.CUDA_TORCH,
             BackendType.OV,
