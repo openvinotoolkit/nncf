@@ -883,15 +883,7 @@ class WeightCompression(Algorithm):
 
         # Filter all_weight_params and nodes_to_compress by excluding nodes
         # that should remain in their original floating-point precision
-        nodes_names_to_exclude = {
-            w_params.node_with_weight.node_name for w_params in all_weight_params if w_params.compression_config is None
-        }
-        all_weight_params = list(
-            filter(
-                lambda w_params: w_params.node_with_weight.node_name not in nodes_names_to_exclude,
-                all_weight_params,
-            )
-        )
+        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
 
         if self._awq:
             self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)

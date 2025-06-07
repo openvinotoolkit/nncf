@@ -22,11 +22,13 @@ import nncf.tensor.functions as fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf import nncf_logger
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
 from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -66,6 +68,39 @@ class SpyAWQ(AWQ):
         spy_instance = self
 
 
+class SpyWeightCompressionStatisticsContext:
+    def __init__(self, mocker):
+        self.mocker = mocker
+        self.unique_tensor_collectors = set()
+        self.statistic_point_spy = None
+
+    def __enter__(self):
+        original_method = StatisticPointsContainer.get_algo_statistics_for_node
+
+        def side_effect(*args, **kwargs):
+            results = []
+            for tc in original_method(*args, **kwargs):
+                results.append(tc)
+                self.unique_tensor_collectors.add(tc)
+            return results
+
+        self.mocker.patch.object(
+            StatisticPointsContainer, "get_algo_statistics_for_node", autospec=True, side_effect=side_effect
+        )
+        self.statistic_point_spy = self.mocker.spy(WeightCompression, "get_statistic_points")
+        return self
+
+    def __exit__(self, *args):
+        statistic_points = self.statistic_point_spy.spy_return
+        number_tensor_collectors = 0
+        for node_statistics_points in statistic_points.values():
+            for _statistics_point in node_statistics_points:
+                tensor_collectors = _statistics_point.algorithm_to_tensor_collectors.values()
+                number_tensor_collectors += len(tensor_collectors)
+
+        assert len(self.unique_tensor_collectors) == number_tensor_collectors
+
+
 class TemplateWeightCompression(ABC):
     # Test Mixed Precision
 
@@ -99,15 +134,16 @@ class TemplateWeightCompression(ABC):
         scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
         act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
 
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=0.5,
-            group_size=1,
-            dataset=dataset,
-            sensitivity_metric=mode,
-            all_layers=True,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=0.5,
+                group_size=1,
+                dataset=dataset,
+                sensitivity_metric=mode,
+                all_layers=True,
+            )
         scores = scores_spy.spy_return
         act_scores = act_scores_spy.spy_return
         assert math.isclose(scores[0], ref_score, rel_tol=1e-05, abs_tol=1e-08)
@@ -160,7 +196,7 @@ class TemplateWeightCompression(ABC):
             (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
         ),
     )
-    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids):
+    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, mocker):
         model = self.get_sequential_matmul_model()
         first = self.to_tensor(np.ones([1, 4, 4], dtype=np.float32))
         second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(1, 4, 4)
@@ -202,15 +238,16 @@ class TemplateWeightCompression(ABC):
         input = self.to_tensor(input)
         dataset = Dataset([input])
 
-        _ = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=1.0,
-            group_size=8,
-            scale_estimation=True,
-            all_layers=True,
-            dataset=dataset,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=8,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
         reference = self.get_scale_estimation_ref()
         assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
 
@@ -222,7 +259,7 @@ class TemplateWeightCompression(ABC):
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
-    def test_scale_estimation_outlier_channel_has_lowest_error(self):
+    def test_scale_estimation_outlier_channel_has_lowest_error(self, mocker):
         """Checks that outlier channel has a lowest error after quantization."""
         OUTLIER_CHANNEL = 4
         model = self.get_model_for_test_scale_estimation()
@@ -234,15 +271,16 @@ class TemplateWeightCompression(ABC):
         input = self.to_tensor(input)
         dataset = Dataset([input])
 
-        compressed_model = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=1.0,
-            group_size=-1,
-            scale_estimation=True,
-            all_layers=True,
-            dataset=dataset,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            compressed_model = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=-1,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
 
         decompressed_weight_before_se = integer_quantize_dequantize_weight(
             original_weight, config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1), reduction_axes=1
@@ -269,13 +307,14 @@ class TemplateWeightCompression(ABC):
         return None
 
     @pytest.mark.parametrize("with_multiply", (True, False))
-    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply):
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply, mocker):
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
         model = self.get_awq_act_model(with_multiply, n_layers)
 
         dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))])
-        model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+        with SpyWeightCompressionStatisticsContext(mocker):
+            model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
         awq_num = self.get_num_multiply_from_awq(model)
         assert awq_num == n_awq_target
@@ -305,22 +344,23 @@ class TemplateWeightCompression(ABC):
     def get_ignored_scope_name() -> str:
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
-    def test_awq_with_ignored_scope(self):
+    def test_awq_with_ignored_scope(self, mocker):
         model = self.get_awq_model()
         sz = 8
         n_samples = 10
 
         dataset = Dataset([self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)])
 
-        compressed_model = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=-1,
-            dataset=dataset,
-            awq=True,
-            ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            compressed_model = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                dataset=dataset,
+                awq=True,
+                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
+            )
 
         int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
@@ -349,7 +389,7 @@ class TemplateWeightCompression(ABC):
     def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    def test_awq_scale_reference(self, monkeypatch):
+    def test_awq_scale_reference(self, monkeypatch, mocker):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
         model = self.get_awq_model()
 
@@ -357,14 +397,15 @@ class TemplateWeightCompression(ABC):
         input = self.to_tensor(input)
         dataset = Dataset([input])
 
-        _ = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=-1,
-            dataset=dataset,
-            awq=True,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                dataset=dataset,
+                awq=True,
+            )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
             assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
