@@ -206,7 +206,7 @@ def _validate_input_dtypes(
     input_zero_point_dtype: Optional[TensorDataType] = None,
 ):
     """
-    Validates the input data types of qunatization model.
+    Validates the input data types for the quantization model.
 
     Ensures that the weight data type is one of the supported floating-point types
     (float32, float16, bfloat16, f8e4m3, f8e5m2), and that the scale and zero point
