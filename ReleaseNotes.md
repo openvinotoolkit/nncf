@@ -13,6 +13,8 @@ Post-training Quantization:
   - (ONNX) Added support for data-free weight compression using INT4 (INT8) in the ONNX backend.
   - (ONNX) Added the `BackendParameters.EXTERNAL_DATA_DIR` parameter for the ONNX backend. This parameter specifies the absolute path to the directory where the model’s external data files are stored. All external data files must be located in the same directory. It should be used when the model is loaded without external data using `onnx.load("model.onnx", load_external_data=False)`, and the external data files are not in the current working directory of the process. This parameter can be omitted if the external data files are located in the current working directory of the process.
   - (TorchFX, Experimental) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce accuracy loss.
+  - (OpenVINO, PyTorch) Added data-free AWQ based on the per-column magnitudes of the weights.
+  - (OpenVINO) Added support for quantizing of the V/V_proj input for ScaledDotProductAttention for FP8.
 - Fixes:
   - Fixed BiasCorrection failures with models without a batch dimention.
 - Improvements:
