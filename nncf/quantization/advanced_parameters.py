@@ -395,6 +395,8 @@ class AdvancedCompressionParameters:
     :type lora_adapter_rank: int
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
+    :param codebook_params: Advanced parameters for codebook compression.
+    :type codebook_params: AdvancedCodebookParameters
     """
 
     statistics_path: Optional[str] = None
