@@ -403,24 +403,11 @@ class LMWeightCompression(BaseTestPipeline):
                 tokenizer=self.preprocessor, gt_data=gt_data_path, test_data=str(gt_data_path), metrics=("similarity",)
             )
 
-        compressed_model_hf = self.model_hf
-        if (
-            self.backend != BackendType.FP32
-            and self.backend != BackendType.FX_TORCH
-            and self.backend != BackendType.ONNX
-        ):
-            compressed_model_hf = OVModelForCausalLM.from_pretrained(
-                self.output_model_dir,
-                trust_remote_code=True,
-                load_in_8bit=False,
-                compile=False,
-                stateful=is_stateful,
-                ov_config={"KV_CACHE_PRECISION": "f16"},
-            )
-        if self.backend == BackendType.FX_TORCH:
-            compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config)
-
-        if self.backend == BackendType.ONNX:
+        if self.backend == BackendType.FP32:
+            compressed_model_hf = self.model_hf
+        elif self.backend == BackendType.FX_TORCH:
+            compressed_model_hf = FXAutoModelForCausalLM(self.model, self.model_config, self.gen_config)
+        elif self.backend == BackendType.ONNX:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir,
                 trust_remote_code=True,
@@ -430,6 +417,15 @@ class LMWeightCompression(BaseTestPipeline):
                 ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
                 export=False,
                 from_onnx=True,
+            )
+        else:
+            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+                self.output_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
 
         print("Evaluation of the target model")
