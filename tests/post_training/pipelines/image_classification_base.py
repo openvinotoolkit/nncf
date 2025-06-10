@@ -135,7 +135,7 @@ class ImageClassificationBase(PTQTestPipeline):
             subset_size = self.compression_params.get("subset_size", 300)
             for data in islice(self.calibration_dataset.get_inference_data(), subset_size):
                 prepared_model(data)
-            self.compressed_model = convert_pt2e(prepared_model)
+            self.compressed_model = convert_pt2e(prepared_model, fold_quantize=False)
 
     def _compress_nncf_pt2e(self, quantizer):
         pt2e_kwargs = {}
