@@ -33,18 +33,13 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         self.model = torch.compile(model, backend="openvino", options={"aot_autograd": True})
         self.generation_config = generation_config
         self.main_input_name = "input_ids"
-        self._device = device.upper()
-
-    @property
-    def device(self) -> torch.device:
-        return torch.device(self._device)
+        self.device = torch.device(device)
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
         cache_position = kwargs["cache_position"]
         past_len = cache_position[0]
         if past_len < input_ids.shape[1]:
             input_ids = input_ids[:, past_len:]
-
         return {"input_ids": input_ids, "cache_position": cache_position}
 
     def forward(
