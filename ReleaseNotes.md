@@ -52,10 +52,12 @@ Compression-aware training:
   - ...
 
 Deprecations/Removals:
+
 - ...
 
 Requirements:
-  - (ONNX) Upgraded ONNX Runtime to version 1.21.1.
+
+- (ONNX) Upgraded ONNX Runtime to version 1.21.1.
 
 ## New in Release 2.16.0
 
