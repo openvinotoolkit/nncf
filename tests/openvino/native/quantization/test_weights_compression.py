@@ -36,11 +36,11 @@ from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
-from nncf.quantization.advanced_parameters import AdvancedCodebookParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
+from nncf.quantization.advanced_parameters import CodebookParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -1076,7 +1076,7 @@ def test_codebook(codebook, dst_type, n_layers, group_size):
         group_size=group_size,
         all_layers=True,
         advanced_parameters=AdvancedCompressionParameters(
-            codebook_params=AdvancedCodebookParameters(codebook=codebook, dst_type=dst_type)
+            codebook_params=CodebookParameters(codebook=codebook, dst_type=dst_type)
         ),
     )
     names_codebook = [

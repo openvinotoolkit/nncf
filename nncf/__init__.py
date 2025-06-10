@@ -52,13 +52,13 @@ from nncf.quantization.advanced_parameters import (
 )
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters as AdvancedBiasCorrectionParameters
-from nncf.quantization.advanced_parameters import AdvancedCodebookParameters as AdvancedCodebookParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as AdvancedGPTQParameters
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters as AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import CodebookParameters as CodebookParameters
 from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.scopes import Subgraph as Subgraph

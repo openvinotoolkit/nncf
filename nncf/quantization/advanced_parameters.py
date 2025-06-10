@@ -361,7 +361,7 @@ class AdvancedLoraCorrectionParameters:
 
 @api()
 @dataclass
-class AdvancedCodebookParameters:
+class CodebookParameters:
     """
     Contains advanced parameters for codebook compression algorithm.
 
@@ -395,8 +395,8 @@ class AdvancedCompressionParameters:
     :type lora_adapter_rank: int
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
-    :param codebook_params: Advanced parameters for codebook compression.
-    :type codebook_params: AdvancedCodebookParameters
+    :param codebook_params: Parameters for codebook compression.
+    :type codebook_params: CodebookParameters
     """
 
     statistics_path: Optional[str] = None
@@ -408,7 +408,7 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
     backend_params: dict[str, Any] = field(default_factory=dict)
-    codebook_params: AdvancedCodebookParameters = field(default_factory=AdvancedCodebookParameters)
+    codebook_params: CodebookParameters = field(default_factory=CodebookParameters)
 
 
 @api()

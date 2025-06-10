@@ -88,9 +88,7 @@ def custom_codebook_example(model_id, output_dir):
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
-    codebook_params = nncf.AdvancedCodebookParameters(
-        [-64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64], ov.Type.i8
-    )
+    codebook_params = nncf.CodebookParameters([-64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64], ov.Type.i8)
 
     model.model = nncf.compress_weights(
         model.model,

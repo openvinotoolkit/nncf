@@ -692,6 +692,7 @@ def create_ov_codebook_subgraph(
 ) -> op.Constant:
     """
     Create an OpenVINO subgraph with gather from the given codebook and indexes tensors.
+
     :param codebook: Codebook tensor.
     :param indexes: Indexes tensor.
     :param dtype: Data type of the indexes.
