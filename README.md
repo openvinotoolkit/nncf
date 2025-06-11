@@ -449,7 +449,19 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
+  
+- [Ultralytics](https://docs.ultralytics.com/integrations/openvino)
 
+  NNCF is integrated into the Intel OpenVINO export pipeline, enabling quantization for the exported models.
+
+- [ExecuTorch](https://github.com/pytorch/executorch/blob/main/examples/openvino/README.md)
+
+  NNCF is used as primary quantization framework for the [ExecuTorch OpenVINO integration](https://docs.pytorch.org/executorch/main/build-run-openvino.html).
+  
+- [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
+
+  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+  
 <a id="installation-guide"></a>
 
 ## Installation Guide
