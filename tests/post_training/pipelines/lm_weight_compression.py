@@ -423,7 +423,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
 
         print("Evaluation of the target model")
