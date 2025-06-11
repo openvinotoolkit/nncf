@@ -747,15 +747,22 @@ def fold_constant_except_qdq(model: torch.fx.GraphModule):
     constant_fold(model, constraint_fn=constraint_fn)
 
 
-def _duplicate_dq(gm: torch.fx.GraphModule, dq_node: torch.fx.Node, user: torch.fx.Node):
+def _duplicate_dq(gm: torch.fx.GraphModule, dq_node: torch.fx.Node, user: torch.fx.Node) -> None:
+    """
+    Duplicates the given dequantizer node so that the specified user node
+    has a unique instance of the dequantizer.
+
+    :param gm: torch.fx.GraphModule instance.
+    :param dq_node: The original dequantizer node to be duplicated.
+    :param user: The user node that requires a unique dequantizer node instance.
+    """
     with gm.graph.inserting_after(dq_node):
         new_node = gm.graph.node_copy(dq_node)
 
         def maybe_replace_node(n: torch.fx.Node) -> torch.fx.Node:
             if n == dq_node:
                 return new_node
-            else:
-                return n
+            return n
 
         new_args = map_arg(user.args, maybe_replace_node)
         new_kwargs = map_arg(user.kwargs, maybe_replace_node)
@@ -763,7 +770,13 @@ def _duplicate_dq(gm: torch.fx.GraphModule, dq_node: torch.fx.Node, user: torch.
         user.kwargs = new_kwargs
 
 
-def _is_sym_size_node(node: torch.fx.Node):
+def _is_sym_size_node(node: torch.fx.Node) -> bool:
+    """
+    Returns True if the given node is a sym size node instance, False otherwise.
+
+    :param node: The given torch.fx.Node.
+    :return: True if the given node is a sym size node instance, False otherwise.
+    """
     return (
         node.op == "call_function"
         and node.target == torch.ops.aten.sym_size.default
@@ -773,16 +786,22 @@ def _is_sym_size_node(node: torch.fx.Node):
     )
 
 
-def _filter_sym_size_users(node: torch.fx.Node) -> list[torch.fx.Node]:
-    node_users = list(filter((lambda x: (_is_sym_size_node(x) is False)), node.users))
-    return node_users
-
-
 class DuplicateDQPassNoAnnotations(PassBase):
+    """
+    Pass that duplicates Dequantizer (DQ) nodes so that each user node has a unique instance,
+    but only when the DQ node retrieves its parameters via a `getitem` operation with constants.
+    """
+
     def call(self, graph_module: torch.fx.GraphModule) -> PassResult:
+        """
+        Invokes the pass.
+
+        :param graph_module: The FX GraphModule to be transformed.
+        :return: PassResult containing the modified graph module and a success flag.
+        """
         for node in graph_module.graph.nodes:
             if node.op == "call_function" and node.target in DEQUANTIZE_NODE_TARGETS:
-                dq_users = _filter_sym_size_users(node)
+                dq_users = list(filter((lambda x: not _is_sym_size_node(x)), node.users))
                 if len(dq_users) <= 1:
                     continue
                 # Do not duplicate dq for dynamic quantization
