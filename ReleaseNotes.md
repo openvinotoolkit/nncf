@@ -46,9 +46,9 @@ Compression-aware training:
 - Features:
   - (PyTorch) For downstream tasks, we introduce Quantization-Aware Training (QAT) with absorbable elastic LoRA adapters and neural low-rank search (NLS). This novel weight compression method enhances the accuracy of Large Language Models (LLMs) with int4 weights on downstream tasks, achieving a reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA_NLS`. A sample QAT compression pipeline with preview support is available [here](examples/llm_compression/torch/downstream_qat_with_nls). Building on our previous work with absorbable LoRA adapters, this new pipeline is specifically designed for downstream tasks. In contrast, the pipeline from the previous release was tailored to enhance general accuracy through knowledge distillation using static rank settings. For a more comprehensive understanding of both approaches, please refer to ["Weight-Only Quantization Aware Training with LoRA and NLS"](/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) in the ["Training-Time Compression Algorithms"](/README.md#Training-Time-Compression-Algorithms) section of the main README in the repository.
 - Fixes:
-  - ...
+  - (PyTorch) Minimized the disparity in accuracy between the Torch model and its exported OpenVINO equivalent for ["Weight-Only Quantization Aware Training with LoRA and NLS"](/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md).
 - Improvements:
-  - ...
+  - (Pytorch) The evaluation and selection process for the best checkpoint in "QAT + absorbable LoRA" with knowledge distillation has been revised. The tuned Torch model is now evaluated using the validation split of Wikitext, while the final results are measured on the test split with the OpenVINO model. The [results table for Wikitext](/examples/llm_compression/torch/distillation_qat_with_lora/README.md#results-on-wikitext) has been updated accordingly and now includes three additional models.
 - Deprecations/Removals:
   - ...
 - Tutorials:
