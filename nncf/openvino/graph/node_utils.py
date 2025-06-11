@@ -688,7 +688,7 @@ def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] =
 
 
 def create_ov_codebook_subgraph(
-    codebook: Tensor, indexes: Tensor, dtype: ov.Type, codebook_dtype: ov.Type, name: Optional[str] = None
+    codebook: Tensor, indexes: Tensor, dtype: ov.Type, name: Optional[str] = None
 ) -> op.Constant:
     """
     Create an OpenVINO subgraph with gather from the given codebook and indexes tensors.
@@ -696,12 +696,11 @@ def create_ov_codebook_subgraph(
     :param codebook: Codebook tensor.
     :param indexes: Indexes tensor.
     :param dtype: Data type of the indexes.
-    :param codebook_dtype: Data type of the codebook.
     :param name: Optional name of the constant.
     :return: OpenVINO subgraph.
     """
-    codebook_const = opset.constant(codebook.data, dtype=codebook_dtype)
-    if codebook_dtype != ov.Type.f16:
+    codebook_const = opset.constant(codebook.data)
+    if codebook.dtype != ov.Type.f16:
         codebook_const = opset.convert(codebook_const, destination_type=ov.Type.f16)
 
     codebook_indexes = opset.constant(indexes.data, dtype=dtype)

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import openvino as ov
+import numpy as np
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -88,7 +88,9 @@ def custom_codebook_example(model_id, output_dir):
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
-    codebook_params = nncf.CodebookParameters([-64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64], ov.Type.i8)
+    codebook_params = nncf.CodebookParameters(
+        np.array([-64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64], dtype=np.int8)
+    )
 
     model.model = nncf.compress_weights(
         model.model,
@@ -109,7 +111,7 @@ def custom_codebook_example(model_id, output_dir):
 
 def main():
     model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
-    output_dir = "smollm2_360m_compressed_codebook"
+    output_dir = "smollm2_360m_compressed_codebook_"
 
     res = default_codebook_example(model_id, output_dir)
     res += custom_codebook_example(model_id, output_dir + "_custom")

@@ -372,7 +372,6 @@ class CodebookParameters:
     """
 
     codebook: Optional[list[Any]] = None
-    dst_type: Any = None
 
 
 @api()
