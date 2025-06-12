@@ -15,29 +15,66 @@ import triton.language as tl
 from torch._inductor.runtime.triton_helpers import libdevice
 
 
+def get_tensor_meta(x: torch.tensor) -> torch.tensor:
+    """
+    Helper function for the 4D shape & stride calculation based on tensor.
+
+    :param x: Torch tensor.
+    :return: Torch tensor with merged shape and stride for input tensor.
+    """
+    shape = list(x.shape)
+    stride = list(x.stride())
+    while len(shape) < 4:
+        shape = [1] + shape
+        stride = [0] + stride
+    return torch.tensor(shape + stride, dtype=torch.int32).to(x.device)
+
+
+@triton.jit
+def calculate_ptr_offsets(offsets: tl.tensor, meta_ptr: torch.tensor, BLOCK_SIZE: tl.constexpr) -> tuple[tl.tensor]:
+    """
+    Helper kernel to compute offsets for each tensor based on meta information.
+
+    :param offsets: Offsets for the current run.
+    :param meta_ptr: Pointer to the meta information for current tensor.
+    :param BLOCK_SIZE: Block size of the current run.
+    :return: Tuple with the updated offsets and calculated pointers.
+    """
+    pointers = tl.full([BLOCK_SIZE], 0, tl.int32)
+    size = 4
+    for i in tl.range(0, size):
+        shape = tl.load(meta_ptr + i)
+        stride = tl.load(meta_ptr + i + size)
+        index = offsets % shape
+        offsets //= shape
+
+        pointers += index * stride
+    offsets *= tl.load(meta_ptr + (size - 1))
+    return offsets, pointers
+
+
 @triton.autotune(
     configs=[
-        triton.Config(kwargs={"BLOCK_SIZE": 256}, num_warps=2),
-        triton.Config(kwargs={"BLOCK_SIZE": 512}, num_warps=2),
-        triton.Config(kwargs={"BLOCK_SIZE": 1024}, num_warps=2),
-        triton.Config(kwargs={"BLOCK_SIZE": 2048}, num_warps=2),
+        triton.Config(kwargs={"BLOCK_SIZE": 128}),
     ],
     key=["BLOCK_SIZE"],
 )
 @triton.jit
 def forward_kernel(
-    input__ptr,
-    input_low_ptr,
-    input_range_ptr,
-    levels,
-    output_ptr,
-    last_dim,
-    is_per_tensor,
+    input__ptr: torch.tensor,
+    input__meta_ptr: torch.tensor,
+    input_low_ptr: torch.tensor,
+    input_low_meta_ptr: torch.tensor,
+    input_range_ptr: torch.tensor,
+    input_range_meta_ptr: torch.tensor,
+    levels: int,
+    output_ptr: torch.tensor,
     BLOCK_SIZE: tl.constexpr,
 ) -> None:
     """
     "
     Forward kernel implementation based on reference formula - nncf/torch/quantization/reference.py
+
     :param input__ptr: Memory pointer to input_ torch.tensor.
     :param input_low_ptr: Memory pointer to input_low torch.tensor.
     :param input_range_ptr: Memory pointer to input_range torch.tensor.
@@ -47,17 +84,33 @@ def forward_kernel(
     :param is_per_tensor: Bool value for offset correction in per-tensor case.
     :param BLOCK_SIZE: Size of the memory block for current process.
     """
-    block_start = tl.program_id(0) * BLOCK_SIZE
-    offset = block_start + tl.arange(0, BLOCK_SIZE)[:]
+    pid = tl.program_id(0)
+    offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    tmp = offsets
+
+    tmp, input__ptrs = calculate_ptr_offsets(
+        tmp,
+        input__meta_ptr,
+        BLOCK_SIZE,
+    )
+
+    tmp, input_low_ptrs = calculate_ptr_offsets(
+        tmp,
+        input_low_meta_ptr,
+        BLOCK_SIZE,
+    )
+
+    tmp, input_range_ptrs = calculate_ptr_offsets(
+        tmp,
+        input_range_meta_ptr,
+        BLOCK_SIZE,
+    )
+
     mask = tl.full([BLOCK_SIZE], True, tl.int1)
-    d_offset = offset // last_dim
 
-    if is_per_tensor:
-        d_offset -= d_offset
-
-    input_ = tl.load(input__ptr + offset, mask=mask).to(tl.float32)
-    input_low = tl.load(input_low_ptr + d_offset, mask=mask, eviction_policy="evict_last").to(tl.float32)
-    input_range = tl.load(input_range_ptr + d_offset, mask=mask, eviction_policy="evict_last").to(tl.float32)
+    input_ = tl.load(input__ptr + input__ptrs, mask)
+    input_low = tl.load(input_low_ptr + input_low_ptrs, mask)
+    input_range = tl.load(input_range_ptr + input_range_ptrs, mask)
 
     # Clip operation
     output_clip_ = tl.maximum(input_, input_low)
@@ -87,32 +140,31 @@ def forward_kernel(
     output_ = libdevice.nearbyint(output_sub_2)
     output = output_ / scale
 
-    tl.store(output_ptr + (offset), output, None)
+    tl.store(output_ptr + input__ptrs, output, mask)
 
 
 @triton.autotune(
     configs=[
-        triton.Config(kwargs={"BLOCK_SIZE": 256}, num_warps=2),
-        triton.Config(kwargs={"BLOCK_SIZE": 512}, num_warps=2),
-        triton.Config(kwargs={"BLOCK_SIZE": 1024}, num_warps=2),
-        triton.Config(kwargs={"BLOCK_SIZE": 2048}, num_warps=2),
+        triton.Config(kwargs={"BLOCK_SIZE": 128}),
     ],
     key=["BLOCK_SIZE"],
 )
 @triton.jit
 def backward_kernel(
-    grad_output_ptr,
-    input__ptr,
-    input_low_ptr,
-    input_range_ptr,
-    levels,
-    level_low,
-    level_high,
-    grad_input_ptr,
-    grad_low_ptr,
-    grad_range_ptr,
-    last_dim,
-    is_per_tensor,
+    grad_output_ptr: torch.tensor,
+    grad_output_meta_ptr: torch.tensor,
+    input__ptr: torch.tensor,
+    input__meta_ptr: torch.tensor,
+    input_low_ptr: torch.tensor,
+    input_low_meta_ptr: torch.tensor,
+    input_range_ptr: torch.tensor,
+    input_range_meta_ptr: torch.tensor,
+    levels: int,
+    level_low: int,
+    level_high: int,
+    grad_input_ptr: torch.tensor,
+    grad_low_ptr: torch.tensor,
+    grad_range_ptr: torch.tensor,
     BLOCK_SIZE: tl.constexpr,
 ) -> None:
     """
@@ -132,19 +184,40 @@ def backward_kernel(
     :param is_per_tensor: Bool value for offset correction in per-tensor case.
     :param BLOCK_SIZE: Size of the memory block for current process.
     """
-    block_start = tl.program_id(0) * BLOCK_SIZE
-    offset = block_start + tl.arange(0, BLOCK_SIZE)[:]
+    pid = tl.program_id(0)
+    offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
+    tmp = offsets
+
+    tmp, grad_output_ptrs = calculate_ptr_offsets(
+        tmp,
+        grad_output_meta_ptr,
+        BLOCK_SIZE,
+    )
+
+    tmp, input__ptrs = calculate_ptr_offsets(
+        tmp,
+        input__meta_ptr,
+        BLOCK_SIZE,
+    )
+
+    tmp, input_low_ptrs = calculate_ptr_offsets(
+        tmp,
+        input_low_meta_ptr,
+        BLOCK_SIZE,
+    )
+
+    tmp, input_range_ptrs = calculate_ptr_offsets(
+        tmp,
+        input_range_meta_ptr,
+        BLOCK_SIZE,
+    )
+
     mask = tl.full([BLOCK_SIZE], True, tl.int1)
-    d_offset = offset // last_dim
 
-    # For per-tensor case, when low/range values are represented as scalars.
-    if is_per_tensor:
-        d_offset -= d_offset
-
-    grad_output = tl.load(grad_output_ptr + offset, mask=mask).to(tl.float32)
-    input_ = tl.load(input__ptr + offset, mask=mask).to(tl.float32)
-    input_low = tl.load(input_low_ptr + d_offset, mask=mask, eviction_policy="evict_last").to(tl.float32)
-    input_range = tl.load(input_range_ptr + d_offset, mask=mask, eviction_policy="evict_last").to(tl.float32)
+    grad_output = tl.load(grad_output_ptr + grad_output_ptrs, mask)
+    input_ = tl.load(input__ptr + input__ptrs, mask)
+    input_low = tl.load(input_low_ptr + input_low_ptrs, mask)
+    input_range = tl.load(input_range_ptr + input_range_ptrs, mask)
 
     # Mask high calculation
     input_high = input_low + input_range
@@ -220,9 +293,9 @@ def backward_kernel(
     # Low gradient calculation
     grad_low = grad_output * mask_hi_lo
 
-    tl.store(grad_input_ptr + (offset), grad_input, None)
-    tl.store(grad_low_ptr + (d_offset), grad_low, None)
-    tl.store(grad_range_ptr + (d_offset), grad_range, None)
+    tl.store(grad_input_ptr + input__ptrs, grad_input, mask)
+    tl.store(grad_low_ptr + input_low_ptrs, grad_low, mask)
+    tl.store(grad_range_ptr + input_range_ptrs, grad_range, mask)
 
 
 def forward(input_: torch.tensor, input_low: torch.tensor, input_range: torch.tensor, levels: int) -> torch.tensor:
@@ -236,18 +309,24 @@ def forward(input_: torch.tensor, input_low: torch.tensor, input_range: torch.te
     :param levels: Levels value.
     :return: Calculated output value as torch.tensor.
     """
-    shape = tuple(input_.shape)
-    last_dim = shape[-1]
-
     output = torch.empty_like(input_)
 
-    n_elements = input_.numel()
-    is_per_tensor = input_low.numel() == 1
+    input__meta = get_tensor_meta(input_)
+    input_low_meta = get_tensor_meta(input_low)
+    input_range_meta = get_tensor_meta(input_range)
 
     with torch.cuda.device(input_.device):
-        grid = lambda meta: (triton.cdiv(n_elements, meta["BLOCK_SIZE"]),)
-
-        forward_kernel[grid](input_, input_low, input_range, levels, output, last_dim, is_per_tensor)
+        grid = lambda meta: (triton.cdiv(input_.numel(), meta["BLOCK_SIZE"]),)
+        forward_kernel[grid](
+            input_,
+            input__meta,
+            input_low,
+            input_low_meta,
+            input_range,
+            input_range_meta,
+            levels,
+            output,
+        )
 
     return output
 
@@ -273,32 +352,37 @@ def backward(
     :param levels: Levels value.
     :return: Calculated grad_input, grad_low and grad_range as tuple of torch.tensor values.
     """
-    shape = tuple(input_.shape)
-    last_dim = shape[-1]
-
     grad_input = torch.empty_like(input_)
     grad_low = torch.empty_like(input_low)
     grad_range = torch.empty_like(input_range)
 
-    n_elements = input_.numel()
-    is_per_tensor = input_low.numel() == 1
+    grad_output_meta = get_tensor_meta(grad_output)
+    input__meta = get_tensor_meta(input_)
+    input_low_meta = get_tensor_meta(input_low)
+    input_range_meta = get_tensor_meta(input_range)
 
     with torch.cuda.device(input_.device):
-        grid = lambda meta: (triton.cdiv(n_elements, meta["BLOCK_SIZE"]),)
+        grid = lambda meta: (
+            triton.cdiv(input_.numel(), meta["BLOCK_SIZE"])
+            * triton.cdiv(input_low.numel(), meta["BLOCK_SIZE"])
+            * triton.cdiv(grad_range.numel(), meta["BLOCK_SIZE"]),
+        )
 
         backward_kernel[grid](
             grad_output,
+            grad_output_meta,
             input_,
+            input__meta,
             input_low,
+            input_low_meta,
             input_range,
+            input_range_meta,
             levels,
             level_low,
             level_high,
             grad_input,
             grad_low,
             grad_range,
-            last_dim,
-            is_per_tensor,
         )
 
     return grad_input, grad_low, grad_range

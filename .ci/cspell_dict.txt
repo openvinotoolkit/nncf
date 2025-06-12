@@ -358,6 +358,7 @@ pthw
 ptnncf
 ptprelu
 ptrelu
+ptrs
 ptselu
 ptsilu
 ptwc
