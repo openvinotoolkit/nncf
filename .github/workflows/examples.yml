@@ -152,7 +152,7 @@ jobs:
   examples-win-cpu:
     timeout-minutes: 80
     name: Test examples CPU Windows [${{ matrix.group }}/4]
-    runs-on: windows-2019-16-core
+    runs-on: windows-2025-16-core
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
     strategy:
       fail-fast: false
