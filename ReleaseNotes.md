@@ -18,6 +18,7 @@ Post-training Quantization:
 - Fixes:
   - Fixed BiasCorrection failures with models without a batch dimension.
   - Aligned quantile centers for NF4 with OpenVINO implementation.
+  - Weights compression statistics collection have been fixed to show the data types of ignored weights.
 - Improvements:
   - (TorchFX) The `nncf.torch.disable_patching()` context manager is no longer required.
   - (OpenVINO) Add version of nncf to rt_info.
