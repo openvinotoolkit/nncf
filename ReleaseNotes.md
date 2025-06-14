@@ -14,7 +14,7 @@ Post-training Quantization:
   - (ONNX) Added the `BackendParameters.EXTERNAL_DATA_DIR` parameter for the ONNX backend. This parameter specifies the absolute path to the directory where the model's external data files are stored. All external data files must be located in the same directory. It should be used when the model is loaded without external data using `onnx.load("model.onnx", load_external_data=False)`, and the external data files are not in the current working directory of the process. This parameter can be omitted if the external data files are located in the current working directory of the process.
   - (TorchFX, Experimental) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce accuracy loss.
 - Fixes:
-  - (TorchFX) The `nncf.torch.disable_patching()` context manager is no longer required.
+  - (TorchFX, Experimental) The `nncf.torch.disable_patching()` context manager is no longer required.
   - Fixed BiasCorrection failures with models without a batch dimension.
   - Aligned quantile centers for NF4 with OpenVINO implementation.
   - Weights compression statistics collection have been fixed to show the data types of ignored weights.
@@ -43,7 +43,7 @@ Compression-aware training:
 
 Requirements:
 
-- Updated ONNX Runtime to version 1.21.1.
+- Updated ONNX Runtime (1.21.1).
 - Updated PyTorch (2.7.1) and Torchvision (0.22.1) versions.
 - Removed jstyleson from requirements.
 
