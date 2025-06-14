@@ -8,7 +8,7 @@ Post-training Quantization:
   - (PyTorch) Moved function_hook module from experimental to nncf.torch namespace. The function_hook module is now the default mechanism for model tracing in NNCF.
   - (PyTorch) The function_hook module is now the default mechanism for model tracing. It has moved out from experimental status and has been moved to the core nncf.torch namespace.
 - Features:
-  - (OpenVINO, PyTorch) Added 4-bit data-free AWQ based on the per-column magnitudes of the weights..
+  - (OpenVINO, PyTorch, TorchFX) Added 4-bit data-free AWQ (Activation-aware Weight Quantization) based on the per-column magnitudes of the weights making it possible to apply AWQ without a dataset for more accurate compression.
   - (OpenVINO) Added support for quantizing of the V/V_proj input for ScaledDotProductAttention for FP8.
   - (ONNX) Added support for data-free weight compression using INT4 (INT8) in the ONNX backend. Added an example for LLM weight compression in the ONNX backend. [This example](examples/llm_compression/onnx/tiny_llama) showcases the optimization of the `TinyLlama-1.1B-Chat-v0.3` model in ONNX format using the NNCF weight compression API.
   - (ONNX) Added the `BackendParameters.EXTERNAL_DATA_DIR` parameter for the ONNX backend. This parameter specifies the absolute path to the directory where the model's external data files are stored. All external data files must be located in the same directory. It should be used when the model is loaded without external data using `onnx.load("model.onnx", load_external_data=False)`, and the external data files are not in the current working directory of the process. This parameter can be omitted if the external data files are located in the current working directory of the process.
