@@ -19,9 +19,9 @@ Post-training Quantization:
   - Aligned quantile centers for NF4 with OpenVINO implementation.
   - Weights compression statistics collection have been fixed to show the data types of ignored weights.
 - Improvements:
-  - (OpenVINO) Add version of nncf to rt_info.
+  - (OpenVINO) Added the version of NNCF to rt_info.
   - Optimized weight compression for NF4 (up to 10x speed up).
-  - Support `transformer>4.52` by `nncf.data.generate_text_data`.
+  - Support for `transformer>4.52` by `nncf.data.generate_text_data`.
 - Tutorials:
   - [Post-Training Optimization of MiniCPM-o 2.6 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-omnimodal-chatbot/minicpm-o-omnimodal-chatbot.ipynb)
   - [Post-Training Optimization of Qwen2.5-Omni Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2.5-omni-chatbot/qwen2.5-omni-chatbot.ipynb)
