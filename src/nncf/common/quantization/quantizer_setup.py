@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
+from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
 
 QuantizationPointId = int
 
@@ -193,9 +194,15 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         insertion_point_cls_name = state[cls._state_names.INSERTION_POINT_CLASS_NAME]
         insertion_point_cls = CommonStatefulClassesRegistry.get_registered_class(insertion_point_cls_name)
         insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])  # type: ignore
+        qconfig_state = state[cls._state_names.QCONFIG]
+        if QuantizerConfig().__dict__.keys() == qconfig_state.keys():
+            qconfig = QuantizerConfig.from_state(qconfig_state)
+        else:
+            qconfig = ExtendedQuantizerConfig.from_state(qconfig_state)
+
         kwargs = {
             cls._state_names.INSERTION_POINT: insertion_point,
-            cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
+            cls._state_names.QCONFIG: qconfig,
             cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS],
         }
         return cls(**kwargs)

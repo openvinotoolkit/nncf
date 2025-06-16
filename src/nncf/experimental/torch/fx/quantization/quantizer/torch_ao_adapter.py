@@ -29,9 +29,9 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.experimental.quantization.quantizer import FXQuantizerConfig
-from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.experimental.quantization.quantizer import Quantizer
+from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
+from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
@@ -72,7 +72,7 @@ class TorchAOQuantizerAdapter(Quantizer):
         from_node: torch.fx.Node,
         to_nodes: list[torch.fx.Node],
         annotated_model: torch.fx.GraphModule,
-        qconfig: FXQuantizerConfig,
+        qconfig: ExtendedQuantizerConfig,
     ) -> list[QuantizationPointBase]:
         """
         Creates quantization points based on the nodes and edges.
@@ -166,8 +166,8 @@ class TorchAOQuantizerAdapter(Quantizer):
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
                 else QuantizationMode.ASYMMETRIC
             )
-            narrow_range = qspec.quant_min % 2 != 0
-            qconfig = FXQuantizerConfig(
+            narrow_range = qspec.quant_max - qspec.quant_min == 254
+            qconfig = ExtendedQuantizerConfig(
                 mode=mode,
                 signedness_to_force=False,
                 per_channel=per_channel,

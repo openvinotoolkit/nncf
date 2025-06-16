@@ -27,8 +27,8 @@ from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.experimental.quantization.quantizer import FXQuantizerConfig
-from nncf.experimental.quantization.quantizer import IntDtype
+from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
+from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
@@ -196,7 +196,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> FakeQuantize:
         per_channel = quantizer_config.per_channel
         dtype = None
-        if isinstance(quantizer_config, FXQuantizerConfig):
+        if isinstance(quantizer_config, ExtendedQuantizerConfig):
             dtype = quantizer_config.dest_dtype
         eps = 1e-16
         if dtype is None:
