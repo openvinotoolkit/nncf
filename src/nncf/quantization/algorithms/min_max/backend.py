@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Optional, TypeVar
+from typing import Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -165,7 +165,6 @@ class MinMaxAlgoBackend(ABC):
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-        extra_params: dict[str, Any],
     ) -> Command:
         """
         Returns backend-specific quantizer insertion command.
@@ -174,7 +173,6 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the quantizer insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :param extra_params: Additional backend-specific parameters to initiate a quantizer insertion command.
         :return: Backend-specific Command for the quantizer insertion operation.
         """
 
@@ -185,7 +183,6 @@ class MinMaxAlgoBackend(ABC):
         target_points: list[TargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-        extra_params: dict[str, Any],
     ) -> list[Command]:
         """
         Returns backend-specific unified scales quantizers insertion commands.
@@ -194,7 +191,6 @@ class MinMaxAlgoBackend(ABC):
         :param target_points: List of target locations for the quantizers insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :param extra_params: Additional backend-specific parameters to initiate a quantizer insertion command.
         :return: List of backend-specific Commands
             for the quantizers with unified scales insertion operations.
         """

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -134,7 +134,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-        extra_params: dict[str, Any],
     ) -> ONNXQuantizerInsertionCommand:
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         is_weight = target_point.is_weight_target_point()
@@ -154,11 +153,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_points: list[ONNXTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-        extra_params: dict[str, Any],
     ) -> list[ONNXQuantizerInsertionCommand]:
         return [
             ONNXMinMaxAlgoBackend.create_quantizer_insertion_command(
-                nncf_graph, target_point, quantizer_config, parameters, extra_params
+                nncf_graph, target_point, quantizer_config, parameters
             )
             for target_point in target_points
         ]

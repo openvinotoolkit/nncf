@@ -18,9 +18,9 @@ import torch
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.quantization.quantizer import FXQuantizerConfig
 from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
@@ -84,15 +84,16 @@ def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[Int
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
     signedness_to_force = None
-    qconfig = QuantizerConfig(
+    qconfig = FXQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
         narrow_range=narrow_range,
         signedness_to_force=signedness_to_force,
+        dest_dtype=dtype,
     )
 
-    quantizer = _get_quantizer(case_to_test, qconfig, dtype)
+    quantizer = _get_quantizer(case_to_test, qconfig)
     assert quantizer.qscheme is torch.per_channel_symmetric if case_to_test.per_channel else torch.per_tensor_symmetric
 
     signed = signedness_to_force or dtype is IntDtype.INT8
@@ -302,15 +303,16 @@ def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
-    qconfig = QuantizerConfig(
+    qconfig = FXQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
         narrow_range=narrow_range,
         signedness_to_force=signedness_to_force,
+        dest_dtype=None,
     )
 
-    quantizer = _get_quantizer(case_to_test, qconfig, None)
+    quantizer = _get_quantizer(case_to_test, qconfig)
     assert quantizer.qscheme is torch.per_channel_symmetric if case_to_test.per_channel else torch.per_tensor_symmetric
 
     signed = signedness_to_force or ref_signed
@@ -383,15 +385,16 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.ASYMMETRIC
-    qconfig = QuantizerConfig(
+    qconfig = FXQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
         narrow_range=narrow_range,
         signedness_to_force=None,
+        dest_dtype=dtype,
     )
 
-    quantizer = _get_quantizer(case_to_test, qconfig, dtype)
+    quantizer = _get_quantizer(case_to_test, qconfig)
     assert quantizer.qscheme is torch.per_channel_affine if case_to_test.per_channel else torch.per_tensor_affine
 
     signed = dtype is IntDtype.INT8
@@ -406,7 +409,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     _check_q_min_q_max(quantizer, signed, narrow_range)
 
 
-def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig, dtype: IntDtype):
+def _get_quantizer(case_to_test: CaseQuantParams, qconfig: FXQuantizerConfig):
     fq_params = calculate_quantizer_parameters(case_to_test.stat, qconfig, case_to_test.quant_group, half_range=False)
 
     ch_axis = 1 if case_to_test.per_channel and case_to_test.quant_group == QuantizerGroup.WEIGHTS else 0
@@ -415,7 +418,7 @@ def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig, dtyp
         if case_to_test.quant_group == QuantizerGroup.WEIGHTS
         else TargetType.PRE_LAYER_OPERATION
     )
-    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, ch_axis, fq_params, target_type, dtype)
+    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, ch_axis, fq_params, target_type)
 
     assert quantizer.ch_axis == ch_axis
 
