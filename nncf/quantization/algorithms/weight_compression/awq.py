@@ -111,6 +111,10 @@ class AWQ(Algorithm):
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQAlgoAlgoBackend
 
             self._backend_entity = FXAWQAlgoAlgoBackend()
+        elif model_backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXAWQAlgoAlgoBackend
+
+            self._backend_entity = ONNXAWQAlgoAlgoBackend(model)
         else:
             msg = f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
@@ -169,7 +173,7 @@ class AWQ(Algorithm):
             else:
                 scale = self._data_aware_step(wp, weight, statistics[k])
 
-            w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
+            w_scale = fns.transpose(fns.unsqueeze(scale, 1 - wp.reduction_axes[0]))
             a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
@@ -180,7 +184,7 @@ class AWQ(Algorithm):
             ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
-                    merge_weight = (merge_weight * a_scale).astype(weight_dtype)
+                    merge_weight = (merge_weight * fns.transpose(a_scale)).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
                 a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node

@@ -63,7 +63,7 @@ class ScaleEstimation:
 
     @property
     def available_backends(self) -> list[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.ONNX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -84,6 +84,10 @@ class ScaleEstimation:
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
+
+            self._backend_entity = ONNXWeightCompressionAlgoBackend(model)
         else:
             msg = (
                 "Cannot return backend-specific Scale Estimation entity because"

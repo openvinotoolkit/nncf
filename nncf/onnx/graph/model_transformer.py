@@ -29,6 +29,7 @@ from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXMultiplyInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -91,6 +92,7 @@ class ONNXModelTransformer(ModelTransformer):
         initializer_update_transformations = []
         qdq_node_removing_transformations = []
         model_extraction_transformation = None
+        multiply_insert_transformations = []
         transformations = transformation_layout.transformations
         # No transformation applied
         if not transformations:
@@ -106,6 +108,9 @@ class ONNXModelTransformer(ModelTransformer):
                 qdq_node_removing_transformations.append(transformation)
             elif isinstance(transformation, ONNXInitializerUpdateCommand):
                 initializer_update_transformations.append(transformation)
+            elif isinstance(transformation, ONNXMultiplyInsertionCommand):
+                multiply_insert_transformations.append(transformation)
+
         # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations or initializer_update_transformations or qdq_node_removing_transformations:
             model = deepcopy(self._model)
@@ -115,6 +120,9 @@ class ONNXModelTransformer(ModelTransformer):
                 model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
             if initializer_update_transformations:
                 model = self._apply_initializer_update_transformations(model, initializer_update_transformations)
+            if multiply_insert_transformations:
+                model = self._apply_multiply_insertion_transformations(model, multiply_insert_transformations)
+
         # Transformations that create new model
         if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
@@ -456,6 +464,48 @@ class ONNXModelTransformer(ModelTransformer):
 
             model.graph.node.remove(quantize_node_proto)
             model.graph.node.remove(dequantize_node_proto)
+
+        return model
+
+    @staticmethod
+    def _apply_multiply_insertion_transformations(
+        model: onnx.ModelProto, transformations: list[ONNXMultiplyInsertionCommand]
+    ) -> onnx.ModelProto:
+        """
+        Inserts Multiply with provided value for corresponding layer.
+
+        :param transformations: List of the smooth insertion transformations.
+        :returns: Transformed model with Multiply nodes.
+        """
+        node_name_to_node = get_name_to_node_map(model)
+
+        for transformation in transformations:
+            target_node_name = transformation.target_point.target_node_name
+            target_output_port = transformation.target_point.port_id
+            target_node = node_name_to_node[target_node_name]
+            output_tensor_name = target_node.output[target_output_port]
+
+            # Create a new initializer for the scale constant
+            scale_tensor_name = f"{transformation.multiply_node_name}_scale"
+            scale_tensor = onnx.numpy_helper.from_array(transformation.scale_value, name=scale_tensor_name)
+            model.graph.initializer.append(scale_tensor)
+
+            # Create a new Multiply node
+            mul_output_name = f"{transformation.multiply_node_name}_output"
+            mul_node = onnx.helper.make_node(
+                "Mul",
+                inputs=[output_tensor_name, scale_tensor_name],
+                outputs=[mul_output_name],
+                name=transformation.multiply_node_name,
+            )
+            target_index = get_node_index(model, target_node_name)
+            model.graph.insert(target_index + 1, mul_node)
+
+            for name in transformation.destination_node_names:
+                node = node_name_to_node[name]
+                for i, input_name in enumerate(node.input):
+                    if input_name == output_tensor_name:
+                        node.input[i] = mul_output_name
 
         return model
 
