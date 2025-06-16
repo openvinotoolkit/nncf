@@ -828,8 +828,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_input_low_input_high(self):
         return self._get_input_low_input_high(self.scale, self.level_low, self.level_high, self.eps)
 
-    @staticmethod
-    def _get_input_low_input_high(scale, level_low, level_high, eps):
+    def _get_input_low_input_high(self, scale, level_low, level_high, eps):
         input_range = abs(scale) + eps
         input_low = input_range * level_low / level_high
         input_high = input_range
@@ -1026,8 +1025,7 @@ class AsymmetricQuantizer(BaseQuantizer):
     def get_input_low_input_high(self):
         return self._get_input_low_input_high(self.input_range, self.input_low, self.levels, self.eps)
 
-    @staticmethod
-    def _get_input_low_input_high(input_range, input_low, levels, eps):
+    def _get_input_low_input_high(self, input_range, input_low, levels, eps):
         input_range_safe = abs(input_range) + eps
         input_low, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
         input_high = input_low + input_range_tuned
