@@ -31,31 +31,40 @@ def get_tensor_meta(x: torch.tensor) -> torch.tensor:
 
 
 @triton.jit
-def calculate_ptr_offsets(offsets: tl.tensor, meta_ptr: torch.tensor, BLOCK_SIZE: tl.constexpr) -> tuple[tl.tensor]:
+def calculate_ptr_offsets(offsets: tl.tensor, meta_ptr: torch.tensor) -> tuple[tl.tensor]:
     """
     Helper kernel to compute offsets for each tensor based on meta information.
 
     :param offsets: Offsets for the current run.
     :param meta_ptr: Pointer to the meta information for current tensor.
-    :param BLOCK_SIZE: Block size of the current run.
     :return: Tuple with the updated offsets and calculated pointers.
     """
-    pointers = tl.full([BLOCK_SIZE], 0, tl.int32)
-    size = 4
-    for i in tl.range(0, size):
-        shape = tl.load(meta_ptr + i)
-        stride = tl.load(meta_ptr + i + size)
-        index = offsets % shape
-        offsets //= shape
+    s0 = tl.load(meta_ptr + 0)
+    s1 = tl.load(meta_ptr + 1)
+    s2 = tl.load(meta_ptr + 2)
+    s3 = tl.load(meta_ptr + 3)
 
-        pointers += index * stride
-    offsets *= tl.load(meta_ptr + (size - 1))
-    return offsets, pointers
+    st0 = tl.load(meta_ptr + 4)
+    st1 = tl.load(meta_ptr + 5)
+    st2 = tl.load(meta_ptr + 6)
+    st3 = tl.load(meta_ptr + 7)
+
+    tmp = offsets
+    i3 = tmp % s3
+    tmp //= s3
+    i2 = tmp % s2
+    tmp //= s2
+    i1 = tmp % s1
+    tmp //= s1
+    i0 = tmp % s0
+
+    pointers = i0 * st0 + i1 * st1 + i2 * st2 + i3 * st3
+    return pointers
 
 
 @triton.autotune(
     configs=[
-        triton.Config(kwargs={"BLOCK_SIZE": 128}),
+        triton.Config(kwargs={"BLOCK_SIZE": 1024}),
     ],
     key=["BLOCK_SIZE"],
 )
@@ -86,59 +95,36 @@ def forward_kernel(
     """
     pid = tl.program_id(0)
     offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
-    tmp = offsets
 
-    tmp, input__ptrs = calculate_ptr_offsets(
-        tmp,
+    input__ptrs = calculate_ptr_offsets(
+        offsets,
         input__meta_ptr,
-        BLOCK_SIZE,
     )
 
-    tmp, input_low_ptrs = calculate_ptr_offsets(
-        tmp,
+    input_low_ptrs = calculate_ptr_offsets(
+        offsets,
         input_low_meta_ptr,
-        BLOCK_SIZE,
     )
 
-    tmp, input_range_ptrs = calculate_ptr_offsets(
-        tmp,
+    input_range_ptrs = calculate_ptr_offsets(
+        offsets,
         input_range_meta_ptr,
-        BLOCK_SIZE,
     )
 
     mask = tl.full([BLOCK_SIZE], True, tl.int1)
 
-    input_ = tl.load(input__ptr + input__ptrs, mask)
-    input_low = tl.load(input_low_ptr + input_low_ptrs, mask)
-    input_range = tl.load(input_range_ptr + input_range_ptrs, mask)
+    input_ = tl.load(input__ptr + input__ptrs, mask).to(tl.float32)
+    input_low = tl.load(input_low_ptr + input_low_ptrs, mask).to(tl.float32)
+    input_range = tl.load(input_range_ptr + input_range_ptrs, mask).to(tl.float32)
 
-    # Clip operation
-    output_clip_ = tl.maximum(input_, input_low)
-    input_high = input_low + input_range
-    output_clip = tl.minimum(output_clip_, input_high)
-
-    # Input low from output subtraction
-    output_sub_1 = output_clip - input_low
-
-    # Scale calculation
-    one = 1.0
-    scale_ = levels - one
-    scale = scale_ / input_range
-
-    # Output scaling
-    output_scale = output_sub_1 * scale
-
-    # Zero point calculation
-    s_input_low = -input_low
-    zero_point_ = s_input_low * scale
-    zero_point = libdevice.nearbyint(zero_point_)
-
-    # Zero point from output subtraction
-    output_sub_2 = output_scale - zero_point
-
-    # Output descaling
-    output_ = libdevice.nearbyint(output_sub_2)
-    output = output_ / scale
+    scale = (levels - 1) / input_range
+    output = tl.clamp(input_, min=input_low, max=input_low + input_range)
+    zero_point = libdevice.nearbyint(-input_low * scale)
+    output -= input_low
+    output *= scale
+    output -= zero_point
+    output = libdevice.nearbyint(output)
+    output = output / scale
 
     tl.store(output_ptr + input__ptrs, output, mask)
 
@@ -188,110 +174,63 @@ def backward_kernel(
     offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     tmp = offsets
 
-    tmp, grad_output_ptrs = calculate_ptr_offsets(
+    grad_output_ptrs = calculate_ptr_offsets(
         tmp,
         grad_output_meta_ptr,
-        BLOCK_SIZE,
     )
 
-    tmp, input__ptrs = calculate_ptr_offsets(
+    input__ptrs = calculate_ptr_offsets(
         tmp,
         input__meta_ptr,
-        BLOCK_SIZE,
     )
 
-    tmp, input_low_ptrs = calculate_ptr_offsets(
+    input_low_ptrs = calculate_ptr_offsets(
         tmp,
         input_low_meta_ptr,
-        BLOCK_SIZE,
     )
 
-    tmp, input_range_ptrs = calculate_ptr_offsets(
+    input_range_ptrs = calculate_ptr_offsets(
         tmp,
         input_range_meta_ptr,
-        BLOCK_SIZE,
     )
 
     mask = tl.full([BLOCK_SIZE], True, tl.int1)
 
-    grad_output = tl.load(grad_output_ptr + grad_output_ptrs, mask)
-    input_ = tl.load(input__ptr + input__ptrs, mask)
-    input_low = tl.load(input_low_ptr + input_low_ptrs, mask)
-    input_range = tl.load(input_range_ptr + input_range_ptrs, mask)
+    grad_output = tl.load(grad_output_ptr + grad_output_ptrs, mask).to(tl.float32)
+    input_ = tl.load(input__ptr + input__ptrs, mask).to(tl.float32)
+    input_low = tl.load(input_low_ptr + input_low_ptrs, mask).to(tl.float32)
+    input_range = tl.load(input_range_ptr + input_range_ptrs, mask).to(tl.float32)
 
-    # Mask high calculation
-    input_high = input_low + input_range
-    mask_hi = input_ > input_high
-
-    # Mask low calculation
+    mask_hi = input_ > (input_low + input_range)
+    mask_hi = mask_hi.to(tl.float32)
     mask_lo = input_ < input_low
+    mask_lo = mask_lo.to(tl.float32)
 
-    # Mask in calculation
-    mask_c = 1.0
-    mask_in_ = mask_c - mask_hi
-    mask_in = mask_in_ - mask_lo
+    mask_in = 1 - mask_hi - mask_lo
 
-    # Output calculation/forward kernel implementation
-    #   Clip operation
-    output_clip_ = tl.maximum(input_, input_low)
-    output_clip = tl.minimum(output_clip_, input_high)
-
-    #   Input low from output subtraction
-    output_sub_1 = output_clip - input_low
-
-    #   Scale calculation
-    one = 1.0
-    scale_ = levels - one
-    scale = scale_ / input_range
-
-    #   Output scaling
-    output_scale = output_sub_1 * scale
-
-    #   Zero point calculation
-    s_input_low = -input_low
-    zero_point_ = s_input_low * scale
-    zero_point = libdevice.nearbyint(zero_point_)
-
-    #   Zero point from output subtraction
-    output_sub_2 = output_scale - zero_point
-
-    #   Output descaling
-    output_ = libdevice.nearbyint(output_sub_2)
-    output = output_ / scale
-
-    # Error calculation
-    err_ = output - input_
+    scale = (levels - 1) / input_range
+    output = tl.clamp(input_, min=input_low, max=input_low + input_range)
+    zero_point = libdevice.nearbyint(-input_low * scale)
+    output -= input_low
+    output *= scale
+    output -= zero_point
+    output = libdevice.nearbyint(output)
+    output = output / scale
 
     # Signed range calculation
-    zeros = tl.full([1], 0, tl.int32)
-    input_range_above_zero_ = zeros < input_range
-    input_range_above_zero = input_range_above_zero_.to(tl.int8)
-    input_range_below_zero_ = input_range < zeros
-    input_range_below_zero = input_range_below_zero_.to(tl.int8)
-    range_sign_ = input_range_above_zero - input_range_below_zero
-    range_sign = range_sign_.to(input_range.dtype)
-
+    input_range_above_zero = input_range > 0
+    input_range_below_zero = input_range < 0
+    range_sign = (input_range_above_zero - input_range_below_zero).to(tl.float32)
     # Reciprocal calculation
-    reciprocal_ = input_range * range_sign
-    reciprocal = one / reciprocal_
+    reciprocal = 1 / (input_range * range_sign)
+    err = (output - input_) * reciprocal
+    grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
+    # SUM LIKE?
 
-    err = err_ * reciprocal
-
-    # Range gradient calculation
-    err_mask_in_ = err * mask_in
-    level_low_level_high_div = level_low / level_high
-    range_levels_ = range_sign * level_low_level_high_div
-    range_mask_lo_ = range_levels_ * mask_lo
-    err_range_ = err_mask_in_ + range_mask_lo_
-    grad_range_ = err_range_ + mask_hi
-    grad_range = grad_output * grad_range_
-
-    # Input gradient calculation
-    mask_hi_lo = mask_hi + mask_lo
     grad_input = grad_output * mask_in
 
-    # Low gradient calculation
-    grad_low = grad_output * mask_hi_lo
+    grad_low = grad_output * (mask_hi + mask_lo)
+    # SUM LIKE?
 
     tl.store(grad_input_ptr + input__ptrs, grad_input, mask)
     tl.store(grad_low_ptr + input_low_ptrs, grad_low, mask)
