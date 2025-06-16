@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Optional
 
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
@@ -27,7 +27,7 @@ from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.experimental.quantization.quantizer import ExtendedFXQuantizerSetup
+from nncf.experimental.quantization.quantizer import FXQuantizerConfig
 from nncf.experimental.quantization.quantizer import IntDtype
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
@@ -145,7 +145,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_convert_insertion_command(
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
-        extra_params: dict[str, Any],
     ) -> TransformationCommand:
         msg = "FakeConvert insertion not implemented in PyTorch backend!"
         raise nncf.InternalError(msg)
@@ -194,9 +193,11 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         channel_axis: int,
         parameters: FakeQuantizeParameters,
         target_type: TargetType,
-        dtype: IntDtype,
     ) -> FakeQuantize:
         per_channel = quantizer_config.per_channel
+        dtype = None
+        if isinstance(quantizer_config, FXQuantizerConfig):
+            dtype = quantizer_config.dest_dtype
         eps = 1e-16
         if dtype is None:
             if quantizer_config.mode != QuantizationScheme.SYMMETRIC:
@@ -280,7 +281,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-        extra_params: dict[str, Any],
     ) -> FXApplyTransformationCommand:
         channel_axis = FXMinMaxAlgoBackend._get_channel_axis(target_point, quantizer_config.per_channel)
 
@@ -289,7 +289,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             channel_axis,
             parameters,
             target_point.target_type,
-            extra_params[ExtendedFXQuantizerSetup.QUANTIZER_DTYPE_NAME],
         )
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
         return FXApplyTransformationCommand(transformation)
@@ -300,7 +299,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_points: list[PTTargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-        extra_params: dict[str, Any],
     ) -> list[PTSharedFnInsertionCommand]:
         channel_axis = FXMinMaxAlgoBackend._get_channel_axis(target_points[0], quantizer_config.per_channel)
 
@@ -309,7 +307,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             channel_axis,
             parameters,
             target_points[0].target_type,
-            extra_params[ExtendedFXQuantizerSetup.QUANTIZER_DTYPE_NAME],
         )
 
         transformations = []
