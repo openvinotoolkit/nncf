@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import operator
 from copy import copy
 from typing import Any, Callable, Optional, Union
 
@@ -16,6 +17,9 @@ import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
+from torch.fx.node import map_arg
+from torch.fx.passes.infra.pass_base import PassBase
+from torch.fx.passes.infra.pass_base import PassResult
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -741,3 +745,84 @@ def fold_constant_except_qdq(model: torch.fx.GraphModule):
         return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
 
     constant_fold(model, constraint_fn=constraint_fn)
+
+
+def _duplicate_dq(gm: torch.fx.GraphModule, dq_node: torch.fx.Node, user: torch.fx.Node) -> None:
+    """
+    Duplicates the given dequantizer node so that the specified user node
+    has a unique instance of the dequantizer.
+
+    :param gm: torch.fx.GraphModule instance.
+    :param dq_node: The original dequantizer node to be duplicated.
+    :param user: The user node that requires a unique dequantizer node instance.
+    """
+    with gm.graph.inserting_after(dq_node):
+        new_node = gm.graph.node_copy(dq_node)
+
+        def maybe_replace_node(n: torch.fx.Node) -> torch.fx.Node:
+            if n == dq_node:
+                return new_node
+            return n
+
+        new_args = map_arg(user.args, maybe_replace_node)
+        new_kwargs = map_arg(user.kwargs, maybe_replace_node)
+        user.args = new_args
+        user.kwargs = new_kwargs
+
+
+def _is_sym_size_node(node: torch.fx.Node) -> bool:
+    """
+    Returns True if the given node is a sym size node instance, False otherwise.
+
+    :param node: The given torch.fx.Node.
+    :return: True if the given node is a sym size node instance, False otherwise.
+    """
+    return (
+        node.op == "call_function"
+        and node.target == torch.ops.aten.sym_size.default
+        or node.target == torch.ops.aten.sym_numel.default
+        or node.target == torch.ops.aten.sym_numel
+        or node.target == torch.ops.aten.sym_size
+    )
+
+
+class DuplicateDQPassNoAnnotations(PassBase):
+    """
+    Pass that duplicates Dequantizer (DQ) nodes so that each user node has a unique instance,
+    but only when the DQ node retrieves its parameters via a `getitem` operation with constants.
+    """
+
+    def call(self, graph_module: torch.fx.GraphModule) -> PassResult:
+        """
+        Invokes the pass.
+
+        :param graph_module: The FX GraphModule to be transformed.
+        :return: PassResult containing the modified graph module and a success flag.
+        """
+        for node in graph_module.graph.nodes:
+            if node.op == "call_function" and node.target in DEQUANTIZE_NODE_TARGETS:
+                dq_users = list(filter((lambda x: not _is_sym_size_node(x)), node.users))
+                if len(dq_users) <= 1:
+                    continue
+                # Do not duplicate dq for dynamic quantization
+                # Pattern: choose_qparam - getitem - q - dq
+                q_node = node.args[0]
+                if q_node.op == "call_function" and q_node.target in QUANTIZE_NODE_TARGETS:
+                    getitem_node = q_node.args[1]
+                    if (
+                        isinstance(getitem_node, torch.fx.node.Node)
+                        and getitem_node.op == "call_function"
+                        and getitem_node.target == operator.getitem
+                    ):
+                        choose_qparam_node = getitem_node.args[0]
+                        if (
+                            isinstance(choose_qparam_node, torch.fx.node.Node)
+                            and choose_qparam_node.op == "call_function"
+                            and choose_qparam_node.target == torch.ops.quantized_decomposed.choose_qparams.tensor
+                        ):
+                            continue
+                for user in dq_users:
+                    _duplicate_dq(graph_module, node, user)
+        graph_module.graph.eliminate_dead_code()
+        graph_module.recompile()
+        return PassResult(graph_module, True)

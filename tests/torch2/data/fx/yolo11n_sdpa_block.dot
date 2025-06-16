@@ -1,5 +1,5 @@
-strict digraph  {
-"0 kqv_weight" [id=0, type=get_attr];
+strict digraph {
+"0 kqv_weight" [id=0, type="get_attr"];
 "1 x" [id=1, type=input];
 "2 linear" [id=2, type=linear];
 "3 slice_1" [id=3, type=slice];
@@ -13,29 +13,29 @@ strict digraph  {
 "11 slice_9" [id=11, type=slice];
 "12 transpose" [id=12, type=transpose];
 "13 matmul" [id=13, type=matmul];
-"14 div_" [id=14, type=div_];
+"14 div_" [id=14, type="div_"];
 "15 softmax" [id=15, type=softmax];
 "16 transpose_1" [id=16, type=transpose];
 "17 matmul_1" [id=17, type=matmul];
 "18 output" [id=18, type=output];
-"0 kqv_weight" -> "2 linear"  [label="(12, 4)", style=solid];
-"1 x" -> "2 linear"  [label="(1, 2, 4)", style=solid];
-"2 linear" -> "3 slice_1"  [label="(1, 2, 12)", style=solid];
-"2 linear" -> "6 slice_4"  [label="(1, 2, 12)", style=solid];
-"2 linear" -> "9 slice_7"  [label="(1, 2, 12)", style=solid];
-"3 slice_1" -> "4 slice_2"  [label="(1, 2, 12)", style=solid];
-"4 slice_2" -> "5 slice_3"  [label="(1, 2, 12)", style=solid];
-"5 slice_3" -> "13 matmul"  [label="(1, 2, 4)", style=solid];
-"6 slice_4" -> "7 slice_5"  [label="(1, 2, 12)", style=solid];
-"7 slice_5" -> "8 slice_6"  [label="(1, 2, 12)", style=solid];
-"8 slice_6" -> "12 transpose"  [label="(1, 2, 4)", style=solid];
-"9 slice_7" -> "10 slice_8"  [label="(1, 2, 12)", style=solid];
-"10 slice_8" -> "11 slice_9"  [label="(1, 2, 12)", style=solid];
-"11 slice_9" -> "17 matmul_1"  [label="(1, 2, 4)", style=solid];
-"12 transpose" -> "13 matmul"  [label="(1, 4, 2)", style=solid];
-"13 matmul" -> "14 div_"  [label="(1, 2, 2)", style=solid];
-"14 div_" -> "15 softmax"  [label="(1, 2, 2)", style=solid];
-"15 softmax" -> "16 transpose_1"  [label="(1, 2, 2)", style=solid];
-"16 transpose_1" -> "17 matmul_1"  [label="(1, 2, 2)", style=solid];
-"17 matmul_1" -> "18 output"  [label="(1, 2, 4)", style=solid];
+"0 kqv_weight" -> "2 linear" [style=solid, label="(12, 4)"];
+"1 x" -> "2 linear" [style=solid, label="(1, 2, 4)"];
+"2 linear" -> "3 slice_1" [style=solid, label="(1, 2, 12)"];
+"2 linear" -> "6 slice_4" [style=solid, label="(1, 2, 12)"];
+"2 linear" -> "9 slice_7" [style=solid, label="(1, 2, 12)"];
+"3 slice_1" -> "4 slice_2" [style=solid, label="(1, 2, 12)"];
+"4 slice_2" -> "5 slice_3" [style=solid, label="(1, 2, 12)"];
+"5 slice_3" -> "13 matmul" [style=solid, label="(1, 2, 4)"];
+"6 slice_4" -> "7 slice_5" [style=solid, label="(1, 2, 12)"];
+"7 slice_5" -> "8 slice_6" [style=solid, label="(1, 2, 12)"];
+"8 slice_6" -> "12 transpose" [style=solid, label="(1, 2, 4)"];
+"9 slice_7" -> "10 slice_8" [style=solid, label="(1, 2, 12)"];
+"10 slice_8" -> "11 slice_9" [style=solid, label="(1, 2, 12)"];
+"11 slice_9" -> "17 matmul_1" [style=solid, label="(1, 2, 4)"];
+"12 transpose" -> "13 matmul" [style=solid, label="(1, 4, 2)"];
+"13 matmul" -> "14 div_" [style=solid, label="(1, 2, 2)"];
+"14 div_" -> "15 softmax" [style=solid, label="(1, 2, 2)"];
+"15 softmax" -> "16 transpose_1" [style=solid, label="(1, 2, 2)"];
+"16 transpose_1" -> "17 matmul_1" [style=solid, label="(1, 2, 2)"];
+"17 matmul_1" -> "18 output" [style=solid, label="(1, 2, 4)"];
 }
