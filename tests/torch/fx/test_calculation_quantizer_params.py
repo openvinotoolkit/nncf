@@ -20,8 +20,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.quantization.quantizer import FXQuantizerConfig
-from nncf.experimental.quantization.quantizer import IntDtype
+from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
+from nncf.experimental.quantization.structs import IntDtype
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import Tensor
@@ -84,7 +84,7 @@ def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[Int
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
     signedness_to_force = None
-    qconfig = FXQuantizerConfig(
+    qconfig = ExtendedQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
@@ -303,7 +303,7 @@ def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
-    qconfig = FXQuantizerConfig(
+    qconfig = ExtendedQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
@@ -385,7 +385,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.ASYMMETRIC
-    qconfig = FXQuantizerConfig(
+    qconfig = ExtendedQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
@@ -409,7 +409,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     _check_q_min_q_max(quantizer, signed, narrow_range)
 
 
-def _get_quantizer(case_to_test: CaseQuantParams, qconfig: FXQuantizerConfig):
+def _get_quantizer(case_to_test: CaseQuantParams, qconfig: ExtendedQuantizerConfig):
     fq_params = calculate_quantizer_parameters(case_to_test.stat, qconfig, case_to_test.quant_group, half_range=False)
 
     ch_axis = 1 if case_to_test.per_channel and case_to_test.quant_group == QuantizerGroup.WEIGHTS else 0
