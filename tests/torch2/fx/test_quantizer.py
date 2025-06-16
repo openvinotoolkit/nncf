@@ -35,7 +35,7 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x
 import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.utils.os import safe_open
-from nncf.experimental.quantization.quantizer import IntDtype
+from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
