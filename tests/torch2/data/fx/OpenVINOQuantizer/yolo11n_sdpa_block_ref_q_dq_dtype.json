@@ -1,5 +1,0 @@
-{
-    "dequantize_per_tensor_1": "UINT8",
-    "dequantize_per_tensor_3": "INT8",
-    "dequantize_per_tensor_5": "INT8"
-}
