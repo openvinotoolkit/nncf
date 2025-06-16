@@ -23,6 +23,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer import xnnpack_quantizer
@@ -39,7 +40,9 @@ from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
@@ -68,8 +71,8 @@ def get_dot_filename(model_name: str) -> str:
     return model_name + ".dot"
 
 
-def get_ref_q_dq_refs_filename(model_name: str) -> str:
-    return model_name + "_ref_q_dq_dtype.json"
+def get_qconf_filename(model_name: str) -> str:
+    return model_name + "_ref_qconfig.json"
 
 
 def get_x86_quantizer(*args, **kwarsg) -> X86InductorQuantizer:
@@ -185,24 +188,75 @@ def test_quantized_model(
     # ao_nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
     # ao_nncf_graph.visualize_graph(f"ao_{quantizer.__class__.__name__}_{get_dot_filename(model_case.model_id)}")
 
-    # Check q dq intermediate dtypes are correct
-    q_dq_types = {}
-    for edge in nncf_graph.get_all_edges():
-        if edge.to_node.node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
-            q_dq_types[edge.to_node.node_name] = edge.dtype.value
 
-    path_to_refs_q_dq_dtypes = (
-        FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_ref_q_dq_refs_filename(model_case.model_id)
+@pytest.mark.parametrize(
+    ("model_case", "quantizer_params"),
+    [case[:2] for case in TEST_MODELS_QUANIZED],
+    ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
+)
+@pytest.mark.parametrize(
+    "quantizer_builder",
+    [
+        get_xnnpack_quantizer,
+        get_x86_quantizer,
+        get_openvino_quantizer,
+    ],
+    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
+)
+def test_quantizer_setup(
+    quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
+    model_case: ModelCase,
+    quantizer_params,
+):
+    fx_model, _ = _build_torch_fx_model(model_case)
+    quantizer = quantizer_builder(**quantizer_params)
+    ref_qconfig_filename = (
+        FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_qconf_filename(model_case.model_id)
     )
-    if os.getenv("NNCF_TEST_REGEN_JSON") is not None:
-        with safe_open(path_to_refs_q_dq_dtypes, "w") as file:
-            json.dump(q_dq_types, file, indent=4)
 
-    with safe_open(path_to_refs_q_dq_dtypes, "r") as file:
-        ref_q_dq_types = json.load(file)
-    assert len(ref_q_dq_types) == len(q_dq_types)
-    for node_name, ref_dtype in ref_q_dq_types.items():
-        assert q_dq_types[node_name] == ref_dtype
+    _fuse_conv_bn_(fx_model)
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
+        quantizer = OpenVINOQuantizerAdapter(quantizer)
+    else:
+        quantizer = TorchAOQuantizerAdapter(quantizer)
+
+    # Call transform_prior_quantization before the NNCFGraph creation
+    fx_model = quantizer.transform_prior_quantization(fx_model)
+    nncf_graph = GraphConverter.create_nncf_graph(fx_model)
+    quantizer_setup = quantizer.get_quantization_setup(fx_model, nncf_graph)
+    qsetup_config = quantizer_setup.get_state()
+    _normalize_qsetup_state(qsetup_config)
+    if os.getenv("NNCF_TEST_REGEN_JSON") is not None:
+        with safe_open(ref_qconfig_filename, "w") as file:
+            json.dump(qsetup_config, file, indent=4)
+
+    with safe_open(ref_qconfig_filename, "r") as file:
+        ref_qsetup_config = json.load(file)
+    # helper to find diff in qconfigs
+    # pip install dictdiffer
+    # from dictdiffer import diff
+    # diff_res = list(diff(ref_qsetup_config, qsetup_config))
+    assert qsetup_config == ref_qsetup_config
+
+
+def _normalize_qsetup_state(setup: dict[str, Any]) -> None:
+    """
+    Normalizes the quantization setup state dictionary in-place to ensure consistent ordering
+    of elements for deterministic behavior.
+
+    :param setup: Quantization setup state to normalize.
+    """
+    for key in ["unified_scale_groups", "shared_input_operation_set_groups"]:
+        sorted_usg = {}
+        for k, v in setup[key].items():
+            sorted_usg[str(k)] = sorted(v)
+        setup[key] = sorted_usg
+    dq_key = "directly_quantized_operator_node_names"
+    sorted_qps = {}
+    for qp in setup["quantization_points"].values():
+        sorted_dq = sorted(qp[dq_key])
+        sorted_qps[f"{tuple(sorted_dq)}_{qp['qip_class']}"] = qp["qconfig"]
+    setup["quantization_points"] = sorted_qps
 
 
 def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
