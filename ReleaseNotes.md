@@ -5,7 +5,6 @@
 Post-training Quantization:
 
 - General:
-  - (PyTorch) Moved function_hook module from experimental to nncf.torch namespace. The function_hook module is now the default mechanism for model tracing in NNCF.
   - (PyTorch) The function_hook module is now the default mechanism for model tracing. It has moved out from experimental status and has been moved to the core nncf.torch namespace.
 - Features:
   - (OpenVINO, PyTorch, TorchFX) Added 4-bit data-free AWQ (Activation-aware Weight Quantization) based on the per-column magnitudes of the weights making it possible to apply AWQ without a dataset for more accurate compression.
