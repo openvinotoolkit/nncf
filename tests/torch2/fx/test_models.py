@@ -139,19 +139,19 @@ TEST_MODELS_QUANIZED = (
     (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
-        [(46, 46), (23, 23)],
+        [(46, 50), (23, 27)],
         [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This Unet Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
         {},
-        [(51, 51), (30, 30)],
+        [(51, 58), (30, 37)],
         [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
         {},
-        [(97, 97), (61, 61)],
+        [(97, 112), (61, 76)],
         [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
