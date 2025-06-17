@@ -23,6 +23,8 @@ from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_N
 
 DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.nf4: ov.Type.nf4,
+    TensorDataType.f4e2m1: ov.Type.f4e2m1,
+    TensorDataType.f8e8m0: ov.Type.f8e8m0,
     TensorDataType.f8e4m3: ov.Type.f8e4m3,
     TensorDataType.f8e5m2: ov.Type.f8e5m2,
     TensorDataType.float16: ov.Type.f16,
@@ -67,6 +69,8 @@ def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
         TensorDataType.int4,
         TensorDataType.uint4,
         TensorDataType.nf4,
+        TensorDataType.f4e2m1,
+        TensorDataType.f8e8m0,
         TensorDataType.f8e4m3,
         TensorDataType.f8e5m2,
     ]
@@ -94,13 +98,15 @@ def _(a: ov.Tensor, shape: Union[int, tuple[int, ...]]) -> ov.Tensor:
 
 @numeric.as_numpy_tensor.register
 def _(a: ov.Tensor) -> NDArray[Any]:
-    # Cannot convert bfloat16, uint4, int4, nf4, f8e4m3, f8e5m2 to numpy directly
+    # Cannot convert bfloat16, uint4, int4, nf4, f4e2m1, f8e8m0, f8e4m3, f8e5m2 to numpy directly
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
     if a_dtype in [
         TensorDataType.bfloat16,
         TensorDataType.uint4,
         TensorDataType.int4,
         TensorDataType.nf4,
+        TensorDataType.f4e2m1,
+        TensorDataType.f8e8m0,
         TensorDataType.f8e4m3,
         TensorDataType.f8e5m2,
     ]:
