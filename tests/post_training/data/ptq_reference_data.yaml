@@ -51,11 +51,11 @@ torchvision/resnet18_backend_CUDA_FX_TORCH:
 torchvision/resnet18_backend_OV_QUANTIZER_NNCF:
   metric_value: 0.6946
 torchvision/resnet18_backend_OV_QUANTIZER_AO:
-  metric_value: 0.6946
+  metric_value: 0.6959
 torchvision/resnet18_backend_X86_QUANTIZER_NNCF:
   metric_value: 0.6946
 torchvision/resnet18_backend_X86_QUANTIZER_AO:
-  metric_value: 0.6946
+  metric_value: 0.6959
 torchvision/mobilenet_v3_small_BC_backend_FP32:
   metric_value: 0.6766
 torchvision/mobilenet_v3_small_BC_backend_OV:
@@ -75,13 +75,13 @@ torchvision/mobilenet_v3_small_BC_backend_CUDA_FX_TORCH:
     error_message: "Openvino Model Files Not Found!"
     message: "Issue-166847"
 torchvision/mobilenet_v3_small_BC_backend_OV_QUANTIZER_NNCF:
-  metric_value: 0.6679
+  metric_value: 0.6561
 torchvision/mobilenet_v3_small_BC_backend_OV_QUANTIZER_AO:
   metric_value: 0.6679
 torchvision/mobilenet_v3_small_BC_backend_X86_QUANTIZER_NNCF:
-  metric_value: 0.6679
+  metric_value: 0.0622
 torchvision/mobilenet_v3_small_BC_backend_X86_QUANTIZER_AO:
-  metric_value: 0.6679
+  metric_value: 0.0538
 torchvision/vit_b_16_backend_FP32:
   metric_value: 0.8107
 torchvision/vit_b_16_backend_OV:
@@ -101,11 +101,11 @@ torchvision/vit_b_16_backend_CUDA_FX_TORCH:
 torchvision/vit_b_16_backend_OV_QUANTIZER_NNCF:
   metric_value: 0.80922
 torchvision/vit_b_16_backend_OV_QUANTIZER_AO:
-  metric_value: 0.80922
+  metric_value: 0.2429
 torchvision/vit_b_16_backend_X86_QUANTIZER_NNCF:
   metric_value: 0.80922
 torchvision/vit_b_16_backend_X86_QUANTIZER_AO:
-  metric_value: 0.80922
+  metric_value: 0.1498
 torchvision/swin_v2_s_backend_FP32:
   metric_value: 0.83712
 torchvision/swin_v2_s_backend_OV:
