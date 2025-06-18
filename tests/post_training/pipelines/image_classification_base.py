@@ -173,7 +173,7 @@ class ImageClassificationBase(PTQTestPipeline):
                 quantizer,
                 self.calibration_dataset,
                 smooth_quant=smooth_quant,
-                fold_quantize=False,
+                fold_quantize=isinstance(quantizer, OpenVINOQuantizer),
                 **pt2e_kwargs,
             )
 
