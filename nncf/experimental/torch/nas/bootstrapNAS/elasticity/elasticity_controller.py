@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict
+from typing import Any
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -33,7 +33,7 @@ class ElasticityController(PTCompressionAlgorithmController):
 
     _ec_state_names = EControllerStateNames
 
-    def __init__(self, target_model: NNCFNetwork, algo_config: Dict, multi_elasticity_handler: MultiElasticityHandler):
+    def __init__(self, target_model: NNCFNetwork, algo_config: dict, multi_elasticity_handler: MultiElasticityHandler):
         super().__init__(target_model)
         self.target_model = target_model
         self._algo_config = algo_config
@@ -79,7 +79,7 @@ class ElasticityController(PTCompressionAlgorithmController):
         """
         return CompressionStage.UNCOMPRESSED
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.
 
@@ -88,7 +88,7 @@ class ElasticityController(PTCompressionAlgorithmController):
         super().load_state(state)
         self.multi_elasticity_handler.load_state(state[self._ec_state_names.MULTI_ELASTICITY_HANDLER_STATE])
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns compression controller state, which is the map of the algorithm name to the dictionary with the
         corresponding state attributes.

@@ -10,12 +10,13 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import List, Tuple, TypeVar
+from typing import TypeVar
 
 import numpy as np
 import torch
 
 import nncf
+from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
@@ -70,11 +71,11 @@ class ReferenceQuantize:
         input_: GeneralizedTensor,
         input_low: GeneralizedTensor,
         input_range: GeneralizedTensor,
-        output: GeneralizedTensor,
+        levels: int,
         level_low: int,
         level_high: int,
         is_asymmetric: bool = False,
-    ) -> List[GeneralizedTensor]:
+    ) -> list[GeneralizedTensor]:
         # is_asymmetric is unused, present only to correspond to the CPU signature of calling "backward"
         mask_hi = input_ > (input_low + input_range)
         mask_hi = self._astype(mask_hi, input_.dtype)
@@ -83,6 +84,7 @@ class ReferenceQuantize:
 
         mask_in = 1 - mask_hi - mask_lo
         range_sign = self._sign(input_range)
+        output = self.forward(input_, input_low, input_range, levels)
         err = (output - input_) * self._reciprocal(input_range * range_sign)
         grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
         grad_range = sum_like(grad_range, input_range)
@@ -95,7 +97,7 @@ class ReferenceQuantize:
 
     def tune_range(
         self, input_low: GeneralizedTensor, input_range: GeneralizedTensor, levels: int
-    ) -> Tuple[GeneralizedTensor, GeneralizedTensor]:
+    ) -> tuple[GeneralizedTensor, GeneralizedTensor]:
         input_high = input_range + input_low
         input_low[input_low > 0] = 0
         input_high[input_high < 0] = 0
@@ -119,7 +121,11 @@ class ReferenceQuantize:
         return new_input_low, new_input_range
 
 
+torch_executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
+torch_forward = CompilationWrapper(torch_executor.forward)
+torch_backward = CompilationWrapper(torch_executor.backward)
+
+
 class ReferenceQuantizedFunctions:
-    _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    Quantize_forward = _executor.forward
-    Quantize_backward = _executor.backward
+    Quantize_forward = torch_forward
+    Quantize_backward = torch_backward

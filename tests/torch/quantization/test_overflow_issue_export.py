@@ -383,14 +383,20 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_overflow_fix_applied(tmp_path, m
         100 * np.random.normal(size=[1, 1, 20, 20]),
         100 * np.random.uniform(size=[1, 1, 20, 20]),
     ]
+
+    # TODO(andrey-churkin): Remove after the issue https://github.com/microsoft/onnxruntime/issues/24518 is fixed.
+    sess_options = None
+    if isinstance(model, DepthWiseConvTestModel):
+        sess_options = rt.SessionOptions()
+        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
+
+    sess = rt.InferenceSession(onnx_checkpoint_path, sess_options)
     for input_tensor in input_tensors:
         torch_input = torch.tensor(input_tensor, dtype=torch.float32)
 
         with torch.no_grad():
             torch_out = compressed_model(torch_input)
 
-        # ONNXRuntime
-        sess = rt.InferenceSession(onnx_checkpoint_path)
         input_name = sess.get_inputs()[0].name
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 

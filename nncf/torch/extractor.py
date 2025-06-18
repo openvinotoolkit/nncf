@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from itertools import chain
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Iterable, Optional, Union
 
 import torch
 import torch.nn.functional as F
@@ -50,7 +50,7 @@ class ExtractedFunc(nn.Module):
     def __init__(
         self,
         fn_name: str,
-        kwargs: Dict[str, Any],
+        kwargs: dict[str, Any],
     ) -> None:
         super().__init__()
         self.fn_name = fn_name
@@ -192,7 +192,7 @@ def try_to_fuse_conv(
     return nn.Sequential(extracted_module, extracted_bn)
 
 
-def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List[str]) -> Optional[nn.Module]:
+def extract_model(model: NNCFNetwork, input_nodes: list[str], output_nodes: list[str]) -> Optional[nn.Module]:
     """
     Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.
 

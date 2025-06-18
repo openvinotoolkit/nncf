@@ -10,7 +10,7 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
-from typing import Dict, List, Set, Tuple, Union
+from typing import Union
 
 import numpy as np
 import onnx
@@ -56,8 +56,8 @@ class ONNXModelTransformer(ModelTransformer):
         port_id: int,
         node_name: str,
         transform_type: TargetType,
-        node_mapping: Dict[str, onnx.NodeProto],
-        input_edges_mapping: Dict[str, str],
+        node_mapping: dict[str, onnx.NodeProto],
+        input_edges_mapping: dict[str, str],
     ) -> str:
         """
         Returns edge name corresponding to the node with a name equal to node_name, port_id and transform_type.
@@ -123,7 +123,7 @@ class ONNXModelTransformer(ModelTransformer):
         return model
 
     def _apply_output_insertion_transformations(
-        self, transformations: List[ONNXOutputInsertionCommand]
+        self, transformations: list[ONNXOutputInsertionCommand]
     ) -> onnx.ModelProto:
         """
         Returns a new model with extra outputs provided by transformations.
@@ -146,7 +146,7 @@ class ONNXModelTransformer(ModelTransformer):
         return ONNXModelTransformer._insert_outputs(self._model, outputs=model_outputs)
 
     @staticmethod
-    def _insert_outputs(model: onnx.ModelProto, outputs: Union[List[str], Set[str]]) -> onnx.ModelProto:
+    def _insert_outputs(model: onnx.ModelProto, outputs: Union[list[str], set[str]]) -> onnx.ModelProto:
         """
         Creates a new model as a copy of provided model with additional outputs.
 
@@ -190,7 +190,7 @@ class ONNXModelTransformer(ModelTransformer):
         return new_model
 
     def _apply_quantizer_insertion_transformations(
-        self, model: onnx.ModelProto, transformations: List[ONNXQuantizerInsertionCommand]
+        self, model: onnx.ModelProto, transformations: list[ONNXQuantizerInsertionCommand]
     ) -> onnx.ModelProto:
         """
         Creates a new model as a deepcopy of provided model and inserts QuantizeLinear-DequantizeLinear nodes pair.
@@ -208,7 +208,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _get_quantize_dequantize_nodes(
         self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str
-    ) -> Tuple[onnx.NodeProto, onnx.NodeProto]:
+    ) -> tuple[onnx.NodeProto, onnx.NodeProto]:
         """
         Returns QuantizeLinear-DequantizeLinear nodes pair, based on the transformation parameters and
         inserted onto edge with name target_edge_name.
@@ -250,7 +250,7 @@ class ONNXModelTransformer(ModelTransformer):
     @staticmethod
     def _get_scale_zero_point_tensors(
         transformation: ONNXQuantizerInsertionCommand, quantizer: onnx.NodeProto, dequantizer: onnx.NodeProto
-    ) -> Tuple[onnx.TensorProto, onnx.TensorProto]:
+    ) -> tuple[onnx.TensorProto, onnx.TensorProto]:
         """
         Returns scale and zero point of QuantizeLinear-DequantizeLinear nodes pair.
 
@@ -285,7 +285,7 @@ class ONNXModelTransformer(ModelTransformer):
         return onnx_scale_tensor, onnx_zero_point_tensor
 
     def _get_quantizer_dequantizer_edge_name(
-        self, transformation: ONNXQuantizerInsertionCommand, node_mapping: Dict[str, onnx.NodeProto]
+        self, transformation: ONNXQuantizerInsertionCommand, node_mapping: dict[str, onnx.NodeProto]
     ) -> str:
         """
         Returns an edge name on which QuantizeLinear-DequantizeLinear nodes pair has to be inserted.
@@ -306,8 +306,8 @@ class ONNXModelTransformer(ModelTransformer):
         self,
         model: onnx.ModelProto,
         transformation: ONNXQuantizerInsertionCommand,
-        node_mapping: Dict[str, onnx.NodeProto],
-        children_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
+        node_mapping: dict[str, onnx.NodeProto],
+        children_node_mapping: dict[str, list[onnx.ValueInfoProto]],
     ) -> onnx.ModelProto:
         """
         Inserts QuantizeLinear-DequantizeLinear nodes pair.
@@ -357,7 +357,7 @@ class ONNXModelTransformer(ModelTransformer):
         return model
 
     def _apply_initializer_update_transformations(
-        self, model: onnx.ModelProto, transformations: List[ONNXInitializerUpdateCommand]
+        self, model: onnx.ModelProto, transformations: list[ONNXInitializerUpdateCommand]
     ) -> onnx.ModelProto:
         """
         Creates a copy of original model and applies bias correction transformations on the model.
@@ -370,10 +370,7 @@ class ONNXModelTransformer(ModelTransformer):
         for transformation in transformations:
             node = name_to_node_map[transformation.target_point.target_node_name]
             initializer_name = node.input[transformation.target_point.port_id]
-            initializer = get_tensor(model, initializer_name)
-
-            new_tensor = onnx.numpy_helper.from_array(transformation.new_value, initializer_name)
-            initializer.CopyFrom(new_tensor)
+            set_initializer(initializer_name, model, transformation.new_value)
         return model
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
@@ -397,10 +394,15 @@ class ONNXModelTransformer(ModelTransformer):
         if not output_tensor_names:
             output_tensor_names = [n.name for n in self._model.graph.output]
 
-        return self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
+        extracted_model = self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
+        if self._model.metadata_props:
+            values = {p.key: p.value for p in self._model.metadata_props}
+            onnx.helper.set_model_props(extracted_model, values)
+
+        return extracted_model
 
     def _apply_qdq_node_removing_transformations(
-        self, model: onnx.ModelProto, transformations: List[ONNXQDQNodeRemovingCommand]
+        self, model: onnx.ModelProto, transformations: list[ONNXQDQNodeRemovingCommand]
     ) -> onnx.ModelProto:
         """
         Returns a copy of original model with removed nodes.
@@ -456,3 +458,38 @@ class ONNXModelTransformer(ModelTransformer):
             model.graph.node.remove(dequantize_node_proto)
 
         return model
+
+
+def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray) -> None:
+    """
+    Updates the initializer tensor in the ONNX model.
+    :param initializer_name: Name of the initializer tensor to update.
+    :param model: ONNX model.
+    :param new_value: New value for the initializer tensor.
+    """
+    initializer = get_tensor(model, initializer_name)
+    new_tensor = onnx.numpy_helper.from_array(new_value, initializer_name)
+    initializer.CopyFrom(new_tensor)
+
+
+def remove_initializer(initializer_name: str, model: onnx.ModelProto) -> None:
+    """
+    Removes the initializer tensor from the ONNX model.
+    :param initializer_name: Name of the initializer tensor to remove.
+    :param model: ONNX model.
+    """
+    original_initializer = next((init for init in model.graph.initializer if init.name == initializer_name), None)
+    if original_initializer is not None:
+        model.graph.initializer.remove(original_initializer)
+
+
+def remove_node(node_name: str, model: onnx.ModelProto) -> None:
+    """
+    Removes the node from the ONNX model.
+
+    :param node_name: Name of the node to remove.
+    :param model: ONNX model.
+    """
+    original_node = next((node for node in model.graph.node if node.name == node_name), None)
+    if original_node is not None:
+        model.graph.node.remove(original_node)

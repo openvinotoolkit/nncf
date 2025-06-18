@@ -18,10 +18,6 @@ hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull_backend_OPTIMUM:
   metric_value: null
 hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless_backend_OPTIMUM:
   metric_value: null
-  exception_xfail_reason:
-    type: "TypeError"
-    error_message: "cannot pickle 'openvino._pyopenvino.Tensor' object"
-    message: "Issue-161969"
 hf/hf-internal-testing/tiny-random-gpt2_backend_FP32:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_OPTIMUM:
@@ -42,8 +38,16 @@ torchvision/resnet18_backend_CUDA_TORCH:
   metric_value: 0.69152
 torchvision/resnet18_backend_FX_TORCH:
   metric_value: 0.6946
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/resnet18_backend_CUDA_FX_TORCH:
   metric_value: 0.6946
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/mobilenet_v3_small_BC_backend_FP32:
   metric_value: 0.6766
 torchvision/mobilenet_v3_small_BC_backend_OV:
@@ -52,24 +56,48 @@ torchvision/mobilenet_v3_small_BC_backend_ONNX:
   metric_value: 0.6679
 torchvision/mobilenet_v3_small_BC_backend_FX_TORCH:
   metric_value: 0.6679
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/mobilenet_v3_small_BC_backend_CUDA_FX_TORCH:
   metric_value: 0.6664
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/vit_b_16_backend_FP32:
   metric_value: 0.8107
 torchvision/vit_b_16_backend_OV:
   metric_value: 0.80948
 torchvision/vit_b_16_backend_FX_TORCH:
   metric_value: 0.80922
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/vit_b_16_backend_CUDA_FX_TORCH:
   metric_value: 0.80922
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/swin_v2_s_backend_FP32:
   metric_value: 0.83712
 torchvision/swin_v2_s_backend_OV:
   metric_value: 0.83638
 torchvision/swin_v2_s_backend_FX_TORCH:
   metric_value: 0.8360
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 torchvision/swin_v2_s_backend_CUDA_FX_TORCH:
   metric_value: 0.8360
+  exception_xfail_reason:
+    type: "FileNotFoundError"
+    error_message: "Openvino Model Files Not Found!"
+    message: "Issue-166847"
 timm/crossvit_9_240_backend_CUDA_TORCH:
   metric_value: 0.7275
 timm/crossvit_9_240_backend_FP32:

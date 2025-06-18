@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
@@ -30,7 +29,7 @@ class SparsifiedLayerSummary:
     def __init__(
         self,
         name: str,
-        weight_shape: List[int],
+        weight_shape: list[int],
         sparsity_level: float,
         weight_percentage: float,
     ):
@@ -55,7 +54,7 @@ class SparsifiedModelStatistics(Statistics):
         self,
         sparsity_level: float,
         sparsity_level_for_layers: float,
-        sparsified_layers_summary: List[SparsifiedLayerSummary],
+        sparsified_layers_summary: list[SparsifiedLayerSummary],
     ):
         self.sparsity_level = sparsity_level
         self.sparsity_level_for_layers = sparsity_level_for_layers
@@ -110,7 +109,7 @@ class MagnitudeSparsityStatistics(Statistics):
     def __init__(
         self,
         model_statistics: SparsifiedModelStatistics,
-        thresholds: List[LayerThreshold],
+        thresholds: list[LayerThreshold],
         target_sparsity_level: float,
     ):
         self.model_statistics = model_statistics

@@ -26,6 +26,8 @@ from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.nncf_network.helpers import SimplestModel
 
+pytestmark = pytest.mark.legacy
+
 INPUT_SAMPLE_SIZE = [1, 1, 4, 4]
 CONFIG_WITH_ALL_INIT_TYPES = {
     "model": "basic_quant_conv",

@@ -52,3 +52,23 @@ When adding model configs and checkpoints to be showcased in NNCF's sample scrip
 1. The base name must be the same for the NNCF config file, AC config file, checkpoint file (PT/ONNX/OV) or checkpoint folder (TF), and other associated artifacts.
 2. This name should be composed with the following format: `{model_name}_{dataset_name}` for FP32 models, `{topology_name}_{dataset_name}_{compression_algorithms_applied}`. The format may be extended if there are multiple models with the same topology, dataset and compression algos applied, which only differ in something else such as exact value of achieved sparsity. Align the naming of the new checkpoints with the existing ones.
 3. Additional human-readable information on the model such as expected metrics and compression algorithm specifics (e.g. level of pruning/sparsity, per-tensor/per-channel quantizer configuration etc.) should be stored in a registry file (`tests/torch/sota_checkpoints_eval.json` for PT, `tests/tensorflow/sota_checkpoints_eval.json` for TF)
+
+## Copyright
+
+1) If code was borrowed, ensure the license is checked and that no legal risks exist. For questions, contact valentina.kats@intel.com.
+2) The next steps depend on the license but usually include:
+    * Adding the license text to the [third-party-programs.txt](licensing/third-party-programs.txt) file.
+    * Mentioning the company name and license type in the borrowed source file:
+
+      ```python
+      #
+      # MIT License
+      # Copyright (c) 2020 EleutherAI
+      ```
+
+    * Adding a note about where the functionality came from, for example:
+
+      ```python
+      # Modification Notes: This file was taken as is from lm-eval-harness:
+      # https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/wikitext/preprocess_wikitext.py
+      ```

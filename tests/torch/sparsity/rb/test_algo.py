@@ -31,6 +31,8 @@ from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 
+pytestmark = pytest.mark.legacy
+
 
 def get_basic_sparsity_config(
     input_sample_size=None, sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2, sparsity_freeze_epoch=3

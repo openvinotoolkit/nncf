@@ -10,7 +10,7 @@
 # limitations under the License.
 from dataclasses import dataclass
 from functools import partial
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import pytest
@@ -137,7 +137,7 @@ def get_mobile_bert_big_model():
 @dataclass
 class GroupTestDesc:
     model_desc: IModelDesc
-    ref_groups: Optional[List[PruningGroup]] = None
+    ref_groups: Optional[list[PruningGroup]] = None
 
     def __str__(self) -> str:
         return self.model_desc.model_name
@@ -338,7 +338,7 @@ CV_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(25)}, consumers={ConsumerInfo(27)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(28)}, consumers={ConsumerInfo(30)}),
         ],
     ),
     GroupTestDesc(
@@ -359,7 +359,7 @@ CV_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(25)}, consumers={ConsumerInfo(27)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(28)}, consumers={ConsumerInfo(30)}),
         ],
     ),
     GroupTestDesc(

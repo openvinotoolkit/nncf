@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Type
+from typing import Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.operations import BasePruningOp
@@ -37,7 +37,7 @@ class MaskPropagationAlgorithm:
         self,
         graph: NNCFGraph,
         pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-        tensor_processor: Optional[Type[NNCFPruningBaseTensorProcessor]] = None,
+        tensor_processor: Optional[type[NNCFPruningBaseTensorProcessor]] = None,
     ) -> None:
         """
         Initializes MaskPropagationAlgorithm.
@@ -51,7 +51,7 @@ class MaskPropagationAlgorithm:
         self._pruning_operator_metatypes = pruning_operator_metatypes
         self._tensor_processor = tensor_processor
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> Type[BasePruningOp]:
+    def get_meta_operation_by_type_name(self, type_name: str) -> type[BasePruningOp]:
         """
         Returns class of metaop that corresponds to `type_name` type.
 
@@ -73,8 +73,8 @@ class MaskPropagationAlgorithm:
             cls.mask_propagation(node, self._graph, self._tensor_processor)  # type: ignore
 
     def symbolic_mask_propagation(
-        self, prunable_layers_types: List[str], can_prune_after_analysis: Dict[int, PruningAnalysisDecision]
-    ) -> Dict[int, PruningAnalysisDecision]:
+        self, prunable_layers_types: list[str], can_prune_after_analysis: dict[int, PruningAnalysisDecision]
+    ) -> dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
         pruning algo have a correct correspondent closing node on each path from self to outputs;
@@ -95,7 +95,7 @@ class MaskPropagationAlgorithm:
         :return: Dict of node indices vs the decision made by symbolic mask propagation algorithm.
         """
         can_be_closing_convs = self._get_can_closing_convs(prunable_layers_types)
-        can_prune_by_dim: Dict[int, PruningAnalysisDecision] = {k: None for k in can_be_closing_convs}  # type: ignore
+        can_prune_by_dim: dict[int, PruningAnalysisDecision] = {k: None for k in can_be_closing_convs}  # type: ignore
         for node in self._graph.topological_sort():
             if node.node_id in can_be_closing_convs and can_prune_after_analysis[node.node_id]:
                 # Set output mask
@@ -130,7 +130,7 @@ class MaskPropagationAlgorithm:
                         can_prune_by_dim[producer.id] = PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)
         # Update decision for nodes which
         # have no closing convolution
-        convs_without_closing_conv: Dict[int, PruningAnalysisDecision] = {}
+        convs_without_closing_conv: dict[int, PruningAnalysisDecision] = {}
         for k, v in can_prune_by_dim.items():
             if v is None:
                 convs_without_closing_conv[k] = PruningAnalysisDecision(
@@ -144,8 +144,8 @@ class MaskPropagationAlgorithm:
 
         return can_prune_by_dim
 
-    def _get_can_closing_convs(self, prunable_layers_types: List[str]) -> Set[int]:
-        retval: Set[int] = set()
+    def _get_can_closing_convs(self, prunable_layers_types: list[str]) -> set[int]:
+        retval: set[int] = set()
         for node in self._graph.get_all_nodes():
             if node.node_type in prunable_layers_types and not (
                 is_grouped_conv(node) or is_batched_linear(node, self._graph)

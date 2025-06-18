@@ -12,7 +12,6 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple, Type
 
 import tensorflow as tf
 from tensorflow.core.framework.node_def_pb2 import NodeDef
@@ -92,7 +91,7 @@ class CustomLayerNodeInfo:
         custom_layer_name: str,
         target_node_name: NNCFNodeName,
         node_type: str,
-        node_metatype: Type[OperatorMetatype],
+        node_metatype: type[OperatorMetatype],
         weight_node_name: str,
         dtype: Dtype,
     ):
@@ -121,7 +120,7 @@ class CustomLayerEdgeInfo:
     Describes an edge inside a custom layer graph representation in TF.
     """
 
-    def __init__(self, tensor_shape: List[int], input_port_id: int, output_port_id: int, dtype: Dtype):
+    def __init__(self, tensor_shape: list[int], input_port_id: int, output_port_id: int, dtype: Dtype):
         """
         :param tensor_shape: The shape of the associated tensor.
         :param input_port_id: The ID of the input tensor among the "to_node" inputs.
@@ -140,12 +139,12 @@ class CustomLayerInfo:
     """
 
     def __init__(self):
-        self.requires_inputs_from_nodes: Set[str] = set()
-        self.gives_outputs_from_nodes: Set[str] = set()
-        self.shared_weight_node_names_vs_weighted_op_node_names: Dict[str, Set[str]] = defaultdict(set)
-        self.node_infos: Dict[str, CustomLayerNodeInfo] = {}
-        self.edge_infos: Dict[Tuple[str, str], CustomLayerEdgeInfo] = {}
-        self.graphdef_node_name_to_pretty_node_name: Dict[str, str] = {}
+        self.requires_inputs_from_nodes: set[str] = set()
+        self.gives_outputs_from_nodes: set[str] = set()
+        self.shared_weight_node_names_vs_weighted_op_node_names: dict[str, set[str]] = defaultdict(set)
+        self.node_infos: dict[str, CustomLayerNodeInfo] = {}
+        self.edge_infos: dict[tuple[str, str], CustomLayerEdgeInfo] = {}
+        self.graphdef_node_name_to_pretty_node_name: dict[str, str] = {}
 
 
 class TFModelConverter(ABC):
@@ -172,9 +171,9 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
 
     def __init__(self, model: tf.keras.Model):
         self._model = model
-        self._node_info: Dict[str, Dict] = {}
+        self._node_info: dict[str, dict] = {}
         self._custom_layer_infos = self._collect_custom_layer_infos(self._model)
-        self._nncf_node_names_vs_custom_layer_name: Dict[NNCFNodeName, str] = {}
+        self._nncf_node_names_vs_custom_layer_name: dict[NNCFNodeName, str] = {}
 
     @staticmethod
     def _get_type_spec(tensor):
@@ -184,7 +183,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
 
     def _collect_custom_layer_infos(
         self, model: tf.keras.Model, use_graph_var_names: bool = False
-    ) -> Dict[str, CustomLayerInfo]:
+    ) -> dict[str, CustomLayerInfo]:
         custom_layers = BaseFunctionalSequentialConverter.get_custom_layers(model)
         retval = {}
         for layer_name, layer in custom_layers.items():
@@ -276,7 +275,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
                 retval[layer_name] = custom_layer_info
         return retval
 
-    def _get_layer_output_dtype(self, layer_config: Dict) -> Dtype:
+    def _get_layer_output_dtype(self, layer_config: dict) -> Dtype:
         if layer_config["class_name"] in ["Functional", "Sequential"]:
             return self._get_layer_output_dtype(layer_config["config"]["layers"][0])
 
@@ -299,7 +298,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
         return Dtype.FLOAT
 
     @staticmethod
-    def _get_layer_type(layer_config: Dict) -> str:
+    def _get_layer_type(layer_config: dict) -> str:
         if layer_config["class_name"] == "TensorFlowOpLayer":
             return layer_config["config"]["node_def"]["op"]
         if layer_config["class_name"] in ["TFOpLambda", "SlicingOpLambda"]:
@@ -310,7 +309,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
         return layer_config["class_name"]
 
     @staticmethod
-    def get_custom_layers(model: tf.keras.Model) -> Dict[str, tf.Module]:
+    def get_custom_layers(model: tf.keras.Model) -> dict[str, tf.Module]:
         """
         Returns the mapping of custom layer names in the model vs associated custom layer
         module objects.
@@ -325,7 +324,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
         return custom_layers
 
     @staticmethod
-    def _get_graphdef_name_to_layer_var_map(concrete_fun) -> Dict[str, str]:
+    def _get_graphdef_name_to_layer_var_map(concrete_fun) -> dict[str, str]:
         names_map = {}
         inverse_map = defaultdict(set)
         for layer_var in concrete_fun.variables:
@@ -346,7 +345,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
 
     @staticmethod
     def _get_graphdef_node_name_for_custom_layer_node_weight(
-        weighted_node: NodeDef, graphdef_nodes: Dict[str, NodeDef]
+        weighted_node: NodeDef, graphdef_nodes: dict[str, NodeDef]
     ) -> str:
         def get_node_name(graphdef_node_name: str):
             return graphdef_node_name.split(":")[0]
@@ -366,12 +365,12 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
         return weight_node_name
 
     @staticmethod
-    def _prepare_shape(shape) -> List:
+    def _prepare_shape(shape) -> list:
         if not isinstance(shape, list):
             return [shape]
         return shape
 
-    def get_layer_info_for_node(self, node_name: NNCFNodeName) -> Tuple[bool, TFLayerInfo]:
+    def get_layer_info_for_node(self, node_name: NNCFNodeName) -> tuple[bool, TFLayerInfo]:
         """
         :param node_name: The node name in the converted NNCFGraph
         :return: A flag indicating whether the node corresponds to a custom layer,
@@ -392,7 +391,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
             insertion_data = TFLayerInfo(layer_name, instance_idx=instance_idx)
         return is_custom, insertion_data
 
-    def get_node_names_vs_custom_layer_names(self) -> Dict[NNCFNodeName, str]:
+    def get_node_names_vs_custom_layer_names(self) -> dict[NNCFNodeName, str]:
         """
         :return: A mapping of NNCFNode names corresponding to custom layers vs the corresponding
           custom layer name.
@@ -415,7 +414,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
     def _add_custom_layer_subgraph(self, nncf_graph: NNCFGraph, custom_layer_name: str) -> NNCFGraph:
         # TODO (vshampor): filter meaningless ops such as Identity, resource read etc.
         custom_layer_info = self._custom_layer_infos[custom_layer_name]
-        node_name_vs_nncf_node_ids: Dict[NNCFNodeName, int] = {}
+        node_name_vs_nncf_node_ids: dict[NNCFNodeName, int] = {}
         for node_info in custom_layer_info.node_infos.values():
             weight_node_name = node_info.weight_node_name
             is_shared = False
@@ -473,11 +472,11 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
     def __init__(self, model: tf.keras.Model):
         super().__init__(model)
         self._model_config = self._model.get_config()
-        self._layer_info: Dict[str, Dict] = {}
+        self._layer_info: dict[str, dict] = {}
         self._collect_layer_information()
         self._layer_name_to_node_names = defaultdict(set)
         self._collect_node_information()
-        self._edge_info: Dict[Tuple[str, str], Dict] = {}
+        self._edge_info: dict[tuple[str, str], dict] = {}
         self._collect_edge_information()
 
     def _collect_layer_information(self):
@@ -507,7 +506,7 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
                 #  properly
                 self._add_regular_layer_nodes(layer_config)
 
-    def _add_regular_layer_nodes(self, layer_config: Dict):
+    def _add_regular_layer_nodes(self, layer_config: dict):
         layer_name = layer_config["name"]
         layer = self._get_layer(layer_name)
         if layer_config["inbound_nodes"]:
@@ -578,8 +577,8 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
 
     def convert(self) -> NNCFGraph:
         nncf_graph = NNCFGraph()
-        node_name_vs_nncf_node_ids: Dict[str, int] = {}
-        output_node_id_vs_model_output_idx: Dict[int, int] = {}
+        node_name_vs_nncf_node_ids: dict[str, int] = {}
+        output_node_id_vs_model_output_idx: dict[int, int] = {}
 
         # Regular nodes
         for node_name, node_info in self._node_info.items():
@@ -741,7 +740,7 @@ class SequentialConverter(BaseFunctionalSequentialConverter):
 
 
 def _get_layer_attributes(
-    layer_metatype: Type[OperatorMetatype], model_layer: tf.keras.layers.Layer
+    layer_metatype: type[OperatorMetatype], model_layer: tf.keras.layers.Layer
 ) -> BaseLayerAttributes:
     layer_attributes = None
     if layer_metatype in DEPTHWISE_CONV_LAYER_METATYPES:

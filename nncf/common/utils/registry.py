@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 
 class Registry:
@@ -17,11 +17,11 @@ class Registry:
 
     def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
-        self._registry_dict: Dict[str, Any] = {}
+        self._registry_dict: dict[str, Any] = {}
         self._add_name_as_attr = add_name_as_attr
 
     @property
-    def registry_dict(self) -> Dict[str, Any]:
+    def registry_dict(self) -> dict[str, Any]:
         return self._registry_dict
 
     def values(self) -> Any:

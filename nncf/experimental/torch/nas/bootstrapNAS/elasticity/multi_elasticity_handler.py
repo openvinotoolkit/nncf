@@ -10,7 +10,7 @@
 # limitations under the License.
 import inspect
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 from typing import OrderedDict as OrderedDictType
 
 from nncf.common.logging import nncf_logger
@@ -100,7 +100,7 @@ class MultiElasticityHandler(ElasticityHandler):
     def depth_handler(self) -> Optional[ElasticDepthHandler]:
         return self._get_handler_by_elasticity_dim(ElasticityDim.DEPTH)
 
-    def get_available_elasticity_dims(self) -> List[ElasticityDim]:
+    def get_available_elasticity_dims(self) -> list[ElasticityDim]:
         """
         :return: list of available elasticity dimension. E.g. it's possible to have a single elasticity like Elastic
         Depth or all possible elasticities (Elastic Depth/Width/Kernel) added to the model.
@@ -164,7 +164,7 @@ class MultiElasticityHandler(ElasticityHandler):
                         f"Config for {handler_id} mismatch. Requested: {sub_config}. Resolved: {resolved_config}"
                     )
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -182,7 +182,7 @@ class MultiElasticityHandler(ElasticityHandler):
             dim = ElasticityDim(dim_str)
             self._is_handler_enabled_map[dim] = is_enabled
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -196,7 +196,7 @@ class MultiElasticityHandler(ElasticityHandler):
             self._state_names.IS_HANDLER_ENABLED_MAP: is_handler_enabled_map,
         }
 
-    def get_search_space(self) -> Dict[str, Any]:
+    def get_search_space(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents the search space of the super-network.
@@ -233,7 +233,7 @@ class MultiElasticityHandler(ElasticityHandler):
         """
         self._is_handler_enabled_map[dim] = False
 
-    def count_flops_and_weights_for_active_subnet(self) -> Tuple[int, int]:
+    def count_flops_and_weights_for_active_subnet(self) -> tuple[int, int]:
         """
         :return: FLOPs and the number weights and in the model for convolution and fully connected layers.
         """
@@ -295,11 +295,11 @@ class MultiElasticityHandler(ElasticityHandler):
                 vars_upper += [len(handler.get_search_space()[i]) - 1 for i in range(len(handler.get_search_space()))]
         return num_vars, vars_upper
 
-    def get_config_from_pymoo(self, x: List) -> SubnetConfig:
+    def get_config_from_pymoo(self, x: list) -> SubnetConfig:
         active_handlers = {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
         index_pos = 0
         sample = SubnetConfig()
-        for handler_id, _ in active_handlers.items():
+        for handler_id in active_handlers:
             if handler_id is ElasticityDim.KERNEL:
                 sample[handler_id] = [
                     self.kernel_search_space[j - index_pos][x[j]]

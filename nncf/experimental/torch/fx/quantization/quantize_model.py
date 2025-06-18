@@ -119,7 +119,7 @@ def quantize_impl(
 
 def compress_weights_impl(
     model: torch.fx.GraphModule,
-    dataset: Dataset,
+    dataset: Optional[Dataset],
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,

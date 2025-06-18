@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Iterator, Optional, TypeVar
 
 import torch
 from torch import nn
@@ -238,9 +238,9 @@ class NNCFNetworkInterface(torch.nn.Module):
         input_info: ModelInputInfo = None,
         dummy_forward_fn: Callable = None,
         wrap_inputs_fn: WrapInputsFnType = None,
-        scopes_without_shape_matching: List[str] = None,
-        ignored_scopes: List[str] = None,
-        target_scopes: List[str] = None,
+        scopes_without_shape_matching: list[str] = None,
+        ignored_scopes: list[str] = None,
+        target_scopes: list[str] = None,
         wrap_outputs_fn: WrapOutputsFnType = None,
         replace_modules: bool = True,
         trace_parameters: bool = False,
@@ -273,7 +273,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
-        self._groups_vs_hooks_handlers: Dict[str, List[HookHandle]] = defaultdict(list)
+        self._groups_vs_hooks_handlers: dict[str, list[HookHandle]] = defaultdict(list)
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -291,11 +291,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         else:
             self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
 
-        self._nncf_replaced_modules: Dict[torch.nn.Module, List[Scope]] = {}
+        self._nncf_replaced_modules: dict[torch.nn.Module, list[Scope]] = {}
         self._scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
-        self._extra_module_types: List[ExtraCompressionModuleType] = []
-        self._insertions_into_original_graph: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]] = {}
+        self._extra_module_types: list[ExtraCompressionModuleType] = []
+        self._insertions_into_original_graph: dict[PTTargetPoint, list[tuple[Callable, TransformationPriority]]] = {}
 
         if isinstance(model, NNCFNetwork):
             self._nncf_replaced_modules = model.nncf._nncf_replaced_modules
@@ -422,7 +422,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         load_module_state(self._model_ref, saved_state)
         return self._model_ref
 
-    def get_modules_in_nncf_modules_by_type(self, class_names: List[str]) -> Dict[Scope, nn.Module]:
+    def get_modules_in_nncf_modules_by_type(self, class_names: list[str]) -> dict[Scope, nn.Module]:
         nncf_modules = self.get_nncf_modules()
         retval = {}
         for nncf_module, nncf_module_scope in nncf_modules.items():
@@ -436,7 +436,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         point: PTInsertionPoint,
         fn: Callable,
         hooks_group_name: Optional[str] = DEFAULT_HOOKS_GROUP_NAME,
-    ) -> List[HookHandle]:
+    ) -> list[HookHandle]:
         """
         Inserts given function to the point in the NNCFNetwork, creates hook handle for the inserted function and
         stores created hook handle in a group with the given name. A group name could be used late
@@ -528,23 +528,23 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         return wrapped_user_dummy_forward_fn
 
-    def _replace_modules_by_nncf_modules(self, model: torch.nn.Module, eval_op_scopes: List[Scope] = None):
+    def _replace_modules_by_nncf_modules(self, model: torch.nn.Module, eval_op_scopes: list[Scope] = None):
         _, self._nncf_replaced_modules = replace_modules_by_nncf_modules(
             model, ignored_scopes=self._ignored_scopes, target_scopes=self._target_scopes, eval_op_scopes=eval_op_scopes
         )
         return model
 
-    def get_nncf_module_scopes(self) -> List[List[Scope]]:
+    def get_nncf_module_scopes(self) -> list[list[Scope]]:
         return list(self._nncf_replaced_modules.values())
 
-    def get_nncf_modules(self) -> Dict[torch.nn.Module, Scope]:
+    def get_nncf_modules(self) -> dict[torch.nn.Module, Scope]:
         retval = {}
         for module, scope_set in self._nncf_replaced_modules.items():
             canonical_scope = next(iter(scope_set))
             retval[module] = canonical_scope.copy()
         return retval
 
-    def get_weighted_original_graph_nodes(self, nncf_module_names: List[str] = None) -> List[NNCFNode]:
+    def get_weighted_original_graph_nodes(self, nncf_module_names: list[str] = None) -> list[NNCFNode]:
         retval = set()
         for scope_list in self.get_nncf_module_scopes():
             for nncf_module_scope in scope_list:
@@ -668,8 +668,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_original_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch
         nncf_graph = self.get_original_graph()
-        pre_hooks: List[PreHookInsertionPoint] = []
-        post_hooks: List[PostHookInsertionPoint] = []
+        pre_hooks: list[PreHookInsertionPoint] = []
+        post_hooks: list[PostHookInsertionPoint] = []
         for node in nncf_graph.get_all_nodes():
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
@@ -719,7 +719,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             scope = self._original_graphs_pair.nncf_graph.get_scope_by_node_name(node_name)
         return self.get_module_by_scope(scope)
 
-    def get_flops_per_module(self) -> Dict[NNCFNodeName, int]:
+    def get_flops_per_module(self) -> dict[NNCFNodeName, int]:
         """
         Calculates FLOPS count for modules.
         """
@@ -747,14 +747,14 @@ class NNCFNetworkInterface(torch.nn.Module):
         total_MACs_count = sum(v // 2 for v in flops_count_dict.values())
         return total_MACs_count
 
-    def save_nncf_module_additions(self) -> Dict[Scope, Tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]:
+    def save_nncf_module_additions(self) -> dict[Scope, tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]:
         retval = {}
         for nncf_module, module_scope in self.get_nncf_modules().items():
             retval[module_scope] = (deepcopy(nncf_module.pre_ops), deepcopy(nncf_module.post_ops))
         return retval
 
     def load_nncf_module_additions(
-        self, scope_vs_pre_post_ops_dict: Dict[Scope, Tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]
+        self, scope_vs_pre_post_ops_dict: dict[Scope, tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]
     ):
         for nncf_module, module_scope in self.get_nncf_modules().items():
             nncf_module.pre_ops = scope_vs_pre_post_ops_dict[module_scope][0]
@@ -780,7 +780,7 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         return Mgr(self._model_ref)
 
-    def _collect_eval_op_scopes(self, model: nn.Module, dummy_forward_fn: Callable) -> List[Scope]:
+    def _collect_eval_op_scopes(self, model: nn.Module, dummy_forward_fn: Callable) -> list[Scope]:
         """
         Returns scopes of the operations in the graph which are executed in evaluation mode.
         """
@@ -800,7 +800,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             FunctionCallTelemetryExtractor("nncf.torch.nncf_network.NNCFNetwork.get_config"),
         ],
     )
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         """
         Returns serializable NNCFNetwork config which contains
         all information required to recover all additional modules placement.
@@ -935,7 +935,7 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         return transformation_layout
 
-    def get_node_to_op_address_mapping(self) -> Dict[NNCFNodeName, OperationAddress]:
+    def get_node_to_op_address_mapping(self) -> dict[NNCFNodeName, OperationAddress]:
         """
         Returns map of NNCFGraph node names vs DynamicGraph operation addresses.
 
@@ -953,7 +953,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             retval[nncf_node.node_name] = op_address
         return retval
 
-    def get_op_address_to_op_name_map(self) -> Dict[OperationAddress, NNCFNodeName]:
+    def get_op_address_to_op_name_map(self) -> dict[OperationAddress, NNCFNodeName]:
         """
         Returns map of DynamicGraph operation addresses vs NNCFGraph node names.
 
@@ -1013,9 +1013,9 @@ class NNCFNetworkMeta(type):
         input_info: ModelInputInfo = None,
         dummy_forward_fn: Callable = None,
         wrap_inputs_fn: WrapInputsFnType = None,
-        scopes_without_shape_matching: List[str] = None,
-        ignored_scopes: List[str] = None,
-        target_scopes: List[str] = None,
+        scopes_without_shape_matching: list[str] = None,
+        ignored_scopes: list[str] = None,
+        target_scopes: list[str] = None,
         wrap_outputs_fn: WrapOutputsFnType = None,
         replace_modules: bool = True,
         trace_parameters: bool = False,
@@ -1271,7 +1271,7 @@ class LoadStateListener:
     restores model state by calling this method.
     """
 
-    def __init__(self, model: "NNCFNetwork", all_quantizations: Dict[str, torch.nn.Module]):
+    def __init__(self, model: "NNCFNetwork", all_quantizations: dict[str, torch.nn.Module]):
         self.hook = model._register_load_state_dict_pre_hook(
             functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values()))
         )
@@ -1285,7 +1285,7 @@ class LoadStateListener:
         missing_keys,
         unexpected_keys,
         error_msgs,
-        quantize_modules: List[torch.nn.Module],
+        quantize_modules: list[torch.nn.Module],
     ):
         for module in quantize_modules:
             module.initialized = False

@@ -11,7 +11,6 @@
 
 import tempfile
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 import torch
@@ -58,7 +57,7 @@ def prepare_frames_for_raft(name, frames1, frames2):
 
 
 class TestTorchHubModel(BaseTestModel):
-    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
+    def load_model(self, model_name: str) -> tuple[nn.Module, ExampleType]:
         torch.manual_seed(0)
         m = torch.hub.load("pytorch/vision", model_name, weights=None, skip_validation=True)
         m.eval()

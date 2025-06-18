@@ -12,7 +12,6 @@
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Iterator
-from typing import Dict, List, Tuple
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.tensor import Tensor
@@ -24,7 +23,7 @@ class LayerwiseIterator(Iterator, ABC):
     """
 
     @abstractmethod
-    def __next__(self) -> Tuple[NNCFNode, Dict[int, List[Tensor]]]:
+    def __next__(self) -> tuple[NNCFNode, dict[int, list[Tensor]]]:
         """
         Returns the next node and its associated tensors in the iteration.
 

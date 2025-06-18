@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -35,7 +35,7 @@ TModel = TypeVar("TModel")
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
-    def preserved_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def preserved_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for backend-specific metatypes that require preserving float subgraphs
         when removing the ShapeOf subgraph.
@@ -43,98 +43,98 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def mat_mul_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def mat_mul_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific MatMul metatypes.
         """
 
     @property
     @abstractmethod
-    def post_processing_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def post_processing_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific post-processing metatypes (NonMaximumSuppression, TopK, etc.).
         """
 
     @property
     @abstractmethod
-    def conv_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def conv_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific Convolution metatypes.
         """
 
     @property
     @abstractmethod
-    def shapeof_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def shapeof_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific ShapeOf metatypes.
         """
 
     @property
     @abstractmethod
-    def dropout_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def dropout_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific Dropout metatypes.
         """
 
     @property
     @abstractmethod
-    def elementwise_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def elementwise_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific Elementwises metatypes.
         """
 
     @property
     @abstractmethod
-    def overflow_fix_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def overflow_fix_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.
         """
 
     @property
     @abstractmethod
-    def add_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def add_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes that also can be interpreted as Add layer.
         """
 
     @property
     @abstractmethod
-    def group_conv_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def group_conv_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific Grouped Convolution metatypes.
         """
 
     @property
     @abstractmethod
-    def scaled_dot_product_attention_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def scaled_dot_product_attention_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific Scaled Dot Product Attention metatypes.
         """
 
     @property
     @abstractmethod
-    def scales_unification_map(self) -> Dict[Type[OperatorMetatype], List[Type[OperatorMetatype]]]:
+    def scales_unification_map(self) -> dict[type[OperatorMetatype], list[type[OperatorMetatype]]]:
         """
         Property for the backend-specific metatypes that produces quantizers that might be unified.
         """
 
     @property
     @abstractmethod
-    def hw_config(self) -> Type[HWConfig]:
+    def hw_config(self) -> type[HWConfig]:
         """
         Property for the hardware backend-specific configuration.
         """
 
     @property
     @abstractmethod
-    def quant_trait_op_dict(self) -> Dict[QuantizationTrait, List[Type[OperatorMetatype]]]:
+    def quant_trait_op_dict(self) -> dict[QuantizationTrait, list[type[OperatorMetatype]]]:
         """
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
         """
 
     @property
     @abstractmethod
-    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+    def reducer_map(self) -> dict[StatisticsType, TensorReducerBase]:
         """
         Property for the backend-specific dictionary that contains backend-specific tensor reducers.
         """
@@ -180,10 +180,10 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def create_unified_scales_quantizers_insertion_commands(
         nncf_graph: NNCFGraph,
-        target_points: List[TargetPoint],
+        target_points: list[TargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> List[Command]:
+    ) -> list[Command]:
         """
         Returns backend-specific unified scales quantizers insertion commands.
 
@@ -211,7 +211,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> list[NNCFNode]:
         """
         Returns a list of NNCFNodes to use as start nodes for activation path tracing.
 
@@ -222,7 +222,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> tuple[int, ...]:
         """
         Returns shape of a target point tensor.
 
@@ -234,7 +234,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint, ndims: int) -> Tuple[int, ...]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint, ndims: int) -> tuple[int, ...]:
         """
         Returns axes for per-channel quantization of weights of the node placed on a input port_id.
 
@@ -246,7 +246,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
         """
         Returns node's input port indices with weight tensors.
 
@@ -266,7 +266,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
-    def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
+    def should_quantize_weight(weight_name: str, quantized_weight_names: set[str]) -> bool:
         """
         Return True if weight should be quantized.
 
@@ -277,7 +277,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[Type[OperatorMetatype]]:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> list[type[OperatorMetatype]]:
         """
         Returns ignored metatypes based on a model type and device parameters.
 
@@ -288,7 +288,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> set[str]:
         """
         Returns names of ignored nodes based on layer_attributes.
 
@@ -297,7 +297,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> list[NNCFNode]:
         """
         Returns nodes that have weights.
 

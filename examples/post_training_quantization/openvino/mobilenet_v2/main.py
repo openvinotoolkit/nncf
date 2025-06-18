@@ -12,7 +12,6 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import openvino as ov
@@ -55,7 +54,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: list[int]) -> float:
     cmd = ["benchmark_app", "-m", model_path.as_posix(), "-d", "CPU", "-api", "async", "-t", "15", "-shape", str(shape)]
     cmd_output = subprocess.check_output(cmd, text=True)  # nosec
     print(*cmd_output.splitlines()[-8:], sep="\n")

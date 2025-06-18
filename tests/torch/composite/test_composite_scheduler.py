@@ -10,8 +10,12 @@
 # limitations under the License.
 from typing import Optional
 
+import pytest
+
 from nncf.api.compression import CompressionScheduler
 from nncf.common.composite_compression import CompositeCompressionScheduler
+
+pytestmark = pytest.mark.legacy
 
 
 class DummyScheduler(CompressionScheduler):

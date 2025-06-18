@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Optional
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -43,10 +43,10 @@ class PruningNodeSelector:
     def __init__(
         self,
         pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
-        prune_operations_types: List[str],
-        grouping_operations_types: List[str],
-        ignored_scopes: Optional[List[str]],
-        target_scopes: Optional[List[str]],
+        prune_operations_types: list[str],
+        grouping_operations_types: list[str],
+        ignored_scopes: Optional[list[str]],
+        target_scopes: Optional[list[str]],
         prune_first: bool,
         prune_downsample_convs: bool,
     ):
@@ -101,8 +101,8 @@ class PruningNodeSelector:
 
         # 2. Clusters for nodes that should be pruned together (taking into account clusters for special ops)
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
-            all_pruned_inputs: Dict[int, NNCFNode] = {}
-            clusters_to_merge: List[int] = []
+            all_pruned_inputs: dict[int, NNCFNode] = {}
+            clusters_to_merge: list[int] = []
 
             for node in cluster.elements:
                 sources = get_sources_of_node(node, graph, self._prune_operations_types)
@@ -154,7 +154,7 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
-            all_previous_convs = []
+            all_previous_convs: list[NNCFNode] = []
             for node in list_of_nodes:
                 nncf_node = graph.get_node_by_id(node.node_id)
                 previous_convs = get_previous_convs(
@@ -184,7 +184,7 @@ class PruningNodeSelector:
         self._filter_groups(pruned_nodes_clusterization, can_prune_final_analysis)
         return pruned_nodes_clusterization
 
-    def _get_multiforward_nodes(self, graph: NNCFGraph) -> List[List[NNCFNode]]:
+    def _get_multiforward_nodes(self, graph: NNCFGraph) -> list[list[NNCFNode]]:
         """
         Groups nodes based on their `layer_name` property to determine groups of nodes belonging to
         a single weighted layer object in the model, i.e. the group of operations in the graph that reuse one and
@@ -202,8 +202,8 @@ class PruningNodeSelector:
         self,
         graph: NNCFGraph,
         pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
-        can_prune_after_check: Dict[int, PruningAnalysisDecision],
-    ) -> Dict[int, PruningAnalysisDecision]:
+        can_prune_after_check: dict[int, PruningAnalysisDecision],
+    ) -> dict[int, PruningAnalysisDecision]:
         """
         Checks:
         1) All nodes that were marked as prunable after the model analysis and compatibility check vs.
@@ -225,8 +225,8 @@ class PruningNodeSelector:
         return self._check_all_closing_nodes_are_feasible(graph, can_prune_after_check_updated)
 
     def _check_all_closing_nodes_are_feasible(
-        self, graph: NNCFGraph, can_prune_after_check: Dict[int, PruningAnalysisDecision]
-    ) -> Dict[int, PruningAnalysisDecision]:
+        self, graph: NNCFGraph, can_prune_after_check: dict[int, PruningAnalysisDecision]
+    ) -> dict[int, PruningAnalysisDecision]:
         """
         Check all nodes that were marked as prunable after the model analysis and compatibility check vs.
         pruning algo have a correct correspondent closing node on each path from self to outputs.
@@ -251,7 +251,7 @@ class PruningNodeSelector:
     def _check_internal_groups_dim(
         self,
         pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
-    ) -> Dict[int, PruningAnalysisDecision]:
+    ) -> dict[int, PruningAnalysisDecision]:
         """
         Checks pruning dimensions of all nodes in each cluster group are equal and
         returns nodes of clusters that failed the check.
@@ -278,8 +278,8 @@ class PruningNodeSelector:
         self,
         graph: NNCFGraph,
         pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
-        can_prune: Dict[int, PruningAnalysisDecision],
-    ) -> Dict[int, PruningAnalysisDecision]:
+        can_prune: dict[int, PruningAnalysisDecision],
+    ) -> dict[int, PruningAnalysisDecision]:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
         model analysis. Otherwise the whole group cannot be pruned.
@@ -313,7 +313,7 @@ class PruningNodeSelector:
     def _filter_groups(
         self,
         pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
-        can_prune: Dict[int, PruningAnalysisDecision],
+        can_prune: dict[int, PruningAnalysisDecision],
     ) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and

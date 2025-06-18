@@ -12,7 +12,7 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import Callable, Tuple, Dict
+from typing import Callable
 
 # nncf.torch must be imported before torchvision
 import nncf
@@ -25,7 +25,6 @@ from fastdownload import FastDownload
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
-from torchvision.models.detection.ssd import GeneralizedRCNNTransform
 from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
 from rich.progress import track
 from functools import partial
@@ -78,7 +77,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         self.labels_path = self.data_path / "labels" / "train2017"
         self.image_ids = sorted(map(lambda p: int(p.stem), self.images_path.glob("*.jpg")))
 
-    def __getitem__(self, item: int) -> Tuple[torch.Tensor, Dict]:
+    def __getitem__(self, item: int) -> tuple[torch.Tensor, dict]:
         image_id = self.image_ids[item]
 
         img = Image.open(self.images_path / f"{image_id:012d}.jpg")
@@ -121,7 +120,7 @@ def validate(model: torch.nn.Module, dataset: COCO128Dataset, device: torch.devi
     return computed_metrics["map_50"]
 
 
-def transform_fn(data_item: Tuple[torch.Tensor, Dict], device: torch.device) -> torch.Tensor:
+def transform_fn(data_item: tuple[torch.Tensor, dict], device: torch.device) -> torch.Tensor:
     # Skip label and add a batch dimension to an image tensor
     images, _ = data_item
     return images[None].to(device)
@@ -141,7 +140,6 @@ def main():
     model.eval()
 
     # Disable NNCF tracing for some methods in order for the model to be properly traced by NNCF
-    disable_tracing(GeneralizedRCNNTransform.normalize)
     disable_tracing(SSD.postprocess_detections)
     disable_tracing(DefaultBoxGenerator.forward)
 

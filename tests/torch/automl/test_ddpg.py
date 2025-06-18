@@ -15,6 +15,8 @@ import torch
 
 from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 
+pytestmark = pytest.mark.legacy
+
 STUB = 0
 N_STATE = 5
 N_ACTION = 2
@@ -164,7 +166,7 @@ def test_soft_update():
     source_ddpg, target_ddpg = create_two_ddpg_agents()
     target_ddpg.soft_update(target_ddpg.actor, source_ddpg.actor)
 
-    for _, state_tensor in target_ddpg.actor.state_dict().items():
+    for state_tensor in target_ddpg.actor.state_dict().values():
         assert torch.all(state_tensor == 0.95).item()
 
 
@@ -172,7 +174,7 @@ def test_hard_update():
     source_ddpg, target_ddpg = create_two_ddpg_agents()
     target_ddpg.hard_update(target_ddpg.actor, source_ddpg.actor)
 
-    for _, state_tensor in target_ddpg.actor.state_dict().items():
+    for state_tensor in target_ddpg.actor.state_dict().values():
         assert torch.all(state_tensor == 0.5).item()
 
 

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
@@ -48,7 +48,7 @@ class ONNXTargetPoint(TargetPoint):
 
 
 class ONNXInsertionCommand(TransformationCommand):
-    def __init__(self, target_point: ONNXTargetPoint, input_edges_mapping: Dict[str, Tuple[str, int]]):
+    def __init__(self, target_point: ONNXTargetPoint, input_edges_mapping: dict[str, tuple[str, int]]):
         super().__init__(TransformationType.INSERT, target_point)
         # Insertion command could be applied to NNCF input nodes, e.g.
         # quantizers will be tied with POST OP of NNCF input nodes.
@@ -61,7 +61,7 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
     def __init__(
         self,
         target_point: ONNXTargetPoint,
-        nncf_input_node_next_onnx_nodes: Dict[str, List[str]],
+        nncf_input_node_next_onnx_nodes: dict[str, list[str]],
         quantizer_parameters: ONNXQuantizerLayerParameters,
     ):
         super().__init__(target_point, nncf_input_node_next_onnx_nodes)
@@ -91,7 +91,7 @@ class ONNXModelExtractionCommand(Command):
     Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
+    def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
         """
         :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
             Each pair denotes the sub-graph beginning.

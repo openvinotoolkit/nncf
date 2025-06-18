@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Tuple
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.utils import get_weight_shape_legacy
@@ -32,7 +31,7 @@ class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return ConstSparsityController(model, self._sparsified_module_info)
 
-    def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
+    def _are_frozen_layers_allowed(self) -> tuple[bool, str]:
         return True, "Frozen layers are allowed for const sparsity"
 
 

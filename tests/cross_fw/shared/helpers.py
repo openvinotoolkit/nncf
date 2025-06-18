@@ -11,7 +11,7 @@
 import subprocess
 import sys
 from pathlib import Path
-from typing import Callable, Set
+from typing import Callable
 
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
@@ -52,7 +52,7 @@ def find_file_by_extension(directory: Path, extension: str) -> str:
     raise FileNotFoundError(msg)
 
 
-def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
+def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: set[str] = None):
     venv_path = tmp_path / "venv"
     venv_path.mkdir(exist_ok=True)
 

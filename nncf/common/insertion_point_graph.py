@@ -12,7 +12,6 @@
 from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Set
 
 import networkx as nx  # type: ignore
 
@@ -73,8 +72,8 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
     def __init__(
         self,
         nncf_graph: NNCFGraph,
-        allowed_pre_hook_insertion_points: List[PreHookInsertionPoint] = None,
-        allowed_post_hook_insertion_points: List[PostHookInsertionPoint] = None,
+        allowed_pre_hook_insertion_points: list[PreHookInsertionPoint] = None,
+        allowed_post_hook_insertion_points: list[PostHookInsertionPoint] = None,
     ):
         """
         Initializes the insertion point graph.
@@ -97,11 +96,11 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
             # Post-hook all nodes if an exact list is not specified
             allowed_post_hook_insertion_points = self._get_default_post_hook_ip_list(nncf_graph)
 
-        target_node_name_vs_pre_hook_ips: Dict[NNCFNodeName, Set[PreHookInsertionPoint]] = defaultdict(set)
+        target_node_name_vs_pre_hook_ips: dict[NNCFNodeName, set[PreHookInsertionPoint]] = defaultdict(set)
         for pre_hook_ip in allowed_pre_hook_insertion_points:
             target_node_name_vs_pre_hook_ips[pre_hook_ip.target_node_name].add(pre_hook_ip)
 
-        target_node_name_vs_post_hook_ips: Dict[NNCFNodeName, Set[PostHookInsertionPoint]] = defaultdict(set)
+        target_node_name_vs_post_hook_ips: dict[NNCFNodeName, set[PostHookInsertionPoint]] = defaultdict(set)
         for post_hook_ip in allowed_post_hook_insertion_points:
             target_node_name_vs_post_hook_ips[post_hook_ip.target_node_name].add(post_hook_ip)
 
@@ -229,7 +228,7 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
                         self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR] = True
 
     @staticmethod
-    def _get_default_pre_hook_ip_list(nncf_graph: NNCFGraph) -> List[PreHookInsertionPoint]:
+    def _get_default_pre_hook_ip_list(nncf_graph: NNCFGraph) -> list[PreHookInsertionPoint]:
         # Pre-hook all input ports of all nodes
         allowed_pre_hook_insertion_points = []
         for nncf_node in nncf_graph.get_all_nodes():
@@ -243,14 +242,14 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
         return allowed_pre_hook_insertion_points
 
     @staticmethod
-    def _get_default_post_hook_ip_list(nncf_graph: NNCFGraph) -> List[PostHookInsertionPoint]:
+    def _get_default_post_hook_ip_list(nncf_graph: NNCFGraph) -> list[PostHookInsertionPoint]:
         # Post-hook all nodes, post hook applies to the entire op output
         allowed_post_hook_insertion_points = []
         for nncf_node in nncf_graph.get_all_nodes():
             allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
         return allowed_post_hook_insertion_points
 
-    def remove_nodes_from(self, nodes: List[str]) -> None:
+    def remove_nodes_from(self, nodes: list[str]) -> None:
         """
         Removes nodes from the InsertionPointGraph and its _base_nx_graph.
 
@@ -269,7 +268,7 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
         """
         return self._base_nx_graph
 
-    def get_input_nodes(self) -> List[str]:
+    def get_input_nodes(self) -> list[str]:
         """
         Returns all input nodes, meaning the nodes which belong to any of INPUT_NOOP_METATYPES metatype.
 

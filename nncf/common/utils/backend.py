@@ -15,7 +15,7 @@ from typing import Any, Callable, TypeVar, cast
 from packaging import version
 
 import nncf
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.common.check_features import is_torch_tracing_by_patching
 
 try:
     import openvino  # type: ignore # noqa: F401
@@ -56,12 +56,11 @@ def is_torch_model(model: Any) -> bool:
     import torch
     import torch.fx
 
-    from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+    from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
-    if is_experimental_torch_tracing_enabled():
-        return isinstance(model, (GraphModelWrapper, torch.nn.Module)) and not isinstance(model, torch.fx.GraphModule)
-
-    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+    if is_torch_tracing_by_patching():
+        return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+    return isinstance(model, (GraphModelWrapper, torch.nn.Module)) and not isinstance(model, torch.fx.GraphModule)
 
 
 @result_verifier
@@ -106,12 +105,12 @@ def is_onnx_model(model: Any) -> bool:
 @result_verifier
 def is_openvino_model(model: Any) -> bool:
     """
-    Returns True if the model is an instance of openvino.runtime.Model, otherwise False.
+    Returns True if the model is an instance of openvino.Model, otherwise False.
 
     :param model: A target model.
-    :return: True if the model is an instance of openvino.runtime.Model, otherwise False.
+    :return: True if the model is an instance of openvino.Model, otherwise False.
     """
-    import openvino.runtime as ov  # type: ignore
+    import openvino as ov
 
     return isinstance(model, ov.Model)
 
@@ -119,12 +118,12 @@ def is_openvino_model(model: Any) -> bool:
 @result_verifier
 def is_openvino_compiled_model(model: Any) -> bool:
     """
-    Returns True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
+    Returns True if the model is an instance of openvino.CompiledModel, otherwise False.
 
     :param model: A target model.
-    :return: True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
+    :return: True if the model is an instance of openvino.CompiledModel, otherwise False.
     """
-    import openvino.runtime as ov
+    import openvino as ov
 
     return isinstance(model, ov.CompiledModel)
 

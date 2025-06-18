@@ -39,7 +39,7 @@
             "precision": {
                 "bitwidth_per_scope": [
                     ["TargetType.OPERATION_WITH_WEIGHTS MobileNetV2/Sequential[features]/InvertedResidual[10]/Sequential[conv]/NNCFConv2d[2]", 8],
-                    ["TargetType.OPERATION_WITH_WEIGHTS MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/Conv2dNormActivation[0]/NNCFConv2d[0]", 8],
+                    ["TargetType.OPERATION_WITH_WEIGHTS MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/Conv2dNormActivation[0]/NNCFConv2d[0]", 8]
                 ]
             }
         }

@@ -10,7 +10,6 @@
 # limitations under the License.
 import inspect
 import sys
-from typing import List, Tuple
 
 import tensorflow as tf
 
@@ -154,7 +153,7 @@ def unwrap_layer(layer):
     return layer
 
 
-def get_nncf_operations(model: tf.keras.Model, operation_names: List[str]) -> Tuple[NNCFWrapper, str, NNCFOperation]:
+def get_nncf_operations(model: tf.keras.Model, operation_names: list[str]) -> tuple[NNCFWrapper, str, NNCFOperation]:
     """
     Yields the operations from the model which names in `operation_names`.
 
@@ -187,16 +186,16 @@ def is_builtin_layer(layer) -> bool:
     )
 
 
-def get_list_level(lst: List) -> int:
+def get_list_level(lst: list) -> int:
     return isinstance(lst, list) and list(map(get_list_level, lst or [0]))[0] + 1
 
 
-def check_oplambda_input_data(x: List) -> bool:
+def check_oplambda_input_data(x: list) -> bool:
     input_structure = [type(item) for item in x]
     return input_structure in ([str, int, int], [str, int, int, dict])
 
 
-def reformat_inbound_nodes_for_oplambda(inbound_nodes: List) -> List[List[List]]:
+def reformat_inbound_nodes_for_oplambda(inbound_nodes: list) -> list[list[list]]:
     """
     Default format examples for inbound_nodes of the layer are as follows:
     1- [[['name', id, id, kwargs]]] - Single input, not shared layer.

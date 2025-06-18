@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import tensorflow as tf
 
@@ -19,7 +18,7 @@ from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.layers import FakeQuantize
 
 
-def apply_overflow_fix(model: tf.keras.Model, op_names: List[str]) -> None:
+def apply_overflow_fix(model: tf.keras.Model, op_names: list[str]) -> None:
     if not isinstance(model, tf.keras.Model):
         msg = f"Expected model to be a `tf.keras.Model` instance but got: {type(model)}"
         raise ValueError(msg)
@@ -44,7 +43,7 @@ def apply_overflow_fix_to_layer(wrapped_layer: NNCFWrapper, weight_attr: str, op
     op.apply_overflow_fix(ops_weights)
 
 
-def collect_fake_quantize_layers(model: tf.keras.Model) -> List[FakeQuantize]:
+def collect_fake_quantize_layers(model: tf.keras.Model) -> list[FakeQuantize]:
     """
     Collects all fake quantize layers from the provided model.
 

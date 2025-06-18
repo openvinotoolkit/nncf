@@ -9,12 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Type
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -51,13 +50,13 @@ def get_StatisticAggregatorTestModel(input_shape, kernel):
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @staticmethod
-    def get_min_max_algo_backend_cls() -> Type[OVMinMaxAlgoBackend]:
+    def get_min_max_algo_backend_cls() -> type[OVMinMaxAlgoBackend]:
         return OVMinMaxAlgoBackend
 
-    def get_bias_correction_algo_backend_cls(self) -> Type[OVBiasCorrectionAlgoBackend]:
+    def get_bias_correction_algo_backend_cls(self) -> type[OVBiasCorrectionAlgoBackend]:
         return OVBiasCorrectionAlgoBackend
 
-    def get_fast_bias_correction_algo_backend_cls(self) -> Type[OVFastBiasCorrectionAlgoBackend]:
+    def get_fast_bias_correction_algo_backend_cls(self) -> type[OVFastBiasCorrectionAlgoBackend]:
         return OVFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
@@ -120,7 +119,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         conv_w = self.dataset_samples_to_conv_w(sample)
         return SharedConvModel(input_name=INPUT_NAME, input_shape=INPUT_SHAPE, kernel=conv_w).ov_model
 
-    def reducers_map(self) -> List[TensorReducerBase]:
+    def reducers_map(self) -> list[TensorReducerBase]:
         map_ = OV_REDUCERS_MAP.copy()
         map_.update({"batch_mean": OVBatchMeanReducer, "mean_per_ch": OVMeanPerChanelReducer})
         return map_

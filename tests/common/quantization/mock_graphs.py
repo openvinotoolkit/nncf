@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import random
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import networkx as nx
@@ -58,7 +58,7 @@ class NodeWithType:
 
 
 def create_mock_graph(
-    nodes: List[NodeWithType], node_edges: List[Tuple[str, str]], edges_attrs: Optional[Tuple[Any]] = None
+    nodes: list[NodeWithType], node_edges: list[tuple[str, str]], edges_attrs: Optional[tuple[Any]] = None
 ) -> nx.DiGraph:
     mock_graph = nx.DiGraph()
     for node in nodes:
@@ -89,7 +89,7 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
 def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFGraph) -> NNCFGraph:
     mock_graph = nncf_graph_cls()
     key_vs_id = {}
-    edge_vs_output_idx_and_creator_id: Dict[Tuple[str, str], Tuple[int, int]] = {}
+    edge_vs_output_idx_and_creator_id: dict[tuple[str, str], tuple[int, int]] = {}
     from networkx.algorithms.dag import lexicographical_topological_sort
 
     for idx, curr_node_key in enumerate(lexicographical_topological_sort(nx_graph)):
@@ -189,9 +189,9 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None, type_=
 
 def _add_nodes_with_layer_attrs(
     nx_graph: nx.DiGraph,
-    node_keys: List[str],
-    layer_attrs: Dict[str, BaseLayerAttributes],
-    metatypes: Dict[str, OperatorMetatype] = None,
+    node_keys: list[str],
+    layer_attrs: dict[str, BaseLayerAttributes],
+    metatypes: dict[str, OperatorMetatype] = None,
 ) -> nx.DiGraph:
     for node_key in node_keys:
         metatype = None
@@ -385,7 +385,7 @@ def get_node_name(op_name: str, call_order: int = 0) -> str:
     return f"/{op_name}_{call_order}"
 
 
-def get_randomly_connected_model_graph(op_name_keys: Set[str]) -> nx.DiGraph:
+def get_randomly_connected_model_graph(op_name_keys: set[str]) -> nx.DiGraph:
     graph_len = len(op_name_keys)
     mock_graph = nx.generators.gnc_graph(graph_len, None, 0)
 
@@ -400,7 +400,7 @@ def get_randomly_connected_model_graph(op_name_keys: Set[str]) -> nx.DiGraph:
     return mock_graph
 
 
-def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
+def get_sequentially_connected_model_graph(op_name_keys: list[str]) -> nx.DiGraph:
     graph = nx.DiGraph()
     node_key_appearances = {k: 0 for k in op_name_keys}
 

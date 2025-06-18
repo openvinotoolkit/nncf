@@ -23,7 +23,7 @@
             "nesterov": true
         }
     },
-   "compression": [
+    "compression": [
        {
             "algorithm": "filter_pruning",
             "pruning_init": 0.1,
@@ -36,7 +36,7 @@
        },
        {
             "algorithm": "knowledge_distillation",
-            "type": "softmax" // or mse
+            "type": "softmax"
        }
    ]
 }

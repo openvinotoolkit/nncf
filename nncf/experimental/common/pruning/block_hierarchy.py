@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Dict, List
 
 import networkx as nx
 
@@ -25,7 +24,7 @@ class BlockHierarchy:
 
     PROPAGATION_GROUP = "propagation_group"
 
-    def __init__(self, root_groups: List[PropagationGroup]) -> None:
+    def __init__(self, root_groups: list[PropagationGroup]) -> None:
         """
         Creates hierarchy of propagation blocks/groups by traversing children in the given root groups.
 
@@ -34,13 +33,13 @@ class BlockHierarchy:
         """
         self._id_counter = 0
         self._graph = nx.DiGraph()
-        self._visited_block_ids_map: Dict[int, int] = {}
+        self._visited_block_ids_map: dict[int, int] = {}
 
         for root_group in root_groups:
             self._add_group_to_graph(root_group)
             self._id_counter += 1
 
-    def get_groups_on_leaves(self) -> List[PropagationGroup]:
+    def get_groups_on_leaves(self) -> list[PropagationGroup]:
         """
         Returns the list of all propagation groups on the leaves.
         """

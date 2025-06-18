@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import openvino as ov
@@ -24,6 +24,7 @@ from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBias
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
@@ -34,7 +35,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     TRANSPOSE_CONV_NAME = "/conv/ConvTranspose/WithoutBiases"
 
     @staticmethod
-    def list_to_backend_type(data: List) -> np.ndarray:
+    def list_to_backend_type(data: list) -> np.ndarray:
         return np.array(data)
 
     @staticmethod
@@ -65,7 +66,9 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
+    def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
+        if model_cls is OneDimMM:
+            return ref_biases
         mapping = {f"{name}/WithoutBiases": val for name, val in ref_biases.items()}
         return mapping
 
@@ -79,7 +82,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return compare_nncf_graphs(model, ref_path)
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: Dict) -> None:
+    def check_bias(model: ov.Model, ref_biases: dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)

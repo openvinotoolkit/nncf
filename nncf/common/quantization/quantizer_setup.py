@@ -13,7 +13,7 @@ from abc import ABC
 from collections import Counter
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -52,7 +52,7 @@ class QuantizationInsertionPointBase(ABC):
     def __init__(self, target_node_name: NNCFNodeName):
         self.target_node_name = target_node_name
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -62,7 +62,7 @@ class QuantizationInsertionPointBase(ABC):
         return {self._state_names.TARGET_NODE_NAME: self.target_node_name}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "QuantizationInsertionPointBase":
+    def from_state(cls, state: dict[str, Any]) -> "QuantizationInsertionPointBase":
         """
         Creates the object from its state.
 
@@ -109,7 +109,7 @@ class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -126,7 +126,7 @@ class QuantizationPointBase:
     def __init__(
         self,
         quant_insertion_point: QuantizationInsertionPointBase,
-        directly_quantized_operator_node_names: List[NNCFNodeName],
+        directly_quantized_operator_node_names: list[NNCFNodeName],
     ):
         self.insertion_point = quant_insertion_point
         self.directly_quantized_operator_node_names = directly_quantized_operator_node_names
@@ -137,7 +137,7 @@ class QuantizationPointBase:
     def is_weight_quantization_point(self) -> bool:
         return isinstance(self.insertion_point, WeightQuantizationInsertionPoint)
 
-    def get_all_configs_list(self) -> List[QuantizerConfig]:
+    def get_all_configs_list(self) -> list[QuantizerConfig]:
         raise NotImplementedError
 
     def __eq__(self, other: object) -> bool:
@@ -158,7 +158,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         self,
         qip: QuantizationInsertionPointBase,
         qconfig: QuantizerConfig,
-        directly_quantized_operator_node_names: List[NNCFNodeName],
+        directly_quantized_operator_node_names: list[NNCFNodeName],
     ):
         super().__init__(qip, directly_quantized_operator_node_names)
         self.qconfig = deepcopy(qconfig)
@@ -166,10 +166,10 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
     def __str__(self) -> str:
         return str(self.insertion_point) + " " + str(self.qconfig)
 
-    def get_all_configs_list(self) -> List[QuantizerConfig]:
+    def get_all_configs_list(self) -> list[QuantizerConfig]:
         return [self.qconfig]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -184,7 +184,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "SingleConfigQuantizationPoint":
+    def from_state(cls, state: dict[str, Any]) -> "SingleConfigQuantizationPoint":
         """
         Creates the object from its state.
 
@@ -205,18 +205,18 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __init__(
         self,
         qip: QuantizationInsertionPointBase,
-        possible_qconfigs: List[QuantizerConfig],
-        directly_quantized_operator_node_names: List[NNCFNodeName],
+        possible_qconfigs: list[QuantizerConfig],
+        directly_quantized_operator_node_names: list[NNCFNodeName],
     ):
         super().__init__(qip, directly_quantized_operator_node_names)
         self.possible_qconfigs = possible_qconfigs
 
     @property
-    def possible_qconfigs(self) -> List[QuantizerConfig]:
+    def possible_qconfigs(self) -> list[QuantizerConfig]:
         return deepcopy(self._possible_qconfigs)
 
     @possible_qconfigs.setter
-    def possible_qconfigs(self, qconfigs: List[QuantizerConfig]) -> None:
+    def possible_qconfigs(self, qconfigs: list[QuantizerConfig]) -> None:
         self._possible_qconfigs = deepcopy(qconfigs)
 
     def select_qconfig(self, qconfig: QuantizerConfig) -> SingleConfigQuantizationPoint:
@@ -235,26 +235,27 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __str__(self) -> str:
         return str(self.insertion_point) + " " + ";".join([str(qc) for qc in self.possible_qconfigs])
 
-    def get_all_configs_list(self) -> List[QuantizerConfig]:
+    def get_all_configs_list(self) -> list[QuantizerConfig]:
         return self.possible_qconfigs
 
 
 class QuantizerSetupBase:
     def __init__(self) -> None:
-        self.quantization_points: Dict[QuantizationPointId, QuantizationPointBase] = {}
-        self.unified_scale_groups: Dict[int, Set[QuantizationPointId]] = {}
-        self.shared_input_operation_set_groups: Dict[int, Set[QuantizationPointId]] = {}
+        self.quantization_points: dict[QuantizationPointId, QuantizationPointBase] = {}
+        self.unified_scale_groups: dict[int, set[QuantizationPointId]] = {}
+        self.shared_input_operation_set_groups: dict[int, set[QuantizationPointId]] = {}
         self._next_unified_scale_gid = 0
         self._next_shared_inputs_gid = 0
 
-    def add_independent_quantization_point(self, qp: QuantizationPointBase) -> None:
+    def add_independent_quantization_point(self, qp: QuantizationPointBase) -> int:
         if self.quantization_points.keys():
             new_id = max(self.quantization_points.keys()) + 1
         else:
             new_id = 0
         self.quantization_points[new_id] = qp
+        return new_id
 
-    def register_unified_scale_group(self, qp_group: List[QuantizationPointId]) -> int:
+    def register_unified_scale_group(self, qp_group: list[QuantizationPointId]) -> int:
         for qp_id in qp_group:
             usg_id = self.get_unified_scale_group_id(qp_id)
             if usg_id is not None:
@@ -265,7 +266,7 @@ class QuantizerSetupBase:
         self._next_unified_scale_gid += 1
         return gid
 
-    def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
+    def register_shared_inputs_group(self, qp_group: list[QuantizationPointId]) -> int:
         for qp_id in qp_group:
             usg_id = self.get_shared_inputs_group_id(qp_id)
             if usg_id is not None:
@@ -343,11 +344,11 @@ class QuantizerSetupBase:
             self.unified_scale_groups.pop(gid)
 
     def equivalent_to(self, other: "QuantizerSetupBase") -> bool:
-        this_qp_id_to_other_qp_id_dict: Dict[QuantizationPointId, QuantizationPointId] = {}
+        this_qp_id_to_other_qp_id_dict: dict[QuantizationPointId, QuantizationPointId] = {}
 
         def _compare_qps(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
             for this_qp_id, this_qp in first.quantization_points.items():
-                matches: List[QuantizationPointId] = []
+                matches: list[QuantizationPointId] = []
                 for other_qp_id, other_qp in second.quantization_points.items():
                     if this_qp == other_qp:
                         matches.append(other_qp_id)
@@ -407,9 +408,9 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self.quantization_points: Dict[QuantizationPointId, SingleConfigQuantizationPoint] = {}  # type: ignore
+        self.quantization_points: dict[QuantizationPointId, SingleConfigQuantizationPoint] = {}  # type: ignore
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -417,7 +418,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         :return: state of the object
         """
 
-        def set2list(pair: Tuple[int, Set[QuantizationPointId]]) -> Tuple[int, List[QuantizationPointId]]:
+        def set2list(pair: tuple[int, set[QuantizationPointId]]) -> tuple[int, list[QuantizationPointId]]:
             i, qp_id_set = pair
             return i, list(qp_id_set)
 
@@ -431,7 +432,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "SingleConfigQuantizerSetup":
+    def from_state(cls, state: dict[str, Any]) -> "SingleConfigQuantizerSetup":
         """
         Creates the object from its state.
 
@@ -439,11 +440,11 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         """
         setup = SingleConfigQuantizerSetup()
 
-        def decode_qp(pair: Tuple[str, Dict[str, Any]]) -> Tuple[int, SingleConfigQuantizationPoint]:
+        def decode_qp(pair: tuple[str, dict[str, Any]]) -> tuple[int, SingleConfigQuantizationPoint]:
             str_qp_id, qp_state = pair
             return int(str_qp_id), SingleConfigQuantizationPoint.from_state(qp_state)
 
-        def list2set(pair: Tuple[str, List[int]]) -> Tuple[int, Set[int]]:
+        def list2set(pair: tuple[str, list[int]]) -> tuple[int, set[int]]:
             str_idx, qp_id_list = pair
             return int(str_idx), set(qp_id_list)
 
@@ -457,11 +458,11 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 class MultiConfigQuantizerSetup(QuantizerSetupBase):
     def __init__(self) -> None:
         super().__init__()
-        self.quantization_points: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}  # type: ignore
-        self._unified_scale_qpid_vs_type: Dict[QuantizationPointId, UnifiedScaleType] = {}
+        self.quantization_points: dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}  # type: ignore
+        self._unified_scale_qpid_vs_type: dict[QuantizationPointId, UnifiedScaleType] = {}
 
     def register_unified_scale_group_with_types(
-        self, qp_group: List[QuantizationPointId], us_types: List[UnifiedScaleType]
+        self, qp_group: list[QuantizationPointId], us_types: list[UnifiedScaleType]
     ) -> int:
         assert len(qp_group) == len(us_types)
         gid = super().register_unified_scale_group(qp_group)
@@ -470,7 +471,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         return gid
 
     def select_qconfigs(
-        self, qp_id_vs_selected_qconfig_dict: Dict[QuantizationPointId, QuantizerConfig], strict: bool = True
+        self, qp_id_vs_selected_qconfig_dict: dict[QuantizationPointId, QuantizerConfig], strict: bool = True
     ) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()
         retval.unified_scale_groups = deepcopy(self.unified_scale_groups)
@@ -522,7 +523,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         return retval
 
     def select_first_qconfig_for_each_point(self) -> SingleConfigQuantizerSetup:
-        qp_id_vs_qconfig_dict: Dict[QuantizationPointId, QuantizerConfig] = {}
+        qp_id_vs_qconfig_dict: dict[QuantizationPointId, QuantizerConfig] = {}
         for qp_id, qp in self.quantization_points.items():
             qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)

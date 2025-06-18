@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from os import path as osp
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import torch
 from torch.distributed import barrier
@@ -18,6 +18,7 @@ from torch.nn import Module
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
@@ -27,9 +28,6 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
-from nncf.experimental.torch2.function_hook.serialization import get_config as pt2_get_config
-from nncf.experimental.torch2.function_hook.serialization import load_from_config as pt2_load_from_config
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -44,6 +42,9 @@ from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
+from nncf.torch.function_hook.serialization import get_config as pt2_get_config
+from nncf.torch.function_hook.serialization import load_from_config as pt2_load_from_config
 from nncf.torch.graph.transformations.serialization import deserialize_transformations
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -63,12 +64,12 @@ from nncf.torch.utils import training_mode_switcher
 def create_compressed_model(
     model: Module,
     config: NNCFConfig,
-    compression_state: Optional[Dict[str, Any]] = None,
+    compression_state: Optional[dict[str, Any]] = None,
     dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+    wrap_inputs_fn: Callable[[tuple, dict], tuple[tuple, dict]] = None,
     wrap_outputs_fn: Callable[[Any], Any] = None,
     dump_graphs=True,
-) -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+) -> tuple[CompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -115,6 +116,13 @@ def create_compressed_model(
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch\n"
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/torch"
     )
+
+    if not PATCHING_STATE.operators_are_wrapped:
+        msg = (
+            "The PyTorch operators are not wrapped. "
+            "To run create_compressed_model set NNCF_TORCH_LEGACY_TRACING=1 environment variable."
+        )
+        raise nncf.InternalError(msg)
 
     if isinstance(model, NNCFNetwork):
         msg = (
@@ -307,7 +315,7 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init=True) -
 
 
 def create_compression_algorithm_builder_from_algo_names(
-    algo_names: List[str], config: NNCFConfig, should_init: bool
+    algo_names: list[str], config: NNCFConfig, should_init: bool
 ) -> PTCompressionAlgorithmBuilder:
     """
     Create compression algorithm builders by a given list of algorithm names.
@@ -353,32 +361,35 @@ def wrap_model(
     :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork or GraphModelWrapper if experimental PyTorch model tracing is enabled.
     """
-    if is_experimental_torch_tracing_enabled():
-        if not trace_parameters:
-            msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
-            raise nncf.InternalError(msg)
-        from nncf.experimental.torch2.function_hook import wrap_model as pt2_wrap_model
-        from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+    if is_torch_tracing_by_patching():
+        if not isinstance(model, torch.nn.Module):
+            msg = (
+                f"The provided model type {type(model)} is incompatible. "
+                "Only models inheriting from torch.nn.Module are supported."
+            )
+            raise TypeError(msg)
 
-        wrapped_model = GraphModelWrapper(pt2_wrap_model(model), example_input=example_input)
-        return wrapped_model
+        input_info = ExampleInputInfo.from_example_input(example_input)
 
-    if not isinstance(model, torch.nn.Module):
-        msg = (
-            f"The provided model type {type(model)} is incompatible. "
-            "Only models inheriting from torch.nn.Module are supported."
-        )
-        raise TypeError(msg)
+        with training_mode_switcher(model, is_training=False):
+            nncf_network = NNCFNetwork(
+                model, input_info=input_info, replace_modules=not trace_parameters, trace_parameters=trace_parameters
+            )
+            nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
-    input_info = ExampleInputInfo.from_example_input(example_input)
+        return nncf_network
 
-    with training_mode_switcher(model, is_training=False):
-        nncf_network = NNCFNetwork(
-            model, input_info=input_info, replace_modules=not trace_parameters, trace_parameters=trace_parameters
-        )
-        nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
+    if not trace_parameters:
+        msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
+        raise nncf.InternalError(msg)
+    from nncf.torch.function_hook import is_wrapped as pt2_is_wrapped
+    from nncf.torch.function_hook import wrap_model as pt2_wrap_model
+    from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
-    return nncf_network
+    if not pt2_is_wrapped(model):
+        model = pt2_wrap_model(model)
+    wrapped_model = GraphModelWrapper(model, example_input=example_input)
+    return wrapped_model
 
 
 def is_wrapped_model(model: Any) -> bool:
@@ -388,7 +399,7 @@ def is_wrapped_model(model: Any) -> bool:
     :param model: A model.
     :return: True if the model is wrapped, False otherwise.
     """
-    from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+    from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
     return isinstance(model, (NNCFNetwork, GraphModelWrapper))
 
@@ -399,7 +410,7 @@ def is_wrapped_model(model: Any) -> bool:
         FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
-def load_from_config(model: Module, config: Dict[str, Any], example_input: Optional[Any] = None) -> Module:
+def load_from_config(model: Module, config: dict[str, Any], example_input: Optional[Any] = None) -> Module:
     """
     Wraps given model and recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded state_dict.
@@ -411,16 +422,16 @@ def load_from_config(model: Module, config: Dict[str, Any], example_input: Optio
         of keywords arguments. Required with enabled legacy tracing mode.
     :return: Wrapped model with additional modules recovered from given config.
     """
-    if is_experimental_torch_tracing_enabled():
-        return pt2_load_from_config(model, config)
+    if is_torch_tracing_by_patching():
+        if example_input is None:
+            msg = "The 'example_input' parameter must be specified."
+            raise nncf.InternalError(msg)
 
-    if example_input is None:
-        msg = "The 'example_input' parameter must be specified."
-        raise nncf.InternalError(msg)
+        nncf_network = wrap_model(model, example_input, trace_parameters=config[NNCFNetwork.TRACE_PARAMETERS_KEY])
+        transformation_layout = deserialize_transformations(config)
+        return PTModelTransformer(nncf_network).transform(transformation_layout)
 
-    nncf_network = wrap_model(model, example_input, trace_parameters=config[NNCFNetwork.TRACE_PARAMETERS_KEY])
-    transformation_layout = deserialize_transformations(config)
-    return PTModelTransformer(nncf_network).transform(transformation_layout)
+    return pt2_load_from_config(model, config)
 
 
 @tracked_function(
@@ -429,13 +440,13 @@ def load_from_config(model: Module, config: Dict[str, Any], example_input: Optio
         FunctionCallTelemetryExtractor("nncf.torch.get_config"),
     ],
 )
-def get_config(model: Module) -> Dict[str, Any]:
+def get_config(model: Module) -> dict[str, Any]:
     """
     Returns the configuration object of the compressed model.
 
     :param model: The compressed model.
     :return: The configuration object of the compressed model.
     """
-    if is_experimental_torch_tracing_enabled():
-        return pt2_get_config(model)
-    return model.nncf.get_config()
+    if is_torch_tracing_by_patching():
+        return model.nncf.get_config()
+    return pt2_get_config(model)

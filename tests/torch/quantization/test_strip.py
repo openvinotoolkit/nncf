@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 import pytest
@@ -23,17 +23,9 @@ from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.config import NNCFConfig
-from nncf.parameters import CompressWeightsMode
-from nncf.parameters import StripFormat
-from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor as INT4AsymDQ
-from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor as INT4SymDQ
-from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor as INT8AsymDQ
-from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor as INT8SymDQ
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
@@ -48,7 +40,6 @@ from tests.common.quantization.data_generators import generate_random_scale_by_i
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
 from tests.torch.helpers import BasicConvTestModel
-from tests.torch.helpers import LinearModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_functions import get_test_data
@@ -112,7 +103,7 @@ INPUT_TEST_SCALES = (
 )
 
 
-def range_mode_to_args(range_mode: str) -> Tuple[bool, bool]:
+def range_mode_to_args(range_mode: str) -> tuple[bool, bool]:
     """
     Get overflow_fix and narrow_range parameters by range_mode.
 
@@ -363,57 +354,6 @@ def check_compression_modules(
     assert len(compression_modules_dict) == 1
     compression_module = next(iter(compression_modules_dict.values()))
     assert isinstance(compression_module, expected_class)
-
-
-@pytest.mark.parametrize(
-    ("mode", "decompressor_class", "torch_dtype", "atol"),
-    (
-        (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float32, 5e-4),
-        (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 5e-4),
-        (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.bfloat16, 1e-2),
-        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 5e-4),
-        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-3),  # torch.compile introduces bigger diff for sym
-        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.bfloat16, 1e-2),
-        (CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
-        (CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
-    ),
-)
-def test_nncf_strip_lora_model(mode, decompressor_class, torch_dtype, atol, mocker):
-    input_shape = [1, 16]
-    model = LinearModel(input_shape=input_shape).to(torch_dtype)
-    dataset = [torch.ones(input_shape).to(torch_dtype)]
-    compression_kwargs = dict(
-        mode=mode,
-        dataset=nncf.Dataset(dataset),
-        compression_format=nncf.CompressionFormat.FQ_LORA,
-        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=1),
-    )
-    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
-        compression_kwargs.update(dict(ratio=1, group_size=4, all_layers=True))
-    compressed_model = nncf.compress_weights(model, **compression_kwargs)
-    check_compression_modules(
-        compressed_model,
-        expected_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
-        not_expected_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
-        expected_class=BaseQuantizer,
-    )
-    assert compressed_model.linear.weight.dtype == torch_dtype
-
-    pack_weight_spy = mocker.spy(decompressor_class, "pack_weight")
-    with torch.no_grad():
-        compressed_output = compressed_model(dataset[0])
-        strip_compressed_model = nncf.strip(compressed_model, do_copy=True, strip_format=StripFormat.DQ)
-        stripped_output = strip_compressed_model(dataset[0])
-
-        assert pack_weight_spy.call_count in [1, 2]  # pack_weight for asym is called twice: for ZP and weight
-        assert strip_compressed_model.linear.weight.dtype in [torch.uint8, torch.int8]
-        check_compression_modules(
-            strip_compressed_model,
-            expected_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
-            not_expected_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
-            expected_class=decompressor_class,
-        )
-        assert torch.allclose(compressed_output, stripped_output, atol=atol)
 
 
 SIGNED_WEIGHT_SAMPLE = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75]

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 
@@ -21,9 +21,9 @@ class OVLayerAttributes(BaseLayerAttributes):
 
     def __init__(
         self,
-        constant_attributes: Dict[int, Any],
+        constant_attributes: dict[int, Any],
         layer_attributes: Optional[BaseLayerAttributes] = None,
-        inputs_attributes: Optional[Dict[Any, Any]] = None,
+        inputs_attributes: Optional[dict[Any, Any]] = None,
     ):
         """
         :param constant_attributes: Map of weights port ID to corresponding const attributes.
@@ -35,7 +35,7 @@ class OVLayerAttributes(BaseLayerAttributes):
         self._inputs_attributes = inputs_attributes
 
     @property
-    def constant_attributes(self) -> Dict[int, Any]:
+    def constant_attributes(self) -> dict[int, Any]:
         return self._constant_attributes
 
     @property
@@ -43,10 +43,10 @@ class OVLayerAttributes(BaseLayerAttributes):
         return self._layer_attributes
 
     @property
-    def input_attributes(self) -> Optional[Dict[Any, Any]]:
+    def input_attributes(self) -> Optional[dict[Any, Any]]:
         return self._inputs_attributes
 
-    def get_const_port_ids(self) -> List[int]:
+    def get_const_port_ids(self) -> list[int]:
         """
         Returns indices of input ports corresponding to the constant nodes.
 

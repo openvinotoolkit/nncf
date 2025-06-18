@@ -11,7 +11,7 @@
 
 from pathlib import Path
 
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 
 from nncf.openvino.graph.model_builder import OVModelBuilder

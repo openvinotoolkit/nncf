@@ -8,7 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypeVar, Union
+import warnings
+from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -21,7 +22,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -60,7 +60,7 @@ def warning_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> None:
     """
     Logs when is_model_no_batchwise_support(...) returns True.
@@ -80,7 +80,7 @@ def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
@@ -99,7 +99,7 @@ def is_model_no_batchwise_support(
 
 def _update_advanced_quantization_parameters(
     advanced_parameters: Optional[AdvancedQuantizationParameters], calibration_dataset: Dataset
-) -> AdvancedQuantizationParameters:
+) -> Optional[AdvancedQuantizationParameters]:
     """
     Updates AdvancedQuantizationParameters depending on batch_size.
 
@@ -186,7 +186,7 @@ def quantize(
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_impl
 
-        return quantize_impl(
+        return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
             mode=mode,
@@ -202,7 +202,7 @@ def quantize(
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_impl
 
-        return quantize_impl(
+        return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
             mode=mode,
@@ -218,7 +218,7 @@ def quantize(
     if backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.quantization.quantize_model import quantize_impl
 
-        return quantize_impl(
+        return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
             mode=mode,
@@ -232,12 +232,9 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        if is_experimental_torch_tracing_enabled():
-            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
-        else:
-            from nncf.torch.quantization.quantize_model import quantize_impl
+        from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
-        return quantize_impl(
+        return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
             mode=mode,
@@ -253,7 +250,7 @@ def quantize(
     if backend == BackendType.TORCH_FX:
         from nncf.experimental.torch.fx.quantization.quantize_model import quantize_impl
 
-        return quantize_impl(
+        return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
             mode=mode,
@@ -269,7 +266,7 @@ def quantize(
     raise nncf.UnsupportedBackendError(msg)
 
 
-def wrap_validation_fn(validation_fn):
+def wrap_validation_fn(validation_fn: Callable[..., Any]) -> Callable[..., tuple[Any, ...]]:
     """
     Wraps validation function to support case when it only returns metric value.
 
@@ -277,7 +274,7 @@ def wrap_validation_fn(validation_fn):
     :return: Wrapped validation function.
     """
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
         retval = validation_fn(*args, **kwargs)
         if isinstance(retval, tuple):
             return retval
@@ -301,7 +298,7 @@ def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -372,7 +369,7 @@ def quantize_with_accuracy_control(
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl
 
-        return quantize_with_accuracy_control_impl(
+        return quantize_with_accuracy_control_impl(  # type: ignore[no-any-return]
             model,
             calibration_dataset,
             validation_dataset,
@@ -391,7 +388,7 @@ def quantize_with_accuracy_control(
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_with_accuracy_control_impl
 
-        return quantize_with_accuracy_control_impl(
+        return quantize_with_accuracy_control_impl(  # type: ignore[no-any-return]
             model,
             calibration_dataset,
             validation_dataset,
@@ -427,7 +424,7 @@ def quantize_with_accuracy_control(
 )
 def compress_weights(
     model: TModel,
-    mode=CompressWeightsMode.INT8_ASYM,
+    mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
@@ -441,7 +438,7 @@ def compress_weights(
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
     backup_mode: Optional[BackupMode] = None,
-    compression_format: Optional[CompressionFormat] = CompressionFormat.DQ,
+    compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -512,7 +509,7 @@ def compress_weights(
         mode = CompressWeightsMode.INT8_ASYM
 
     backend = get_backend(model)
-    compression_weights_impl = None
+    compression_weights_impl: Optional[Callable[..., Any]] = None
 
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
@@ -553,18 +550,72 @@ def compress_weights(
             from nncf.torch.model_creation import wrap_model
 
             example_input = next(iter(dataset.get_inference_data()))
-            model = wrap_model(model, example_input=example_input, trace_parameters=True)
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore[arg-type]
         if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
             dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
 
-    if backend == BackendType.TORCH_FX:
+    elif backend == BackendType.TORCH_FX:
         from nncf.experimental.torch.fx.quantization.quantize_model import (
             compress_weights_impl as fx_compression_weights_impl,
         )
 
         if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
             msg = "Torch backend does not support NF4 and E2M1 modes for weight compression."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        options = {
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_options = [name for name, value in options.items() if value is not None]
+        if unsupported_options:
+            msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if advanced_parameters and advanced_parameters.statistics_path:
+            msg = "TorchFX does not supports statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
+            msg = "Torch FX backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if (
+            mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
+            and dataset is not None
+        ):
+            warnings.warn("data-aware methods are not supported in INT8 modes. dataset is set to None")
+            dataset = None
+
+        compression_weights_impl = fx_compression_weights_impl
+
+    elif backend == BackendType.OPENVINO:
+        from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
+
+        if any((scale_estimation, gptq, lora_correction)) and dataset is None:
+            msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if any((awq, scale_estimation, gptq, lora_correction)) and mode == CompressWeightsMode.E2M1:
+            msg = "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode is E2M1."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if gptq and lora_correction:
+            msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
+            msg = "OpenVINO backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        compression_weights_impl = ov_compress_weights_impl
+
+    elif backend == BackendType.ONNX:
+        from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
+
+        if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
+            msg = "ONNX backend does not support NF4 and E2M1 modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
@@ -575,50 +626,26 @@ def compress_weights(
         }
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
-            msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
         if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
             msg = (
-                "TorchFX backend only supports data-free sensitivity metric. "
+                "ONNX backend only supports data-free sensitivity metric. "
                 "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
             )
             raise nncf.ParameterNotSupportedError(msg)
-
         if dataset:
-            msg = "TorchFX only supports data-free weights compression. Set the 'dataset' option to None"
+            msg = "ONNX only supports data-free weights compression. Set the 'dataset' option to None"
             raise nncf.ParameterNotSupportedError(msg)
         if advanced_parameters and advanced_parameters.statistics_path:
-            msg = "TorchFX does not supports statistics caching."
+            msg = "ONNX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
+        compression_weights_impl = onnx_compress_weights_impl
+    if compression_weights_impl is None:
+        msg = f"Unsupported type of backend: {backend}"
+        raise nncf.UnsupportedBackendError(msg)
 
-        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-            msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
-            raise nncf.ParameterNotSupportedError(msg)
-
-        compression_weights_impl = fx_compression_weights_impl
-
-    if backend == BackendType.OPENVINO:
-        from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
-
-        if any((awq, scale_estimation, gptq, lora_correction)) and (
-            dataset is None or mode == CompressWeightsMode.E2M1
-        ):
-            msg = (
-                "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
-                "but dataset is None or mode is E2M1."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-
-        if gptq and lora_correction:
-            msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
-            raise nncf.ParameterNotSupportedError(msg)
-
-        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
-            msg = "OpenVINO backend does not support FQ and FQ_LORA compression formats."
-            raise nncf.ParameterNotSupportedError(msg)
-
-        compression_weights_impl = ov_compress_weights_impl
     check_user_compression_configuration(
         mode,
         subset_size,
@@ -652,11 +679,7 @@ def compress_weights(
         advanced_parameters,
     )
 
-    if compression_weights_impl is None:
-        msg = f"Unsupported type of backend: {backend}"
-        raise nncf.UnsupportedBackendError(msg)
-
-    return compression_weights_impl(
+    return compression_weights_impl(  # type: ignore[no-any-return]
         model=model,
         dataset=dataset,
         subset_size=subset_size,
@@ -665,11 +688,21 @@ def compress_weights(
     )
 
 
+class InitQuantizationParameters(TypedDict):
+    preset: Optional[QuantizationPreset]
+    target_device: TargetDevice
+    subset_size: int
+    fast_bias_correction: bool
+    model_type: Optional[ModelType]
+    ignored_scope: Optional[IgnoredScope]
+    advanced_parameters: Optional[AdvancedQuantizationParameters]
+
+
 def quantize_with_tune_hyperparams(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,
@@ -713,7 +746,7 @@ def quantize_with_tune_hyperparams(
         fine-tuning the quantization algorithm.
     :return: The quantized model.
     """
-    init_quantization_params = {
+    init_quantization_params: InitQuantizationParameters = {
         "preset": preset,
         "target_device": target_device,
         "subset_size": subset_size,

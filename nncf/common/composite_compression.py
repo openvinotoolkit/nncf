@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import nncf
 from nncf import NNCFConfig
@@ -35,10 +35,10 @@ class CompositeCompressionLoss(CompressionLoss):
 
     def __init__(self) -> None:
         super().__init__()
-        self._child_losses: List[CompressionLoss] = []
+        self._child_losses: list[CompressionLoss] = []
 
     @property
-    def child_losses(self) -> List[CompressionLoss]:
+    def child_losses(self) -> list[CompressionLoss]:
         return self._child_losses
 
     def add(self, child_loss: CompressionLoss) -> None:
@@ -49,7 +49,7 @@ class CompositeCompressionLoss(CompressionLoss):
         """
         self._child_losses.append(child_loss)
 
-    def load_state(self, state: List[Dict[str, Any]]) -> None:  # type: ignore[override]
+    def load_state(self, state: list[dict[str, Any]]) -> None:  # type: ignore[override]
         """
         Loads the composite compression loss state.
 
@@ -58,7 +58,7 @@ class CompositeCompressionLoss(CompressionLoss):
         for child_loss, child_state in zip(self._child_losses, state):
             child_loss.load_state(child_state)
 
-    def get_state(self) -> List[Dict[str, Any]]:  # type: ignore[override]
+    def get_state(self) -> list[dict[str, Any]]:  # type: ignore[override]
         """
         Returns the composite compression loss state.
 
@@ -95,10 +95,10 @@ class CompositeCompressionScheduler(CompressionScheduler):
 
     def __init__(self) -> None:
         super().__init__()
-        self._child_schedulers: List[CompressionScheduler] = []
+        self._child_schedulers: list[CompressionScheduler] = []
 
     @property
-    def child_schedulers(self) -> List[CompressionScheduler]:
+    def child_schedulers(self) -> list[CompressionScheduler]:
         return self._child_schedulers
 
     def add(self, child_scheduler: CompressionScheduler) -> None:
@@ -131,7 +131,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for scheduler in self._child_schedulers:
             scheduler.epoch_step(next_epoch)
 
-    def load_state(self, state: List[Dict[str, Any]]) -> None:  # type: ignore[override]
+    def load_state(self, state: list[dict[str, Any]]) -> None:  # type: ignore[override]
         """
         Calls `load_state()` method for all children.
 
@@ -140,7 +140,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for child_scheduler, child_state in zip(self._child_schedulers, state):
             child_scheduler.load_state(child_state)
 
-    def get_state(self) -> List[Dict[str, Any]]:  # type: ignore[override]
+    def get_state(self) -> list[dict[str, Any]]:  # type: ignore[override]
         """
         Returns the composite compression scheduler state. This state contains
         the state of all children.
@@ -173,10 +173,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             by the `CompressionAlgorithmBuilder`.
         """
         super().__init__(target_model)
-        self._child_ctrls: List[CompressionAlgorithmController] = []
+        self._child_ctrls: list[CompressionAlgorithmController] = []
         self._loss = CompositeCompressionLoss()
         self._scheduler = CompositeCompressionScheduler()
-        self._builder_state: Optional[Dict[str, Any]] = None
+        self._builder_state: Optional[dict[str, Any]] = None
         self._name: Optional[str] = None
 
     @property
@@ -188,7 +188,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         return self._scheduler
 
     @property
-    def child_ctrls(self) -> List[CompressionAlgorithmController]:
+    def child_ctrls(self) -> list[CompressionAlgorithmController]:
         return self._child_ctrls
 
     @property
@@ -228,7 +228,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             result += current_level
         return result
 
-    def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:
+    def load_state(self, state: dict[str, dict[str, Any]]) -> None:
         """
         Loads the composite compression controller state from the map of algorithm name to the dictionary with state
         attributes.
@@ -238,7 +238,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         for ctrl in self.child_ctrls:
             ctrl.load_state(state)
 
-    def get_state(self) -> Dict[str, Dict[str, Any]]:
+    def get_state(self) -> dict[str, dict[str, Any]]:
         """
         Returns composite compression controller state, which is the map of the algorithm name to the dictionary with
         the corresponding state attributes. This state contains the state of all children.
@@ -301,9 +301,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self,
         save_path: str,
         save_format: Optional[str] = None,
-        input_names: Optional[List[str]] = None,
-        output_names: Optional[List[str]] = None,
-        model_args: Optional[Tuple[Any, ...]] = None,
+        input_names: Optional[list[str]] = None,
+        output_names: Optional[list[str]] = None,
+        model_args: Optional[tuple[Any, ...]] = None,
     ) -> None:
         """
         Exports the compressed model to the specified format for deployment.
@@ -346,14 +346,14 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             ctrl.disable_scheduler()
             self._scheduler.add(ctrl.scheduler)
 
-    def get_compression_state(self) -> Dict[str, Any]:
+    def get_compression_state(self) -> dict[str, Any]:
         if self._builder_state is None:
             msg = "Internal error: builder state is not set for the controller"
             raise nncf.InternalError(msg)
 
         return {self.BUILDER_STATE: self._builder_state, self.CONTROLLER_STATE: self.get_state()}
 
-    def set_builder_state_with_name(self, name: str, builder_state: Dict[str, Any]) -> None:
+    def set_builder_state_with_name(self, name: str, builder_state: dict[str, Any]) -> None:
         """
         Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
         state and registered algorithm key.
@@ -383,16 +383,16 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         """
         self._config = config
         self.should_init = should_init
-        self._child_builders: List[CompressionAlgorithmBuilder] = []
+        self._child_builders: list[CompressionAlgorithmBuilder] = []
 
-    def _get_algo_specific_config_section(self) -> Dict[str, Any]:
+    def _get_algo_specific_config_section(self) -> dict[str, Any]:
         return {}
 
     @property
-    def child_builders(self) -> List[CompressionAlgorithmBuilder]:
+    def child_builders(self) -> list[CompressionAlgorithmBuilder]:
         return self._child_builders
 
-    def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:
+    def load_state(self, state: dict[str, dict[str, Any]]) -> None:
         """
         Loads the compression builder state of children
 
@@ -401,7 +401,7 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         for builder in self.child_builders:
             builder.load_state(state)
 
-    def get_state(self) -> Dict[str, Dict[str, Any]]:
+    def get_state(self) -> dict[str, dict[str, Any]]:
         """
         Returns the composite compression builder state. This state contains
         the state of all children.

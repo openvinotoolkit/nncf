@@ -11,7 +11,7 @@
 
 import numpy as np
 import openvino as ov
-import openvino.runtime.opset13 as opset
+import openvino.opset13 as opset
 import pytest
 
 import nncf.tensor.functions as fns

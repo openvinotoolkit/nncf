@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
 import onnx
 
@@ -52,9 +52,9 @@ class ONNXLayerAttributes(BaseLayerAttributes):
 
     def __init__(
         self,
-        weight_attrs: Optional[Dict[int, Dict]] = None,
-        bias_attrs: Optional[Dict[str, Any]] = None,
-        node_attrs: Optional[Dict[str, Any]] = None,
+        weight_attrs: Optional[dict[int, dict]] = None,
+        bias_attrs: Optional[dict[str, Any]] = None,
+        node_attrs: Optional[dict[str, Any]] = None,
     ):
         """
         :param weight_attrs: Maps input port id associated with weight to a weight description.
@@ -75,7 +75,7 @@ class ONNXLayerAttributes(BaseLayerAttributes):
         return bool(self.node_attrs)
 
 
-def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> list[int]:
     """
     Returns port ids on which metatype must have a weight based on Operation definition.
 
@@ -87,7 +87,7 @@ def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
     return []
 
 
-def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
+def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> list[int]:
     """
     Returns weight port ids on which metatype could have a weight.
     Example: ONNXMatMulMetatype could have activations or weights on input port ids: 0, 1
@@ -115,8 +115,8 @@ def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int
 def _get_weight_port_ids(
     node: onnx.NodeProto,
     model: onnx.ModelProto,
-    parents_node_mapping: Dict[str, onnx.NodeProto],
-) -> Set[int]:
+    parents_node_mapping: dict[str, onnx.NodeProto],
+) -> set[int]:
     """
     Returns all weight input ports.
     First, add constant weight port ids from metatype.
@@ -153,7 +153,7 @@ def _is_node_with_bias(node: onnx.NodeProto, model: onnx.ModelProto) -> bool:
     return False
 
 
-def _get_gemm_attrs(node: onnx.NodeProto) -> Dict[str, int]:
+def _get_gemm_attrs(node: onnx.NodeProto) -> dict[str, int]:
     """
     Returns transpose attributes of GEMM node.
 
@@ -168,7 +168,7 @@ def _get_gemm_attrs(node: onnx.NodeProto) -> Dict[str, int]:
     return gemm_attrs
 
 
-def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> Dict[str, Any]:
+def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> dict[str, Any]:
     """
     Returns node attributes.
 
@@ -185,8 +185,8 @@ def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> Dict[str, A
 def _get_bias_attr(
     node: onnx.NodeProto,
     model: onnx.ModelProto,
-    parents_node_mapping: Dict[str, onnx.NodeProto],
-) -> Dict[str, str]:
+    parents_node_mapping: dict[str, onnx.NodeProto],
+) -> dict[str, str]:
     """
     Returns bias tensor attributes.
 
@@ -238,8 +238,8 @@ class GraphConverter:
     def _add_nncf_input_nodes(
         model: onnx.ModelProto,
         nncf_graph: NNCFGraph,
-        edge_info_mapping: Dict[str, onnx.ValueInfoProto],
-        children_node_mapping: Dict[str, List[onnx.NodeProto]],
+        edge_info_mapping: dict[str, onnx.ValueInfoProto],
+        children_node_mapping: dict[str, list[onnx.NodeProto]],
     ) -> None:
         """
         Adds special NNCF Input nodes to NNCFGraph.
@@ -284,8 +284,8 @@ class GraphConverter:
     def _add_nncf_output_nodes(
         model: onnx.ModelProto,
         nncf_graph: NNCFGraph,
-        edge_info_mapping: Dict[str, onnx.ValueInfoProto],
-        parents_node_mapping: Dict[str, onnx.NodeProto],
+        edge_info_mapping: dict[str, onnx.ValueInfoProto],
+        parents_node_mapping: dict[str, onnx.NodeProto],
     ) -> None:
         """
         Adds special NNCF Output nodes to NNCFGraph.

@@ -19,6 +19,7 @@ from pytest import FixtureRequest
 from pytest import Parser
 
 from nncf import set_log_level
+from nncf.common.quantization.structs import QuantizationScheme
 
 pytest.register_assert_rewrite("tests.torch.helpers")
 
@@ -54,9 +55,6 @@ def pytest_configure(config: Config) -> None:
     if nncf_debug:
         set_log_level(logging.DEBUG)
 
-    # Disable patching of torch functions
-    os.environ["NNCF_EXPERIMENTAL_TORCH_TRACING"] = "1"
-
 
 @pytest.fixture
 def regen_ref_data(request: FixtureRequest):
@@ -65,6 +63,16 @@ def regen_ref_data(request: FixtureRequest):
 
 @pytest.fixture(params=[pytest.param(True, marks=pytest.mark.cuda), False], ids=["cuda", "cpu"])
 def use_cuda(request: FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["per_channel", "per_tensor"])
+def is_per_channel(request: FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=[QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC])
+def quantization_mode(request: FixtureRequest):
     return request.param
 
 

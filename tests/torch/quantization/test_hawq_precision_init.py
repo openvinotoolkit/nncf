@@ -16,7 +16,7 @@ from collections import OrderedDict
 from collections import namedtuple
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple
+from typing import Callable, NamedTuple
 
 import pytest
 import torch
@@ -77,6 +77,8 @@ from tests.torch.test_models import squeezenet1_1
 from tests.torch.test_models.mobilenet import MobileNetV2
 from tests.torch.test_models.mobilenet import mobilenet_v2
 
+pytestmark = pytest.mark.legacy
+
 
 def create_test_dataloaders(config: NNCFConfig, dataset_dir):
     input_info = FillerInputInfo.from_nncf_config(config).elements[0]
@@ -124,7 +126,7 @@ class BaseConfigBuilder:
     def __init__(self, config_creator_fn: Callable = None):
         if config_creator_fn:
             self._config = config_creator_fn()
-        self._options: Dict[str, str] = OrderedDict()
+        self._options: dict[str, str] = OrderedDict()
         self._extra_params: str = ""
 
     def with_ratio(self, ratio: float):
@@ -132,7 +134,7 @@ class BaseConfigBuilder:
         self._options["ratio"] = str(ratio)
         return self
 
-    def with_sample_size(self, sample_size: List[int]):
+    def with_sample_size(self, sample_size: list[int]):
         self._config["input_info"]["sample_size"] = sample_size
         return self
 
@@ -158,7 +160,7 @@ class BaseConfigBuilder:
     def build(self):
         return self._config
 
-    def with_ignored_scope(self, ignored_scopes=List[str], target_group: QuantizerGroup = None):
+    def with_ignored_scope(self, ignored_scopes=list[str], target_group: QuantizerGroup = None):
         if target_group is None:
             self._config["compression"]["ignored_scopes"] = ignored_scopes
         else:
@@ -168,7 +170,7 @@ class BaseConfigBuilder:
         self._options["with"] = "ignored_scopes"
         return self
 
-    def with_target_scope(self, target_scopes=List[str]):
+    def with_target_scope(self, target_scopes=list[str]):
         self._config["target_scopes"] = target_scopes
         self._config["compression"]["target_scopes"] = target_scopes
         self._options["with"] = "target_scopes"
@@ -475,7 +477,6 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
         model = model.cuda()
         criterion = criterion.cuda()
         ref_trace = params.cuda_ref_trace
-        rtol = 1e-6
 
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -544,7 +545,7 @@ def get_requires_grad_per_param(model):
     return OrderedDict(sorted(not_sorted.items()))
 
 
-def get_skipped_quantized_weight_node_names() -> List[NNCFNodeName]:
+def get_skipped_quantized_weight_node_names() -> list[NNCFNodeName]:
     scopes_list = [
         "MobileNetV2/Sequential[features]/Conv2dNormActivation[18]/NNCFConv2d[0]/conv2d_0",
         "MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
@@ -728,7 +729,7 @@ class RatioCalculatorTestDesc:
         self._ignored_scopes = []
         self.ref_ratio = ref_ratio
 
-    def bitwidths(self, bitwidth_sequence=List[int]):
+    def bitwidths(self, bitwidth_sequence=list[int]):
         self._bitwidth_sequence = bitwidth_sequence
         return self
 

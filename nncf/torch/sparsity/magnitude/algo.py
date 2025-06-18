@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import List
 
 import torch
 
@@ -58,7 +57,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
     Controller for the magnitude sparsity algorithm in PT.
     """
 
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: list[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         self._config = config
         self._algo_config = extract_algo_specific_config(self._config, "magnitude_sparsity")
@@ -161,7 +160,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                     layer.module.weight, self._weight_importance_fn, threshold_val
                 )
 
-    def _collect_all_weights(self, target_sparsified_module_info_list: List[SparseModuleInfo]):
+    def _collect_all_weights(self, target_sparsified_module_info_list: list[SparseModuleInfo]):
         all_weights = []
         for minfo in target_sparsified_module_info_list:
             all_weights.append(self._weight_importance_fn(minfo.module.weight).view(-1))

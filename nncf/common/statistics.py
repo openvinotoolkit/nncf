@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from dataclasses import fields
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional
 
 from nncf.api.statistics import Statistics
 from nncf.common.pruning.statistics import FilterPruningStatistics
@@ -63,5 +63,5 @@ class NNCFStatistics:
         pretty_string = "\n\n".join([x[1].to_str() for x in self])
         return pretty_string
 
-    def __iter__(self) -> Iterator[Tuple[str, Statistics]]:
+    def __iter__(self) -> Iterator[tuple[str, Statistics]]:
         return iter([(f.name, getattr(self, f.name)) for f in fields(self) if getattr(self, f.name) is not None])

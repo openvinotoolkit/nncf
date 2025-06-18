@@ -16,7 +16,7 @@ import pathlib
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Optional, TypeVar, Union, cast
 
 import numpy as np
 from scipy.interpolate import interp1d  # type: ignore
@@ -64,7 +64,7 @@ class TrainingLoop(ABC):
             float,
         ],
         validate_fn: Callable[[TModel], float],
-        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]] = None,
+        configure_optimizers_fn: Optional[Callable[[], tuple[OptimizerType, LRSchedulerType]]] = None,
         dump_checkpoint_fn: Optional[
             Callable[
                 [
@@ -133,7 +133,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
             float,
         ],
         validate_fn: Callable[[TModel], float],
-        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]] = None,
+        configure_optimizers_fn: Optional[Callable[[], tuple[OptimizerType, LRSchedulerType]]] = None,
         dump_checkpoint_fn: Optional[
             Callable[
                 [
@@ -344,7 +344,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     def _get_adaptive_compression_ctrl(
         self, compression_controller: CompressionAlgorithmController
     ) -> CompressionAlgorithmController:
-        def _adaptive_compression_controllers() -> Dict[str, CompressionAlgorithmController]:
+        def _adaptive_compression_controllers() -> dict[str, CompressionAlgorithmController]:
             def remove_registry_prefix(algo_name: str) -> str:
                 for prefix in ("pt_", "tf_"):
                     if algo_name.startswith(prefix):
@@ -391,7 +391,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             float,
         ],
         validate_fn: Callable[[TModel], float],
-        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]] = None,
+        configure_optimizers_fn: Optional[Callable[[], tuple[OptimizerType, LRSchedulerType]]] = None,
         dump_checkpoint_fn: Optional[
             Callable[
                 [
@@ -604,8 +604,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         nncf_logger.info(f"Compressed training history: {training_history}")
         training_history[minimal_compression_rate] = runner.maximal_accuracy_drop  # type: ignore
         training_history[maximal_compression_rate] = -full_compression_factor * runner.maximal_accuracy_drop  # type: ignore
-        compression_rates = cast(List[float], training_history.keys())
-        evaluated_acc_budgets = cast(List[float], training_history.values())
+        compression_rates = cast(list[float], training_history.keys())
+        evaluated_acc_budgets = cast(list[float], training_history.values())
         interp_kind = "linear" if len(compression_rates) < 4 else "cubic"
         acc_budget_vs_comp_rate_curve = interp1d(compression_rates, evaluated_acc_budgets, kind=interp_kind)
         rate_interval = np.linspace(

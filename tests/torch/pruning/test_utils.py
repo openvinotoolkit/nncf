@@ -20,6 +20,8 @@ from tests.torch.pruning.helpers import BigPruningTestModel
 from tests.torch.pruning.helpers import BranchingModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.parametrize(
     "total,sparsity_rate,multiple_of,ref",

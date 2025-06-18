@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
@@ -21,7 +20,7 @@ class PrunedLayerSummary:
     Contains information about the pruned layer.
     """
 
-    def __init__(self, name: str, weight_shape: List[int], mask_shape: List[int], filter_pruning_level: float):
+    def __init__(self, name: str, weight_shape: list[int], mask_shape: list[int], filter_pruning_level: float):
         """
         Initializes a summary about the pruned layer.
 
@@ -49,7 +48,7 @@ class PrunedModelStatistics(Statistics):
         current_params_num: int,
         full_filters_num: int,
         current_filters_num: int,
-        pruned_layers_summary: List[PrunedLayerSummary],
+        pruned_layers_summary: list[PrunedLayerSummary],
     ):
         """
         Initializes statistics of the pruned model.

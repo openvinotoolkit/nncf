@@ -17,7 +17,7 @@ extend the existing algorithms.
 """
 
 from abc import abstractmethod
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, TypeVar
 
 import torch
 from torch import nn
@@ -67,7 +67,7 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return self.calculate()
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Loads the compression loss state.
 
@@ -174,7 +174,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         ctrl.set_builder_state_with_name(self.name, self.get_state())
         return ctrl
 
-    def _get_state_without_name(self) -> Dict[str, Any]:
+    def _get_state_without_name(self) -> dict[str, Any]:
         """
         Implementation of get_state that returns state without builder name.
 
@@ -183,7 +183,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         return {}
 
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: dict[str, Any]):
         """
         Implementation of load state that takes state without builder name.
 
@@ -215,7 +215,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     def _should_consider_scope(self, node_name: NNCFNodeName) -> bool:
         return should_consider_scope(node_name, self.ignored_scopes, self.target_scopes)
 
-    def _nncf_module_types_to_compress(self) -> List[str]:
+    def _nncf_module_types_to_compress(self) -> list[str]:
         """
         Return list of NNCF module types which should be compressed by specific algorithm.
         As name of algorithm used the value set by decorator @Registry.register() or default one.
@@ -227,6 +227,6 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
                 filtered_nncf_module_names_list.append(module_cls.__name__)
         return filtered_nncf_module_names_list
 
-    def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
+    def _are_frozen_layers_allowed(self) -> tuple[bool, str]:
         algo_name = self.name.replace("_", " ")
         return False, f"Frozen layers are not allowed for {algo_name}"

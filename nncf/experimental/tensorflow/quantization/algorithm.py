@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -64,15 +64,15 @@ class TFQuantizationPointV2(TFQuantizationPoint):
         quantizer_spec: TFQuantizerSpec,
         target_point: TargetPoint,
         is_weight_quantization: bool,
-        input_shape: Optional[List[int]] = None,
-        channel_axes: Optional[List[int]] = None,
+        input_shape: Optional[list[int]] = None,
+        channel_axes: Optional[list[int]] = None,
     ):
         super().__init__(op_name, quantizer_spec, target_point)
         self.is_weight_quantization = is_weight_quantization
         self.input_shape = input_shape
         self.channel_axes = channel_axes
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state = super().get_state()
         state.update(
             {
@@ -84,7 +84,7 @@ class TFQuantizationPointV2(TFQuantizationPoint):
         return state
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFQuantizationPointV2":
+    def from_state(cls, state: dict[str, Any]) -> "TFQuantizationPointV2":
         target_point_cls = TF_STATEFUL_CLASSES.get_registered_class(state[cls._state_names.TARGET_POINT_CLASS_NAME])
         kwargs = {
             cls._state_names.OP_NAME: state[cls._state_names.OP_NAME],
@@ -99,7 +99,7 @@ class TFQuantizationPointV2(TFQuantizationPoint):
 
 class TFQuantizationSetupV2(TFQuantizationSetup):
     @classmethod
-    def from_state(cls, state: Dict) -> "TFQuantizationSetupV2":
+    def from_state(cls, state: dict) -> "TFQuantizationSetupV2":
         setup = TFQuantizationSetupV2()
         for quantization_point_state in state[cls._state_names.QUANTIZATION_POINTS]:
             quantization_point = TFQuantizationPointV2.from_state(quantization_point_state)
@@ -120,7 +120,7 @@ def _get_quantizer_op_name(prefix: str, is_wq: bool, port_id: int, target_type) 
 
 
 def _get_tensor_specs(
-    node: NNCFNode, nncf_graph: NNCFGraph, port_ids: List[int], is_input_tensors: bool, is_weight_tensors: bool
+    node: NNCFNode, nncf_graph: NNCFGraph, port_ids: list[int], is_input_tensors: bool, is_weight_tensors: bool
 ):
     """
     Returns specification of tensors for `node` according to `port_ids`.
@@ -163,7 +163,7 @@ def _get_tensor_specs(
 
 @TF_COMPRESSION_ALGORITHMS.register("experimental_quantization")
 class QuantizationBuilderV2(QuantizationBuilder):
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: dict[str, Any]):
         quantizer_setup_state = state_without_name[self._state_names.QUANTIZER_SETUP]
         self._quantizer_setup = TFQuantizationSetupV2.from_state(quantizer_setup_state)
 
@@ -173,7 +173,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
     def _build_insertion_commands_for_quantizer_setup(
         self, quantizer_setup: TFQuantizationSetupV2
-    ) -> List[TFInsertionCommand]:
+    ) -> list[TFInsertionCommand]:
         insertion_commands = []
         quantization_points = quantizer_setup.get_quantization_points()
         # quantization point id is her index inside the `quantization_points` list
@@ -240,7 +240,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
             self._range_initializer = RangeInitializerV2(self._range_init_params)
         self._range_initializer.run(model)
 
-    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, model: NNCFNetwork) -> List[NNCFNode]:
+    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, model: NNCFNetwork) -> list[NNCFNode]:
         return []
 
     def _get_quantizer_setup(self, model: NNCFNetwork) -> TFQuantizationSetupV2:
@@ -260,8 +260,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
         # Logic of the TFQuantizationSetupV2 creation
 
         quantization_setup = TFQuantizationSetupV2()
-        node_name_to_qconfig_map: Dict[str, QuantizerConfig] = {}
-        qp_id_to_setup_index_map: Dict[QuantizationPointId, int] = {}
+        node_name_to_qconfig_map: dict[str, QuantizerConfig] = {}
+        qp_id_to_setup_index_map: dict[QuantizationPointId, int] = {}
         first_conv_nodes = get_first_nodes_of_type(nncf_graph, ["Conv2D", "Conv3D"])
 
         for idx, (qp_id, qp) in enumerate(qp_solution.quantization_points.items()):

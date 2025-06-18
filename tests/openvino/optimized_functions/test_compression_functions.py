@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import re
 from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
@@ -16,16 +16,25 @@ from unittest.mock import patch
 
 import numpy as np
 import openvino as ov
+import openvino.opset13 as opset
 import pytest
 
+import nncf
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
+from nncf import Dataset
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.openvino.cpu_info import is_arm_cpu
+from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -58,7 +67,12 @@ INT4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=2),
 ]
 
-COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS
+FP4_COMPRESSION_CONFIGS = [
+    WeightCompressionConfig(CompressWeightsMode.NF4),
+    WeightCompressionConfig(CompressWeightsMode.NF4, group_size=2),
+]
+
+COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
 
 WEIGHT_SHAPE = (10000, 4)
 
@@ -93,14 +107,47 @@ def get_random_integer_tensor(shape, low, high, dtype, backend, seed=0):
 
 @contextmanager
 def openvino_available(available: bool):
-    import nncf.common.utils.backend
+    import nncf.quantization.algorithms.weight_compression.weight_lowering as lowering
 
-    original_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
-    nncf.common.utils.backend._OPENVINO_AVAILABLE = available
-    yield
-    nncf.common.utils.backend._OPENVINO_AVAILABLE = original_value
+    with patch.object(lowering, "_can_run_optimized", return_value=available):
+        yield
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
+@pytest.mark.parametrize(
+    "weight_shape,is_disabled",
+    [
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4 - 1, 4), True),
+        ((MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // 4, 4), False),
+    ],
+)
+@pytest.mark.parametrize("quantization_task", [QuantizationTask.Q, QuantizationTask.Q_DQ, QuantizationTask.Q_DQ_RQ])
+def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantization_task):
+    weight = get_random_float_tensor(weight_shape, TensorDataType.float32, TensorBackend.numpy)
+    config = WeightCompressionConfig(CompressWeightsMode.INT8_ASYM)
+
+    fn_to_call, fn_to_patch = _get_compression_fn_from_quantization_task(quantization_task, config)
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        kwargs = {}
+        if quantization_task == QuantizationTask.Q_DQ_RQ:
+            kwargs["return_compressed_weight"] = True
+
+        fn_to_call(weight, config, reduction_axes=1)
+
+        if is_disabled:
+            mock.assert_not_called()
+        else:
+            mock.assert_called_once()
+
+
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
@@ -151,12 +198,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                         zero_point_shape, level_low, level_high, TensorDataType.int32, TensorBackend.numpy
                     )
 
-            if quantization_task == QuantizationTask.Q:
-                fn_to_call = do_int_quantization
-                fn_to_patch = opt_fns.do_int_quantization
-            else:
-                fn_to_call = quantize_dequantize_weight
-                fn_to_patch = opt_fns.quantize_dequantize_weight
+            fn_to_call, fn_to_patch = _get_compression_fn_from_quantization_task(quantization_task, config)
             patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
                 # When scale (and z.p) are precomputed, all inputs are assumed to be already reshaped and reduction
@@ -167,17 +209,24 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                 if quantization_task == QuantizationTask.Q_DQ_RQ:
                     kwargs["return_compressed_weight"] = True
 
-                outputs = fn_to_call(
-                    weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, **kwargs
-                )
+                args = (weight, config, reduction_axes, precomputed_scale)
+                if config.is_integer:
+                    args = args + (precomputed_zero_point,)
+                outputs = fn_to_call(*args, **kwargs)
 
                 decompressed_weight, compressed_weight, scale, zero_point = (None,) * 4
                 if quantization_task == QuantizationTask.Q:
-                    compressed_weight, scale, zero_point = outputs
+                    if config.is_integer:
+                        compressed_weight, scale, zero_point = outputs
+                    else:
+                        compressed_weight, scale = outputs
                 elif quantization_task == QuantizationTask.Q_DQ:
                     decompressed_weight = outputs
                 else:
-                    decompressed_weight, compressed_weight, scale, zero_point = outputs
+                    if config.is_integer:
+                        decompressed_weight, compressed_weight, scale, zero_point = outputs
+                    else:
+                        decompressed_weight, compressed_weight, scale = outputs
 
                 if cb == ComputationBackend.NumPy:
                     mock.assert_not_called()
@@ -214,6 +263,10 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
     _check_values(results)
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
@@ -243,6 +296,142 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
     _check_values(results)
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
+@pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
+@pytest.mark.parametrize("weight_dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
+@pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
+@pytest.mark.parametrize(
+    "compression_kwargs",
+    [
+        {},
+        {"awq": True},
+        {"scale_estimation": True},
+        {"gptq": True},
+        {"gptq": True, "scale_estimation": True},
+        {"lora_correction": True},
+    ],
+    ids=["data-free", "awq", "se", "gptq", "gptq_se", "lora"],
+)
+@pytest.mark.parametrize("dataset_size", [3])
+def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kwargs, dataset_size):
+    def create_ov_model():
+        inp = opset.parameter([1, 24, weight_shape[1]])
+        weight_const = opset.constant(get_random_float_tensor(weight_shape, weight_dtype, TensorBackend.ov).data)
+        weight_const = opset.convert(weight_const, ov.Type.f32)
+        matmul = opset.matmul(inp, weight_const, transpose_a=False, transpose_b=True)
+        result = opset.result(matmul)
+        return ov.Model([result], [inp])
+
+    def create_dataset(model):
+        input_data = []
+        for i in range(dataset_size):
+            input_sample = []
+            for j, inp in enumerate(model.inputs):
+                partial_shape = inp.get_partial_shape()
+                if partial_shape.is_static:
+                    input_shape = tuple(inp.shape)
+                else:
+                    # Batch dimension
+                    input_shape = (1 if partial_shape[0].is_dynamic else partial_shape[0].get_length(),)
+                    if len(partial_shape) == 2:
+                        # Assuming this is sequence length dimension
+                        input_shape += (10 if partial_shape[1].is_dynamic else partial_shape[1].get_length(),)
+                random_data = get_random_float_tensor(
+                    input_shape, TensorDataType.float32, TensorBackend.numpy, seed=hash((i, j)) % (1 << 32)
+                ).data
+                input_sample.append(random_data)
+            input_data.append(input_sample)
+        return Dataset(input_data)
+
+    def get_input_node_data(node: ov.Node, input_id: int) -> Tensor:
+        # Get the constant node data which is the input to the given node
+        child_node = node.input(input_id).get_source_output().get_node()
+        if child_node.get_type_name() == "Convert":
+            child_node = child_node.input(0).get_source_output().get_node()
+        assert child_node.get_type_name() == "Constant"
+        return Tensor(get_const_value_as_ov_tensor(child_node)).as_numpy_tensor()
+
+    is_data_aware = (
+        compression_kwargs.get("awq")
+        or compression_kwargs.get("scale_estimation")
+        or compression_kwargs.get("gptq")
+        or compression_kwargs.get("lora_correction")
+    )
+
+    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+        if is_data_aware:
+            pytest.skip("Data-aware compression is not supported for INT8 modes.")
+    else:
+        compression_kwargs["all_layers"] = True
+
+    results = defaultdict(dict)
+
+    # Iterate over two implementations
+    for cb in [ComputationBackend.NumPy, ComputationBackend.OV]:
+        # A context manager to enable/disable ov implementation
+        with openvino_available(cb == ComputationBackend.OV):
+            fn_to_patch = opt_fns.do_integer_quantization if config.is_integer else opt_fns.do_float_quantization
+            patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+            with patch(patch_path, side_effect=fn_to_patch) as mock:
+                model = create_ov_model()
+
+                if is_data_aware:
+                    compression_kwargs["dataset"] = create_dataset(model)
+
+                nncf.compress_weights(model, config.mode, group_size=config.group_size, **compression_kwargs)
+
+                if cb == ComputationBackend.NumPy:
+                    mock.assert_not_called()
+                else:
+                    mock.assert_called()
+
+                ov_nodes = {node.get_friendly_name(): node for node in model.get_ops()}
+                nncf_graph = NNCFGraphFactory.create(model)
+                for i, nncf_node in enumerate(nncf_graph.topological_sort()):
+                    node_name = nncf_node.node_name
+                    node = ov_nodes[node_name]
+                    if re.search(r"/fq_weights_\d+$", node_name):
+                        # Extract compression-related constants from compression subgraph
+                        node_name_prefix = f"{i}_"
+                        if "lora" in node_name:
+                            node_name_prefix += "lora_A_" if "lora_A" in node_name else "lora_B_"
+
+                        assert node.get_type_name() == "Multiply"
+                        mul_node = node
+                        results[cb][f"{node_name_prefix}scale"] = get_input_node_data(mul_node, 1)
+                        weight_node = node.input(0).get_source_output().get_node()
+
+                        if config.is_asym_mode:
+                            assert weight_node.get_type_name() == "Subtract"
+                            results[cb][f"{node_name_prefix}zero_point"] = get_input_node_data(weight_node, 1)
+                            weight_node = weight_node.input(0).get_source_output().get_node()
+
+                        results[cb][f"{node_name_prefix}weight"] = get_input_node_data(weight_node, 0)
+
+    _check_values(results)
+
+
+def _get_compression_fn_from_quantization_task(quantization_task, config):
+    if quantization_task == QuantizationTask.Q:
+        if config.is_integer:
+            fn_to_call = do_integer_quantization
+            fn_to_patch = opt_fns.do_integer_quantization
+        else:
+            fn_to_call = do_float_quantization
+            fn_to_patch = opt_fns.do_float_quantization
+    else:
+        if config.is_integer:
+            fn_to_call = integer_quantize_dequantize_weight
+            fn_to_patch = opt_fns.integer_quantize_dequantize_weight
+        else:
+            fn_to_call = float_quantize_dequantize_weight
+            fn_to_patch = opt_fns.float_quantize_dequantize_weight
+    return fn_to_call, fn_to_patch
+
+
 def _check_backends_and_dtypes(
     quantization_task,
     cb,
@@ -266,19 +455,30 @@ def _check_backends_and_dtypes(
         and config.num_bits == 4
     ):
         # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
-        # zero point must be in ov backend and have (u)int4 dtype in order to be able to insert them into OV model
-        # without re-packing
+        # zero point must be in ov backend and have (u)int4 or nf4 dtypes in order to be able to insert them into OV
+        # model without re-packing
+        if config.is_integer:
+            ref_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
+        else:
+            ref_dtype = TensorDataType.nf4
         assert compressed_weight.backend == TensorBackend.ov
-        assert compressed_weight.dtype == (TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4)
+        assert compressed_weight.dtype == ref_dtype
         if config.is_asym_mode and not precompute_s_zp:
             assert zero_point.backend == TensorBackend.ov
             assert zero_point.dtype == TensorDataType.uint4
     else:
         if quantization_task != QuantizationTask.Q_DQ:
-            # Otherwise compressed weight and zero point must be returned in numpy backend, compressed weight must
-            # be of (u)int8 data type, zero point -- in int32
-            assert compressed_weight.backend == TensorBackend.numpy
-            assert compressed_weight.dtype == (TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8)
+            # Otherwise, for integer compression, compressed weight and zero point must be returned in numpy backend,
+            # compressed weight must be of (u)int8, zero point -- in int32; for nf4 compression, the resulting
+            # data type and backend depends on the input tensor backend.
+            if config.is_integer:
+                ref_backend = TensorBackend.numpy
+                ref_dtype = TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8
+            else:
+                ref_backend = weight_tensor_backend
+                ref_dtype = TensorDataType.nf4 if weight_tensor_backend == TensorBackend.ov else TensorDataType.float32
+            assert compressed_weight.backend == ref_backend
+            assert compressed_weight.dtype == ref_dtype
             if config.is_asym_mode and not precompute_s_zp:
                 assert zero_point.backend == TensorBackend.numpy
                 assert zero_point.dtype == TensorDataType.int32

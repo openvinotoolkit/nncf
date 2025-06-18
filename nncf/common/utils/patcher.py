@@ -15,7 +15,7 @@ import inspect
 from collections import OrderedDict
 from functools import partial
 from functools import partialmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 
 class Patcher:
@@ -25,7 +25,7 @@ class Patcher:
     """
 
     def __init__(self) -> None:
-        self._patched: Dict[Tuple[Any, str], List[Tuple[Any, Callable[..., Any]]]] = OrderedDict()
+        self._patched: dict[tuple[Any, str], list[tuple[Any, Callable[..., Any]]]] = OrderedDict()
 
     def patch(  # noqa: C901
         self,
@@ -71,7 +71,7 @@ class Patcher:
         :param depth: How many patches to undo, depth=0 to undo all of them
         """
 
-        def _unpatch(obj: Any, fn_name: str, key: Tuple[Any, str], depth: int) -> None:
+        def _unpatch(obj: Any, fn_name: str, key: tuple[Any, str], depth: int) -> None:
             if depth == 0:
                 depth = len(self._patched[key])
             keep = len(self._patched[key]) - depth
@@ -107,7 +107,7 @@ class Patcher:
                 obj, fn_name = self.import_obj(".".join([obj, fn_name]))
             _unpatch(obj, fn_name, key, depth)
 
-    def import_obj(self, obj_cls: Union[str, Any]) -> Tuple[Any, str]:  # noqa: C901
+    def import_obj(self, obj_cls: Union[str, Any]) -> tuple[Any, str]:  # noqa: C901
         """Object import helper."""
         if isinstance(obj_cls, str):
             fn_name = obj_cls.split(".")[-1]
@@ -214,7 +214,7 @@ class Patcher:
         setattr(obj_cls, fn_name, partialmethod(helper, __wrapper=wrapper, __fn=fn).__get__(obj_cls))
         self._patched[key].append((fn, wrapper))
 
-    def _initialize(self, key: Tuple[int, str], force: bool) -> Optional[Any]:
+    def _initialize(self, key: tuple[int, str], force: bool) -> Optional[Any]:
         fn = None
         if key not in self._patched:
             self._patched[key] = []

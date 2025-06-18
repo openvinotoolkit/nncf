@@ -13,7 +13,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from functools import partial
 from itertools import product
-from typing import Any, Iterator, List, Optional, Tuple
+from typing import Any, Iterator, Optional
 
 import numpy as np
 import pytest
@@ -169,7 +169,7 @@ class TemplateTestReducersAggregators:
         pass
 
     @abstractmethod
-    def squeeze_tensor(self, ref_tensor: List[Any], axes: Optional[Tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
         pass
 
     @abstractmethod
@@ -378,7 +378,7 @@ class TemplateTestReducersAggregators:
     def _get_inputs_for_mean_median_aggregators(
         self,
         dims: int,
-        aggregation_axes: Tuple[int, ...],
+        aggregation_axes: tuple[int, ...],
         is_median: bool,
         different_sizes: bool = False,
     ) -> Iterator[NNCFTensor]:

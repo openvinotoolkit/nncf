@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Union
 
 from nncf.tensor import Tensor
 from nncf.tensor.functions.dispatcher import tensor_dispatcher
@@ -19,7 +19,7 @@ from nncf.tensor.functions.dispatcher import tensor_dispatcher
 def norm(
     a: Tensor,
     ord: Union[Literal["fro", "nuc"], float, None] = None,
-    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    axis: Optional[Union[int, tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
     r"""
@@ -127,7 +127,7 @@ def lstsq(a: Tensor, b: Tensor, driver: Optional[str] = None) -> Tensor:
 
 
 @tensor_dispatcher
-def svd(a: Tensor, full_matrices: Optional[bool] = True) -> Tuple[Tensor, Tensor, Tensor]:
+def svd(a: Tensor, full_matrices: Optional[bool] = True) -> tuple[Tensor, Tensor, Tensor]:
     """
     Factorizes the matrix a into two unitary matrices U and Vh, and a 1-D array s of singular values
     (real, non-negative) such that a == U @ S @ Vh, where S is a suitably shaped matrix of zeros with main diagonal s.

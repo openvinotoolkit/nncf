@@ -9,16 +9,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Iterator, Optional, Union
 
 import numpy as np
 import onnx
 from onnx import numpy_helper
 
 import nncf
+from nncf.onnx.graph.model_metadata import MetadataKey
+from nncf.onnx.graph.model_metadata import get_metadata
+from nncf.tensor.definitions import TensorDataType
+
+NNCF_DTYPE_TO_ONNX_DTYPE = {
+    TensorDataType.float16: onnx.TensorProto.FLOAT16,
+    TensorDataType.bfloat16: onnx.TensorProto.BFLOAT16,
+    TensorDataType.float32: onnx.TensorProto.FLOAT,
+    TensorDataType.float64: onnx.TensorProto.DOUBLE,
+    TensorDataType.int32: onnx.TensorProto.INT32,
+    TensorDataType.int64: onnx.TensorProto.INT64,
+    TensorDataType.int8: onnx.TensorProto.INT8,
+    TensorDataType.uint8: onnx.TensorProto.UINT8,
+    TensorDataType.int4: onnx.TensorProto.INT4,
+    TensorDataType.uint4: onnx.TensorProto.UINT4,
+}
+
+ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
 
 
-def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+def get_name_to_node_map(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
     """
     Returns mapping from node name to the node.
 
@@ -28,7 +46,7 @@ def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
     return {node.name: node for node in model.graph.node}
 
 
-def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
+def get_edge_info_mapping(model: onnx.ModelProto) -> dict[str, onnx.ValueInfoProto]:
     """
     Returns mapping from edge name to the edge info.
 
@@ -41,7 +59,7 @@ def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoPro
     }
 
 
-def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.NodeProto]]:
+def get_children_node_mapping(model: onnx.ModelProto) -> dict[str, list[onnx.NodeProto]]:
     """
     Returns a mapping from edge name to nodes which consume this edge as an input.
 
@@ -55,7 +73,7 @@ def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.Nod
     return output
 
 
-def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+def get_parents_node_mapping(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
     """
     Returns a mapping from edge name to node which outputs this edge.
 
@@ -69,7 +87,7 @@ def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto
     return output
 
 
-def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
+def get_model_inputs(model: onnx.ModelProto) -> list[onnx.ValueInfoProto]:
     """
     Returns all model inputs.
 
@@ -182,10 +200,24 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     :param tensor_name: Name of the tensor.
     :return: The value of the tensor.
     """
-    return numpy_helper.to_array(get_tensor(model, tensor_name))
+    tensor = get_tensor(model, tensor_name)
+    return get_array_from_tensor(model, tensor)
 
 
-def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:
+def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> np.ndarray:
+    """
+    Returns the data from an ONNX tensor as NumPy array.
+
+    :param model: The ONNX model containing the tensor.
+    :param tensor: The specific tensor whose data is to be extracted.
+    :return: A NumPy array containing the tensor's data.
+    """
+    external_data_dir = get_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
+    base_dir = external_data_dir if external_data_dir else ""
+    return numpy_helper.to_array(tensor, base_dir)
+
+
+def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[int]:
     """
     Returns edge shape.
 
@@ -227,7 +259,7 @@ def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
 def get_parent(
     node: onnx.NodeProto,
     port_id: int,
-    parents_node_mapping: Dict[str, onnx.NodeProto],
+    parents_node_mapping: dict[str, onnx.NodeProto],
 ) -> Optional[onnx.NodeProto]:
     """
     Returns parents of the node. If there is no parent node, returns None.
@@ -242,7 +274,7 @@ def get_parent(
     return None
 
 
-def get_children(node: onnx.NodeProto, children_node_mapping: Dict[str, List[onnx.NodeProto]]) -> List[onnx.NodeProto]:
+def get_children(node: onnx.NodeProto, children_node_mapping: dict[str, list[onnx.NodeProto]]) -> list[onnx.NodeProto]:
     """
     Returns children of the node.
 
@@ -259,7 +291,7 @@ def get_children(node: onnx.NodeProto, children_node_mapping: Dict[str, List[onn
 def is_node_has_shared_weight(
     node: onnx.NodeProto,
     weight_port_id: int,
-    children_node_mapping: Dict[str, List[onnx.NodeProto]],
+    children_node_mapping: dict[str, list[onnx.NodeProto]],
 ) -> bool:
     """
     Returns whether the node share a weight.
@@ -272,3 +304,71 @@ def is_node_has_shared_weight(
     weight_tensor_edge = node.input[weight_port_id]
     nodes = children_node_mapping[weight_tensor_edge]
     return len(nodes) > 1
+
+
+def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
+    """
+    Apply packing based on the rule - https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking
+    :param tensor: Tensor to pack.
+    :return: Packed tensor.
+    """
+    if tensor.dtype == np.uint8:
+        if np.max(tensor) > 15 or np.min(tensor) < 0:
+            msg = "Tensor values are not in [0, 15]."
+            raise nncf.InternalError(msg)
+    elif tensor.dtype == np.int8:
+        if np.max(tensor) > 7 or np.min(tensor) < -8:
+            msg = "Tensor values are not in [-8, 7]."
+            raise nncf.InternalError(msg)
+    else:
+        msg = f"Invalid weight dtype {tensor.dtype}."
+        raise nncf.InternalError(msg)
+    packed_tensor = np.ascontiguousarray(tensor)
+    packed_tensor = packed_tensor.reshape(-1, 2)
+    packed_tensor = packed_tensor[..., 1::2] << 4 | packed_tensor[..., ::2] & 15
+    return packed_tensor
+
+
+def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.ndarray:
+    """
+    Returns `weight` that is stored as uint8 with shape (N, n_blocks_per_col, blob_size) in which:
+        - n_blocks_per_col = CeilDiv(K, block_size)
+        - blob_size = CeilDiv(block_size * bits, 8)
+        - bits = 4 (Number of bits used for weight quantization)
+
+    See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#commicrosoftmatmulnbits
+    for more details.
+
+    :param weight: A 2D array of shape (K, N) quantized with 4 bits.
+    :param block_size: Number of groupsize used for weight quantization.
+    :param signed: True if the weight has type int4, and False if uint4.
+    :return: A packed weight that can be used as `B` input for `com.microsoft.MatMulNBits` operation.
+    """
+    ceil_div = lambda a, b: (a + b - 1) // b
+    K, N = weight.shape
+    n_blocks_per_col = ceil_div(K, block_size)
+
+    if signed:
+        if weight.dtype != np.int8:
+            msg = f"Expected weight dtype to be np.int8 for signed weight tensor, but got {weight.dtype}"
+            raise nncf.ValidationError(msg)
+        weight = weight + 8  # [-8, 7] -> [0, 15]
+        weight = weight.astype(np.uint8)
+
+    K_padded = n_blocks_per_col * block_size
+    pad_len = K_padded - K
+    if pad_len > 0:
+        weight = np.pad(weight, ((0, pad_len), (0, 0)), mode="constant", constant_values=0)
+
+    weight_blocks = weight.reshape(n_blocks_per_col, block_size, N)
+
+    even = weight_blocks[:, 0::2, :]
+    odd = weight_blocks[:, 1::2, :]
+    if odd.shape[1] < even.shape[1]:
+        pad_width = [(0, 0), (0, even.shape[1] - odd.shape[1]), (0, 0)]
+        odd = np.pad(odd, pad_width, mode="constant", constant_values=0)
+
+    packed = ((odd & 0x0F) << 4) | (even & 0x0F)  # (n_blocks_per_col, blob_size, N)
+    packed_weight = packed.transpose(2, 0, 1)
+
+    return packed_weight

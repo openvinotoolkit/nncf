@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, Optional, Set, Type
+from typing import Callable, Optional
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -27,13 +27,13 @@ class OperatorMetatype:
     """
 
     name: str = ""
-    hw_config_names: List[str] = []
+    hw_config_names: list[str] = []
     output_channel_axis: Optional[int] = None
-    ignored_input_ports: List[int] = []
-    target_input_ports: Optional[List[int]] = None
+    ignored_input_ports: list[int] = []
+    target_input_ports: Optional[list[int]] = None
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         """
         Returns a list of the framework operator aliases.
 
@@ -42,7 +42,7 @@ class OperatorMetatype:
         return []
 
     @classmethod
-    def get_subtypes(cls) -> List[Type["OperatorMetatype"]]:
+    def get_subtypes(cls) -> list[type["OperatorMetatype"]]:
         """
         Returns a list of 'OperatorMetatype' that are subtypes.
 
@@ -51,7 +51,7 @@ class OperatorMetatype:
         return []
 
     @classmethod
-    def subtype_check(cls, metatype: Type["OperatorMetatype"]) -> bool:
+    def subtype_check(cls, metatype: type["OperatorMetatype"]) -> bool:
         """
         Check if a metatype is a subtype.
 
@@ -77,9 +77,9 @@ class OperatorMetatypeRegistry(Registry):
         :param name: The registry name.
         """
         super().__init__(name)
-        self._op_name_to_op_meta_dict: Dict[str, Type[OperatorMetatype]] = {}
+        self._op_name_to_op_meta_dict: dict[str, type[OperatorMetatype]] = {}
 
-    def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[..., Type[OperatorMetatype]]:
+    def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[..., type[OperatorMetatype]]:
         """
         Decorator for registering operator metatypes.
 
@@ -90,7 +90,7 @@ class OperatorMetatypeRegistry(Registry):
         name_ = name
         super_register = super()._register
 
-        def wrap(obj: Type[OperatorMetatype]) -> Type[OperatorMetatype]:
+        def wrap(obj: type[OperatorMetatype]) -> type[OperatorMetatype]:
             """
             Inner function for registering operator metatypes.
 
@@ -115,7 +115,7 @@ class OperatorMetatypeRegistry(Registry):
 
         return wrap
 
-    def get_operator_metatype_by_op_name(self, op_name: str) -> Type[OperatorMetatype]:
+    def get_operator_metatype_by_op_name(self, op_name: str) -> type[OperatorMetatype]:
         """
         Returns the operator metatype by operator name.
 
@@ -143,7 +143,7 @@ class UnknownMetatype(OperatorMetatype):
     name = "unknown"
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [cls.name]
 
 
@@ -157,7 +157,7 @@ class NoopMetatype(OperatorMetatype):
     name = "noop"
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [cls.name]
 
 
@@ -167,7 +167,7 @@ class InputNoopMetatype(OperatorMetatype):
     name = "input_noop"
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [NNCFGraphNodeType.INPUT_NODE]
 
 
@@ -177,7 +177,7 @@ class OutputNoopMetatype(OperatorMetatype):
     name = "output_noop"
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [NNCFGraphNodeType.OUTPUT_NODE]
 
 
@@ -187,11 +187,11 @@ class ConstNoopMetatype(OperatorMetatype):
     name = "const_noop"
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [NNCFGraphNodeType.CONST_NODE]
 
 
-def get_all_aliases(*metatypes: OperatorMetatype) -> Set[str]:
+def get_all_aliases(*metatypes: OperatorMetatype) -> set[str]:
     """
     Returns a set of all unique aliases from the provided metatypes.
 

@@ -10,7 +10,7 @@
 # limitations under the License.
 from collections import OrderedDict
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import torch
@@ -36,7 +36,7 @@ class CompressionTrainer(Trainer):
         self,
         compression_ctrl: Optional[CompressionAlgorithmController],
         *args,
-        callbacks: Optional[List[TrainerCallback]] = None,
+        callbacks: Optional[list[TrainerCallback]] = None,
         **kwargs,
     ):
         self.compression_ctrl = compression_ctrl
@@ -124,11 +124,11 @@ def build_compression_trainer(
     num_train_epochs: int = 6,
     **training_kwargs,
 ) -> CompressionTrainer:
-    evaluation_strategy = "no" if eval_dataset is None else "epoch"
+    eval_strategy = "no" if eval_dataset is None else "epoch"
     training_args = dict(
         output_dir=Path(output_dir),
         label_names=["labels"],
-        evaluation_strategy=evaluation_strategy,
+        eval_strategy=eval_strategy,
         save_strategy="steps",
         logging_strategy="steps",
         save_steps=500,

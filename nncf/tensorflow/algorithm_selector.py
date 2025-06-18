@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, Type
 
 import tensorflow as tf
 
@@ -40,7 +39,7 @@ class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
     def initialize(self, model: tf.keras.Model) -> None:
         pass
 
-    def _get_algo_specific_config_section(self) -> Dict:
+    def _get_algo_specific_config_section(self) -> dict:
         return {}
 
 
@@ -71,6 +70,6 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
         return CompressionStage.UNCOMPRESSED
 
 
-def get_compression_algorithm_builder(algo_name: str) -> Type[TFCompressionAlgorithmBuilder]:
+def get_compression_algorithm_builder(algo_name: str) -> type[TFCompressionAlgorithmBuilder]:
     nncf_logger.info(f"Creating compression algorithm: {algo_name}")
     return TF_COMPRESSION_ALGORITHMS.get(algo_name)

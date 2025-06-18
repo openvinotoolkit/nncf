@@ -15,18 +15,17 @@ from collections import OrderedDict
 from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable, DefaultDict, Dict, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import torch
 
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.hook_handle import HookHandle
 from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
-from nncf.experimental.torch2.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
@@ -37,6 +36,7 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
+from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
 
 
 class ThreadLocalGlobalContext(threading.local):
@@ -101,8 +101,8 @@ class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._post_hooks: DefaultDict[OperationAddress, Dict[str, Callable]] = defaultdict(OrderedDict)
-        self._pre_hooks: DefaultDict[PreHookId, Dict[str, Callable]] = defaultdict(OrderedDict)
+        self._post_hooks: defaultdict[OperationAddress, dict[str, Callable]] = defaultdict(OrderedDict)
+        self._pre_hooks: defaultdict[PreHookId, dict[str, Callable]] = defaultdict(OrderedDict)
         self._num_nested_hooks = 0
         self.reused_parameters = []
 
@@ -158,7 +158,7 @@ class TracingContext:
         set_current_context(previous_context)
 
     def find_operator_node(
-        self, tensor_metas: List[Optional[TensorMeta]], op_address: OperationAddress
+        self, tensor_metas: list[Optional[TensorMeta]], op_address: OperationAddress
     ) -> Optional[DynamicGraphNode]:
         with self._threading.cond:
             self._n_instances_searching_graph += 1
@@ -206,10 +206,10 @@ class TracingContext:
     def maybe_add_node(
         self,
         inputs: OperatorInput,
-        tensor_metas: List[Optional[TensorMeta]],
+        tensor_metas: list[Optional[TensorMeta]],
         op_address: OperationAddress,
         module_attrs: BaseLayerAttributes = None,
-        ignored_algorithms: List[str] = None,
+        ignored_algorithms: list[str] = None,
         is_called_inside_nncf_module: bool = False,
     ) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
@@ -348,7 +348,7 @@ class TracingContext:
     def disable_node_additions(self):
         self._may_add_nodes = False
 
-    def add_node_comparators(self, scopes_to_apply: List[str], node_input_comparator: TensorMetaComparator = None):
+    def add_node_comparators(self, scopes_to_apply: list[str], node_input_comparator: TensorMetaComparator = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
@@ -376,7 +376,7 @@ class TracingContext:
         self._threading.thread_local.in_parameter_trace = val
 
     @property
-    def module_call_stack(self) -> List[torch.nn.Module]:
+    def module_call_stack(self) -> list[torch.nn.Module]:
         return self._threading.thread_local.module_call_stack
 
     def get_current_module(self) -> Optional[torch.nn.Module]:
@@ -385,7 +385,7 @@ class TracingContext:
         return None
 
     @property
-    def relative_scopes_stack(self) -> List[Scope]:
+    def relative_scopes_stack(self) -> list[Scope]:
         return self._threading.thread_local.scopes
 
     @property
@@ -409,7 +409,7 @@ class TracingContext:
             self._threading.thread_local.node_call_tracker[node.node_id] = 1
 
     def reset_node_call_counters(self):
-        for k, _ in self._threading.thread_local.node_call_tracker.items():
+        for k in self._threading.thread_local.node_call_tracker:
             self._threading.thread_local.node_call_tracker[k] = 0
 
     def get_node_call_counter_dict(self):
@@ -442,14 +442,13 @@ class TracingContext:
         stack_copy = self.relative_scopes_stack.copy()
         scope_el_list = []
         for relative_scope in stack_copy:
-            for scope_element in relative_scope.scope_elements:
-                scope_el_list.append(scope_element)
+            scope_el_list.extend(relative_scope.scope_elements)
         return Scope(scope_el_list)
 
     def reset_graph(self):
         self.graph = DynamicGraph()
 
-    def set_active_skipped_block(self, block_indexes: List[int]):
+    def set_active_skipped_block(self, block_indexes: list[int]):
         if self.active_block_indexes is not None:
             self.start_node_name_of_skipped_block = []
             self.end_node_name_of_skipped_block = []
@@ -459,7 +458,7 @@ class TracingContext:
                 self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_index].start_node_name)
                 self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_index].end_node_name)
 
-    def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):  # noqa: F821
+    def set_elastic_blocks(self, blocks: list["BuildingBlock"] = None):  # noqa: F821
         if blocks is not None and isinstance(blocks, list):
             if len(blocks) == 0:
                 self.skipped_blocks = []
@@ -507,15 +506,15 @@ def disable_tracing(method):
     Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_patching():
 
         def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-            with disable_function_hook_mode():
+            with no_nncf_trace():
                 return fn(*args, **kwargs)
     else:
 
         def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-            with no_nncf_trace():
+            with disable_function_hook_mode():
                 return fn(*args, **kwargs)
 
     PATCHER.patch(method, no_nncf_trace_wrapper)

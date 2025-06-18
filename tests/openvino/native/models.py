@@ -12,11 +12,11 @@
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
 import numpy as np
-import openvino.runtime as ov
-from openvino.runtime import opset13 as opset
+import openvino as ov
+from openvino import opset13 as opset
 
 from nncf.common.utils.registry import Registry
 from tests.torch.test_models.inceptionv3 import inception_v3
@@ -30,7 +30,7 @@ from tests.torch.test_models.swin import SwinTransformerBlock
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 
 
-def get_torch_model_info(model_name: str) -> Tuple[Callable, Tuple[int]]:
+def get_torch_model_info(model_name: str) -> tuple[Callable, tuple[int]]:
     models = {
         "mobilenet-v2": (mobilenet_v2, (1, 3, 224, 224)),
         "mobilenet-v3-small": (mobilenet_v3_small, (1, 3, 224, 224)),
@@ -886,7 +886,7 @@ class GatherAndMatmulShareData(OVReferenceModel):
 
 
 class ScaledDotProductAttentionModel(OVReferenceModel):
-    def _create_ov_model(self):
+    def _create_ov_model(self, with_weights=False):
         input_ = opset.parameter([1, 1, 1, 64], name="Input_1")
         attn_mask = opset.parameter([1, 1, 1, 1], name="Input_2")
         x = opset.reshape(input_, [64], False)
@@ -898,6 +898,9 @@ class ScaledDotProductAttentionModel(OVReferenceModel):
         for _ in range(3):
             x_ = opset.reshape(x, [64], False)
             x_ = opset.reshape(x_, [1, 1, 1, 64], False)
+            if with_weights:
+                w_ = opset.constant(self._rng.random((64, 64)), dtype=np.float32)
+                x_ = opset.matmul(x_, w_, transpose_a=False, transpose_b=False)
             inputs.append(x_)
 
         attn = opset.scaled_dot_product_attention(*inputs, attn_mask)

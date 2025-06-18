@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -24,11 +24,10 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -63,7 +62,7 @@ class ScaleEstimation:
         self._weight_penalty = weight_penalty
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -81,6 +80,10 @@ class ScaleEstimation:
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
+
+            self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
             msg = (
                 "Cannot return backend-specific Scale Estimation entity because"
@@ -92,10 +95,10 @@ class ScaleEstimation:
         self,
         model: TModel,
         graph: NNCFGraph,
-        all_weight_params: List[WeightCompressionParameters],
-        statistics: Dict[str, WCTensorStatistic],
+        all_weight_params: list[WeightCompressionParameters],
+        statistics: dict[str, WCTensorStatistic],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> Tuple[Dict[str, Tensor], Dict[str, Tensor]]:
+    ) -> tuple[dict[str, Tensor], dict[str, Tensor]]:
         """
         Estimates better scale for the int4 nodes in the model.
         Minimizes per-group difference between floating point MatMul and
@@ -161,7 +164,7 @@ class ScaleEstimation:
     def calculate_quantization_params(
         statistics: WCTensorStatistic,
         weight: Tensor,
-        reduction_axes: Tuple[int, ...],
+        reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
         subset_size: int = 32,
         initial_steps: int = 5,
@@ -209,15 +212,12 @@ class ScaleEstimation:
 
         original_weight = fns.zeros_like(weight) + weight
         if config.mode == CompressWeightsMode.NF4:
-            norm_weight, scale = calculate_normalized_weight_and_fp4_scale(
-                original_weight, reduction_axis, cur_config.group_size
+            q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
+                original_weight, cur_config, reduction_axis, return_compressed_weight=True
             )
-            compressed_weights = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)
-            q_weights = do_nf4_dequantization(compressed_weights, scale, reduction_axis)
-            q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, group_size)
             zp = None
         else:
-            q_weights, compressed_weights, scale, zp = quantize_dequantize_weight(
+            q_weights, compressed_weights, scale, zp = integer_quantize_dequantize_weight(
                 original_weight, cur_config, reduction_axis, return_compressed_weight=True
             )
             if zp is not None:
@@ -261,10 +261,13 @@ class ScaleEstimation:
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if config.mode == CompressWeightsMode.NF4:
-                g_compressed_weighs = do_nf4_quantization(original_weight, near_to_ideal_scale)
-                out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
+                out = float_quantize_dequantize_weight(
+                    original_weight,
+                    config,
+                    precomputed_scale=near_to_ideal_scale,
+                )
             else:
-                out = quantize_dequantize_weight(
+                out = integer_quantize_dequantize_weight(
                     original_weight,
                     config,
                     precomputed_scale=near_to_ideal_scale,
@@ -296,9 +299,9 @@ class ScaleEstimation:
 
             if i < initial_steps - 1:
                 if config.mode == CompressWeightsMode.NF4:
-                    out = do_nf4_quantization(original_weight, near_to_ideal_scale)
+                    out, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
                 else:
-                    out, _, _ = do_int_quantization(
+                    out, _, _ = do_integer_quantization(
                         original_weight,
                         config,
                         precomputed_scale=near_to_ideal_scale,
@@ -314,9 +317,9 @@ class ScaleEstimation:
             scaled_scale = factor * scale
 
             if config.mode == CompressWeightsMode.NF4:
-                out = do_nf4_quantization(original_weight, scaled_scale)
+                out, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
             else:
-                out, _, _ = do_int_quantization(
+                out, _, _ = do_integer_quantization(
                     original_weight,
                     config,
                     precomputed_scale=scaled_scale,
@@ -330,10 +333,9 @@ class ScaleEstimation:
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if config.mode == CompressWeightsMode.NF4:
-                g_compressed_weighs = do_nf4_quantization(original_weight, near_to_ideal_scale)
-                out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
+                out = float_quantize_dequantize_weight(original_weight, config, precomputed_scale=near_to_ideal_scale)
             else:
-                out = quantize_dequantize_weight(
+                out = integer_quantize_dequantize_weight(
                     original_weight,
                     config,
                     precomputed_scale=near_to_ideal_scale,
@@ -367,7 +369,7 @@ class ScaleEstimation:
         return result_scale, zp
 
     @staticmethod
-    def activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
+    def activations_to_wc_statistics(activations: list[Tensor]) -> WCTensorStatistic:
         """
         Mimic the activation reducing logic from WeightCompression.get_statistic_points.
 
@@ -384,7 +386,7 @@ class ScaleEstimation:
         return wc_statistics
 
 
-def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
+def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> tuple[Tensor, Tensor]:
     """
     Computes the target values and a mask indicating zero values in the target.
 

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 
-from typing import Tuple
+from typing import Union
 
 import numpy as np
 import torch
@@ -30,7 +30,6 @@ from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -203,7 +202,7 @@ def strip_quantized_model(model: NNCFNetwork, strip_format: StripFormat = StripF
 
 def asym_fq_to_decompressor(
     quantizer: AsymmetricQuantizer, weight: torch.Tensor
-) -> Tuple[BaseWeightsDecompressor, torch.Tensor]:
+) -> tuple[Union[INT8AsymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor], torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 
@@ -261,7 +260,7 @@ def asym_fq_to_decompressor(
 
 def sym_fq_to_decompressor(
     quantizer: SymmetricQuantizer, weight: torch.Tensor
-) -> Tuple[BaseWeightsDecompressor, torch.Tensor]:
+) -> tuple[Union[INT8SymmetricWeightsDecompressor, INT4SymmetricWeightsDecompressor], torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Optional, Tuple, Type
+from typing import Optional
 
 import numpy as np
 
@@ -38,11 +38,11 @@ from nncf.experimental.common.tensor_statistics.statistics import RawTensorStati
 from nncf.tensor import Tensor
 
 
-def _reshape_all(targets: Tuple[Tensor, ...], target_shape: Tuple[int, ...]):
+def _reshape_all(targets: tuple[Tensor, ...], target_shape: tuple[int, ...]):
     return map(lambda stat: stat.reshape(target_shape), targets)
 
 
-def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[MinMaxTensorStatistic]:
+def _get_wrapped_min_max_tensor_statistic(target_shape: tuple[int, ...]) -> type[MinMaxTensorStatistic]:
     """
     Returns MinMaxTensorStatistic type but all statistics are reshaped to target_shape.
 
@@ -58,7 +58,7 @@ def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type
     return WrappedPTMinMaxTensorStatistic
 
 
-def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PercentileTensorStatistic]:
+def _get_wrapped_percentile_tensor_statistic(target_shape: tuple[int, ...]) -> type[PercentileTensorStatistic]:
     """
     Returns PercentileTensorStatistic type but all statistics are reshaped to target_shape.
 
@@ -78,9 +78,9 @@ def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> T
 
 def get_min_max_statistic_collector(
     use_abs_max: bool,
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
-    scale_shape: Tuple[int, ...],
+    reduction_axes: tuple[int, ...],
+    aggregation_axes: tuple[int, ...],
+    scale_shape: tuple[int, ...],
     num_samples: int,
 ) -> TensorCollector:
     """
@@ -112,9 +112,9 @@ def get_min_max_statistic_collector(
 
 def get_mixed_min_max_statistic_collector(
     use_abs_max: bool,
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
-    scale_shape: Tuple[int, ...],
+    reduction_axes: tuple[int, ...],
+    aggregation_axes: tuple[int, ...],
+    scale_shape: tuple[int, ...],
     use_means_of_mins: bool,
     use_means_of_maxs: bool,
     num_samples: int = None,
@@ -156,9 +156,9 @@ def get_mixed_min_max_statistic_collector(
 
 
 def get_median_mad_statistic_collector(
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
-    scale_shape: Tuple[int, ...],
+    reduction_axes: tuple[int, ...],
+    aggregation_axes: tuple[int, ...],
+    scale_shape: tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,
 ) -> TensorCollector:
@@ -191,10 +191,10 @@ def get_median_mad_statistic_collector(
 
 
 def get_percentile_tensor_collector(
-    percentiles_to_collect: Tuple[int, ...],
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
-    scale_shape: Tuple[int, ...],
+    percentiles_to_collect: tuple[int, ...],
+    reduction_axes: tuple[int, ...],
+    aggregation_axes: tuple[int, ...],
+    scale_shape: tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,
 ) -> TensorCollector:
@@ -223,8 +223,8 @@ def get_percentile_tensor_collector(
 def _get_collection_without_reduction(
     aggregator_cls: AggregatorBase,
     statistic_cls: AggregatorBase,
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: tuple[int, ...],
+    aggregation_axes: tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,
 ) -> TensorCollector:
@@ -256,10 +256,10 @@ def _get_collection_without_reduction(
 
 
 def get_mean_percentile_statistic_collector(
-    percentiles_to_collect: Tuple[int, ...],
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
-    scale_shape: Tuple[int, ...],
+    percentiles_to_collect: tuple[int, ...],
+    reduction_axes: tuple[int, ...],
+    aggregation_axes: tuple[int, ...],
+    scale_shape: tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,
 ) -> TensorCollector:

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import singledispatch
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 from nncf.api.statistics import Statistics
 from nncf.common.pruning.statistics import FilterPruningStatistics
@@ -21,14 +21,14 @@ from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
 
 
-def prepare_for_tensorboard(nncf_stats: NNCFStatistics) -> Dict[str, float]:
+def prepare_for_tensorboard(nncf_stats: NNCFStatistics) -> dict[str, float]:
     """
     Extracts scalar values from NNCF statistics for its reporting to the TensorBoard.
 
     :param nncf_stats: NNCF Statistics.
     :return: A dict storing name and value of the scalar.
     """
-    tensorboard_stats: Dict[str, float] = {}
+    tensorboard_stats: dict[str, float] = {}
     for algorithm_name, stats in nncf_stats:
         tensorboard_stats.update(convert_to_dict(stats, algorithm_name))
 
@@ -39,12 +39,12 @@ def prepare_for_tensorboard(nncf_stats: NNCFStatistics) -> Dict[str, float]:
 def convert_to_dict(
     stats: Statistics,
     algorithm_name: str,
-) -> Dict[Any, Any]:
+) -> dict[Any, Any]:
     return {}
 
 
 @convert_to_dict.register(FilterPruningStatistics)
-def _(stats: FilterPruningStatistics, algorithm_name: str) -> Dict[str, float]:
+def _(stats: FilterPruningStatistics, algorithm_name: str) -> dict[str, float]:
     tensorboard_stats = {
         f"{algorithm_name}/algo_current_pruning_level": stats.current_pruning_level,
         f"{algorithm_name}/model_FLOPS_pruning_level": stats.model_statistics.flops_pruning_level,
@@ -59,7 +59,7 @@ def _(stats: FilterPruningStatistics, algorithm_name: str) -> Dict[str, float]:
 @convert_to_dict.register(ConstSparsityStatistics)
 def _(
     stats: Union[MagnitudeSparsityStatistics, RBSparsityStatistics, ConstSparsityStatistics], algorithm_name: str
-) -> Dict[str, float]:
+) -> dict[str, float]:
     tensorboard_stats = {
         f"{algorithm_name}/sparsity_level_for_model": stats.model_statistics.sparsity_level,
         f"{algorithm_name}/sparsity_level_for_sparsified_layers": stats.model_statistics.sparsity_level_for_layers,
@@ -73,7 +73,7 @@ def _(
 
 
 @convert_to_dict.register(MovementSparsityStatistics)
-def _(stats: MovementSparsityStatistics, algorithm_name: str) -> Dict[str, float]:
+def _(stats: MovementSparsityStatistics, algorithm_name: str) -> dict[str, float]:
     tensorboard_stats = {
         f"{algorithm_name}/model_sparsity": stats.model_statistics.sparsity_level,
         f"{algorithm_name}/linear_layer_sparsity": stats.model_statistics.sparsity_level_for_layers,

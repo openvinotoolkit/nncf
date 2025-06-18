@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -58,7 +58,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def model_extraction_command(
-        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+        input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]
     ) -> TransformationCommand:
         """
         Returns backend-specific command to extract sub-model based on input & output names.
@@ -90,7 +90,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_sub_input_output_names(subgraph: TModel) -> Tuple[Union[str, int], Union[str]]:
+    def get_sub_input_output_names(subgraph: TModel) -> tuple[Union[str, int], Union[str]]:
         """
         Returns tuple of the subgraph's the input & output tensor names respectively.
 
@@ -101,8 +101,8 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_input_data(
-        shape: Tuple[int], data: List[TTensor], input_name: str, channel_axis: int
-    ) -> Union[Dict[str, TTensor], TTensor]:
+        shape: tuple[int], data: list[TTensor], input_name: str, channel_axis: int
+    ) -> Union[dict[str, TTensor], TTensor]:
         """
         Creates input data for the bias shift calculation.
 
@@ -127,7 +127,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
@@ -173,7 +173,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[str, str]:
         """
         Return name of nodes to collect statistics.
 
@@ -187,7 +187,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         """
         Returns axis number of the activation tensor which correspond to it channel.
 
@@ -198,7 +198,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
 
     def extract_submodel(
-        self, model_transformer: ModelTransformer, input_id: Tuple[str, int], output_id: Tuple[str, int]
+        self, model_transformer: ModelTransformer, input_id: tuple[str, int], output_id: tuple[str, int]
     ) -> TModel:
         """
         Extracts sub-model using backend-specific ModelTransformer.

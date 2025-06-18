@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Set
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -75,7 +74,7 @@ class TargetScope(IgnoredScope):
 
 def get_target_node_names_from_target_scope(
     target_scope: TargetScope, nncf_graph: NNCFGraph, strict: bool = True
-) -> Set[str]:
+) -> set[str]:
     """
     Returns NNCF node names from the graph that are matched by target scope.
     If strict is True, raises nncf.ValidationError if no rule is matched.

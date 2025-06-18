@@ -1,7 +1,0 @@
-tensorboard==2.13.0
-torch==2.6.0
-whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.1.0.0#subdirectory=tools/who_what_benchmark
-numpy>=1.23.5,<2
-openvino==2025.1
-optimum-intel>=1.22.0
-transformers>=4.48.0

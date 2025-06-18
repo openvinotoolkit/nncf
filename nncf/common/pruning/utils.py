@@ -12,7 +12,7 @@
 import math
 from enum import Enum
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Callable, Optional, TypeVar, Union
 
 import numpy as np
 
@@ -57,7 +57,7 @@ def is_batched_linear(node: NNCFNode, graph: NNCFGraph) -> bool:
     return len(edges[0].tensor_shape) > 2
 
 
-def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:
+def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: list[str]) -> list[NNCFNode]:
     """
     Source is a node of source such that there is path from this node to `nncf_node` and on this path
     no node has one of `sources_types` type.
@@ -79,7 +79,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     return source_nodes
 
 
-def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
+def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: list[str]) -> list[NNCFNode]:
     """
     Traverse nodes in the graph from nncf node to find first nodes that aren't of type from types list.
     First nodes with some condition mean nodes:
@@ -104,7 +104,7 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     return next_nodes
 
 
-def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
+def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: list[str]) -> list[NNCFNode]:
     """
     Looking for nodes with type from types list from `nncf_node` such that there is path
     from `nncf_node` to this node and on this path no node has one of types type.
@@ -143,8 +143,8 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
 
 
 def traverse_function(
-    node: NNCFNode, output: List[NNCFNode], type_check_fn: Callable[[str], bool], visited: Dict[int, bool]
-) -> Tuple[bool, List[NNCFNode]]:
+    node: NNCFNode, output: list[NNCFNode], type_check_fn: Callable[[str], bool], visited: dict[int, bool]
+) -> tuple[bool, list[NNCFNode]]:
     if visited[node.node_id]:
         return True, output
     visited[node.node_id] = True
@@ -156,7 +156,7 @@ def traverse_function(
     return True, output
 
 
-def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
+def get_last_nodes_of_type(graph: NNCFGraph, op_types: list[str]) -> list[NNCFNode]:
     """
     Looking for last node in graph with type in `op_types`.
     Last == layer with type in `op_types`, that there is a path from this layer to the model output
@@ -178,8 +178,8 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
 
 
 def get_previous_convs(
-    graph: NNCFGraph, nncf_node: NNCFNode, pruning_types: List[str], stop_propagation_ops: List[str]
-) -> List[NNCFNode]:
+    graph: NNCFGraph, nncf_node: NNCFNode, pruning_types: list[str], stop_propagation_ops: list[str]
+) -> list[NNCFNode]:
     """
     Returns source convolutions of the node.
 
@@ -190,7 +190,7 @@ def get_previous_convs(
     return sources
 
 
-def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
+def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> tuple[dict[NNCFNodeName, int], dict[NNCFNodeName, int]]:
     """
     Collects the number of input and output channels for each prunable layer in the graph.
 
@@ -217,7 +217,7 @@ TObj = TypeVar("TObj", bound=type)
 class PruningOperationsMetatypeRegistry(Registry):
     def __init__(self, name: str) -> None:
         super().__init__(name)
-        self._op_name_to_op_class: Dict[str, type] = {}
+        self._op_name_to_op_class: dict[str, type] = {}
 
     def register(self, name: Optional[str] = None) -> Callable[[TObj], TObj]:
         name_ = name
@@ -295,10 +295,10 @@ class PruningAnalysisDecision:
     def __init__(
         self,
         decision: bool,
-        possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None,
+        possible_reasons: Optional[Union[list[PruningAnalysisReason], PruningAnalysisReason]] = None,
     ):
         self.decision = decision
-        self._reasons: Optional[List[PruningAnalysisReason]] = None
+        self._reasons: Optional[list[PruningAnalysisReason]] = None
         if possible_reasons is None:
             return
         if not isinstance(possible_reasons, list):
@@ -326,7 +326,7 @@ class PruningAnalysisDecision:
         return self.decision
 
     @property
-    def reasons(self) -> Optional[List[PruningAnalysisReason]]:
+    def reasons(self) -> Optional[list[PruningAnalysisReason]]:
         if self._reasons:
             return self._reasons.copy()
         return None
@@ -367,7 +367,7 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return False
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[SymbolicMask]]:
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> list[Optional[SymbolicMask]]:
     """
     Returns input masks for all inputs of given NNCFNode.
 

@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -134,7 +134,7 @@ class OVModelExtractionCommand(Command):
     Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
+    def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
         """
         :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
             Each pair denotes the sub-graph beginning.
@@ -151,7 +151,7 @@ class OVStateLessModelExtractionCommand(Command):
     Extracts stateless sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
+    def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
         """
         :param input_ids: List of the input IDs: pairs of node names and correspondent output port ids.
             Each pair denotes the sub-graph beginning.
@@ -186,7 +186,7 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
         self,
         target_point: OVTargetPoint,
         scale_value: np.ndarray,
-        destination_node_names: List[str],
+        destination_node_names: list[str],
         multiply_node_name: str,
     ):
         """

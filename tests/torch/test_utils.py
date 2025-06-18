@@ -13,7 +13,11 @@ import pytest
 import torch
 from torch import nn
 
+import nncf
+from nncf.common.logging import nncf_logger
+from nncf.common.utils.os import is_windows
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
+from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import _ModuleState
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
@@ -120,3 +124,35 @@ def test_model_dtype():
 def test_empty_model_dtype():
     model = EmptyModel()
     assert get_model_dtype(model) == torch.float32
+
+
+def compilable_fn(x, y):
+    a = torch.sin(x)
+    b = torch.cos(y)
+    return a - b
+
+
+def not_compilable_fn(x, y):
+    if torch.compiler.is_compiling():
+        msg = "Controlled exception!"
+        nncf_logger.debug(msg)
+        raise nncf.InternalError(msg)
+    a = torch.sin(x)
+    b = torch.cos(y)
+    return a + b
+
+
+@pytest.mark.parametrize(
+    "fn, is_compilation_successful",
+    [
+        (compilable_fn, True),
+        (not_compilable_fn, False),
+    ],
+)
+def test_compilation_wrapper(fn, is_compilation_successful):
+    successful_ref = False if is_windows() else is_compilation_successful
+    torch.compiler.reset()
+    wrapped_fn = CompilationWrapper(fn)
+    wrapped_fn(torch.randn(10, 10), torch.randn(10, 10))
+    assert wrapped_fn.is_compilation_successful == successful_ref
+    torch.compiler.reset()

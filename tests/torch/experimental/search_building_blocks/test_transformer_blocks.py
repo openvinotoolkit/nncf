@@ -12,7 +12,7 @@
 import json
 import os
 from functools import partial
-from typing import Callable, Dict, List, Optional, Set, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pytest
@@ -38,6 +38,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 
+pytestmark = pytest.mark.legacy
+
 
 def check_extended_blocks(name, actual_blocks: ExtendedBuildingBlocks):
     ref_file_dir = TEST_ROOT / "torch" / "data" / "search_building_block"
@@ -59,7 +61,7 @@ def check_extended_blocks(name, actual_blocks: ExtendedBuildingBlocks):
 
 
 class TransformerSearchBBlockParamsCase:
-    def __init__(self, name: str, input_info: Union[List, Dict], model_creator: Callable[[], nn.Module]):
+    def __init__(self, name: str, input_info: Union[list, dict], model_creator: Callable[[], nn.Module]):
         self.input_info = input_info
         self.model_creator = model_creator
         self.name = name.lower().replace(" ", "_")
@@ -142,11 +144,11 @@ def test_transformer_building_blocks(desc: TransformerSearchBBlockParamsCase):
 class FilterBlockTestDesc:
     def __init__(
         self,
-        start_ids: List[int],
-        end_ids: List[int],
-        overlapping_blocks_ids_min: Optional[Set[int]] = None,
-        overlapping_blocks_ids_seq: Optional[Set[int]] = None,
-        num_ops_in_block: Optional[List[int]] = None,
+        start_ids: list[int],
+        end_ids: list[int],
+        overlapping_blocks_ids_min: Optional[set[int]] = None,
+        overlapping_blocks_ids_seq: Optional[set[int]] = None,
+        num_ops_in_block: Optional[list[int]] = None,
         name: Optional[str] = None,
     ):
         self.start_ids = start_ids

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 import tensorflow as tf
 
@@ -20,8 +20,8 @@ class TFZeroCompressionLoss(CompressionLoss):
     def calculate(self, *args, **kwargs) -> Any:
         return tf.constant(0.0)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         pass
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {}

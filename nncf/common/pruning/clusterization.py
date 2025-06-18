@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Generic, Hashable, List, Optional, TypeVar
+from typing import Callable, Generic, Hashable, Optional, TypeVar
 
 T = TypeVar("T")
 
@@ -19,7 +19,7 @@ class Cluster(Generic[T]):
     Represents element of Clusterization. Groups together elements.
     """
 
-    def __init__(self, cluster_id: int, elements: List[T], nodes_orders: List[int]) -> None:
+    def __init__(self, cluster_id: int, elements: list[T], nodes_orders: list[int]) -> None:
         self.id = cluster_id
         self.elements = list(elements)
         self.importance = max(nodes_orders)
@@ -28,7 +28,7 @@ class Cluster(Generic[T]):
         self.elements = []
         self.importance = 0
 
-    def add_elements(self, elements: List[T], importance: int) -> None:
+    def add_elements(self, elements: list[T], importance: int) -> None:
         self.elements.extend(elements)
         self.importance = max(self.importance, importance)
 
@@ -40,8 +40,8 @@ class Clusterization(Generic[T]):
     """
 
     def __init__(self, id_fn: Optional[Callable[[T], Hashable]] = None) -> None:
-        self.clusters: Dict[int, Cluster[T]] = {}
-        self._element_to_cluster: Dict[Hashable, int] = {}
+        self.clusters: dict[int, Cluster[T]] = {}
+        self._element_to_cluster: dict[Hashable, int] = {}
         if id_fn is None:
             self._id_fn = lambda x: x.id
         else:
@@ -108,7 +108,7 @@ class Clusterization(Generic[T]):
             self._element_to_cluster.pop(node_id)
         self.clusters.pop(cluster_id)
 
-    def get_all_clusters(self) -> List[Cluster[T]]:
+    def get_all_clusters(self) -> list[Cluster[T]]:
         """
         Returns list of all clusters in clusterization.
 
@@ -116,7 +116,7 @@ class Clusterization(Generic[T]):
         """
         return list(self.clusters.values())
 
-    def get_all_nodes(self) -> List[T]:
+    def get_all_nodes(self) -> list[T]:
         """
         Returns list all elements of all clusters in clusterization.
 
@@ -147,7 +147,7 @@ class Clusterization(Generic[T]):
                 self._element_to_cluster[self._id_fn(elt)] = second_id  # type: ignore[no-untyped-call]
             self.clusters.pop(first_id)
 
-    def merge_list_of_clusters(self, clusters: List[int]) -> None:
+    def merge_list_of_clusters(self, clusters: list[int]) -> None:
         """
         Merges provided clusters.
 

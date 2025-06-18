@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List
 
 import torch
 from torch import nn
@@ -70,7 +69,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self._pruned_norms_operators = []
 
     @staticmethod
-    def _set_default_params_for_ranking_type(params: Dict) -> None:
+    def _set_default_params_for_ranking_type(params: dict) -> None:
         """
         Setting default parameter values of pruning algorithm depends on the ranking type:
         for learned_ranking `all_weights` must be True (in case of False was set by the user, an Exception will be
@@ -203,7 +202,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
     def __init__(
         self,
         target_model: NNCFNetwork,
-        prunable_types: List[str],
+        prunable_types: list[str],
         pruned_module_groups_info: Clusterization[PrunedModuleInfo],
         config: NNCFConfig,
     ):

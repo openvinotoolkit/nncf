@@ -12,9 +12,9 @@
 
 import pytest
 
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_visualization import PydotStyleTemplate
-from nncf.experimental.torch2.function_hook.graph.graph_visualization import to_pydot
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_visualization import PydotStyleTemplate
+from nncf.torch.function_hook.graph.graph_visualization import to_pydot
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.function_hook import helpers
 from tests.torch2.utils import compare_with_reference_file

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, TypeVar
+from typing import Callable, TypeVar
 
 import numpy as np
 
@@ -19,7 +19,7 @@ from nncf.common.utils.backend import BackendType
 TTensor = TypeVar("TTensor")
 
 
-def create_normalized_mse_func(backend: BackendType) -> Callable[[List[TTensor], List[TTensor]], float]:
+def create_normalized_mse_func(backend: BackendType) -> Callable[[list[TTensor], list[TTensor]], float]:
     """
     Factory method to create backend-specific implementation of the normalized_nmse.
 
@@ -33,7 +33,7 @@ def create_normalized_mse_func(backend: BackendType) -> Callable[[List[TTensor],
     raise nncf.UnsupportedBackendError(msg)
 
 
-def normalized_mse(ref_outputs: List[np.ndarray], approx_outputs: List[np.ndarray]) -> float:
+def normalized_mse(ref_outputs: list[np.ndarray], approx_outputs: list[np.ndarray]) -> float:
     """
     Calculates normalized mean square error between `ref_outputs` and `approx_outputs`.
     The normalized mean square error is defined as

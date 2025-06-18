@@ -31,11 +31,14 @@ from tests.torch.nas.models.synthetic import TwoSequentialConvBNTestModel
 from tests.torch.nas.models.synthetic import TwoSequentialFcLNTestModel
 from tests.torch.nas.test_all_elasticity import NAS_MODELS_SCOPE
 from tests.torch.nas.test_elastic_kernel import do_conv2d
+from tests.torch.test_compressed_graph import get_full_path_to_the_graph
+
+pytestmark = pytest.mark.legacy
+
 
 ###########################
 # Helpers
 ###########################
-from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 
 
 @pytest.fixture(

@@ -18,7 +18,6 @@ import tarfile
 from os import path as osp
 from pathlib import Path
 from shutil import copyfile
-from typing import Tuple
 
 import torch
 from PIL import Image
@@ -176,7 +175,7 @@ def is_pretrained_model_requested(config: SampleConfig) -> bool:
 
 
 class MockDataset(data.Dataset):
-    def __init__(self, img_size: Tuple[int, int] = (32, 32), num_images: int = 1000, transform=None):
+    def __init__(self, img_size: tuple[int, int] = (32, 32), num_images: int = 1000, transform=None):
         super().__init__()
         self._img_size = img_size
         self._num_images = num_images

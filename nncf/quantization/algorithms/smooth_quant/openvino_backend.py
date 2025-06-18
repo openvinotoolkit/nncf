@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -41,15 +41,15 @@ OV_PRE_LAYER_TARGET_TYPE = TargetType.PRE_LAYER_OPERATION
 
 class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         return [OVConvolutionMetatype]
 
     @property
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         return [OVMatMulMetatype]
 
     @property
-    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+    def quantize_agnostic_metatypes(self) -> list[OperatorMetatype]:
         return QUANTIZE_AGNOSTIC_OPERATIONS
 
     @staticmethod
@@ -78,7 +78,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = OVAbsMaxReducer(reduction_axes=stats_reduction_axes, inplace=inplace)
@@ -111,7 +111,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         source_node: NNCFNode,
         scale_value: np.ndarray,
         source_output_port_id: int,
-        nodes: List[NNCFNode],
+        nodes: list[NNCFNode],
         scale_node_name: str,
     ) -> OVMultiplyInsertionCommand:
         return OVCommandCreator.multiply_insertion_command(

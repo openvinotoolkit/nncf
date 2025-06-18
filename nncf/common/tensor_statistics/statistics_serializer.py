@@ -12,7 +12,7 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, cast
+from typing import Any, Optional, TextIO, cast
 
 import nncf
 from nncf.common.tensor_statistics.statistics_validator import validate_cache
@@ -36,7 +36,7 @@ def sanitize_filename(filename: str) -> str:
     return re.sub(r"[^\w]", "_", filename)
 
 
-def add_unique_name(name: str, unique_map: Dict[str, List[str]]) -> str:
+def add_unique_name(name: str, unique_map: dict[str, list[str]]) -> str:
     """
     Creates an unique name, adds it to a `unique_map` and returns this unique name.
 
@@ -51,7 +51,7 @@ def add_unique_name(name: str, unique_map: Dict[str, List[str]]) -> str:
     return unique_sanitized_name
 
 
-def load_metadata(dir_path: Path) -> Dict[str, Any]:
+def load_metadata(dir_path: Path) -> dict[str, Any]:
     """
     Loads the metadata, including the mapping and any other metadata information from the metadata file.
 
@@ -61,12 +61,12 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     metadata_file = dir_path / METADATA_FILE
     if metadata_file.exists():
         with safe_open(metadata_file, "r") as f:
-            return cast(Dict[str, Any], json.load(f))
+            return cast(dict[str, Any], json.load(f))
     msg = f"Metadata file does not exist in the following path: {dir_path}"
     raise nncf.StatisticsCacheError(msg)
 
 
-def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
+def save_metadata(metadata: dict[str, Any], dir_path: Path) -> None:
     """
     Saves metadata to a file in the specified directory.
 
@@ -78,7 +78,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, cast(TextIO, f), indent=4)
 
 
-def load_statistics(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str, Tensor]]:
+def load_statistics(dir_path: Path, backend: BackendType) -> dict[str, dict[str, Tensor]]:
     """
     Loads statistics from a directory.
 
@@ -89,7 +89,7 @@ def load_statistics(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str,
     metadata = load_metadata(dir_path)
     try:
         validate_cache(metadata, dir_path, backend)
-        statistics: Dict[str, Dict[str, Tensor]] = {}
+        statistics: dict[str, dict[str, Tensor]] = {}
         mapping = metadata.get("mapping", {})
         tensor_backend = get_tensor_backend(backend)
         for file_name, original_name in mapping.items():
@@ -101,10 +101,10 @@ def load_statistics(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str,
 
 
 def dump_statistics(
-    statistics: Dict[str, Dict[str, Tensor]],
+    statistics: dict[str, dict[str, Tensor]],
     dir_path: Path,
     backend: BackendType,
-    additional_metadata: Optional[Dict[str, Any]] = None,
+    additional_metadata: Optional[dict[str, Any]] = None,
 ) -> None:
     """
     Saves statistics and metadata to a directory.
@@ -130,8 +130,8 @@ def dump_statistics(
     :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
     dir_path.mkdir(parents=True, exist_ok=True)
-    metadata: Dict[str, Any] = {"mapping": {}, "backend": backend.value}
-    unique_map: Dict[str, List[str]] = defaultdict(list)
+    metadata: dict[str, Any] = {"mapping": {}, "backend": backend.value}
+    unique_map: dict[str, list[str]] = defaultdict(list)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
         unique_sanitized_name = add_unique_name(sanitized_name, unique_map) + STATISTICS_FILE_EXTENSION

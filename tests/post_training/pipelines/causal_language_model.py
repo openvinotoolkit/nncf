@@ -10,7 +10,7 @@
 # limitations under the License.
 
 
-import openvino.runtime as ov
+import openvino as ov
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForCausalLM

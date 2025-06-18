@@ -11,7 +11,6 @@
 from copy import deepcopy
 from functools import partial
 from itertools import product
-from typing import Tuple
 
 import datasets
 import numpy as np
@@ -56,7 +55,7 @@ def create_transform_fn(model: OVModelForCausalLM, tokenizer: AutoTokenizer):
     return transform_fn
 
 
-def _setup_model_and_dataset(model_id: str) -> Tuple[OVModelForCausalLM, nncf.Dataset]:
+def _setup_model_and_dataset(model_id: str) -> tuple[OVModelForCausalLM, nncf.Dataset]:
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = OVModelForCausalLM.from_pretrained(model_id, export=True, load_in_8bit=False, compile=False, stateful=False)

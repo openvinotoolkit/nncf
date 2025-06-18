@@ -11,7 +11,6 @@
 
 from abc import abstractmethod
 from collections import Counter
-from typing import List, Tuple
 
 from nncf.common.collector import StatisticsCollector
 from nncf.common.quantization.statistics import QuantizationStatistics
@@ -80,7 +79,7 @@ class QuantizationStatisticsCollector(StatisticsCollector):
     """
 
     @abstractmethod
-    def _collect_quantizers_descriptions(self) -> List[QuantizerDescription]:
+    def _collect_quantizers_descriptions(self) -> list[QuantizerDescription]:
         """
         Collects descriptions of the quantizers.
 
@@ -88,7 +87,7 @@ class QuantizationStatisticsCollector(StatisticsCollector):
         """
 
     @abstractmethod
-    def _get_potential_quantizers_num(self) -> Tuple[int, int]:
+    def _get_potential_quantizers_num(self) -> tuple[int, int]:
         """
         Returns a potential number of quantizers for weights and activations.
 

@@ -12,9 +12,9 @@
 from dataclasses import dataclass
 from enum import Enum
 from enum import auto
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
-T_SHAPE_ARRAY = Tuple[int, ...]
+T_SHAPE_ARRAY = tuple[int, ...]
 T_SHAPE = Union[int, T_SHAPE_ARRAY]
 T_AXIS = Optional[T_SHAPE]
 T_NUMBER = Union[int, float, bool]
@@ -26,6 +26,7 @@ class TensorBackend(Enum):
     """
 
     numpy = auto()
+    tf = auto()
     torch = auto()
     ov = auto()
 

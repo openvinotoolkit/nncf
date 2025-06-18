@@ -28,6 +28,8 @@ from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_manual_precision_init import PrecisionInitTestDesc
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.fixture()
 def _nncf_caplog(caplog):

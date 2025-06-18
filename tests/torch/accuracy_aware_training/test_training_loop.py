@@ -32,6 +32,8 @@ from tests.torch.pruning.helpers import get_pruning_baseline_config
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.fixture(scope="module", name="finetuned_master_lenet")
 def fixture_finetuned_master_lenet():

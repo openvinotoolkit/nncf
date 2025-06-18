@@ -60,11 +60,7 @@ ov_quantized_model = ov.convert_model(quantized_model.cpu(), example_input=dummy
 # To OpenVINO format
 import openvino as ov
 
-# Removes auxiliary layers and operations added during the quantization process,
-# resulting in a clean, fully quantized model ready for deployment.
-stripped_model = nncf.strip(quantized_model)
-
-ov_quantized_model = ov.convert_model(stripped_model)
+ov_quantized_model = ov.convert_model(quantized_model)
 ```
 
 </details>

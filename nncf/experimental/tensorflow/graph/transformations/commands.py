@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -63,7 +63,7 @@ class TFTargetPoint(TargetPoint):
         ]
         return " ".join(items)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -79,7 +79,7 @@ class TFTargetPoint(TargetPoint):
         return state
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TFTargetPoint":
+    def from_state(cls, state: dict[str, Any]) -> "TFTargetPoint":
         """
         Creates the object from its state.
 

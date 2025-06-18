@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Union
 
 import numpy as np
 import torch
@@ -92,7 +92,7 @@ class PTQuantizerSpec(QuantizerSpec):
         signedness_to_force: Optional[bool],
         narrow_range: bool,
         half_range: bool,
-        scale_shape: Tuple[int, ...],
+        scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
         compression_lr_multiplier: Optional[float] = None,
@@ -126,7 +126,7 @@ class PTQuantizerSpec(QuantizerSpec):
         qconfig: QuantizerConfig,
         narrow_range: bool,
         half_range: bool,
-        scale_shape: Tuple[int, ...],
+        scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
         compression_lr_multiplier: Optional[float],
@@ -147,7 +147,7 @@ class PTQuantizerSpec(QuantizerSpec):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "PTQuantizerSpec":
+    def from_state(cls, state: dict[str, Any]) -> "PTQuantizerSpec":
         """
         Creates the object from its state.
 
@@ -170,8 +170,8 @@ class PTLoraSpec:
     def __init__(
         self,
         lora_rank: int,
-        orig_weight_shape: List[int],
-        weight_shape: List[int],
+        orig_weight_shape: list[int],
+        weight_shape: list[int],
     ):
         """
         :param lora_rank: The rank of the adapters.
@@ -184,7 +184,7 @@ class PTLoraSpec:
         self.weight_shape = weight_shape
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "PTLoraSpec":
+    def from_state(cls, state: dict[str, Any]) -> "PTLoraSpec":
         """
         Creates the object from its state.
 
@@ -195,6 +195,27 @@ class PTLoraSpec:
 
     def get_state(self):
         return {arg: getattr(self, arg) for arg in self._arg_names}
+
+
+class PTLoraNLSSpec(PTLoraSpec):
+    _arg_names = PTLoraSpec._arg_names + ["active_lora_rank"]
+
+    def __init__(
+        self,
+        lora_rank: int,
+        active_lora_rank: int,
+        orig_weight_shape: list[int],
+        weight_shape: list[int],
+    ):
+        """
+        :param lora_rank: The rank of the adapters.
+        :param active_lora_rank: The active rank of the adapters.
+        :param orig_weight_shape: The shape of the original weight tensor.
+        :param weight_shape: The shape of the weight tensor before applying quantization. In case of group-wise
+            quantization, weights are reshaped from [Cout, Cin] to [Cout, Cin // group_size, group_size].
+        """
+        super().__init__(lora_rank, orig_weight_shape, weight_shape)
+        self.active_lora_rank = active_lora_rank
 
 
 class PTQPointStateNames:
@@ -210,7 +231,7 @@ class PTQuantizationPoint:
         self,
         qspec: PTQuantizerSpec,
         target_point: PTTargetPoint,
-        directly_quantized_operator_node_names: List[NNCFNodeName],
+        directly_quantized_operator_node_names: list[NNCFNodeName],
     ):
         self.qspec = qspec
         self.target_point = target_point
@@ -225,7 +246,7 @@ class PTQuantizationPoint:
     def __str__(self):
         return str(self.target_point) + " " + str(self.qspec)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -239,7 +260,7 @@ class PTQuantizationPoint:
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "PTQuantizationPoint":
+    def from_state(cls, state: dict[str, Any]) -> "PTQuantizationPoint":
         """
         Creates the object from its state.
 
@@ -268,7 +289,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
         self.shared_input_operation_set_groups = shared_input_operation_set_groups
 
     @classmethod
-    def from_state(cls, state: Dict) -> "PTQuantizerSetup":
+    def from_state(cls, state: dict) -> "PTQuantizerSetup":
         """
         Creates the object from its state.
 
@@ -445,7 +466,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
     def reset_call_counter(self):
         self.call_count = 0
 
-    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+    def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {}
 
     def apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
@@ -508,7 +529,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         return self._narrow_range
 
     @property
-    def scale_shape(self) -> Tuple[int, ...]:
+    def scale_shape(self) -> tuple[int, ...]:
         # Per-tensor scale shapes are (1,)
         return self._scale_shape
 
@@ -532,7 +553,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
             levels = level_high - level_low + 1
         return x, levels, input_low, input_high
 
-    def _prepare_qdq_export_quantization(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
+    def _prepare_qdq_export_quantization(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
         x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
         with no_jit_trace():
             levels = level_high - level_low + 1
@@ -557,7 +578,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
 
         return x, y_scale, y_zero_point, axis
 
-    def _possible_per_channel_dimensions(self) -> List[int]:
+    def _possible_per_channel_dimensions(self) -> list[int]:
         return [i for i in range(len(self.scale_shape)) if self.scale_shape[i] > 1]
 
     def run_export_quantization(self, x: torch.Tensor):
@@ -593,7 +614,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         return not is_per_tensor
 
     @abstractmethod
-    def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    def get_parameters_for_torch_fq(self) -> tuple[int, int, torch.Tensor, torch.Tensor]:
         """
         Get parameters for conversion to native FakeQuantize.
 
@@ -616,9 +637,9 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
 class QuantizersSwitcher:
     """Enables/disables quantizers with saving and restoring original state"""
 
-    def __init__(self, quantizers: List[BaseQuantizer]):
-        self.originally_disabled: List[BaseQuantizer] = []
-        self.originally_enabled: List[BaseQuantizer] = []
+    def __init__(self, quantizers: list[BaseQuantizer]):
+        self.originally_disabled: list[BaseQuantizer] = []
+        self.originally_enabled: list[BaseQuantizer] = []
         self._quantizers = quantizers
 
     def disable_quantizers(self):
@@ -776,7 +797,7 @@ class SymmetricQuantizer(BaseQuantizer):
             x, self.levels, self.level_low, self.level_high, self.scale, self.eps, skip=execute_traced_op_as_identity
         )
 
-    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+    def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale}
 
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
@@ -831,7 +852,7 @@ class SymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
-    def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    def get_parameters_for_torch_fq(self) -> tuple[int, int, torch.Tensor, torch.Tensor]:
         """
         Get parameters for conversion to native FakeQuantize.
 
@@ -974,7 +995,7 @@ class AsymmetricQuantizer(BaseQuantizer):
             skip=execute_traced_op_as_identity,
         )
 
-    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+    def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {
             self.INPUT_LOW_PARAM_NAME: self.input_low,
             self.INPUT_RANGE_PARAM_NAME: self.input_range,
@@ -1028,7 +1049,7 @@ class AsymmetricQuantizer(BaseQuantizer):
                 x = self.quantize(x, execute_traced_op_as_identity=False)
         return x, level_high, level_low, input_low, input_high
 
-    def get_parameters_for_torch_fq(self) -> Tuple[int, int, torch.Tensor, torch.Tensor]:
+    def get_parameters_for_torch_fq(self) -> tuple[int, int, torch.Tensor, torch.Tensor]:
         """
         Get parameters for conversion to native FakeQuantize.
 
@@ -1096,11 +1117,44 @@ class LoraMixin:
         self.lora_A.requires_grad = False
         self.lora_B.requires_grad = False
 
-    def get_adapters(self) -> Dict[str, torch.Tensor]:
+    def get_adapters(self) -> dict[str, torch.Tensor]:
         return {
             self.LORA_A_PARAM_NAME: self.lora_A,
             self.LORA_B_PARAM_NAME: self.lora_B,
         }
+
+
+class LoraNLSMixin(LoraMixin):
+    """
+    Represents learnable LoRA (Low-Rank Adaptation) adapters for quantization modules,
+    and uses Neural Low-Rank Adapter Search (NLS) algorithm to make the adapter elastic.
+    """
+
+    def init_lora(self, lspec: PTLoraNLSSpec):
+        super().init_lora(lspec)
+        self.max_lora_rank = lspec.lora_rank
+        self.active_lora_rank = lspec.active_lora_rank
+
+    def set_active_rank(self, rank: int):
+        """
+        Set the active rank for the LoRA adapters.
+
+        :param rank: The rank to be set as active.
+        """
+        if rank > self.max_lora_rank:
+            msg = f"Activated rank {rank} cannot exceed the maximum LoRA rank {self.max_lora_rank}"
+            raise ValueError(msg)
+        self.active_lora_rank = rank
+
+    def get_active_adapters(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Get the currently active LoRA adapters.
+
+        :return: A dictionary containing the active LoRA adapters.
+        """
+        lora_A = self.lora_A[: self.active_lora_rank, :]
+        lora_B = self.lora_B[:, : self.active_lora_rank]
+        return lora_A, lora_B
 
 
 @COMPRESSION_MODULES.register()
@@ -1139,18 +1193,48 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         super().disable_gradients()
         LoraMixin.disable_gradients(self)
 
-    def get_trainable_params(self) -> Dict[str, torch.nn.Parameter]:
+    def get_trainable_params(self) -> dict[str, torch.nn.Parameter]:
         params = super().get_trainable_params()
         params.update(LoraMixin.get_adapters(self))
         return params
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return {"qspec": super().get_config(), "lspec": self._lspec.get_state()}
 
     @classmethod
     def from_config(cls, state) -> "AsymmetricLoraQuantizer":
         qspec = PTQuantizerSpec.from_state(state["qspec"])
         lspec = PTLoraSpec.from_state(state["lspec"])
+        return cls(qspec, lspec)
+
+
+@COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA_NLS)
+class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
+    def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
+        lora_A, lora_B = self.get_active_adapters()
+        return asymmetric_quantize_lora(
+            x,
+            self._lspec.weight_shape,
+            lora_A,
+            lora_B,
+            self.input_low,
+            self.input_range,
+            self.level_low,
+            self.level_high,
+            self.levels,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
+
+    @classmethod
+    def from_config(cls, state) -> "AsymmetricLoraNLSQuantizer":
+        qspec = PTQuantizerSpec.from_state(state["qspec"])
+        lspec = PTLoraNLSSpec.from_state(state["lspec"])
         return cls(qspec, lspec)
 
 
@@ -1187,12 +1271,12 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         super().disable_gradients()
         LoraMixin.disable_gradients(self)
 
-    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+    def get_trainable_params(self) -> dict[str, torch.Tensor]:
         params = super().get_trainable_params()
         params.update(LoraMixin.get_adapters(self))
         return params
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return {"qspec": super().get_config(), "lspec": self._lspec.get_state()}
 
     @classmethod
@@ -1202,7 +1286,36 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         return cls(qspec, lspec)
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> List[int]:
+@COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
+class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
+        lora_A, lora_B = self.get_active_adapters()
+        return symmetric_quantize_lora(
+            x,
+            self._lspec.weight_shape,
+            lora_A,
+            lora_B,
+            self.scale,
+            self.level_low,
+            self.level_high,
+            self.levels,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
+
+    @classmethod
+    def from_config(cls, state) -> "SymmetricLoraNLSQuantizer":
+        qspec = PTQuantizerSpec.from_state(state["qspec"])
+        lspec = PTLoraNLSSpec.from_state(state["lspec"])
+        return cls(qspec, lspec)
+
+
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> list[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1215,7 +1328,7 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[i
 
 def get_scale_shape(
     input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
-) -> List[int]:
+) -> list[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.
@@ -1334,8 +1447,8 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         self,
         scale: torch.Tensor,
         zero_point: torch.Tensor,
-        compressed_weight_shape: Tuple[int, ...],
-        result_shape: Optional[Tuple[int, ...]] = None,
+        compressed_weight_shape: tuple[int, ...],
+        result_shape: Optional[tuple[int, ...]] = None,
         result_dtype: Optional[torch.dtype] = None,
     ):
         """
@@ -1382,8 +1495,8 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     def __init__(
         self,
         scale: torch.Tensor,
-        compressed_weight_shape: Tuple[int, ...],
-        result_shape: Optional[Tuple[int, ...]] = None,
+        compressed_weight_shape: tuple[int, ...],
+        result_shape: Optional[tuple[int, ...]] = None,
         result_dtype: Optional[torch.dtype] = None,
     ):
         """

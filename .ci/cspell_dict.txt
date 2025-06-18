@@ -26,8 +26,10 @@ argprovider
 argspec
 argvalue
 ascale
+ascontiguousarray
 asym
 asymm
+atleast
 atol
 atrous
 autocast
@@ -49,6 +51,7 @@ biburl
 bitwidth
 bitwidths
 bkup
+blockwise
 bnas
 booktitle
 bootstrapnas
@@ -124,6 +127,7 @@ elts
 eltwise
 eltwises
 embeddingbag
+emnlp
 eprint
 eprinttype
 errstate
@@ -146,11 +150,13 @@ frobenius
 fsolve
 funcs
 fval
+fxawq
 fxsq
 gacts
 gelsy
 gelu
 genai
+getsizeof
 gflop
 gflops
 giga
@@ -159,6 +165,7 @@ googlenet
 gptq
 graphdef
 groupnormalization
+groupsize
 groupwise
 grusequence
 gscale
@@ -168,6 +175,7 @@ hardswish
 hardtanh
 hawq
 headport
+hellaswag
 hiddens
 hparam
 hparams
@@ -195,7 +203,7 @@ inputless
 interp
 ioff
 iterval
-jstyleson
+jinjie
 junitxml
 keepdim
 keepdims
@@ -220,13 +228,15 @@ logicalor
 logicalxor
 logit
 loglikelihoods
+lspec
 lstmsequence
 lstsq
-lspec
 lyalyushkin
 mapillary
 maskrcnn
 mathbb
+mathrm
+matmulnbits
 matmuls
 maxcolwidths
 maxpool
@@ -304,10 +314,12 @@ onnxp
 onnxqdq
 onnxroi
 onnxx
+openbookqa
 openvino
 openvinotoolkit
 oplambda
 opset
+opsets
 outgate
 ovawq
 overcalled
@@ -319,9 +331,12 @@ ovhw
 ovlstm
 ovmvn
 ovroi
+ovselu
 pbar
+perchannel
 pertensor
 pinv
+plappert
 popleft
 pqid
 pratap
@@ -339,7 +354,9 @@ pthw
 ptnncf
 ptprelu
 ptrelu
+ptselu
 ptsilu
+ptwc
 pymodules
 pymoo
 pyopenvino
@@ -370,6 +387,7 @@ qtype
 quantizability
 quantizable
 qval
+qwen
 rademacher
 randn
 rankdir
@@ -394,6 +412,7 @@ rtype
 sacts
 sanh
 savelyev
+savelyevv
 savetxt
 sdpa
 sdxl
@@ -420,6 +439,7 @@ sparsifiers
 sparsifies
 sparsify
 sparsifying
+sqft
 squeezenet
 stabilityai_stablelm
 stdv
@@ -450,6 +470,7 @@ thresholded
 thresholding
 timestep
 tinyyolov
+tobytes
 togethercomputer
 torchdynamo
 truncnorm
@@ -472,6 +493,7 @@ vtype
 weakrefs
 weightable
 whowhatbench
+winogrande
 xlabel
 xnli
 xticklabels

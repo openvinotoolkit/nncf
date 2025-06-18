@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 import pytest
 
@@ -32,7 +31,7 @@ def load_config_for_device(target_device: TargetDevice) -> HWConfig:
     return HWConfig.from_json(hw_config_path)
 
 
-def get_quantization_config(hw_config: HWConfig) -> Dict:
+def get_quantization_config(hw_config: HWConfig) -> dict:
     """
     Returns quantization config aggregated by types.
 
@@ -53,7 +52,7 @@ def test_get_hw_config_type_trial():
     assert get_hw_config_type("TRIAL") is None
 
 
-@pytest.mark.parametrize("target_device", [TargetDevice.NPU])
+@pytest.mark.parametrize("target_device", [TargetDevice.GPU, TargetDevice.NPU])
 def test_device_configuration_alignment(target_device):
     base_hw_config = load_config_for_device(BASE_DEVICE)
     base_quantization_config = get_quantization_config(base_hw_config)

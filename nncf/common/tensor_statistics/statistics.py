@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import Any, Dict, TypeVar
+from typing import Any, TypeVar
 
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -89,7 +89,7 @@ class MedianMADTensorStatistic(TensorStatistic):
 class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT = "percentile_vs_values_dict"
 
-    def __init__(self, percentile_vs_values_dict: Dict[float, Any]):
+    def __init__(self, percentile_vs_values_dict: dict[float, Any]):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 
     def __eq__(self, other: Any, rtol: float = 1e-9) -> bool:

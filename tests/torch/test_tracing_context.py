@@ -20,6 +20,8 @@ from nncf.torch.dynamic_graph.wrappers import wrap_parameters
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from tests.torch.helpers import BasicConvTestModel
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.skipif(
     version.parse(torch.__version__) < version.parse("1.11"),

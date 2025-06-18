@@ -18,7 +18,7 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import nncf
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
@@ -228,7 +228,7 @@ class AdvancedQuantizationParameters:
     :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
     :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
-    :type backend_params: Dict[str, Any]
+    :type backend_params: dict[str, Any]
     """
 
     # General parameters
@@ -257,7 +257,7 @@ class AdvancedQuantizationParameters:
     smooth_quant_alpha: Optional[float] = None
 
     # Backend specific parameters
-    backend_params: Dict[str, Any] = field(default_factory=dict)
+    backend_params: dict[str, Any] = field(default_factory=dict)
 
 
 @api()
@@ -276,6 +276,9 @@ class AdvancedAWQParameters:
     :type alpha_max: float
     :param steps: The number of the steps in grid search.
     :type steps: int
+    :param prefer_data_aware_scaling: Determines whether to use activations to calculate scales if
+        activations are presented.
+    :type prefer_data_aware_scaling: bool
     """
 
     subset_size: int = 32
@@ -283,6 +286,7 @@ class AdvancedAWQParameters:
     alpha_min: float = 0.0
     alpha_max: float = 1.0
     steps: int = 100
+    prefer_data_aware_scaling: bool = True
 
 
 @api()
@@ -373,6 +377,8 @@ class AdvancedCompressionParameters:
     :type lora_correction_params: AdvancedLoraCorrectionParameters
     :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
     :type lora_adapter_rank: int
+    :param backend_params: Backend-specific parameters.
+    :type backend_params: dict[str, Any]
     """
 
     statistics_path: Optional[str] = None
@@ -383,6 +389,7 @@ class AdvancedCompressionParameters:
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
+    backend_params: dict[str, Any] = field(default_factory=dict)
 
 
 @api()
@@ -422,7 +429,7 @@ class AdvancedAccuracyRestorerParameters:
     restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS
 
 
-def changes_asdict(params: Any) -> Dict[str, Any]:
+def changes_asdict(params: Any) -> dict[str, Any]:
     """
     Returns non None fields as dict
 
@@ -437,7 +444,7 @@ def changes_asdict(params: Any) -> Dict[str, Any]:
     return changes
 
 
-def convert_to_dict_recursively(params: Any) -> Dict[str, Any]:
+def convert_to_dict_recursively(params: Any) -> dict[str, Any]:
     """
     Converts dataclass to dict recursively
 
@@ -460,14 +467,14 @@ def convert_to_dict_recursively(params: Any) -> Dict[str, Any]:
     return result
 
 
-def convert_quantization_parameters_to_dict(params: Optional[QuantizationParameters]) -> Dict[str, Any]:
+def convert_quantization_parameters_to_dict(params: Optional[QuantizationParameters]) -> dict[str, Any]:
     """
     Converts quantization parameters to the dict in the legacy format
 
     :param params: Quantization parameters
     :return: Quantization parameters as dict in the legacy format
     """
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
     if params is not None:
         if params.num_bits is not None:
             result["bits"] = params.num_bits
@@ -483,7 +490,7 @@ def convert_quantization_parameters_to_dict(params: Optional[QuantizationParamet
     return result
 
 
-def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters) -> Dict[str, Any]:
+def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters) -> dict[str, Any]:
     """
     Converts range estimator parameters to the dict in the legacy format
 
@@ -494,7 +501,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
         msg = "clipping_value parameter is not supported in the legacy format"
         raise nncf.ParameterNotSupportedError(msg)
 
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
     if (
         params.min.statistics_type == StatisticsType.MIN
         and params.min.aggregator_type == AggregatorType.MIN
@@ -535,8 +542,8 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
 
 
 def apply_advanced_parameters_to_config(
-    config: Dict[str, Any], params: AdvancedQuantizationParameters
-) -> Dict[str, Any]:
+    config: dict[str, Any], params: AdvancedQuantizationParameters
+) -> dict[str, Any]:
     """
     Apply advanced parameters to the config in the legacy format
 

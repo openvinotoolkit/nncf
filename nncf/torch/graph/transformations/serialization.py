@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -25,7 +25,7 @@ COMPRESSION_STATE_ATTR = "compression_state"
 SUPPORTED_COMMANDS = (PTSharedFnInsertionCommand, PTInsertionCommand)
 
 
-def serialize_transformations(transformations_layout: TransformationLayout) -> Dict[str, Any]:
+def serialize_transformations(transformations_layout: TransformationLayout) -> dict[str, Any]:
     """
     Serializes given transformation layout to a dict.
 
@@ -39,7 +39,7 @@ def serialize_transformations(transformations_layout: TransformationLayout) -> D
     return {COMPRESSION_STATE_ATTR: transformation_commands}
 
 
-def deserialize_transformations(serialized_transformation_layout: Dict[str, Any]) -> TransformationLayout:
+def deserialize_transformations(serialized_transformation_layout: dict[str, Any]) -> TransformationLayout:
     """
     Deserializes given serialized transformation layout.
 
@@ -54,7 +54,7 @@ def deserialize_transformations(serialized_transformation_layout: Dict[str, Any]
     return transformation_layout
 
 
-def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
+def serialize_command(command: PTTransformationCommand) -> dict[str, Any]:
     """
     Serializes given command layout to a dict.
 
@@ -90,7 +90,7 @@ def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
     return serialized_transformation
 
 
-def deserialize_command(serialized_command: Dict[str, Any]) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+def deserialize_command(serialized_command: dict[str, Any]) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
     """
     Deserializes given serialized command.
 

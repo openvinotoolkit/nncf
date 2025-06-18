@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import numpy as np
 
@@ -76,7 +76,7 @@ class ChannelAlignment(Algorithm):
         self._algorithm_key = f"CA_{hash(self)}"
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -179,7 +179,7 @@ class ChannelAlignment(Algorithm):
         conv_out_value: np.ndarray,
         amean: np.ndarray,
         conv_out_descr: LayoutDescriptor,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Function which calculates new add_in_value and add_out_value
         in ChannelAlignment pattern, so output activations of the second convolution bias
@@ -222,7 +222,7 @@ class ChannelAlignment(Algorithm):
         conv_in_descr: LayoutDescriptor,
         conv_out_descr: LayoutDescriptor,
         eps: float,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Function which calculates new conv_in_value, conv_out_value and bias_in_value
         in ChannelAlignment pattern, so output activations of conv_out are the same,
@@ -354,7 +354,7 @@ class ChannelAlignment(Algorithm):
         pattern.add_pattern_alternative(get_conv_add_conv_pattern())
         return pattern
 
-    def _get_node_pairs(self, nncf_graph: NNCFGraph) -> List[Tuple[NNCFNode, Optional[NNCFNode], NNCFNode]]:
+    def _get_node_pairs(self, nncf_graph: NNCFGraph) -> list[tuple[NNCFNode, Optional[NNCFNode], NNCFNode]]:
         pairs = []
         patterns = self._get_target_patterns()
         for subgraph in nncf_graph.find_matching_subgraphs(patterns):
@@ -373,7 +373,7 @@ class ChannelAlignment(Algorithm):
             pairs.append((conv_in, add_in, conv_out))
         return pairs
 
-    def _get_target_point_and_node_in(self, conv_in, add_in) -> Tuple[TargetPoint, NNCFNode]:
+    def _get_target_point_and_node_in(self, conv_in, add_in) -> tuple[TargetPoint, NNCFNode]:
         node_in = conv_in if add_in is None else add_in
         input_port_id, _ = self._backend_entity.get_activation_port_ids_for_node(node_in)
         return (

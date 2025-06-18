@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC
-from typing import Dict, List, Tuple
 
 import tensorflow as tf
 
@@ -219,7 +218,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         )
 
     @staticmethod
-    def _get_bn_for_node(node: NNCFNode, bn_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
+    def _get_bn_for_node(node: NNCFNode, bn_nodes: list[NNCFNode]) -> tuple[bool, list[NNCFNode]]:
         is_finished = False
         propagating_ops = [
             op_name
@@ -233,7 +232,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             is_finished = True
         return is_finished, bn_nodes
 
-    def _get_related_batchnorms(self, layer_name: str, group: Cluster, graph: NNCFGraph) -> List[NNCFNode]:
+    def _get_related_batchnorms(self, layer_name: str, group: Cluster, graph: NNCFGraph) -> list[NNCFNode]:
         """
         Returns List of batchnorm elements related to the layer.
         Note: Single node per layer for shared batchnorm layers
@@ -256,13 +255,13 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         """
         raise NotImplementedError
 
-    def _get_op_types_of_pruned_layers(self) -> List[str]:
+    def _get_op_types_of_pruned_layers(self) -> list[str]:
         """
         Returns list of operation types that should be pruned.
         """
         raise NotImplementedError
 
-    def _get_types_of_grouping_ops(self) -> List[str]:
+    def _get_types_of_grouping_ops(self) -> list[str]:
         raise NotImplementedError
 
     def _get_pruning_operation_name(self, layer_name: str, weight_attr_name: str) -> str:
@@ -278,8 +277,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
     def __init__(
         self,
         target_model: tf.keras.Model,
-        op_names: List[str],
-        prunable_types: List[str],
+        op_names: list[str],
+        prunable_types: list[str],
         pruned_layer_groups_info: Clusterization[PrunedLayerInfo],
         config,
     ):
@@ -317,7 +316,7 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
         if pruning_flops_target:
             self.prune_flops = True
 
-    def _calculate_num_of_sparse_elements_by_node(self) -> Dict[NNCFNodeName, int]:
+    def _calculate_num_of_sparse_elements_by_node(self) -> dict[NNCFNodeName, int]:
         """Returns the number of sparse elements per node. Take into account names ('^') for the shared ops."""
         if self._num_of_sparse_elements_by_node is None:
             self._calculate_pruned_layers_summary()
@@ -328,7 +327,7 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
                 retval[node.node_name] = self._num_of_sparse_elements_by_node[node.layer_name]
         return retval
 
-    def _calculate_pruned_layers_summary(self) -> List[PrunedLayerSummary]:
+    def _calculate_pruned_layers_summary(self) -> list[PrunedLayerSummary]:
         pruning_levels = []
         mask_names = []
         weights_shapes = []

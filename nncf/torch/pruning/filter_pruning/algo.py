@@ -12,7 +12,7 @@
 import json
 from math import isclose
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Union
 
 import numpy as np
 import torch
@@ -111,11 +111,11 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         # Currently prune only Convolutions
         return isinstance(module, tuple(NNCF_PRUNING_MODULES_DICT.keys()))
 
-    def get_op_types_of_pruned_modules(self) -> List[str]:
+    def get_op_types_of_pruned_modules(self) -> list[str]:
         types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
         return types
 
-    def get_types_of_grouping_ops(self) -> List[str]:
+    def get_types_of_grouping_ops(self) -> list[str]:
         return PTElementwisePruningOp.get_all_op_aliases()
 
 
@@ -125,9 +125,9 @@ class FilterPruningController(BasePruningAlgoController):
     def __init__(
         self,
         target_model: NNCFNetwork,
-        prunable_types: List[str],
+        prunable_types: list[str],
         pruned_module_groups: Clusterization[PrunedModuleInfo],
-        pruned_norms_operators: List[Tuple[NNCFNode, FilterPruningMask, torch.nn.Module]],
+        pruned_norms_operators: list[tuple[NNCFNode, FilterPruningMask, torch.nn.Module]],
         config: NNCFConfig,
     ):
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
@@ -148,10 +148,10 @@ class FilterPruningController(BasePruningAlgoController):
             pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES, prunable_types=prunable_types
         )
         self.pruning_quotas = {}
-        self.nodes_flops: Dict[NNCFNodeName, int] = {}
-        self.nodes_params_num: Dict[NNCFNodeName, int] = {}
-        self._next_nodes: Dict[int, List[NNCFNodeName]] = {}
-        self._output_shapes: Dict[NNCFNodeName, int] = {}
+        self.nodes_flops: dict[NNCFNodeName, int] = {}
+        self.nodes_params_num: dict[NNCFNodeName, int] = {}
+        self._next_nodes: dict[int, list[NNCFNodeName]] = {}
+        self._output_shapes: dict[NNCFNodeName, int] = {}
         _, modules_out_channels = get_prunable_layers_in_out_channels(self._graph)
         self._init_pruned_layers_params(modules_out_channels)
         self.flops_count_init()
@@ -308,7 +308,7 @@ class FilterPruningController(BasePruningAlgoController):
             self._graph, self._output_shapes
         )
 
-    def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level: float) -> Tuple[int, int]:
+    def _calculate_flops_and_weights_in_uniformly_pruned_model(self, pruning_level: float) -> tuple[int, int]:
         """
         Prune all prunable modules in model by pruning_level level and returns number of weights and
         flops of the pruned model.
@@ -360,7 +360,7 @@ class FilterPruningController(BasePruningAlgoController):
         raise nncf.InternalError(msg)
 
     def set_pruning_level(
-        self, pruning_level: Union[float, Dict[int, float]], run_batchnorm_adaptation: bool = False
+        self, pruning_level: Union[float, dict[int, float]], run_batchnorm_adaptation: bool = False
     ) -> None:
         """
         Set the global or groupwise pruning level in the model.
@@ -420,7 +420,7 @@ class FilterPruningController(BasePruningAlgoController):
         return pruned_param_count / full_param_count
 
     @property
-    def current_groupwise_pruning_level(self) -> Dict[int, float]:
+    def current_groupwise_pruning_level(self) -> dict[int, float]:
         """
         Return the dict of layer group id's and corresponding current groupwise
         pruning levels in the model
@@ -430,7 +430,7 @@ class FilterPruningController(BasePruningAlgoController):
             groupwise_pruning_level_dict[group.id] = self.pruning_level_for_mask(group.elements[0])
         return groupwise_pruning_level_dict
 
-    def _set_binary_masks_for_pruned_modules_groupwise(self, pruning_level: Union[float, Dict[int, float]]) -> None:
+    def _set_binary_masks_for_pruned_modules_groupwise(self, pruning_level: Union[float, dict[int, float]]) -> None:
         """
         Set the binary mask values according to groupwise pruning level.
         If pruning_level is a float, set the pruning level uniformly across groups.
@@ -661,7 +661,7 @@ class FilterPruningController(BasePruningAlgoController):
             return 1 - self._min_possible_flops / max(self.full_flops, 1)
         return 1.0
 
-    def _calculate_num_of_sparse_elements_by_node(self) -> Dict[str, int]:
+    def _calculate_num_of_sparse_elements_by_node(self) -> dict[str, int]:
         num_of_sparse_elements_by_node = {}
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             mask = self.get_mask(minfo)

@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 import numpy as np
 import onnx
@@ -34,7 +33,7 @@ from tests.onnx.quantization.common import min_max_quantize_model
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / "data" / "reference_scales"
 
 
-def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
+def get_q_nodes_params(model: onnx.ModelProto) -> dict[str, np.ndarray]:
     output = {}
     for node in model.graph.node:
         if node.op_type == "QuantizeLinear":
@@ -61,7 +60,7 @@ def test_overflow_fix_scales(overflow_fix):
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
     # Unkomment lines below to generate reference for new models.
-    # from tests.shared.helpers import dump_to_json
+    # from tests.cross_fw.shared.json import dump_to_json
 
     # dump_to_json(ref_stats_path, q_nodes_params)
 

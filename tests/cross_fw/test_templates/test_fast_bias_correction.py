@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import TypeVar
 
 import pytest
 
@@ -31,7 +31,7 @@ TTensor = TypeVar("TTensor")
 class TemplateTestFBCAlgorithm:
     @staticmethod
     @abstractmethod
-    def list_to_backend_type(data: List) -> TTensor:
+    def list_to_backend_type(data: list) -> TTensor:
         """
         Convert list to backend specific type
 

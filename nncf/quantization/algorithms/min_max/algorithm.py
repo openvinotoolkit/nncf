@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, Union
+from typing import Any, Optional, OrderedDict, TypeVar, Union
 
 import numpy as np
 
@@ -108,8 +108,8 @@ MODE_BASED_DEFAULTS = {
 
 
 def _filter_target_points_by_metatypes(
-    quantization_target_points: Set[TargetPoint], metatypes: List[OperatorMetatype], nncf_graph: NNCFGraph
-) -> Set[TargetPoint]:
+    quantization_target_points: set[TargetPoint], metatypes: list[OperatorMetatype], nncf_graph: NNCFGraph
+) -> set[TargetPoint]:
     """
     Returns TargetPoints which are suited to a node having metatype specified in 'metatypes'.
 
@@ -153,7 +153,7 @@ class MinMaxQuantization(Algorithm):
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         quantizer_propagation_rule: Optional[QuantizerPropagationRule] = None,
-        backend_params: Optional[Dict[str, Any]] = None,
+        backend_params: Optional[dict[str, Any]] = None,
     ):
         """
         :param mode: Defines optimization mode for the algorithm. None by default.
@@ -272,9 +272,9 @@ class MinMaxQuantization(Algorithm):
                 weight_bits = self._weights_quantization_params.num_bits
 
             quant_scheme_a8w8 = act_bits == 8 and weight_bits == 8
-            if self._target_device == TargetDevice.NPU and quant_scheme_a8w8:
+            if self._target_device in [TargetDevice.GPU, TargetDevice.NPU] and quant_scheme_a8w8:
                 self._target_device = TargetDevice.CPU
-                nncf_logger.debug("Target device NPU was changed to CPU!")
+                nncf_logger.debug(f"Target device {self._target_device} was changed to CPU!")
 
             if self._overflow_fix is None and not quant_scheme_a8w8:
                 self._overflow_fix = OverflowFix.DISABLE
@@ -289,11 +289,14 @@ class MinMaxQuantization(Algorithm):
             if getattr(self, self_name) is None:
                 setattr(self, self_name, default_value)
 
+    def _is_fp8(self):
+        return self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2)
+
     def _review_mode_based_params(self):
         """
         Reviews parameter values because mode option doesn't support them.
         """
-        if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2):
+        if self._is_fp8():
             nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
             if self._preset != QuantizationPreset.PERFORMANCE:
@@ -337,7 +340,7 @@ class MinMaxQuantization(Algorithm):
         self._ignored_scope = ignored_scope
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _get_quantizer_constraints(
@@ -493,8 +496,8 @@ class MinMaxQuantization(Algorithm):
         self,
         range_estimator_params: RangeEstimatorParameters,
         use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
+        reduction_axes: Optional[tuple[int, ...]],
+        aggregation_axes: Optional[tuple[int, ...]],
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:
@@ -567,7 +570,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_ignored_names(
         self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph, ignored_patterns: GraphPattern
-    ) -> Dict[str, IgnoreReason]:
+    ) -> dict[str, IgnoreReason]:
         """
         Returns all node names that are ignored for quantization:
         Firstly, the ignored names are obtained from user-defined ignored the scope.
@@ -594,7 +597,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_ignored_names_by_ignored_patterns(
         self, inference_nncf_graph: NNCFGraph, ignored_patterns: GraphPattern
-    ) -> Set[str]:
+    ) -> set[str]:
         """
         Returns node names matched ignored_patterns.
 
@@ -608,7 +611,7 @@ class MinMaxQuantization(Algorithm):
                 nncf_node_names.add(nncf_node.node_name)
         return nncf_node_names
 
-    def _get_ignored_names_by_algorithm(self, inference_nncf_graph: NNCFGraph) -> Set[str]:
+    def _get_ignored_names_by_algorithm(self, inference_nncf_graph: NNCFGraph) -> set[str]:
         """
         Returns node names for ignored_algorithms matched `quantization`.
 
@@ -621,7 +624,7 @@ class MinMaxQuantization(Algorithm):
                 nncf_node_names.add(nncf_node.node_name)
         return nncf_node_names
 
-    def _get_scope_overrides(self, inference_nncf_graph: NNCFGraph) -> Dict:
+    def _get_scope_overrides(self, inference_nncf_graph: NNCFGraph) -> dict:
         """
         Returns a dictionary of quantization configuration overrides for inputs to matching operation nodes.
 
@@ -635,10 +638,14 @@ class MinMaxQuantization(Algorithm):
             )
         ]
 
+        target_input_ports = [0, 1, 2] if self._is_fp8() else [0, 1]
+
         scope_overrides_activations = {}
+        scope_overrides_operations = {}
         for node_name in scaled_dot_product_attention_node_names:
             scope_overrides_activations[node_name] = {"mode": "symmetric"}
-        return {"activations": scope_overrides_activations}
+            scope_overrides_operations[node_name] = {"target_input_ports": target_input_ports}
+        return {"activations": scope_overrides_activations, "operations": scope_overrides_operations}
 
     def _get_quantizer_setup(
         self,
@@ -734,7 +741,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_weight_quantization_target_points(
         self, quantization_point: SingleConfigQuantizationPoint, nncf_graph: NNCFGraph
-    ) -> List[SingleConfigQuantizationPoint]:
+    ) -> list[SingleConfigQuantizationPoint]:
         """
         Returns weight quantization target points to the set of existing points.
 
@@ -825,7 +832,7 @@ class MinMaxQuantization(Algorithm):
 
     def fill_quantization_target_points(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
-    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+    ) -> tuple[OrderedDict[TargetPoint, QuantizerConfig], list[list[TargetPoint]]]:
         """
         Initializes a cache and puts the given quantization target points in the cache.
 
@@ -849,7 +856,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_quantization_target_points(
         self, model: TModel, nncf_graph: NNCFGraph
-    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+    ) -> tuple[OrderedDict[TargetPoint, QuantizerConfig], list[list[TargetPoint]]]:
         """
         Returns Quantization Target Points.
         Returns a cache with target points if exists. Otherwise, initiates a procedure of finding them.
@@ -867,7 +874,7 @@ class MinMaxQuantization(Algorithm):
 
     def _collect_unified_groups(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
-    ) -> List[List[TargetPoint]]:
+    ) -> list[list[TargetPoint]]:
         """
         Collects the group of quantizers for unification.
 
@@ -889,14 +896,13 @@ class MinMaxQuantization(Algorithm):
                     unified_scale_group.append(activation_target_point)
                 else:
                     weight_target_points = self._get_weight_quantization_target_points(quantization_point, nncf_graph)
-                    for weight_target_point in weight_target_points:
-                        unified_scale_group.append(weight_target_point)
+                    unified_scale_group.extend(weight_target_points)
             unified_scale_groups.append(unified_scale_group)
         return unified_scale_groups
 
     def _topological_sort_quantization_points(
-        self, quantization_points: List[SingleConfigQuantizationPoint], nncf_graph: NNCFGraph
-    ) -> List[SingleConfigQuantizationPoint]:
+        self, quantization_points: list[SingleConfigQuantizationPoint], nncf_graph: NNCFGraph
+    ) -> list[SingleConfigQuantizationPoint]:
         """
         Sorts quantization_points based on the topological order of nodes obtained form nncf_graph.
 
@@ -909,8 +915,8 @@ class MinMaxQuantization(Algorithm):
         return quantization_points
 
     def _get_first_quantized_convolutions(
-        self, quantization_points: List[TargetPoint], starting_node: NNCFNode, nncf_graph: NNCFGraph
-    ) -> List[TargetPoint]:
+        self, quantization_points: list[TargetPoint], starting_node: NNCFNode, nncf_graph: NNCFGraph
+    ) -> list[TargetPoint]:
         """
         Returns target points connected to a first visited node with Convolution metatype,
         which are included in quantization_points. A traversal of nncf_graph is started from starting_node.
@@ -944,7 +950,7 @@ class MinMaxQuantization(Algorithm):
         overflow_fix: OverflowFix,
         quantization_target_points: OrderedDict[TargetPoint, QuantizerConfig],
         nncf_graph: NNCFGraph,
-    ) -> Set[TargetPoint]:
+    ) -> set[TargetPoint]:
         """
         Returns quantization target points, for whom overflow_fix should be applied.
 
@@ -1093,7 +1099,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_statistic_point_container(
         self,
-        quantization_target_points: Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]],
+        quantization_target_points: tuple[OrderedDict[TargetPoint, QuantizerConfig], list[list[TargetPoint]]],
         graph: NNCFGraph,
     ) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
@@ -1230,7 +1236,7 @@ class MinMaxQuantization(Algorithm):
         return quantizer_setup
 
     @staticmethod
-    def _unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+    def _unify_statistics(statistics: list[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
         """
         Returns backend-specific unified statistics.
 

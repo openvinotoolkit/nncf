@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
@@ -19,10 +18,10 @@ TF_OPERATION_METATYPES = OperatorMetatypeRegistry("tf_operation_metatypes")
 
 
 class TFOpMetatype(OperatorMetatype):
-    op_names: List[str] = []
+    op_names: list[str] = []
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return cls.op_names
 
 
@@ -46,7 +45,7 @@ class OpWeightDef:
 
 
 class TFOpWithWeightsMetatype(TFOpMetatype):
-    weight_definitions: List[OpWeightDef] = []
+    weight_definitions: list[OpWeightDef] = []
 
 
 @TF_OPERATION_METATYPES.register()

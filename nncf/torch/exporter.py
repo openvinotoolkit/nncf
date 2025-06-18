@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 import torch
 from torch.onnx import OperatorExportTypes
@@ -46,8 +46,8 @@ def count_tensors(obj: Any) -> int:
 
 
 def get_export_args(
-    model: NNCFNetwork, model_args: Optional[Tuple[Any, ...]] = None, device: Optional[str] = None
-) -> Tuple:
+    model: NNCFNetwork, model_args: Optional[tuple[Any, ...]] = None, device: Optional[str] = None
+) -> tuple:
     args, kwargs = model.nncf.input_infos.get_forward_inputs(device)
 
     if model_args is not None:
@@ -74,7 +74,7 @@ class PTExporter(Exporter):
     _ONNX_DEFAULT_OPSET = 14
 
     @staticmethod
-    def parse_format(save_format: str) -> Tuple[str, dict]:
+    def parse_format(save_format: str) -> tuple[str, dict]:
         """
         Parse saving format to a short form and additional arguments.
 

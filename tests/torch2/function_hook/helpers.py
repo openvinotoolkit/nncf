@@ -12,8 +12,8 @@
 import torch
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.wrapper import register_post_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
 
@@ -180,3 +180,12 @@ class HookWithState(torch.nn.Module, StatefulModuleInterface):
     @classmethod
     def from_config(cls, state: str):
         return cls(state)
+
+
+class ModelGRU(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.gru = torch.nn.GRU(3, 4, batch_first=True)
+
+    def forward(self, x):
+        return self.gru(x)

@@ -17,6 +17,8 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 
 def get_multistep_normed_abs_config():
     config = get_basic_magnitude_sparsity_config()

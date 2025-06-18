@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
@@ -37,7 +37,7 @@ class ONNXQuantizerLayerParameters:
 
 
 def convert_fq_params_to_onnx_params(
-    parameters: FakeQuantizeParameters, num_bits: int, tensor_type: np.dtype, axis: Tuple[int]
+    parameters: FakeQuantizeParameters, num_bits: int, tensor_type: np.dtype, axis: tuple[int]
 ) -> ONNXQuantizerLayerParameters:
     """
     Converts common FakeQuantizeParameters to ONNXQuantizerLayerParameters.
@@ -74,7 +74,7 @@ def convert_fq_params_to_onnx_params(
     return ONNXQuantizerLayerParameters(scale.data, zero_point.data, tensor_type, axis)
 
 
-def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:
+def get_level_low_level_high(tensor_type: np.dtype) -> tuple[int, int]:
     """
     Returns the minimum and maximum level for the quantizer.
     In ONNX opset Q/DequantizeLinear-13 uses only two levels: [-128, 127] and [0, 255].

@@ -11,7 +11,6 @@
 
 import importlib
 from pathlib import Path
-from typing import Dict
 
 import pytest
 
@@ -31,6 +30,8 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor
+
+pytestmark = pytest.mark.legacy
 
 
 class NASSampleTestDescriptor(SanityTestCaseDescriptor):
@@ -52,7 +53,7 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
     def get_compression_section(self):
         pass
 
-    def get_config_update(self) -> Dict:
+    def get_config_update(self) -> dict:
         sample_params = self.get_sample_params()
         sample_params["num_mock_images"] = 2
         sample_params["epochs"] = 5

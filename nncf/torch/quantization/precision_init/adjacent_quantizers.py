@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List, NamedTuple, Tuple
+from typing import NamedTuple
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
@@ -27,8 +27,8 @@ class AdjacentQuantizers(NamedTuple):
     :param: weight_quantizers   list of pairs of weight quantizers with their ids
     """
 
-    activation_quantizers: List[Tuple[QuantizerId, BaseQuantizer]]
-    weight_quantizers: List[Tuple[QuantizerId, BaseQuantizer]]
+    activation_quantizers: list[tuple[QuantizerId, BaseQuantizer]]
+    weight_quantizers: list[tuple[QuantizerId, BaseQuantizer]]
 
 
 class GroupsOfAdjacentQuantizers:
@@ -39,9 +39,9 @@ class GroupsOfAdjacentQuantizers:
     """
 
     def __init__(self):
-        self.weight_qp_id_per_activation_qp_id: Dict[QuantizationPointId, QuantizationPointId] = {}
+        self.weight_qp_id_per_activation_qp_id: dict[QuantizationPointId, QuantizationPointId] = {}
         self._quantizer_per_group_id = {}
-        self._groups_of_adjacent_quantizers: List[AdjacentQuantizers] = []
+        self._groups_of_adjacent_quantizers: list[AdjacentQuantizers] = []
 
     def get_group_id_for_quantizer(self, quantizer_id: QuantizerId):
         return self._quantizer_per_group_id.get(quantizer_id, None)
@@ -63,16 +63,16 @@ class GroupsOfAdjacentQuantizers:
 
     def parse_from_quantizer_setup(
         self,
-        all_quantizations: Dict[QuantizerId, BaseQuantizer],
+        all_quantizations: dict[QuantizerId, BaseQuantizer],
         quantizer_setup: QuantizerSetupBase,
-        quantization_point_id_vs_quantizer_id: Dict[QuantizationPointId, QuantizerId],
+        quantization_point_id_vs_quantizer_id: dict[QuantizationPointId, QuantizerId],
     ):
         for group_idx, group in quantizer_setup.shared_input_operation_set_groups.items():
-            act_quant_tuples: List[Tuple[QuantizerId, BaseQuantizer]] = []
-            wt_quant_tuples: List[Tuple[QuantizerId, BaseQuantizer]] = []
+            act_quant_tuples: list[tuple[QuantizerId, BaseQuantizer]] = []
+            wt_quant_tuples: list[tuple[QuantizerId, BaseQuantizer]] = []
 
-            quantized_node_per_activation_qp_id: Dict[NNCFNodeName, QuantizationPointId] = {}
-            module_scope_per_weight_qp_id: Dict[NNCFNodeName, QuantizationPointId] = {}
+            quantized_node_per_activation_qp_id: dict[NNCFNodeName, QuantizationPointId] = {}
+            module_scope_per_weight_qp_id: dict[NNCFNodeName, QuantizationPointId] = {}
 
             for qp_id in group:
                 qp = quantizer_setup.quantization_points[qp_id]

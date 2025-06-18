@@ -15,7 +15,7 @@ from abc import ABC
 from abc import abstractmethod
 from copy import deepcopy
 from functools import partial
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Union
 
 import networkx as nx
 import pytest
@@ -75,9 +75,11 @@ from tests.torch.test_models.synthetic import ScaledDotProductModel
 from tests.torch.test_models.synthetic import ShiftScaleParametrized
 from tests.torch.test_models.synthetic import TransposeModel
 
+pytestmark = pytest.mark.legacy
+
 
 def get_basic_quantization_config(
-    quantization_type="symmetric", input_sample_sizes=None, input_info: Union[List, Dict] = None
+    quantization_type="symmetric", input_sample_sizes=None, input_info: Union[list, dict] = None
 ):
     config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
     config["compression"] = {
@@ -203,7 +205,7 @@ def sr_wrap_inputs_fn(model_args, model_kwargs):
     return model_args, model_kwargs
 
 
-def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
+def sr_dummy_forward_fn(model_, input_sample_sizes: tuple[list[int]]):
     device = get_model_device(model_)
     config = NNCFConfig.from_dict({"input_info": [{"sample_size": sizes} for sizes in input_sample_sizes]})
     input_info = FillerInputInfo.from_nncf_config(config)
@@ -433,7 +435,7 @@ class IModelDesc(ABC):
 class BaseDesc(IModelDesc):
     def __init__(
         self,
-        input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
+        input_sample_sizes: Union[tuple[list[int], ...], list[int]] = None,
         model_name: str = None,
         wrap_inputs_fn: Callable = None,
         input_info=None,
@@ -473,11 +475,11 @@ class BaseDesc(IModelDesc):
 class GeneralModelDesc(BaseDesc):
     def __init__(
         self,
-        input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
+        input_sample_sizes: Union[tuple[list[int], ...], list[int]] = None,
         model_name: str = None,
         wrap_inputs_fn: Callable = None,
         model_builder=None,
-        input_info: Union[Dict, List] = None,
+        input_info: Union[dict, list] = None,
     ):
         super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
         if not model_name and hasattr(model_builder, "__name__"):
@@ -492,7 +494,7 @@ class SingleLayerModelDesc(BaseDesc):
     def __init__(
         self,
         layer: nn.Module,
-        input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
+        input_sample_sizes: Union[tuple[list[int], ...], list[int]] = None,
         model_name: str = None,
         wrap_inputs_fn: Callable = None,
         input_info=None,
@@ -589,7 +591,7 @@ class ConvLayerConvModelDesc(BaseDesc):
         self,
         layer: nn.Module,
         conv_class: nn.Module,
-        input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
+        input_sample_sizes: Union[tuple[list[int], ...], list[int]] = None,
         model_name: str = None,
     ):
         super().__init__(input_sample_sizes, model_name)
@@ -887,8 +889,8 @@ def _case_dir(type_hw_config):
 
 def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: SingleConfigQuantizerSetup) -> nx.DiGraph:
     quantizers_weights_attr = {}
-    pre_hooked_quantizers_activations_attr: Dict[NNCFNodeName, Tuple[int, str]] = {}
-    post_hooked_quantizers_activations_attr: Dict[NNCFNodeName, str] = {}
+    pre_hooked_quantizers_activations_attr: dict[NNCFNodeName, tuple[int, str]] = {}
+    post_hooked_quantizers_activations_attr: dict[NNCFNodeName, str] = {}
 
     for qp in quantizer_setup.quantization_points.values():
         if qp.is_weight_quantization_point():

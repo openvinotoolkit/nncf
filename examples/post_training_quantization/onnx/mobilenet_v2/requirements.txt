@@ -3,6 +3,6 @@ tqdm
 scikit-learn
 fastdownload
 onnx==1.17.0
-onnxruntime==1.19.2
-openvino==2025.1
+onnxruntime==1.21.1
+openvino==2025.2.0
 numpy<2

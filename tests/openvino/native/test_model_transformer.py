@@ -11,12 +11,12 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
@@ -100,7 +100,7 @@ def get_extra_outputs(original_model, transformed_model, as_nodes=False):
     return nodes_set if as_nodes else names_set
 
 
-def get_nodes_by_type(model: ov.Model, type_name: str) -> List[ov.Node]:
+def get_nodes_by_type(model: ov.Model, type_name: str) -> list[ov.Node]:
     fq_nodes = []
     for op in model.get_ops():
         if op.get_type_name() == type_name:
@@ -130,10 +130,10 @@ def verify_inputs_equality(node: ov.Node) -> None:
 @dataclass
 class InplaceOpTestCase:
     name: str
-    reduce_shape: Tuple[int, ...]
+    reduce_shape: tuple[int, ...]
     op_builder: Callable
-    ref_types: List[str]
-    ref_values: List[np.array]
+    ref_types: list[str]
+    ref_values: list[np.array]
     dims: str = "DEFAULT"
 
     def __str__(self) -> str:

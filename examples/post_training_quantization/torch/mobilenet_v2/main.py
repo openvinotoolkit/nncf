@@ -13,7 +13,6 @@ import re
 import subprocess
 from functools import partial
 from pathlib import Path
-from typing import List, Tuple
 
 import numpy as np
 import openvino as ov
@@ -62,7 +61,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: list[int]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),
@@ -128,7 +127,7 @@ torch_model.eval()
 # >>    model(transform_fn(data_item, device))
 
 
-def transform_fn(data_item: Tuple[torch.Tensor, int], device: torch.device) -> torch.Tensor:
+def transform_fn(data_item: tuple[torch.Tensor, int], device: torch.device) -> torch.Tensor:
     images, _ = data_item
     return images.to(device)
 

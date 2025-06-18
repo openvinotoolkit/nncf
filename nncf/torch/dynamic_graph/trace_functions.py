@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
+from typing import Callable, Iterable, Optional, TypeVar
 
 import numpy as np
 import torch
@@ -26,7 +26,7 @@ from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 from nncf.torch.nested_objects_traversal import objwalk
 
-TensorOrTupleOrList = TypeVar("TensorOrTupleOrList", List[torch.Tensor], Tuple[torch.Tensor], torch.Tensor)
+TensorOrTupleOrList = TypeVar("TensorOrTupleOrList", list[torch.Tensor], tuple[torch.Tensor], torch.Tensor)
 
 
 def is_iterable(item):
@@ -159,7 +159,7 @@ def trace_tensors(
     return trace_tensor(operator_output, 0, node, ctx)
 
 
-def make_tensor_metas(inputs: OperatorInput) -> List[Optional[TensorMeta]]:
+def make_tensor_metas(inputs: OperatorInput) -> list[Optional[TensorMeta]]:
     """
     Produces TensorMeta data for each torch.Tensor or TracedTensorMixin in `inputs`.
 
@@ -180,7 +180,7 @@ def make_tensor_metas(inputs: OperatorInput) -> List[Optional[TensorMeta]]:
     return tensor_metas
 
 
-def strip_traced_tensors(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+def strip_traced_tensors(args: tuple, kwargs: dict) -> tuple[tuple, dict]:
     """
     Required to guard against new forward calls on tensors that have already passed
     through NNCF's forward once and got turned into TracedTensors by reference access.

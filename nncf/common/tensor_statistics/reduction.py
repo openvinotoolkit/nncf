@@ -9,13 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Deque, List, Tuple
+from collections import deque
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
 
-def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
+def get_channel_count_and_dim_idx(scale_shape: list[int]) -> tuple[int, int]:
     channel_dim_idx = 0
     channel_count = 1
     for dim_idx, dim in enumerate(scale_shape):
@@ -25,7 +26,7 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     return channel_count, channel_dim_idx
 
 
-def split_into_channels(input_: NDArray[Any], scale_shape: List[int]) -> List[NDArray[Any]]:
+def split_into_channels(input_: NDArray[Any], scale_shape: list[int]) -> list[NDArray[Any]]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
     if channel_count == 1:
@@ -38,10 +39,10 @@ def split_into_channels(input_: NDArray[Any], scale_shape: List[int]) -> List[ND
 
 
 def get_per_channel_history(
-    raw_input_history: Deque[Any], scale_shape: List[int], discard_zeros: bool = False
-) -> List[Any]:
+    raw_input_history: deque[Any], scale_shape: list[int], discard_zeros: bool = False
+) -> list[Any]:
     channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
-    per_channel_history: List[Any] = [None for i in range(channel_count)]
+    per_channel_history: list[Any] = [None for i in range(channel_count)]
     for _ in range(len(raw_input_history)):
         entry = raw_input_history.popleft()
         split = split_into_channels(entry, scale_shape)
@@ -61,7 +62,7 @@ def get_per_channel_history(
     return per_channel_history
 
 
-def np_percentile_reduce_like(input_: NDArray[Any], ref_tensor_shape: Tuple[int], q: float) -> NDArray[Any]:
+def np_percentile_reduce_like(input_: NDArray[Any], ref_tensor_shape: tuple[int], q: float) -> NDArray[Any]:
     numel = np.prod(ref_tensor_shape)
     if numel == 1:
         return np.array([np.percentile(input_, q)])

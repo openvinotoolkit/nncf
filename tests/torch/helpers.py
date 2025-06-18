@@ -16,7 +16,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
+from typing import Any, Callable, TypeVar, Union
 
 import numpy as np
 import onnx
@@ -365,7 +365,7 @@ class SharedCustomConv(nn.Module):
 
 
 def get_empty_config(
-    model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None, input_info: Dict = None
+    model_size=4, input_sample_sizes: Union[tuple[list[int]], list[int]] = None, input_info: dict = None
 ) -> NNCFConfig:
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
@@ -386,7 +386,7 @@ def get_empty_config(
     return config
 
 
-def get_grads(variables: List[nn.Parameter]) -> List[torch.Tensor]:
+def get_grads(variables: list[nn.Parameter]) -> list[torch.Tensor]:
     return [var.grad.clone() for var in variables]
 
 
@@ -405,9 +405,9 @@ def create_compressed_model_and_algo_for_test(
     model: Module,
     config: NNCFConfig = None,
     dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-    compression_state: Dict[str, Any] = None,
-) -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
+    wrap_inputs_fn: Callable[[tuple, dict], tuple[tuple, dict]] = None,
+    compression_state: dict[str, Any] = None,
+) -> tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     if config is not None:
         assert isinstance(config, NNCFConfig)
         NNCFConfig.validate(config)
@@ -426,8 +426,8 @@ def create_nncf_model_and_single_algo_builder(
     model: Module,
     config: NNCFConfig,
     dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-) -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
+    wrap_inputs_fn: Callable[[tuple, dict], tuple[tuple, dict]] = None,
+) -> tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     input_info = FillerInputInfo.from_nncf_config(config)
@@ -496,7 +496,7 @@ class ModelWithReloadedForward(nn.Module):
 
 def check_correct_nncf_modules_replacement(
     model: torch.nn.Module, compressed_model: NNCFNetwork
-) -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:
+) -> tuple[dict[Scope, Module], dict[Scope, Module]]:
     """
     Checks that all extendable modules in model were replaced by NNCF-extended counterparts.
     :param model: original model
@@ -514,13 +514,13 @@ def check_correct_nncf_modules_replacement(
 
 
 class BaseDatasetMock(Dataset, ABC):
-    def __init__(self, input_size: Tuple, num_samples: int = 10):
+    def __init__(self, input_size: tuple, num_samples: int = 10):
         super().__init__()
         self._input_size = input_size
         self._len = num_samples
 
     @abstractmethod
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         pass
 
     def __len__(self) -> int:
@@ -528,7 +528,7 @@ class BaseDatasetMock(Dataset, ABC):
 
 
 class OnesDatasetMock(BaseDatasetMock):
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         return torch.ones(self._input_size), torch.ones(1)
 
 
@@ -561,7 +561,7 @@ def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batc
 
 
 # ONNX graph helpers
-def get_nodes_by_type(onnx_model: onnx.ModelProto, node_type: str) -> List[onnx.NodeProto]:
+def get_nodes_by_type(onnx_model: onnx.ModelProto, node_type: str) -> list[onnx.NodeProto]:
     retval = []
     for node in onnx_model.graph.node:
         if str(node.op_type) == node_type:
@@ -569,7 +569,7 @@ def get_nodes_by_type(onnx_model: onnx.ModelProto, node_type: str) -> List[onnx.
     return retval
 
 
-def get_all_inputs_for_graph_node(node: onnx.NodeProto, graph: onnx.GraphProto) -> Dict[str, onnx.AttributeProto]:
+def get_all_inputs_for_graph_node(node: onnx.NodeProto, graph: onnx.GraphProto) -> dict[str, onnx.AttributeProto]:
     retval = {}
     for input_ in node.input:
         constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
@@ -590,7 +590,7 @@ def get_all_inputs_for_graph_node(node: onnx.NodeProto, graph: onnx.GraphProto) 
 
 def resolve_constant_node_inputs_to_values(
     node: onnx.NodeProto, graph: onnx.GraphProto
-) -> Dict[str, onnx.AttributeProto]:
+) -> dict[str, onnx.AttributeProto]:
     retval = {}
     for input_ in node.input:
         constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
@@ -687,7 +687,7 @@ class HookChecker:
 
     def add_ref(
         self,
-        ref_hooks: List[callable],
+        ref_hooks: list[callable],
         target_type: TargetType,
         target_node_name: str,
         input_port_id: int,
@@ -750,7 +750,7 @@ class HookChecker:
         self._ref_hooks.clear()
 
     @staticmethod
-    def _check_weight_update_hooks(ref_hooks: Dict[torch.nn.Module, List[HookType]]):
+    def _check_weight_update_hooks(ref_hooks: dict[torch.nn.Module, list[HookType]]):
         for target_module, ref_hooks_per_module in ref_hooks.items():
             assert len(target_module.pre_ops) == len(ref_hooks_per_module)
             for actual_op, ref_op in zip(target_module.pre_ops.values(), ref_hooks_per_module):
@@ -758,14 +758,14 @@ class HookChecker:
                 assert actual_op.op is ref_op
 
     @staticmethod
-    def _check_pre_post_op_hooks(hooks: List[torch.ModuleDict], ref_hooks: List[HookType]):
+    def _check_pre_post_op_hooks(hooks: list[torch.ModuleDict], ref_hooks: list[HookType]):
         assert len(hooks) == len(ref_hooks)
         for actual_hook, ref_hook in zip(hooks.values(), ref_hooks):
             assert actual_hook is ref_hook
 
     @staticmethod
     def _check_pre_post_hooks(
-        hooks: Dict[OperationAddress, Dict[Any, HookType]], ref_hooks: Dict[OperationAddress, List[HookType]]
+        hooks: dict[OperationAddress, dict[Any, HookType]], ref_hooks: dict[OperationAddress, list[HookType]]
     ):
         assert len(hooks) == len(ref_hooks)
         for op_address, ref_hooks in ref_hooks.items():
@@ -776,7 +776,7 @@ class HookChecker:
 
 
 class LinearModel(nn.Module):
-    def __init__(self, input_shape=List[int]):
+    def __init__(self, input_shape=list[int]):
         super().__init__()
         with set_torch_seed():
             self.linear = nn.Linear(input_shape[1], input_shape[0], bias=False)

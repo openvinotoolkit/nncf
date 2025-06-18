@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-from typing import Dict, List
 
 from torch.nn import Module
 
@@ -21,7 +20,7 @@ class CallCountTracker:
         self.name = name
         self.call_counts = {}
 
-    def init_with_key_list(self, key_list: List):
+    def init_with_key_list(self, key_list: list):
         self.call_counts = {key: 0 for key in key_list}
         nncf_logger.debug(f"{self.name} tracker: registered {len(self.call_counts)} entries")
 
@@ -34,10 +33,10 @@ class CallCountTracker:
         else:
             self.call_counts[key] = counts
 
-    def get_never_called_keys(self) -> List[str]:
+    def get_never_called_keys(self) -> list[str]:
         return [k for k, v in self.call_counts.items() if v == 0]
 
-    def get_overcalled_keys_with_call_counts(self) -> Dict[str, int]:
+    def get_overcalled_keys_with_call_counts(self) -> dict[str, int]:
         return {k: v for k, v in self.call_counts.items() if v > 1}
 
     def get_total_call_count(self) -> int:
@@ -78,7 +77,7 @@ def debuggable_forward(forward_func):
 
 class CombinedDebugInterface(DebugInterface):
     def __init__(self):
-        self._interfaces: List[DebugInterface] = []
+        self._interfaces: list[DebugInterface] = []
 
     def add_interface(self, interface: "DebugInterface"):
         self._interfaces.append(interface)

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable
 
 import torch
 
@@ -20,16 +20,14 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch2.commands import PT2ConstUpdateCommand
-from nncf.experimental.torch2.commands import PT2InsertionCommand
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
-from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
+from nncf.torch.function_hook.commands import PT2ConstUpdateCommand
+from nncf.torch.function_hook.commands import PT2InsertionCommand
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
@@ -46,7 +44,7 @@ from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_
 class SQMultiply(torch.nn.Module, StatefulModuleInterface):
     SCALE_SHAPE_KEY = "scale_shape"
 
-    def __init__(self, scale_shape: Tuple[int, ...]):
+    def __init__(self, scale_shape: tuple[int, ...]):
         super().__init__()
         self._scale_value = CompressionParameter(torch.empty(scale_shape))
 
@@ -61,7 +59,7 @@ class SQMultiply(torch.nn.Module, StatefulModuleInterface):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.mul(x, self._scale_value)
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         return {self.SCALE_SHAPE_KEY: list(self._scale_value.shape)}
 
     @classmethod
@@ -74,7 +72,7 @@ PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
 
 class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         return [
             om.PTConv1dMetatype,
             om.PTConv2dMetatype,
@@ -82,11 +80,11 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         ]
 
     @property
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTLinearMetatype]
 
     @property
-    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+    def quantize_agnostic_metatypes(self) -> list[OperatorMetatype]:
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.QUANTIZATION_AGNOSTIC]
 
     @staticmethod
@@ -112,7 +110,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
@@ -136,17 +134,15 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def weight_update_command(
         node_with_weight: NNCFNode, nncf_graph: NNCFGraph, weight_value: torch.Tensor
     ) -> PTWeightUpdateCommand:
-        if is_experimental_torch_tracing_enabled():
-            weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
-            return PT2ConstUpdateCommand(weight_node, weight_value)
-        return create_command_to_update_weight(node_with_weight, weight_value)
+        weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
+        return PT2ConstUpdateCommand(weight_node, weight_value)
 
     @staticmethod
     def scale_insertion_command(
         source_node: NNCFNode,
         scale_value: torch.Tensor,
         source_output_port_id: int,
-        nodes: List[NNCFNode],
+        nodes: list[NNCFNode],
         scale_node_name: str,
     ) -> PTSharedFnInsertionCommand:
         input_port_id = 0
@@ -157,9 +153,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         sq_multiply = SQMultiply(scale_value.shape)
         sq_multiply.scale = scale_value
 
-        if is_experimental_torch_tracing_enabled():
-            return PT2InsertionCommand(target_points=target_points, hook_module=sq_multiply)
-        return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
+        return PT2InsertionCommand(target_points=target_points, hook_module=sq_multiply)
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
@@ -175,11 +169,9 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        if is_experimental_torch_tracing_enabled():
-            weight_node = get_const_node(node, node.metatype.weight_port_ids[0], nncf_graph)
-            output_edges = nncf_graph.get_next_nodes(weight_node)
-            return len(output_edges) > 1
-        return node.is_shared()
+        weight_node = get_const_node(node, node.metatype.weight_port_ids[0], nncf_graph)
+        output_edges = nncf_graph.get_next_nodes(weight_node)
+        return len(output_edges) > 1
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:

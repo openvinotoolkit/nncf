@@ -84,11 +84,6 @@ def fixture_run_benchmark_app(pytestconfig):
     return pytestconfig.getoption("benchmark")
 
 
-@pytest.fixture(scope="session", name="torch_compile_validation")
-def fixture_torch_compile_validation(pytestconfig):
-    return pytestconfig.getoption("torch_compile_validation")
-
-
 @pytest.fixture(scope="session", name="extra_columns")
 def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")

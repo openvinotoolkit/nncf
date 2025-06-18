@@ -18,6 +18,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import LRSch
 from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import StageLRScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.lr_scheduler import calc_learning_rate
 
+pytestmark = pytest.mark.legacy
 LR_SCHEDULER_PARAMS = LRSchedulerParams.from_dict(
     {
         "num_steps_in_epoch": 10,

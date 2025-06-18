@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Type
 
 import numpy as np
 import pytest
@@ -149,7 +148,7 @@ INVALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
 
 class TemplateTestChannelAlignment:
     @abstractmethod
-    def get_backend_cls(self) -> Type[ChannelAlignmentAlgoBackend]:
+    def get_backend_cls(self) -> type[ChannelAlignmentAlgoBackend]:
         pass
 
     @abstractmethod

@@ -10,7 +10,7 @@
 # limitations under the License.
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import numpy as np
 
@@ -75,7 +75,7 @@ class WeightCompressionParameters:
     node_with_weight: NNCFNode
     weight_port_id: int
     num_weights: np.uint64
-    reduction_axes: Tuple[int, ...]
+    reduction_axes: tuple[int, ...]
     compression_config: Optional[WeightCompressionConfig] = field(default_factory=WeightCompressionConfig)
 
     def __post_init__(self):

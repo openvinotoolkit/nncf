@@ -8,20 +8,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
 
 from torch import Tensor
 
 
 class TracesOrder:
-    def __init__(self, execution_indexes_of_weights_ordered_by_traces: List[int]):
+    def __init__(self, execution_indexes_of_weights_ordered_by_traces: list[int]):
         self._index_by_traces_to_execution_index = execution_indexes_of_weights_ordered_by_traces
         self._num_weights = len(execution_indexes_of_weights_ordered_by_traces)
         self._index_by_execution_to_index_by_traces = [
             execution_indexes_of_weights_ordered_by_traces.index(i) for i in range(self._num_weights)
         ]
 
-    def get_execution_order_configs(self, trace_ordered_configuration: List) -> List:
+    def get_execution_order_configs(self, trace_ordered_configuration: list) -> list:
         if len(trace_ordered_configuration) != self._num_weights:
             msg = "Incompatible configuration size!"
             raise ValueError(msg)
@@ -30,7 +29,7 @@ class TracesOrder:
             execution_order_config[self._index_by_traces_to_execution_index[i]] = config
         return execution_order_config
 
-    def get_traces_order_configs(self, execution_ordered_configuration: List) -> List:
+    def get_traces_order_configs(self, execution_ordered_configuration: list) -> list:
         if len(execution_ordered_configuration) != self._num_weights:
             msg = "Incompatible configuration size!"
             raise ValueError(msg)

@@ -36,9 +36,6 @@
         "initializer": {
             "precision": {
                 "bitwidth_per_scope": [
-                    // | num_bits | % weights | % activations | % total |
-                    // | 8        | 24.528    | 30.189        | 54.717  |
-                    // | 4        | 24.528    | 20.755        | 45.283  |
                     [4, "SqueezeNet/Sequential[classifier]/NNCFConv2d[1]/conv2d_0|WEIGHT"],
                     [4, "SqueezeNet/Sequential[features]/Fire[10]/NNCFConv2d[expand1x1]/conv2d_0|WEIGHT"],
                     [4, "SqueezeNet/Sequential[features]/Fire[10]/NNCFConv2d[expand3x3]/conv2d_0|WEIGHT"],

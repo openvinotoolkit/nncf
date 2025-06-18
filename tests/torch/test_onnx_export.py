@@ -30,6 +30,8 @@ from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import SingleLayerModelDesc
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 
+pytestmark = pytest.mark.legacy
+
 
 class ModelForIONamingTest(torch.nn.Module):
     def __init__(self):

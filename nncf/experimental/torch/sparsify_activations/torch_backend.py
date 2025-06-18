@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Type, TypeVar
+from typing import TypeVar
 
 import torch
 import torch.nn as nn
@@ -23,12 +23,13 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.tensor.functions.torch_numeric import quantile
+from nncf.torch.function_hook.commands import PT2InsertionCommand
+from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.model_transformer import PTModelTransformer
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import training_mode_switcher
 
 ACTIVATIONS_SPARSIFIER_PREFIX = "activations_sparsifier"
@@ -127,55 +128,46 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     SUPPORTED_METATYPES = [om.PTLinearMetatype]
 
     @staticmethod
-    def get_sparsifiers(model: NNCFNetwork) -> List[ActivationsSparsifier]:
+    def get_sparsifiers(model: nn.Module) -> list[ActivationsSparsifier]:
         """
         Finds all the activation sparsifiers in the model.
 
         :param model: The model with activation sparsifiers.
         :return: List of activation sparsifiers.
         """
-        return [m for m in model.nncf.modules() if isinstance(m, ActivationsSparsifier)]
+        return [m for _, m in get_hook_storage(model).named_hooks() if isinstance(m, ActivationsSparsifier)]
 
     @property
-    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
+    def supported_metatypes(self) -> list[type[OperatorMetatype]]:
         return PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES
 
     def insert_sparsifiers(
         self,
-        model: NNCFNetwork,
+        model: GraphModelWrapper,
         graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
-    ) -> NNCFNetwork:
+        target_sparsity_by_node: dict[NNCFNode, float],
+    ) -> GraphModelWrapper:
         transformation_layout = PTTransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():
             activation_port_id = self._get_activation_port_id(node, graph)
             sparsifier = ActivationsSparsifier(target_sparsity=target_sparsity)
-            sparsifier_name = f"{ACTIVATIONS_SPARSIFIER_PREFIX}_{node.node_name.replace('.', '_')}"
-            transformation_layout.register(
-                PTSharedFnInsertionCommand(
-                    [
-                        PTTargetPoint(
-                            target_type=TargetType.PRE_LAYER_OPERATION,
-                            target_node_name=node.node_name,
-                            input_port_id=activation_port_id,
-                        )
-                    ],
-                    sparsifier,
-                    sparsifier_name,
-                )
+            target_point = PTTargetPoint(
+                TargetType.OPERATOR_PRE_HOOK, target_node_name=node.node_name, input_port_id=activation_port_id
             )
+            command = PT2InsertionCommand([target_point], sparsifier)
+            transformation_layout.register(command)
 
-        transformed_model = PTModelTransformer(model).transform(transformation_layout)
+        transformed_model = PT2ModelTransformer(model).transform(transformation_layout)
         return transformed_model
 
-    def calibrate_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph, dataset: Dataset) -> NNCFNetwork:
-        sparsifiers = self.get_sparsifiers(model)
+    def calibrate_sparsifiers(self, model: GraphModelWrapper, graph: NNCFGraph, dataset: Dataset) -> GraphModelWrapper:
+        sparsifiers = self.get_sparsifiers(model.model)
         for sparsifier in sparsifiers:
             sparsifier.reset_running_stats()
             sparsifier.freeze = False
-        with training_mode_switcher(model, is_training=False):
+        with training_mode_switcher(model.model, is_training=False):
             with torch.no_grad():
-                self.do_inference(model, dataset)
+                self.do_inference(model.model, dataset)
         for sparsifier in sparsifiers:
             sparsifier.freeze = True
         return model

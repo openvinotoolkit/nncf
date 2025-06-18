@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict
+from typing import Callable
 
 import numpy as np
 import openvino as ov
@@ -79,7 +79,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     def inplace_statistics(self, request) -> bool:
         return request.param
 
-    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+    def get_node_name_map(self, model_cls) -> dict[str, str]:
         if model_cls is LinearMultiShapeModel:
             return OV_LINEAR_MODEL_MM_OP_MAP
         if model_cls is ConvTestModel:
@@ -105,7 +105,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         return ov.convert_model(model, example_input=torch.rand(model.INPUT_SIZE), input=model.INPUT_SIZE)
 
     @staticmethod
-    def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+    def check_scales(model: ov.Model, reference_values: dict[str, np.ndarray], model_cls) -> None:
         names_map = OV_LINEAR_MODEL_SQ_OP_MAP if model_cls is LinearMultiShapeModel else OV_CONV_MODEL_SQ_OP_MAP
         ops_list = {op.get_friendly_name(): op for op in model.get_ops()}
         for ref_names, ref_value in reference_values.items():

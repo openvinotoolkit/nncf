@@ -41,7 +41,12 @@ from tests.cross_fw.shared.paths import get_accuracy_aware_checkpoint_dir_path
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
 
+pytestmark = pytest.mark.legacy
+
 NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
+
+SANITY_ENV = ROOT_PYTHONPATH_ENV.copy()
+SANITY_ENV["NNCF_TORCH_LEGACY_TRACING"] = "1"
 
 
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
@@ -243,7 +248,7 @@ class TestSanitySample:
         elif multiprocessing_distributed:
             args["--multiprocessing-distributed"] = True
 
-        runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, config["sample_type"]), env=SANITY_ENV)
         runner.run()
 
     @staticmethod
@@ -281,7 +286,7 @@ class TestSanitySample:
                 "to support even still."
             )
 
-        runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, config["sample_type"]), env=SANITY_ENV)
         runner.run(assert_returncode_zero=False)
         last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
         assert os.path.exists(last_checkpoint_path)
@@ -329,7 +334,7 @@ class TestSanitySample:
         elif multiprocessing_distributed:
             args["--multiprocessing-distributed"] = True
 
-        runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, config["sample_type"]), env=SANITY_ENV)
         runner.run()
 
     @staticmethod
@@ -366,7 +371,7 @@ class TestSanitySample:
         elif multiprocessing_distributed:
             args["--multiprocessing-distributed"] = True
 
-        runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, config["sample_type"]), env=SANITY_ENV)
         runner.run(assert_returncode_zero=False)
         last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
         assert os.path.exists(last_checkpoint_path)
@@ -402,7 +407,7 @@ class TestSanitySample:
         if not torch.cuda.is_available():
             args["--cpu-only"] = True
 
-        runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, config["sample_type"]), env=SANITY_ENV)
         runner.run()
         assert os.path.exists(onnx_path)
 
@@ -431,7 +436,7 @@ class TestSanitySample:
         if not torch.cuda.is_available():
             args["--cpu-only"] = True
 
-        runner = Command(create_command_line(args, "classification"), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, "classification"), env=SANITY_ENV)
         runner.run()
         assert os.path.exists(onnx_path)
 
@@ -583,7 +588,7 @@ class TestSanitySample:
         elif multiprocessing_distributed:
             args["--multiprocessing-distributed"] = True
 
-        runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=SANITY_ENV)
         runner.run(assert_returncode_zero=False)
 
         checkpoint_save_dir = log_dir / get_run_name(config_factory.config)
@@ -609,7 +614,7 @@ class TestSanitySample:
             "--config": config_factory.serialize(),
         }
 
-        runner = Command(create_command_line(args, sample_type), env=ROOT_PYTHONPATH_ENV)
+        runner = Command(create_command_line(args, sample_type), env=SANITY_ENV)
         return_code = runner.run(assert_returncode_zero=False)
         assert return_code != 0
         assert remove_line_breaks(EVAL_ONLY_ERROR_TEXT) in remove_line_breaks("".join(runner.output))

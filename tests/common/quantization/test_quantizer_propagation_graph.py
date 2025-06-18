@@ -13,7 +13,7 @@ from abc import abstractmethod
 from collections import Counter
 from collections import namedtuple
 from copy import deepcopy
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import networkx as nx
 import pytest
@@ -47,7 +47,7 @@ from tests.common.quantization.mock_graphs import get_two_branch_mock_model_grap
 from tests.common.quantization.mock_graphs import mark_input_ports_lexicographically_based_on_input_node_key
 
 
-def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
+def get_edge_paths(graph, start_node_key, finish_node_key) -> list[list[tuple]]:
     node_paths = list(nx.all_simple_paths(graph, start_node_key, finish_node_key))
     edge_paths = []
     for path in node_paths:
@@ -55,7 +55,7 @@ def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
     return edge_paths
 
 
-def get_edge_paths_for_propagation(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
+def get_edge_paths_for_propagation(graph, start_node_key, finish_node_key) -> list[list[tuple]]:
     paths = get_edge_paths(graph, start_node_key, finish_node_key)
     return [list(reversed(path)) for path in paths]
 
@@ -208,7 +208,7 @@ class TestQuantizerPropagationStateGraph:
         ref_paths = start_ip_node_and_path_to_dominating_node[1]
         test_paths = mock_qp_graph.get_paths_to_immediately_dominating_insertion_points(start_node)
 
-        def get_cat_path_list(path_list: List[List[Tuple[str, str]]]):
+        def get_cat_path_list(path_list: list[list[tuple[str, str]]]):
             str_paths = [[str(edge[0]) + " -> " + str(edge[1]) for edge in path] for path in path_list]
             cat_paths = [";".join(path) for path in str_paths]
             return cat_paths
@@ -216,7 +216,7 @@ class TestQuantizerPropagationStateGraph:
         assert Counter(get_cat_path_list(ref_paths)) == Counter(get_cat_path_list(test_paths))
 
     class DomIPGroupedByUnifiedScalesTestStruct:
-        def __init__(self, start_ip_node_key: str, ref_groups_vs_paths: Dict[Optional[int], List[PropagationPath]]):
+        def __init__(self, start_ip_node_key: str, ref_groups_vs_paths: dict[Optional[int], list[PropagationPath]]):
             self.start_ip_node_key = start_ip_node_key
             self.ref_groups_vs_paths = ref_groups_vs_paths
 
@@ -291,7 +291,7 @@ class TestQuantizerPropagationStateGraph:
             )
         )
 
-        def get_cat_path_list(path_list: List[List[Tuple[str, str]]]):
+        def get_cat_path_list(path_list: list[list[tuple[str, str]]]):
             str_paths = [[str(edge[0]) + " -> " + str(edge[1]) for edge in path] for path in path_list]
             cat_paths = [";".join(path) for path in str_paths]
             return cat_paths
@@ -558,7 +558,7 @@ class TestQuantizerPropagationStateGraph:
         return request.param
 
     @staticmethod
-    def mark_nodes_with_traits(qpsg: QPSG, node_keys_vs_traits_dict: Dict[str, QuantizationTrait]) -> QPSG:
+    def mark_nodes_with_traits(qpsg: QPSG, node_keys_vs_traits_dict: dict[str, QuantizationTrait]) -> QPSG:
         for node_key, node in qpsg.nodes.items():
             if node_key in node_keys_vs_traits_dict:
                 node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = node_keys_vs_traits_dict[node_key]
@@ -756,7 +756,7 @@ class TestQuantizerPropagationStateGraph:
             target_node = quantizers_test_struct.target_node_for_quantizer
             is_merged = quantizers_test_struct.is_merged
             prop_path = quantizers_test_struct.prop_path
-            node_key_vs_trait_dict: Dict[str, QuantizationTrait] = {}
+            node_key_vs_trait_dict: dict[str, QuantizationTrait] = {}
             for node_key in quant_prop_graph.nodes:
                 node_key_vs_trait_dict[node_key] = QuantizationTrait.QUANTIZATION_AGNOSTIC
             primary_prop_quant = None
@@ -823,8 +823,8 @@ class TestQuantizerPropagationStateGraph:
 
 class TestRedundantQuantizerMerge:
     class RedundantQuantizerMergeTestStruct(ABC):
-        ref_remaining_pq_positions: Set[str]
-        operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
+        ref_remaining_pq_positions: set[str]
+        operator_node_key_vs_trait_dict: dict[str, QuantizationTrait]
 
         def prepare_qpsg_state(self, qpsg: QPSG) -> QPSG:
             qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(qpsg, self.operator_node_key_vs_trait_dict)
@@ -1317,8 +1317,8 @@ MODEL_GRAPH: NNCFGraph = create_graph_for_output_quant_as_weights()
 
 
 class OutputQuantAsWeightsSetupTestStruct(ABC):
-    operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
-    quantizable_module_node_names_vs_qconfigs: Dict[NNCFNodeName, List[QuantizerConfig]]
+    operator_node_key_vs_trait_dict: dict[str, QuantizationTrait]
+    quantizable_module_node_names_vs_qconfigs: dict[NNCFNodeName, list[QuantizerConfig]]
 
     def prepare_qpsg_state(self, qpsg: QPSG) -> QPSG:
         qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(qpsg, self.operator_node_key_vs_trait_dict)

@@ -33,6 +33,8 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_ones_mock_dataloader
 
+pytestmark = pytest.mark.legacy
+
 
 def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cfg=None) -> QuantizationEnv:
     if input_info_cfg is None:

@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Optional
 
 import jsonschema
-import jstyleson as json  # type: ignore
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -40,10 +40,10 @@ class NNCFConfig(dict[str, Any]):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.__nncf_extra_structs: Dict[str, NNCFExtraConfigStruct] = {}
+        self.__nncf_extra_structs: dict[str, NNCFExtraConfigStruct] = {}
 
     @classmethod
-    def from_dict(cls, nncf_dict: Dict[str, Any]) -> "NNCFConfig":
+    def from_dict(cls, nncf_dict: dict[str, Any]) -> "NNCFConfig":
         """
         Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.
 
@@ -64,7 +64,7 @@ class NNCFConfig(dict[str, Any]):
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
 
-    def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]) -> None:
+    def register_extra_structs(self, struct_list: list[NNCFExtraConfigStruct]) -> None:
         """
         Attach the supplied list of extra configuration structures to this configuration object.
 
@@ -77,13 +77,13 @@ class NNCFConfig(dict[str, Any]):
                 raise nncf.InternalError(msg)
             self.__nncf_extra_structs[struct_id] = struct
 
-    def get_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
+    def get_extra_struct(self, struct_cls: type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
         return self.__nncf_extra_structs[struct_cls.get_id()]
 
-    def has_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> bool:
+    def has_extra_struct(self, struct_cls: type[NNCFExtraConfigStruct]) -> bool:
         return struct_cls.get_id() in self.__nncf_extra_structs
 
-    def get_all_extra_structs(self) -> List[NNCFExtraConfigStruct]:
+    def get_all_extra_structs(self) -> list[NNCFExtraConfigStruct]:
         return list(self.__nncf_extra_structs.values())
 
     def get_redefinable_global_param_value_for_algo(self, param_name: str, algo_name: str) -> Optional[str]:
@@ -110,14 +110,14 @@ class NNCFConfig(dict[str, Any]):
         return param
 
     @staticmethod
-    def schema() -> Dict[str, Any]:
+    def schema() -> dict[str, Any]:
         """
         Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.
         """
         return NNCF_CONFIG_SCHEMA
 
     @staticmethod
-    def _is_path_to_algorithm_name(path_parts: List[str]) -> bool:
+    def _is_path_to_algorithm_name(path_parts: list[str]) -> bool:
         return (len(path_parts) == 2 and path_parts[0] == "compression" and path_parts[1] == "algorithm") or (
             len(path_parts) == 3
             and path_parts[0] == "compression"
@@ -126,7 +126,7 @@ class NNCFConfig(dict[str, Any]):
         )
 
     @staticmethod
-    def validate(loaded_json: Dict[str, Any]) -> None:
+    def validate(loaded_json: dict[str, Any]) -> None:
         try:
             jsonschema.validate(loaded_json, NNCFConfig.schema())
         except jsonschema.ValidationError as e:

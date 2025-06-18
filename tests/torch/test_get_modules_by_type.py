@@ -124,6 +124,6 @@ def test_get_all_modules_by_type__with_ignored_scope(ignored_scopes):
 
     act_modules = get_all_modules_by_type(model, model_modules, ignored_scopes=ignored_scopes)
 
-    for module_scope, _ in act_modules.items():
+    for module_scope in act_modules:
         for scope in ignored_scopes:
             assert not str(module_scope).startswith(str(scope))

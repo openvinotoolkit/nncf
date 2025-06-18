@@ -10,9 +10,9 @@
 # limitations under the License.
 
 from itertools import islice
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf import Dataset
 from nncf.common import factory
@@ -40,10 +40,10 @@ def _make_dataset_for_if_bodies(
     engine: Engine,
     calibration_dataset: Dataset,
     if_cond_input_name: str,
-    then_model_input_names: List[str],
-    else_model_input_names: List[str],
+    then_model_input_names: list[str],
+    else_model_input_names: list[str],
     subset_size: int,
-) -> Tuple[Dataset, Dataset]:
+) -> tuple[Dataset, Dataset]:
     """
     Returns dataset for a then and else bodies of If node.
 
@@ -133,13 +133,13 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
 def apply_algorithm_if_bodies(
     algorithm: Algorithm,
     parent_model: ov.Model,
-    graphs: Dict[str, NNCFGraph],
+    graphs: dict[str, NNCFGraph],
     graph_id: str,
     parent_dataset: Dataset,
     subset_size: int,
     current_model_num: int,
     parent_statistic_points: Optional[StatisticPointsContainer] = None,
-) -> Tuple[ov.Model, int]:
+) -> tuple[ov.Model, int]:
     """
     Applies an algorithm recursively to each bodies of If node.
 
@@ -216,7 +216,7 @@ class OVBackend:
         return int(not if_body_condition)
 
     @staticmethod
-    def if_node_metatypes() -> List[OperatorMetatype]:
+    def if_node_metatypes() -> list[OperatorMetatype]:
         """
         Returns metatypes that map to If node.
 
@@ -225,7 +225,7 @@ class OVBackend:
         return [OVIfMetatype]
 
     @staticmethod
-    def get_if_body_input_names(model: ov.Model, if_node: NNCFNode, if_body_condition: bool) -> List[str]:
+    def get_if_body_input_names(model: ov.Model, if_node: NNCFNode, if_body_condition: bool) -> list[str]:
         """
         Returns input names of If node body based on if_body_condition.
         The order of inputs are in a way that they are passed to the model during inference.
@@ -287,7 +287,7 @@ class OVBackend:
         return OVExtractIfBodyCommand(if_node.node_name, if_body_condition)
 
     @staticmethod
-    def create_output_insertion_commands_if_node(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
+    def create_output_insertion_commands_if_node(model: ov.Model, if_node: NNCFNode) -> list[OVOutputInsertionCommand]:
         """
         Returns output insertion commands on If node inputs.
 

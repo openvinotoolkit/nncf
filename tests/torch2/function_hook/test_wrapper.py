@@ -18,10 +18,10 @@ import onnxruntime as ort
 import pytest
 import torch
 
-from nncf.experimental.torch2.function_hook.wrapper import is_wrapped
-from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.wrapper import is_wrapped
+from nncf.torch.function_hook.wrapper import register_post_function_hook
+from nncf.torch.function_hook.wrapper import register_pre_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 
 ADD_VALUE = 2.0

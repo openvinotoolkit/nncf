@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import abstractmethod
-from typing import Tuple
 
 import pytest
 
@@ -59,7 +58,7 @@ class TemplateTestMinMaxAlgorithm:
 
 class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
     @abstractmethod
-    def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
+    def get_nncf_graph(self, weight_port_id: int, weight_shape: tuple[int]) -> NNCFGraph:
         "Returns backend specific NNCFGraph having a single Convolution."
 
     @pytest.mark.parametrize(
@@ -71,7 +70,7 @@ class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
         ),
     )
     def test_get_target_point_shape(
-        self, target_point_type: TargetType, input_port_id: int, reference_shape: Tuple[int]
+        self, target_point_type: TargetType, input_port_id: int, reference_shape: tuple[int]
     ):
         nncf_graph = self.get_nncf_graph(input_port_id, CONV_WEIGHT_SHAPE)
         nodes = nncf_graph.get_nodes_by_metatypes((self.conv_metatype,))
@@ -94,18 +93,18 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
 
     @staticmethod
     @abstractmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> BaseLayerAttributes:
         "Returns backend specific layer attributes for Convolution."
 
     @staticmethod
     @abstractmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> BaseLayerAttributes:
         "Returns backend specific layer attributes for Convolution."
 
     @staticmethod
     @abstractmethod
     def get_matmul_node_attrs(
-        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+        weight_port_id: int, transpose_weight: tuple[int], weight_shape: tuple[int]
     ) -> BaseLayerAttributes:
         "Returns backend specific layer attributes for MatMul."
 

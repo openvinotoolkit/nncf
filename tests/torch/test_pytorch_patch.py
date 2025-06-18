@@ -11,12 +11,10 @@
 
 import inspect
 import os
-from typing import List
 
 import pytest
 import torch
 
-import nncf
 from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
 from nncf.torch import wrap_model
@@ -38,6 +36,8 @@ from tests.torch.pytorch_patch_isolated import test_compile
 from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
 from tests.torch.pytorch_patch_isolated import test_jit_script_exception_preserves_patching_isolated
 
+pytestmark = pytest.mark.legacy
+
 
 def test_get_all_aliases_is_valid():
     operator_names_to_function_name = {}
@@ -55,7 +55,7 @@ def test_get_all_aliases_is_valid():
 def test_patch_magic_functions(name_space):
     patched_magic_fns = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.get(name_space, [])
     for op_name, operator in PT_OPERATOR_METATYPES.registry_dict.items():
-        op_fns: List[str] = operator.module_to_function_names.get(name_space, [])
+        op_fns: list[str] = operator.module_to_function_names.get(name_space, [])
         op_magic_fns = [x for x in op_fns if x.startswith("__") and x.endswith("__")]
         for fn_name in op_magic_fns:
             assert fn_name in patched_magic_fns, f"{op_name} contains not patched magic function {fn_name}"
@@ -65,9 +65,9 @@ def test_patch_magic_functions(name_space):
 def test_op_for_patch_magic_functions(name_space):
     patched_magic_fns = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.get(name_space, [])
 
-    all_magic_fns_in_op: List[str] = []
+    all_magic_fns_in_op: list[str] = []
     for operator in PT_OPERATOR_METATYPES.registry_dict.values():
-        op_fns: List[str] = operator.module_to_function_names.get(name_space, [])
+        op_fns: list[str] = operator.module_to_function_names.get(name_space, [])
         all_magic_fns_in_op += [x for x in op_fns if x.startswith("__") and x.endswith("__")]
 
     for patched_fn in patched_magic_fns:
@@ -127,13 +127,6 @@ def test_torch_compile_on_nncf_model():
     model = BasicConvTestModel()
     compiled_model = torch.compile(model)
     compiled_model(torch.ones(model.INPUT_SIZE))
-
-    model = BasicConvTestModel()
-    quantized_model = nncf.quantize(model, nncf.Dataset([torch.rand(model.INPUT_SIZE)]))
-    with pytest.raises(
-        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
-    ):
-        torch.compile(quantized_model)
 
     model = BasicConvTestModel()
     config = get_test_quantization_config(model)

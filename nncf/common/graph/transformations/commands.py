@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import IntEnum
-from typing import Any, Dict
+from typing import Any
 
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 
@@ -80,7 +80,7 @@ class TargetType(IntEnum):
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -90,7 +90,7 @@ class TargetType(IntEnum):
         return {TARGET_TYPE_STATE_ATTR: self.name}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TargetType":
+    def from_state(cls, state: dict[str, Any]) -> "TargetType":
         """
         Creates the object from its state.
 
@@ -154,7 +154,7 @@ class TargetPoint:
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -167,7 +167,7 @@ class TargetPoint:
         return self._target_type == TargetType.OPERATION_WITH_WEIGHTS
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "TargetPoint":
+    def from_state(cls, state: dict[str, Any]) -> "TargetPoint":
         """
         Creates the object from its state.
 

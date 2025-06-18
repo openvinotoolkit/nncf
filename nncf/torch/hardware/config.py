@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Type
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.hardware.config import HWConfig
@@ -17,5 +16,5 @@ from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 
 
 class PTHWConfig(HWConfig):
-    def _get_available_operator_metatypes_for_matching(self) -> List[Type[OperatorMetatype]]:
+    def _get_available_operator_metatypes_for_matching(self) -> list[type[OperatorMetatype]]:
         return get_operator_metatypes()

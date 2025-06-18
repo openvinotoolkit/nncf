@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
 
 import numpy as np
 import onnx
@@ -40,7 +39,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         self._registered_weights = set()
         super().collect_statistics(model, graph)
 
-    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             target_point = statistic_point.target_point
             port_id = target_point.port_id
@@ -90,7 +89,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: dict[str, np.ndarray]) -> dict[str, Tensor]:
         return {n: Tensor(v) for n, v in outputs.items()}
 
     def _get_statistics_key(self, statistics: TensorStatistic, target_point: ONNXTargetPoint) -> str:

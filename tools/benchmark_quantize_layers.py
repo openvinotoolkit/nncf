@@ -14,7 +14,7 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pandas as pd
 import torch
@@ -61,8 +61,8 @@ class TimingMode(Enum):
 @dataclass
 class BatchDescriptor:
     mode: BatchMode
-    input_size: List[int]
-    num_runs: Dict[torch.device, int]
+    input_size: list[int]
+    num_runs: dict[torch.device, int]
 
 
 class TensorType(Enum):
@@ -75,12 +75,12 @@ class GranularityType(Enum):
     PER_CHANNEL = "per_channel"
 
 
-TEST_TENSOR_TYPES: List[TensorType] = [TensorType.WEIGHTS, TensorType.ACTIVATIONS]
-TEST_GRANULARITY: List[GranularityType] = [GranularityType.PER_TENSOR, GranularityType.PER_CHANNEL]
-TEST_SYMMETRIC: List[bool] = [True, False]
-TEST_DEVICES: List[torch.device] = [torch.device("cuda"), torch.device("cpu")]
+TEST_TENSOR_TYPES: list[TensorType] = [TensorType.WEIGHTS, TensorType.ACTIVATIONS]
+TEST_GRANULARITY: list[GranularityType] = [GranularityType.PER_TENSOR, GranularityType.PER_CHANNEL]
+TEST_SYMMETRIC: list[bool] = [True, False]
+TEST_DEVICES: list[torch.device] = [torch.device("cuda"), torch.device("cpu")]
 
-TEST_BATCHES: List[BatchDescriptor] = [
+TEST_BATCHES: list[BatchDescriptor] = [
     BatchDescriptor(
         mode=BatchMode.LOW,
         input_size=LOW_BATCH_INPUT_SIZE,
@@ -92,15 +92,15 @@ TEST_BATCHES: List[BatchDescriptor] = [
         num_runs={torch.device("cuda"): GPU_RUNS_HIGH_BATCH, torch.device("cpu"): CPU_RUNS},
     ),
 ]
-TEST_DTYPES: List[torch.dtype] = [torch.float, torch.half]
-TEST_EXEC_TYPES: List[ExecutionType] = [
+TEST_DTYPES: list[torch.dtype] = [torch.float, torch.half]
+TEST_EXEC_TYPES: list[ExecutionType] = [
     ExecutionType.REGULAR,
     ExecutionType.DISTRIBUTED_DATA_PARALLEL,
     ExecutionType.DATA_PARALLEL,
 ]
-TEST_NARROW_RANGE: List[bool] = [False, True]
-TEST_TIMING_MODE: List[TimingMode] = [TimingMode.WALL, TimingMode.KERNEL]
-TEST_REFERENCE: List[bool] = [False, True]
+TEST_NARROW_RANGE: list[bool] = [False, True]
+TEST_TIMING_MODE: list[TimingMode] = [TimingMode.WALL, TimingMode.KERNEL]
+TEST_REFERENCE: list[bool] = [False, True]
 
 
 @dataclass
@@ -116,7 +116,7 @@ class ParamStruct:
     timing_mode: TimingMode
     ref: bool
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         dct = asdict(self)
         dct.pop("batch")
         dct["num_runs"] = self.batch.num_runs[self.device]
@@ -124,7 +124,7 @@ class ParamStruct:
         return dct
 
 
-TEST_PARAM_STRUCTS: List[ParamStruct] = [
+TEST_PARAM_STRUCTS: list[ParamStruct] = [
     ParamStruct(
         dtype=dtype,
         device=device,
@@ -157,7 +157,7 @@ TEST_PARAM_STRUCTS: List[ParamStruct] = [
 class DefaultedPTQuantizerSpec(PTQuantizerSpec):
     def __init__(
         self,
-        scale_shape: Tuple[int, ...],
+        scale_shape: tuple[int, ...],
         num_bits: int = 8,
         mode: QuantizationMode = QuantizationMode.SYMMETRIC,
         signedness_to_force: Optional[bool] = None,
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     file_name = "benchmark_quantize_layers_result.csv" if len(sys.argv) == 1 else sys.argv[1]
     print(f"Benchmark results will be saved to file {file_name}")
 
-    benchmark_data: List[Dict[str, Any]] = []
+    benchmark_data: list[dict[str, Any]] = []
     device_ids = range(torch.cuda.device_count())
     ngpus_per_node = len(device_ids)
     world_size = ngpus_per_node
@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
         input_size = param_struct.batch.input_size
         if param_struct.exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL:
-            output: List[Dict[str, float]] = []
+            output: list[dict[str, float]] = []
             try:
                 mp.spawn(
                     run_worker,

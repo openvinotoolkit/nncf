@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, List
 
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
@@ -18,12 +17,12 @@ from nncf.torch.structures import QuantizationPrecisionInitArgs
 
 
 class ManualPrecisionInitParams(BasePrecisionInitParams):
-    def __init__(self, user_init_args: QuantizationPrecisionInitArgs = None, bitwidth_per_scope: List[List] = None):
+    def __init__(self, user_init_args: QuantizationPrecisionInitArgs = None, bitwidth_per_scope: list[list] = None):
         super().__init__(user_init_args)
         self.bitwidth_per_scope = bitwidth_per_scope
 
     @classmethod
-    def from_config(cls, manual_init_params_dict: Dict):
+    def from_config(cls, manual_init_params_dict: dict):
         return cls(user_init_args=None, bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", []))
 
 

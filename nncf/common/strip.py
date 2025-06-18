@@ -10,7 +10,7 @@
 # limitations under the License.
 
 
-from typing import TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf.common.utils.api_marker import api
@@ -26,7 +26,12 @@ TModel = TypeVar("TModel")
 
 @api(canonical_alias="nncf.strip")
 @tracked_function(category=MODEL_BASED_CATEGORY, extractors=[FunctionCallTelemetryExtractor("nncf.strip")])
-def strip(model: TModel, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> TModel:
+def strip(
+    model: TModel,
+    do_copy: bool = True,
+    strip_format: StripFormat = StripFormat.NATIVE,
+    example_input: Optional[Any] = None,
+) -> TModel:
     """
     Removes auxiliary layers and operations added during the compression process, resulting in a clean
     model ready for deployment. The functionality of the model object is still preserved as a compressed model.
@@ -35,13 +40,14 @@ def strip(model: TModel, do_copy: bool = True, strip_format: StripFormat = Strip
     :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
       will return the currently associated model object "stripped" in-place.
     :param strip format: Describes the format in which model is saved after strip.
+    :param example_input: An example input tensor to be used for tracing the model.
     :return: The stripped model.
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.TORCH:
         from nncf.torch.strip import strip as strip_pt
 
-        return strip_pt(model, do_copy, strip_format)  # type: ignore
+        return strip_pt(model, do_copy, strip_format, example_input)  # type: ignore
     elif model_backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.strip import strip as strip_tf
 

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.common.graph.transformations.commands import Command
 
@@ -27,10 +26,10 @@ class TransformationLayout:
         """
         Initialize Transformation Layout.
         """
-        self._transformations: List[Command] = []
+        self._transformations: list[Command] = []
 
     @property
-    def transformations(self) -> List[Command]:
+    def transformations(self) -> list[Command]:
         return self._transformations
 
     def register(self, transformation: Command) -> None:

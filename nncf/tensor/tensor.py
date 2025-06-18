@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Dict, Iterator, Optional, Tuple, Union, cast
+from typing import Any, Iterator, Optional, Union, cast
 
 import nncf
 from nncf.common.utils.backend import BackendType
@@ -38,7 +38,7 @@ class Tensor:
         return self._data
 
     @property
-    def shape(self) -> Tuple[int, ...]:
+    def shape(self) -> tuple[int, ...]:
         return tuple(self.data.shape)
 
     @property
@@ -65,12 +65,12 @@ class Tensor:
         return bool(self.data)
 
     def __iter__(self) -> Iterator[Tensor]:
-        return TensorIterator(self.data)
+        return TensorIterator(self)
 
-    def __getitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]]) -> Tensor:
+    def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]]) -> Tensor:
         return Tensor(self.data[unwrap_index(index)])
 
-    def __setitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]], value: Any) -> None:
+    def __setitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]], value: Any) -> None:
         self.data[unwrap_index(index)] = unwrap_tensor_data(value)
 
     def __str__(self) -> str:
@@ -205,8 +205,17 @@ class Tensor:
     def as_numpy_tensor(self) -> Tensor:
         return cast(Tensor, _call_function("as_numpy_tensor", self))
 
+    def as_openvino_tensor(self) -> Tensor:
+        x = self
+        if x.backend == TensorBackend.numpy:
+            x = cast(Tensor, _call_function("from_numpy", x.data, backend=TensorBackend.ov))
+        if x.backend != TensorBackend.ov:
+            msg = f"Unsupported backend for OpenVINO conversion: {x.backend}."
+            raise NotImplementedError(msg)
+        return x
 
-def _call_function(func_name: str, *args: Any) -> Any:
+
+def _call_function(func_name: str, *args: Any, **kwargs: Any) -> Any:
     """
     Call function from functions.py to avoid circular imports.
 
@@ -216,7 +225,7 @@ def _call_function(func_name: str, *args: Any) -> Any:
     from nncf.tensor.functions import numeric
 
     fn = getattr(numeric, func_name)
-    return fn(*args)
+    return fn(*args, **kwargs)
 
 
 class TensorIterator(Iterator[Tensor]):
@@ -227,15 +236,19 @@ class TensorIterator(Iterator[Tensor]):
         self._index = 0
 
     def __next__(self) -> Tensor:
-        if self._index < len(self._tensor):
+        tensor_shape = self._tensor.shape
+        if not tensor_shape:
+            msg = "iteration over a 0-d tensor"
+            raise TypeError(msg)
+        if self._index < tensor_shape[0]:
             result = self._tensor[self._index]
             self._index += 1
-            return Tensor(result)
+            return result
 
         raise StopIteration
 
 
-def unwrap_index(obj: Union[Any, Tuple[Any, ...]]) -> Union[TTensor, Tuple[TTensor, ...]]:
+def unwrap_index(obj: Union[Any, tuple[Any, ...]]) -> Union[TTensor, tuple[TTensor, ...]]:
     """
     Unwraps the tensor data from the input object or tuple of objects.
 
@@ -264,7 +277,7 @@ def get_tensor_backend(backend: BackendType) -> TensorBackend:
     :param backend: Backend type.
     :return: Corresponding tensor backend type.
     """
-    BACKEND_TO_TENSOR_BACKEND: Dict[BackendType, TensorBackend] = {
+    BACKEND_TO_TENSOR_BACKEND: dict[BackendType, TensorBackend] = {
         BackendType.OPENVINO: TensorBackend.numpy,
         BackendType.ONNX: TensorBackend.numpy,
         BackendType.TORCH_FX: TensorBackend.torch,

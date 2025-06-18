@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
 
 import torch
 
@@ -37,7 +36,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
             super().collect_statistics(model, graph)
         model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)
 
-    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         # PyTorch backend doesn't use outputs to register statistics
         return
 
@@ -73,7 +72,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: torch.Tensor) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: torch.Tensor) -> dict[str, Tensor]:
         # PyTorch backend doesn't use outputs to register statistics
         return {}
 

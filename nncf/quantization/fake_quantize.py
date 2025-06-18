@@ -11,7 +11,6 @@
 
 import warnings
 from dataclasses import dataclass
-from typing import Tuple
 
 import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
@@ -74,7 +73,7 @@ def fix_zero_filters_symmetric(max_values: Tensor, eps: float = 0.01) -> Tensor:
     return fns.maximum(lower_threshold, max_values)
 
 
-def fix_zero_filters_asymmetric(min_values: Tensor, max_values: Tensor, eps: float = 1e-8) -> Tuple[Tensor, Tensor]:
+def fix_zero_filters_asymmetric(min_values: Tensor, max_values: Tensor, eps: float = 1e-8) -> tuple[Tensor, Tensor]:
     """
     Fixes zero filters for asymmetric quantizer.
 
@@ -96,7 +95,7 @@ def fix_zero_filters_asymmetric(min_values: Tensor, max_values: Tensor, eps: flo
 
 def tune_range(
     left_border: Tensor, right_border: Tensor, num_bits: int, unify_zp: bool = False
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Tunes asymmetric quantization range to unify the zero point of all channels if `unify_zp` is True,
     or sets zero quant precisely to zero value otherwise.
@@ -148,7 +147,7 @@ def symmetric_range(
     max_values: Tensor,
     levels: int,
     quantizer_config: QuantizerConfig,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Calculates the numbers of the low and high quant for the symmetric quantization scheme.
 
@@ -163,7 +162,7 @@ def symmetric_range(
     level_high = fix_zero_filters_symmetric(max_values)
 
     signed = quantizer_config.signedness_to_force is True
-    signed = signed or fns.any(min_values < 0)
+    signed = signed or bool(fns.any(min_values < 0))
 
     if signed:
         level_low_scale = 1 if quantizer_config.narrow_range else levels / (levels - 2)
@@ -180,7 +179,7 @@ def asymmetric_range(
     min_values: Tensor,
     max_values: Tensor,
     quantizer_config: QuantizerConfig,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Calculates the numbers of the low and high quant for the asymmetric quantization scheme.
 
@@ -252,7 +251,7 @@ def calculate_quantizer_parameters(
 
 def calculate_convert_parameters(
     statistics: MinMaxTensorStatistic,
-    is_per_channel: False,
+    is_per_channel: bool,
     destination_type: FP8Type = FP8Type.E4M3,
     activation_scale: float = 0.5,
 ) -> FakeConvertParameters:
@@ -285,7 +284,7 @@ def _calculate_scaled_parameters(
     max_values: Tensor,
     quantizer_config: QuantizerConfig,
     quant_group: QuantizerGroup,
-) -> Tuple[Tensor, Tensor, int]:
+) -> tuple[Tensor, Tensor, int]:
     """
     Calculates FakeQuantize layer attributes scaled to effectively use a half range of the quantization range.
 
@@ -326,7 +325,7 @@ def calculate_scale_zero_point(
     level_low: int,
     level_high: int,
     narrow_range: bool,
-) -> Tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """
     Calculates scale and zero_point values for the quantizer.
 

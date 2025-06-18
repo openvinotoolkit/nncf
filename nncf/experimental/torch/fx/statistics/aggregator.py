@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
 
 import numpy as np
 import torch
@@ -66,7 +65,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
         model.graph.eliminate_dead_code()
         model.recompile()
 
-    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         return
 
     @staticmethod
@@ -122,7 +121,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: dict[str, np.ndarray]) -> dict[str, Tensor]:
         return outputs
 
     def _get_statistics_key(self, statistics: TensorStatistic, target_point: PTTargetPoint) -> str:

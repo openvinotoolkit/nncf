@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import itertools
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 import tensorflow as tf
 
@@ -19,7 +19,7 @@ from nncf.experimental.tensorflow.graph.transformations.commands import TFTarget
 from nncf.experimental.tensorflow.patch_tf import Hook
 from nncf.tensorflow.layers.operation import NNCFOperation
 
-InputSignature = Union[tf.TensorSpec, Dict[str, tf.TensorSpec], Tuple[tf.TensorSpec, ...], List[tf.TensorSpec]]
+InputSignature = Union[tf.TensorSpec, dict[str, tf.TensorSpec], tuple[tf.TensorSpec, ...], list[tf.TensorSpec]]
 
 
 def _add_names_to_input_signature(input_signature: InputSignature):
@@ -51,11 +51,11 @@ class NNCFNetwork(tf.keras.Model):
         # This workaround allows not add dependencies from hooks to the model.
         # See `tensorflow.python.training.tracking.autotrackable.AutoTrackable`
         # class for more details.
-        self.__dict__["_pre_hooks"]: Dict[str, List[Hook]] = {}
-        self.__dict__["_post_hooks"]: Dict[str, List[Hook]] = {}
+        self.__dict__["_pre_hooks"]: dict[str, list[Hook]] = {}
+        self.__dict__["_post_hooks"]: dict[str, list[Hook]] = {}
 
     @property
-    def nncf_operations(self) -> List[NNCFOperation]:
+    def nncf_operations(self) -> list[NNCFOperation]:
         """
         Returns list of the NNCF operations which were added to the NNCF network.
 
@@ -72,7 +72,7 @@ class NNCFNetwork(tf.keras.Model):
         """
         return self._input_signature
 
-    def get_nncf_operations_with_params(self) -> List[Tuple[NNCFOperation, Any]]:
+    def get_nncf_operations_with_params(self) -> list[tuple[NNCFOperation, Any]]:
         return [(op, hook.get_operation_weights(op.name)) for hook in getattr(self, "_hooks") for op in hook.operations]
 
     def get_config(self):
@@ -93,7 +93,7 @@ class NNCFNetwork(tf.keras.Model):
             outputs = self._model(xs, **kwargs)
         return outputs
 
-    def insert_at_point(self, point: TFTargetPoint, ops: List[NNCFOperation]) -> None:
+    def insert_at_point(self, point: TFTargetPoint, ops: list[NNCFOperation]) -> None:
         """
         Inserts the list of the NNCF operations according to the target point.
 

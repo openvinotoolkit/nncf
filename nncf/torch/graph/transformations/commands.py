@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import torch
 
@@ -75,7 +75,7 @@ class PTTargetPoint(TargetPoint):
     def __hash__(self):
         return hash(str(self))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -89,7 +89,7 @@ class PTTargetPoint(TargetPoint):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "PTTargetPoint":
+    def from_state(cls, state: dict[str, Any]) -> "PTTargetPoint":
         """
         Creates the object from its state.
 
@@ -161,7 +161,7 @@ class ExtraCompressionModuleType(Enum):
 class PTSharedFnInsertionCommand(PTTransformationCommand):
     def __init__(
         self,
-        target_points: List[PTTargetPoint],
+        target_points: list[PTTargetPoint],
         fn: Callable,
         op_unique_name: str,
         compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
@@ -185,7 +185,7 @@ class PTModelExtractionCommand(PTCommand):
     Extracts submodel based on the sub-model input and output names
     """
 
-    def __init__(self, input_node_names: List[str], output_node_names: List[str]):
+    def __init__(self, input_node_names: list[str], output_node_names: list[str]):
         """
         :param node_name: Node name that will be extracted.
         """

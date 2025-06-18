@@ -10,14 +10,14 @@
 # limitations under the License.
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.utils.registry import Registry
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.torch.nncf_network import NNCFNetwork
 
-ELASTICITY_HANDLERS_MAP = Dict[ElasticityDim, "ElasticityHandler"]
+ELASTICITY_HANDLERS_MAP = dict[ElasticityDim, "ElasticityHandler"]
 ElasticSearchSpace = TypeVar("ElasticSearchSpace")
 ElasticityConfig = TypeVar("ElasticityConfig")
 ELASTICITY_BUILDERS = Registry("Elasticity builder", add_name_as_attr=True)
@@ -83,7 +83,7 @@ class ElasticityHandler(ABC):
         """
 
     @abstractmethod
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -92,7 +92,7 @@ class ElasticityHandler(ABC):
         """
 
     @abstractmethod
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -139,7 +139,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         """
 
     @abstractmethod
-    def get_transformation_commands(self) -> List[TransformationCommand]:
+    def get_transformation_commands(self) -> list[TransformationCommand]:
         """
         :return: transformation commands for introducing the elasticity to NNCFNetwork
         """
@@ -160,7 +160,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         :return: elasticity configuration without conflicts with other active configs of other elasticity handlers
         """
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -169,7 +169,7 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
         active_config = state[self._state_names.ACTIVE_CONFIG]
         self.activate_subnet_for_config(active_config)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -184,14 +184,14 @@ class SingleElasticityHandler(ElasticityHandler, ABC):
 
 class BaseElasticityParams:
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "BaseElasticityParams":
+    def from_config(cls, config: dict[str, Any]) -> "BaseElasticityParams":
         """
         Creates the object from its config.
         """
 
     @classmethod
     @abstractmethod
-    def from_state(cls, state: Dict[str, Any]) -> "BaseElasticityParams":
+    def from_state(cls, state: dict[str, Any]) -> "BaseElasticityParams":
         """
         Creates the object from its state.
 
@@ -199,7 +199,7 @@ class BaseElasticityParams:
         """
 
     @abstractmethod
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns the compression loss state.
 
@@ -222,8 +222,8 @@ class SingleElasticityBuilder:
     def __init__(
         self,
         params: BaseElasticityParams,
-        ignored_scopes: Optional[List[str]] = None,
-        target_scopes: Optional[List[str]] = None,
+        ignored_scopes: Optional[list[str]] = None,
+        target_scopes: Optional[list[str]] = None,
     ):
         self._target_scopes = target_scopes
         self._ignored_scopes = ignored_scopes
@@ -240,7 +240,7 @@ class SingleElasticityBuilder:
         """
 
     @abstractmethod
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -249,7 +249,7 @@ class SingleElasticityBuilder:
         """
 
     @abstractmethod
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -258,10 +258,10 @@ class SingleElasticityBuilder:
 
 
 def create_elasticity_builder_from_config(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     elasticity_dim: ElasticityDim,
-    ignored_scopes: Optional[List[str]] = None,
-    target_scopes: Optional[List[str]] = None,
+    ignored_scopes: Optional[list[str]] = None,
+    target_scopes: Optional[list[str]] = None,
 ) -> SingleElasticityBuilder:
     params_cls = ELASTICITY_PARAMS.get(elasticity_dim)
     params = params_cls.from_config(config)

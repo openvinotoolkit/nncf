@@ -11,7 +11,6 @@
 
 
 import operator
-from typing import List
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -100,7 +99,7 @@ def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: 
         "subset_size_greater_than_num_errors",
     ],
 )
-def test_get_subset_indices(errors: List[float], subset_size: int, expected_indices: List[int]):
+def test_get_subset_indices(errors: list[float], subset_size: int, expected_indices: list[int]):
     actual_indices = get_subset_indices(errors, subset_size)
     assert expected_indices == actual_indices
 
@@ -136,7 +135,7 @@ def test_get_subset_indices(errors: List[float], subset_size: int, expected_indi
         "subset_size_greater_than_num_errors",
     ],
 )
-def test_get_subset_indices_pot_version(errors: List[float], subset_size: int, expected_indices: List[int]):
+def test_get_subset_indices_pot_version(errors: list[float], subset_size: int, expected_indices: list[int]):
     actual_indices = get_subset_indices_pot_version(errors, subset_size)
     assert expected_indices == actual_indices
 
@@ -165,7 +164,7 @@ def test_get_subset_indices_pot_version(errors: List[float], subset_size: int, e
         ),
     ],
 )
-def test_find_groups_of_quantizers_to_rank(nncf_graph_name: NNCFGraph, ref_groups: List[GroupToRank]):
+def test_find_groups_of_quantizers_to_rank(nncf_graph_name: NNCFGraph, ref_groups: list[GroupToRank]):
     ranker = Ranker(1, tuple(), AABackendForTests, None)
     nncf_graph = aa_create_nncf_graph(AA_GRAPHS_DESCR[nncf_graph_name])
     ret_val = ranker.find_groups_of_quantizers_to_rank(nncf_graph)
@@ -276,7 +275,7 @@ def test_sequential_calculation_ranking_score(
     ranker._ranking_fn = ranker._create_ranking_fn(BackendType.OPENVINO)
 
     groups_to_rank = ranker.find_groups_of_quantizers_to_rank(quantized_model_graph)
-    scores: List[float] = ranker._sequential_calculation_ranking_score(
+    scores: list[float] = ranker._sequential_calculation_ranking_score(
         quantized_model,
         quantized_model_graph,
         groups_to_rank,

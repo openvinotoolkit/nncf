@@ -11,7 +11,6 @@
 
 from math import floor
 from math import isclose
-from typing import List, Set
 
 import tensorflow as tf
 
@@ -85,14 +84,14 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def _is_pruned_layer(self, layer: tf.keras.layers.Layer) -> bool:
         return layer.__class__.__name__ in self._prunable_types
 
-    def _get_op_types_of_pruned_layers(self) -> List[str]:
+    def _get_op_types_of_pruned_layers(self) -> list[str]:
         return [
             op_name
             for meta_op in [TFConvolutionPruningOp, TFTransposeConvolutionPruningOp, TFLinearPruningOp]
             for op_name in meta_op.get_all_op_aliases()
         ]
 
-    def _get_types_of_grouping_ops(self) -> List[str]:
+    def _get_types_of_grouping_ops(self) -> list[str]:
         return TFElementwisePruningOp.get_all_op_aliases()
 
 
@@ -107,8 +106,8 @@ class FilterPruningController(BasePruningAlgoController):
         self,
         target_model: tf.keras.Model,
         graph: NNCFGraph,
-        op_names: List[str],
-        prunable_types: List[str],
+        op_names: list[str],
+        prunable_types: list[str],
         pruned_layer_groups: Clusterization[PrunedLayerInfo],
         config: NNCFConfig,
     ):
@@ -441,7 +440,7 @@ class FilterPruningController(BasePruningAlgoController):
         msg = f"Unable to prune model to required flops pruning level: {target_flops_pruning_level}"
         raise nncf.InternalError(msg)
 
-    def _set_operation_masks(self, layers: List[NNCFWrapper], filter_mask):
+    def _set_operation_masks(self, layers: list[NNCFWrapper], filter_mask):
         for layer in layers:
             for weight_attr, ops in layer.weights_attr_ops.items():
                 weight_shape = layer.layer_weights[weight_attr].shape
@@ -501,7 +500,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         cumulative_filters_importance = tf.zeros(filters_num)
         # Calculate cumulative importance for all filters in this group
-        shared_nodes: Set[str] = set()
+        shared_nodes: set[str] = set()
         for minfo in group.elements:
             layer_name = minfo.layer_name
             if layer_name in shared_nodes:

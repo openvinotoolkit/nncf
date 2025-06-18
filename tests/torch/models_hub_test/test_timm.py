@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 import timm
@@ -27,7 +26,7 @@ MODEL_LIST_FILE = Path(__file__).parent / "timm_models.txt"
 
 
 class TestTimmModel(BaseTestModel):
-    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
+    def load_model(self, model_name: str) -> tuple[nn.Module, ExampleType]:
         m = timm.create_model(model_name, pretrained=False)
         cfg = timm.get_pretrained_cfg(model_name)
         shape = [1] + list(cfg.input_size)

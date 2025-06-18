@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Type
+from typing import Callable
 
 import numpy as np
 import pytest
@@ -34,8 +34,8 @@ from nncf.torch.model_transformer import PTInsertionCommand
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 from tests.torch.helpers import HookChecker
-from tests.torch.ptq.helpers import get_nncf_network
-from tests.torch.ptq.test_ptq_params import ToNNCFNetworkInterface
+from tests.torch2.function_hook.quantization.helper import get_nncf_network
+from tests.torch2.function_hook.quantization.test_ptq_params import ToNNCFNetworkInterface
 
 IDENTITY_NODE_NAME = "PTIdentityConvModel/__add___0"
 CONV_NODE_NAME = "PTIdentityConvModel/Conv2d[conv]/conv2d_0"
@@ -60,13 +60,13 @@ MinMaxTestParameters = TemplateTestStatisticsAggregator.MinMaxTestParameters
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @staticmethod
-    def get_min_max_algo_backend_cls() -> Type[PTMinMaxAlgoBackend]:
+    def get_min_max_algo_backend_cls() -> type[PTMinMaxAlgoBackend]:
         return PTMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
         pytest.skip("PTBiasCorrectionAlgoBackend is not implemented")
 
-    def get_fast_bias_correction_algo_backend_cls(self) -> Type[PTFastBiasCorrectionAlgoBackend]:
+    def get_fast_bias_correction_algo_backend_cls(self) -> type[PTFastBiasCorrectionAlgoBackend]:
         return PTFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
@@ -103,7 +103,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_target_point_cls(self):
         return PTTargetPoint
 
-    def reducers_map(self) -> List[TensorReducerBase]:
+    def reducers_map(self) -> list[TensorReducerBase]:
         return None
 
     @pytest.fixture

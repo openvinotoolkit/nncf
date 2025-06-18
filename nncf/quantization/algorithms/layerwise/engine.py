@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, TypeVar
+from typing import Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -69,7 +69,7 @@ class LayerwiseEngine:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise UnsupportedBackendError(msg)
 
-    def _get_statistics(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> List[Tensor]:
+    def _get_statistics(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> list[Tensor]:
         """
         Collects statistic values for the given node and port id.
 
@@ -98,8 +98,8 @@ class LayerwiseEngine:
         return res
 
     def _create_cache(
-        self, outputs: List[NodeOutputPort], statistic_points: StatisticPointsContainer
-    ) -> Dict[NodeOutputPort, List[Tensor]]:
+        self, outputs: list[NodeOutputPort], statistic_points: StatisticPointsContainer
+    ) -> dict[NodeOutputPort, list[Tensor]]:
         """
         Creates a cache for the outputs using the provided statistic points.
 
@@ -117,8 +117,8 @@ class LayerwiseEngine:
         return cache
 
     def _get_outputs_following_model_inputs(
-        self, graph: NNCFGraph, schedule: List[LayerwiseStep]
-    ) -> List[NodeOutputPort]:
+        self, graph: NNCFGraph, schedule: list[LayerwiseStep]
+    ) -> list[NodeOutputPort]:
         """
         Identifies the outputs that follow the model inputs.
 
@@ -145,7 +145,7 @@ class LayerwiseEngine:
         self,
         model: TModel,
         graph: NNCFGraph,
-        target_nodes: List[NNCFNode],
+        target_nodes: list[NNCFNode],
         dataset: Dataset,
         statistic_points: Optional[StatisticPointsContainer] = None,
     ) -> LayerwiseIterator:
@@ -169,7 +169,7 @@ class LayerwiseEngine:
         return self._backend_entity.create_layerwise_iterator(model, graph, schedule, dataset, self._subset_size, cache)
 
     def get_statistic_points(
-        self, model: TModel, graph: NNCFGraph, target_nodes: List[NNCFNode]
+        self, model: TModel, graph: NNCFGraph, target_nodes: list[NNCFNode]
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.

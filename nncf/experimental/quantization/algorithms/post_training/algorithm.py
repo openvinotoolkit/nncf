@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import itertools
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -77,7 +77,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         )
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         backends = set(BackendType)
         for algorithm in itertools.chain.from_iterable(self._pipeline.pipeline_steps):
             backends = backends.intersection(algorithm.available_backends)

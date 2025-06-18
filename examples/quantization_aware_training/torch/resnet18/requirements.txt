@@ -1,5 +1,4 @@
 fastdownload==0.0.7
-openvino==2025.1
-torch==2.6.0
-torchvision==0.21.0
-setuptools<=72.1.0
+openvino==2025.2.0
+torch==2.7.1
+torchvision==0.22.1

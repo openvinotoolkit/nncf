@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -27,12 +26,12 @@ class CompressionRatioCalculator:
 
     def __init__(
         self,
-        flops_per_weighted_module_node: Dict[NNCFNodeName, int],
+        flops_per_weighted_module_node: dict[NNCFNodeName, int],
         quantizer_setup: SingleConfigQuantizerSetup,
-        weight_qp_id_per_activation_qp_id: Dict[QuantizationPointId, QuantizationPointId],
+        weight_qp_id_per_activation_qp_id: dict[QuantizationPointId, QuantizationPointId],
     ):
         self._weight_qp_id_per_activation_qp_id = weight_qp_id_per_activation_qp_id
-        self._flops_per_weight_qp_id: Dict[QuantizationPointId, float] = {}
+        self._flops_per_weight_qp_id: dict[QuantizationPointId, float] = {}
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 target_node_name = qp.insertion_point.target_node_name

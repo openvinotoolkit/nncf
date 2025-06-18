@@ -13,7 +13,7 @@ import datetime
 import itertools
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Tuple, TypeVar
+from typing import Callable, Iterable, Optional, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -141,7 +141,7 @@ def print_results(optimized_model: ov.Model, similarity: float) -> None:
 
 def find_parameters(
     evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset
-) -> Tuple[bool, float, int]:
+) -> tuple[bool, float, int]:
     """
     Find the optimal `awq`, `ratio` and `group_size` for weight compression algorithm.
 
@@ -248,7 +248,6 @@ def main():
         "PERFORMANCE_HINT": "LATENCY",
         "NUM_STREAMS": "1",
         "CACHE_DIR": "",
-        "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
         "KV_CACHE_PRECISION": "f16",
     }
     model = OVModelForCausalLM.from_pretrained(

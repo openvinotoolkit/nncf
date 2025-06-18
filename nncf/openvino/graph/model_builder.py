@@ -9,11 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
-from typing import Dict, List, Tuple
 
-import openvino.runtime as ov
-from openvino.runtime import opset13 as opset
-from openvino.runtime.utils.node_factory import NodeFactory
+import openvino as ov
+from openvino import opset13 as opset
+from openvino.utils.node_factory import NodeFactory
 
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_parameter_node_name
@@ -55,10 +54,10 @@ class OVModelBuilder:
 
     def _collect_graph_nodes(
         self,
-        input_ids: List[Tuple[str, int]],
-        output_ids: List[Tuple[str, int]],
-        node_mapping: Dict[str, ov.Node],
-    ) -> List[ov.Node]:
+        input_ids: list[tuple[str, int]],
+        output_ids: list[tuple[str, int]],
+        node_mapping: dict[str, ov.Node],
+    ) -> list[ov.Node]:
         r"""
         A method for aggregating layers to be further cloned.
         Aggregation is designed in such a way that layers are listed from right to left,
@@ -111,9 +110,9 @@ class OVModelBuilder:
 
     def build(
         self,
-        input_ids: List[Tuple[str, int]],
-        output_ids: List[Tuple[str, int]],
-        node_mapping: Dict[str, ov.Node],
+        input_ids: list[tuple[str, int]],
+        output_ids: list[tuple[str, int]],
+        node_mapping: dict[str, ov.Node],
     ) -> ov.Model:
         r"""
         The basic method of the algorithm. This method uses an aggregated list of layers to be recreated.

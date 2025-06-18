@@ -11,7 +11,6 @@
 
 import sys
 from functools import partial
-from typing import Tuple
 
 import tensorflow as tf
 
@@ -25,7 +24,7 @@ IMAGE_SIZE = 224
 CROP_PADDING = 32
 
 
-def get_model_normalize_fn(model_name: str, means: Tuple[float, ...] = None, stddev: Tuple[float, ...] = None):
+def get_model_normalize_fn(model_name: str, means: tuple[float, ...] = None, stddev: tuple[float, ...] = None):
     """
     Returns a function that normalizes the input image for a specific model.
 
@@ -158,8 +157,8 @@ def imagenet_preprocess_image(
     image_size: int = IMAGE_SIZE,
     is_training: bool = False,
     dtype: tf.dtypes.DType = tf.float32,
-    means: Tuple[float, ...] = None,
-    stddev: Tuple[float, ...] = None,
+    means: tuple[float, ...] = None,
+    stddev: tuple[float, ...] = None,
     model_name: str = None,
 ) -> tf.Tensor:
     """

@@ -10,14 +10,14 @@
 # limitations under the License.
 
 import operator
-from typing import Callable, List, TypeVar, Union
+from typing import Callable, TypeVar, Union
 
 import numpy as np
 
 TTensor = TypeVar("TTensor")
 
 
-def get_subset_indices(errors: List[float], subset_size: int) -> List[int]:
+def get_subset_indices(errors: list[float], subset_size: int) -> list[int]:
     """
     Returns `subset_size` indices of elements in the `errors` list
     that have the biggest error value. Returned indices are sorted in
@@ -32,7 +32,7 @@ def get_subset_indices(errors: List[float], subset_size: int) -> List[int]:
     return sorted(ordered_indices[:end_index])
 
 
-def get_subset_indices_pot_version(errors: List[float], subset_size: int) -> List[int]:
+def get_subset_indices_pot_version(errors: list[float], subset_size: int) -> list[int]:
     """
     POT implementation of the `get_subset_indices()` method.
     """
@@ -43,10 +43,10 @@ def get_subset_indices_pot_version(errors: List[float], subset_size: int) -> Lis
 
 def select_subset(
     subset_size: int,
-    reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
-    approximate_values_for_each_item: Union[List[float], List[List[TTensor]]],
-    error_fn: Callable[[Union[float, List[TTensor]], Union[float, List[TTensor]]], float],
-) -> List[int]:
+    reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
+    approximate_values_for_each_item: Union[list[float], list[list[TTensor]]],
+    error_fn: Callable[[Union[float, list[TTensor]], Union[float, list[TTensor]]], float],
+) -> list[int]:
     """
     Selects first `subset_size` indices of data items for which `error_fn` function gives maximal value.
     Assumes that `reference_values_for_each_item` and `approximate_values_for_each_item` lists have same

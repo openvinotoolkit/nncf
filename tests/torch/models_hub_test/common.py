@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import networkx as nx
 import pytest
@@ -25,13 +25,13 @@ import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.torch.model_creation import wrap_model
 
-ExampleType = Union[Tuple[torch.Tensor, ...], List[torch.Tensor], Dict[str, torch.Tensor]]
+ExampleType = Union[tuple[torch.Tensor, ...], list[torch.Tensor], dict[str, torch.Tensor]]
 
 
 @pytest.mark.models_hub
 class BaseTestModel(ABC):
     @abstractmethod
-    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
+    def load_model(self, model_name: str) -> tuple[nn.Module, ExampleType]:
         """
         Load model by name and create example of input.
 
@@ -89,7 +89,7 @@ def idfn(val):
     return None
 
 
-def get_models_list(path: Path) -> List[ModelInfo]:
+def get_models_list(path: Path) -> list[ModelInfo]:
     """
     Get list of test model from file.
 
@@ -125,7 +125,7 @@ def get_models_list(path: Path) -> List[ModelInfo]:
     return models
 
 
-def get_model_params(path: Path) -> List[Union[ModelInfo, ParameterSet]]:
+def get_model_params(path: Path) -> list[Union[ModelInfo, ParameterSet]]:
     """
     Get test cases from the file.
 

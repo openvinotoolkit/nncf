@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import random
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import torch
 import torch.nn.functional as F
@@ -41,8 +41,8 @@ from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace
 
 KernelSizeType = int
-ElasticKernelConfig = List[KernelSizeType]  # list of kernel sizes per layer
-ElasticKernelSearchSpace = List[List[KernelSizeType]]
+ElasticKernelConfig = list[KernelSizeType]  # list of kernel sizes per layer
+ElasticKernelSearchSpace = list[list[KernelSizeType]]
 
 
 class EKParamsStateNames:
@@ -63,7 +63,7 @@ class ElasticKernelParams(BaseElasticityParams):
         self.max_num_kernels = max_num_kernels
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "ElasticKernelParams":
+    def from_config(cls, config: dict[str, Any]) -> "ElasticKernelParams":
         """
         Creates the object from its config.
         """
@@ -73,7 +73,7 @@ class ElasticKernelParams(BaseElasticityParams):
         return cls(**kwargs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "ElasticKernelParams":
+    def from_state(cls, state: dict[str, Any]) -> "ElasticKernelParams":
         """
         Creates the object from its state.
 
@@ -81,7 +81,7 @@ class ElasticKernelParams(BaseElasticityParams):
         """
         return cls(**state)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns the compression loss state.
 
@@ -138,7 +138,7 @@ class ElasticKernelOp:
         self._active_kernel_size = kernel_size
 
     @property
-    def kernel_size_list(self) -> List[KernelSizeType]:
+    def kernel_size_list(self) -> list[KernelSizeType]:
         """
         Gets list of all available kernel sizes to select from. Each value corresponds to a single element in the
         search space of operation. The search space of the model is cartesian product of search spaces of operation.
@@ -203,7 +203,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
 
     def generate_kernel_size_list(
         self, max_kernel_size: KernelSizeType, original_padding_value: int
-    ) -> List[KernelSizeType]:
+    ) -> list[KernelSizeType]:
         """
         Generates list of available kernel size values.
 
@@ -341,12 +341,12 @@ class ElasticKernelHandler(SingleElasticityHandler):
     An interface for handling elastic kernel dimension in the network, i.e. define size of kernels in the conv layers.
     """
 
-    def __init__(self, elastic_kernel_ops: List[ElasticKernelOp], transformation_commands: List[TransformationCommand]):
+    def __init__(self, elastic_kernel_ops: list[ElasticKernelOp], transformation_commands: list[TransformationCommand]):
         super().__init__()
         self._elastic_kernel_ops = elastic_kernel_ops
         self._transformation_commands = transformation_commands
 
-    def get_transformation_commands(self) -> List[TransformationCommand]:
+    def get_transformation_commands(self) -> list[TransformationCommand]:
         """
         :return: transformation commands for introducing the elasticity to NNCFNetwork
         """
@@ -409,7 +409,7 @@ class ElasticKernelHandler(SingleElasticityHandler):
         for op, ks in zip(self._elastic_kernel_ops, config):
             op.set_active_kernel_size(ks)
 
-    def get_active_kernel_sizes_per_node(self) -> Dict[str, Any]:
+    def get_active_kernel_sizes_per_node(self) -> dict[str, Any]:
         """
         :return: mapping of node name to the active kernel sizes in that node
         """
@@ -435,7 +435,7 @@ class ElasticKernelHandler(SingleElasticityHandler):
         """
         return config
 
-    def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> List[Any]:
+    def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> list[Any]:
         return list(map(selection_rule, self._elastic_kernel_ops))
 
 
@@ -450,11 +450,11 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
     def __init__(
         self,
         params: ElasticKernelParams,
-        ignored_scopes: Optional[List[str]] = None,
-        target_scopes: Optional[List[str]] = None,
+        ignored_scopes: Optional[list[str]] = None,
+        target_scopes: Optional[list[str]] = None,
     ):
         super().__init__(ignored_scopes, target_scopes)
-        self._node_names_to_make_elastic: List[NNCFNodeName] = []
+        self._node_names_to_make_elastic: list[NNCFNodeName] = []
         self._params = params
 
     def build(self, target_model: NNCFNetwork) -> ElasticKernelHandler:
@@ -465,7 +465,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         :param target_model: a target NNCFNetwork for adding modifications
         :return: a handler object that can manipulate the elastic kernel.
         """
-        elastic_kernel_ops: List[ElasticKernelOp] = []
+        elastic_kernel_ops: list[ElasticKernelOp] = []
         transformation_commands = []
 
         graph = target_model.nncf.get_original_graph()
@@ -474,7 +474,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
 
         if not self._node_names_to_make_elastic:
             elastic_kernel_types = [NNCFConv2d.op_func_name]
-            all_elastic_kernel_nodes: List[NNCFNode] = graph.get_nodes_by_types(elastic_kernel_types)
+            all_elastic_kernel_nodes: list[NNCFNode] = graph.get_nodes_by_types(elastic_kernel_types)
             self._node_names_to_make_elastic = [node.node_name for node in all_elastic_kernel_nodes]
 
         for node_name in self._node_names_to_make_elastic:
@@ -534,7 +534,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
 
         return ElasticKernelHandler(elastic_kernel_ops, transformation_commands)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Initializes object from the state.
 
@@ -550,7 +550,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         self._params = params
         self._node_names_to_make_elastic = state[self._state_names.NODE_NAMES_TO_MAKE_ELASTIC]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.

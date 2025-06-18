@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -26,7 +26,7 @@ class NSParamsStateNames:
 class NASSchedulerParams:
     _state_names = NSParamsStateNames
 
-    def __init__(self, list_stage_descriptions: Optional[List[StageDescriptor]] = None):
+    def __init__(self, list_stage_descriptions: Optional[list[StageDescriptor]] = None):
         """
         Constructor
 
@@ -49,7 +49,7 @@ class NASSchedulerParams:
         self.list_stage_descriptions = list_stage_descriptions
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "NASSchedulerParams":
+    def from_config(cls, config: dict[str, Any]) -> "NASSchedulerParams":
         """
         Creates the object from its config.
         """
@@ -60,7 +60,7 @@ class NASSchedulerParams:
         return cls(descs)
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "NASSchedulerParams":
+    def from_state(cls, state: dict[str, Any]) -> "NASSchedulerParams":
         """
         Creates the object from its state.
 
@@ -70,7 +70,7 @@ class NASSchedulerParams:
         list_stage_descriptions = [StageDescriptor.from_state(state) for state in list_stage_descriptions_state]
         return cls(list_stage_descriptions)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns the compression loss state.
 
@@ -101,8 +101,8 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         self,
         training_ctrl: BNASTrainingAlgorithm,
         params: NASSchedulerParams,
-        available_elasticity_dims: List[ElasticityDim],
-        progressivity_of_elasticity: List[ElasticityDim],
+        available_elasticity_dims: list[ElasticityDim],
+        progressivity_of_elasticity: list[ElasticityDim],
     ):
         super().__init__()
         self._training_ctrl = training_ctrl
@@ -131,7 +131,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         return self._lr_scheduler.current_step
 
     @property
-    def list_stage_descriptors(self) -> List[StageDescriptor]:
+    def list_stage_descriptors(self) -> list[StageDescriptor]:
         """
         :return: a list of stage descriptors (parameters of the training stage).
         """
@@ -142,7 +142,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         return self._list_stage_descriptors
 
     @list_stage_descriptors.setter
-    def list_stage_descriptors(self, stage_descriptors: List[StageDescriptor]) -> None:
+    def list_stage_descriptors(self, stage_descriptors: list[StageDescriptor]) -> None:
         """
         Sets a given stage descriptors to the schedule. Can be used on loading state from a checkpoint.
 
@@ -186,7 +186,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         """
         return self.current_stage_idx == len(self.list_stage_descriptors) - 1
 
-    def get_current_stage_desc(self) -> Tuple[Optional[StageDescriptor], int]:
+    def get_current_stage_desc(self) -> tuple[Optional[StageDescriptor], int]:
         """
         :return: current stage descriptor and its index in the list of all descriptors
         """
@@ -208,7 +208,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
             total_epochs += stage_desc.epochs
         return total_epochs
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Loads the compression scheduler state, but does not update the state of the
         compression method.
@@ -220,7 +220,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         # No conflict resolving with the related config options, parameters are overridden by compression state
         self.list_stage_descriptors = list(map(StageDescriptor.from_state, list_stage_descriptors))
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns the compression scheduler state.
 
@@ -231,7 +231,7 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         return state
 
     def _validate_elasticity_dims(
-        self, available_elasticity_dims: List[ElasticityDim], progressivity_of_elasticity: List[ElasticityDim]
+        self, available_elasticity_dims: list[ElasticityDim], progressivity_of_elasticity: list[ElasticityDim]
     ) -> None:
         last_stage = -1
         first_stage = len(progressivity_of_elasticity)

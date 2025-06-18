@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Dict, List, NoReturn
+from typing import Any, Callable, NoReturn
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -49,9 +49,9 @@ class ProgressiveShrinkingController(BNASTrainingController):
         target_model: NNCFNetwork,
         elasticity_ctrl: ElasticityController,
         bn_adaptation: BatchnormAdaptationAlgorithm,
-        progressivity_of_elasticity: List[ElasticityDim],
+        progressivity_of_elasticity: list[ElasticityDim],
         schedule_params: NASSchedulerParams,
-        lr_schedule_config: Dict[str, Any],
+        lr_schedule_config: dict[str, Any],
         compression_loss_func: Callable,
     ):
         super().__init__(target_model)
@@ -93,7 +93,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         return self._lr_schedule_config
 
     @lr_schedule_config.setter
-    def lr_schedule_config(self, val: Dict[str, Any]) -> NoReturn:
+    def lr_schedule_config(self, val: dict[str, Any]) -> NoReturn:
         self._lr_schedule_config = val
 
     @property
@@ -206,7 +206,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
             return CompressionStage.FULLY_COMPRESSED
         return CompressionStage.PARTIALLY_COMPRESSED
 
-    def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:
+    def load_state(self, state: dict[str, dict[str, Any]]) -> None:
         """
         Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.
 
@@ -217,7 +217,7 @@ class ProgressiveShrinkingController(BNASTrainingController):
         elasticity_ctrl_state = state[self._ps_state_names.ELASTICITY_CONTROLLER_STATE]
         self._elasticity_ctrl.load_state(elasticity_ctrl_state)
 
-    def get_state(self) -> Dict[str, Dict[str, Any]]:
+    def get_state(self) -> dict[str, dict[str, Any]]:
         """
         Returns compression controller state, which is the map of the algorithm name to the dictionary with the
         corresponding state attributes.

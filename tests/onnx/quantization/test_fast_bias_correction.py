@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import numpy as np
 import onnx
@@ -31,7 +30,7 @@ def get_data_from_node(model: onnx.ModelProto, node_name: str):
 
 class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
-    def list_to_backend_type(data: List) -> np.ndarray:
+    def list_to_backend_type(data: list) -> np.ndarray:
         return np.array(data)
 
     @staticmethod

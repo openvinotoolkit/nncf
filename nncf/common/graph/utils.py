@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Set, Tuple, Type, Union
+from typing import Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -24,7 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.pruning.utils import traverse_function
 
 
-def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
+def get_concat_axis(input_shapes: list[list[int]], output_shapes: list[list[int]]) -> int:
     """
     Returns concatenation axis by given input and output shape of concat node.
 
@@ -51,7 +51,7 @@ def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]
     return axis
 
 
-def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
+def get_first_nodes_of_type(graph: NNCFGraph, op_types: list[str]) -> list[NNCFNode]:
     """
     Looking for first node in graph with type in `op_types`.
     First == layer with type in `op_types`, that there is a path from the input such that there are no other
@@ -72,7 +72,7 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
     return first_nodes_of_type
 
 
-def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
+def get_split_axis(input_shapes: list[list[int]], output_shapes: list[list[int]]) -> int:
     """
     Returns split/chunk axis by given input and output shape of split/chunk node.
 
@@ -95,8 +95,8 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
 
 def get_number_of_quantized_ops(
     graph: NNCFGraph,
-    quantizer_metatypes: List[Type[OperatorMetatype]],
-    quantizable_metatypes: List[Type[OperatorMetatype]],
+    quantizer_metatypes: list[type[OperatorMetatype]],
+    quantizable_metatypes: list[type[OperatorMetatype]],
 ) -> int:
     """
     Returns the number of quantized operations in the graph.
@@ -109,8 +109,8 @@ def get_number_of_quantized_ops(
         that may be quantized.
     :return: Number of quantized operations in the graph.
     """
-    quantized_ops: Set[NNCFNode] = set()
-    nodes_to_see: List[NNCFNode] = []
+    quantized_ops: set[NNCFNode] = set()
+    nodes_to_see: list[NNCFNode] = []
 
     for quantizer_node in graph.get_nodes_by_metatypes(quantizer_metatypes):
         nodes_to_see.extend(graph.get_next_nodes(quantizer_node))
@@ -124,8 +124,8 @@ def get_number_of_quantized_ops(
 
 
 def get_reduction_axes(
-    channel_axes: Union[List[int], Tuple[int, ...]], shape: Union[List[int], Tuple[int, ...]]
-) -> Tuple[int, ...]:
+    channel_axes: Union[list[int], tuple[int, ...]], shape: Union[list[int], tuple[int, ...]]
+) -> tuple[int, ...]:
     """
     Returns filtered reduction axes without axes that correspond to channels.
 
@@ -139,7 +139,7 @@ def get_reduction_axes(
     return tuple(reduction_axes)
 
 
-def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> List[int]:
+def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> list[int]:
     """
     Returns hard-coded weights shape layout for the given layer attributes.
     Applicable only for eager PyTorch and Tensorflow models.

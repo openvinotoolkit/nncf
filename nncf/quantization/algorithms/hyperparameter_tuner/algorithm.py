@@ -14,7 +14,7 @@ import dataclasses
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, Mapping, Optional, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -32,11 +32,11 @@ from nncf.quantization.algorithms.pipeline import collect_statistics
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
-CombinationKey = Tuple[int, ...]
-Combination = Dict[str, Any]
+CombinationKey = tuple[int, ...]
+Combination = dict[str, Any]
 
 
-def create_combinations(param_grid: Dict[str, List[Any]]) -> Dict[CombinationKey, Combination]:
+def create_combinations(param_grid: dict[str, list[Any]]) -> dict[CombinationKey, Combination]:
     """
     Creates combinations as follows:
       * All keys in `param_grid` are numbered using integers from 0 to N = len(param_grid)-1
@@ -62,7 +62,7 @@ def create_combinations(param_grid: Dict[str, List[Any]]) -> Dict[CombinationKey
         indices.append([None, *range(len(values))])
         simple_changes.append([{param_name: v} for v in values])
 
-    combinations: Dict[CombinationKey, Combination] = {}
+    combinations: dict[CombinationKey, Combination] = {}
 
     for combination_key in itertools.product(*indices):
         combination: Combination = {}
@@ -86,7 +86,7 @@ def is_dataclass_instance(obj: Any) -> bool:
     return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 
-def apply_combination(init_params: Dict[str, Any], combination: Combination) -> Dict[str, Any]:
+def apply_combination(init_params: dict[str, Any], combination: Combination) -> dict[str, Any]:
     """
     Applies combination of parameters to initial parameters.
 
@@ -135,9 +135,9 @@ def print_combination_and_score(
 
 
 def find_best_combination(
-    combinations: Dict[CombinationKey, Combination],
+    combinations: dict[CombinationKey, Combination],
     combination_score_func: Callable[[CombinationKey], float],
-    param_grid: Dict[str, List[Any]],
+    param_grid: dict[str, list[Any]],
 ) -> CombinationKey:
     """
     Finds best combination.
@@ -220,10 +220,10 @@ class HyperparameterTuner:
     def __init__(
         self,
         pipeline_fn: Callable[..., Pipeline],
-        init_params: Dict[str, Any],
-        param_grids: List[Dict[str, List[Any]]],
+        init_params: Mapping[str, Any],
+        param_grids: list[dict[str, list[Any]]],
         calibration_dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+        validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
         subset_size: int,
         initial_metric_results: MetricResults,
         quantized_metric_results: MetricResults,
@@ -255,10 +255,10 @@ class HyperparameterTuner:
         self._error_fn = None
 
         # Will be initialized inside `_prepare_pipeline_step()` method
-        self._pipelines: Dict[CombinationKey, Pipeline] = {}
-        self._step_index_to_statistics: Dict[int, StatisticPointsContainer] = {}
+        self._pipelines: dict[CombinationKey, Pipeline] = {}
+        self._step_index_to_statistics: dict[int, StatisticPointsContainer] = {}
 
-        self._calculated_scores: Dict[CombinationKey, float] = {}
+        self._calculated_scores: dict[CombinationKey, float] = {}
 
     def apply(self, model: TModel, validation_dataset: Dataset) -> TModel:
         """
@@ -333,7 +333,7 @@ class HyperparameterTuner:
         step_index: int,
         step_model: TModel,
         step_graph: NNCFGraph,
-        step_combinations: Dict[CombinationKey, Combination],
+        step_combinations: dict[CombinationKey, Combination],
         best_settings,
     ) -> None:
         """
@@ -376,7 +376,7 @@ class HyperparameterTuner:
         step_model: TModel,
         step_graph: NNCFGraph,
         dataset: Dataset,
-        subset_indices: List[int],
+        subset_indices: list[int],
     ) -> float:
         """
         Calculates score for provided combination.
@@ -401,7 +401,7 @@ class HyperparameterTuner:
 
         return score
 
-    def _validate_model(self, model: TModel, dataset: Dataset, subset_indices: List[int]) -> float:
+    def _validate_model(self, model: TModel, dataset: Dataset, subset_indices: list[int]) -> float:
         """
         Validates input model on subset.
 

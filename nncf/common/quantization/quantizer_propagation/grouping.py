@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import copy
-from typing import Dict, Optional, Set
+from typing import Optional
 
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 
@@ -23,14 +23,14 @@ class UnifiedScalePropagatingQuantizerGroupManager:
 
     def __init__(self) -> None:
         self._next_gid = 0
-        self._group_vs_prop_quants_dict: Dict[int, Set[PropagatingQuantizer]] = {}
+        self._group_vs_prop_quants_dict: dict[int, set[PropagatingQuantizer]] = {}
 
     def _get_next_gid(self) -> int:
         retval = self._next_gid
         self._next_gid += 1
         return retval
 
-    def register_group(self, prop_quants: Set[PropagatingQuantizer]) -> int:
+    def register_group(self, prop_quants: set[PropagatingQuantizer]) -> int:
         """
         Registers a set of propagating quantizers as a new group.
 
@@ -69,7 +69,7 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         """
         self._group_vs_prop_quants_dict[group].remove(prop_quant)
 
-    def get_group_vs_prop_quants_dict(self) -> Dict[int, Set[PropagatingQuantizer]]:
+    def get_group_vs_prop_quants_dict(self) -> dict[int, set[PropagatingQuantizer]]:
         """
         :return: A dictionary of groups vs propagating quantizers currently associated with the corresponding group.
         """
@@ -109,8 +109,8 @@ class QuantizersWaitingForMergeManager:
     """
 
     def __init__(self) -> None:
-        self._branching_node_keys_vs_quantizers_waiting_for_merge: Dict[str, Set[PropagatingQuantizer]] = {}
-        self._quantizers_vs_branching_node_keys: Dict[PropagatingQuantizer, str] = {}
+        self._branching_node_keys_vs_quantizers_waiting_for_merge: dict[str, set[PropagatingQuantizer]] = {}
+        self._quantizers_vs_branching_node_keys: dict[PropagatingQuantizer, str] = {}
 
     def add_propagating_quantizer_to_wait_on_node_key(self, pq: PropagatingQuantizer, branching_node_key: str) -> None:
         """
@@ -134,7 +134,7 @@ class QuantizersWaitingForMergeManager:
         """
         return self._quantizers_vs_branching_node_keys[pq]
 
-    def get_waiting_quantizers_for_branching_node_key(self, node_key: str) -> Set[PropagatingQuantizer]:
+    def get_waiting_quantizers_for_branching_node_key(self, node_key: str) -> set[PropagatingQuantizer]:
         """
         Returns the set of all quantizers registered to be "waiting" on a given node key in
         QuantizerPropagationStateGraph.

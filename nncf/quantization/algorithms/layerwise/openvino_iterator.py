@@ -11,9 +11,9 @@
 
 from collections import defaultdict
 from itertools import islice
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -39,10 +39,10 @@ class OVLayerwiseIterator(LayerwiseIterator):
         self,
         model: ov.Model,
         graph: NNCFGraph,
-        schedule: List[LayerwiseStep],
+        schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[Dict[NodeOutputPort, List[Tensor]]] = None,
+        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
     ):
         """
         :param model: The OpenVINO model to iterate over.
@@ -57,11 +57,11 @@ class OVLayerwiseIterator(LayerwiseIterator):
         self._schedule = schedule
         self._dataset = dataset
         self._subset_size = subset_size
-        self._cache: Dict[NodeOutputPort, List[Tensor]] = {}
-        self._cache_lifetime: Dict[NodeOutputPort, int] = {}
+        self._cache: dict[NodeOutputPort, list[Tensor]] = {}
+        self._cache_lifetime: dict[NodeOutputPort, int] = {}
 
         self._step_index = 0
-        self._queue: List[Tuple[NNCFNode, Dict[int, List[Tensor]]]] = []
+        self._queue: list[tuple[NNCFNode, dict[int, list[Tensor]]]] = []
 
         if cache is not None:
             self.update_cache(cache)
@@ -72,7 +72,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
             input.node.get_friendly_name(): next(iter(input.names)) for input in model.inputs
         }
 
-    def extract_model(self, input_ids: List[NodeOutputPort], output_ids: List[NodeOutputPort]) -> ov.Model:
+    def extract_model(self, input_ids: list[NodeOutputPort], output_ids: list[NodeOutputPort]) -> ov.Model:
         """
         Extracts submodel by the specified input & output layers.
 
@@ -86,7 +86,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
         extracted_model = self._model_transformer.transform(transformation_layout)
         return extracted_model
 
-    def create_feed_dicts(self, input_ids: List[NodeOutputPort]) -> List[Dict]:
+    def create_feed_dicts(self, input_ids: list[NodeOutputPort]) -> list[dict]:
         """
         Creates a list of dictionaries containing the input data for model execution.
 
@@ -110,8 +110,8 @@ class OVLayerwiseIterator(LayerwiseIterator):
         return feed_dicts
 
     def run_model(
-        self, model: ov.Model, feed_dicts: List[Dict], output_ids: List[NodeOutputPort]
-    ) -> Dict[NodeOutputPort, List[Tensor]]:
+        self, model: ov.Model, feed_dicts: list[dict], output_ids: list[NodeOutputPort]
+    ) -> dict[NodeOutputPort, list[Tensor]]:
         """
         Runs the submodel with the given input data and collects the output tensors.
 
@@ -141,7 +141,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
                 return idx
         return -1
 
-    def update_cache(self, outputs: Dict[NodeOutputPort, List[Tensor]]) -> None:
+    def update_cache(self, outputs: dict[NodeOutputPort, list[Tensor]]) -> None:
         """
         Updates the cache with new output tensors and removes expired ones.
 
@@ -164,7 +164,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
         self._cache = updated_cache
         self._cache_lifetime = updated_cache_lifetime
 
-    def collect_output_tensors(self, step: LayerwiseStep) -> Dict[NodeOutputPort, List[Tensor]]:
+    def collect_output_tensors(self, step: LayerwiseStep) -> dict[NodeOutputPort, list[Tensor]]:
         """
         Collects the output tensors for a given step.
 
@@ -208,7 +208,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
         extracted_model = self.extract_model(subgraph_inputs, subgraph_outputs)
         return self.run_model(extracted_model, feed_dicts, subgraph_outputs)
 
-    def __next__(self) -> Tuple[NNCFNode, Dict[int, List[Tensor]]]:
+    def __next__(self) -> tuple[NNCFNode, dict[int, list[Tensor]]]:
         """
         Advances to the next layer in the iteration.
 

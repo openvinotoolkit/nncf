@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, List, Tuple, TypeVar
+from typing import Callable, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -30,7 +30,7 @@ TTensor = TypeVar("TTensor")
 class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
-    def convolution_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatypes(self) -> list[OperatorMetatype]:
         """
         Parameter for backend-specific metatypes for Convolution.
 
@@ -39,7 +39,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def matmul_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> list[OperatorMetatype]:
         """
         Parameter for backend-specific metatypes for MatMul.
 
@@ -48,7 +48,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+    def quantize_agnostic_metatypes(self) -> list[OperatorMetatype]:
         """
         Parameter for backend-specific quantize agnostic metatypes.
 
@@ -100,7 +100,7 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         """
         Returns TensorCollector with MaxAggregator and AbsMaxReducer.
@@ -141,7 +141,7 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: TTensor, source_output_port_id: int, nodes: List[NNCFNode]
+        source_node: NNCFNode, scale_value: TTensor, source_output_port_id: int, nodes: list[NNCFNode]
     ) -> TransformationCommand:
         """
         Returns command to insert Smooth Quant node.

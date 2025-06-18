@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Optional, Set, Tuple
+from typing import Optional
 
 import torch.fx
 
@@ -50,7 +50,7 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]
+        input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> PTModelExtractionCommand:
         return PTModelExtractionCommand([inp_id[0] for inp_id in input_ids], [out_id[0] for out_id in output_ids])
 
@@ -72,7 +72,7 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_raw_stat_collector(num_samples)
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: int) -> Tensor:
+    def process_model_output(raw_data: dict, output_name: int) -> Tensor:
         return Tensor(raw_data[output_name])
 
     @staticmethod

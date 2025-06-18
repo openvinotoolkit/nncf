@@ -18,6 +18,8 @@ from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import get_pruning_baseline_config
 from tests.torch.pruning.helpers import get_pruning_exponential_config
 
+pytestmark = pytest.mark.legacy
+
 
 def test_baseline_scheduler():
     """

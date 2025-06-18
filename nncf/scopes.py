@@ -12,7 +12,7 @@
 import re
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -33,11 +33,11 @@ class Subgraph:
     :type outputs: List[str]
     """
 
-    inputs: List[str] = field(default_factory=list)
-    outputs: List[str] = field(default_factory=list)
+    inputs: list[str] = field(default_factory=list)
+    outputs: list[str] = field(default_factory=list)
 
 
-def get_ignored_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -> List[str]:
+def get_ignored_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -> list[str]:
     """
     Returns all names that should be ignored according to given subgraph.
 
@@ -109,10 +109,10 @@ class IgnoredScope:
     :type types: bool
     """
 
-    names: List[str] = field(default_factory=list)
-    patterns: List[str] = field(default_factory=list)
-    types: List[str] = field(default_factory=list)
-    subgraphs: List[Subgraph] = field(default_factory=list)
+    names: list[str] = field(default_factory=list)
+    patterns: list[str] = field(default_factory=list)
+    types: list[str] = field(default_factory=list)
+    subgraphs: list[Subgraph] = field(default_factory=list)
     validate: bool = True
 
 
@@ -133,7 +133,7 @@ def get_difference_ignored_scope(ignored_scope_1: IgnoredScope, ignored_scope_2:
     )
 
 
-def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List[str]:
+def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> list[str]:
     """
     Convert the contents of the `IgnoredScope` class to the legacy ignored
     scope format.
@@ -141,7 +141,7 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     :param ignored_scope: The ignored scope.
     :return: An ignored scope in the legacy format as list.
     """
-    results: List[str] = []
+    results: list[str] = []
     if ignored_scope is None:
         return results
     results.extend(ignored_scope.names)
@@ -154,8 +154,8 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
 
 
 def get_matched_ignored_scope_info(
-    ignored_scope: IgnoredScope, nncf_graphs: List[NNCFGraph]
-) -> Tuple[IgnoredScope, Dict[str, Set[str]]]:
+    ignored_scope: IgnoredScope, nncf_graphs: list[NNCFGraph]
+) -> tuple[IgnoredScope, dict[str, set[str]]]:
     """
     Returns matched ignored scope for provided graphs along with all found matches.
     The resulted ignored scope consist of all matched rules.
@@ -202,7 +202,7 @@ def get_matched_ignored_scope_info(
     return matched_ignored_scope, matches
 
 
-def _info_matched_ignored_scope(matches: Dict[str, Set[str]]) -> None:
+def _info_matched_ignored_scope(matches: dict[str, set[str]]) -> None:
     """
     Log matches.
 
@@ -252,7 +252,7 @@ def _check_ignored_scope_strictly_matched(ignored_scope: IgnoredScope, matched_i
 
 def get_ignored_node_names_from_ignored_scope(
     ignored_scope: IgnoredScope, nncf_graph: NNCFGraph, strict: bool = True
-) -> Set[str]:
+) -> set[str]:
     """
     Returns ignored names according to ignored scope and NNCFGraph.
     If strict is True, raises nncf.ValidationError if any ignored rule was not matched.
@@ -270,7 +270,7 @@ def get_ignored_node_names_from_ignored_scope(
     return {name for match in matches.values() for name in match}
 
 
-def validate_ignored_scope(ignored_scope: IgnoredScope, nncf_graphs: List[NNCFGraph]) -> None:
+def validate_ignored_scope(ignored_scope: IgnoredScope, nncf_graphs: list[NNCFGraph]) -> None:
     """
     Passes whether all rules at 'ignored_scope' have matches at provided graphs, otherwise - raises ValidationError.
 

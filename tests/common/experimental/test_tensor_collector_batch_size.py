@@ -10,7 +10,6 @@
 # limitations under the License.
 from abc import ABC
 from abc import abstractmethod
-from typing import List
 
 import numpy as np
 import pytest
@@ -43,14 +42,14 @@ class TemplateTestTensorCollectorBatchSize(ABC):
     def to_backend_tensor(self, tensor: np.ndarray):
         pass
 
-    def create_dataitems_without_batch_dim(self, input_shape: List[int], length: int = 100) -> List[np.ndarray]:
+    def create_dataitems_without_batch_dim(self, input_shape: list[int], length: int = 100) -> list[np.ndarray]:
         rng = np.random.default_rng(seed=0)
         data_items = []
         for _ in range(length):
             data_items.append(rng.uniform(0, 1, input_shape))
         return data_items
 
-    def add_batch_dim_to_dataitems(self, data_items: List[np.ndarray], batch_size: int) -> List[np.ndarray]:
+    def add_batch_dim_to_dataitems(self, data_items: list[np.ndarray], batch_size: int) -> list[np.ndarray]:
         assert batch_size >= 1
         dataset = []
         item = []

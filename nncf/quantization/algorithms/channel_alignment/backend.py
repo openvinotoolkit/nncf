@@ -11,7 +11,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Tuple, TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 
@@ -74,7 +74,7 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_activation_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_node(node: NNCFNode) -> tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to activation input and output edges for
         the node.
@@ -85,7 +85,7 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_weights_port_ids_for_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_weights_port_ids_for_node(node: NNCFNode) -> tuple[int, int]:
         """
         Returns Input Port ID and Output Port ID corresponding to node weights input port id and
         constant output port id the node.

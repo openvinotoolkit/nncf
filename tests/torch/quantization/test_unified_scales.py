@@ -12,7 +12,6 @@
 import itertools
 from collections import Counter
 from functools import partial
-from typing import Dict, List
 
 import onnx
 import pytest
@@ -287,9 +286,9 @@ def make_insertion_point_for_coalescing_test(node_name: NNCFNodeName, input_port
     ],
 )
 def test_insertion_point_coalescing(
-    input_insertion_points: List[PTTargetPoint],
-    linked_scopes_groups_list: List[List[str]],
-    ref_coalesced_ip_lists: List[List[PTTargetPoint]],
+    input_insertion_points: list[PTTargetPoint],
+    linked_scopes_groups_list: list[list[str]],
+    ref_coalesced_ip_lists: list[list[PTTargetPoint]],
 ):
     if ref_coalesced_ip_lists is None:
         with pytest.raises((nncf.InternalError, nncf.ValidationError)):
@@ -525,7 +524,7 @@ class TwoEmbeddingAddModel(torch.nn.Module):
 
 class TestsWithONNXInspection:
     @staticmethod
-    def get_fq_nodes(onnx_model: onnx.ModelProto) -> List[onnx.NodeProto]:
+    def get_fq_nodes(onnx_model: onnx.ModelProto) -> list[onnx.NodeProto]:
         return get_nodes_by_type(onnx_model, "FakeQuantize")
 
     @staticmethod
@@ -562,8 +561,8 @@ class TestsWithONNXInspection:
         return False
 
     @staticmethod
-    def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[List[onnx.NodeProto]]:
-        output_nodes: Dict[str, List[onnx.NodeProto]] = {}
+    def group_nodes_by_output_target(nodes: list[onnx.NodeProto], graph: onnx.GraphProto) -> list[list[onnx.NodeProto]]:
+        output_nodes: dict[str, list[onnx.NodeProto]] = {}
         for node in nodes:
             succs = get_successors(node, graph)
             assert len(succs) == 1

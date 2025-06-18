@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from nncf.common.utils.backend import BackendType
 
 
-def validate_backend(metadata: Dict[str, Any], backend: BackendType) -> None:
+def validate_backend(metadata: dict[str, Any], backend: BackendType) -> None:
     """
     Checks whether backend in metadata is equal to a provided backend.
 
@@ -30,7 +30,7 @@ def validate_backend(metadata: Dict[str, Any], backend: BackendType) -> None:
         raise ValueError(msg)
 
 
-def validate_statistics_files_exist(metadata: Dict[str, Any], dir_path: Path) -> None:
+def validate_statistics_files_exist(metadata: dict[str, Any], dir_path: Path) -> None:
     """
     Checks whether all statistics files exist.
 
@@ -44,7 +44,7 @@ def validate_statistics_files_exist(metadata: Dict[str, Any], dir_path: Path) ->
             raise FileNotFoundError(msg)
 
 
-def validate_cache(metadata: Dict[str, Any], dir_path: Path, backend: BackendType) -> None:
+def validate_cache(metadata: dict[str, Any], dir_path: Path, backend: BackendType) -> None:
     """
     Validates cache directory.
 

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
 
 import tensorflow as tf
 
@@ -57,7 +56,7 @@ def strip(
         model = copy_model(model)
         wrapped_layers = collect_wrapped_layers(model)
 
-    op_to_priority: Dict[NNCFOperation, int] = {
+    op_to_priority: dict[NNCFOperation, int] = {
         SymmetricQuantizer: 1,
         AsymmetricQuantizer: 1,
         BinaryMask: 2,

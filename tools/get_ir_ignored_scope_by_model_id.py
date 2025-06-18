@@ -11,9 +11,9 @@
 
 import sys
 from argparse import ArgumentParser
-from typing import List, Optional
+from typing import Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 
 def print_ignored_scope_by_model_name(model_name: str, xml_path: str, bin_path: str) -> None:
@@ -32,7 +32,7 @@ def print_ignored_scope_by_model_name(model_name: str, xml_path: str, bin_path: 
         print(name)
 
 
-def mobilenet_v3_large_tf_torch_is(ov_model: ov.Model) -> Optional[List[str]]:
+def mobilenet_v3_large_tf_torch_is(ov_model: ov.Model) -> Optional[list[str]]:
     for node in ov_model.get_ordered_ops():
         if node.type_info.name == "GroupConvolution":
             return [node.get_friendly_name()]
@@ -47,7 +47,7 @@ def get_next_nodes(node, output_port):
     return [x.get_node() for x in node.output(output_port).target_inputs]
 
 
-def mobilenet_v3_large_tf2_is(ov_model: ov.Model) -> Optional[List[str]]:
+def mobilenet_v3_large_tf2_is(ov_model: ov.Model) -> Optional[list[str]]:
     retval = []
 
     for node in ov_model.get_ordered_ops():
@@ -62,7 +62,7 @@ def mobilenet_v3_large_tf2_is(ov_model: ov.Model) -> Optional[List[str]]:
     return None
 
 
-def ssd_resnet34_1200_caffe_is(ov_model: ov.Model) -> Optional[List[str]]:
+def ssd_resnet34_1200_caffe_is(ov_model: ov.Model) -> Optional[list[str]]:
     for result in ov_model.get_results():
         prev_node = get_prev_node(result, 0)
         if prev_node.type_info.name == "Add":
@@ -70,7 +70,7 @@ def ssd_resnet34_1200_caffe_is(ov_model: ov.Model) -> Optional[List[str]]:
     return None
 
 
-def east_resnet_v1_50_tf_is(ov_model: ov.Model) -> Optional[List[str]]:
+def east_resnet_v1_50_tf_is(ov_model: ov.Model) -> Optional[list[str]]:
     idx = 0
     for node in ov_model.get_ordered_ops()[::-1]:
         if node.type_info.name == "Concat":

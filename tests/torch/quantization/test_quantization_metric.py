@@ -21,6 +21,8 @@ from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatistic
 from tests.torch import test_models
 from tests.torch.helpers import register_bn_adaptation_init_args
 
+pytestmark = pytest.mark.legacy
+
 
 def get_basic_quantization_config():
     config = NNCFConfig()

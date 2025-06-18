@@ -18,10 +18,10 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
+from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
@@ -34,10 +34,10 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.helpers import create_depthwise_conv
-from tests.torch.ptq.helpers import get_nncf_network
-from tests.torch.ptq.helpers import get_single_conv_nncf_graph
-from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
 from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
+from tests.torch2.function_hook.quantization.helper import get_nncf_network
+from tests.torch2.function_hook.quantization.helper import get_single_conv_nncf_graph
+from tests.torch2.function_hook.quantization.helper import get_single_no_weight_matmul_nncf_graph
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:

@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -24,6 +25,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_algo_quantization import get_squeezenet_quantization_config
 from tests.torch.test_models import squeezenet1_1
+
+pytestmark = pytest.mark.legacy
 
 
 def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):

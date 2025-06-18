@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
 
 import tensorflow as tf
 
@@ -29,7 +28,7 @@ def resize_image(image: tf.Tensor, height: int, width: int) -> tf.Tensor:
 
 
 def mean_image_subtraction(
-    image: tf.Tensor, means: Tuple[float, ...], num_channels: int = 3, dtype: tf.dtypes.DType = tf.float32
+    image: tf.Tensor, means: tuple[float, ...], num_channels: int = 3, dtype: tf.dtypes.DType = tf.float32
 ) -> tf.Tensor:
     """
     Subtracts the given means from each image channel.
@@ -56,7 +55,7 @@ def mean_image_subtraction(
 
 
 def standardize_image(
-    image: tf.Tensor, stddev: Tuple[float, ...], num_channels: int = 3, dtype: tf.dtypes.DType = tf.float32
+    image: tf.Tensor, stddev: tuple[float, ...], num_channels: int = 3, dtype: tf.dtypes.DType = tf.float32
 ) -> tf.Tensor:
     """
     Divides the given stddev from each image channel.
@@ -84,8 +83,8 @@ def standardize_image(
 
 def normalize(
     image: tf.Tensor,
-    means: Tuple[float, ...],
-    stddev: Tuple[float, ...],
+    means: tuple[float, ...],
+    stddev: tuple[float, ...],
     num_channels: int = 3,
     dtype: tf.dtypes.DType = tf.float32,
 ) -> tf.Tensor:

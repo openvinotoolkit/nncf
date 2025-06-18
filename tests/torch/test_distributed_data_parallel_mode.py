@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import time
-from typing import Tuple
 
 import pytest
 import torch
@@ -22,10 +21,12 @@ from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
 from tests.torch.helpers import create_random_mock_dataloader
 
+pytestmark = pytest.mark.legacy
+
 
 class ModelWithChangedTrain(nn.Module):
     def __init__(
-        self, in_out_channels: Tuple[Tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)), freezing_stages: int = -1
+        self, in_out_channels: tuple[tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)), freezing_stages: int = -1
     ):
         super().__init__()
         self.freezing_stages = freezing_stages

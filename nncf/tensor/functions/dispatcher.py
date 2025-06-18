@@ -17,12 +17,9 @@ from inspect import getfullargspec
 from typing import (
     Any,
     Callable,
-    Dict,
-    List,
     MutableMapping,
     Protocol,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -118,15 +115,15 @@ def tensor_dispatcher(func: Callable[P, R]) -> DispatchCallable[P, R]:
 
 def _find_arguments_to_unwrap(
     parameters: types.MappingProxyType[str, inspect.Parameter],
-) -> Tuple[List[int], List[str]]:
+) -> tuple[list[int], list[str]]:
     """
     Get the arguments to unwrap from a given function.
 
     :param parameters: The parameters of the function.
     :return: A tuple containing two lists - the indexes of the arguments to unwrap and their names.
     """
-    indexes: List[int] = []
-    names: List[str] = []
+    indexes: list[int] = []
+    names: list[str] = []
     for idx, (name, param) in enumerate(parameters.items()):
         if inspect.Parameter.empty is param.annotation:
             msg = f"Argument {name} has no annotation"
@@ -258,13 +255,13 @@ def _wrap_output(ret_val: Any, ret_ann: Any) -> Any:
     """
     if ret_ann is Tensor:
         return Tensor(ret_val)
-    if ret_ann == List[Tensor]:
+    if ret_ann == list[Tensor]:
         return [Tensor(x) for x in ret_val]
-    if ret_ann == Tuple[Tensor, ...]:
+    if ret_ann == tuple[Tensor, ...]:
         return tuple(Tensor(x) for x in ret_val)
     if get_origin(ret_ann) is tuple:
         return tuple(Tensor(x) if a is Tensor else x for x, a in zip(ret_val, get_args(ret_ann)))
-    if ret_ann == Dict[str, Tensor]:
+    if ret_ann == dict[str, Tensor]:
         return {k: Tensor(v) for k, v in ret_val.items()}
     return ret_val
 
@@ -285,6 +282,14 @@ def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[...
         from nncf.tensor.functions import torch_numeric
 
         return getattr(torch_numeric, fn_name)
+    if backend == TensorBackend.tf:
+        from nncf.tensor.functions import tf_numeric
+
+        return getattr(tf_numeric, fn_name)
+    if backend == TensorBackend.ov:
+        from nncf.tensor.functions import openvino_numeric
+
+        return getattr(openvino_numeric, fn_name)
     msg = f"Unsupported backend type: {backend}"
     raise ValueError(msg)
 
@@ -301,6 +306,10 @@ def get_io_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[..., Any
         from nncf.tensor.functions import numpy_io
 
         return getattr(numpy_io, fn_name)
+    if backend == TensorBackend.tf:
+        from nncf.tensor.functions import tf_io
+
+        return getattr(tf_io, fn_name)
     if backend == TensorBackend.torch:
         from nncf.tensor.functions import torch_io
 

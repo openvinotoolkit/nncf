@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import torch.fx
 import torch.utils._pytree as pytree
@@ -77,8 +77,8 @@ class ConstantFolder(torch.fx.Interpreter):
         gm: torch.fx.GraphModule,
     ) -> None:
         super().__init__(gm)
-        self.node_replacements: Dict[torch.fx.Node, Any] = {}
-        self.replaced_uses: Dict[torch.fx.Node, int] = collections.Counter()
+        self.node_replacements: dict[torch.fx.Node, Any] = {}
+        self.replaced_uses: dict[torch.fx.Node, int] = collections.Counter()
         self.unknown_value = object()
 
         # overwrite this to deallocate env values if their only remaining use
@@ -122,7 +122,7 @@ class ConstantFolder(torch.fx.Interpreter):
             return True
         return False
 
-    def node_to_last_non_output_use(self) -> Dict[torch.fx.Node, List[torch.fx.Node]]:
+    def node_to_last_non_output_use(self) -> dict[torch.fx.Node, list[torch.fx.Node]]:
         last_non_output_use = collections.defaultdict(list)
         seen_uses = set()
         output_node = next(iter(reversed(self.module.graph.nodes)))
@@ -215,11 +215,11 @@ class ConstantFolder(torch.fx.Interpreter):
         self.node_replacements[node] = tensor
 
     def run(self) -> Any:  # type: ignore[override]
-        env: Dict[torch.fx.Node, Any] = {}
+        env: dict[torch.fx.Node, Any] = {}
         self.insert_placeholder_values(env)
         return super().run(initial_env=env)
 
-    def insert_placeholder_values(self, env: Dict[torch.fx.Node, Any]) -> None:
+    def insert_placeholder_values(self, env: dict[torch.fx.Node, Any]) -> None:
         for n in self.module.graph.find_nodes(op="placeholder"):
             env[n] = self.unknown_value  # type: ignore[assignment]
 

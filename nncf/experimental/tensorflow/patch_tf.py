@@ -11,7 +11,7 @@
 
 import functools
 import inspect
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import tensorflow as tf
 from tensorflow.python.eager import context
@@ -33,7 +33,7 @@ class Hook:
     these operations should be applied.
     """
 
-    def __init__(self, operations: List[NNCFOperation], target_point: TFTargetPoint, ops_weights: Dict[str, Any]):
+    def __init__(self, operations: list[NNCFOperation], target_point: TFTargetPoint, ops_weights: dict[str, Any]):
         """
         Initializes the hook.
 
@@ -59,7 +59,7 @@ class Hook:
         self._arg_provider = arg_provider_cls()
 
     @property
-    def operations(self) -> List[NNCFOperation]:
+    def operations(self) -> list[NNCFOperation]:
         return self._operations
 
     @property
@@ -155,7 +155,7 @@ class TensorFlowOpWrapper:
         return getattr(self._op, name)
 
     @staticmethod
-    def _apply_hooks(hooks: List[Hook], args, kwargs):
+    def _apply_hooks(hooks: list[Hook], args, kwargs):
         """
         Applies hooks.
 
@@ -208,7 +208,7 @@ class TFPatcher:
         tf.name_scope.__enter__ = TFPatcher._wrap_name_scope_v2_enter_fn(tf.name_scope.__enter__)
 
     @staticmethod
-    def _get_ops_info(op_type_names: Optional[List[str]] = None):
+    def _get_ops_info(op_type_names: Optional[list[str]] = None):
         raw_ops = inspect.getmembers(tf.raw_ops, predicate=inspect.isfunction)
         op_type_name_to_fn_map = dict(raw_ops)
 

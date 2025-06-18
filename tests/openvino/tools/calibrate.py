@@ -24,14 +24,14 @@ from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from itertools import islice
-from typing import Any, Dict, Iterable, List, Optional, TypeVar
+from typing import Any, Iterable, Optional, TypeVar
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pkg_resources
 from config import Config
-from openvino.runtime import Dimension
-from openvino.runtime import PartialShape
+from openvino import Dimension
+from openvino import PartialShape
 
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
@@ -988,10 +988,10 @@ class ACDataset:
         self._indices = list(range(model_evaluator.dataset.full_size))
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[List[int]] = None):
+    def get_data(self, indices: Optional[list[int]] = None):
         return DataProvider(self._indices, None, indices)
 
-    def get_inference_data(self, indices: Optional[List[int]] = None):
+    def get_inference_data(self, indices: Optional[list[int]] = None):
         return DataProvider(ACDattasetWrapper(self._model_evaluator), self._transform_func, indices)
 
 
@@ -1085,7 +1085,7 @@ def update_accuracy_checker_config(accuracy_checker_config: Config, batch_size: 
             print(f"Updated batch size value to {batch_size}")
 
 
-def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, Any]], batch_size: int) -> None:
+def update_nncf_algorithms_config(nncf_algorithms_config: dict[str, dict[str, Any]], batch_size: int) -> None:
     """
     Updates subset_size parameter depending on batch_size and subset_size from an algorithm config.
 

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple, Union
+from typing import Union
 
 import tensorflow as tf
 
@@ -47,7 +47,7 @@ def get_reduction_shape_weights(
     return tuple(reduction_shape)
 
 
-def convert_rs_to_pt_type(input_shape: Tuple[int], reduction_shape: ReductionAxes) -> ReductionAxes:
+def convert_rs_to_pt_type(input_shape: tuple[int], reduction_shape: ReductionAxes) -> ReductionAxes:
     if len(reduction_shape) == len(input_shape):
         pt_reduction_shape = [1]
     else:

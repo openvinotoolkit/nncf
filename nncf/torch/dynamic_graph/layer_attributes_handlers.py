@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFGraph
@@ -147,8 +147,8 @@ def _get_const_attrs_from_args_kwargs(args, _) -> ConstantLayerAttributes:
 
 
 def apply_args_defaults(
-    args: List[Any], kwargs: Dict[str, Any], args_signature=List[Union[str, Tuple[str, Any]]]
-) -> Dict[str, Any]:
+    args: list[Any], kwargs: dict[str, Any], args_signature=list[Union[str, tuple[str, Any]]]
+) -> dict[str, Any]:
     """
     Combines positional arguments (`args`) and keyword arguments (`kwargs`)
     according to the provided `args_signature`.
@@ -170,7 +170,7 @@ def apply_args_defaults(
     # Manual defines function signature necessary because inspection of torch function is not available
     # https://github.com/pytorch/pytorch/issues/74539
 
-    args_dict: Dict[str, Any] = dict()
+    args_dict: dict[str, Any] = dict()
     for idx, arg_desc in enumerate(args_signature):
         if isinstance(arg_desc, str):
             if arg_desc in kwargs:
@@ -180,7 +180,7 @@ def apply_args_defaults(
             else:
                 msg = "Incorrect args_signature, can not by applied to function arguments."
                 raise ValueError(msg)
-        elif isinstance(arg_desc, Tuple):
+        elif isinstance(arg_desc, tuple):
             arg_name, default = arg_desc
             args_dict[arg_name] = kwargs.get(arg_name, args[idx] if idx < len(args) else default)
         else:
@@ -229,7 +229,7 @@ LAYER_NORM_FUNC_SIGNATURE = [
 ]
 
 
-def _get_conv_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str, Any]) -> ConvolutionLayerAttributes:
+def _get_conv_attrs_from_args_kwargs(args: list[Any], kwargs: dict[str, Any]) -> ConvolutionLayerAttributes:
     args_dict = apply_args_defaults(args, kwargs, CONV_FUNC_SIGNATURE)
 
     kernel_size = tuple(args_dict["weight"].shape[2:])
@@ -250,7 +250,7 @@ def _get_conv_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str, Any]) ->
     )
 
 
-def _get_conv_transpose_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str, Any]) -> ConvolutionLayerAttributes:
+def _get_conv_transpose_attrs_from_args_kwargs(args: list[Any], kwargs: dict[str, Any]) -> ConvolutionLayerAttributes:
     args_dict = apply_args_defaults(args, kwargs, CONV_TRANSPOSE_FUNC_SIGNATURE)
 
     kernel_size = tuple(args_dict["weight"].shape[2:])

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import torch
@@ -47,7 +47,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+        input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]
     ) -> PTModelExtractionCommand:
         return PTModelExtractionCommand([input_ids[0][0]], [output_ids[0][0]])
 
@@ -61,12 +61,12 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: torch.fx.GraphModule) -> Tuple[Optional[int], int]:
+    def get_sub_input_output_names(subgraph: torch.fx.GraphModule) -> tuple[Optional[int], int]:
         # Pytorch does not have name for extracted node
         return None, 0
 
     @staticmethod
-    def create_input_data(shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int) -> torch.Tensor:
+    def create_input_data(shape: tuple[int], data: list[Tensor], input_name: str, channel_axis: int) -> torch.Tensor:
         blob = torch.zeros(shape, dtype=data[0].data.dtype, device=data[0].data.device)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
@@ -78,11 +78,11 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_bias_value(node, nncf_graph, model)
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> tuple[int, int]:
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: int) -> Tensor:
+    def process_model_output(raw_data: dict, output_name: int) -> Tensor:
         return Tensor(raw_data[output_name])
 
     @staticmethod
@@ -94,9 +94,9 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[str, str]:
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         return node.metatype.output_channel_axis

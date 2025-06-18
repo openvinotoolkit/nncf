@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import namedtuple
-from typing import List, Optional, Type
+from typing import Optional
 
 import tensorflow as tf
 
@@ -28,25 +28,25 @@ KERAS_LAYER_METATYPES = OperatorMetatypeRegistry("keras_layer_metatypes")
 
 
 class TFLayerMetatype(OperatorMetatype):
-    keras_layer_names: List[str] = []
-    subtypes: List[Type[OperatorMetatype]] = []
+    keras_layer_names: list[str] = []
+    subtypes: list[type[OperatorMetatype]] = []
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return cls.subtypes
 
     @classmethod
-    def determine_subtype(cls, layer: tf.keras.layers.Layer) -> Optional[Type[OperatorMetatype]]:
+    def determine_subtype(cls, layer: tf.keras.layers.Layer) -> Optional[type[OperatorMetatype]]:
         return cls._determine_subtype(layer)
 
     @classmethod
     def determine_subtype_wrapped_layer(
         cls, layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.layers.Wrapper] = None
-    ) -> Optional[Type[OperatorMetatype]]:
+    ) -> Optional[type[OperatorMetatype]]:
         return cls._determine_subtype(layer, wrapper)
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return cls.keras_layer_names
 
     @classmethod
@@ -56,7 +56,7 @@ class TFLayerMetatype(OperatorMetatype):
     @classmethod
     def _determine_subtype(
         cls, layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.layers.Wrapper] = None
-    ) -> Optional[Type[OperatorMetatype]]:
+    ) -> Optional[type[OperatorMetatype]]:
         matches = []
         for subtype in cls.get_subtypes():
             if subtype.matches(layer, wrapper):
@@ -74,7 +74,7 @@ class TFLayerMetatype(OperatorMetatype):
 
 
 class TFLayerWithWeightsMetatype(TFLayerMetatype):
-    weight_definitions: List[WeightDef] = []
+    weight_definitions: list[WeightDef] = []
     bias_attr_name: Optional[str] = None
 
 
@@ -84,7 +84,7 @@ class TFLayerNoopMetatype(TFLayerMetatype):
     name = "noop"
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [cls.name]
 
 
@@ -558,13 +558,13 @@ class TFTensorFlowOpLayerMetatype(TFLayerMetatype):
     keras_layer_names = ["TensorFlowOpLayer"]
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return list(TF_OPERATION_METATYPES.registry_dict.values())
 
     @classmethod
     def determine_subtype(
         cls, layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.layers.Wrapper] = None
-    ) -> Optional[Type[OperatorMetatype]]:
+    ) -> Optional[type[OperatorMetatype]]:
         return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.node_def.op)
 
 
@@ -574,13 +574,13 @@ class TFOpLambdaMetatype(TFLayerMetatype):
     keras_layer_names = ["TFOpLambda"]
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return list(TF_OPERATION_METATYPES.registry_dict.values())
 
     @classmethod
     def determine_subtype(
         cls, layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.layers.Wrapper] = None
-    ) -> Optional[Type[OperatorMetatype]]:
+    ) -> Optional[type[OperatorMetatype]]:
         return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.symbol)
 
 
@@ -590,13 +590,13 @@ class TFSlicingOpLambdaMetatype(TFLayerMetatype):
     keras_layer_names = ["SlicingOpLambda"]
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return list(TF_OPERATION_METATYPES.registry_dict.values())
 
     @classmethod
     def determine_subtype(
         cls, layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.layers.Wrapper] = None
-    ) -> Optional[Type[OperatorMetatype]]:
+    ) -> Optional[type[OperatorMetatype]]:
         return TF_OPERATION_METATYPES.get_operator_metatype_by_op_name(layer.symbol)
 
 
@@ -606,11 +606,11 @@ class TFNNCFWrapperLayerMetatype(TFLayerMetatype):
     keras_layer_names = ["NNCFWrapper"]
 
     @classmethod
-    def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
+    def get_subtypes(cls) -> list[type[OperatorMetatype]]:
         return list(KERAS_LAYER_METATYPES.registry_dict.values())
 
     @classmethod
-    def determine_subtype(cls, layer: tf.keras.layers.Layer) -> Optional[Type[OperatorMetatype]]:
+    def determine_subtype(cls, layer: tf.keras.layers.Layer) -> Optional[type[OperatorMetatype]]:
         unwrapped_layer = layer.layer
         unwrapped_layer_metatype = KERAS_LAYER_METATYPES.get_operator_metatype_by_op_name(
             unwrapped_layer.__class__.__name__
@@ -623,7 +623,7 @@ class TFNNCFWrapperLayerMetatype(TFLayerMetatype):
     @classmethod
     def _determine_subtype(
         cls, layer: tf.keras.layers.Layer, wrapper: Optional[tf.keras.layers.Wrapper] = None
-    ) -> Optional[Type[OperatorMetatype]]:
+    ) -> Optional[type[OperatorMetatype]]:
         unwrapped_layer = layer.layer
         return super()._determine_subtype(unwrapped_layer, wrapper)
 

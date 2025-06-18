@@ -11,7 +11,6 @@
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Tuple
 
 import numpy as np
 import openvino as ov
@@ -25,7 +24,7 @@ from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 
 
-def convert_torch_model(model: torch.nn.Module, input_shape: Tuple[int], tmp_path: Path) -> ov.Model:
+def convert_torch_model(model: torch.nn.Module, input_shape: tuple[int], tmp_path: Path) -> ov.Model:
     model_tmp_path = tmp_path / ("model.onnx")
     with torch.no_grad():
         torch.onnx.export(model, torch.ones(input_shape), model_tmp_path)

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
 
 import pytest
 
@@ -42,7 +41,7 @@ class TestOVMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 
 
 class TestOVGetTargetPointShape(TemplateTestGetTargetPointShape, TestOVMinMaxAlgorithm):
-    def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
+    def get_nncf_graph(self, weight_port_id: int, weight_shape: tuple[int]) -> NNCFGraph:
         conv_layer_attrs = OVLayerAttributes({weight_port_id: {"name": "dummy", "shape": weight_shape, "dtype": "f32"}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs).nncf_graph
 
@@ -57,17 +56,17 @@ class TestOVGetChannelAxes(TemplateTestGetChannelAxes, TestOVMinMaxAlgorithm):
         return OVMatMulMetatype
 
     @staticmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> OVLayerAttributes:
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> OVLayerAttributes:
         constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape, "dtype": "f32"}}
         return OVLayerAttributes(constant_attributes, {}, {})
 
     @staticmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> OVLayerAttributes:
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: tuple[int]) -> OVLayerAttributes:
         return TestOVGetChannelAxes.get_conv_node_attrs(weight_port_id, weight_shape)
 
     @staticmethod
     def get_matmul_node_attrs(
-        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+        weight_port_id: int, transpose_weight: tuple[int], weight_shape: tuple[int]
     ) -> OVLayerAttributes:
         constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape, "dtype": "f32"}}
         constant_attributes[weight_port_id]["transpose"] = transpose_weight

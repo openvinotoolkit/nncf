@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -29,18 +29,18 @@ class ALoss(CompressionLoss):
     def calculate(self, *args, **kwargs) -> Any:
         pass
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         self.state = state.get(STATE_ATTR)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {STATE_ATTR: self.state}
 
 
 class BLoss(ALoss):
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         self.state = state.get(DIFF_STATE_ATTR)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {DIFF_STATE_ATTR: self.state}
 
 
@@ -54,18 +54,18 @@ class AScheduler(CompressionScheduler):
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         pass
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         self.state = state.get(STATE_ATTR)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {STATE_ATTR: self.state}
 
 
 class BScheduler(AScheduler):
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         self.state = state.get(DIFF_STATE_ATTR)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {DIFF_STATE_ATTR: self.state}
 
 
@@ -85,7 +85,7 @@ class A(BaseCompressionAlgorithmController):
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
-    def get_compression_state(self) -> Dict[str, Any]:
+    def get_compression_state(self) -> dict[str, Any]:
         pass
 
     def statistics(self, quickly_collected_only: bool = False) -> Statistics:
@@ -114,16 +114,16 @@ class CA(CompositeCompressionAlgorithmController):
     def name(self) -> str:
         pass
 
-    def get_compression_state(self) -> Dict[str, Any]:
+    def get_compression_state(self) -> dict[str, Any]:
         pass
 
     def export_model(
         self,
         save_path: str,
         save_format: Optional[str] = None,
-        input_names: Optional[List[str]] = None,
-        output_names: Optional[List[str]] = None,
-        model_args: Optional[Tuple[Any, ...]] = None,
+        input_names: Optional[list[str]] = None,
+        output_names: Optional[list[str]] = None,
+        model_args: Optional[tuple[Any, ...]] = None,
     ) -> None:
         pass
 

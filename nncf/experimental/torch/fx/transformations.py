@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import copy
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import torch
 import torch.fx
@@ -43,7 +43,7 @@ BaseArgumentTypes = Union[
     torch.layout,
     torch._ops.OpOverload,
 ]
-Argument = Optional[Union[Tuple[Any, ...], List[Any], Dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes]]
+Argument = Optional[Union[tuple[Any, ...], list[Any], dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes]]
 
 QUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
@@ -70,7 +70,7 @@ QDQ_PAIR = {
 
 def _set_new_node_meta(
     new_node: torch.fx.Node,
-    prev_nodes: Tuple[Argument, ...],
+    prev_nodes: tuple[Argument, ...],
     target_module: torch.nn.Module,
     model: torch.fx.GraphModule,
 ):
@@ -100,7 +100,7 @@ def _set_new_node_meta(
 
 
 def module_insertion_transformation_builder(
-    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint], target_module_name: str
+    module_to_insert: torch.nn.Module, target_points: list[PTTargetPoint], target_module_name: str
 ) -> TransformationFNType:
     """
     Returns transformation which inserts given module to a target model
@@ -139,7 +139,7 @@ def module_insertion_transformation_builder(
 
 
 def leaf_module_insertion_transformation_builder(
-    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint], target_module_name: str
+    module_to_insert: torch.nn.Module, target_points: list[PTTargetPoint], target_module_name: str
 ) -> TransformationFNType:
     """
     Returns transformation which inserts given module to a target model
@@ -219,7 +219,7 @@ def constant_update_fn(
 
 
 def qdq_insertion_transformation_builder(
-    quantizer: FakeQuantize, target_points: List[PTTargetPoint]
+    quantizer: FakeQuantize, target_points: list[PTTargetPoint]
 ) -> TransformationFNType:
     """
     Returns transformation which inserts quantize-dequantize operations with parameters
@@ -383,27 +383,21 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
     # use the same qparams from quantize op
     dq_inputs = [quantized_node] + quantize_op_inputs[1:]
-    if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-        user_dq_nodes = []
-        with graph.inserting_after(quantized_node):
-            for user in target_node.users:
+
+    with graph.inserting_after(quantized_node):
+        dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
+        dq_node.meta["val"] = copy(meta_val)
+        if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+            for user in list(target_node.users):
                 if user is quantized_node:
                     continue
-                dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
-                dq_node.meta["val"] = copy(meta_val)
-                user_dq_nodes.append((user, dq_node))
+                user.replace_input_with(target_node, dq_node)
 
-        for user, dq_node in user_dq_nodes:
-            user.replace_input_with(target_node, dq_node)
-    elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
-        with graph.inserting_after(quantized_node):
-            dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
-            dq_node.meta["val"] = copy(meta_val)
-
-        target_node.replace_input_with(input_node, dq_node)
-    else:
-        msg = f"Unexpected target type: {target_point.target_type}"
-        raise nncf.InternalError(msg)
+        elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
+            target_node.replace_input_with(input_node, dq_node)
+        else:
+            msg = f"Unexpected target type: {target_point.target_type}"
+            raise nncf.InternalError(msg)
 
 
 def _insert_call_module(
@@ -514,7 +508,7 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def _get_pattern_replacement_per_channel() -> Tuple[
+def _get_pattern_replacement_per_channel() -> tuple[
     Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]
 ]:
     """
@@ -537,7 +531,7 @@ def _get_pattern_replacement_per_channel() -> Tuple[
     return pattern_per_channel, replacement_graph_per_channel
 
 
-def _get_pattern_replacement_per_tensor() -> Tuple[
+def _get_pattern_replacement_per_tensor() -> tuple[
     Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]
 ]:
     """
@@ -574,7 +568,7 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
         _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
 
 
-def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[Tuple[Union[torch.Tensor, int]]]:
+def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[tuple[Union[torch.Tensor, int]]]:
     """
     Gets the inputs for the Quantize node which quantize the weights. Otherwise returns None.
 

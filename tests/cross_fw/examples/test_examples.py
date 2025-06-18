@@ -14,7 +14,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -68,8 +68,8 @@ def _is_connection_error(txt: str) -> bool:
 def test_examples(
     tmp_path: Path,
     example_name: str,
-    example_params: Dict[str, Any],
-    backends_list: List[str],
+    example_params: dict[str, Any],
+    backends_list: list[str],
     is_check_performance: bool,
     ov_version_override: str,
     data: str,
@@ -86,7 +86,7 @@ def test_examples(
     skip_if_backend_not_selected(backend, backends_list)
     if reuse_venv:
         # Use example directory as tmp_path
-        tmp_path = Path(example_params["requirements"]).parent
+        tmp_path = (PROJECT_ROOT / example_params["requirements"]).parent
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:
@@ -97,8 +97,8 @@ def test_examples(
     if ov_version_override is not None:
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         uninstall_cmd_line = f"{pip_with_venv} uninstall --yes openvino-genai openvino_tokenizers"
-        extra_index_url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
-        wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
+        extra_index_url = "https://storage.openvinotoolkit.org/simple/wheels/pre-release/"
+        wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git@releases/2025/2#subdirectory=tools/who_what_benchmark"
         wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
         subprocess.run(uninstall_cmd_line, check=True, shell=True)

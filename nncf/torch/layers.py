@@ -10,7 +10,7 @@
 # limitations under the License.
 import math
 import numbers
-from typing import Dict, Tuple, Union
+from typing import Union
 
 import torch
 import torch.nn.functional as F
@@ -30,7 +30,7 @@ from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.utils import no_jit_trace
 
 
-def dict_update(src: Dict, dst: Dict, recursive: bool = True):
+def dict_update(src: dict, dst: dict, recursive: bool = True):
     for name, value in src.items():
         if recursive and name in dst and isinstance(value, dict):
             dict_update(value, dst[name], recursive)
@@ -541,7 +541,7 @@ class LSTMCellForwardNNCF(nn.Module):
         self.input_linear = input_linear
         self.hidden_linear = hidden_linear
 
-    def forward(self, input_: torch.Tensor, hidden: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, input_: torch.Tensor, hidden: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         hx, cx = hidden
         gates = self.input_linear(input_) + self.hidden_linear(hx)
 
@@ -890,14 +890,14 @@ class NNCF_RNN(nn.Module):
 
     def permute_hidden(
         self, hx: torch.Tensor, permutation: torch.Tensor
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ) -> Union[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         if permutation is None:
             return hx
         return self.apply_permutation(hx[0], permutation), self.apply_permutation(hx[1], permutation)
 
     def prepare_hidden(
         self, hx: torch.Tensor, permutation: torch.Tensor
-    ) -> Union[torch.Tensor, Tuple[Tuple[torch.Tensor, ...], Tuple[torch.Tensor, ...]]]:
+    ) -> Union[torch.Tensor, tuple[tuple[torch.Tensor, ...], tuple[torch.Tensor, ...]]]:
         if permutation is None:
             return hx
         split_size = len(hx[0])

@@ -10,8 +10,9 @@
 # limitations under the License.
 
 
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Optional, TypeVar
 
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -22,7 +23,6 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
@@ -50,33 +50,33 @@ class PTOperatorMetatype(OperatorMetatype):
     :param subtypes: List of subtypes of PyTorch operator.
     """
 
-    external_op_names: List[str] = []
+    external_op_names: list[str] = []
     num_expected_input_edges: Optional[int] = None
-    weight_port_ids: List[int] = []
+    weight_port_ids: list[int] = []
 
-    module_to_function_names: Dict[NamespaceTarget, List[str]] = {
+    module_to_function_names: dict[NamespaceTarget, list[str]] = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
         NamespaceTarget.TORCH_TENSOR: [],
         NamespaceTarget.TORCH: [],
         NamespaceTarget.ATEN: [],
     }
 
-    subtypes: List[Type["PTOperatorMetatype"]] = []
+    subtypes: list[type["PTOperatorMetatype"]] = []
 
     @classmethod
-    def get_subtypes(cls) -> List[Type["PTOperatorMetatype"]]:
+    def get_subtypes(cls) -> list[type["PTOperatorMetatype"]]:
         return cls.subtypes.copy()
 
     @classmethod
-    def get_all_namespace_to_function_names(cls) -> Dict[NamespaceTarget, List[str]]:
+    def get_all_namespace_to_function_names(cls) -> dict[NamespaceTarget, list[str]]:
         output = dict(cls.module_to_function_names)
         output[NamespaceTarget.EXTERNAL] = cls.external_op_names
         return output
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         output = set()
-        for _, function_names in cls.module_to_function_names.items():
+        for function_names in cls.module_to_function_names.values():
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
@@ -542,6 +542,12 @@ class PTSILUMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTSELUMetatype(PTOperatorMetatype):
+    name = "SeluOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["selu"]}
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTSigmoidMetatype(PTOperatorMetatype):
     name = "SigmoidOp"
     module_to_function_names = {
@@ -681,7 +687,7 @@ class PTAddmmMetatype(PTOperatorMetatype):
     # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
     # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication
     # and therefore won't quantize the bias input, as this would break the hardware-fused pattern.
-    ignored_input_ports: List[int] = [0]
+    ignored_input_ports: list[int] = [0]
     num_expected_input_edges = 2
     weight_port_ids = [1, 2]
 
@@ -729,14 +735,14 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     }
     subtypes = [PTModuleBatchNormMetatype]
 
-    if is_experimental_torch_tracing_enabled():
-        # torch.batch_norm
-        weight_port_ids = [1]
-        bias_port_id = 2
-    else:
+    if is_torch_tracing_by_patching():
         # torch.nn.functional.batch_norm
         weight_port_ids = [3]
         bias_port_id = 4
+    else:
+        # torch.batch_norm
+        weight_port_ids = [1]
+        bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -1137,7 +1143,7 @@ class PTSinMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH: ["sin"]}
 
 
-def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
+def get_operator_metatypes() -> list[type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
 

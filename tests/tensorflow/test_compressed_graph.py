@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import os
-from typing import List
 
 import networkx as nx
 import pytest
@@ -181,7 +180,7 @@ class ModelDesc:
         model_builder,
         input_sample_sizes,
         rename_resource_nodes=False,
-        ignored_scopes: List[str] = None,
+        ignored_scopes: list[str] = None,
         unstable_node_names: bool = False,
     ):
         self.model_name, _ = os.path.splitext(ref_graph_filename)

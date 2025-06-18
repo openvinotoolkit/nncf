@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -113,6 +113,11 @@ def _(a: torch.Tensor, shape: T_SHAPE) -> torch.Tensor:
     return a.reshape(shape)
 
 
+@numeric.atleast_1d.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.atleast_1d(a)  # type: ignore
+
+
 @numeric.all.register
 def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     if axis is None:
@@ -194,12 +199,12 @@ def _(x: Sequence[torch.Tensor], axis: int = 0) -> torch.Tensor:
 
 
 @numeric.concatenate.register
-def _(x: List[torch.Tensor], axis: int = 0) -> torch.Tensor:
+def _(x: list[torch.Tensor], axis: int = 0) -> torch.Tensor:
     return torch.concatenate(x, dim=axis)
 
 
 @numeric.unstack.register
-def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
+def _(x: torch.Tensor, axis: int = 0) -> list[torch.Tensor]:
     if not list(x.shape):
         x = x.unsqueeze(0)
     return list(torch.unbind(x, dim=axis))
@@ -248,7 +253,7 @@ def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
 @numeric.quantile.register
 def quantile(
     a: torch.Tensor,
-    q: Union[float, List[float]],
+    q: Union[float, list[float]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -270,7 +275,7 @@ def quantile(
 @numeric.percentile.register
 def _(
     a: torch.Tensor,
-    q: Union[float, List[float]],
+    q: Union[float, list[float]],
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -428,7 +433,7 @@ def _(
 
 
 def zeros(
-    shape: Tuple[int, ...],
+    shape: tuple[int, ...],
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,

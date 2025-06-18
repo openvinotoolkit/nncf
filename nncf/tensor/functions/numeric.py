@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Sequence, Union
 
 import numpy as np
 
@@ -47,7 +47,7 @@ def backend(a: Tensor) -> TensorBackend:
 
 
 @tensor_dispatcher
-def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
+def squeeze(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
     """
     Remove axes of length one from a.
 
@@ -70,7 +70,7 @@ def flatten(a: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
-def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def max(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -83,7 +83,7 @@ def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
 
 
 @tensor_dispatcher
-def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def min(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -135,6 +135,17 @@ def reshape(a: Tensor, shape: T_SHAPE) -> Tensor:
     :param a: Tensor to be reshaped.
     :param shape: The new shape should be compatible with the original shape.
     :return: Reshaped tensor.
+    """
+
+
+@tensor_dispatcher
+def atleast_1d(a: Tensor) -> Tensor:
+    """
+    Convert input to tensor with at least one dimension.
+
+    Scalar inputs is converted to 1-dimensional tensor, whilst higher-dimensional inputs are preserved.
+    :param a: Input tensor.
+    :return: Tensor with at least 1-dimension.
     """
 
 
@@ -284,7 +295,7 @@ def stack(x: Sequence[Tensor], axis: int = 0) -> Tensor:
 
 
 @tensor_dispatcher
-def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
+def concatenate(x: list[Tensor], axis: int = 0) -> Tensor:
     """
     Join a sequence of arrays along an existing axis.
 
@@ -295,7 +306,7 @@ def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
 
 
 @tensor_dispatcher
-def unstack(x: Tensor, axis: int = 0) -> List[Tensor]:
+def unstack(x: Tensor, axis: int = 0) -> list[Tensor]:
     """
     Unstack a Tensor into list.
 
@@ -306,7 +317,7 @@ def unstack(x: Tensor, axis: int = 0) -> List[Tensor]:
 
 
 @tensor_dispatcher
-def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> Tensor:
+def moveaxis(a: Tensor, source: Union[int, tuple[int, ...]], destination: Union[int, tuple[int, ...]]) -> Tensor:
     """
     Move axes of an array to new positions.
 
@@ -371,7 +382,7 @@ def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
 @tensor_dispatcher
 def quantile(
     a: Tensor,
-    q: Union[float, List[float]],
+    q: Union[float, list[float]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> Tensor:
@@ -392,7 +403,7 @@ def quantile(
 @tensor_dispatcher
 def percentile(
     a: Tensor,
-    q: Union[float, List[float]],
+    q: Union[float, list[float]],
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> Tensor:
@@ -480,7 +491,7 @@ def item(a: Tensor) -> Union[int, float, bool]:
 
 
 @tensor_dispatcher
-def sum(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def sum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Sum of tensor elements over a given axis.
 
@@ -505,7 +516,7 @@ def multiply(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
 
 
 @tensor_dispatcher
-def var(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0) -> Tensor:
+def var(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0) -> Tensor:
     """
     Compute the variance along the specified axis.
 
@@ -674,7 +685,7 @@ def searchsorted(
 
 
 def zeros(
-    shape: Tuple[int, ...],
+    shape: tuple[int, ...],
     *,
     backend: TensorBackend,
     dtype: Optional[TensorDataType] = None,
@@ -806,7 +817,7 @@ def as_numpy_tensor(a: Tensor) -> Tensor:
     Convert tensor to numpy.
     In certain cases, this conversion may involve data copying, depending on the
     data type or device. Specifically:
-      - OV: if tensors data type is bf16, u4 or i4.
+      - OV: if tensors data type is bfloat16, f8e4m3, f8e5m2, nf4, uint4 or int4.
       - PT: if tensors on the GPU or data type is not supported on Numpy.
 
     :param a: Tensor to change backend for.

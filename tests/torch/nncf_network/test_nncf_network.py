@@ -14,7 +14,7 @@ import inspect
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Callable, Type
+from typing import Callable
 
 import pytest
 import torch
@@ -55,6 +55,8 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nncf_network.helpers import SimplestModel
 from tests.torch.test_models.synthetic import ManyNonEvalModules
+
+pytestmark = pytest.mark.legacy
 
 
 @pytest.fixture()
@@ -455,7 +457,7 @@ class EvilSelfForwardProvider(ReplacementForwardProvider):
 @pytest.mark.parametrize(
     "replacement_forward_provider_cls", [ArgDecoratorForward, ArgAndKwargWrapsForward, EvilSelfForwardProvider]
 )
-def test_replacing_forward_of_original_model(replacement_forward_provider_cls: Type[ReplacementForwardProvider]):
+def test_replacing_forward_of_original_model(replacement_forward_provider_cls: type[ReplacementForwardProvider]):
     model = BasicConvTestModel()
     provider = replacement_forward_provider_cls()
     replacement_forward = provider.get_replacement_forward(model)

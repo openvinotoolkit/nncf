@@ -11,7 +11,7 @@
 
 import math
 from abc import abstractmethod
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.experimental.torch.nas.bootstrapNAS.training.stage_descriptor import StageDescriptor
@@ -99,7 +99,7 @@ class LRSchedulerParams:
         self.warmup_lr = warmup_lr
 
     @classmethod
-    def from_dict(cls, lr_scheduler_config: Dict[str, Any]) -> "LRSchedulerParams":
+    def from_dict(cls, lr_scheduler_config: dict[str, Any]) -> "LRSchedulerParams":
         """
         Initialize learning rate scheduler parameters storage class from Dict.
         :param lr_scheduler_config: Dict with parameters of learning rate scheduler.
@@ -128,10 +128,10 @@ class BaseLRScheduler(BaseCompressionScheduler):
         pass
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any], optimizer: OptimizerType):
+    def from_state(cls, state: dict[str, Any], optimizer: OptimizerType):
         return cls(optimizer, **state)
 
-    def get_last_lr(self) -> List[Any]:
+    def get_last_lr(self) -> list[Any]:
         return [group["lr"] for group in self._optimizer.param_groups]
 
 
@@ -188,7 +188,7 @@ class GlobalLRScheduler(BaseLRScheduler):
                 lr_schedule_type="cosine",
             )
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state_dict = {
             "num_steps_in_epoch": self._num_steps_in_epoch,
             "base_lr": self._base_lr,
@@ -229,7 +229,7 @@ class StageLRScheduler(BaseLRScheduler):
             lr_schedule_type="cosine",
         )
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state_dict = {
             "num_steps_in_epoch": self._num_steps_in_epoch,
             "init_lr": self._init_lr,

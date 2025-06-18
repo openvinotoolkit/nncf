@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Deque, List, Tuple, Union
+from collections import deque
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
@@ -36,11 +37,11 @@ class TFNNCFCollectorTensorProcessor:
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, tuple[int, ...], list[int]], keepdims: bool = False) -> NNCFTensor:
         return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, tuple[int, ...], list[int]], keepdims: bool = False) -> NNCFTensor:
         return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
@@ -56,16 +57,16 @@ class TFNNCFCollectorTensorProcessor:
         return TFNNCFTensor(tf.math.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, tuple[int, ...], list[int]], keepdims=False) -> NNCFTensor:
         return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def stack(x: Union[List[tf.Tensor], Deque[tf.Tensor]], axis: int = 0) -> NNCFTensor:
+    def stack(x: Union[list[tf.Tensor], deque[tf.Tensor]], axis: int = 0) -> NNCFTensor:
         x = [t.tensor for t in x]
         return TFNNCFTensor(tf.stack(x, axis=axis))
 
     @staticmethod
-    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+    def unstack(x: NNCFTensor, axis: int = 0) -> list[NNCFTensor]:
         tensor = x.tensor
         if list(tensor.shape) == []:
             tensor = tf.expand_dims(tensor, 0)

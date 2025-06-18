@@ -12,7 +12,7 @@ import queue
 from copy import copy
 from copy import deepcopy
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 import numpy as np
 import torch
@@ -44,7 +44,7 @@ class EvolutionOptimizer:
     After all generations, the best action (with the best reward value) is returned.
     """
 
-    def __init__(self, initial_filter_norms: Dict, hparams: Dict, random_seed: int):
+    def __init__(self, initial_filter_norms: dict, hparams: dict, random_seed: int):
         """
         :param initial_filter_norms: Initial filter norms needed to get std and var of filter norms in each layer.
         :param hparams: hyperparams of the Optimizer, can contain population_size, num_generations, num_samples,
@@ -102,7 +102,7 @@ class EvolutionOptimizer:
             self.population[self.oldest_index] = self.last_action
             self.population_rewards[self.oldest_index] = reward
 
-    def _predict_action(self) -> Dict:
+    def _predict_action(self) -> dict:
         """
         Predict action for the current episode. Works as described above.
         :return: new generated action
@@ -142,7 +142,7 @@ class EvolutionOptimizer:
             self.oldest_index = self.indexes_queue.get()
         return action
 
-    def ask(self, episode_num: int) -> Dict:
+    def ask(self, episode_num: int) -> dict:
         """
         Predict and returns action for the last told episode information: state, reward, episode_num and info
         :return: predicted action
@@ -152,7 +152,7 @@ class EvolutionOptimizer:
         self.last_action = action
         return action
 
-    def tell(self, state: torch.Tensor, reward: float, end_of_episode: bool, episode_num: int, info: List) -> None:
+    def tell(self, state: torch.Tensor, reward: float, end_of_episode: bool, episode_num: int, info: list) -> None:
         """
         Getting info about episode step and save it every end of episode
         """
@@ -215,7 +215,7 @@ class LeGREvolutionEnv:
         self.filter_pruner = filter_pruner
         self.model = model
 
-    def reset(self) -> Tuple[torch.Tensor, List]:
+    def reset(self) -> tuple[torch.Tensor, list]:
         """
         Resetting pruner params (all changes in the model made by training) and environment params changed during
         the step.
@@ -237,13 +237,13 @@ class LeGREvolutionEnv:
         optimizer = self.train_optimizer(self.model.parameters())
         self.train_fn(self.train_loader, self.model, optimizer, self.filter_pruner, steps)
 
-    def _get_reward(self) -> Tuple[float, float, float]:
+    def _get_reward(self) -> tuple[float, float, float]:
         """
         Validating model with validate_fn and return result in format: (acc, loss)
         """
         return self.validate_fn(self.model, self.val_loader)
 
-    def step(self, action: Dict) -> Tuple[torch.Tensor, float, bool, List]:
+    def step(self, action: dict) -> tuple[torch.Tensor, float, bool, list]:
         """
         1. Getting action (ranking coefficients)
         2. Making step with this action - prune model with ranking coefficients
@@ -324,7 +324,7 @@ class LeGRPruner:
     def get_full_flops_number_in_model(self) -> float:
         return self.filter_pruner.full_flops
 
-    def prune(self, flops_pruning_target: float, ranking_coeffs: Dict) -> None:
+    def prune(self, flops_pruning_target: float, ranking_coeffs: dict) -> None:
         """
         Prune target model to flops pruning target with ranking_coeffs.
         :param flops_pruning_target: pruning target for the model pruning

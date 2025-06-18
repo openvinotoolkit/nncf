@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import random
-from typing import Dict
 
 import numpy as np
 import pytest
@@ -85,7 +84,7 @@ class MockResultFunctor:
         self._call_count = 0
         self._mock_retval = mock_retval
 
-    def __call__(self, results_dict: Dict) -> float:
+    def __call__(self, results_dict: dict) -> float:
         if self._call_count == 0:
             retval = self._mock_retval
         else:

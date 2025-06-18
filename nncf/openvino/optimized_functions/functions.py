@@ -9,33 +9,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
+from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import get_astype_model
-from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
-from nncf.openvino.optimized_functions.models import get_compress_weight_model
-from nncf.openvino.optimized_functions.models import get_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_float_quantization_model
+from nncf.openvino.optimized_functions.models import get_float_quantize_dequantize_weight_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_model
+from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
 from nncf.tensor import TensorDataType
 
-ReductionAxes = Union[int, Tuple[int, ...]]
+ReductionAxes = Union[int, tuple[int, ...]]
 
 
-def do_int_quantization(
+def do_integer_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-) -> Tuple[Tensor, Tensor, Tensor]:
+) -> tuple[Tensor, Tensor, Tensor]:
     """
-    Quantizes the given weight tensor.
+    Quantizes the given weight tensor to an integer data type.
 
     :param weight: The weight tensor to quantize.
     :param config: The weight compression configuration.
@@ -63,7 +66,7 @@ def do_int_quantization(
             {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
         )
 
-    model = get_compress_weight_model(
+    model = get_integer_quantization_model(
         ov_model_params,
         config,
         weight_shape,
@@ -97,16 +100,70 @@ def do_int_quantization(
     return compressed_weight, scale, zero_point
 
 
-def quantize_dequantize_weight(
+def do_float_quantization(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Optional[Tensor] = None,
+) -> tuple[Tensor, Tensor]:
+    """
+    Computes quantization scale if not provided, and performs corresponding nf4 weight quantization.
+    For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
+    TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
+
+    :param weight: Weight array to compress.
+    :param config: Weight compression configuration.
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics.
+    :param precomputed_scale: Optional precomputed scale.
+    :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor.
+    """
+    assert config.mode == CompressWeightsMode.NF4
+
+    weight_shape = weight.shape
+    scale_shape = None if precomputed_scale is None else precomputed_scale.shape
+
+    ov_model_params = OVModelParameters()
+    ov_model_params.input_dtypes["weight"] = weight.dtype
+    if precomputed_scale is not None:
+        ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
+    if weight.backend == TensorBackend.ov:
+        # Return ov tensors in target precision to seamlessly insert them into openvino model later
+        ov_model_params.return_ov_tensors = True
+        ov_model_params.output_dtypes.update({"compressed_weight": TensorDataType.nf4})
+
+    model = get_float_quantization_model(
+        ov_model_params,
+        config,
+        weight_shape,
+        scale_shape,
+        reduction_axes,
+    )
+
+    if precomputed_scale is None:
+        # weight -> compressed_weight, scale
+        compressed_weight, scale = model([weight])
+
+        # Scale is always in fp32 so there is no need to store it in ov.Tensor
+        if scale.backend == TensorBackend.ov:
+            scale = scale.as_numpy_tensor()
+    else:
+        # weight, scale -> compressed_weight
+        compressed_weight = model([weight, precomputed_scale])[0]
+        scale = precomputed_scale
+
+    return compressed_weight, scale
+
+
+def integer_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
+) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
-    Quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
+    Quantizes the given weight tensor to an integer data type and then dequantizes it back to obtain float32 values.
 
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
@@ -135,7 +192,7 @@ def quantize_dequantize_weight(
     if precomputed_zero_point is not None:
         ov_model_params.input_dtypes["zero_point"] = precomputed_zero_point.dtype
 
-    model = get_compress_decompress_weight_model(
+    model = get_integer_quantize_dequantize_weight_model(
         ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_compressed_weight
     )
 
@@ -157,6 +214,60 @@ def quantize_dequantize_weight(
         decompressed_weight, compressed_weight, scale, zero_point = results
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale, zero_point
+    else:
+        return decompressed_weight
+
+
+def float_quantize_dequantize_weight(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Optional[Tensor] = None,
+    return_compressed_weight: Optional[bool] = False,
+) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
+    """
+    First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
+
+    :param weight: The weight tensor to quantize-dequantize.
+    :param config: Compression configuration.
+    :param reduction_axes: Axes along which to reduce statistics. Not required if precomputed scale are provided.
+    :param precomputed_scale: Optional precomputed scale tensor.
+    :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
+    :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
+    """
+    assert config.mode == CompressWeightsMode.NF4
+
+    # When reduction axes are not provided, assuming that the weights are already reshaped
+    if config.group_size != -1 and reduction_axes is not None:
+        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+
+    weight_shape = weight.shape
+    scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
+
+    ov_model_params = OVModelParameters()
+    ov_model_params.input_dtypes["weight"] = weight.dtype
+    if precomputed_scale is not None:
+        ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
+
+    model = get_float_quantize_dequantize_weight_model(
+        ov_model_params, config, weight_shape, scale_shape, reduction_axes, return_compressed_weight
+    )
+
+    inputs = [weight]
+    if precomputed_scale is not None:
+        inputs.append(precomputed_scale)
+
+    compressed_weight, scale = None, precomputed_scale
+    results = model(inputs)
+    if len(results) == 1:
+        decompressed_weight = results[0]
+    elif len(results) == 2:
+        decompressed_weight, compressed_weight = results
+    else:
+        decompressed_weight, compressed_weight, scale = results
+    if return_compressed_weight:
+        return decompressed_weight, compressed_weight, scale
     else:
         return decompressed_weight
 
@@ -188,7 +299,7 @@ def get_integer_quantization_error(
 
     ov_model_params = OVModelParameters()
     ov_model_params.input_dtypes["weight"] = weight.dtype
-    model = get_quantization_error_model(
+    model = get_integer_quantization_error_model(
         ov_model_params, config, original_weight_shape, weight.shape, original_reduction_axes, reduction_axes
     )
 

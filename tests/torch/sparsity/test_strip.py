@@ -24,6 +24,8 @@ from tests.torch.quantization.test_strip import check_quantizer_operators
 from tests.torch.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
+pytestmark = pytest.mark.legacy
+
 
 def _get_config_for_algo(input_size, quantization=False):
     config = NNCFConfig()

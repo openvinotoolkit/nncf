@@ -122,6 +122,9 @@ def pytest_configure(config: Config):
         if config.getoption(f"--regen-{regen_option}", False):
             os.environ[f"NNCF_TEST_REGEN_{regen_option.upper()}"] = "1"
 
+    # Enable patching of torch functions
+    os.environ["NNCF_TORCH_LEGACY_TRACING"] = "1"
+
 
 @pytest.fixture(scope="module")
 def dataset_dir(request: FixtureRequest):

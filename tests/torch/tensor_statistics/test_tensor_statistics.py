@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Dict, Tuple, Type
 
 import pytest
 import torch
@@ -112,8 +111,8 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics_with_shape_convert(
         self,
-        collector: Type[TensorStatisticCollectorBase],
-        reduction_axes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
+        collector: type[TensorStatisticCollectorBase],
+        reduction_axes_vs_ref_statistic: dict[tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
         for shapes in reduction_axes_vs_ref_statistic:
             scale_shape, reducer_axes = shapes
@@ -203,8 +202,8 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics(
         self,
-        collector: Type[TensorStatisticCollectorBase],
-        reduction_axes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
+        collector: type[TensorStatisticCollectorBase],
+        reduction_axes_vs_ref_statistic: dict[ReductionAxes, TensorStatistic],
     ):
         for reduction_axes in reduction_axes_vs_ref_statistic:
             if len(reduction_axes) > 1:

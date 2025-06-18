@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -51,7 +51,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+        input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]
     ) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(input_ids, output_ids)
 
@@ -65,13 +65,13 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: ov.Model) -> tuple[str, str]:
         return subgraph.inputs[0].get_any_name(), subgraph.outputs[0].get_any_name()
 
     @staticmethod
     def create_input_data(
-        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
-    ) -> Dict[str, np.ndarray]:
+        shape: tuple[int], data: list[Tensor], input_name: str, channel_axis: int
+    ) -> dict[str, np.ndarray]:
         blob = np.zeros(shape, dtype=data[0].data.dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
@@ -83,7 +83,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return Tensor(get_bias_value(node, nncf_graph, model, node_mapping=self._node_mapping))
 
     @staticmethod
-    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
+    def get_activation_port_ids_for_bias_node(node: NNCFNode) -> tuple[int, int]:
         activation_ports = [0, 1]
 
         for weight_port in node.layer_attributes.get_const_port_ids():
@@ -104,7 +104,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+    def process_model_output(raw_data: dict, output_name: str) -> Tensor:
         return Tensor(raw_data[output_name])
 
     @staticmethod
@@ -112,11 +112,11 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return is_node_with_bias(node, nncf_graph, OPERATIONS_WITH_BIAS_REDUCED)
 
     @staticmethod
-    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[str, str]:
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         return get_activation_channel_axis(node, port_id, input_shape)
 
     def extract_submodel(self, model_transformer, input_id, output_id):

@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import Counter
-from typing import Tuple
 
 import torch.fx
 
@@ -84,7 +83,7 @@ class GraphConverter:
         return metatype
 
     @staticmethod
-    def get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> Tuple[str, om.OperatorMetatype]:
+    def get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[str, om.OperatorMetatype]:
         """
         Retrieves node's type and metatype.
 
@@ -170,7 +169,7 @@ class GraphConverter:
         source_nncf_node: NNCFNode,
         dist_node: torch.fx.Node,
         output_idx: int,
-    ) -> Tuple[int, int, Tuple[int, ...]]:
+    ) -> tuple[int, int, tuple[int, ...]]:
         """
         Retrieves edge params from the given source_node and dist_node pair.
 

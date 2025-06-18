@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Set
 
 import tensorflow as tf
 
@@ -67,7 +66,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         transformations = TFTransformationLayout()
 
-        processed_shared_layer_names: Set[str] = set()
+        processed_shared_layer_names: set[str] = set()
 
         for node in nncf_graph.get_all_nodes():
             if node.is_shared():

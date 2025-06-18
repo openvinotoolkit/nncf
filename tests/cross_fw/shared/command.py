@@ -15,7 +15,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
 def is_windows() -> bool:
@@ -23,7 +23,7 @@ def is_windows() -> bool:
 
 
 class Command:
-    def __init__(self, cmd: str, cwd: Path = None, env: Dict = None):
+    def __init__(self, cmd: str, cwd: Path = None, env: dict = None):
         self.cmd = cmd
         self.process = None
         self.exec_time = -1
@@ -114,7 +114,7 @@ class Command:
         return self.exec_time
 
 
-def arg_list_from_arg_dict(dct: Dict[str, Any]) -> List[str]:
+def arg_list_from_arg_dict(dct: dict[str, Any]) -> list[str]:
     retval = []
     for key, val in dct.items():
         retval.append(key)

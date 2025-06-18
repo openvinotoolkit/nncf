@@ -1,4 +1,4 @@
 ultralytics==8.3.22
 onnx==1.17.0
-onnxruntime==1.19.2
-openvino==2025.1
+onnxruntime==1.21.1
+openvino==2025.2.0

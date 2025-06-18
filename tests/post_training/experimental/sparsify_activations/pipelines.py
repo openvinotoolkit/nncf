@@ -12,7 +12,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 import openvino as ov
@@ -29,6 +29,7 @@ import nncf
 from nncf.experimental.torch.sparsify_activations import sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import PT_BACKENDS
@@ -44,8 +45,8 @@ from tests.post_training.pipelines.lm_weight_compression import LMWeightCompress
 from tests.post_training.pipelines.lm_weight_compression import WCNumCompressNodes
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
 from tests.post_training.pipelines.lm_weight_compression import collect_int4_int8_num_errors
-from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
+from tests.torch2.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 
 
 @dataclass
@@ -86,7 +87,6 @@ class SAPipelineMixin(BaseTestPipeline):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
-        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -101,7 +101,6 @@ class SAPipelineMixin(BaseTestPipeline):
             reference_data,
             no_eval,
             run_benchmark_app,
-            torch_compile_validation,
             params,
             batch_size,
             memory_monitor,
@@ -143,7 +142,7 @@ class SAPipelineMixin(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_int4 = num_int4
         self.run_info.num_compress_nodes.num_sparse_activations = num_sparse_activations
 
-    def collect_errors(self) -> List[ErrorReport]:
+    def collect_errors(self) -> list[ErrorReport]:
         errors = super().collect_errors()
         run_info = self.run_info
         reference_data = self.reference_data
@@ -213,7 +212,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     def get_transform_calibration_fn(self):
         process_one = super().get_transform_calibration_fn()
 
-        def transform_fn(chunk: List[Dict]):
+        def transform_fn(chunk: list[dict]):
             samples = [process_one(data, max_tokens=128, filter_bad_tokens=False) for data in chunk]
             inputs = {}
             for input_name, sample_value in samples[0].items():
@@ -251,14 +250,19 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         self.path_compressed_ir = self.output_model_dir / self.OV_MODEL_NAME
         if self.backend == BackendType.CUDA_TORCH:
             self.model_hf.float()
-            for module in self.model_hf.nncf.modules():
+            for _, module in get_hook_storage(self.model_hf).named_hooks():
                 if isinstance(module, (INT8AsymmetricWeightsDecompressor, INT8SymmetricWeightsDecompressor)):
                     module.result_dtype = torch.float32
             export_from_model(
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
         else:
-            super().save_compressed_model()
+            if self.backend == BackendType.FP32:
+                self.path_compressed_ir = self.fp32_model_dir / self.OV_MODEL_NAME
+                ov.serialize(self.model, self.path_compressed_ir)
+                self.model_hf._save_config(self.fp32_model_dir)
+            else:
+                super().save_compressed_model()
 
     def _dump_model_fp32(self):
         if self.backend == BackendType.CUDA_TORCH:
@@ -289,3 +293,10 @@ class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassific
         subset = torch.utils.data.Subset(val_dataset, indices=indices)
         loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
+
+    def save_compressed_model(self):
+        if self.backend == BackendType.FP32:
+            self.path_compressed_ir = self.fp32_model_dir / "model_fp32.xml"
+            ov.serialize(self.model, self.path_compressed_ir)
+        else:
+            super().save_compressed_model()

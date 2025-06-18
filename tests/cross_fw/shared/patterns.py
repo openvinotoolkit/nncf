@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.graph.patterns import IgnoredPatternNames
@@ -16,7 +15,7 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.utils.backend import BackendType
 
 
-def check_hw_patterns(backend: BackendType, reasons: Dict[HWFusedPatternNames, str]):
+def check_hw_patterns(backend: BackendType, reasons: dict[HWFusedPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_hw_patterns_map(backend)
 
     all_base_patterns = HWFusedPatternNames
@@ -30,7 +29,7 @@ def check_hw_patterns(backend: BackendType, reasons: Dict[HWFusedPatternNames, s
         assert base_pattern in backend_patterns, f"Pattern {pattern_name} not found in {backend.name}"
 
 
-def check_ignored_patterns(backend: BackendType, reasons: Dict[IgnoredPatternNames, str]):
+def check_ignored_patterns(backend: BackendType, reasons: dict[IgnoredPatternNames, str]):
     backend_patterns = PatternsManager._get_backend_ignored_patterns_map(backend)
 
     all_base_patterns = IgnoredPatternNames

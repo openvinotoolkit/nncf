@@ -14,6 +14,7 @@ import torch
 
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import PTLoraNLSSpec
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
 
@@ -27,16 +28,18 @@ def test_quantizer_layers_accepts_return_type(registred):
 
     quantizer_spec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationMode.SYMMETRIC,
+        mode=mode,
         signedness_to_force=True,
         narrow_range=True,
         half_range=True,
         scale_shape=(1,),
         logarithm_scale=False,
     )
-    if mode in [QuantizationMode.ASYMMETRIC_LORA, QuantizationMode.SYMMETRIC_LORA]:
+    if mode not in [QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC]:
         shape = actual_input.unsqueeze(dim=0).shape
         lora_spec = PTLoraSpec(0, shape, shape)
+        if mode in [QuantizationMode.ASYMMETRIC_LORA_NLS, QuantizationMode.SYMMETRIC_LORA_NLS]:
+            lora_spec = PTLoraNLSSpec(0, 0, shape, shape)
         quantizer = quantizer_cls(quantizer_spec, lora_spec)
     else:
         quantizer = quantizer_cls(quantizer_spec)

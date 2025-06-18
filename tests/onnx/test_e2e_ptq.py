@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 import pytest
@@ -67,7 +67,7 @@ XFAIL_MODELS = {
 }
 
 
-def check_skip_model(model_name: str, model_names_to_test: Optional[List[str]]):
+def check_skip_model(model_name: str, model_names_to_test: Optional[list[str]]):
     if model_names_to_test is not None and model_name not in model_names_to_test:
         pytest.skip(f"The model {model_name} is skipped, because it was not included in --model-names.")
     if model_name in XFAIL_MODELS:
@@ -80,7 +80,7 @@ def remove_prefix_if_exist(line: str, prefix: str) -> str:
     return line
 
 
-def run_command(command: List[str]):
+def run_command(command: list[str]):
     com_str = " ".join(command)
     print(f"Run command: {com_str}")
     with subprocess.Popen(
@@ -278,7 +278,7 @@ class TestPTQ:
         self,
         task_type: str,
         model_name: str,
-        model_names_to_test: Optional[List[str]],
+        model_names_to_test: Optional[list[str]],
         model_dir: Path,
         data_dir: Path,
         anno_dir: Path,
@@ -324,7 +324,7 @@ class TestBenchmark:
         anno_dir: Path,
         out_file_name: Path,
         eval_size: Optional[int],
-    ) -> List[str]:
+    ) -> list[str]:
         com_line = [
             sys.executable, str(program_path),
             "-c", str(config_path),
@@ -351,7 +351,7 @@ class TestBenchmark:
         is_quantized: bool,
         is_ov_ep: bool,
         is_cpu_ep: bool,
-    ) -> List[str]:
+    ) -> list[str]:
         program_path, config_path, model_path, output_dir, data_dir, anno_dir = configure_paths(
             task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, False, is_quantized
         )
@@ -377,7 +377,7 @@ class TestBenchmark:
         eval_size: int,
         program: str,
         is_quantized: bool,
-    ) -> List[str]:
+    ) -> list[str]:
         program_path, config_path, model_path, output_dir, data_dir, anno_dir = configure_paths(
             task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size, program, True, is_quantized
         )
@@ -507,7 +507,7 @@ class TestBenchmarkResult:
 
     def get_row_colors(
         self, df: pd.DataFrame, reference_model_accuracy: pd.DataFrame, int8_col_name: str
-    ) -> Dict[int, str]:
+    ) -> dict[int, str]:
         row_colors = {}
         for idx, row in df.iterrows():
             for i, model_name in enumerate(reference_model_accuracy.index):
@@ -582,9 +582,9 @@ class TestBenchmarkResult:
     def generate_html(
         self,
         df: pd.DataFrame,
-        cpu_ep_row_colors: Dict[int, str],
-        ov_ep_row_colors: Dict[int, str],
-        ov_row_colors: Dict[int, str],
+        cpu_ep_row_colors: dict[int, str],
+        ov_ep_row_colors: dict[int, str],
+        ov_row_colors: dict[int, str],
         output_fp: str,
     ) -> None:
         doc, tag, text = Doc().tagtext()

@@ -11,7 +11,6 @@
 from abc import abstractmethod
 from collections import Counter
 from copy import deepcopy
-from typing import Dict
 
 import pytest
 
@@ -64,7 +63,7 @@ class ModelToTestOverflowFix:
     #          |
     #       Output_1
 
-    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype]):
+    def __init__(self, metatypes: dict[TestMetatype, OperatorMetatype]):
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
             NodeWithType("Input_2", InputNoopMetatype),
@@ -103,7 +102,7 @@ class ModelWithUnifiedScales:
     #           |
     #        Output_1
 
-    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype], nncf_graph_cls=NNCFGraph):
+    def __init__(self, metatypes: dict[TestMetatype, OperatorMetatype], nncf_graph_cls=NNCFGraph):
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
             NodeWithType("Conv_1", metatypes[Conv2dTestMetatype]),
@@ -206,7 +205,7 @@ class TemplateTestPTQParams:
         stat_points = min_max_algo.get_statistic_points(params["model"], params["nncf_graph"])
         assert len(stat_points) == params["stat_points_num"]
 
-        for _, stat_point in stat_points.items():
+        for stat_point in stat_points.values():
             for stat_point_ in stat_point:
                 for tensor_collector in stat_point_.algorithm_to_tensor_collectors[min_max_algo._algorithm_key]:
                     if stat_point_.target_point.is_weight_target_point():

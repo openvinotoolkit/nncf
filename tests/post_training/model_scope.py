@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import copy
-from typing import Dict, List
 
 import nncf
 from nncf import ModelType
@@ -18,6 +17,7 @@ from nncf import QuantizationPreset
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
+from nncf.quantization.advanced_parameters import AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -403,14 +403,27 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_SYM,
             "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.ONNX],
+    },
+    {
+        "reported_name": "tinyllama_data_free_opset19",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        },
+        "params": {"opset": 19},
+        "backends": [BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
-        "backends": [BackendType.OV, BackendType.TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_stateful",
@@ -434,7 +447,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
             ),
         },
-        "backends": [BackendType.OV, BackendType.TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
@@ -460,7 +473,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "compression_params": {
             "mode": CompressWeightsMode.INT8_ASYM,
         },
-        "backends": [BackendType.TORCH],
+        "backends": [BackendType.TORCH, BackendType.FX_TORCH],
     },
     {
         "reported_name": "tinyllama_int4_data_free",
@@ -472,7 +485,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_SYM,
             "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         },
-        "backends": [BackendType.TORCH],
+        "backends": [BackendType.TORCH, BackendType.FX_TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_gptq_scale_estimation_stateful",
@@ -517,7 +530,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
-        "backends": [BackendType.OV, BackendType.TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_lora_stateful",
@@ -552,10 +565,26 @@ WEIGHT_COMPRESSION_MODELS = [
         },
         "backends": [BackendType.OV],
     },
+    {
+        "reported_name": "tinyllama_data_free_awq",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "awq": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=False)
+            ),
+        },
+        # TODO: (andreyanufr) add torch.fx backend
+        "backends": [BackendType.OV, BackendType.TORCH],
+    },
 ]
 
 
-def generate_tests_scope(models_list: List[Dict]) -> Dict[str, dict]:
+def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """

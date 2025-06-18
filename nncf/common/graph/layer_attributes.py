@@ -12,7 +12,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 
 class Dtype(Enum):
@@ -42,7 +42,7 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, chunks: Union[int, List[Any]], axis: int):
+    def __init__(self, chunks: Union[int, list[Any]], axis: int):
         """
 
         :param chunks: Number of chunks (outputs).
@@ -75,7 +75,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
     def __init__(
         self,
         weight_requires_grad: bool,
-        weight_shape: List[int],
+        weight_shape: list[int],
         filter_dimension_idx: int = 0,
         with_bias: bool = False,
     ):
@@ -117,14 +117,14 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         weight_requires_grad: bool,
         in_channels: int,
         out_channels: int,
-        kernel_size: Tuple[int, ...],
-        stride: Tuple[int, ...],
-        dilations: Tuple[int, ...],
+        kernel_size: tuple[int, ...],
+        stride: tuple[int, ...],
+        dilations: tuple[int, ...],
         groups: int,
         transpose: bool,
-        padding_values: Union[Tuple[int, ...], int],
+        padding_values: Union[tuple[int, ...], int],
         with_bias: bool = False,
-        output_padding_values: Optional[Union[Tuple[int, ...], int]] = None,
+        output_padding_values: Optional[Union[tuple[int, ...], int]] = None,
     ):
         """
 
@@ -173,8 +173,8 @@ class ReshapeLayerAttributes(BaseLayerAttributes):
     :param output_shape: number of elements of each of the axes of a output tensor.
     """
 
-    input_shape: List[int]
-    output_shape: List[int]
+    input_shape: list[int]
+    output_shape: list[int]
 
 
 @dataclass
@@ -194,7 +194,7 @@ class PermuteLayerAttributes(BaseLayerAttributes):
     :param permutation: the desired ordering of dimensions.
     """
 
-    permutation: Tuple[int, ...]
+    permutation: tuple[int, ...]
 
 
 @dataclass
@@ -236,4 +236,4 @@ class ConstantLayerAttributes(BaseLayerAttributes):
     """
 
     name: str
-    shape: List[int]
+    shape: list[int]

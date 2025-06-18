@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from torch import nn
 
 from nncf.torch import register_default_init_args
@@ -16,6 +17,8 @@ from nncf.torch.structures import DistributedCallbacksArgs
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.pruning.helpers import PruningTestModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
+
+pytestmark = pytest.mark.legacy
 
 
 def test_default_distributed_init_struct():

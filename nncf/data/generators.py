@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf.common.logging.track_progress import track
@@ -33,7 +33,7 @@ TTokenizer = TypeVar("TTokenizer")
 )
 def generate_text_data(
     model: TModel, tokenizer: TTokenizer, seq_len: int = 32, dataset_size: int = 128, unique_tokens_lower_limit: int = 5
-) -> List[str]:
+) -> list[str]:
     """
     Generates text dataset based on the model output.
 
@@ -54,7 +54,7 @@ def generate_text_data(
         raise nncf.ModuleNotFoundError(msg)
 
     try:
-        from transformers import PreTrainedModel  # type: ignore
+        from transformers import GenerationMixin  # type: ignore
         from transformers import PreTrainedTokenizerBase
         from transformers.utils import logging  # type: ignore
 
@@ -63,15 +63,15 @@ def generate_text_data(
         msg = "transformers is required in order to generate text data: `pip install transformers`."
         raise nncf.ModuleNotFoundError(msg)
 
-    if not isinstance(model, PreTrainedModel.__bases__):
-        msg = "Model should be instance of the `transformers.PreTrainedModel`."
+    if not isinstance(model, GenerationMixin):
+        msg = "Model should be instance of the `transformers.GenerationMixin`."
         raise nncf.ValidationError(msg)
 
     if not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):
         msg = "tokenizer should be instance of the `transformers.PreTrainedTokenizerBase`."
         raise nncf.ValidationError(msg)
 
-    generated_data: List[str] = []
+    generated_data: list[str] = []
 
     vocab_size_names = ["padded_vocab_size", "vocab_size"]
     vocab_size = BASE_VOCAB_SIZE

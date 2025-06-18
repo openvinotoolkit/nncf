@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, TypeVar
+from typing import TypeVar
 
 import nncf
 
@@ -37,7 +37,7 @@ class NNCFTensor:
         return self._tensor
 
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> list[int]:
         if self._tensor is None:
             msg = "Attempt to get shape of empty NNCFTensor"
             raise nncf.InternalError(msg)

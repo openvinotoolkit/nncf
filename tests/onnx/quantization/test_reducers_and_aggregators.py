@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import numpy as np
 import pytest
@@ -53,7 +53,7 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         ref_ = np.array(ref)
         return np.allclose(val_, ref_) and val_.shape == ref_.shape
 
-    def squeeze_tensor(self, ref_tensor: List[Any], axes: Optional[Tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
         return np.squeeze(np.array(ref_tensor), axes)
 
     def cast_tensor(self, tensor, dtype: Dtype):

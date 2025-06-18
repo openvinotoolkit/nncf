@@ -11,7 +11,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List, TypeVar, Union
+from typing import TypeVar, Union
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 
@@ -29,7 +29,7 @@ TModel = TypeVar("TModel")
 @dataclass
 class ModeTestStruct:
     metric_value: float
-    values_for_each_item: Union[None, List[float], List[List[np.ndarray]]]
+    values_for_each_item: Union[None, list[float], list[list[np.ndarray]]]
     expected_is_metric_mode: bool
     raise_exception: bool = False
 
@@ -209,7 +209,7 @@ def test_validate_metric_mode_none_or_false(
 
     metric, values_for_each_item = evaluator_returns_tensor.validate(model, dataset)
     assert evaluator_returns_tensor.num_passed_iterations == expected_iterations
-    assert all(isinstance(item, List) for item in values_for_each_item)
+    assert all(isinstance(item, list) for item in values_for_each_item)
     assert all(isinstance(item, np.ndarray) for item in values_for_each_item[0])
     assert isinstance(metric, float)
 

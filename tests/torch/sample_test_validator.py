@@ -17,7 +17,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any, Optional
 
 import torch
 
@@ -30,7 +30,7 @@ from tests.cross_fw.shared.paths import EXAMPLES_DIR
 from tests.cross_fw.shared.paths import TEST_ROOT
 
 
-def create_command_line(args: Dict[str, Any], sample_type: str, main_filename: str = "main.py") -> str:
+def create_command_line(args: dict[str, Any], sample_type: str, main_filename: str = "main.py") -> str:
     executable = EXAMPLES_DIR.joinpath("torch", sample_type, main_filename).as_posix()
     cli_args = " ".join(key if (val is None or val is True) else f"{key} {val}" for key, val in args.items())
     return f"{sys.executable} {executable} {cli_args}"
@@ -221,7 +221,7 @@ class BaseSampleTestCaseDescriptor(ABC):
 
     def sample_type(self, sample_type: SampleType):
         self.sample_type_ = sample_type
-        sample_handler_cls: Type[BaseSampleHandler] = SAMPLE_HANDLERS.get(self.sample_type_)
+        sample_handler_cls: type[BaseSampleHandler] = SAMPLE_HANDLERS.get(self.sample_type_)
         self.sample_handler = sample_handler_cls()
         return self
 
@@ -241,17 +241,17 @@ class BaseSampleTestCaseDescriptor(ABC):
 class SanityTestCaseDescriptor(BaseSampleTestCaseDescriptor, ABC):
     def __init__(self):
         super().__init__()
-        self.config_dict: Dict = {}
+        self.config_dict: dict = {}
 
     @abstractmethod
     def get_compression_section(self):
         pass
 
-    def get_config_update(self) -> Dict:
+    def get_config_update(self) -> dict:
         sample_params = self.get_sample_params()
         return {**sample_params, "target_device": "NPU", "compression": self.get_compression_section()}
 
-    def get_sample_params(self) -> Dict:
+    def get_sample_params(self) -> dict:
         return {"dataset": self.dataset_name} if self.dataset_name else {}
 
     def finalize(self, dataset_dir=None) -> "SanityTestCaseDescriptor":
@@ -271,7 +271,7 @@ class SanitySampleValidator(BaseSampleValidator, ABC):
         self._desc = desc
         self._sample_handler = desc.sample_handler
 
-    def validate_sample(self, args: Dict[str, Any], mocker):
+    def validate_sample(self, args: dict[str, Any], mocker):
         arg_list = arg_list_from_arg_dict(args)
         command_line = " ".join(arg_list)
         print(f"Command line arguments: {command_line}")

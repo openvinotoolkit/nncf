@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Union
 
 import networkx as nx
 import pytest
@@ -20,20 +20,20 @@ import torch.nn.functional as F
 import torchvision.models as models
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import convert_to_nncf_graph
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_dtype
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_name_of_node
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_node_type
-from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_utils import ConstMeta
+from nncf.torch.function_hook.graph.graph_utils import FunctionMeta
+from nncf.torch.function_hook.graph.graph_utils import InOutMeta
+from nncf.torch.function_hook.graph.graph_utils import NodeType
+from nncf.torch.function_hook.graph.graph_utils import TensorMeta
+from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import convert_to_nncf_graph
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import get_dtype
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import get_name_of_node
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import get_node_type
+from nncf.torch.function_hook.wrapper import register_post_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -118,35 +118,35 @@ def test_convert_to_nncf_graph_multi_edges(regen_ref_data: bool):
 class ModelDesc:
     model_name: str
     model_builder: callable
-    inputs_info: Union[List[List[int]], Tuple[List[int], ...]]
+    inputs_info: Union[list[list[int]], tuple[list[int], ...]]
 
     def __str__(self):
         return self.model_name
 
 
 TEST_MODELS_DESC = [
-    ModelDesc("convnext_small", models.convnext_small, [1, 3, 64, 64]),
-    ModelDesc("densenet121", models.densenet121, [1, 3, 64, 64]),
-    ModelDesc("efficientnet_b0", models.efficientnet_b0, [1, 3, 64, 64]),
-    ModelDesc("inception_v3", partial(models.inception_v3, init_weights=False), [1, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", models.mobilenet_v2, [1, 3, 64, 64]),
-    ModelDesc("mobilenet_v3_small", models.mobilenet_v3_small, [1, 3, 64, 64]),
-    ModelDesc("resnet18", models.resnet18, [1, 3, 64, 64]),
-    ModelDesc("resnext50_32x4d", models.resnext50_32x4d, [1, 3, 64, 64]),
-    ModelDesc("shufflenet_v2_x0_5", models.shufflenet_v2_x0_5, [1, 3, 224, 224]),
-    ModelDesc("squeezenet1_0", models.squeezenet1_0, [1, 3, 64, 64]),
-    ModelDesc("swin_v2_b", models.swin_v2_b, [1, 3, 64, 64]),
-    ModelDesc("vgg16", models.vgg16, [1, 3, 32, 32]),
+    ModelDesc("convnext_small", partial(models.convnext_small, weights=None), [1, 3, 64, 64]),
+    ModelDesc("densenet121", partial(models.densenet121, weights=None), [1, 3, 64, 64]),
+    ModelDesc("efficientnet_b0", partial(models.efficientnet_b0, weights=None), [1, 3, 64, 64]),
+    ModelDesc("inception_v3", partial(models.inception_v3, init_weights=False, weights=None), [1, 3, 300, 300]),
+    ModelDesc("mobilenet_v2", partial(models.mobilenet_v2, weights=None), [1, 3, 64, 64]),
+    ModelDesc("mobilenet_v3_small", partial(models.mobilenet_v3_small, weights=None), [1, 3, 64, 64]),
+    ModelDesc("resnet18", partial(models.resnet18, weights=None), [1, 3, 64, 64]),
+    ModelDesc("resnext50_32x4d", partial(models.resnext50_32x4d, weights=None), [1, 3, 64, 64]),
+    ModelDesc("shufflenet_v2_x0_5", partial(models.shufflenet_v2_x0_5, weights=None), [1, 3, 224, 224]),
+    ModelDesc("squeezenet1_0", partial(models.squeezenet1_0, weights=None), [1, 3, 64, 64]),
+    ModelDesc("swin_v2_b", partial(models.swin_v2_b, weights=None), [1, 3, 64, 64]),
+    ModelDesc("vgg16", partial(models.vgg16, weights=None), [1, 3, 32, 32]),
+    ModelDesc("gru", helpers.ModelGRU, [1, 3, 3]),
 ]
 
 
 @pytest.mark.parametrize("desc", TEST_MODELS_DESC, ids=str)
 def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
-    model: torch.nn.Module = desc.model_builder(weights=None)
+    model: torch.nn.Module = desc.model_builder()
     model = model.eval()
-    inputs = [torch.randn(desc.inputs_info)]
     model = wrap_model(model)
-    nncf_graph = build_nncf_graph(model, *inputs)
+    nncf_graph = build_nncf_graph(model, torch.randn(desc.inputs_info))
     graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
@@ -234,7 +234,7 @@ def _no_missed_input_edge_for_conv() -> PTNNCFGraph:
         (_no_missed_input_edge_for_conv, []),
     ),
 )
-def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: List[str]):
+def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: list[str]):
     graph = graph_builder()
     ret = graph.get_nodes_with_missed_input_edges()
     ret_names = [node.node_name for node in ret]

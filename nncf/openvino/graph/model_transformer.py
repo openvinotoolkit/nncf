@@ -11,12 +11,12 @@
 
 from collections import defaultdict
 from collections import deque
-from typing import Callable, Dict, List, Tuple
+from typing import Callable
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
+from openvino import opset13 as opset
 from openvino._pyopenvino import DescriptorTensor
-from openvino.runtime import opset13 as opset
 
 import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -73,7 +73,7 @@ class OVModelTransformer(ModelTransformer):
         return clip_data.astype(dtype)
 
     @staticmethod
-    def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
+    def _get_name_to_node_mapping(model: ov.Model) -> dict[str, ov.Node]:
         """
         Returns name to node mapping.
 
@@ -83,7 +83,7 @@ class OVModelTransformer(ModelTransformer):
         return {op.get_friendly_name(): op for op in model.get_ops()}
 
     @staticmethod
-    def _get_activation_node_names(model: ov.Model) -> List[str]:
+    def _get_activation_node_names(model: ov.Model) -> list[str]:
         """
         Returns list of the activation node names.
 
@@ -102,7 +102,7 @@ class OVModelTransformer(ModelTransformer):
         return list(activation_nodes)
 
     @staticmethod
-    def _update_tensor_names(tensors: List[DescriptorTensor], names: List[str]) -> None:
+    def _update_tensor_names(tensors: list[DescriptorTensor], names: list[str]) -> None:
         """
         Updates tensors names in-place.
 
@@ -143,7 +143,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_output_insertion_transformations(
-        model: ov.Model, transformations: List[OVOutputInsertionCommand]
+        model: ov.Model, transformations: list[OVOutputInsertionCommand]
     ) -> ov.Model:
         """
         Applies incoming transformations to the model.
@@ -157,8 +157,8 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _get_extra_model_outputs(
-        model: ov.Model, transformations: List[OVOutputInsertionCommand]
-    ) -> List[Tuple[ov.Output, int]]:
+        model: ov.Model, transformations: list[OVOutputInsertionCommand]
+    ) -> list[tuple[ov.Output, int]]:
         """
         Collects extra model outputs based on transformations.
 
@@ -188,7 +188,7 @@ class OVModelTransformer(ModelTransformer):
         return extra_model_outputs
 
     @staticmethod
-    def _insert_outputs(model: ov.Model, outputs: List[Tuple[ov.Output, int, Callable[[str, int], str]]]) -> ov.Model:
+    def _insert_outputs(model: ov.Model, outputs: list[tuple[ov.Output, int, Callable[[str, int], str]]]) -> ov.Model:
         """
         Takes a model and adds outputs based on the list of ov.Output.
 
@@ -221,7 +221,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(
-        model: ov.Model, transformations: List[OVFQNodeRemovingCommand]
+        model: ov.Model, transformations: list[OVFQNodeRemovingCommand]
     ) -> ov.Model:
         """
         Removes the layers from the model.
@@ -243,7 +243,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_quantizer_insertion_transformations(
-        model: ov.Model, transformations: List[OVQuantizerInsertionCommand]
+        model: ov.Model, transformations: list[OVQuantizerInsertionCommand]
     ) -> ov.Model:
         """
         Applies transformations on the model.
@@ -259,7 +259,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_convert_insertion_transformations(
-        model: ov.Model, transformations: List[OVConvertInsertionCommand]
+        model: ov.Model, transformations: list[OVConvertInsertionCommand]
     ) -> ov.Model:
         """
         Applies transformations on the model.
@@ -363,7 +363,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _insert_fake_quantize_op(
-        transformation: OVQuantizerInsertionCommand, name_to_node_mapping: Dict[str, ov.Node]
+        transformation: OVQuantizerInsertionCommand, name_to_node_mapping: dict[str, ov.Node]
     ) -> None:
         """
         Inserts FakeQuantize Operation to a model which name_to_node_mapping is passed.
@@ -417,7 +417,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _insert_fake_convert_op(
-        transformation: OVConvertInsertionCommand, name_to_node_mapping: Dict[str, ov.Node]
+        transformation: OVConvertInsertionCommand, name_to_node_mapping: dict[str, ov.Node]
     ) -> None:
         """
         Inserts FakeConvert Operation to a model which name_to_node_mapping is passed.
@@ -471,7 +471,7 @@ class OVModelTransformer(ModelTransformer):
             raise nncf.InternalError(msg)
 
     @staticmethod
-    def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
+    def _apply_bias_correction_transformations(model, transformations: list[OVBiasCorrectionCommand]) -> ov.Model:
         """
         Applies bias correction transformations on the model.
 
@@ -532,7 +532,7 @@ class OVModelTransformer(ModelTransformer):
         const_port.replace_source_output(new_const_node.output(0))
 
     @staticmethod
-    def _apply_weight_update_transformations(model, transformations: List[OVWeightUpdateCommand]) -> ov.Model:
+    def _apply_weight_update_transformations(model, transformations: list[OVWeightUpdateCommand]) -> ov.Model:
         """
         Applies weight update transformation to the model.
 
@@ -551,7 +551,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_model_extraction_transformation(
-        model: ov.Model, transformations: List[OVModelExtractionCommand]
+        model: ov.Model, transformations: list[OVModelExtractionCommand]
     ) -> ov.Model:
         """
         Extracts sub-model from the original based on the inputs and outputs names.
@@ -612,7 +612,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_stateless_model_extraction_transformation(
-        model: ov.Model, transformations: List[OVStateLessModelExtractionCommand]
+        model: ov.Model, transformations: list[OVStateLessModelExtractionCommand]
     ) -> ov.Model:
         """
         Extracts stateless sub-model from the original based on the inputs and outputs names.
@@ -692,8 +692,8 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _insert_inplace_operation(
-        transformation: OVInplaceFnInsertionCommand, name_to_node_mapping: Dict[str, ov.Node]
-    ) -> Tuple[ov.Output, int]:
+        transformation: OVInplaceFnInsertionCommand, name_to_node_mapping: dict[str, ov.Node]
+    ) -> tuple[ov.Output, int]:
         """
         Inserts operation inplace to a model which name_to_node_mapping is passed.
 
@@ -722,7 +722,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_bias_insertion_transformations(
-        model: ov.Model, transformations: List[OVBiasInsertionCommand]
+        model: ov.Model, transformations: list[OVBiasInsertionCommand]
     ) -> ov.Model:
         """
         Inserts bias operation after corresponding layer.
@@ -757,7 +757,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_multiply_insertion_transformations(
-        model: ov.Model, transformations: List[OVMultiplyInsertionCommand]
+        model: ov.Model, transformations: list[OVMultiplyInsertionCommand]
     ) -> ov.Model:
         """
         Inserts Multiply with provided value for corresponding layer.
@@ -794,7 +794,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_update_if_body_transformations(
-        model: ov.Model, transformations: List[OVUpdateIfBodyCommand]
+        model: ov.Model, transformations: list[OVUpdateIfBodyCommand]
     ) -> ov.Model:
         """
         Update model body for IF node.
@@ -814,7 +814,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_extract_if_body_transformation(
-        model: ov.Model, transformations: List[OVExtractIfBodyCommand]
+        model: ov.Model, transformations: list[OVExtractIfBodyCommand]
     ) -> ov.Model:
         """
         Extract a model body from If node.

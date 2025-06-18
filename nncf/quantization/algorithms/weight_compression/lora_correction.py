@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -25,9 +25,8 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_dequantization
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -84,7 +83,7 @@ class LoraCorrectionAlgorithm:
     """
 
     def __init__(
-        self, statistics: Dict[str, WCTensorStatistic], lora_correction_params: AdvancedLoraCorrectionParameters
+        self, statistics: dict[str, WCTensorStatistic], lora_correction_params: AdvancedLoraCorrectionParameters
     ):
         """
         :param statistics: Input activation statistics for each node.
@@ -107,7 +106,7 @@ class LoraCorrectionAlgorithm:
 
     def calculate_adapters(
         self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
-    ) -> Tuple[Tensor, Tensor, List[float]]:
+    ) -> tuple[Tensor, Tensor, list[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
 
@@ -137,7 +136,7 @@ class LoraCorrectionAlgorithm:
         weight: Tensor,
         compressed_weight: CompressedWeight,
         compression_config: WeightCompressionConfig,
-        reduction_axes: Tuple[int, ...],
+        reduction_axes: tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
@@ -170,15 +169,14 @@ class LoraCorrectionAlgorithm:
         assert len(reduction_axes) == 1, "Assumed a single reduction axis"
         reduction_axis = reduction_axes[0] if compression_config.group_size != -1 else -1
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
-            fq_weights = do_int_dequantization(
+            fq_weights = do_integer_dequantization(
                 compressed_weight.tensor,
                 compressed_weight.scale,
                 compressed_weight.zero_point,
                 reduction_axis,
             )
         elif mode == CompressWeightsMode.NF4:
-            indexes = do_nf4_quantization(compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True)
-            fq_weights = do_nf4_dequantization(indexes, compressed_weight.scale, reduction_axis)
+            fq_weights = do_float_dequantization(compressed_weight.tensor, compressed_weight.scale, reduction_axis)
         else:
             msg = (
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"

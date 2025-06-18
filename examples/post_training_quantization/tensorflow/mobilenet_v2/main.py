@@ -12,7 +12,6 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import List
 
 import openvino as ov
 import tensorflow as tf
@@ -38,7 +37,7 @@ def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
     return metric.result()
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: list[int]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),
@@ -143,10 +142,6 @@ def transform_fn(data_item):
 
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
-
-# Removes auxiliary layers and operations added during the quantization process,
-# resulting in a clean, fully quantized model ready for deployment.
-tf_quantized_model = nncf.strip(tf_quantized_model)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy

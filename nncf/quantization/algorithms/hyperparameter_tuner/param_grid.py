@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import itertools
-from typing import Any, Dict, List
+from typing import Any
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationPreset
@@ -27,7 +27,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
-ParamGrid = Dict[str, List[Any]]
+ParamGrid = dict[str, list[Any]]
 
 
 def _get_minmax_quantization_param_grid() -> ParamGrid:
@@ -100,7 +100,7 @@ def _get_bias_correction_param_grid() -> ParamGrid:
     return {"fast_bias_correction": [True, False]}
 
 
-def get_quantization_param_grids(pipeline: Pipeline, backend: BackendType) -> List[ParamGrid]:
+def get_quantization_param_grids(pipeline: Pipeline, backend: BackendType) -> list[ParamGrid]:
     """
     Returns params grid for post-training quantization algorithm.
     """

@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,7 +21,7 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
-ReductionAxes = Tuple[int, ...]
+ReductionAxes = tuple[int, ...]
 
 
 class TensorStatisticCollectorBase(ABC):
@@ -103,7 +103,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self, reduction_shape: Optional[ReductionAxes] = None, num_samples: int = None, window_size: int = None
     ):
         super().__init__(reduction_shape, num_samples)
-        self._samples: Deque[int] = deque(maxlen=window_size)
+        self._samples: deque[int] = deque(maxlen=window_size)
 
     def _reset(self) -> None:
         self._samples.clear()
@@ -165,8 +165,8 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self._use_abs_max = use_abs_max
         self._tensor_processor = self._get_processor()
 
-        self._all_min_values: Deque[int] = deque(maxlen=window_size)
-        self._all_max_values: Deque[int] = deque(maxlen=window_size)
+        self._all_min_values: deque[int] = deque(maxlen=window_size)
+        self._all_max_values: deque[int] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
@@ -260,8 +260,8 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(num_samples=num_samples)
         self._channel_axis = channel_axis
         self._tensor_processor = self._get_processor()
-        self._all_values: Deque[int] = deque(maxlen=window_size)
-        self._all_shapes: Deque[int] = deque(maxlen=window_size)
+        self._all_values: deque[int] = deque(maxlen=window_size)
+        self._all_shapes: deque[int] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
@@ -299,7 +299,7 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         """
         super().__init__(num_samples=num_samples)
-        self._all_values: List[int] = []
+        self._all_values: list[int] = []
 
     @staticmethod
     @abstractmethod
@@ -318,9 +318,9 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates median and median absolute deviation (MAD).
     """
 
-    def _prepare_statistics(self) -> Tuple[NDArray[Any], NDArray[Any]]:
+    def _prepare_statistics(self) -> tuple[NDArray[Any], NDArray[Any]]:
         per_channel_history = get_per_channel_history(
-            self._samples, cast(List[int], self._reduction_shape), discard_zeros=True
+            self._samples, cast(list[int], self._reduction_shape), discard_zeros=True
         )
         per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
@@ -338,7 +338,7 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
 
     def __init__(
         self,
-        percentiles_to_collect: List[float],
+        percentiles_to_collect: list[float],
         reduction_shape: Optional[ReductionAxes] = None,
         num_samples: int = None,
         window_size: int = None,
@@ -346,8 +346,8 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(reduction_shape, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
 
-    def _prepare_statistics(self) -> Dict[float, Any]:
-        per_channel_history = get_per_channel_history(self._samples, cast(List[int], self._reduction_shape))
+    def _prepare_statistics(self) -> dict[float, Any]:
+        per_channel_history = get_per_channel_history(self._samples, cast(list[int], self._reduction_shape))
         percentile_vs_values_dict = {}
         for pc in self._percentiles_to_collect:
             per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
@@ -363,16 +363,16 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
 
     def __init__(
         self,
-        percentiles_to_collect: List[float],
+        percentiles_to_collect: list[float],
         reduction_shape: Optional[ReductionAxes] = None,
         num_samples: int = None,
         window_size: int = None,
     ):
         super().__init__(reduction_shape, num_samples, window_size)
-        self._all_pct_values: Dict[float, Any] = {}
+        self._all_pct_values: dict[float, Any] = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque(maxlen=window_size)
 
     def _reset(self) -> None:
-        for _, val in self._all_pct_values.items():
+        for val in self._all_pct_values.values():
             val.clear()

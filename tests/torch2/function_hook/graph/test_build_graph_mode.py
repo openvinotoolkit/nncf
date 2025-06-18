@@ -9,27 +9,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import Union
 
 import pytest
 import torch
 from pytest import FixtureRequest
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import GraphBuilderMode
-from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorInfo
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorSource
-from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.function_hook.graph.build_graph_mode import GraphBuilderMode
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph
+from nncf.torch.function_hook.graph.graph_utils import ConstMeta
+from nncf.torch.function_hook.graph.graph_utils import EdgeMeta
+from nncf.torch.function_hook.graph.graph_utils import FunctionMeta
+from nncf.torch.function_hook.graph.graph_utils import InOutMeta
+from nncf.torch.function_hook.graph.graph_utils import NodeType
+from nncf.torch.function_hook.graph.graph_utils import TensorInfo
+from nncf.torch.function_hook.graph.graph_utils import TensorMeta
+from nncf.torch.function_hook.graph.graph_utils import TensorSource
+from nncf.torch.function_hook.hook_executor_mode import OpMeta
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 
 
@@ -123,7 +123,7 @@ def test_execute_pre_hooks():
 
 
 @pytest.fixture(params=["tensor", "list", "torch_return_type"])
-def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]:
+def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]:
     return {
         "tensor": torch.tensor(1.0),
         "list": [torch.tensor(1), torch.tensor([2])],
@@ -131,7 +131,7 @@ def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.T
     }.get(request.param)
 
 
-def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]):
+def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]):
     ctx = GraphBuilderMode(nn.Identity(), HookStorage())
     op_meta = OpMeta("/relu/0", torch.relu, {"node_id": 0})
     ctx.execute_post_hooks(example_outputs, op_meta)

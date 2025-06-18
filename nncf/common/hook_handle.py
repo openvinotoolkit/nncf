@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import weakref
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 
 class HookHandle:
@@ -19,12 +19,12 @@ class HookHandle:
     hook_id is unique for the hooks_registry.
     """
 
-    def __init__(self, hooks_registry: Dict[Any, Any], hook_id: str):
+    def __init__(self, hooks_registry: dict[Any, Any], hook_id: str):
         """
         :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
         :param hook_id: Hook id to use as key in the dictionary of hooks.
         """
-        self.hooks_registry_ref: Optional[weakref.ReferenceType[Dict[Any, Any]]] = weakref.ref(hooks_registry)
+        self.hooks_registry_ref: Optional[weakref.ReferenceType[dict[Any, Any]]] = weakref.ref(hooks_registry)
         self._hook_id = hook_id
 
     @property
@@ -47,7 +47,7 @@ class HookHandle:
             self.hooks_registry_ref = None
 
 
-def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandle:
+def add_op_to_registry(hooks_registry: dict[Any, Any], op: Any) -> HookHandle:
     """
     Registers op into the hooks_registry and returns HookHandler instance.
 

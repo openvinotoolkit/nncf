@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Callable, Dict, List, Optional, Set, Tuple, Type
+from typing import Callable, Optional
 
 import torch
 from torch import nn
@@ -48,7 +48,7 @@ def is_nncf_module(module: nn.Module) -> bool:
 
 def collect_all_scopes_for_extendable_and_extended_modules(
     model: nn.Module, predicate: Callable = None
-) -> Dict[nn.Module, Set[Scope]]:
+) -> dict[nn.Module, set[Scope]]:
     """
     Collects all ranges for all modules in the model that match the condition from predicate.
 
@@ -65,7 +65,7 @@ def collect_all_scopes_for_extendable_and_extended_modules(
 
 def collect_modules_and_scopes_by_predicate(
     module: nn.Module, predicate: Callable[[torch.nn.Module], bool]
-) -> Dict[nn.Module, Set[Scope]]:
+) -> dict[nn.Module, set[Scope]]:
     retval = {}
     return _collect_modules_and_scopes_recursive_helper(module, Scope(), predicate, retval)
 
@@ -74,9 +74,9 @@ def _collect_modules_and_scopes_recursive_helper(
     current_module: nn.Module,
     current_scope: Scope,
     collect_predicate: Callable[[torch.nn.Module], bool],
-    retval: Dict[nn.Module, Set[Scope]],
-    visited_scopes: Set[Scope] = None,
-) -> Dict[nn.Module, Set[Scope]]:
+    retval: dict[nn.Module, set[Scope]],
+    visited_scopes: set[Scope] = None,
+) -> dict[nn.Module, set[Scope]]:
     if visited_scopes is None:
         visited_scopes = set()
         current_scope = Scope()
@@ -138,12 +138,12 @@ def nncf_module_from(module: nn.Module) -> nn.Module:
 
 def replace_modules_by_nncf_modules(
     model: nn.Module,
-    ignored_scopes: Optional[List[str]] = None,
-    target_scopes: Optional[List[str]] = None,
-    eval_op_scopes: Optional[List[Scope]] = None,
+    ignored_scopes: Optional[list[str]] = None,
+    target_scopes: Optional[list[str]] = None,
+    eval_op_scopes: Optional[list[Scope]] = None,
     custom_replacer: Callable[[nn.Module], None] = None,
     predicate_fn: Optional[Callable] = None,
-) -> Tuple[nn.Module, Dict[torch.nn.Module, List[Scope]]]:
+) -> tuple[nn.Module, dict[torch.nn.Module, list[Scope]]]:
     """
     Replaces certain modules in the model hierarchy with NNCF-wrapped versions of the same modules.
     The modules to be replaced are statically defined in `nncf.torch.layers.NNCF_MODULES_DICT` and dynamically
@@ -173,8 +173,8 @@ def replace_modules_by_nncf_modules(
     The dictionary will also include the extended modules that have already been present in the model.
     """
     modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model, predicate=predicate_fn)
-    inter_dict: Dict[nn.Module, Set[Scope]] = {}
-    ret_dict: Dict[nn.Module, List[Scope]] = {}
+    inter_dict: dict[nn.Module, set[Scope]] = {}
+    ret_dict: dict[nn.Module, list[Scope]] = {}
     for module, scope_set in modules_vs_scopes_dict.items():
         if is_nncf_module(module):
             # The module has already been extended, track it in the return value
@@ -219,7 +219,7 @@ def get_original_module_scope_from_nncf_module_scope(nncf_module_scope: Scope) -
     return original_module_scope
 
 
-def _is_module_only_in_user_module(scope_set: Set[Scope]) -> bool:
+def _is_module_only_in_user_module(scope_set: set[Scope]) -> bool:
     for scope in scope_set:
         has_at_least_one_user_module = False
         for user_module_class in UNWRAPPED_USER_MODULES.registry_dict.values():
@@ -233,7 +233,7 @@ def _is_module_only_in_user_module(scope_set: Set[Scope]) -> bool:
     return True
 
 
-def _has_user_module(scope: Scope, user_module_class: Type[torch.nn.Module]) -> bool:
+def _has_user_module(scope: Scope, user_module_class: type[torch.nn.Module]) -> bool:
     for scope_element in scope.scope_elements[:-1]:
         if scope_element.calling_module_class_name == user_module_class.__name__:
             return True
@@ -276,10 +276,10 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
 
 
 def _is_scopes_allow_replacement(
-    scope_set_for_module: Set[Scope],
-    ignored_scopes: Optional[List[str]] = None,
-    target_scopes: Optional[List[str]] = None,
-    eval_op_scopes: Optional[List[Scope]] = None,
+    scope_set_for_module: set[Scope],
+    ignored_scopes: Optional[list[str]] = None,
+    target_scopes: Optional[list[str]] = None,
+    eval_op_scopes: Optional[list[Scope]] = None,
 ) -> bool:
     used_in_eval = False
     for scope in scope_set_for_module:

@@ -11,7 +11,7 @@
 
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -22,8 +22,8 @@ from nncf.experimental.common.pruning.operations import ReshapePruningOp
 
 @dataclass
 class ReshapeParsingDesc:
-    input_shape: List[int]
-    output_shape: List[int]
+    input_shape: list[int]
+    output_shape: list[int]
     mode: ReshapeMode = ReshapeMode.DEFAULT
     in_map: Optional[ReshapePruningOp.DIMENSION_MAP] = None
     out_map: Optional[ReshapePruningOp.DIMENSION_MAP] = None

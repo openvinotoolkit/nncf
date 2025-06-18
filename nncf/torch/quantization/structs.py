@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
 
 import torch
 
@@ -17,7 +16,7 @@ from nncf.torch.quantization.layers import BaseQuantizer
 
 
 class QuantizerInfo:
-    def __init__(self, quantizer_module_ref: BaseQuantizer, affected_insertions: List[PTTargetPoint]):
+    def __init__(self, quantizer_module_ref: BaseQuantizer, affected_insertions: list[PTTargetPoint]):
         self.quantizer_module_ref = quantizer_module_ref
         self.affected_insertions = affected_insertions
 
@@ -31,7 +30,7 @@ class WeightQuantizerInfo(QuantizerInfo):
         self,
         quantizer_module_ref: BaseQuantizer,
         quantized_module: torch.nn.Module,
-        affected_insertions: List[PTTargetPoint],
+        affected_insertions: list[PTTargetPoint],
     ):
         super().__init__(quantizer_module_ref, affected_insertions)
         self.quantized_module = quantized_module

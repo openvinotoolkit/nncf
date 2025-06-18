@@ -9,12 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 import nncf
 
 
-def handle_invalid_group_size_error(first_caught_exception: nncf.InvalidGroupSizeError, node_names: List[str]) -> None:
+def handle_invalid_group_size_error(first_caught_exception: nncf.InvalidGroupSizeError, node_names: list[str]) -> None:
     """
     Handles the InvalidGroupSizeError by generating a detailed error message and re-raising the exception.
 

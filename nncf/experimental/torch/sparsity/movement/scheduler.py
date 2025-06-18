@@ -10,7 +10,7 @@
 # limitations under the License.
 import math
 from enum import IntEnum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 
@@ -92,7 +92,7 @@ class MovementSchedulerParams:
         self.steps_per_epoch = steps_per_epoch
 
     @classmethod
-    def from_dict(cls, params: Dict[str, Any]) -> "MovementSchedulerParams":
+    def from_dict(cls, params: dict[str, Any]) -> "MovementSchedulerParams":
         """
         Initialize `MovementSchedulerParams` object from the config in dict format.
 
@@ -227,13 +227,13 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             return
         self._schedule_controller()
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         state = super().get_state()
         state["_init_importance_threshold"] = self._init_importance_threshold
         state["_steps_per_epoch"] = self._steps_per_epoch
         return state
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         super().load_state(state)
         self._init_importance_threshold = state["_init_importance_threshold"]
         self._steps_per_epoch = state["_steps_per_epoch"]

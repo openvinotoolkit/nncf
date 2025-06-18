@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -70,7 +70,7 @@ class BiasCorrection(Algorithm):
         threshold: float = BIAS_CORRECTION_THRESHOLD,
         apply_for_all_nodes: bool = False,
         inplace_statistics: bool = True,
-        backend_params: Optional[Dict[str, Any]] = None,
+        backend_params: Optional[dict[str, Any]] = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -105,7 +105,7 @@ class BiasCorrection(Algorithm):
             raise nncf.InternalError(msg)
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -219,7 +219,7 @@ class BiasCorrection(Algorithm):
             node, nncf_graph
         )
 
-    def _find_subgraph_output_ids(self, nncf_graph: NNCFGraph, main_node: NNCFNode) -> List[Tuple[str, int]]:
+    def _find_subgraph_output_ids(self, nncf_graph: NNCFGraph, main_node: NNCFNode) -> list[tuple[str, int]]:
         """
         The essence of the method is to collect output points for the future subgraph.
         It is understood that the main_node is the one for which the correction will be performed.
@@ -256,7 +256,7 @@ class BiasCorrection(Algorithm):
             edges_queue.extend(nncf_graph.get_output_edges(node))
         return subgraph_output_ids
 
-    def _get_statistic_nodes(self, nncf_graph: NNCFGraph, subgraph_output_ids: List[Tuple[str, int]]) -> List[NNCFNode]:
+    def _get_statistic_nodes(self, nncf_graph: NNCFGraph, subgraph_output_ids: list[tuple[str, int]]) -> list[NNCFNode]:
         """
         This method extracts NNCFNode instances from the subgraph_output_ids list.
 
@@ -272,8 +272,8 @@ class BiasCorrection(Algorithm):
         return statistic_nodes
 
     def _find_subgraph_input_ids(
-        self, nncf_graph: NNCFGraph, main_node: NNCFNode, subgraph_output_ids: List[Tuple[str, int]]
-    ) -> List[Tuple[str, int]]:
+        self, nncf_graph: NNCFGraph, main_node: NNCFNode, subgraph_output_ids: list[tuple[str, int]]
+    ) -> list[tuple[str, int]]:
         """
         The essence of the method is to collect entry points for the future subgraph.
         It is understood that the main_node is the one from the statistic nodes collected before.
@@ -308,7 +308,7 @@ class BiasCorrection(Algorithm):
             edges_queue.extend(nncf_graph.get_input_edges(node))
         return subgraph_input_ids
 
-    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, Set[Tuple[str, int]]]:
+    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> dict[str, set[tuple[str, int]]]:
         """
         This method collects necessary data for the specified node and its subgraph.
         This data contains the nodes (NNCFNode) for the subgraph building
@@ -348,7 +348,7 @@ class BiasCorrection(Algorithm):
 
         return subgraph_data
 
-    def _prepare_subgraph(self, node: NNCFNode, model: TModel, nncf_graph: NNCFGraph, subgraph_data: Dict) -> TModel:
+    def _prepare_subgraph(self, node: NNCFNode, model: TModel, nncf_graph: NNCFGraph, subgraph_data: dict) -> TModel:
         """
         This method prepares the subgraph from the model for the further inference.
 
@@ -374,8 +374,8 @@ class BiasCorrection(Algorithm):
         return model_transformer.transform(transformation_layout)
 
     def _create_feed_dicts(
-        self, model: TModel, subgraph_data: Dict, statistic_points: StatisticPointsContainer
-    ) -> List[Dict]:
+        self, model: TModel, subgraph_data: dict, statistic_points: StatisticPointsContainer
+    ) -> list[dict]:
         """
         Creates the list of the dictionaries that contains the input data for the model execution.
 
@@ -407,7 +407,7 @@ class BiasCorrection(Algorithm):
         return feed_dicts
 
     def _compute_bias_shift(
-        self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
+        self, node: NNCFNode, model: TModel, feed_dicts: list, statistic_points: StatisticPointsContainer
     ) -> Tensor:
         """
         Computes bias shift that will be used for the further bias correction.
@@ -460,7 +460,7 @@ class BiasCorrection(Algorithm):
         transformation_layout.register(bias_correction_command)
         return model_transformer.transform(transformation_layout)
 
-    def _collect_new_stats(self, model: TModel, feed_dicts: List, subgraph_data: Dict) -> None:
+    def _collect_new_stats(self, model: TModel, feed_dicts: list, subgraph_data: dict) -> None:
         """
         Updates the self._fp_inputs with the new statistics for the next layers
         after the correction of the bias for the current.
@@ -476,7 +476,7 @@ class BiasCorrection(Algorithm):
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name, output_id)
                 self._fp_inputs[(output_node_name, output_id)].append(Tensor(new_q_output[output_tensor_name]))
 
-    def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
+    def _remove_unnecessary_stats(self, position: int, subgraphs_data: dict[str, dict]) -> None:
         """
         Removes unnecessary statistics that were collected before to reduce the memory usage.
 
@@ -550,7 +550,8 @@ class BiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
+            stats = tensor_collector.get_statistics().mean_values
+            output_fp.extend(fns.atleast_1d(stats))
         return output_fp
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
@@ -629,7 +630,7 @@ class BiasCorrection(Algorithm):
 
         return statistic_container
 
-    def _get_biased_after_nodes(self, nncf_graph: NNCFGraph, nodes: List[NNCFNode], model: TModel) -> List[NNCFNode]:
+    def _get_biased_after_nodes(self, nncf_graph: NNCFGraph, nodes: list[NNCFNode], model: TModel) -> list[NNCFNode]:
         """
         This method finds and returns nodes with the bias in the model that follows after the input nodes.
 
@@ -673,7 +674,7 @@ class BiasCorrection(Algorithm):
 
         return list(biased_nodes - dependant_nodes)
 
-    def extract_model(self, model: TModel, input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]) -> TModel:
+    def extract_model(self, model: TModel, input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]) -> TModel:
         """
         Returns the backend-specific model that bounded by the specified input & output layers.
 

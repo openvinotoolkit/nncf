@@ -49,12 +49,17 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
 
 MATMUL_METATYPES = [onnx_metatypes.ONNXGemmMetatype, onnx_metatypes.ONNXMatMulMetatype]
 
-
-INPUTS_QUANTIZABLE_OPERATIONS = [
+CONVOLUTION_METATYPES = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
     onnx_metatypes.ONNXConvolutionTransposeMetatype,
-    *MATMUL_METATYPES,
+    onnx_metatypes.ONNXDeformableConvolutionMetatype,
+]
+
+LINEAR_OPERATIONS = [*CONVOLUTION_METATYPES, *MATMUL_METATYPES]
+
+INPUTS_QUANTIZABLE_OPERATIONS = [
+    *LINEAR_OPERATIONS,
     onnx_metatypes.ONNXAveragePoolMetatype,
     onnx_metatypes.ONNXGlobalAveragePoolMetatype,
     onnx_metatypes.ONNXAddLayerMetatype,
@@ -83,14 +88,6 @@ POSSIBLE_WEIGHT_LAYER_METATYPES = [
 
 OPERATIONS_WITH_WEIGHTS = list(set().union(CONSTANT_WEIGHT_LAYER_METATYPES, POSSIBLE_WEIGHT_LAYER_METATYPES))
 
-LINEAR_OPERATIONS = [
-    onnx_metatypes.ONNXConvolutionMetatype,
-    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
-    onnx_metatypes.ONNXConvolutionTransposeMetatype,
-    onnx_metatypes.ONNXDeformableConvolutionMetatype,
-    *MATMUL_METATYPES,
-]
-
 
 ATOMIC_ACTIVATIONS_OPERATIONS = [
     onnx_metatypes.ONNXReluMetatype,
@@ -101,6 +98,7 @@ ATOMIC_ACTIVATIONS_OPERATIONS = [
     onnx_metatypes.ONNXSigmoidMetatype,
     onnx_metatypes.ONNXHardSigmoidMetatype,
     onnx_metatypes.ONNXHardSwishMetatype,
+    onnx_metatypes.ONNXSeluMetatype,
 ]
 
 

@@ -13,7 +13,7 @@ from copy import deepcopy
 from functools import partial
 from inspect import Parameter
 from inspect import Signature
-from typing import Any, Dict, List, Optional, Protocol, Set, Tuple, Type, Union
+from typing import Any, Optional, Protocol, Union
 
 import torch
 
@@ -66,7 +66,7 @@ def replicate_same_tensors(obj: Any) -> Any:
     at runtime one and the same tensor could be wrapped by input/output wrappers twice,
     which will disrupt the traced graph structure and possibly hook calls.
     """
-    observed_tensor_object_ids: Set[int] = set()
+    observed_tensor_object_ids: set[int] = set()
 
     def replicate_fn(tensor: torch.Tensor) -> torch.Tensor:
         tensor_object_id = id(tensor)
@@ -88,7 +88,7 @@ class ModelInputInfo(abc.ABC):
     """
 
     @abc.abstractmethod
-    def get_forward_inputs(self, device: Optional[Union[str, torch.device]] = None) -> Tuple[Tuple, Dict]:
+    def get_forward_inputs(self, device: Optional[Union[str, torch.device]] = None) -> tuple[tuple, dict]:
         """
         Returns the tuple of (args, kwargs) for passing into the compressed model's forward method when necessary.
         The returned arguments should be such that the model's forward with these arguments executes the main
@@ -111,7 +111,7 @@ class FillerInputElement:
     FILLER_TYPE_RANDOM = "random"
     FILLER_TYPES = [FILLER_TYPE_ONES, FILLER_TYPE_ZEROS, FILLER_TYPE_RANDOM]
 
-    def __init__(self, shape: List[int], type_str: str = "float", keyword: str = None, filler: str = None):
+    def __init__(self, shape: list[int], type_str: str = "float", keyword: str = None, filler: str = None):
         """
         :param shape: The shape of the model input tensor.
         :param type_str: The type of the model input tensor - "float" for torch.float32, "long" for torch.long
@@ -165,7 +165,7 @@ class FillerInputInfo(ModelInputInfo):
     tensor args and kwargs of the model's forward method.
     """
 
-    def __init__(self, elements: List[FillerInputElement]):
+    def __init__(self, elements: list[FillerInputElement]):
         super().__init__()
         self.elements = deepcopy(elements)
 
@@ -194,7 +194,7 @@ class FillerInputInfo(ModelInputInfo):
                 ]
             )
         if isinstance(input_infos, list):
-            elements: List[FillerInputElement] = []
+            elements: list[FillerInputElement] = []
             for info_dict in input_infos:
                 elements.append(
                     FillerInputElement(
@@ -210,7 +210,7 @@ class FillerInputInfo(ModelInputInfo):
 
     def get_forward_inputs(
         self, device: Optional[Union[str, torch.device]] = None
-    ) -> Tuple[Tuple[torch.Tensor, ...], Dict[str, torch.Tensor]]:
+    ) -> tuple[tuple[torch.Tensor, ...], dict[str, torch.Tensor]]:
         args_list = []
         kwargs = {}
         for fe in self.elements:
@@ -229,11 +229,11 @@ class ExactInputsInfo(ModelInputInfo):
     An implementation of ModelInputInfo that defines the model input in terms of exact forward args and kwargs.
     """
 
-    def __init__(self, forward_args: Tuple, forward_kwargs: Dict):
+    def __init__(self, forward_args: tuple, forward_kwargs: dict):
         self._forward_args = forward_args
         self._forward_kwargs = forward_kwargs
 
-    def get_forward_inputs(self, device: Optional[Union[str, torch.device]] = None) -> Tuple[Tuple, Dict]:
+    def get_forward_inputs(self, device: Optional[Union[str, torch.device]] = None) -> tuple[tuple, dict]:
         if device is None:
             return self._forward_args, self._forward_kwargs
         to_device_fn = partial(torch.Tensor.to, device=device)
@@ -306,9 +306,9 @@ class InputInfoWrapManager:
         self._module_ref_for_device = module_ref_for_device
         args, kwargs = input_info.get_forward_inputs()
         bound_params = fwd_signature.bind(*args, **kwargs)
-        self._fwd_param_names_to_dummy_inputs_odict: Dict[str, Any] = bound_params.arguments
+        self._fwd_param_names_to_dummy_inputs_odict: dict[str, Any] = bound_params.arguments
 
-    def wrap_inputs(self, model_args: Tuple, model_kwargs: Dict) -> Tuple[Tuple, Dict]:
+    def wrap_inputs(self, model_args: tuple, model_kwargs: dict) -> tuple[tuple, dict]:
         bound_model_params = self._fwd_signature.bind(*model_args, **model_kwargs)
         for param_name, dummy_input in self._fwd_param_names_to_dummy_inputs_odict.items():
             if not isinstance(dummy_input, torch.Tensor):
@@ -357,4 +357,4 @@ class HasDataloader(Protocol):
         pass
 
 
-EXTRA_STRUCTS_WITH_DATALOADERS: List[Type[HasDataloader]] = [QuantizationRangeInitArgs, BNAdaptationInitArgs]
+EXTRA_STRUCTS_WITH_DATALOADERS: list[type[HasDataloader]] = [QuantizationRangeInitArgs, BNAdaptationInitArgs]

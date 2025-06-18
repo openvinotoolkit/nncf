@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import List
 
 import torch
 import torch.distributed as dist
@@ -61,7 +60,7 @@ class RBSparsityController(BaseSparsityAlgoController):
     Controller for the regularization-based (RB) sparsity algorithm in PT.
     """
 
-    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config: NNCFConfig):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: list[SparseModuleInfo], config: NNCFConfig):
         super().__init__(target_model, sparsified_module_info)
         algo_config = extract_algo_specific_config(config, "rb_sparsity")
         params = deepcopy(algo_config.get("params", {}))

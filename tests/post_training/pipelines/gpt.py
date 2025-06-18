@@ -11,7 +11,7 @@
 
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import torch
 import transformers
 from optimum.intel import OVQuantizer

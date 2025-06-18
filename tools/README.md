@@ -21,7 +21,7 @@ python memory_monitor.py --log-dir ./allocation_logs python allocate.py
 ```
 
 ```shell
-python memory_monitor.py optimum-cli export openvino ...
+python memory_monitor.py "optimum-cli export openvino ..."
 ```
 
 ### Example 2. As a python Module

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
-from typing import Any, Callable, List, Union
+from typing import Any, Callable, Union
 
 import torch
 from torch import Tensor
@@ -27,28 +27,28 @@ from nncf.torch.utils import is_tensor
 
 
 class ParameterHandler:
-    def __init__(self, parameters: List[Parameter], device: str):
+    def __init__(self, parameters: list[Parameter], device: str):
         self._device = device
         self._parameters = parameters
 
     @property
-    def parameters(self) -> List[Parameter]:
+    def parameters(self) -> list[Parameter]:
         return self._parameters
 
-    def get_gradients(self) -> List[Union[Tensor, float]]:
+    def get_gradients(self) -> list[Union[Tensor, float]]:
         gradients = []
         for parameter in self.parameters:
             gradients.append(0.0 if parameter.grad is None else parameter.grad + 0.0)
         return gradients
 
-    def sample_rademacher_like_params(self) -> List[Tensor]:
+    def sample_rademacher_like_params(self) -> list[Tensor]:
         def sample(parameter):
             r = torch.randint_like(parameter, high=2, device=self._device)
             return r.masked_fill_(r == 0, -1)
 
         return [sample(p) for p in self.parameters]
 
-    def sample_normal_like_params(self) -> List[Tensor]:
+    def sample_normal_like_params(self) -> list[Tensor]:
         return [torch.randn(p.size(), device=self._device) for p in self.parameters]
 
 
@@ -132,7 +132,7 @@ class HessianTraceEstimator:
         :return: Tensor with average hessian trace per parameter
         """
         avg_total_trace = 0.0
-        avg_traces_per_iter: List[Tensor] = []
+        avg_traces_per_iter: list[Tensor] = []
         mean_avg_traces_per_param = None
 
         for i in range(max_iter):
@@ -163,5 +163,5 @@ class HessianTraceEstimator:
         return avg_traces_per_param
 
     @staticmethod
-    def _get_mean(data: List[Tensor]) -> Tensor:
+    def _get_mean(data: list[Tensor]) -> Tensor:
         return torch.mean(torch.stack(data), dim=0)

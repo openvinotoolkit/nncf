@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.operations import BatchNormPruningOp
@@ -33,7 +32,7 @@ class DummyDefaultMetatype(OperatorMetatype):
     name = None
 
     @classmethod
-    def get_all_aliases(cls) -> List[str]:
+    def get_all_aliases(cls) -> list[str]:
         return [cls.name]
 
 

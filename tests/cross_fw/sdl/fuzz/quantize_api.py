@@ -21,7 +21,7 @@ with atheris.instrument_imports():
 from random import randint
 from random import seed
 
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from torchvision import datasets
 from torchvision import transforms

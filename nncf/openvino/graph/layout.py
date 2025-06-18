@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Tuple
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -46,7 +45,7 @@ _CONV_BASE_CONST_LAYOUT = {
 }
 
 
-def get_conv_weights_layout_from_node(node: NNCFNode) -> Tuple[OVLayoutElem]:
+def get_conv_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -60,7 +59,7 @@ def get_conv_weights_layout_from_node(node: NNCFNode) -> Tuple[OVLayoutElem]:
     )
 
 
-def get_linear_weights_layout_from_node(node: NNCFNode) -> Tuple[OVLayoutElem]:
+def get_linear_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
     """
     Calculates weights layout for a target linear node.
 
@@ -78,8 +77,8 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> Tuple[OVLayoutElem]:
 
 
 def get_linear_activations_layout_from_node(
-    node: NNCFNode, port_id: int, input_shape: Tuple[int]
-) -> Tuple[OVLayoutElem]:
+    node: NNCFNode, port_id: int, input_shape: tuple[int]
+) -> tuple[OVLayoutElem]:
     """
     Calculates activations layout for a target linear node.
 
@@ -96,7 +95,7 @@ def get_linear_activations_layout_from_node(
     )
 
 
-def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int, ...]) -> Tuple[OVLayoutElem]:
+def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: tuple[int, ...]) -> tuple[OVLayoutElem]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -110,7 +109,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     return tuple(weights_layout)
 
 
-def get_linear_input_layout(input_shape: Tuple[int, ...], transpose: bool, port_id: int) -> Tuple[OVLayoutElem]:
+def get_linear_input_layout(input_shape: tuple[int, ...], transpose: bool, port_id: int) -> tuple[OVLayoutElem]:
     """
     Calculates input layout for a target linear node.
 

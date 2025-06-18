@@ -9,13 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import onnxruntime as rt
 from onnx import ModelProto
 
 from nncf.common.engine import Engine
+from nncf.onnx.graph.model_metadata import MetadataKey
+from nncf.onnx.graph.model_metadata import get_metadata
 
 
 class ONNXEngine(Engine):
@@ -25,14 +27,22 @@ class ONNXEngine(Engine):
 
     def __init__(self, model: ModelProto, **rt_session_options: Any):
         self.input_names = set()
+
+        sees_options = rt.SessionOptions()
+        external_data_dir = get_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
+        if external_data_dir:
+            sees_options.add_session_config_entry(
+                "session.model_external_initializers_file_folder_path", external_data_dir
+            )
+
         rt_session_options["providers"] = ["CPUExecutionProvider"]
         serialized_model = model.SerializeToString()
-        self.sess = rt.InferenceSession(serialized_model, **rt_session_options)
+        self.sess = rt.InferenceSession(serialized_model, sees_options, **rt_session_options)
 
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
 
-    def infer(self, input_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def infer(self, input_data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Runs model on the provided input via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.

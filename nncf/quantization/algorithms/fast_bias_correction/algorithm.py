@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from math import inf
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 
 import nncf
 from nncf import Dataset
@@ -60,7 +60,7 @@ class FastBiasCorrection(Algorithm):
         threshold: float = FAST_BIAS_CORRECTION_THRESHOLD,
         apply_for_all_nodes: bool = False,
         inplace_statistics: bool = True,
-        backend_params: Optional[Dict[str, Any]] = None,
+        backend_params: Optional[dict[str, Any]] = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -92,7 +92,7 @@ class FastBiasCorrection(Algorithm):
             raise nncf.InternalError(msg)
 
     @property
-    def available_backends(self) -> List[BackendType]:
+    def available_backends(self) -> list[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -239,7 +239,7 @@ class FastBiasCorrection(Algorithm):
             bias_shift = bias_shift.reshape(new_shape)
         return bias_shift
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tuple[List, List]:
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> tuple[list, list]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -264,7 +264,7 @@ class FastBiasCorrection(Algorithm):
             input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> list[TTensor]:
         """
         Makes out per-layer needed data from the floating-point collected statistics.
 
@@ -304,9 +304,9 @@ class FastBiasCorrection(Algorithm):
     def _get_bias_shift(
         self,
         model: TModel,
-        input_blob: Union[TTensor, Dict[str, TTensor]],
-        output_channel_axis: Tuple[int],
-        output_fp: List[TTensor],
+        input_blob: Union[TTensor, dict[str, TTensor]],
+        output_channel_axis: tuple[int],
+        output_fp: list[TTensor],
         output_name: str,
     ) -> TTensor:
         """

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import tensorflow as tf
 
@@ -66,7 +66,7 @@ class CalibrationDataLoader(NNCFDataLoader):
         return iter(DataProvider(self._dataset.get_inference_data(), transform_fn))
 
 
-def _get_default_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict[str, Any]:
+def _get_default_quantization_config(preset: QuantizationPreset, subset_size: int) -> dict[str, Any]:
     """
     Returns the default quantization config
 

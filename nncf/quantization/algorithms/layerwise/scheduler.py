@@ -13,7 +13,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Dict, List, NamedTuple, Set, TypeVar
+from typing import NamedTuple, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -45,9 +45,9 @@ class LayerwiseStep:
     :param subgraph_outputs: List of output ports for the subgraph.
     """
 
-    target_node_map: Dict[NNCFNode, Dict[int, NodeOutputPort]]
-    subgraph_inputs: List[NodeOutputPort]
-    subgraph_outputs: List[NodeOutputPort]
+    target_node_map: dict[NNCFNode, dict[int, NodeOutputPort]]
+    subgraph_inputs: list[NodeOutputPort]
+    subgraph_outputs: list[NodeOutputPort]
 
 
 @dataclass
@@ -60,9 +60,9 @@ class SimplePath:
     :param inputs: Set of input ports.
     """
 
-    input_nodes: Set[NNCFNode]
-    output_nodes: Set[NNCFNode]
-    inputs: Set[NodeOutputPort] = field(default_factory=set)
+    input_nodes: set[NNCFNode]
+    output_nodes: set[NNCFNode]
+    inputs: set[NodeOutputPort] = field(default_factory=set)
 
 
 class LayerwiseScheduler:
@@ -90,8 +90,8 @@ class LayerwiseScheduler:
         self.add_additional_outputs = add_additional_outputs
 
     def schedule(
-        self, graph: NNCFGraph, target_nodes: List[NNCFNode], collect_inputs: bool = True
-    ) -> List[LayerwiseStep]:
+        self, graph: NNCFGraph, target_nodes: list[NNCFNode], collect_inputs: bool = True
+    ) -> list[LayerwiseStep]:
         """
         Schedules the execution of the graph in a layer-wise manner.
 
@@ -234,7 +234,7 @@ class LayerwiseScheduler:
 
         return steps
 
-    def _merge_paths(self, paths: List[SimplePath]) -> List[SimplePath]:
+    def _merge_paths(self, paths: list[SimplePath]) -> list[SimplePath]:
         """
         Merges paths that have overlapping input sets into single paths.
 

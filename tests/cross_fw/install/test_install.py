@@ -13,7 +13,6 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -63,7 +62,7 @@ def removable_tmp_path(tmp_path: Path):
 
 
 @pytest.fixture(name="backend_to_test")
-def backend_to_test_(request, backend_clopt: List[str]):
+def backend_to_test_(request, backend_clopt: list[str]):
     backends_to_test = set()
     for be in backend_clopt:
         if be == "all":
@@ -80,7 +79,7 @@ class TestInstall:
         removable_tmp_path: Path,
         backend: str,
         package_type: str,
-        backend_clopt: List[str],
+        backend_clopt: list[str],
         host_configuration_clopt: str,
         ov_version_override: str,
     ):

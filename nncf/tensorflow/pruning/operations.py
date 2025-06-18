@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.pruning.operations import BatchNormPruningOp
@@ -35,7 +34,7 @@ from nncf.tensorflow.graph.pattern_operations import TF_ACTIVATIONS_OPERATIONS
 TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
-def _get_types(operations_dict: Dict) -> List[str]:
+def _get_types(operations_dict: dict) -> list[str]:
     return operations_dict["type"]
 
 

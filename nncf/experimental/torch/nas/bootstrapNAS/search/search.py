@@ -12,7 +12,7 @@ import csv
 from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar
+from typing import Any, Callable, NoReturn, Optional, TypeVar
 
 import numpy as np
 import torch
@@ -114,7 +114,7 @@ class SearchParams:
         self.ref_acc = ref_acc
 
     @classmethod
-    def from_dict(cls, search_config: Dict[str, Any]) -> "SearchParams":
+    def from_dict(cls, search_config: dict[str, Any]) -> "SearchParams":
         """
         Initializes search params storage class from Dict.
 
@@ -174,7 +174,7 @@ class RNSGA2SearchParams(SearchParams):
         self.extreme_points_as_ref_points = extreme_points_as_ref_points
 
     @classmethod
-    def from_dict(cls, search_config: Dict[str, Any]) -> "RNSGA2SearchParams":
+    def from_dict(cls, search_config: dict[str, Any]) -> "RNSGA2SearchParams":
         """
         Initializes search params storage class from Dict.
 
@@ -274,7 +274,7 @@ class BaseSearchAlgorithm:
         efficiency_evaluator: Optional[BaseEvaluator] = None,
         ref_acc: Optional[float] = 100,
         tensorboard_writer: Optional["SummaryWriter"] = None,  # noqa: F821
-    ) -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
+    ) -> tuple[ElasticityController, SubnetConfig, tuple[float, ...]]:
         """This method should implement how to run the search algorithm."""
 
     def search_progression_to_csv(self, filename="search_progression.csv") -> NoReturn:
@@ -350,7 +350,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         self.type_var = int
 
     @property
-    def evaluator_handlers(self) -> List[BaseEvaluatorHandler]:
+    def evaluator_handlers(self) -> list[BaseEvaluatorHandler]:
         """
         Gets a list of the evaluators used by the search algorithm.
 
@@ -380,7 +380,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         self.search_params.acc_delta = val
 
     @property
-    def vars_lower(self) -> List[float]:
+    def vars_lower(self) -> list[float]:
         """
         Gets access to design variables lower bounds.
         :return: lower bounds for design variables
@@ -388,7 +388,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         return self._vars_lower
 
     @property
-    def vars_upper(self) -> List[float]:
+    def vars_upper(self) -> list[float]:
         """
         Gets access to design variables upper bounds.
         :return: upper bounds for design variables
@@ -412,7 +412,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         ref_acc: Optional[float] = 100,
         tensorboard_writer: Optional["SummaryWriter"] = None,  # noqa: F821
         evaluator_checkpoint=None,
-    ) -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
+    ) -> tuple[ElasticityController, SubnetConfig, tuple[float, ...]]:
         """
         Runs the search algorithm
 
@@ -692,7 +692,7 @@ class SearchProblem(Problem):
         self._model = search._model
         self._lower_bound_acc = search.search_params.ref_acc - search.acc_delta
 
-    def _evaluate(self, x: List[float], out: Dict[str, Any], *args, **kwargs) -> NoReturn:
+    def _evaluate(self, x: list[float], out: dict[str, Any], *args, **kwargs) -> NoReturn:
         """
         Evaluates a population of sub-networks.
 

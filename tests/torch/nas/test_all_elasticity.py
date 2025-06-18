@@ -30,11 +30,13 @@ from tests.torch.nas.descriptors import MultiElasticityTestDesc
 from tests.torch.nas.helpers import do_training_step
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import ThreeConvModelMode
+from tests.torch.test_compressed_graph import get_full_path_to_the_graph
+
+pytestmark = pytest.mark.legacy
 
 ###########################
 # Helpers
 ###########################
-from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 
 
 def check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, stage):

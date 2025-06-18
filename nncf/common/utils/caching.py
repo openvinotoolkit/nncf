@@ -12,7 +12,7 @@ import copy
 import inspect
 from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Callable, Dict, Iterator, TypeVar, cast
+from typing import Any, Callable, Iterator, TypeVar, cast
 
 
 class ResultsCache:
@@ -23,9 +23,9 @@ class ResultsCache:
     def __init__(self) -> None:
         self._enabled = True
         # Stores the results of the decorated function
-        self._cache: Dict[Any, Any] = {}
+        self._cache: dict[Any, Any] = {}
         # Stores the number of times the cached result was accessed
-        self._access_count: Dict[Any, int] = {}
+        self._access_count: dict[Any, int] = {}
 
     def enable(self) -> None:
         self._enabled = True
@@ -36,7 +36,7 @@ class ResultsCache:
     def enabled(self) -> bool:
         return self._enabled
 
-    def access_count(self) -> Dict[Any, int]:
+    def access_count(self) -> dict[Any, int]:
         return copy.deepcopy(self._access_count)
 
     def clear(self) -> None:
@@ -95,9 +95,11 @@ def disable_results_caching(cache: ResultsCache) -> Iterator[None]:
 
     :param cache: A cache container where results are stored.
     """
-    if cache.enabled():
+    should_reenable = cache.enabled()
+    if should_reenable:
         cache.disable()
+    try:
         yield
-        cache.enable()
-    else:
-        yield
+    finally:
+        if should_reenable:
+            cache.enable()

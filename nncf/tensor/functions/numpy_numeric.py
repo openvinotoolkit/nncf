@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Sequence, Union
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -27,9 +27,9 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore [type-arg]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]
 
-DTYPE_MAP: Dict[TensorDataType, DTypeLike] = {
+DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
     TensorDataType.float32: np.dtype(np.float32),
     TensorDataType.float64: np.dtype(np.float64),
@@ -100,6 +100,11 @@ def _(a: T_NUMPY) -> TensorDataType:
 @numeric.reshape.register
 def _(a: T_NUMPY, shape: T_SHAPE) -> T_NUMPY:
     return a.reshape(shape)
+
+
+@numeric.atleast_1d.register
+def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
+    return np.atleast_1d(a)
 
 
 @numeric.all.register
@@ -184,12 +189,12 @@ def _(x: T_NUMPY, axis: int = 0) -> T_NUMPY_ARRAY:
 
 
 @numeric.unstack.register
-def _(x: T_NUMPY, axis: int = 0) -> List[T_NUMPY_ARRAY]:
+def _(x: T_NUMPY, axis: int = 0) -> list[T_NUMPY_ARRAY]:
     return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]
 
 
 @numeric.moveaxis.register
-def _(a: T_NUMPY_ARRAY, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> T_NUMPY_ARRAY:
+def _(a: T_NUMPY_ARRAY, source: Union[int, tuple[int, ...]], destination: Union[int, tuple[int, ...]]) -> T_NUMPY_ARRAY:
     return np.moveaxis(a, source, destination)
 
 
@@ -226,7 +231,7 @@ def _(a: T_NUMPY, exponent: Union[T_NUMPY, float]) -> T_NUMPY:
 @numeric.quantile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, List[float]],
+    q: Union[float, list[float]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY:
@@ -236,7 +241,7 @@ def _(
 @numeric.percentile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, List[float]],
+    q: Union[float, list[float]],
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> T_NUMPY:
@@ -393,7 +398,7 @@ def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
 
 
 def zeros(
-    shape: Tuple[int, ...],
+    shape: tuple[int, ...],
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
@@ -439,7 +444,7 @@ def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
 
 
 def tensor(
-    data: Union[TTensor, List[float]],
+    data: Union[TTensor, list[float]],
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,

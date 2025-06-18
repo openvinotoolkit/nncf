@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import inspect
-from typing import Callable, Dict, TypeVar
+from typing import Callable, TypeVar
 
 TObj = TypeVar("TObj", bound=type)
 
@@ -23,8 +23,8 @@ class StatefulClassesRegistry:
     REQUIRED_METHOD_NAME = "from_state"
 
     def __init__(self) -> None:
-        self._name_vs_class_map: Dict[str, type] = {}
-        self._class_vs_name_map: Dict[type, str] = {}
+        self._name_vs_class_map: dict[str, type] = {}
+        self._class_vs_name_map: dict[type, str] = {}
 
     def register(self, name: str = None) -> Callable[[TObj], TObj]:
         """

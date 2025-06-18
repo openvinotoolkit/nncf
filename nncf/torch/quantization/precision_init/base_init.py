@@ -11,7 +11,7 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Dict, List, Union
+from typing import Union
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -66,7 +66,7 @@ class BasePrecisionInitializer:
         raise NotImplementedError
 
     @staticmethod
-    def get_bitwidth_per_scope(quantizer_setup: SingleConfigQuantizerSetup) -> List[List[Union[int, str]]]:
+    def get_bitwidth_per_scope(quantizer_setup: SingleConfigQuantizerSetup) -> list[list[Union[int, str]]]:
         scope_vs_bitwidth = {}
         for qp in quantizer_setup.quantization_points.values():
             scope_vs_bitwidth[str(qp.insertion_point)] = qp.qconfig.num_bits
@@ -96,15 +96,15 @@ class WeightQuantizersHandler:
     def __init__(
         self,
         model: NNCFNetwork,
-        weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+        weight_quantizers: dict[WeightQuantizerId, WeightQuantizerInfo],
         constraints: HardwareQuantizationConstraints,
     ):
         self._wq_affected_module_node_name_vs_qid_dict = {k.target_node_name: k for k in weight_quantizers}
-        self._quantizer_module_scope_vs_qid_dict: Dict[Scope, WeightQuantizerId] = {}
+        self._quantizer_module_scope_vs_qid_dict: dict[Scope, WeightQuantizerId] = {}
         self._skipped_quantized_weight_node_names = []
-        self._skipped_weight_quantizers: Dict[WeightQuantizerId, BaseQuantizer] = {}
-        self._weight_quantizers_in_execution_order_per_scope: Dict[Scope, BaseQuantizer] = OrderedDict()
-        self._weight_quantizers_in_execution_order: Dict[WeightQuantizerId, BaseQuantizer] = OrderedDict()
+        self._skipped_weight_quantizers: dict[WeightQuantizerId, BaseQuantizer] = {}
+        self._weight_quantizers_in_execution_order_per_scope: dict[Scope, BaseQuantizer] = OrderedDict()
+        self._weight_quantizers_in_execution_order: dict[WeightQuantizerId, BaseQuantizer] = OrderedDict()
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         weight_module_dict = model
@@ -123,18 +123,18 @@ class WeightQuantizersHandler:
                         self._skipped_quantized_weight_node_names.append(affected_module_node.node_name)
                         self._skipped_weight_quantizers[qid] = quantizer
 
-    def get_skipped_quantized_weight_node_names(self) -> List[NNCFNodeName]:
+    def get_skipped_quantized_weight_node_names(self) -> list[NNCFNodeName]:
         return self._skipped_quantized_weight_node_names
 
-    def get_all_weight_quantizers_in_execution_order_per_scope(self) -> Dict[Scope, BaseQuantizer]:
+    def get_all_weight_quantizers_in_execution_order_per_scope(self) -> dict[Scope, BaseQuantizer]:
         return self._weight_quantizers_in_execution_order_per_scope
 
-    def get_weight_quantizers_in_execution_order_per_id(self) -> Dict[WeightQuantizerId, BaseQuantizer]:
+    def get_weight_quantizers_in_execution_order_per_id(self) -> dict[WeightQuantizerId, BaseQuantizer]:
         return self._weight_quantizers_in_execution_order
 
     def get_quantizer_id_by_scope(self, scope: Scope) -> QuantizerId:
         affected_module_scope = self.get_owning_module_scope_from_wq_scope(scope)
         return self._wq_affected_module_node_name_vs_qid_dict[affected_module_scope]
 
-    def get_skipped_weight_quantizers_per_id(self) -> Dict[QuantizerId, BaseQuantizer]:
+    def get_skipped_weight_quantizers_per_id(self) -> dict[QuantizerId, BaseQuantizer]:
         return self._skipped_weight_quantizers

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import math
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -26,12 +26,10 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -82,10 +80,10 @@ class GPTQ:
         model: TModel,
         graph: NNCFGraph,
         dataset: Dataset,
-        weight_compression_parameters: List[WeightCompressionParameters],
+        weight_compression_parameters: list[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> Tuple[TModel, Dict[str, Tensor], Dict[str, Tensor]]:
+    ) -> tuple[TModel, dict[str, Tensor], dict[str, Tensor]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
 
@@ -134,7 +132,7 @@ class GPTQ:
         self,
         model: TModel,
         graph: NNCFGraph,
-        target_nodes: List[NNCFNode],
+        target_nodes: list[NNCFNode],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> StatisticPointsContainer:
         """
@@ -157,7 +155,7 @@ class GPTQ:
 
         return self._layerwise_engine.get_statistic_points(model, graph, filtered_nodes)
 
-    def _calculate_hessian(self, node: NNCFNode, inputs: List[Tensor]) -> Tensor:
+    def _calculate_hessian(self, node: NNCFNode, inputs: list[Tensor]) -> Tensor:
         """
         Calculates the Hessian matrix for the given node and inputs.
 
@@ -197,7 +195,7 @@ class GPTQ:
         graph: NNCFGraph,
         wc_params: WeightCompressionParameters,
         hessian: Tensor,
-        inputs: List[Tensor],
+        inputs: list[Tensor],
     ):
         """
         Quantizes the weights of the model based on the calculated Hessian matrix.
@@ -263,7 +261,9 @@ class GPTQ:
 
                 if (i1 + i) % group_size == 0:
                     if block_compression_config.mode == CompressWeightsMode.NF4:
-                        scale = calculate_nf4_scale(weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes)
+                        scale = calculate_float_quantization_params(
+                            weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
+                        )
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
@@ -285,15 +285,18 @@ class GPTQ:
                         zero_points.append(zero_point)
 
                 if block_compression_config.mode == CompressWeightsMode.NF4:
-                    compressed_weights = do_nf4_quantization(
-                        fns.unsqueeze(weight_col, 1), scales[-1], is_normalized_weight=False
+                    quantized_col = float_quantize_dequantize_weight(
+                        fns.unsqueeze(weight_col, 1),
+                        block_compression_config,
+                        precomputed_scale=scales[-1],
                     )
-                    quantized_col = do_nf4_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
                 else:
-                    compressed_weights = calculate_quantized_weight(
-                        fns.unsqueeze(weight_col, 1), block_compression_config, scales[-1], zero_points[-1]
+                    quantized_col = integer_quantize_dequantize_weight(
+                        fns.unsqueeze(weight_col, 1),
+                        block_compression_config,
+                        precomputed_scale=scales[-1],
+                        precomputed_zero_point=zero_points[-1],
                     )
-                    quantized_col = do_int_dequantization(compressed_weights, scales[-1], zero_points[-1])
                 quantized_col = fns.flatten(quantized_col)
                 quantized_block[:, i] = quantized_col
                 loss_block[:, i] = (weight_col - quantized_col) ** 2 / hessian_diag_val**2

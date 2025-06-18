@@ -12,7 +12,6 @@
 import os
 from collections import OrderedDict
 from pathlib import Path
-from typing import List
 
 import torch
 from torch import Tensor
@@ -35,11 +34,11 @@ from nncf.torch.utils import get_all_modules_by_type
 class HAWQDebugger:
     def __init__(
         self,
-        weight_qconfig_sequences_in_trace_order: List["QConfigSequenceForHAWQToEvaluate"],
+        weight_qconfig_sequences_in_trace_order: list["QConfigSequenceForHAWQToEvaluate"],
         perturbations: Perturbations,
-        weight_observers_for_each_covering_configuration: List[List[PerturbationObserver]],
+        weight_observers_for_each_covering_configuration: list[list[PerturbationObserver]],
         traces_per_layer: TracesPerLayer,
-        bitwidths: List[int],
+        bitwidths: list[int],
     ):
         self._weight_qconfig_sequences_in_trace_order = weight_qconfig_sequences_in_trace_order
         self._num_weights = len(traces_per_layer.traces_order)
@@ -105,7 +104,7 @@ class HAWQDebugger:
         plt.savefig(dump_file)
 
     @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
-    def dump_metric_MB(self, metric_per_qconfig_sequence: List[Tensor]):
+    def dump_metric_MB(self, metric_per_qconfig_sequence: list[Tensor]):
         import matplotlib.pyplot as plt
 
         list_to_plot = [cm.item() for cm in metric_per_qconfig_sequence]
@@ -134,7 +133,7 @@ class HAWQDebugger:
 
     @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_metric_flops(
-        self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float], chosen_qconfig_index: int
+        self, metric_per_qconfig_sequence: list[Tensor], flops_per_config: list[float], chosen_qconfig_index: int
     ):
         import matplotlib.pyplot as plt
 
@@ -160,7 +159,7 @@ class HAWQDebugger:
 
     @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_density_of_quantization_noise(self):
-        noise_per_config: List[Tensor] = []
+        noise_per_config: list[Tensor] = []
         for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
             qnoise = 0
             for i in range(self._num_weights):

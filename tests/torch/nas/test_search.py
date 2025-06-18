@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, NamedTuple
 
 import pytest
 import torch
@@ -28,6 +28,7 @@ from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
 from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # noqa: F401
 
+pytestmark = pytest.mark.legacy
 SEARCH_ALGORITHMS = ["NSGA2", "RNSGA2"]
 
 
@@ -39,9 +40,9 @@ def fixture_search_algo_name(request):
 class SearchTestDesc(NamedTuple):
     model_creator: Any
     # ref_model_stats: RefModelStats = None
-    blocks_to_skip: List[List[str]] = None
-    input_sizes: List[int] = [1, 3, 32, 32]
-    algo_params: Dict = {}
+    blocks_to_skip: list[list[str]] = None
+    input_sizes: list[int] = [1, 3, 32, 32]
+    algo_params: dict = {}
     name: str = None
     mode: str = "auto"
 
@@ -199,10 +200,10 @@ class TestSearchAlgorithm:
 class SearchTestResultDesc(NamedTuple):
     model_creator: Any
     expected_accuracy: float
-    subnet_expected_accuracy: Dict
-    input_sizes: List[int]
-    search_spaces: Dict
-    eval_datasets: List
+    subnet_expected_accuracy: dict
+    input_sizes: list[int]
+    search_spaces: dict
+    eval_datasets: list
 
 
 SEARCH_RESULT_DESCRIPTORS = [

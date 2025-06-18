@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pytest
@@ -42,7 +42,7 @@ class DummyTensorReducer(TensorReducerBase):
         self.output_name = output_name
         self._inplace_mock = inplace_mock
 
-    def _reduce_out_of_place(self, x: List[TensorType]):
+    def _reduce_out_of_place(self, x: list[TensorType]):
         return x
 
     def get_inplace_fn(self):
@@ -67,7 +67,7 @@ class DummyTensorAggregator(AggregatorBase):
         return self._container[0]
 
 
-def get_output_info(reducers: List[DummyTensorReducer]) -> List[Tuple[int, List[str]]]:
+def get_output_info(reducers: list[DummyTensorReducer]) -> list[tuple[int, list[str]]]:
     retval = []
     for reducer in reducers:
         retval.append((hash(reducer), [reducer.output_name]))
@@ -250,7 +250,7 @@ class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
     NUM_INPUTS = 3
     NUM_OUTPUTS = 2
 
-    def _reduce_out_of_place(self, x: List[TensorType]):
+    def _reduce_out_of_place(self, x: list[TensorType]):
         return x[: self.NUM_OUTPUTS]
 
 

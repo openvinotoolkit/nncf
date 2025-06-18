@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from bisect import bisect_right
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -77,7 +77,7 @@ class MultiStepSchedule:
     This schedule applies a piecewise constant function to an epoch index
     """
 
-    def __init__(self, boundaries: List[int], values: List[float]):
+    def __init__(self, boundaries: list[int], values: list[float]):
         """
         Initializes a schedule with a piecewise constant function.
 
@@ -225,7 +225,7 @@ class BaseCompressionScheduler(CompressionScheduler):
             next_epoch = self._current_epoch + 1
         self._current_epoch = next_epoch
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         """
         Loads the compression scheduler state, but does not update the state of the
         compression method.
@@ -235,7 +235,7 @@ class BaseCompressionScheduler(CompressionScheduler):
         self._current_step = state["current_step"]
         self._current_epoch = state["current_epoch"]
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """
         Returns the compression scheduler state.
 
@@ -251,10 +251,10 @@ class StubCompressionScheduler(CompressionScheduler):
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         pass
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: dict[str, Any]) -> None:
         pass
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         return {}
 
     def compression_stage(self) -> CompressionStage:

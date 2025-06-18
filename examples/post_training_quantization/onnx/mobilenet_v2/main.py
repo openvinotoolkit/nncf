@@ -12,7 +12,6 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import onnx
@@ -62,7 +61,7 @@ def validate(path_to_model: Path, validation_loader: torch.utils.data.DataLoader
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(path_to_model: Path, shape: List[int]) -> float:
+def run_benchmark(path_to_model: Path, shape: list[int]) -> float:
     command = [
         "benchmark_app",
         "-m", path_to_model.as_posix(),

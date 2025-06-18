@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from dataclasses import fields
-from typing import Any, ClassVar, Dict, List, Tuple
+from typing import Any, ClassVar
 
 import nncf
 from nncf.tensor import Tensor
@@ -27,7 +27,7 @@ class TensorStatistic:
 
     TENSOR_STATISTIC_OUTPUT_KEY: ClassVar[str] = "tensor_statistic_output"
 
-    def get_data(self, is_serialized: bool = False) -> Dict[str, Any]:
+    def get_data(self, is_serialized: bool = False) -> dict[str, Any]:
         """
         Retrieves the data of the tensor statistics. If `is_serialized` is True,
         the data is prepared for serialization by including only Tensor instances.
@@ -41,7 +41,7 @@ class TensorStatistic:
             return self._get_serialized_data()  # Dict[str, Tensor]
         return {field.name: getattr(self, field.name) for field in fields(self)}
 
-    def _get_serialized_data(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> dict[str, Tensor]:
         """
         Prepares the data for serialization by including only Tensor instances.
 
@@ -58,7 +58,7 @@ class TensorStatistic:
                 raise nncf.InternalError(msg)
         return serialized_data
 
-    def load_data(self, data: Dict[str, Tensor]) -> None:
+    def load_data(self, data: dict[str, Tensor]) -> None:
         """
         Loads the data from the serialized data.
 
@@ -68,7 +68,7 @@ class TensorStatistic:
             setattr(self, key, data[key])
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
         args = {key: config[key] for key in (field.name for field in fields(cls))}
         return cls(**args)
 
@@ -105,14 +105,14 @@ class MeanTensorStatistic(TensorStatistic):
     SHAPE_STAT: ClassVar[str] = "shape"
 
     mean_values: Tensor
-    shape: Tuple[int, ...]
+    shape: tuple[int, ...]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
 
-    def _get_serialized_data(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> dict[str, Tensor]:
         backend = self.mean_values.backend
         dtype = self.mean_values.dtype
         device = self.mean_values.device
@@ -121,7 +121,7 @@ class MeanTensorStatistic(TensorStatistic):
             self.SHAPE_STAT: fns.tensor(self.shape, backend=backend, dtype=dtype, device=device),
         }
 
-    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+    def load_data(self, loaded_data: dict[str, Tensor]) -> None:
         self.mean_values = loaded_data[self.MEAN_STAT]
         self.shape_values = tuple(loaded_data[self.SHAPE_STAT].tolist())
 
@@ -142,7 +142,7 @@ class MedianMADTensorStatistic(TensorStatistic):
         return False
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
         return cls(
             median_values=config[cls.TENSOR_STATISTIC_OUTPUT_KEY][cls.MEDIAN_VALUES_STAT],
             mad_values=config[cls.TENSOR_STATISTIC_OUTPUT_KEY][cls.MAD_VALUES_STAT],
@@ -153,7 +153,7 @@ class MedianMADTensorStatistic(TensorStatistic):
 class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT: ClassVar[str] = "percentile_vs_values_dict"
 
-    percentile_vs_values_dict: Dict[str, Tensor]
+    percentile_vs_values_dict: dict[str, Tensor]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, PercentileTensorStatistic):
@@ -166,7 +166,7 @@ class PercentileTensorStatistic(TensorStatistic):
         return False
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
         if cls.TENSOR_STATISTIC_OUTPUT_KEY in config:
             percentile_vs_values_dict = config[cls.TENSOR_STATISTIC_OUTPUT_KEY]
         else:
@@ -175,10 +175,10 @@ class PercentileTensorStatistic(TensorStatistic):
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
-    def _get_serialized_data(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> dict[str, Tensor]:
         return self.PERCENTILE_VS_VALUE_DICT
 
-    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+    def load_data(self, loaded_data: dict[str, Tensor]) -> None:
         self.percentile_vs_values_dict = loaded_data
 
 
@@ -247,8 +247,8 @@ class WCTensorStatistic(TensorStatistic):
     MEAN_STAT = "mean_values"
     SHAPE_STAT = "shape_values"
 
-    mean_values: List[Tensor]
-    shape_values: List[Tuple[Tensor]]
+    mean_values: list[Tensor]
+    shape_values: list[tuple[Tensor]]
 
     def __eq__(self, other: Any) -> bool:
         shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))
@@ -259,7 +259,7 @@ class WCTensorStatistic(TensorStatistic):
         )
         return mean_values_equal
 
-    def _get_serialized_data(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> dict[str, Tensor]:
         backend = self.mean_values[0].backend
         dtype = self.mean_values[0].dtype
         device = self.mean_values[0].device
@@ -273,12 +273,12 @@ class WCTensorStatistic(TensorStatistic):
             ),
         }
 
-    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+    def load_data(self, loaded_data: dict[str, Tensor]) -> None:
         self.shape_values = [tuple(shape) for shape in loaded_data[self.SHAPE_STAT]]
         self.mean_values = [it for it in loaded_data[self.MEAN_STAT]]
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
         mean_values, shape_values = None, None
         if cls.MEAN_STAT in config and config[cls.MEAN_STAT] is not None:
             mean_values = [fns.squeeze(it) for it in config[cls.MEAN_STAT]]

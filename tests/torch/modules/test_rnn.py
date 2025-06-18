@@ -14,7 +14,6 @@ import os
 import sys
 from collections import namedtuple
 from functools import partial
-from typing import List, Tuple
 
 import onnx
 import pytest
@@ -39,6 +38,8 @@ from tests.torch.helpers import get_grads
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.modules.seq2seq.gnmt import GNMT
 
+pytestmark = pytest.mark.legacy
+
 
 def replace_lstm(model):
     def replace_fn(module_):
@@ -56,7 +57,7 @@ def replace_lstm(model):
             bias=module_.bias,
         )
 
-        def get_param_names(bias: bool) -> List[str]:
+        def get_param_names(bias: bool) -> list[str]:
             suffixes = ["ih", "hh"]
             names = ["weight_" + suffix for suffix in suffixes]
             if bias:
@@ -85,7 +86,7 @@ def replace_lstm(model):
     return model
 
 
-def clone_test_data(data_list) -> List[torch.Tensor]:
+def clone_test_data(data_list) -> list[torch.Tensor]:
     results = []
     x = data_list[0]
     result = x if isinstance(x, PackedSequence) else x.clone()
@@ -385,11 +386,11 @@ class TestLSTM:
             torch.testing.assert_close(test, ref, rtol=1e-1, atol=1e-1)
 
     @classmethod
-    def flatten_nested_lists(cls, nested_list: List) -> List[torch.Tensor]:
+    def flatten_nested_lists(cls, nested_list: list) -> list[torch.Tensor]:
         return [tensor for tensor_tuple in nested_list for tensor in tensor_tuple]
 
     @classmethod
-    def get_test_lstm_hidden(cls, data: LSTMTestData) -> List[Tuple[torch.Tensor, ...]]:
+    def get_test_lstm_hidden(cls, data: LSTMTestData) -> list[tuple[torch.Tensor, ...]]:
         result = []
         hidden_names = ["h0", "c0"]
         for name in hidden_names:
@@ -402,7 +403,7 @@ class TestLSTM:
         return result
 
     @classmethod
-    def get_ref_lstm_hidden(cls, data: LSTMTestData) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_ref_lstm_hidden(cls, data: LSTMTestData) -> tuple[torch.Tensor, torch.Tensor]:
         hidden = cls.get_test_lstm_hidden(data)
         hidden_states = [torch.unsqueeze(tensor, dim=0) for tensor in hidden[0]]
         cell_states = [torch.unsqueeze(tensor, dim=0) for tensor in hidden[1]]
@@ -422,7 +423,7 @@ class TestLSTM:
                     getattr(nn_lstm, param_name).data.copy_(param[i].data)
 
     @classmethod
-    def get_param_names(cls, bias: bool) -> List[str]:
+    def get_param_names(cls, bias: bool) -> list[str]:
         suffixes = ["ih", "hh"]
         names = ["weight_" + suffix for suffix in suffixes]
         if bias:
