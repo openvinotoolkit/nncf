@@ -1,0 +1,875 @@
+{
+    "quantization_points": {
+        "('conv2d',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_6',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_7',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_10',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_11',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_12',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_15',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_17',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_20',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_22',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_25',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_26',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_27',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_30',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_32',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_35',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_36',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_37',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_40',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_42',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_45',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_47',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": true,
+            "narrow_range": false
+        },
+        "('conv2d_50',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d_51',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d', 'mul')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_', 'conv2d_8')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_1', 'mul_1')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__1', 'conv2d_16')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_2', 'mul_2')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__2', 'conv2d_21')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_3', 'mul_3')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_4', 'mul_4')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__3', 'conv2d_31')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_5', 'mul_5')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_6', 'mul_6')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_6',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__4', 'conv2d_41')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_7', 'mul_7')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_7',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__5', 'conv2d_46')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add__5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('mul_8',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d_8', 'mul_8')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_1',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_4',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_5',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_6',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_7',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_8',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_9',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_10',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_11',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_12',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_15',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_16',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_17',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_20',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_21',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_22',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_25',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_26',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_27',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_30',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_31',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_32',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_35',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_36',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_37',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_40',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_41',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_42',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_45',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_46',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_47',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_50',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('conv2d_51',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_1',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        }
+    },
+    "unified_scale_groups": {},
+    "shared_input_operation_set_groups": {
+        "0": [
+            1,
+            104
+        ],
+        "1": [
+            2,
+            105
+        ],
+        "2": [
+            6,
+            106
+        ],
+        "3": [
+            7,
+            107
+        ],
+        "4": [
+            8,
+            108
+        ],
+        "5": [
+            9,
+            109
+        ],
+        "6": [
+            11,
+            111
+        ],
+        "7": [
+            12,
+            112
+        ],
+        "8": [
+            15,
+            113
+        ],
+        "9": [
+            16,
+            114
+        ],
+        "10": [
+            20,
+            115
+        ],
+        "11": [
+            22,
+            117
+        ],
+        "12": [
+            26,
+            118
+        ],
+        "13": [
+            30,
+            120
+        ],
+        "14": [
+            34,
+            121
+        ],
+        "15": [
+            37,
+            122
+        ],
+        "16": [
+            38,
+            123
+        ],
+        "17": [
+            42,
+            124
+        ],
+        "18": [
+            44,
+            126
+        ],
+        "19": [
+            48,
+            127
+        ],
+        "20": [
+            51,
+            128
+        ],
+        "21": [
+            52,
+            129
+        ],
+        "22": [
+            56,
+            130
+        ],
+        "23": [
+            58,
+            132
+        ],
+        "24": [
+            62,
+            133
+        ],
+        "25": [
+            66,
+            135
+        ],
+        "26": [
+            70,
+            136
+        ],
+        "27": [
+            73,
+            137
+        ],
+        "28": [
+            74
+        ],
+        "29": [
+            75,
+            138
+        ],
+        "30": [
+            76,
+            139
+        ],
+        "31": [
+            4,
+            77
+        ],
+        "32": [
+            13,
+            79,
+            110
+        ],
+        "33": [
+            18,
+            81
+        ],
+        "34": [
+            27,
+            83,
+            116
+        ],
+        "35": [
+            24,
+            84
+        ],
+        "36": [
+            35,
+            86,
+            119
+        ],
+        "37": [
+            32,
+            87
+        ],
+        "38": [
+            40,
+            90
+        ],
+        "39": [
+            49,
+            92,
+            125
+        ],
+        "40": [
+            46,
+            93
+        ],
+        "41": [
+            54,
+            96
+        ],
+        "42": [
+            63,
+            98,
+            131
+        ],
+        "43": [
+            60,
+            99
+        ],
+        "44": [
+            71,
+            101,
+            134
+        ],
+        "45": [
+            68,
+            102
+        ]
+    }
+}

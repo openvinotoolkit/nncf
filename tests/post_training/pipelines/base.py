@@ -57,6 +57,10 @@ class BackendType(Enum):
     CUDA_TORCH = "CUDA_TORCH"
     FX_TORCH = "FX_TORCH"
     CUDA_FX_TORCH = "CUDA_FX_TORCH"
+    OV_QUANTIZER_NNCF = "OV_QUANTIZER_NNCF"
+    OV_QUANTIZER_AO = "OV_QUANTIZER_AO"
+    X86_QUANTIZER_NNCF = "X86_QUANTIZER_NNCF"
+    X86_QUANTIZER_AO = "X86_QUANTIZER_AO"
     ONNX = "ONNX"
     OV = "OV"
     OPTIMUM = "OPTIMUM"
@@ -65,7 +69,14 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]
+FX_BACKENDS = [
+    BackendType.FX_TORCH,
+    BackendType.CUDA_FX_TORCH,
+    BackendType.OV_QUANTIZER_NNCF,
+    BackendType.OV_QUANTIZER_AO,
+    BackendType.X86_QUANTIZER_NNCF,
+    BackendType.X86_QUANTIZER_AO,
+]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
@@ -506,7 +517,7 @@ class PTQTestPipeline(BaseTestPipeline):
             mod = torch.compile(
                 exported_model.module(),
                 backend="openvino",
-                options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
+                options={"model_caching": True, "cache_dir": str(self.output_model_dir), "aot_autograd": True},
             )
             mod(self.dummy_tensor)
 
