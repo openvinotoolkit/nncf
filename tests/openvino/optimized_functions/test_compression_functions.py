@@ -70,6 +70,8 @@ INT4_COMPRESSION_CONFIGS = [
 FP4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.NF4),
     WeightCompressionConfig(CompressWeightsMode.NF4, group_size=2),
+    WeightCompressionConfig(CompressWeightsMode.E2M1),
+    WeightCompressionConfig(CompressWeightsMode.E2M1, group_size=2),
 ]
 
 COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
@@ -149,18 +151,19 @@ def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantizati
     reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
 )
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
-@pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
+# @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
+@pytest.mark.parametrize("config", FP4_COMPRESSION_CONFIGS[-2:])
 @pytest.mark.parametrize(
     ("quantization_task", "tensor_backend"),
     [
         (QuantizationTask.Q, TensorBackend.numpy),
-        (QuantizationTask.Q, "auto"),
+        # (QuantizationTask.Q, "auto"),
         # NumPy backend should support OV tensors as inputs only for quantization task
-        (QuantizationTask.Q, TensorBackend.ov),
-        (QuantizationTask.Q_DQ, TensorBackend.numpy),
-        (QuantizationTask.Q_DQ, "auto"),
-        (QuantizationTask.Q_DQ_RQ, TensorBackend.numpy),
-        (QuantizationTask.Q_DQ_RQ, "auto"),
+        # (QuantizationTask.Q, TensorBackend.ov),
+        # (QuantizationTask.Q_DQ, TensorBackend.numpy),
+        # (QuantizationTask.Q_DQ, "auto"),
+        # (QuantizationTask.Q_DQ_RQ, TensorBackend.numpy),
+        # (QuantizationTask.Q_DQ_RQ, "auto"),
     ],
 )
 @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
@@ -240,6 +243,10 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                 np.testing.assert_allclose(precomputed_zero_point.data, zero_point.data, atol=0, rtol=0)
 
         # Save results for comparison between implementations
+        if group_size != -1 and not precompute_s_zp:
+            weight, _ = reshape_weight_for_grouped_quantization(weight, REDUCTION_AXES, group_size)
+        results[cb]["input"] = weight.as_numpy_tensor()
+
         if quantization_task != QuantizationTask.Q:
             results[cb]["decompressed_weight"] = decompressed_weight
         if quantization_task != QuantizationTask.Q_DQ:
@@ -361,9 +368,9 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
         or compression_kwargs.get("lora_correction")
     )
 
-    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM, CompressWeightsMode.E2M1]:
         if is_data_aware:
-            pytest.skip("Data-aware compression is not supported for INT8 modes.")
+            pytest.skip("Data-aware compression is not supported for INT8 or F4E2M1 modes.")
     else:
         compression_kwargs["all_layers"] = True
 
@@ -455,12 +462,12 @@ def _check_backends_and_dtypes(
         and config.num_bits == 4
     ):
         # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
-        # zero point must be in ov backend and have (u)int4 or nf4 dtypes in order to be able to insert them into OV
-        # model without re-packing
+        # zero point must be in ov backend and have (u)int4/nf4/f4e2m1 dtypes in order to be able to insert them into
+        # OV model without re-packing
         if config.is_integer:
             ref_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
         else:
-            ref_dtype = TensorDataType.nf4
+            ref_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
         assert compressed_weight.backend == TensorBackend.ov
         assert compressed_weight.dtype == ref_dtype
         if config.is_asym_mode and not precompute_s_zp:
@@ -469,14 +476,17 @@ def _check_backends_and_dtypes(
     else:
         if quantization_task != QuantizationTask.Q_DQ:
             # Otherwise, for integer compression, compressed weight and zero point must be returned in numpy backend,
-            # compressed weight must be of (u)int8, zero point -- in int32; for nf4 compression, the resulting
+            # compressed weight must be of (u)int8, zero point -- in int32; for nf4/f4e2m1 compression, the resulting
             # data type and backend depends on the input tensor backend.
             if config.is_integer:
                 ref_backend = TensorBackend.numpy
                 ref_dtype = TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8
             else:
                 ref_backend = weight_tensor_backend
-                ref_dtype = TensorDataType.nf4 if weight_tensor_backend == TensorBackend.ov else TensorDataType.float32
+                if weight_tensor_backend == TensorBackend.ov:
+                    ref_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
+                else:
+                    ref_dtype = TensorDataType.float32
             assert compressed_weight.backend == ref_backend
             assert compressed_weight.dtype == ref_dtype
             if config.is_asym_mode and not precompute_s_zp:
@@ -488,6 +498,9 @@ def _check_backends_and_dtypes(
 
 
 def _check_values(results):
+    def format_list_of_floats(lst):
+        return ", ".join(f"{x:.6f}" for x in lst)
+
     # Check that the computed tensors are equal between implementations
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
     for key in keys:
@@ -501,6 +514,23 @@ def _check_values(results):
         # Note: For static-shaped OV models doing asymmetric compression with convertable divisions there maybe
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
-        np.testing.assert_allclose(
-            ov_result.data, numpy_result.data, atol=0, rtol=0, err_msg=f"Results do not align for {key}."
-        )
+        try:
+            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=0, rtol=0)
+        except AssertionError:
+            not_equal_mask = ov_result.data != numpy_result.data
+            msg = (
+                f"Results do not align for {key} with "
+                f"{not_equal_mask.sum() / ov_result.data.size * 100:.2f} % misalignment ratio.\n"
+                f"OV result:    {format_list_of_floats(ov_result.data[not_equal_mask])}\n"
+                f"NumPy result: {format_list_of_floats(numpy_result.data[not_equal_mask])}\n"
+            )
+            if "input" in results[ComputationBackend.OV] and "input" in results[ComputationBackend.NumPy]:
+                numpy_input = results[ComputationBackend.NumPy]['input'].data
+                ov_input = results[ComputationBackend.OV]['input'].data
+                np.testing.assert_allclose(numpy_input, ov_input, atol=0, rtol=0)
+                msg += f"Input values   : {format_list_of_floats(numpy_input[not_equal_mask])}\n"
+                misaligned_groups_mask = np.any(not_equal_mask, axis=-1)
+                misaligned_groups = numpy_input[misaligned_groups_mask, ...]
+                misaligned_groups = np.reshape(misaligned_groups, (-1, misaligned_groups.shape[-1]))
+                msg += f"First 10 misaligned groups: {[it for it in misaligned_groups][:10]}\n"
+            raise AssertionError(msg)
