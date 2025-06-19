@@ -1,5 +1,51 @@
 # Release Notes
 
+## New in Release 2.17.0
+
+Post-training Quantization:
+
+- General:
+  - (PyTorch) The function_hook module is now the default mechanism for model tracing. It has moved out from experimental status and has been moved to the core nncf.torch namespace.
+- Features:
+  - (OpenVINO, PyTorch, TorchFX) Added 4-bit data-free AWQ (Activation-aware Weight Quantization) based on the per-column magnitudes of the weights making it possible to apply AWQ without a dataset for more accurate compression.
+  - (OpenVINO) Added support for quantizing of the value input for ScaledDotProductAttention for FP8.
+  - (ONNX) Added support for data-free weight compression using INT4 (INT8) in the ONNX backend. Added an example for LLM weight compression in the ONNX backend. [This example](examples/llm_compression/onnx/tiny_llama) showcases the optimization of the `TinyLlama-1.1B-Chat-v0.3` model in ONNX format using the NNCF weight compression API.
+  - (ONNX) Added the `BackendParameters.EXTERNAL_DATA_DIR` parameter for the ONNX backend. This parameter specifies the absolute path to the directory where the model's external data files are stored. All external data files must be located in the same directory. It should be used when the model is loaded without external data using `onnx.load("model.onnx", load_external_data=False)`, and the external data files are not in the current working directory of the process. This parameter can be omitted if the external data files are located in the current working directory of the process.
+  - (TorchFX, Experimental) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce accuracy loss.
+- Fixes:
+  - (TorchFX, Experimental) To simplify usage, the nncf.torch.disable_patching() context manager has been made redundant and is no longer required ([example](/examples/post_training_quantization/torch_fx/resnet18/README.md)).
+  - Fixed BiasCorrection failures with models without a batch dimension.
+  - Aligned quantile centers for NF4 with OpenVINO implementation.
+  - Weights compression statistics collection have been fixed to show the data types of ignored weights.
+- Improvements:
+  - (OpenVINO) Added the version of NNCF to rt_info.
+  - Optimized weight compression for NF4 (up to 10x speed up).
+  - Support for `transformer>4.52` by `nncf.data.generate_text_data`.
+- Tutorials:
+  - [Post-Training Optimization of MiniCPM-o 2.6 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-omnimodal-chatbot/minicpm-o-omnimodal-chatbot.ipynb)
+  - [Post-Training Optimization of Qwen2.5-Omni Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2.5-omni-chatbot/qwen2.5-omni-chatbot.ipynb)
+  - [Post-Training Optimization of InternVideo2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/intern-video2-classiciation/intern-video2-classification.ipynb)
+  - [Post-Training Optimization of OpenVoice2 and MeloTTS Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/openvoice2-and-melotts/openvoice2-and-melotts.ipynb)
+  - [Post-Training Optimization of Flex.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flex.2-image-generation/flex.2-image-generation.ipynb)
+  - [Post-Training Optimization of Wan2.1 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.1-text-to-video/wan2.1-text-to-video.ipynb)
+  - [Post-Training Optimization of Phi-4-mini Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/phi4-agent/phi4_agent.py)
+  - [Post-Training Optimization of Torch.FX Stable Diffusion v3 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-v3-torch-fx/stable-diffusion-v3-torch-fx.ipynb)
+
+Compression-aware training:
+
+- Features:
+  - (PyTorch) For downstream tasks, we introduce Quantization-Aware Training (QAT) with absorbable elastic LoRA adapters and neural low-rank search (NLS). This novel weight compression method enhances the accuracy of Large Language Models (LLMs) with int4 weights on downstream tasks, achieving a reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA_NLS`. A sample QAT compression pipeline with preview support is available [here](examples/llm_compression/torch/downstream_qat_with_nls). Building on our previous work with absorbable LoRA adapters, this new pipeline is specifically designed for downstream tasks. In contrast, the pipeline from the previous release was tailored to enhance general accuracy through knowledge distillation using static rank settings. For a more comprehensive understanding of both approaches, please refer to ["Weight-Only Quantization Aware Training with LoRA and NLS"](/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) in the ["Training-Time Compression Algorithms"](/README.md#Training-Time-Compression-Algorithms) section of the main README in the repository.
+- Fixes:
+  - (PyTorch) Minimized the disparity in accuracy between the Torch model and its exported OpenVINO equivalent for ["Weight-Only Quantization Aware Training with LoRA and NLS"](/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md).
+- Improvements:
+  - (Pytorch) The evaluation and selection process for the best checkpoint in "QAT + absorbable LoRA" with knowledge distillation has been revised. The tuned Torch model is now evaluated using the validation split of Wikitext, while the final results are measured on the test split with the OpenVINO model. The [results table for Wikitext](/examples/llm_compression/torch/distillation_qat_with_lora/README.md#results-on-wikitext) has been updated accordingly and now includes three additional models.
+
+Requirements:
+
+- Updated ONNX Runtime (1.21.1).
+- Updated PyTorch (2.7.1) and Torchvision (0.22.1) versions.
+- Removed jstyleson from requirements.
+
 ## New in Release 2.16.0
 
 Post-training Quantization:
