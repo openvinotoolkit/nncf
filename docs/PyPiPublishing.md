@@ -5,22 +5,19 @@
 
 # Neural Network Compression Framework (NNCF)
 
-Neural Network Compression Framework (NNCF) provides a suite of post-training
-and training-time algorithms for optimizing inference of neural networks in
-[OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
+Neural Network Compression Framework (NNCF) provides a suite of post-training and training-time algorithms for
+optimizing inference of neural networks in [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
 [TorchFX](https://pytorch.org/docs/stable/fx.html), [TensorFlow](https://www.tensorflow.org/),
 [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
-The framework is organized as a Python package that can be built and used
-as a standalone tool. Its architecture is unified to make adding different
-compression algorithms easy for both PyTorch and TensorFlow.
+NNCF provides [samples](https://github.com/openvinotoolkit/nncf/blob/develop/#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different
+use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
 
-NNCF provides samples that demonstrate the usage of compression algorithms
-for different use cases and models. See compression results achievable
-with the NNCF-powered samples on the
-[NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
+The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
+architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
+learning frameworks.
 
 For more information about NNCF, see:
 
@@ -41,38 +38,31 @@ For more information about NNCF, see:
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                                                                                                       | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
-| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
+| Compression algorithm                                                                                    | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
+| :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
 | [Post-Training Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
-| [Weight Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)                | Supported | Supported | Experimental | Not supported | Not supported |
+| [Weights Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Not supported |
 | [Activation Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental | Not supported| Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
-| Compression algorithm                                                                                                                                                                         | PyTorch      | TensorFlow    |
-| :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------: | :-----------: |
-| [Quantization Aware Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                 | Supported    | Supported     |
-| [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported    | Not supported |
-| [Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Sparsity.md)                                                            | Supported    | Supported     |
-| [Filter pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Pruning.md)                                                       | Supported    | Supported     |
-| [Movement pruning](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                                                        | Experimental | Not supported |
+| Compression algorithm                                                                                      | PyTorch      | TensorFlow    |
+| :--------------------------------------------------------------------------------------------------------- | :----------: | :-----------: |
+| [Quantization Aware Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training/Usage.md) | Supported    | Supported     |
+| [Weight-Only Quantization Aware Training with LoRA and NLS](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    | Not Supported     |
+| [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
+| [Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Sparsity.md)                            | Supported    | Supported     |
+| [Filter pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Pruning.md)                       | Supported    | Supported     |
+| [Movement pruning](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                        | Experimental | Not supported |
 
-- Automatic, configurable model graph transformation to obtain the compressed
-  model.
-  > **NOTE**: Limited support for TensorFlow models. Only models created using
-    Sequential or Keras Functional API are supported.
+- Automatic, configurable model graph transformation to obtain the compressed model.
+  > **NOTE**: Limited support for TensorFlow models. Only models created using Sequential or Keras Functional API are supported.
 - Common interface for compression methods.
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
-- Git patch for prominent third-party repository
-  ([huggingface-transformers](https://github.com/huggingface/transformers))
-  demonstrating the process of integrating NNCF into custom training pipelines.
-- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow
-  compressed models to SavedModel or Frozen Graph format, ready to use with
-  [OpenVINO&trade; toolkit](https://docs.openvino.ai).
-- Support for [Accuracy-Aware model training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training)
-  pipelines via the [Adaptive Compression Level Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md)
-  and [Early Exit Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/EarlyExitTraining.md).
+- Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
+- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
+- Support for [Accuracy-Aware model training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Installation Guide<a id="installation-guide"></a>
 
@@ -95,24 +85,34 @@ the matrix of corresponding versions can be found in [installation.md](https://g
 
 ## Third-party Repository Integration<a id="third-party-repository-integration"></a>
 
-NNCF may be easily integrated into training/evaluation pipelines of third-party
-repositories.
+NNCF may be easily integrated into training/evaluation pipelines of third-party repositories.
+
+### Used by
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
-  NNCF is integrated into OpenVINO Training Extensions as a model optimization
-  backend. You can train, optimize, and export new models based on available
-  model templates as well as run the exported models with OpenVINO.
+  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
+  export new models based on available model templates as well as run the exported models with OpenVINO.
 
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
-  NNCF is used as a compression backend within the renowned `transformers`
-  repository in HuggingFace Optimum Intel.
+  NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
+
+- [Ultralytics](https://docs.ultralytics.com/integrations/openvino)
+
+  NNCF is integrated into the Intel OpenVINO export pipeline, enabling quantization for the exported models.
+
+- [ExecuTorch](https://github.com/pytorch/executorch/blob/main/examples/openvino/README.md)
+
+  NNCF is used as primary quantization framework for the [ExecuTorch OpenVINO integration](https://docs.pytorch.org/executorch/main/build-run-openvino.html).
+
+- [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
+
+  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
 
 ## NNCF Compressed Model Zoo<a id="nncf-compressed-model-zoo"></a>
 
-A list of models and compression results for them can be found at our
-[NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
+List of models and compression results for them can be found at our [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
 
 ## Citing
 
@@ -127,10 +127,9 @@ A list of models and compression results for them can be found at our
 
 ## Telemetry
 
-NNCF as part of the OpenVINO™ toolkit collects anonymous usage data for the
-purpose of improving OpenVINO™ tools. You can opt-out at any time by running
-the following command in the Python environment where you have NNCF installed:
+NNCF as part of the OpenVINO™ toolkit collects anonymous usage data for the purpose of improving OpenVINO™ tools.
+You can opt-out at any time by running the following command in the Python environment where you have NNCF installed:
 
 `opt_in_out --opt_out`
 
-More information available on [OpenVINO telemetry](https://docs.openvino.ai/nightly/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/2025/about-openvino/additional-resources/telemetry.html).
