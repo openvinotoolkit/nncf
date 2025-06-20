@@ -23,7 +23,7 @@ from typing import Callable
 import torch
 from torch.utils.cpp_extension import _get_build_directory
 
-import nncf
+import nncf as nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
@@ -137,12 +137,3 @@ def force_build_cpu_extensions():
 @api(canonical_alias="nncf.torch.force_build_cuda_extensions")
 def force_build_cuda_extensions():
     _force_build_extensions(ExtensionsType.CUDA)
-
-
-class CudaNotAvailableStub:
-    def __getattr__(self, item):
-        msg = (
-            f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
-            f"driver supporting CUDA {torch.version.cuda} is installed."
-        )
-        raise nncf.InstallationError(msg)

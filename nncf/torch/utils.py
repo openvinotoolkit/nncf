@@ -511,3 +511,12 @@ class CompilationWrapper:
                 self._compiled_func = self._func
                 self._is_compilation_successful = False
         return self._compiled_func(*args, **kwargs)
+
+
+class CudaNotAvailableStub:
+    def __getattr__(self, item):
+        msg = (
+            f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
+            f"driver supporting CUDA {torch.version.cuda} is installed."
+        )
+        raise nncf.InstallationError(msg)
