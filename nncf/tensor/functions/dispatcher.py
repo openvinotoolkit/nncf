@@ -28,7 +28,10 @@ from typing import (
     get_type_hints,
 )
 
-from typing_extensions import ParamSpec
+try:
+    from typing_extensions import ParamSpec
+except ImportError:
+    from typing import ParamSpec
 
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
