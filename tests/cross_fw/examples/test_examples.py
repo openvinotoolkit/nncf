@@ -108,7 +108,7 @@ def test_examples(
 
     env = os.environ.copy()
     example_dir = Path(example_params["requirements"]).parent
-    env["PYTHONPATH"] = f"{PROJECT_ROOT}:{example_dir}"  # need this to be able to import from tests.* in run_example.py
+    env["PYTHONPATH"] = f"{PROJECT_ROOT}{os.pathsep}{example_dir}"  # need this to be able to import from tests.* in run_example.py
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
     if device != "cuda":
         env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
