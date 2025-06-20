@@ -15,6 +15,57 @@ import triton.language as tl
 from torch._inductor.runtime.triton_helpers import libdevice
 
 
+def get_4d_tensor_meta(x: torch.tensor) -> torch.tensor:
+    """
+    Helper function for meta information creation.
+
+    :param x: Torch tensor.
+    :returns: Torch tensor as meta with 4D shape + tensor.
+    """
+    shape = list(x.shape)
+    stride = list(x.stride())
+    size = len(shape)
+
+    for i in range(4):
+        if i > size:
+            shape += [1]
+            stride += [0]
+        elif shape[i] == 1:
+            stride[i] = 0
+
+    return torch.tensor(shape + stride, dtype=torch.int32).to(x.device)
+
+
+@triton.jit
+def read_shape(meta: torch.tensor) -> tuple[tl.tensor]:
+    """
+    Helper kernel for the shapes loading from meta tensor.
+
+    :param meta: Torch tensor with meta information (shape + stride).
+    :returns: Tuple of 4D shapes.
+    """
+    s0 = tl.load(meta + 0)
+    s1 = tl.load(meta + 1)
+    s2 = tl.load(meta + 2)
+    s3 = tl.load(meta + 3)
+    return s0, s1, s2, s3
+
+
+@triton.jit
+def read_stride(meta: torch.tensor) -> tuple[tl.tensor]:
+    """
+    Helper kernel for the strides loading from meta tensor.
+
+    :param meta: Torch tensor with meta information (shape + stride).
+    :returns: Tuple of 4D strides.
+    """
+    st0 = tl.load(meta + 4)
+    st1 = tl.load(meta + 5)
+    st2 = tl.load(meta + 6)
+    st3 = tl.load(meta + 7)
+    return st0, st1, st2, st3
+
+
 @triton.autotune(
     configs=[
         triton.Config(kwargs={"BLOCK_SIZE": 256}),
@@ -26,11 +77,13 @@ from torch._inductor.runtime.triton_helpers import libdevice
 @triton.jit
 def forward_kernel(
     input__ptr: torch.tensor,
+    input__meta: torch.tensor,
     input_low_ptr: torch.tensor,
+    input_low_meta: torch.tensor,
     input_range_ptr: torch.tensor,
+    input_range_meta: torch.tensor,
     levels: int,
     output_ptr: torch.tensor,
-    diff: int,
     BLOCK_SIZE: tl.constexpr,
 ) -> None:
     """
@@ -48,13 +101,28 @@ def forward_kernel(
     """
     pid = tl.program_id(0)
     offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
-    offsets_d = offsets // diff
+    input__s0, input__s1, input__s2, input__s3 = read_shape(input__meta)
 
-    mask = tl.full([BLOCK_SIZE], True, tl.int1)
+    tmp = offsets
+    i3 = tmp % input__s3
+    tmp //= input__s3
+    i2 = tmp % input__s2
+    tmp //= input__s2
+    i1 = tmp % input__s1
+    tmp //= input__s1
+    i0 = tmp % input__s0
+
+    input_low_st0, input_low_st1, input_low_st2, input_low_st3 = read_stride(input_low_meta)
+    input_low_offset = i0 * input_low_st0 + i1 * input_low_st1 + i2 * input_low_st2 + i3 * input_low_st3
+
+    input_range_st0, input_range_st1, input_range_st2, input_range_st3 = read_stride(input_range_meta)
+    input_range_offset = i0 * input_range_st0 + i1 * input_range_st1 + i2 * input_range_st2 + i3 * input_range_st3
+
+    mask = None  # tl.full([BLOCK_SIZE], True, tl.int1)
 
     input_ = tl.load(input__ptr + offsets, mask).to(tl.float32)
-    input_low = tl.load(input_low_ptr + offsets_d, mask, eviction_policy="evict_last").to(tl.float32)
-    input_range = tl.load(input_range_ptr + offsets_d, mask, eviction_policy="evict_last").to(tl.float32)
+    input_low = tl.load(input_low_ptr + input_low_offset, mask).to(tl.float32)
+    input_range = tl.load(input_range_ptr + input_range_offset, mask).to(tl.float32)
 
     scale = (levels - 1) / input_range
 
@@ -81,16 +149,19 @@ def forward_kernel(
 @triton.jit
 def backward_kernel(
     grad_output_ptr: torch.tensor,
+    grad_output_meta: torch.tensor,
     input__ptr: torch.tensor,
+    input__meta: torch.tensor,
     input_low_ptr: torch.tensor,
+    input_low_meta: torch.tensor,
     input_range_ptr: torch.tensor,
+    input_range_meta: torch.tensor,
     levels: int,
     level_low: int,
     level_high: int,
     grad_input_ptr: torch.tensor,
     grad_low_ptr: torch.tensor,
     grad_range_ptr: torch.tensor,
-    diff: int,
     BLOCK_SIZE: tl.constexpr,
 ) -> None:
     """
@@ -112,14 +183,29 @@ def backward_kernel(
     """
     pid = tl.program_id(0)
     offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
-    offsets_d = offsets // diff
+    input__s0, input__s1, input__s2, input__s3 = read_shape(input__meta)
 
-    mask = tl.full([BLOCK_SIZE], True, tl.int1)
+    tmp = offsets
+    i3 = tmp % input__s3
+    tmp //= input__s3
+    i2 = tmp % input__s2
+    tmp //= input__s2
+    i1 = tmp % input__s1
+    tmp //= input__s1
+    i0 = tmp % input__s0
+
+    input_low_st0, input_low_st1, input_low_st2, input_low_st3 = read_stride(input_low_meta)
+    input_low_offset = i0 * input_low_st0 + i1 * input_low_st1 + i2 * input_low_st2 + i3 * input_low_st3
+
+    input_range_st0, input_range_st1, input_range_st2, input_range_st3 = read_stride(input_range_meta)
+    input_range_offset = i0 * input_range_st0 + i1 * input_range_st1 + i2 * input_range_st2 + i3 * input_range_st3
+
+    mask = None  # tl.full([BLOCK_SIZE], True, tl.int1)
 
     grad_output = tl.load(grad_output_ptr + offsets, mask).to(tl.float32)
     input_ = tl.load(input__ptr + offsets, mask).to(tl.float32)
-    input_low = tl.load(input_low_ptr + offsets_d, mask, eviction_policy="evict_last").to(tl.float32)
-    input_range = tl.load(input_range_ptr + offsets_d, mask, eviction_policy="evict_last").to(tl.float32)
+    input_low = tl.load(input_low_ptr + input_low_offset, mask).to(tl.float32)
+    input_range = tl.load(input_range_ptr + input_range_offset, mask).to(tl.float32)
 
     mask_hi = input_ > (input_low + input_range)
     mask_hi = mask_hi.to(tl.float32)
@@ -151,8 +237,8 @@ def backward_kernel(
     grad_low = grad_output * (mask_hi + mask_lo)
 
     tl.store(grad_input_ptr + offsets, grad_input, mask)
-    tl.store(grad_low_ptr + offsets_d, grad_low, mask)
-    tl.store(grad_range_ptr + offsets_d, grad_range, mask)
+    tl.store(grad_low_ptr + offsets, grad_low, mask)
+    tl.store(grad_range_ptr + offsets, grad_range, mask)
 
 
 def forward(input_: torch.tensor, input_low: torch.tensor, input_range: torch.tensor, levels: int) -> torch.tensor:
@@ -168,17 +254,21 @@ def forward(input_: torch.tensor, input_low: torch.tensor, input_range: torch.te
     """
     output = torch.empty_like(input_)
 
-    diff = input_.numel() // input_low.numel()
+    input__meta = get_4d_tensor_meta(input_)
+    input_low_meta = get_4d_tensor_meta(input_low)
+    input_range_meta = get_4d_tensor_meta(input_range)
 
     with torch.cuda.device(input_.device):
         grid = lambda meta: (triton.cdiv(input_.numel(), meta["BLOCK_SIZE"]),)
         forward_kernel[grid](
             input_,
+            input__meta,
             input_low,
+            input_low_meta,
             input_range,
+            input_range_meta,
             levels,
             output,
-            diff,
         )
 
     return output
@@ -206,30 +296,36 @@ def backward(
     :return: Calculated grad_input, grad_low and grad_range as tuple of torch.tensor values.
     """
     grad_input = torch.empty_like(input_)
-    grad_low = torch.empty_like(input_low)
-    grad_range = torch.empty_like(input_range)
+    grad_low = torch.empty_like(grad_output)
+    grad_range = torch.empty_like(grad_output)
 
-    diff = input_.numel() // input_low.numel()
+    grad_output_meta = get_4d_tensor_meta(grad_output)
+    input__meta = get_4d_tensor_meta(input_)
+    input_low_meta = get_4d_tensor_meta(input_low)
+    input_range_meta = get_4d_tensor_meta(input_range)
 
     with torch.cuda.device(input_.device):
         grid = lambda meta: (
             triton.cdiv(input_.numel(), meta["BLOCK_SIZE"])
             * triton.cdiv(input_low.numel(), meta["BLOCK_SIZE"])
-            * triton.cdiv(grad_range.numel(), meta["BLOCK_SIZE"]),
+            * triton.cdiv(input_range.numel(), meta["BLOCK_SIZE"]),
         )
 
         backward_kernel[grid](
             grad_output,
+            grad_output_meta,
             input_,
+            input__meta,
             input_low,
+            input_low_meta,
             input_range,
+            input_range_meta,
             levels,
             level_low,
             level_high,
             grad_input,
             grad_low,
             grad_range,
-            diff,
         )
 
     return grad_input, grad_low, grad_range
