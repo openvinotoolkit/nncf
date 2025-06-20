@@ -27,7 +27,7 @@ def get_4d_tensor_meta(x: torch.tensor) -> torch.tensor:
     size = len(shape)
 
     for i in range(4):
-        if i > size:
+        if i >= size:
             shape += [1]
             stride += [0]
         elif shape[i] == 1:
