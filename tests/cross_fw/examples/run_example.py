@@ -171,6 +171,10 @@ def llm_compression() -> dict[str, float]:
 def llm_compression_fx() -> dict[str, float]:
     from examples.llm_compression.torch_fx.tiny_llama.main import main as llm_compression_main
 
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
 
 def llm_compression_onnx() -> dict[str, float]:
     from examples.llm_compression.onnx.tiny_llama.main import main as llm_compression_main
