@@ -25,7 +25,7 @@ import nncf
 MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
 
 
-def transform_fn(data: str, tokenizer: LlamaTokenizerFast):
+def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
     tokenized_text = tokenizer(data["text"], return_tensors="pt")
     input_ids = tokenized_text["input_ids"]
     attention_mask = tokenized_text["attention_mask"]
@@ -41,7 +41,7 @@ def transform_fn(data: str, tokenizer: LlamaTokenizerFast):
     return inputs
 
 
-def main():
+def main() -> str:
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
