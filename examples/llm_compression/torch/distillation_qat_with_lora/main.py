@@ -203,7 +203,6 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> list[dict[s
     scales_to_train = []
     adapters_to_train = []
     hook_storage = get_hook_storage(model)
-
     for _, module in hook_storage.named_hooks():
         if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits == 4):
             module.enable_gradients()
@@ -272,7 +271,6 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVMode
         trust_remote_code=True,
         load_in_8bit=False,
         compile=True,
-        ov_config={"KV_CACHE_PRECISION": "f16"},
     )
 
 

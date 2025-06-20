@@ -14,13 +14,13 @@ on:
 
 jobs:
   examples-cpu:
-    name: Weight compression [${{ matrix.group }}/3]
+    name: Weight compression [${{ matrix.group }}/4]
     runs-on: ubuntu-latest-16-cores
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3]
+        group: [1, 2, 3, 4]
     defaults:
       run:
         shell: bash
@@ -49,7 +49,7 @@ jobs:
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 3 \
+            --splits 4 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
           ret=$?

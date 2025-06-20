@@ -224,6 +224,14 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "word_count": 65
+      }
+    },
+    "llm_compression_onnx": {
+        "backend": "onnx",
+        "requirements": "examples/llm_compression/onnx/tiny_llama/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 77
         }
     },
     "llm_tune_params": {
@@ -283,10 +291,10 @@
             ]
         }
     },
-    "llm_compression_qat_with_lora": {
+    "llm_compression_distillation_qat_with_lora": {
         "backend": "torch",
         "device": "cuda",
-        "requirements": "examples/llm_compression/torch/qat_with_lora/requirements.txt",
+        "requirements": "examples/llm_compression/torch/distillation_qat_with_lora/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.1,
         "accuracy_metrics": {
@@ -297,7 +305,7 @@
     "llm_compression_qat_with_nls": {
         "backend": "torch",
         "device": "cuda",
-        "requirements": "examples/llm_compression/torch/qat_with_nls_downstream/requirements.txt",
+        "requirements": "examples/llm_compression/torch/downstream_qat_with_nls/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.02,
         "accuracy_metrics": {

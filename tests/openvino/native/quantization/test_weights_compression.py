@@ -44,6 +44,7 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_nf4_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -1493,7 +1494,8 @@ def test_compression_with_transposed_activations(kwargs):
 )
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
-    model = LMLinearModel(input_shape=[1, 24, 5000]).ov_model
+    hidden_dim = (MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // LMLinearModel.OUTPUT_DIM) + 1
+    model = LMLinearModel(input_shape=[1, 24, hidden_dim]).ov_model
 
     def run_compression():
         compress_weights(model, mode=CompressWeightsMode.INT8)

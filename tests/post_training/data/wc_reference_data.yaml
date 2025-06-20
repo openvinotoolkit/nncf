@@ -2,6 +2,14 @@ tinyllama_data_free_backend_OV:
   metric_value: 0.73873
   num_int4: 114
   num_int8: 84
+tinyllama_data_free_backend_ONNX:
+  metric_value: 0.73779
+  num_int4: 264
+  num_int8: 84
+tinyllama_data_free_opset19_backend_ONNX:
+  metric_value: 0.73779
+  num_int4: 264
+  num_int8: 84
 tinyllama_data_aware_backend_OV:
   metric_value: 0.85767
   num_int4: 94
@@ -78,7 +86,7 @@ tinyllama_int4_data_free_backend_FX_TORCH:
     error_message: "Openvino Model Files Not Found!"
     message: "Issue-165013"
 tinyllama_data_aware_backend_FX_TORCH:
-  metric_value: 0.85811
+  metric_value: 0.85767
   num_int4: 94
   num_int8: 124
   exception_xfail_reason:

@@ -1,9 +1,8 @@
 fastdownload==0.0.7
 onnx==1.17.0
-openvino==2025.1
+openvino==2025.2.0
 pycocotools==2.0.7
-torch==2.7.0
+torch==2.7.1
 torchmetrics==1.0.1
-torchvision==0.22.0
+torchvision==0.22.1
 numpy<2
-setuptools<=72.1.0

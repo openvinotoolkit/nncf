@@ -481,3 +481,15 @@ def remove_initializer(initializer_name: str, model: onnx.ModelProto) -> None:
     original_initializer = next((init for init in model.graph.initializer if init.name == initializer_name), None)
     if original_initializer is not None:
         model.graph.initializer.remove(original_initializer)
+
+
+def remove_node(node_name: str, model: onnx.ModelProto) -> None:
+    """
+    Removes the node from the ONNX model.
+
+    :param node_name: Name of the node to remove.
+    :param model: ONNX model.
+    """
+    original_node = next((node for node in model.graph.node if node.name == node_name), None)
+    if original_node is not None:
+        model.graph.node.remove(original_node)

@@ -12,13 +12,14 @@ from dataclasses import dataclass
 
 import numpy as np
 import onnx
+import onnxruntime
 import pytest
 from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
 from onnxruntime import InferenceSession
+from packaging import version
 
-import nncf
 from nncf import CompressWeightsMode
 from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.graph.onnx_helper import get_tensor
@@ -267,23 +268,26 @@ def test_compression_with_inference(mode):
     session.run(None, {"input": input_data})
 
 
-@pytest.mark.parametrize(
-    "opset, mode, should_raise",
-    (
-        (13, CompressWeightsMode.INT8_ASYM, False),
-        (13, CompressWeightsMode.INT8_SYM, False),
-        (13, CompressWeightsMode.INT4_SYM, True),
-        (13, CompressWeightsMode.INT4_ASYM, True),
-        (21, CompressWeightsMode.INT8_ASYM, False),
-        (21, CompressWeightsMode.INT8_SYM, False),
-        (21, CompressWeightsMode.INT4_SYM, False),
-        (21, CompressWeightsMode.INT4_ASYM, False),
-    ),
-)
-def test_raises_error_model_opset_versions(opset, mode, should_raise):
-    model = create_model(opset)
-    if should_raise:
-        with pytest.raises(nncf.ValidationError):
-            compress_weights(model, mode)
-    else:
-        compress_weights(model, mode)
+def test_matmulnbits():
+    rtol = 1e-5
+    if version.parse(onnxruntime.__version__) < version.parse("1.21.1"):
+        rtol = 1e-3
+
+    np.random.seed(42)
+    model_opset21 = create_model()
+
+    np.random.seed(42)
+    model_opset19 = create_model(opset_version=19)
+
+    compressed_model_opset21 = compress_weights(model_opset21, mode=CompressWeightsMode.INT4_SYM, group_size=16)
+    compressed_model_opset19 = compress_weights(model_opset19, mode=CompressWeightsMode.INT4_SYM, group_size=16)
+
+    dummy_input = np.random.rand(100, 1280).astype(np.float32)
+
+    sess21 = InferenceSession(compressed_model_opset21.SerializeToString())
+    sess19 = InferenceSession(compressed_model_opset19.SerializeToString())
+
+    output21 = sess21.run(None, {"input": dummy_input})[0]
+    output19 = sess19.run(None, {"input": dummy_input})[0]
+
+    assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)

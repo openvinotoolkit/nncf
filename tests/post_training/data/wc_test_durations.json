@@ -13,5 +13,7 @@
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV]": 193,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_OV]": 251,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_awq_backend_OV]": 164,
-    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_awq_backend_TORCH]": 210
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_awq_backend_TORCH]": 210,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_backend_ONNX]": 182,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_opset19_backend_ONNX]": 512
 }

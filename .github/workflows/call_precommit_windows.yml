@@ -17,7 +17,7 @@ on:
 jobs:
   common:
     timeout-minutes: 40
-    runs-on: windows-2019
+    runs-on: windows-2025
     defaults:
       run:
         shell: bash
@@ -43,7 +43,7 @@ jobs:
 
   onnx:
     timeout-minutes: 40
-    runs-on: windows-2019-8-core
+    runs-on: windows-2025-8-core
     defaults:
       run:
         shell: bash
@@ -69,7 +69,7 @@ jobs:
 
   openvino:
     timeout-minutes: 40
-    runs-on: windows-2019-8-core
+    runs-on: windows-2025-8-core
     defaults:
       run:
         shell: bash
@@ -95,7 +95,7 @@ jobs:
 
   pytorch-cpu:
     timeout-minutes: 100
-    runs-on: windows-2019-8-core
+    runs-on: windows-2025-8-core
     defaults:
       run:
         shell: bash
@@ -129,7 +129,7 @@ jobs:
 
   tensorflow:
     timeout-minutes: 40
-    runs-on: windows-2019-8-core
+    runs-on: windows-2025-8-core
     if: ${{ inputs.python_version != '3.12' }}
     defaults:
       run:
@@ -158,7 +158,7 @@ jobs:
 
   pytorch2-cpu:
     timeout-minutes: 40
-    runs-on: windows-2019-8-core
+    runs-on: windows-2025-8-core
     defaults:
       run:
         shell: bash
