@@ -66,6 +66,18 @@ def read_stride(meta: torch.tensor) -> tuple[tl.tensor]:
     return st0, st1, st2, st3
 
 
+@triton.jit
+def calculate_total_elements(meta: torch.tensor) -> tl.tensor:
+    """
+    Helper kernel for the total elements calculation based on meta tensor.
+
+    :param meta: Torch tensor with meta information (shape + stride).
+    :returns: Total number of elements for mask calculation.
+    """
+    s0, s1, s2, s3 = read_shape(meta)
+    return s0 * s1 * s2 * s3
+
+
 @triton.autotune(
     configs=[
         triton.Config(kwargs={"BLOCK_SIZE": 256}),
@@ -102,6 +114,7 @@ def forward_kernel(
     pid = tl.program_id(0)
     offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     input__s0, input__s1, input__s2, input__s3 = read_shape(input__meta)
+    input__elements = input__s0 * input__s1 * input__s2 * input__s3
 
     tmp = offsets
     i3 = tmp % input__s3
@@ -114,15 +127,17 @@ def forward_kernel(
 
     input_low_st0, input_low_st1, input_low_st2, input_low_st3 = read_stride(input_low_meta)
     input_low_offset = i0 * input_low_st0 + i1 * input_low_st1 + i2 * input_low_st2 + i3 * input_low_st3
+    input_low_elements = calculate_total_elements(input_low_meta)
 
     input_range_st0, input_range_st1, input_range_st2, input_range_st3 = read_stride(input_range_meta)
     input_range_offset = i0 * input_range_st0 + i1 * input_range_st1 + i2 * input_range_st2 + i3 * input_range_st3
+    input_range_elements = calculate_total_elements(input_range_meta)
 
-    mask = None  # tl.full([BLOCK_SIZE], True, tl.int1)
-
-    input_ = tl.load(input__ptr + offsets, mask).to(tl.float32)
-    input_low = tl.load(input_low_ptr + input_low_offset, mask).to(tl.float32)
-    input_range = tl.load(input_range_ptr + input_range_offset, mask).to(tl.float32)
+    input_ = tl.load(input__ptr + offsets, mask=offsets < input__elements).to(tl.float32)
+    input_low = tl.load(input_low_ptr + input_low_offset, mask=input_low_offset < input_low_elements).to(tl.float32)
+    input_range = tl.load(input_range_ptr + input_range_offset, mask=input_range_offset < input_range_elements).to(
+        tl.float32
+    )
 
     scale = (levels - 1) / input_range
 
@@ -135,7 +150,7 @@ def forward_kernel(
     output = libdevice.nearbyint(output)
     output = output / scale
 
-    tl.store(output_ptr + offsets, output, mask)
+    tl.store(output_ptr + offsets, output, mask=offsets < input__elements)
 
 
 @triton.autotune(
@@ -184,6 +199,8 @@ def backward_kernel(
     pid = tl.program_id(0)
     offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
     input__s0, input__s1, input__s2, input__s3 = read_shape(input__meta)
+    input__s0, input__s1, input__s2, input__s3 = read_shape(input__meta)
+    input__elements = input__s0 * input__s1 * input__s2 * input__s3
 
     tmp = offsets
     i3 = tmp % input__s3
@@ -196,16 +213,18 @@ def backward_kernel(
 
     input_low_st0, input_low_st1, input_low_st2, input_low_st3 = read_stride(input_low_meta)
     input_low_offset = i0 * input_low_st0 + i1 * input_low_st1 + i2 * input_low_st2 + i3 * input_low_st3
+    input_low_elements = calculate_total_elements(input_low_meta)
 
     input_range_st0, input_range_st1, input_range_st2, input_range_st3 = read_stride(input_range_meta)
     input_range_offset = i0 * input_range_st0 + i1 * input_range_st1 + i2 * input_range_st2 + i3 * input_range_st3
+    input_range_elements = calculate_total_elements(input_range_meta)
 
-    mask = None  # tl.full([BLOCK_SIZE], True, tl.int1)
-
-    grad_output = tl.load(grad_output_ptr + offsets, mask).to(tl.float32)
-    input_ = tl.load(input__ptr + offsets, mask).to(tl.float32)
-    input_low = tl.load(input_low_ptr + input_low_offset, mask).to(tl.float32)
-    input_range = tl.load(input_range_ptr + input_range_offset, mask).to(tl.float32)
+    grad_output = tl.load(grad_output_ptr + offsets, mask=offsets < input__elements).to(tl.float32)
+    input_ = tl.load(input__ptr + offsets, mask=offsets < input__elements).to(tl.float32)
+    input_low = tl.load(input_low_ptr + input_low_offset, mask=input_low_offset < input_low_elements).to(tl.float32)
+    input_range = tl.load(input_range_ptr + input_range_offset, mask=input_range_offset < input_range_elements).to(
+        tl.float32
+    )
 
     mask_hi = input_ > (input_low + input_range)
     mask_hi = mask_hi.to(tl.float32)
@@ -236,9 +255,9 @@ def backward_kernel(
 
     grad_low = grad_output * (mask_hi + mask_lo)
 
-    tl.store(grad_input_ptr + offsets, grad_input, mask)
-    tl.store(grad_low_ptr + offsets, grad_low, mask)
-    tl.store(grad_range_ptr + offsets, grad_range, mask)
+    tl.store(grad_input_ptr + offsets, grad_input, mask=offsets < input__elements)
+    tl.store(grad_low_ptr + offsets, grad_low, mask=offsets < input__elements)
+    tl.store(grad_range_ptr + offsets, grad_range, mask=offsets < input__elements)
 
 
 def forward(input_: torch.tensor, input_low: torch.tensor, input_range: torch.tensor, levels: int) -> torch.tensor:
