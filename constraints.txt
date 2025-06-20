@@ -6,7 +6,7 @@ torch==2.7.1
 torchvision==0.22.1
 
 # ONNX
-onnx==1.17.0
+onnx==1.18.0
 onnxruntime==1.19.2; python_version <= '3.9'
 onnxruntime==1.21.1; python_version > '3.9'
 
