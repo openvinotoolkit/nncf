@@ -37,6 +37,7 @@ def get_cli_dict_args(args):
 
 MAP_BACKEND_PACKAGES = {
     "torch": ["torch", "torchvision"],
+    "torchfx": ["torch", "torchvision"],
     "openvino": ["openvino"],
     "onnx": ["onnx", "onnxruntime"],
     "tf": ["tensorflow"],
