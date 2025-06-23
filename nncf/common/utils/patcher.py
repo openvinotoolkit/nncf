@@ -113,9 +113,13 @@ class Patcher:
             fn_name = obj_cls.split(".")[-1]
             obj_cls = ".".join(obj_cls.split(".")[:-1])
         else:
-            if "_partialmethod" in obj_cls.__dict__:
-                while "_partialmethod" in obj_cls.__dict__:
-                    obj_cls = obj_cls._partialmethod.keywords["__fn"]
+            # python<3.13
+            while "_partialmethod" in obj_cls.__dict__:
+                obj_cls = obj_cls._partialmethod.keywords["__fn"]
+            # python>=3.13
+            while "__partialmethod__" in obj_cls.__dict__:
+                obj_cls = obj_cls.__partialmethod__.keywords["__fn"]
+
             while isinstance(obj_cls, (partial, partialmethod)):
                 obj_cls = obj_cls.keywords["__fn"]
 
@@ -140,6 +144,7 @@ class Patcher:
             except ModuleNotFoundError:
                 module = ".".join(obj_cls.split(".")[:-1])
                 obj_cls = obj_cls.split(".")[-1]
+                print(f"{module}, {obj_cls}")
                 obj_cls = getattr(importlib.import_module(module), obj_cls)
         return obj_cls, fn_name
 
