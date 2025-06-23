@@ -63,6 +63,7 @@ def main() -> str:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
+        print("Warmup...")
         output = compressed_model_hf.generate(input_ids["input_ids"])
 
         start_t = time.time()
