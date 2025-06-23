@@ -144,7 +144,6 @@ class Patcher:
             except ModuleNotFoundError:
                 module = ".".join(obj_cls.split(".")[:-1])
                 obj_cls = obj_cls.split(".")[-1]
-                print(f"{module}, {obj_cls}")
                 obj_cls = getattr(importlib.import_module(module), obj_cls)
         return obj_cls, fn_name
 
