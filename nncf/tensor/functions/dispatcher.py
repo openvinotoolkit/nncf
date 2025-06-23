@@ -31,7 +31,7 @@ from typing import (
 try:
     from typing_extensions import ParamSpec
 except ImportError:
-    from typing import ParamSpec
+    from typing import ParamSpec  # type: ignore[assignment]
 
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
