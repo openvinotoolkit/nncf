@@ -75,9 +75,9 @@ torchvision/mobilenet_v3_small_BC_backend_CUDA_FX_TORCH:
     error_message: "Openvino Model Files Not Found!"
     message: "Issue-166847"
 torchvision/mobilenet_v3_small_BC_backend_OV_QUANTIZER_NNCF:
-  metric_value: 0.6561
-torchvision/mobilenet_v3_small_BC_backend_OV_QUANTIZER_AO:
   metric_value: 0.6679
+torchvision/mobilenet_v3_small_BC_backend_OV_QUANTIZER_AO:
+  metric_value: 0.6561
 torchvision/mobilenet_v3_small_BC_backend_X86_QUANTIZER_NNCF:
   metric_value: 0.0622
 torchvision/mobilenet_v3_small_BC_backend_X86_QUANTIZER_AO:
