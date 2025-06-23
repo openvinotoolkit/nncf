@@ -250,6 +250,10 @@ def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
             dq_cnt += 1
 
 
+@pytest.mark.xfail(
+    version.parse(onnx.__version__) >= version.parse("1.18.0"),
+    reason="onnxruntime not support default IR for onnx==1.18.0",
+)
 @pytest.mark.parametrize(
     "mode",
     [
