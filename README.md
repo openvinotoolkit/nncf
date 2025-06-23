@@ -21,11 +21,15 @@
 
 </div>
 
-Neural Network Compression Framework (NNCF) provides a suite of post-training and training-time algorithms for optimizing inference of neural networks in [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
+Neural Network Compression Framework (NNCF) provides a suite of post-training and training-time algorithms for
+optimizing inference of neural networks in [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
 
-NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TorchFX](https://pytorch.org/docs/stable/fx.html), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
+NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
+[TorchFX](https://pytorch.org/docs/stable/fx.html), [TensorFlow](https://www.tensorflow.org/),
+[ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
-NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](./docs/ModelZoo.md).
+NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different
+use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](./docs/ModelZoo.md).
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
@@ -436,7 +440,7 @@ Examples of full pipelines including compression, training, and inference for cl
 
 <a id="third-party-repository-integration"></a>
 
-## Third-party repository integration
+## Third-party Repository Integration
 
 NNCF may be easily integrated into training/evaluation pipelines of third-party repositories.
 
@@ -444,12 +448,13 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
-  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and export new models based on available model templates as well as run the exported models with OpenVINO.
+  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
+  export new models based on available model templates as well as run the exported models with OpenVINO.
 
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
-  
+
 - [Ultralytics](https://docs.ultralytics.com/integrations/openvino)
 
   NNCF is integrated into the Intel OpenVINO export pipeline, enabling quantization for the exported models.
@@ -457,11 +462,11 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [ExecuTorch](https://github.com/pytorch/executorch/blob/main/examples/openvino/README.md)
 
   NNCF is used as primary quantization framework for the [ExecuTorch OpenVINO integration](https://docs.pytorch.org/executorch/main/build-run-openvino.html).
-  
+
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
   NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
-  
+
 <a id="installation-guide"></a>
 
 ## Installation Guide
