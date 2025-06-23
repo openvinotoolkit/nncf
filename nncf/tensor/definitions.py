@@ -42,6 +42,8 @@ class TensorDataType(Enum):
     float64 = auto()
     f8e4m3 = auto()
     f8e5m2 = auto()
+    f8e8m0 = auto()
+    f4e2m1 = auto()
     nf4 = auto()
     int8 = auto()
     int32 = auto()

@@ -244,7 +244,8 @@ def get_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
-    Get a model that compresses weights to float (currently only nf4) destination type using the given configuration.
+    Get a model that compresses weights to float (currently nf4 or f4e2m1) destination type using the given
+    configuration.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -533,7 +534,7 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    assert config.mode == CompressWeightsMode.NF4
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
 
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
@@ -562,8 +563,7 @@ def _build_float_quantization_model(
         raise ValueError(msg)
 
     # Validate output dtypes
-    # TODO: add support for f4e2m1 once ticket 164851 is resolved
-    valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4]
+    valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4, TensorDataType.f4e2m1]
     if compressed_weight_dtype not in valid_compressed_weight_dtypes:
         msg = (
             f"Compressed weight must be one of the following data types: {valid_compressed_weight_dtypes}. "
@@ -591,8 +591,16 @@ def _build_float_quantization_model(
         eps = np.finfo(np.float32).eps
         scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
+        if config.mode == CompressWeightsMode.E2M1:
+            scale = scale / opset.constant(6.0, ov.Type.f32)
+            scale = opset.log(scale) / opset.log(opset.constant(2.0, ov.Type.f32))
+            scale = opset.ceil(scale)
+            scale = opset.clamp(scale, -127.0, 127.0)
+            scale = opset.power(opset.constant(2.0, ov.Type.f32), scale)
+
     compressed_weight = divide_op(weight, scale)
-    compressed_weight = convert_op(compressed_weight, ov.Type.nf4)
+    target_dtype = ov.Type.nf4 if config.mode == CompressWeightsMode.NF4 else ov.Type.f4e2m1
+    compressed_weight = convert_op(compressed_weight, target_dtype)
     compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
 
     ov_results = [compressed_weight]

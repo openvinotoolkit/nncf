@@ -44,6 +44,8 @@ class GraphConverter:
         type_name = ov_type.get_type_name()
         conversion_map = {
             "nf4": "float",
+            "f4e2m1": "float",
+            "f8e8m0": "float",
             "f8e4m3": "float",
             "f8e5m2": "float",
             "f16": "float",
