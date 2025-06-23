@@ -88,6 +88,9 @@ def convert_and_export_with_cache(model: PreTrainedModel) -> tuple[ExportedProgr
     """
     Convert a `PreTrainedModel` into an exportable module and export it using `torch.export`
     or `torch._export.capture_pre_autograd_graph`.
+
+    :param model: Model to be exported.
+    :return: A tuple iwth the Exported Program, config for the LLM, Generation config of the LLM
     """
 
     example_input_ids = torch.ones(1, 8, dtype=torch.long)
