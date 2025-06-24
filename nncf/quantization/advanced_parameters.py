@@ -29,6 +29,8 @@ from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
+TTensor = Any
+
 
 @api(canonical_alias="nncf.OverflowFix")
 class OverflowFix(StrEnum):
@@ -366,12 +368,12 @@ class CodebookParameters:
     Contains parameters for codebook compression algorithm.
 
     :param codebook: The codebook (LUT) for the weight compression.
-        Applicable for vector quantization.
-    :type codebook: list[Any]
+        Applicable for vector quantization. Must be a numpy array, ov Tensor, or torch Tensor.
+    :type codebook: TTensor
     :param dts_type: The type of the codebook.
     """
 
-    codebook: Optional[list[Any]] = None
+    codebook: Optional[TTensor] = None
 
 
 @api()
