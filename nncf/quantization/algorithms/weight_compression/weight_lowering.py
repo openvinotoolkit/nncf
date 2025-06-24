@@ -20,6 +20,8 @@ from nncf.common.utils.backend import is_openvino_available
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_NF4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.constants import NF4_QUANTILES
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -27,71 +29,6 @@ from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 
 ReductionAxes = Union[int, tuple[int, ...]]
-
-NF4_QUANTILES = np.array(
-    [
-        -1.0,
-        -0.6961928009986877,
-        -0.5250730514526367,
-        -0.39491748809814453,
-        -0.28444138169288635,
-        -0.18477343022823334,
-        -0.09105003625154495,
-        0.0,
-        0.07958029955625534,
-        0.16093020141124725,
-        0.24611230194568634,
-        0.33791524171829224,
-        0.44070982933044434,
-        0.5626170039176941,
-        0.7229568362236023,
-        1.0,
-    ],
-    dtype=np.float32,
-)
-
-CB4_QUANTILES = np.array(
-    [
-        -3.5,
-        -2.5,
-        -1.875,
-        -1.375,
-        -1.0,
-        -0.625,
-        -0.3125,
-        0.0,
-        0.2812,
-        0.5625,
-        0.875,
-        1.125,
-        1.5,
-        2.0,
-        2.5,
-        3.5,
-    ],
-    dtype=np.float32,
-)
-
-CENTER_OF_NF4_QUANTILES = np.array(
-    [
-        -0.84809643,
-        -0.6106329,
-        -0.45999527,
-        -0.33967942,
-        -0.2346074,
-        -0.13791174,
-        -0.045525018,
-        0.03979015,
-        0.120255254,
-        0.20352125,
-        0.29201376,
-        0.38931254,
-        0.5016634,
-        0.6427869,
-        0.8614784,
-    ],
-    dtype=np.float32,
-)
 
 
 MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 10000
@@ -221,7 +158,7 @@ def do_float_quantization(
     scale = precomputed_scale
     if scale is None:
         if config.is_codebook:
-            max_val = max(np.abs(np.array(config.codebook_values)))
+            max_val = max(np.abs(config.get_numpy_codebook()))
         scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
@@ -231,7 +168,9 @@ def do_float_quantization(
         else:
             compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
     elif config.is_codebook:
-        compressed_weight, indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=config.codebook_values)
+        compressed_weight, indexes = _calculate_codebook_quantized_weight(
+            norm_weight, quantiles=config.get_numpy_codebook()
+        )
         return compressed_weight, scale, indexes
     else:
         # TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
@@ -388,7 +327,7 @@ def compress_weight(
                 indexes,
                 scale,
                 None,
-                fns.from_numpy(np.array(config.codebook_values), backend=compressed_weight.backend),
+                config.codebook_values,
             )
         else:
             return CompressedWeight(compressed_weight, scale)

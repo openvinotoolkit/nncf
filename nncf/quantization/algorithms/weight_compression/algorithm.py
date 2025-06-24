@@ -39,14 +39,15 @@ from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
-from nncf.quantization.algorithms.weight_compression.weight_lowering import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
@@ -442,7 +443,7 @@ class WeightCompression(Algorithm):
             group_size=self._group_size,
             codebook_values=CB4_QUANTILES
             if self._mode == CompressWeightsMode.CB4_F8E4M3
-            else self._advanced_parameters.codebook_params.codebook,
+            else Tensor(self._advanced_parameters.codebook_params.codebook),
         )
 
     def _set_weight_compression_config(
