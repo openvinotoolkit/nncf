@@ -819,13 +819,9 @@ def _is_embedding(node: ov.Node) -> bool:
     input_tensor = node.input_value(const_port_id)
     input_type = input_tensor.get_element_type().get_type_name()
 
-    try:
-        input_node = node.input(const_port_id).get_source_output().node
-        if input_node.get_type_info().name == "Convert":
-            input_type = input_node.input_value(0).get_element_type().get_type_name()
-    except AttributeError:
-        # Handle the case where input_node is not available
-        pass
+    if node.friendly_name.endswith("nncf_codebook"):
+        return False
+
     if input_type in allowed_types_list:
         const_node = get_operation_const_op(node, const_port_id)
         if const_node is not None:

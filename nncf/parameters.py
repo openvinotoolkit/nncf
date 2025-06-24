@@ -94,10 +94,10 @@ class CompressWeightsMode(StrEnum):
     INT4_SYM = "int4_sym"
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
+    CB4_F8E4M3 = "cb4_f8e4m3"
     INT8 = "int8"  # Deprecated mode
     E2M1 = "e2m1"
     CODEBOOK = "codebook"
-    CB4_F8E4M3 = "cb4_f8e4m3"
 
 
 @api(canonical_alias="nncf.CompressionFormat")

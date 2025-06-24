@@ -260,6 +260,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 indexes=compressed_weight.tensor,
                 dtype=compression_dtype,
                 name=const_node_name,
+                name=const_node_name + "_nncf_codebook",
             )
         else:
             compressed_const = create_ov_const_from_tensor(
