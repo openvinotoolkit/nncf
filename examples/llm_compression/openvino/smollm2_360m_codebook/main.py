@@ -111,7 +111,7 @@ def custom_codebook_example(model_id, output_dir):
 
 def main():
     model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
-    output_dir = "smollm2_360m_compressed_codebook_"
+    output_dir = "smollm2_360m_compressed_codebook"
 
     res = default_codebook_example(model_id, output_dir)
     res += custom_codebook_example(model_id, output_dir + "_custom")

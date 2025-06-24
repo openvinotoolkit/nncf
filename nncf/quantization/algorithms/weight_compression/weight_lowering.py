@@ -19,6 +19,7 @@ from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.backend import is_openvino_available
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
+from nncf.quantization.algorithms.weight_compression.common import reshape_weight_for_grouped_quantization
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_NF4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import NF4_QUANTILES
@@ -32,38 +33,6 @@ ReductionAxes = Union[int, tuple[int, ...]]
 
 
 MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 10000
-
-
-def reshape_weight_for_grouped_quantization(
-    weight: Tensor, reduction_axes: ReductionAxes, group_size: int
-) -> tuple[Tensor, int]:
-    """
-    Reshapes weight for group-wise quantization and return a reduction axis for collecting statistics per group
-    dimension. Having a transposed weight with shapes [c_out, c_in] and group size = 128, shape of reshaped weight is
-    [c_out, c_in // 128, 128], reduction axis = 1 and the returned reduction axis = 2.
-
-    :param weight: Weight array to compress.
-    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
-    :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-    :return: reshaped weight and new reduction axis.
-    """
-    assert group_size != -1
-    if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
-        reduction_axes = reduction_axes[0]
-    if not isinstance(reduction_axes, int):
-        msg = f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
-        raise nncf.UnsupportedModelError(msg)
-    channel_size = weight.shape[reduction_axes]
-    if channel_size % group_size != 0:
-        msg = f"Channel size {channel_size} should be divisible by size of group {group_size}."
-        raise nncf.InvalidGroupSizeError(msg)
-
-    num_groups_per_channel = channel_size // group_size
-    shape = list(weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
-    shape[reduction_axes : reduction_axes + 1] = (num_groups_per_channel, group_size)
-    reshaped_weight = weight.reshape(shape)
-    reduction_axes += 1
-    return reshaped_weight, reduction_axes
 
 
 def calculate_float_quantization_params(

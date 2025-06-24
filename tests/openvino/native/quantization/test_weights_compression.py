@@ -41,6 +41,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters 
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
 from nncf.quantization.advanced_parameters import CodebookParameters
+from nncf.quantization.algorithms.weight_compression.common import reshape_weight_for_grouped_quantization
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -51,7 +52,6 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import _cal
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -1061,13 +1061,17 @@ def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
 @pytest.mark.parametrize(
     ("codebook", "dst_type", "n_layers"),
     (
-        ([i for i in range(-8, 8)], ov.Type.i4, 5),
-        ([i for i in range(-(2**6), 2**6)], ov.Type.i8, 5),
-        ([i for i in range(-(2**6), 2**6)], ov.Type.f8e4m3, 5),
+        (np.array([i for i in range(-8, 8)], np.int8), ov.Type.i8, 5),
+        (np.array([i for i in range(-(2**6), 2**6)], np.int8), ov.Type.i8, 5),
+        (
+            Tensor(np.array([i for i in range(-(2**6), 2**6)])).as_openvino_tensor().astype(TensorDataType.f8e4m3),
+            ov.Type.f8e4m3,
+            5,
+        ),
     ),
 )
 @pytest.mark.parametrize("group_size", (1, -1))
-def test_codebook(codebook, dst_type, n_layers, group_size):
+def test_codebook(codebook, n_layers, dst_type, group_size):
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(
         model,
@@ -1075,10 +1079,16 @@ def test_codebook(codebook, dst_type, n_layers, group_size):
         ratio=1.0,
         group_size=group_size,
         all_layers=True,
-        advanced_parameters=AdvancedCompressionParameters(
-            codebook_params=CodebookParameters(codebook=codebook, dst_type=dst_type)
-        ),
+        advanced_parameters=AdvancedCompressionParameters(codebook_params=CodebookParameters(codebook=codebook)),
     )
+    names_codebook = [
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_friendly_name().endswith("nncf_codebook")
+    ]
+
+    assert len(names_codebook) == n_layers
+
     names_codebook = [
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == dst_type
     ]
@@ -1121,7 +1131,7 @@ def test_codebook_weighs_range(data):
     codebook = data
     max_diff = 0.1
     w = Tensor(data + (np.random.rand(*data.shape) - 0.5) * max_diff)
-    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=data)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=Tensor(data))
     _, scale, indexes = do_float_quantization(w, config, -1)
     uncompressed_data = codebook[indexes.data] * scale.data
 
