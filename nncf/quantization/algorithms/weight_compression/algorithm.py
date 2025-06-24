@@ -66,8 +66,6 @@ SUPPORTED_DATA_TYPES = [
     TensorDataType.float64,
 ]
 
-MIN_FLEXIBLE_GROUP_SIZE = 32
-
 
 def get_weight_compression_configuration(
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,

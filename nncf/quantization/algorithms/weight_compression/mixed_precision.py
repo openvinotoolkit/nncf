@@ -61,6 +61,9 @@ class MixedPrecisionCriterion(Algorithm):
             and the rest to INT8_ASYM).
         :param subset_size: Size of dataset subset for statistics.
         """
+        if group_size_parameters is None:
+            group_size_parameters = AdvancedGroupSizeParameters()
+
         self._primary_config = primary_config
         self._ratio = ratio
         self._subset_size = subset_size
