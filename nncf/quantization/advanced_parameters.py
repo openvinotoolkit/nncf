@@ -363,12 +363,16 @@ class AdvancedLoraCorrectionParameters:
 @dataclass
 class AdvancedGroupSizeParameters:
     """
-    Contains advanced parameters for flexible group size searching logic. When enabled, each weight for which its
+    Contains advanced parameters for flexible group size searching logic. When enabled, each weight for which the
     channel size is not divisible by the general group size value will be compressed to a newly calculated group size.
-    The new group size value is the maximal power of two such that:
+    The new group size value is the maximal power of two (i.e., 2^k) such that:
         - channel size is divisible by it;
         - it is less than the originally specified group size value;
         - it is greater than or equal to `min_flexible_group_size`.
+
+    If it's not possible to find a value satisfying these requirements, such weight is compressed to the backup
+    precision. If ratio < 1.0 and some weights have to be compressed to the backup precision because of group size
+    issues, then these weights also contribute to the ratio of backup mode group.
 
     :param enable_flexible_group_size: Whether to enable flexible group size searching.
     :type enable_flexible_group_size: bool
