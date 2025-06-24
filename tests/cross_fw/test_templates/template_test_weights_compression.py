@@ -9,17 +9,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-import re
 from abc import ABC
 from abc import abstractmethod
 from typing import TypeVar
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+import nncf
 import nncf.tensor.functions as fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
+from nncf import nncf_logger
 from nncf.data.dataset import Dataset
 from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
@@ -336,18 +338,33 @@ class TemplateWeightCompression(ABC):
             assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
 
     @pytest.mark.parametrize("algorithm", (None, "awq", "scale_estimation", "gptq", "lora_correction"))
-    def test_error_message_for_invalid_group_size(self, algorithm):
+    @pytest.mark.parametrize(
+        ["group_size", "enable_flex", "min_flex_group_size", "expected_outcome"],
+        [
+            (32, False, None, "exception"),
+            (32, True, 16, "warn_backup_mode"),
+            (32, True, 8, "info_adjusted_group_size"),
+        ],
+    )
+    def test_error_message_for_invalid_group_size(
+        self,
+        algorithm,
+        group_size,
+        enable_flex,
+        min_flex_group_size,
+        expected_outcome,
+    ):
         """
-        Verifies that an exception is raised for an invalid group size
-        and the error message suggests either adding the node to the ignored scope or adjusting the group size.
+        Verifies that:
+            - an exception is raised for an invalid group size
+            - a warning is logged when a flexible group size value cannot be found
+            - an info message is logged when the group size is adjusted to a valid value
         """
-        pytest.skip("WIP")
         if algorithm in self.get_not_supported_algorithms():
             pytest.skip("Skipping test for not supported algorithms")
 
         model = self.get_awq_model()
         hidden_dim = 8
-        invalid_group_size = hidden_dim + 1
         input_example = self.to_tensor(np.ones([1, 4, hidden_dim], dtype=np.float32))
         dataset = Dataset([input_example])
         algorithm_dict = {algorithm: True} if algorithm else {}
@@ -355,21 +372,33 @@ class TemplateWeightCompression(ABC):
             model=model,
             mode=CompressWeightsMode.INT4_ASYM,
             ratio=1.0,
-            group_size=invalid_group_size,
+            group_size=group_size,
             all_layers=True,
             **algorithm_dict,
             dataset=dataset,
+            advanced_parameters=nncf.AdvancedCompressionParameters(
+                group_size_params=nncf.AdvancedGroupSizeParameters(
+                    enable_flexible_group_size=enable_flex, min_flexible_group_size=min_flex_group_size
+                )
+            ),
         )
 
-        with pytest.raises(InvalidGroupSizeError) as exc_info:
-            compress_weights(**kwargs)
-
-        # TODO: update message
-        names = re.findall(r"IgnoredScope\(names=\[(.*?)\]\)", re.sub(r"[\n\t]", "", str(exc_info.value)))
-        assert len(names) == 1, f"Error message should contain ignored scope to avoid issue: {str(exc_info.value)}"
-        name_list = [name.strip('"') for name in names[0].split(",")]
-
-        compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
+        if expected_outcome == "exception":
+            with pytest.raises(InvalidGroupSizeError) as exc_info:
+                compress_weights(**kwargs)
+            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+        elif expected_outcome == "warn_backup_mode":
+            with patch.object(nncf_logger, "warning") as mock_warning:
+                compress_weights(**kwargs)
+            warning_messages = [args[0] for args, _ in mock_warning.call_args_list]
+            warn_msg = "Large enough flexible group size value cannot be found for some nodes."
+            assert any(warn_msg in msg for msg in warning_messages)
+        elif expected_outcome == "info_adjusted_group_size":
+            with patch.object(nncf_logger, "info") as mock_info:
+                compress_weights(**kwargs)
+            info_messages = [args[0] for args, _ in mock_info.call_args_list]
+            info_msg = f"Wasn't able to set the specified group size value ({group_size}) to some nodes."
+            assert any(info_msg in msg for msg in info_messages)
 
     @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])

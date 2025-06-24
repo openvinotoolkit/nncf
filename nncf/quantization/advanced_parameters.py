@@ -362,7 +362,7 @@ class AdvancedLoraCorrectionParameters:
 @api()
 @dataclass
 class AdvancedGroupSizeParameters:
-    flexible_group_size_enabled: bool = False
+    enable_flexible_group_size: bool = False
     min_flexible_group_size: int = 16
 
 

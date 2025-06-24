@@ -463,7 +463,7 @@ class WeightCompression(Algorithm):
             msg = (
                 f"Failed to apply group-wise quantization with group size value {self._group_size}. "
                 "Ensure that the channel size is divisible by the group size. You can also pass "
-                "`AdvancedGroupSizeParameters(flexible_group_size_enabled=True)` advanced parameter to allow the "
+                "`AdvancedGroupSizeParameters(enable_flexible_group_size=True)` advanced parameter to allow the "
                 "algorithm to find the maximal suitable group size value for each weight."
             )
             raise nncf.InvalidGroupSizeError(msg)

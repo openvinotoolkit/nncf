@@ -67,7 +67,7 @@ class MixedPrecisionCriterion(Algorithm):
         self._primary_config = primary_config
         self._ratio = ratio
         self._subset_size = subset_size
-        self._flexible_group_size_enabled = group_size_parameters.flexible_group_size_enabled
+        self._enable_flexible_group_size = group_size_parameters.enable_flexible_group_size
         self._min_flexible_group_size = group_size_parameters.min_flexible_group_size
         self._algorithm_key = f"MPC_{hash(self)}"
         self._backend_entity = None
@@ -101,7 +101,7 @@ class MixedPrecisionCriterion(Algorithm):
 
         flexible_group_size_values = {}
         valid_weight_params = weight_params
-        if self._flexible_group_size_enabled and self._primary_config.group_size != -1:
+        if self._enable_flexible_group_size and self._primary_config.group_size != -1:
             group_size_data = self._get_flexible_group_size_data(weight_params)
             flexible_group_size_values = {w_param.weight_name: group_size for w_param, group_size in group_size_data}
             valid_weight_params = [w_param for w_param, _ in group_size_data]
