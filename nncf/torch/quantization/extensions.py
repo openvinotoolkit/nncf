@@ -18,12 +18,12 @@ import nncf
 from nncf import nncf_logger
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 from nncf.torch.extensions import EXTENSIONS
-from nncf.torch.extensions import CudaNotAvailableStub
 from nncf.torch.extensions import ExtensionLoader
 from nncf.torch.extensions import ExtensionLoaderTimeoutException
 from nncf.torch.extensions import ExtensionNamespace
 from nncf.torch.extensions import ExtensionsType
 from nncf.torch.quantization.reference import ReferenceQuantizedFunctions
+from nncf.torch.utils import CudaNotAvailableStub
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/quantization")
 

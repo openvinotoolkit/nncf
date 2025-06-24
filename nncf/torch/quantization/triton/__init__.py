@@ -9,24 +9,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os.path
+from typing import Callable
 
 import torch
 
-from nncf.torch.extensions import get_build_directory_for_extension
 from nncf.torch.utils import CudaNotAvailableStub
 
-ext_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+
+class TritonFunctionsWrapper:
+    def __init__(self):
+        """
+        Wrapper that handles Triton kernel imports since it would trigger compilation.
+        To prevent issues with non-CUDA environment.
+        """
+        from nncf.torch.quantization.triton.reference import backward
+        from nncf.torch.quantization.triton.reference import forward
+
+        self.Quantize_forward = forward
+        self.Quantize_backward = backward
+
+    def get(self, fn_name: str) -> Callable:
+        return getattr(self, fn_name)
+
+
 if torch.cuda.is_available():
-    EXTENSIONS = torch.utils.cpp_extension.load(
-        "extensions",
-        [
-            os.path.join(ext_dir, "extensions.cpp"),
-            os.path.join(ext_dir, "nms/nms.cpp"),
-            os.path.join(ext_dir, "nms/nms_kernel.cu"),
-        ],
-        verbose=False,
-        build_directory=get_build_directory_for_extension("extensions"),
-    )
+    QuantizedFunctionsCUDA = TritonFunctionsWrapper()
 else:
-    EXTENSIONS = CudaNotAvailableStub
+    QuantizedFunctionsCUDA = CudaNotAvailableStub()
