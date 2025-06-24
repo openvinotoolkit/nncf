@@ -250,6 +250,10 @@ def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
             dq_cnt += 1
 
 
+@pytest.mark.xfail(
+    version.parse(onnx.__version__) >= version.parse("1.18.0"),
+    reason="onnxruntime not support default IR for onnx==1.18.0",
+)
 @pytest.mark.parametrize(
     "mode",
     [
@@ -268,6 +272,10 @@ def test_compression_with_inference(mode):
     session.run(None, {"input": input_data})
 
 
+@pytest.mark.xfail(
+    version.parse(onnx.__version__) >= version.parse("1.18.0"),
+    reason="onnxruntime not support default IR for onnx==1.18.0",
+)
 def test_matmulnbits():
     rtol = 1e-5
     if version.parse(onnxruntime.__version__) < version.parse("1.21.1"):
