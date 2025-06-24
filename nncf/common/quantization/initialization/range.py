@@ -215,8 +215,8 @@ class RangeInitCollectorParams:
     def use_means_of_maxs(self) -> bool:
         return not self._is_weights and not self._is_per_channel
 
+    @staticmethod
     def _get_reduction_axes(
-        self,
         shape_to_reduce: Union[tuple[int, ...], list[int]],
         quantization_axes: Union[tuple[int, ...], list[int]],
         aggregation_axes: Union[tuple[int, ...], list[int]],
@@ -234,18 +234,21 @@ class RangeInitCollectorParams:
         axes_to_keep.update(quantization_axes)
         return get_reduction_axes(list(axes_to_keep), shape_to_reduce)
 
-    def _get_aggregation_axes(self, batchwise_statistics: bool) -> tuple[int, ...]:
+    @staticmethod
+    def _get_aggregation_axes(batchwise_statistics: bool, shape: Union[tuple[int, ...], list[int]]) -> tuple[int, ...]:
         """
         Returns axes for aggregator.
 
+        :param shape: Shape of the tensor.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
             for each item of the batch or for the entire batch.
         :return Tuple[int]: Aggregation axes.
         """
-        return (0, 1) if batchwise_statistics else (0,)
+        return (0, 1) if batchwise_statistics and len(shape) > 0 else (0,)
 
+    @classmethod
     def get_reduction_aggregation_axes(
-        self,
+        cls,
         shape_to_reduce: Union[tuple[int, ...], list[int]],
         quantization_axes: Union[tuple[int, ...], list[int]],
         batchwise_statistics: bool,
@@ -259,6 +262,6 @@ class RangeInitCollectorParams:
             for each item of the batch or for the entire batch.
         :return: Reduction axes and aggregation axes.
         """
-        aggregation_axes = self._get_aggregation_axes(batchwise_statistics)
-        reduction_axes = self._get_reduction_axes(shape_to_reduce, quantization_axes, aggregation_axes)
+        aggregation_axes = cls._get_aggregation_axes(batchwise_statistics, shape_to_reduce)
+        reduction_axes = cls._get_reduction_axes(shape_to_reduce, quantization_axes, aggregation_axes)
         return reduction_axes, aggregation_axes
