@@ -361,6 +361,13 @@ class AdvancedLoraCorrectionParameters:
 
 @api()
 @dataclass
+class AdvancedGroupSizeParameters:
+    flexible_group_size_enabled: bool = True
+    min_flexible_group_size: int = 16
+
+
+@api()
+@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -390,7 +397,7 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
     backend_params: dict[str, Any] = field(default_factory=dict)
-    flexible_group_size: bool = False
+    group_size_params: AdvancedGroupSizeParameters = field(default_factory=AdvancedGroupSizeParameters)
 
 
 @api()

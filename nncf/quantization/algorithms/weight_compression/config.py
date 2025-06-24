@@ -8,8 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import operator
 from dataclasses import dataclass
 from dataclasses import field
+from functools import reduce
 from typing import Optional, TypeVar
 
 import numpy as np
@@ -67,7 +69,6 @@ class WeightCompressionParameters:
     :param node_with_weight: Node with weight in the NNCF graph.
     :param weight_port_id: Number of elements in the weight array.
     :param weight_shape: Shape of the weight array.
-    :param num_weights: Number of elements in the weight array.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param compression_config: Configuration of weight compression for the weight node.
     """
@@ -76,11 +77,11 @@ class WeightCompressionParameters:
     node_with_weight: NNCFNode
     weight_port_id: int
     weight_shape: tuple[int, ...]
-    num_weights: np.uint64
     reduction_axes: tuple[int, ...]
     compression_config: Optional[WeightCompressionConfig] = field(default_factory=WeightCompressionConfig)
 
-    def __post_init__(self):
-        # Explicitly cast num_weights to avoid overflow on finding total number of weights.
-        # The issue happens on Windows, because np.ndarray.size() returns np.int32 and sum of weights is more than 2^32.
-        self.num_weights = np.uint64(self.num_weights)
+    @property
+    def num_weights(self) -> np.uint64:
+        if not hasattr(self, "_num_weights"):
+            self._num_weights = np.uint64(reduce(operator.mul, self.weight_shape, 1))
+        return self._num_weights

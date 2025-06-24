@@ -8,13 +8,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import dataclasses
 from abc import ABC
 from abc import abstractmethod
 from typing import Iterable, Optional, TypeVar
 
 import nncf
 from nncf import Dataset
+from nncf import nncf_logger
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
@@ -25,10 +26,12 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.registry import Registry
 from nncf.parameters import SensitivityMetric
+from nncf.quantization.advanced_parameters import AdvancedGroupSizeParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.weight_lowering import get_reduction_channel_size
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -45,7 +48,13 @@ class MixedPrecisionCriterion(Algorithm):
     for weights based on some criteria.
     """
 
-    def __init__(self, primary_config: WeightCompressionConfig, ratio: float, subset_size: Optional[int] = None):
+    def __init__(
+        self,
+        primary_config: WeightCompressionConfig,
+        ratio: float,
+        subset_size: Optional[int] = None,
+        group_size_parameters: Optional[AdvancedGroupSizeParameters] = None,
+    ):
         """
         :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
@@ -55,6 +64,8 @@ class MixedPrecisionCriterion(Algorithm):
         self._primary_config = primary_config
         self._ratio = ratio
         self._subset_size = subset_size
+        self._flexible_group_size_enabled = group_size_parameters.flexible_group_size_enabled
+        self._min_flexible_group_size = group_size_parameters.min_flexible_group_size
         self._algorithm_key = f"MPC_{hash(self)}"
         self._backend_entity = None
 
@@ -85,20 +96,44 @@ class MixedPrecisionCriterion(Algorithm):
         """
         self._set_backend_entity(model)
 
-        scores = self._calc_sensitivity(model, graph, weight_params, statistic_points)
-        num_all_weights = sum(wp.num_weights for wp in weight_params)
+        flexible_group_size_values = {}
+        valid_weight_params = weight_params
+        if self._flexible_group_size_enabled and self._primary_config.group_size != -1:
+            group_size_data = self._get_flexible_group_size_data(weight_params)
+            flexible_group_size_values = {w_param.weight_name: group_size for w_param, group_size in group_size_data}
+            valid_weight_params = [w_param for w_param, _ in group_size_data]
 
-        indexes_of_layers_in_ascending_order_of_scores = [
-            i[0] for i in sorted(enumerate(scores), reverse=False, key=lambda x: x[1])
-        ]
-        num_weights_in_4bit = 0
-        for index in indexes_of_layers_in_ascending_order_of_scores:
-            weight_param = weight_params[index]
-            current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_all_weights
-            if current_ratio >= self._ratio:
-                break
-            weight_param.compression_config = self._primary_config
-            num_weights_in_4bit += weight_param.num_weights
+        if self._ratio == 1.0:
+            for weight_param in valid_weight_params:
+                weight_param.compression_config = self._primary_config
+                if weight_param.weight_name in flexible_group_size_values:
+                    weight_param.compression_config = dataclasses.replace(
+                        weight_param.compression_config,
+                        group_size=flexible_group_size_values[weight_param.weight_name],
+                    )
+        else:
+            scores = self._calc_sensitivity(model, graph, valid_weight_params, statistic_points)
+
+            # Sum all weights to calculate the ratio. This way the weights for which we weren't able to find a flexible
+            # group size value will contribute to the backup group as well.
+            num_all_weights = sum(wp.num_weights for wp in weight_params)
+
+            indexes_of_layers_in_ascending_order_of_scores = [
+                i[0] for i in sorted(enumerate(scores), reverse=False, key=lambda x: x[1])
+            ]
+            num_weights_in_4bit = 0
+            for index in indexes_of_layers_in_ascending_order_of_scores:
+                weight_param = valid_weight_params[index]
+                current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_all_weights
+                if current_ratio >= self._ratio:
+                    break
+                weight_param.compression_config = self._primary_config
+                if weight_param.weight_name in flexible_group_size_values:
+                    weight_param.compression_config = dataclasses.replace(
+                        weight_param.compression_config,
+                        group_size=flexible_group_size_values[weight_param.weight_name],
+                    )
+                num_weights_in_4bit += weight_param.num_weights
 
     @abstractmethod
     def _set_backend_entity(self, model: TModel) -> None:
@@ -123,6 +158,59 @@ class MixedPrecisionCriterion(Algorithm):
         :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
+
+    def _get_flexible_group_size_data(
+        self, weight_params: list[WeightCompressionParameters]
+    ) -> list[tuple[WeightCompressionParameters, int]]:
+        primary_group_size = self._primary_config.group_size
+        flexible_group_size_not_found_weight_params = []
+        group_size_data = []
+        for w_params in weight_params:
+            reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
+            if reduction_channel_size % primary_group_size == 0:
+                # The weight can be compressed with the given group size, nothing else to do
+                group_size_data.append((w_params, primary_group_size))
+                continue
+
+            # Find the maximal power of two that divides reduction_channel_size
+            new_group_size = 2
+            while reduction_channel_size % new_group_size == 0 and new_group_size < primary_group_size:
+                new_group_size *= 2
+            new_group_size //= 2
+
+            if new_group_size < self._min_flexible_group_size:
+                flexible_group_size_not_found_weight_params.append(w_params)
+            else:
+                group_size_data.append((w_params, new_group_size))
+
+        node_strings = []
+        for i, (w_params, new_group_size) in enumerate(group_size_data):
+            if new_group_size == primary_group_size:
+                continue
+            weight_shape = w_params.weight_shape
+            reduction_channel_size, _ = get_reduction_channel_size(weight_shape, w_params.reduction_axes)
+            node_strings.append(
+                f"{w_params.node_with_weight.node_name} "
+                f"(weight shape: {weight_shape}, adjusted group size: {new_group_size})"
+            )
+        if len(node_strings) > 0:
+            nncf_logger.info(
+                f"Wasn't able to set the specified group size value ({primary_group_size}) to some nodes. These nodes "
+                f"will have an adjusted group size value:\n\t" + "\n\t".join(node_strings)
+            )
+
+        if len(flexible_group_size_not_found_weight_params) > 0:
+            node_strings = [""] * len(flexible_group_size_not_found_weight_params)
+            for i, w_params in enumerate(flexible_group_size_not_found_weight_params):
+                weight_shape = w_params.weight_shape
+                reduction_channel_size, _ = get_reduction_channel_size(weight_shape, w_params.reduction_axes)
+                node_strings[i] = f"{w_params.node_with_weight.node_name} (weight shape: {weight_shape})"
+            nncf_logger.warning(
+                "Large enough flexible group size value cannot be found for some nodes. They will be compressed to the "
+                "backup mode. Nodes:\n\t" + "\n\t".join(node_strings)
+            )
+
+        return group_size_data
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.WEIGHT_QUANTIZATION_ERROR)
