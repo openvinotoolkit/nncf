@@ -66,8 +66,7 @@ Homepage = "https://github.com/openvinotoolkit/nncf"
 version = { attr = "custom_version.version" }
 
 [tool.setuptools.packages.find]
-where = ["."]
-exclude = ["tests", "tests.*", "examples", "examples.*", "tools", "tools.*"]
+where = ["src"]
 namespaces = false
 
 [tool.md_dead_link_check]
@@ -81,15 +80,15 @@ strict = true
 # https://github.com/hauntsaninja/no_implicit_optional
 implicit_optional = true
 files = [
-    "nncf/api",
-    "nncf/data",
-    "nncf/common",
-    "nncf/config",
-    "nncf/torch/function_hook",
-    "nncf/quantization/*py",
-    "nncf/telemetry/",
-    "nncf/tensor/",
-    "nncf/*py",
+    "src/nncf/api",
+    "src/nncf/data",
+    "src/nncf/common",
+    "src/nncf/config",
+    "src/nncf/torch/function_hook",
+    "src/nncf/quantization/*py",
+    "src/nncf/telemetry/",
+    "src/nncf/tensor/",
+    "src/nncf/*py",
 ]
 disable_error_code = ["import-untyped"]
 
@@ -101,8 +100,8 @@ disable_error_code = ["empty-body", "no-any-return"]
 [tool.ruff]
 line-length = 120
 exclude = [
-    "nncf/tensorflow/__init__.py",
-    "nncf/torch/function_hook/handle_inner_functions.py"
+    "src/nncf/tensorflow/__init__.py",
+    "src/nncf/torch/function_hook/handle_inner_functions.py"
 ]
 
 [tool.ruff.lint]
@@ -163,12 +162,12 @@ extend-select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"nncf/experimental/torch/nas/bootstrapNAS/__init__.py" = ["F401"]
-"nncf/torch/__init__.py" = ["F401", "E402"]
+"src/nncf/experimental/torch/nas/bootstrapNAS/__init__.py" = ["F401"]
+"src/nncf/torch/__init__.py" = ["F401", "E402"]
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!nncf/**.py" = ["INP", "D"]
+"!src/nncf/**.py" = ["INP", "D"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
