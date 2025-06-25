@@ -98,6 +98,71 @@ class QuantizerConfig:
     def __hash__(self) -> int:
         return hash(str(self))
 
+    def __lt__(self, other: "QuantizerConfig") -> bool:
+        # Prefer higher bitwidths, per-tensor, symmetrical
+        if self.num_bits > other.num_bits:
+            return True
+        if self.num_bits < other.num_bits:
+            return False
+        if self.per_channel is False and other.per_channel is True:
+            return True
+        if self.per_channel is True and other.per_channel is False:
+            return False
+        if self.mode is QuantizationScheme.SYMMETRIC and other.mode is QuantizationScheme.ASYMMETRIC:
+            return True
+        if self.mode is QuantizationScheme.ASYMMETRIC and other.mode is QuantizationScheme.SYMMETRIC:
+            return False
+        return False
+
+    def is_redundant_with_downstream_qconfig(self, downstream_qconfig: "QuantizerConfig") -> bool:
+        """
+        Returns True if the two quantizers placed immediately one after another are redundant and could be
+        replaced with a single quantizer.
+
+        :param downstream_qconfig: QuantizerConfig of a quantizer placed immediately after the quantizer
+            with the current QuantizerConfig.
+        :return: True if the two quantizers placed immediately one after another are redundant and could be
+            replaced with a single quantizer.
+        """
+        is_redundant = downstream_qconfig.num_bits == self.num_bits
+
+        # Avoid asymmetric quantization if a symmetrically quantized tensor arrived
+        is_redundant = is_redundant and (
+            (downstream_qconfig.mode == self.mode)
+            or (downstream_qconfig.mode == QuantizationScheme.ASYMMETRIC and self.mode == QuantizationScheme.SYMMETRIC)
+        )
+
+        # Avoid per-channel quantization if a per-tensor-quantized tensor arrived
+        is_redundant = is_redundant and (
+            (downstream_qconfig.per_channel == self.per_channel)
+            or (downstream_qconfig.per_channel is True and self.per_channel is False)
+        )
+
+        # Strictly prohibit merging of config with different narrow_range params
+        is_redundant = is_redundant and (downstream_qconfig.narrow_range == self.narrow_range)
+        return is_redundant
+
+    def is_compatible(self, other: "QuantizerConfig") -> bool:
+        """
+        Return True if the current QuantizerConfig and the other QuantizerConfig
+        do not contradict each other.
+
+        :param other: The QuantizerConfig to compare with.
+        :return: True if the current QuantizerConfig and the other QuantizerConfig
+            do not contradict each other.
+        """
+        return (
+            self.per_channel == other.per_channel
+            and self.mode == other.mode
+            and self.num_bits == other.num_bits
+            and self.narrow_range == other.narrow_range
+            and (
+                self.signedness_to_force == other.signedness_to_force
+                or other.signedness_to_force is None
+                or self.signedness_to_force is None
+            )
+        )
+
     def is_valid_requantization_for(self, other: "QuantizerConfig") -> bool:
         """
         Quantizer config A is a valid requantization for quantizer config B if A is more strict -

@@ -155,23 +155,9 @@ class QuantizationProposal:
             else:
                 final_qconfig = final_quantizer_setup.quantization_points[qp_id].qconfig
                 if strict:
-
-                    def is_final_qconfig_compatible_to_initial(initial_qconfig: QuantizerConfig) -> bool:
-                        return (
-                            final_qconfig.per_channel == initial_qconfig.per_channel
-                            and final_qconfig.mode == initial_qconfig.mode
-                            and final_qconfig.num_bits == initial_qconfig.num_bits
-                            and final_qconfig.narrow_range == initial_qconfig.narrow_range
-                            and (
-                                final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force
-                                or initial_qconfig.signedness_to_force is None
-                                or final_qconfig.signedness_to_force is None
-                            )
-                        )
-
                     compatible_initial_qconfs = list(
                         filter(
-                            is_final_qconfig_compatible_to_initial,
+                            final_qconfig.is_compatible,
                             self.quantizer_setup.quantization_points[qp_id].possible_qconfigs,
                         )
                     )
@@ -1511,33 +1497,6 @@ class QuantizerPropagationSolver:
         list. Quantization configs could not contain different narrow range parameters, so it does
         not participate in __lt__ method of the QConfigComparator.
         """
-
-        class QConfigComparator:
-            def __init__(self, qconfig: QuantizerConfig):
-                self.qconfig = qconfig
-
-            def __lt__(self, other: "QConfigComparator") -> bool:
-                # Prefer higher bitwidths, per-tensor, symmetrical
-                if self.qconfig.num_bits > other.qconfig.num_bits:
-                    return True
-                if self.qconfig.num_bits < other.qconfig.num_bits:
-                    return False
-                if self.qconfig.per_channel is False and other.qconfig.per_channel is True:
-                    return True
-                if self.qconfig.per_channel is True and other.qconfig.per_channel is False:
-                    return False
-                if (
-                    self.qconfig.mode is QuantizationMode.SYMMETRIC
-                    and other.qconfig.mode is QuantizationMode.ASYMMETRIC
-                ):
-                    return True
-                if (
-                    self.qconfig.mode is QuantizationMode.ASYMMETRIC
-                    and other.qconfig.mode is QuantizationMode.SYMMETRIC
-                ):
-                    return False
-                return False
-
         slices_to_sort = []
 
         if len(qconfig_list_with_priority) > 1:
@@ -1554,12 +1513,11 @@ class QuantizerPropagationSolver:
             if last_idx - curr_priority_start_idx > 0:
                 slices_to_sort.append(slice(curr_priority_start_idx, last_idx + 1))
 
-        list_to_sort = [QConfigComparator(x[0]) for x in qconfig_list_with_priority]
+        list_to_sort = [x[0] for x in qconfig_list_with_priority]
         for slice_obj in slices_to_sort:
             list_to_sort[slice_obj] = sorted(list_to_sort[slice_obj])
 
-        retval = [x.qconfig for x in list_to_sort]
-        return retval
+        return list_to_sort
 
     def get_finished_propagating_quantizers(self) -> list[PropagatingQuantizer]:
         """
