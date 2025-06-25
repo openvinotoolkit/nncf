@@ -198,6 +198,46 @@ def _prepare_quantization_model_inputs(
     return weight_shape, scale_shape, zero_point_shape
 
 
+def _validate_input_dtypes(
+    weight_dtype: TensorDataType,
+    scale_shape: Optional[tuple] = None,
+    input_scale_dtype: Optional[TensorDataType] = None,
+    zero_point_shape: Optional[tuple] = None,
+    input_zero_point_dtype: Optional[TensorDataType] = None,
+):
+    """
+    Validates the input data types for the quantization model.
+
+    Ensures that the weight data type is one of the supported floating-point types
+    (float32, float16, bfloat16, f8e4m3, f8e5m2), and that the scale and zero point
+    data types are float32 and int32/float32 respectively, if provided.
+
+    :param weight_dtype: Data type of the weight tensor.
+    :param scale_shape: Shape of the scale tensor (optional).
+    :param input_scale_dtype: Data type of the scale tensor (optional).
+    :param zero_point_shape: Shape of the zero point tensor (optional).
+    :param input_zero_point_dtype: Data type of the zero point tensor (optional).
+    :raises ValueError: If the weight data type is not supported, or if the scale
+        or zero point data types are incorrect.
+    """
+    valid_weight_dtypes = [
+        TensorDataType.float32,
+        TensorDataType.float16,
+        TensorDataType.bfloat16,
+        TensorDataType.f8e4m3,
+        TensorDataType.f8e5m2,
+    ]
+    if weight_dtype not in valid_weight_dtypes:
+        msg = f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
+        raise ValueError(msg)
+    if scale_shape is not None and input_scale_dtype != TensorDataType.float32:
+        msg = f"Input scale must be of float32 data type. But found: {input_scale_dtype}."
+        raise ValueError(msg)
+    if zero_point_shape is not None and input_zero_point_dtype not in [TensorDataType.int32, TensorDataType.float32]:
+        msg = f"Input zero point must be of int32/float32 data type. But found: {input_zero_point_dtype}."
+        raise ValueError(msg)
+
+
 def get_integer_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
@@ -412,17 +452,13 @@ def _build_integer_quantization_model(
     output_scale_dtype = ov_model_params.output_dtypes["scale"]
     output_zero_point_dtype = ov_model_params.output_dtypes["zero_point"]
 
-    # Validate input dtypes
-    valid_weight_dtypes = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
-    if weight_dtype not in valid_weight_dtypes:
-        msg = f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
-        raise ValueError(msg)
-    if scale_shape is not None and input_scale_dtype != TensorDataType.float32:
-        msg = f"Input scale must be of float32 data type. But found: {input_scale_dtype}."
-        raise ValueError(msg)
-    if zero_point_shape is not None and input_zero_point_dtype not in [TensorDataType.int32, TensorDataType.float32]:
-        msg = f"Input zero point must be of int32/float32 data type. But found: {input_zero_point_dtype}."
-        raise ValueError(msg)
+    _validate_input_dtypes(
+        weight_dtype=weight_dtype,
+        scale_shape=scale_shape,
+        input_scale_dtype=input_scale_dtype,
+        zero_point_shape=zero_point_shape,
+        input_zero_point_dtype=input_zero_point_dtype,
+    )
 
     # Validate output dtypes
     valid_compressed_weight_dtypes = [
@@ -467,21 +503,21 @@ def _build_integer_quantization_model(
         ov_parameters.append(scale)
     else:
         # Compute scale
-        if is_asym_mode:
-            # [a1, r, a2] -> [a1, 1, a2]
-            min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
-            max_values = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
-            min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
+        # [a1, r, a2] -> [a1, 1, a2]
+        min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
+        max_values = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
+        min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
 
+        if is_asym_mode:
             levels = level_high - level_low + 1
             scale = divide_op(max_values - min_values, opset.constant(levels - 1, ov.Type.f32))
             scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
         else:
-            w_abs_min = opset.abs(opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True))
-            w_max = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
-            w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
+            abs_min_values = opset.abs(min_values)
 
-            scale = opset.select(opset.greater_equal(w_abs_min, w_max), w_abs_min, opset.negative(w_max))
+            scale = opset.select(
+                opset.greater_equal(abs_min_values, max_values), abs_min_values, opset.negative(max_values)
+            )
             scale = divide_op(scale, opset.constant(-level_low, ov.Type.f32))
             scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
@@ -552,14 +588,11 @@ def _build_float_quantization_model(
     compressed_weight_dtype = ov_model_params.output_dtypes["compressed_weight"]
     output_scale_dtype = ov_model_params.output_dtypes["scale"]
 
-    # Validate input dtypes
-    valid_weight_dtypes = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
-    if weight_dtype not in valid_weight_dtypes:
-        msg = f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
-        raise ValueError(msg)
-    if scale_shape is not None and input_scale_dtype != TensorDataType.float32:
-        msg = f"Input scale must be of float32 data type. But found: {input_scale_dtype}."
-        raise ValueError(msg)
+    _validate_input_dtypes(
+        weight_dtype=weight_dtype,
+        scale_shape=scale_shape,
+        input_scale_dtype=input_scale_dtype,
+    )
 
     # Validate output dtypes
     # TODO: add support for f4e2m1 once ticket 164851 is resolved

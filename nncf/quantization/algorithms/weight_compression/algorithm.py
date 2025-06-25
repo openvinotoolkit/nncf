@@ -63,6 +63,8 @@ SUPPORTED_DATA_TYPES = [
     TensorDataType.bfloat16,
     TensorDataType.float32,
     TensorDataType.float64,
+    TensorDataType.f8e4m3,
+    TensorDataType.f8e5m2,
 ]
 
 
@@ -380,13 +382,9 @@ class WeightCompression(Algorithm):
         )
 
         ordered_nodes_to_compress = []
-        ignored_names = get_ignored_node_names_from_ignored_scope(
-            self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
-        )
         for node in nncf_graph.topological_sort():
             is_node_with_weights = self._backend_entity.is_node_with_weights(node, nncf_graph)
-            is_within_scope = should_consider_scope(node.node_name, ignored_names)
-            if node.metatype in weighted_metatypes and is_node_with_weights and is_within_scope:
+            if node.metatype in weighted_metatypes and is_node_with_weights:
                 ordered_nodes_to_compress.append(node)
         return ordered_nodes_to_compress
 
@@ -469,7 +467,7 @@ class WeightCompression(Algorithm):
         self,
         all_params: list[WeightCompressionParameters],
         ratio_defining_params: list[WeightCompressionParameters],
-        ignored_scope_weight_statistics: list[int],
+        skipped_weight_params: list[WeightCompressionParameters],
     ) -> str:
         """
         Generates a table that shows the ratio of weights quantized to different number of bits.
@@ -477,7 +475,7 @@ class WeightCompression(Algorithm):
         :param all_params: Information about each weight node.
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
-        :param ignored_scope_weight_statistics: Information about weight nodes from IgnoredScope.
+        :param skipped_weight_params: Information about weight nodes that were skipped.
         :return: A string containing the table.
         """
         dtype_vs_num_weights_map = {}
@@ -490,14 +488,16 @@ class WeightCompression(Algorithm):
             n_total.append(data.num_weights)
             dtype_vs_num_weights_map[dtype] = (n_total, n_ratio_defining)
 
-        if ignored_scope_weight_statistics:
+        n_skipped_float = [ws.num_weights for ws in skipped_weight_params if ws.weight_dtype.is_float()]
+        if n_skipped_float:
             n_total, n_ratio_defining = dtype_vs_num_weights_map.get("float", ([], []))
-            dtype_vs_num_weights_map["float"] = (n_total + ignored_scope_weight_statistics, n_ratio_defining)
+            dtype_vs_num_weights_map["float"] = (n_total + n_skipped_float, n_ratio_defining)
 
+        num_total_skipped_weights = sum(ws.num_weights for ws in skipped_weight_params)
         num_ratio_defining_weights = sum(ws.num_weights for ws in ratio_defining_params)
         num_ratio_defining_params = len(ratio_defining_params)
-        num_total_weights = sum(ws.num_weights for ws in all_params) + sum(ignored_scope_weight_statistics)
-        num_params = len(all_params) + len(ignored_scope_weight_statistics)
+        num_total_weights = sum(ws.num_weights for ws in all_params) + num_total_skipped_weights
+        num_params = len(all_params) + len(n_skipped_float)
         dtype_vs_num_weights_map = OrderedDict(sorted(dtype_vs_num_weights_map.items(), reverse=True))
         # Table creation
         header = ["Weight compression mode", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
@@ -544,6 +544,23 @@ class WeightCompression(Algorithm):
                 ignored_scope_weight_statistics.append(weight_size)
         return ignored_scope_weight_statistics
 
+    @staticmethod
+    def is_weight_compression_supported(weight_dtype: TensorDataType, compression_mode: CompressWeightsMode) -> bool:
+        """
+        Determines if a given weight data type and compression mode combination is supported for weight compression.
+
+        :param weight_dtype: The data type of the weights to be compressed.
+        :param compression_mode: The compression mode to be applied.
+        :return: True if the combination of weight_dtype and compression_mode is supported for compression,
+            False otherwise. Specifically, returns False if the data type is one of the supported
+            float8 types and the mode is an INT8 mode (i.e., same-bit compression is not supported).
+        """
+        is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
+        is_same_bit_compression = (
+            weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and compression_mode in INT8_MODES
+        )
+        return is_supported_dtype and not is_same_bit_compression
+
     def apply(
         self,
         model: TModel,
@@ -555,10 +572,78 @@ class WeightCompression(Algorithm):
 
         nodes_to_compress = self.get_nodes_to_compress(graph)
 
+        all_weight_params: list[WeightCompressionParameters] = []
+        skipped_weight_params: list[WeightCompressionParameters] = []
+
+        weight_names = set()
+        is_last_layer_shared = False
+        n = len(nodes_to_compress)
+        ignored_names = get_ignored_node_names_from_ignored_scope(
+            self._ignored_scope, graph, strict=self._ignored_scope.validate
+        )
+        for i, node in enumerate(nodes_to_compress):
+            is_target_node = should_consider_scope(node.node_name, ignored_names)
+            for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
+                if weight_name in weight_names:
+                    if i == n - 1:
+                        is_last_layer_shared = True
+                    continue
+
+                weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
+                weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
+                weight_size = reduce(operator.mul, weight_shape, 1)
+                reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
+
+                if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
+                    if (
+                        self._group_size != -1
+                        and self._all_layers
+                        and node.metatype in self._backend_entity.embedding_metatypes
+                        and isinstance(reduction_axes, tuple)
+                        and len(reduction_axes) != 1
+                    ):
+                        # NNCF supports multiple reduction axes only for ops with group_size != -1.
+                        # Convolution ops are always kept in backup mode.
+                        # Embedding layers are quantized to 4-bits only if all_layers=True.
+                        # MatMul ops can't have multiple reduction axes.
+                        nncf_logger.warning(
+                            f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
+                            f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
+                            f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
+                        )
+
+                    wc_config = None
+                    if self._backup_mode != BackupMode.NONE:
+                        mode = (
+                            CompressWeightsMode.INT8_ASYM
+                            if self._backup_mode == BackupMode.INT8_ASYM
+                            else CompressWeightsMode.INT8_SYM
+                        )
+                        if self.is_weight_compression_supported(weight_dtype, mode):
+                            wc_config = WeightCompressionConfig(mode=mode)
+                    weight_params = WeightCompressionParameters(
+                        weight_name, node, weight_port_id, weight_dtype, weight_size, reduction_axes, wc_config
+                    )
+                    all_weight_params.append(weight_params)
+                    weight_names.add(weight_name)
+                else:
+                    skipped_weight_params.append(
+                        WeightCompressionParameters(
+                            weight_name, node, weight_port_id, weight_dtype, weight_size, reduction_axes, None
+                        )
+                    )
+
+        # get subset nodes to define compression ratio
+        ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
+
+        # collect statistics for the weights compression
         statistics = None
         if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
+            weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
             matmul_nodes_to_compress = [
-                node for node in nodes_to_compress if node.metatype in self._backend_entity.matmul_metatypes
+                wp.node_with_weight
+                for wp in weight_params
+                if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
             ]
             matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
                 matmul_nodes_to_compress, graph
@@ -570,84 +655,20 @@ class WeightCompression(Algorithm):
                 matmul_input_to_output_nodes_map, statistic_points
             )
 
-        all_weight_params: list[WeightCompressionParameters] = []
-        weight_names = set()
-
-        is_last_layer_shared = False
-        n = len(nodes_to_compress)
-        for i, node in enumerate(nodes_to_compress):
-            for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
-                if weight_name in weight_names:
-                    if i == n - 1:
-                        is_last_layer_shared = True
-                    continue
-
-                weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if weight_dtype not in SUPPORTED_DATA_TYPES:
-                    continue
-                weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
-                weight_size = reduce(operator.mul, weight_shape, 1)
-                reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
-                if (
-                    self._group_size != -1
-                    and self._all_layers
-                    and node.metatype in self._backend_entity.embedding_metatypes
-                    and isinstance(reduction_axes, tuple)
-                    and len(reduction_axes) != 1
-                ):
-                    # NNCF supports multiple reduction axes only for ops with group_size != -1.
-                    # Convolution ops are always kept in backup mode.
-                    # Embedding layers are quantized to 4-bits only if all_layers=True.
-                    # MatMul ops can't have multiple reduction axes.
-                    nncf_logger.warning(
-                        f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
-                        f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
-                        f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
-                    )
-
-                if self._backup_mode == BackupMode.NONE:
-                    wc_config = None
-                else:
-                    mode = (
-                        CompressWeightsMode.INT8_ASYM
-                        if self._backup_mode == BackupMode.INT8_ASYM
-                        else CompressWeightsMode.INT8_SYM
-                    )
-                    wc_config = WeightCompressionConfig(mode=mode)
-                weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight_size, reduction_axes, wc_config
-                )
-                all_weight_params.append(weight_params)
-                weight_names.add(weight_name)
-
-        ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
+        # set weight compression configuration
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
-        ignored_scope_weight_statistics = self._get_ignored_scope_weight_statistics(model, graph)
+
+        # print statistics
         nncf_logger.info(
-            self._get_bitwidth_distribution_str(
-                all_weight_params, ratio_defining_params, ignored_scope_weight_statistics
-            )
+            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        if self._backup_mode == BackupMode.NONE:
-            # Filter all_weight_params and nodes_to_compress by excluding nodes
-            # that should remain in their original floating-point precision
-            nodes_names_to_exclude = {
-                w_params.node_with_weight.node_name
-                for w_params in all_weight_params
-                if w_params.compression_config is None
-            }
-            all_weight_params = list(
-                filter(
-                    lambda w_params: w_params.node_with_weight.node_name not in nodes_names_to_exclude,
-                    all_weight_params,
-                )
-            )
-            nodes_to_compress = list(
-                filter(lambda node: node.node_name not in nodes_names_to_exclude, nodes_to_compress)
-            )
+        # Filter all_weight_params and nodes_to_compress by excluding nodes
+        # that should remain in their original floating-point precision
+        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+
         if self._awq:
-            self.awq_algo.apply(model, graph, all_weight_params, nodes_to_compress, statistics, self._backend_entity)
+            self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
             statistics = self.awq_algo.update_statistics(statistics)
             # del is used to prematurely mark non-necessary data as free for garbage collection
