@@ -699,7 +699,7 @@ def create_ov_codebook_subgraph(
     :param name: Optional name of the constant.
     :return: OpenVINO subgraph.
     """
-    codebook_const = opset.constant(codebook.data)
+    codebook_const = opset.constant(codebook.data, name=name)
     if codebook.dtype != ov.Type.f16:
         codebook_const = opset.convert(codebook_const, destination_type=ov.Type.f16)
 
@@ -707,5 +707,5 @@ def create_ov_codebook_subgraph(
     if dtype == ov.Type.u4:
         codebook_indexes = opset.convert(codebook_indexes, destination_type=ov.Type.u8)
 
-    const = opset.gather(codebook_const, codebook_indexes, 0, name=name)
+    const = opset.gather(codebook_const, codebook_indexes, 0, name=name + "_nncf_codebook")
     return const

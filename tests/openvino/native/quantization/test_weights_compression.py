@@ -231,6 +231,37 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     }
 
 
+def check_cb4_f8e4m3_grouped(op: ov.Node, group_size: int = 7):
+    assert op.get_element_type() == ov.Type.f8e4m3
+
+    convert_node = get_next_node(op)
+    assert convert_node.get_type_name() == "Convert"
+
+    gather_node = get_next_node(convert_node)
+    assert gather_node.get_type_name() == "Gather"
+
+    weight_shape = gather_node.shape
+    # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
+    assert list(weight_shape)[-1] == group_size
+    reduced_weight_shape = list(weight_shape)
+    reduced_weight_shape[-1] = 1
+
+    mul_node = get_next_node(gather_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = mul_node.input_value(1).get_node()
+    assert list(scale_node.shape) == reduced_weight_shape
+
+    reshape_node = get_next_node(mul_node)
+    assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
+
+    return {
+        "scale": get_const_value_as_numpy_tensor(scale_node),
+    }
+
+
 def check_int4_sym_grouped(op: ov.Node):
     return check_int4_grouped(op, mode=CompressWeightsMode.INT4_SYM)
 
@@ -258,6 +289,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
         (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.CB4_F8E4M3, 7, get_mixed_mapping(check_cb4_f8e4m3_grouped, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
