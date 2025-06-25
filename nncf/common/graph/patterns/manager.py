@@ -15,6 +15,7 @@ from nncf.common.graph.patterns.patterns import HWFusedPatternNames
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.graph.patterns.patterns import Patterns
 from nncf.common.utils.backend import BackendType
+from nncf.parameters import AlgorithmType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
@@ -91,6 +92,7 @@ class PatternsManager:
         patterns_to_filter: dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
         model_type: Optional[ModelType] = None,
+        algorithm: Optional[AlgorithmType] = None,
     ) -> dict[PatternNames, Callable[[], GraphPattern]]:
         """
         Returns all patterns from patterns_to_filter that are satisfied device and model_type parameters.
@@ -104,9 +106,11 @@ class PatternsManager:
         for pattern_desc, pattern_creator in patterns_to_filter.items():
             pattern_desc_devices = pattern_desc.value.devices
             pattern_desc_model_types = pattern_desc.value.model_types
+            pattern_desc_algos = pattern_desc.value.algorithms
             devices_condition = pattern_desc_devices is None or device in pattern_desc_devices
             model_types_condition = pattern_desc_model_types is None or model_type in pattern_desc_model_types
-            if devices_condition and model_types_condition:
+            algo_condition = pattern_desc_algos is None or algorithm in pattern_desc_algos
+            if devices_condition and model_types_condition and algo_condition:
                 filtered_patterns[pattern_desc] = pattern_creator
         return filtered_patterns
 
@@ -115,6 +119,7 @@ class PatternsManager:
         backend_patterns_map: dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
         model_type: Optional[ModelType] = None,
+        algorithm: Optional[AlgorithmType] = None,
     ) -> GraphPattern:
         """
         Filters patterns and returns GraphPattern with registered filtered patterns.
@@ -124,7 +129,7 @@ class PatternsManager:
         :param model_type: ModelType instance.
         :return: Completed GraphPattern based on the backend, device & model_type.
         """
-        filtered_patterns = PatternsManager._filter_patterns(backend_patterns_map, device, model_type)
+        filtered_patterns = PatternsManager._filter_patterns(backend_patterns_map, device, model_type, algorithm)
         patterns = Patterns()
         for pattern_desc, pattern_creator in filtered_patterns.items():
             patterns.register(pattern_creator(), pattern_desc.value.name)
@@ -150,7 +155,10 @@ class PatternsManager:
 
     @staticmethod
     def get_full_ignored_pattern_graph(
-        backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
+        backend: BackendType,
+        device: TargetDevice,
+        model_type: Optional[ModelType] = None,
+        algorithm: Optional[AlgorithmType] = None,
     ) -> GraphPattern:
         """
         Returns a GraphPattern containing all registered ignored patterns specifically
@@ -164,4 +172,4 @@ class PatternsManager:
         backend_patterns_map = cast(
             dict[PatternNames, Callable[[], GraphPattern]], PatternsManager._get_backend_ignored_patterns_map(backend)
         )
-        return PatternsManager._get_full_pattern_graph(backend_patterns_map, device, model_type)
+        return PatternsManager._get_full_pattern_graph(backend_patterns_map, device, model_type, algorithm)

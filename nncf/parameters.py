@@ -47,6 +47,17 @@ class ModelType(StrEnum):
     TRANSFORMER = "transformer"
 
 
+class AlgorithmType(StrEnum):
+    """
+    Describes the algorithm applying to the model.
+    :param MINMAX: The MinMaxQuantization algorithm.
+    :param WEIGHTS_COMPRESSION: The WeightCompression algorithm.
+    """
+
+    MINMAX = "MinMaxQuantization"
+    WEIGHTS_COMPRESSION = "WeightCompression"
+
+
 @api(canonical_alias="nncf.DropType")
 class DropType(StrEnum):
     """
