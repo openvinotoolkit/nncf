@@ -1082,9 +1082,7 @@ def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
         sensitivity_metric=mode,
     )
     names_codebook = {
-        op.get_friendly_name()
-        for op in compressed_model.get_ordered_ops()
-        if op.get_element_type() == ov.Type.f8e4m3 and op.get_friendly_name().startswith("Const")
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f8e4m3
     }
 
     assert ref_ids == len(names_codebook)
