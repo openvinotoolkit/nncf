@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nncf"
 description = "Neural Networks Compression Framework"
 readme="docs/PyPiPublishing.md"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "Intel" }, { email = "maksim.proshin@intel.com" }]
 requires-python = ">=3.9"
 dynamic = ["version"]
@@ -28,7 +28,6 @@ keywords = [
     "transformers",
 ]
 classifiers = [
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
 ]
