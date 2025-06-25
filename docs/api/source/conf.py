@@ -35,7 +35,7 @@ extensions = ["autoapi.extension", "sphinx.ext.autodoc", "sphinx.ext.linkcode"]
 # using :type: syntax.
 autodoc_typehints = "description"
 
-autoapi_dirs = ["../../../nncf"]
+autoapi_dirs = ["../../../src/nncf"]
 autoapi_options = ["members", "show-inheritance", "show-module-summary", "special-members", "imported-members"]
 
 autoapi_template_dir = "_autoapi_templates"
