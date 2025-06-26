@@ -451,20 +451,20 @@ class WeightCompression(Algorithm):
         self._mixed_precision_algo.apply(model, graph, statistics_points, weight_params=ratio_defining_params)
 
         # Check if group size is valid for each weight in ratio_defining_params
-        is_invalid_group_size_present = False
+        failed_node_names = []
         for w_params in ratio_defining_params:
             if w_params.compression_config is None or w_params.compression_config.group_size == -1:
                 continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
             if reduction_channel_size % w_params.compression_config.group_size != 0:
-                is_invalid_group_size_present = True
-                break
-        if is_invalid_group_size_present:
+                failed_node_names.append(w_params.node_with_weight.node_name)
+        if len(failed_node_names) > 0:
+            names = ",".join(f'"{name}"' for name in failed_node_names)
             msg = (
-                f"Failed to apply group-wise quantization with group size value {self._group_size}. "
-                "Ensure that the channel size is divisible by the group size. You can also pass "
-                "`AdvancedGroupSizeParameters(enable_flexible_group_size=True)` advanced parameter to allow the "
-                "algorithm to find the maximal suitable group size value for each weight."
+                f"Failed to apply group-wise quantization with group size value {self._group_size}.\n"
+                "Ensure that the group size is divisible by the channel size, "
+                "or include this node and others with similar issues in the ignored scope:\n"
+                f"nncf.compress_weight(\n\t..., \n\tignored_scope=IgnoredScope(names=[{names}]\n\t)\n)"
             )
             raise nncf.InvalidGroupSizeError(msg)
 

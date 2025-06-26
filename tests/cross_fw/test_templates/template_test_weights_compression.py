@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import re
 from abc import ABC
 from abc import abstractmethod
 from typing import TypeVar
@@ -386,7 +387,12 @@ class TemplateWeightCompression(ABC):
         if expected_outcome == "exception":
             with pytest.raises(InvalidGroupSizeError) as exc_info:
                 compress_weights(**kwargs)
-            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+
+            names = re.findall(r"IgnoredScope\(names=\[(.*?)\]\)", re.sub(r"[\n\t]", "", str(exc_info.value)))
+            assert len(names) == 1, f"Error message should contain ignored scope to avoid issue: {str(exc_info.value)}"
+            name_list = [name.strip('"') for name in names[0].split(",")]
+
+            compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
         elif expected_outcome == "warn_backup_mode":
             with patch.object(nncf_logger, "warning") as mock_warning:
                 compress_weights(**kwargs)
