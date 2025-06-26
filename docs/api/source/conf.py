@@ -190,7 +190,7 @@ def skip_non_api(app, what, name, obj, skip, options):
 def linkcode_resolve(domain, info):
     # sphinx.ext.linkcode interface; will link to Github here.
     target_ref = "develop"
-    base_url = f"https://github.com/openvinotoolkit/nncf/blob/{target_ref}/"
+    base_url = f"https://github.com/openvinotoolkit/nncf/blob/{target_ref}/src/"
     if not info["module"]:
         return None
     fullname = info["module"] + "." + info["fullname"]
