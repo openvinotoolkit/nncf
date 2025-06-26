@@ -44,6 +44,7 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.weight_lowering import get_reduction_channel_size
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.tensor.definitions import TensorDataType
@@ -295,7 +296,9 @@ class WeightCompression(Algorithm):
 
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
-        self._mixed_precision_algo = criterion_cls(primary_config, self._ratio, self._subset_size)
+        self._mixed_precision_algo = criterion_cls(
+            primary_config, self._ratio, self._subset_size, self._advanced_parameters.group_size_params
+        )
         self._statistics_path = self._advanced_parameters.statistics_path
 
         if self._awq:
@@ -445,12 +448,26 @@ class WeightCompression(Algorithm):
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
         """
-        primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
-        if self._ratio == 1:
-            for weight_param in ratio_defining_params:
-                weight_param.compression_config = primary_config
-        else:
-            self._mixed_precision_algo.apply(model, graph, statistics_points, weight_params=ratio_defining_params)
+        self._mixed_precision_algo.apply(model, graph, statistics_points, weight_params=ratio_defining_params)
+
+        # Check if group size is valid for each weight in ratio_defining_params
+        failed_nodes = []
+        for w_params in ratio_defining_params:
+            if w_params.compression_config is None or w_params.compression_config.group_size == -1:
+                continue
+            reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
+            if reduction_channel_size % w_params.compression_config.group_size != 0:
+                failed_nodes.append((w_params.node_with_weight.node_name, reduction_channel_size))
+        if len(failed_nodes) > 0:
+            names = ",".join(f'"{name}"' for name, _ in failed_nodes)
+            msg = (
+                "Failed to apply group-wise quantization with "
+                f"group size value {self._group_size} and channel size value {failed_nodes[0][1]}.\n"
+                "Ensure that the group size is divisible by the channel size, "
+                "or include this node and others with similar issues in the ignored scope:\n"
+                f"nncf.compress_weight(\n\t..., \n\tignored_scope=IgnoredScope(names=[{names}]\n\t)\n)"
+            )
+            raise nncf.InvalidGroupSizeError(msg)
 
     @staticmethod
     def _proportion_str(num_weights_list: list[int], total_num_weights: int, total_num_params: int) -> str:
@@ -586,7 +603,6 @@ class WeightCompression(Algorithm):
                 if weight_dtype not in SUPPORTED_DATA_TYPES:
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
-                weight_size = reduce(operator.mul, weight_shape, 1)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
                 if (
                     self._group_size != -1
@@ -615,7 +631,7 @@ class WeightCompression(Algorithm):
                     )
                     wc_config = WeightCompressionConfig(mode=mode)
                 weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight_size, reduction_axes, wc_config
+                    weight_name, node, weight_port_id, weight_shape, reduction_axes, wc_config
                 )
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)

@@ -91,6 +91,23 @@ class CompressedWeight:
     zero_point: Optional[Tensor] = None
 
 
+def get_reduction_channel_size(weight_shape: tuple[int, ...], reduction_axes: ReductionAxes) -> tuple[int, int]:
+    """
+    Returns the size of the channel dimension for group quantization.
+
+    :param weight_shape: Shape of the weight tensor.
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
+    :return: Size of the channel dimension and new reduction axis.
+    """
+    if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
+        reduction_axes = reduction_axes[0]
+    if not isinstance(reduction_axes, int):
+        msg = f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
+        raise nncf.UnsupportedModelError(msg)
+    channel_size = weight_shape[reduction_axes]
+    return channel_size, reduction_axes
+
+
 def reshape_weight_for_grouped_quantization(
     weight: Tensor, reduction_axes: ReductionAxes, group_size: int
 ) -> tuple[Tensor, int]:
@@ -105,12 +122,7 @@ def reshape_weight_for_grouped_quantization(
     :return: reshaped weight and new reduction axis.
     """
     assert group_size != -1
-    if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
-        reduction_axes = reduction_axes[0]
-    if not isinstance(reduction_axes, int):
-        msg = f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
-        raise nncf.UnsupportedModelError(msg)
-    channel_size = weight.shape[reduction_axes]
+    channel_size, reduction_axes = get_reduction_channel_size(weight.shape, reduction_axes)
     if channel_size % group_size != 0:
         msg = f"Channel size {channel_size} should be divisible by size of group {group_size}."
         raise nncf.InvalidGroupSizeError(msg)
