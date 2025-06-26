@@ -451,17 +451,18 @@ class WeightCompression(Algorithm):
         self._mixed_precision_algo.apply(model, graph, statistics_points, weight_params=ratio_defining_params)
 
         # Check if group size is valid for each weight in ratio_defining_params
-        failed_node_names = []
+        failed_nodes = []
         for w_params in ratio_defining_params:
             if w_params.compression_config is None or w_params.compression_config.group_size == -1:
                 continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
             if reduction_channel_size % w_params.compression_config.group_size != 0:
-                failed_node_names.append(w_params.node_with_weight.node_name)
-        if len(failed_node_names) > 0:
-            names = ",".join(f'"{name}"' for name in failed_node_names)
+                failed_nodes.append((w_params.node_with_weight.node_name, reduction_channel_size))
+        if len(failed_nodes) > 0:
+            names = ",".join(f'"{name}"' for name, _ in failed_nodes)
             msg = (
-                f"Failed to apply group-wise quantization with group size value {self._group_size}.\n"
+                "Failed to apply group-wise quantization with "
+                f"group size value {self._group_size} and channel size value {failed_nodes[0][1]}.\n"
                 "Ensure that the group size is divisible by the channel size, "
                 "or include this node and others with similar issues in the ignored scope:\n"
                 f"nncf.compress_weight(\n\t..., \n\tignored_scope=IgnoredScope(names=[{names}]\n\t)\n)"
