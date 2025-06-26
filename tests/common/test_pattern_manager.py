@@ -14,6 +14,7 @@ from enum import Enum
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.patterns import PatternDesc
 from nncf.common.utils.registry import Registry
+from nncf.parameters import AlgorithmType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
@@ -59,7 +60,7 @@ TEST_MODEL_TYPE_PATTERN_REGISTRY.register(ModelTypePatterns.COMMON_PATTERN)(None
 def test_pattern_filter_model_type():
     manager = PatternsManager()
     filtered_patterns = manager._filter_patterns(
-        TEST_MODEL_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None
+        TEST_MODEL_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None, algorithm=None
     )
     assert len(filtered_patterns) == 1
     assert ModelTypePatterns.COMMON_PATTERN in filtered_patterns
@@ -70,3 +71,34 @@ def test_pattern_filter_model_type():
     assert len(filtered_patterns) == 2
     assert ModelTypePatterns.COMMON_PATTERN in filtered_patterns
     assert ModelTypePatterns.TRANSFORMER_PATTERN in filtered_patterns
+
+
+TEST_ALGORITHM_TYPE_PATTERN_REGISTRY = Registry("TEST_PATTERNS_REGISTRY")
+
+
+class AlgorithmTypePatterns(Enum):
+    WC_PATTERN = PatternDesc("WC_PATTERN", algorithms=[AlgorithmType.WEIGHTS_COMPRESSION])
+    COMMON_PATTERN = PatternDesc("COMMON_PATTERN")
+
+
+TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.register(AlgorithmTypePatterns.WC_PATTERN)(None)
+TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.register(AlgorithmTypePatterns.COMMON_PATTERN)(None)
+
+
+def test_pattern_filter_algorithm_type():
+    manager = PatternsManager()
+    filtered_patterns = manager._filter_patterns(
+        TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None, algorithm=None
+    )
+    assert len(filtered_patterns) == 1
+    assert AlgorithmTypePatterns.COMMON_PATTERN in filtered_patterns
+
+    filtered_patterns = manager._filter_patterns(
+        TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.registry_dict,
+        device=None,
+        model_type=None,
+        algorithm=AlgorithmType.WEIGHTS_COMPRESSION,
+    )
+    assert len(filtered_patterns) == 2
+    assert AlgorithmTypePatterns.COMMON_PATTERN in filtered_patterns
+    assert AlgorithmTypePatterns.WC_PATTERN in filtered_patterns

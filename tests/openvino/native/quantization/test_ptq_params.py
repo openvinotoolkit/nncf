@@ -25,6 +25,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.parameters import AlgorithmType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
@@ -43,7 +44,9 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
-    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.OPENVINO, device=device)
+    return PatternsManager.get_full_ignored_pattern_graph(
+        backend=BackendType.OPENVINO, device=device, algorithm=AlgorithmType.MINMAX
+    )
 
 
 class TestPTQParams(TemplateTestPTQParams):
