@@ -76,4 +76,4 @@ The [example scripts](../examples) use the same configuration file structure to 
 These extensions are training pipeline-specific rather than NNCF-specific and their format differs across the example scripts.
 
 > **NOTE**: You can extend the configuration file format for custom usage in your own training pipeline, but only at the root level of the JSON file and only for the keywords that are not already used by NNCF.
-If you wish to extend NNCF with a new compression algorithm (which is to be specified in the "compression" section), you should register it within the NNCF config [JSON schema](../nncf/config/schema.py), against which the config files are validated.
+If you wish to extend NNCF with a new compression algorithm (which is to be specified in the "compression" section), you should register it within the NNCF config [JSON schema](../src/nncf/config/schema.py), against which the config files are validated.

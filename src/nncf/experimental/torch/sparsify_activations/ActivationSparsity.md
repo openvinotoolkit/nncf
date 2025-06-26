@@ -141,6 +141,6 @@ Here is the word perplexity for different language models on a subset of [wikite
 
 #### Known Limitations
 
-1. Currently activation sparsity only supports Torch backend. Consequently, this restricts the available compression modes to 8-bit integer modes when using `nncf.compress_weights()` before activation sparsification. More information on supported modes can be found at [Weights Compression](../../../../docs/usage/post_training_compression/weights_compression/Usage.md#limitations).
+1. Currently activation sparsity only supports Torch backend. Consequently, this restricts the available compression modes to 8-bit integer modes when using `nncf.compress_weights()` before activation sparsification. More information on supported modes can be found at [Weights Compression](/docs/usage/post_training_compression/weights_compression/Usage.md#limitations).
 2. Actual activation sparsity during inference is dynamic and per input basis, deviation from the target should be expected. In our local experiments, the statistical mean of actual activation sparsity aligned to the target when thresholds are calibrated on datasets similar to the final task.
 3. Similar to other compression methods, model accuracy and activation sparsity are trade-off at play. For LLMs like [Llama](https://llama.meta.com), it is recommended to start with 30%~50% sparsity for the Linear layers in feed-forward networks.

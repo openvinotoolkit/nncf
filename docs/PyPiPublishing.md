@@ -42,7 +42,7 @@ For more information about NNCF, see:
 | :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
 | [Post-Training Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
 | [Weights Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Not supported |
-| [Activation Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental | Not supported| Not supported| Not supported |
+| [Activation Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)          | Not supported | Experimental | Not supported| Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -53,7 +53,7 @@ For more information about NNCF, see:
 | [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
 | [Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Sparsity.md)                            | Supported    | Supported     |
 | [Filter pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Pruning.md)                       | Supported    | Supported     |
-| [Movement pruning](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                        | Experimental | Not supported |
+| [Movement pruning](https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                    | Experimental | Not supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
   > **NOTE**: Limited support for TensorFlow models. Only models created using Sequential or Keras Functional API are supported.
