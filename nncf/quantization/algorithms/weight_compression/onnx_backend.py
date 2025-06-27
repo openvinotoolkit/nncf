@@ -47,7 +47,7 @@ from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight

@@ -21,7 +21,7 @@ from nncf.openvino.optimized_functions.models import get_float_quantize_dequanti
 from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
 from nncf.openvino.optimized_functions.models import get_integer_quantization_model
 from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
-from nncf.quantization.algorithms.weight_compression.common import reshape_weight_for_grouped_quantization
+from nncf.quantization.algorithms.weight_compression.group_quantization import reshape_weight_for_grouped_quantization
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
