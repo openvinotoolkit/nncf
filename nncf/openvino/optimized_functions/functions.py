@@ -151,7 +151,7 @@ def do_float_quantization(
         compressed_weight = model([weight, precomputed_scale])[0]
         scale = precomputed_scale
 
-    return compressed_weight, scale
+    return compressed_weight, scale, None
 
 
 def integer_quantize_dequantize_weight(

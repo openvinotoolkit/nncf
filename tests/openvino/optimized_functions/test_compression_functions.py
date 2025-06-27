@@ -219,7 +219,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                     if config.is_integer:
                         compressed_weight, scale, zero_point = outputs
                     else:
-                        compressed_weight, scale = outputs
+                        compressed_weight, scale, _ = outputs
                 elif quantization_task == QuantizationTask.Q_DQ:
                     decompressed_weight = outputs
                 else:
