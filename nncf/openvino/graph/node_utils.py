@@ -703,7 +703,7 @@ def create_ov_codebook_subgraph(
     if codebook.dtype != ov.Type.f16:
         codebook_const = opset.convert(codebook_const, destination_type=ov.Type.f16)
 
-    codebook_indexes = opset.constant(indexes.data, dtype=dtype)
+    codebook_indexes = opset.constant(indexes.data, dtype=dtype, name=name + "_nncf_codebook_idxs")
     if dtype == ov.Type.u4:
         codebook_indexes = opset.convert(codebook_indexes, destination_type=ov.Type.u8)
 

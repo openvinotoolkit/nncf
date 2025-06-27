@@ -18,11 +18,11 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.backend import is_openvino_available
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.algorithms.weight_compression.common import CompressedWeight
-from nncf.quantization.algorithms.weight_compression.common import reshape_weight_for_grouped_quantization
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_NF4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import NF4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.group_quantization import reshape_weight_for_grouped_quantization
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns

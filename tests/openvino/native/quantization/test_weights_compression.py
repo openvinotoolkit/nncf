@@ -231,8 +231,8 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     }
 
 
-def check_cb4_f8e4m3_grouped(op: ov.Node, group_size: int = 7):
-    assert op.get_element_type() == ov.Type.f8e4m3
+def check_codebook_grouped(op: ov.Node, group_size: int = 7, dtype=ov.Type.f8e4m3):
+    assert op.get_element_type() == dtype
 
     convert_node = get_next_node(op)
     assert convert_node.get_type_name() == "Convert"
@@ -259,6 +259,23 @@ def check_cb4_f8e4m3_grouped(op: ov.Node, group_size: int = 7):
 
     return {
         "scale": get_const_value_as_numpy_tensor(scale_node),
+    }
+
+
+def check_codebook_indexes(op: ov.Node, dtype=ov.Type.u4):
+    assert op.get_element_type() == dtype
+
+    if dtype == ov.Type.u4:
+        convert_node = get_next_node(op)
+        assert convert_node.get_type_name() == "Convert"
+    else:
+        convert_node = op
+
+    gather_node = get_next_node(convert_node)
+    assert gather_node.get_type_name() == "Gather"
+
+    return {
+        "indexes": get_const_value_as_numpy_tensor(op),
     }
 
 
@@ -289,7 +306,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
         (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.CB4_F8E4M3, 7, get_mixed_mapping(check_cb4_f8e4m3_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.CB4_F8E4M3, 7, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
@@ -304,6 +321,57 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
 
     ref_stats_path = get_actual_reference_for_current_openvino(
         REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
+    )
+
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+        dump_to_json(ref_stats_path, actual_stats)
+
+    ref_stats = load_json(ref_stats_path)
+    compare_stats(ref_stats, actual_stats)
+
+
+@pytest.mark.parametrize(
+    "codebook, codebook_dtype, index_dtype, name",
+    [
+        (np.array([i for i in range(16)], np.uint8), ov.Type.u8, ov.Type.u4, "u8_u4"),
+        (np.array([0.1 * i for i in range(-8, 8)], np.float16), ov.Type.f16, ov.Type.u4, "f16_u4"),
+        (
+            Tensor(np.array([0.35 * i for i in range(-10, 11)], np.float16))
+            .as_openvino_tensor()
+            .astype(TensorDataType.f8e4m3),
+            ov.Type.f8e4m3,
+            ov.Type.u8,
+            "f8e4m3_u8",
+        ),
+        (
+            Tensor(np.array([i for i in range(-10, 11)], np.int8)).as_openvino_tensor().astype(TensorDataType.int8),
+            ov.Type.i8,
+            ov.Type.u8,
+            "i8_u8",
+        ),
+    ],
+)
+def test_compression_with_сodebook_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
+    model = IntegerModel().ov_model
+    codebook_params = nncf.CodebookParameters(codebook)
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        group_size=7,
+        advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
+    )
+    actual_stats = {}
+    for op in compressed_model.get_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant":
+            if op_name == "matmul_2_data":
+                actual_stats[op_name] = check_codebook_grouped(op, group_size=7, dtype=codebook_dtype)
+            elif op_name == "matmul_2_data_nncf_codebook_idxs":
+                actual_stats[op_name] = check_codebook_indexes(op, dtype=index_dtype)
+
+    ref_stats_path = get_actual_reference_for_current_openvino(
+        REFERENCE_SCALES_DIR / f"IntegerModel_codebook_{name}.json"
     )
 
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
