@@ -364,7 +364,7 @@ class TemplateTestQuantizerConfig:
             backend=self.get_backend_type(),
             device=TargetDevice.ANY,
             model_type=ModelType.TRANSFORMER,
-            algorithm=AlgorithmType.MINMAX,
+            algorithm_type=AlgorithmType.MINMAX,
         )
         q_setup = min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=hw_patterns, ignored_patterns=ignored_patterns

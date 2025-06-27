@@ -797,7 +797,7 @@ class MinMaxQuantization(Algorithm):
         device = self._target_device
         model_type = self._model_type
         ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
-            backend=backend, device=device, model_type=model_type, algorithm=AlgorithmType.MINMAX
+            backend=backend, device=device, model_type=model_type, algorithm_type=AlgorithmType.MINMAX
         )
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
 

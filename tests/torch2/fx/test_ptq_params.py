@@ -46,7 +46,7 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(
-        backend=BackendType.TORCH_FX, device=device, algorithm=AlgorithmType.MINMAX
+        backend=BackendType.TORCH_FX, device=device, algorithm_type=AlgorithmType.MINMAX
     )
 
 

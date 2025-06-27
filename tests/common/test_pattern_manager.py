@@ -38,7 +38,7 @@ TEST_DEVICE_PATTERN_REGISTRY.register(DevicePatterns.COMMON_PATTERN)(None)
 def test_pattern_filter_device():
     manager = PatternsManager()
     filtered_patterns = manager._filter_patterns(
-        TEST_DEVICE_PATTERN_REGISTRY.registry_dict, device=TargetDevice.CPU, model_type=None
+        TEST_DEVICE_PATTERN_REGISTRY.registry_dict, device=TargetDevice.CPU, model_type=None, algorithm_type=None
     )
     assert len(filtered_patterns) == 2
     assert DevicePatterns.CPU_PATTERN in filtered_patterns
@@ -60,13 +60,16 @@ TEST_MODEL_TYPE_PATTERN_REGISTRY.register(ModelTypePatterns.COMMON_PATTERN)(None
 def test_pattern_filter_model_type():
     manager = PatternsManager()
     filtered_patterns = manager._filter_patterns(
-        TEST_MODEL_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None, algorithm=None
+        TEST_MODEL_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None, algorithm_type=None
     )
     assert len(filtered_patterns) == 1
     assert ModelTypePatterns.COMMON_PATTERN in filtered_patterns
 
     filtered_patterns = manager._filter_patterns(
-        TEST_MODEL_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=ModelType.TRANSFORMER
+        TEST_MODEL_TYPE_PATTERN_REGISTRY.registry_dict,
+        device=None,
+        model_type=ModelType.TRANSFORMER,
+        algorithm_type=None,
     )
     assert len(filtered_patterns) == 2
     assert ModelTypePatterns.COMMON_PATTERN in filtered_patterns
@@ -88,7 +91,7 @@ TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.register(AlgorithmTypePatterns.COMMON_PATTE
 def test_pattern_filter_algorithm_type():
     manager = PatternsManager()
     filtered_patterns = manager._filter_patterns(
-        TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None, algorithm=None
+        TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.registry_dict, device=None, model_type=None, algorithm_type=None
     )
     assert len(filtered_patterns) == 1
     assert AlgorithmTypePatterns.COMMON_PATTERN in filtered_patterns
@@ -97,7 +100,7 @@ def test_pattern_filter_algorithm_type():
         TEST_ALGORITHM_TYPE_PATTERN_REGISTRY.registry_dict,
         device=None,
         model_type=None,
-        algorithm=AlgorithmType.WEIGHTS_COMPRESSION,
+        algorithm_type=AlgorithmType.WEIGHTS_COMPRESSION,
     )
     assert len(filtered_patterns) == 2
     assert AlgorithmTypePatterns.COMMON_PATTERN in filtered_patterns
