@@ -234,8 +234,11 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
 def check_codebook_grouped(op: ov.Node, group_size: int = 7, dtype=ov.Type.f8e4m3):
     assert op.get_element_type() == dtype
 
-    convert_node = get_next_node(op)
-    assert convert_node.get_type_name() == "Convert"
+    if dtype == ov.Type.f16:
+        convert_node = op
+    else:
+        convert_node = get_next_node(op)
+        assert convert_node.get_type_name() == "Convert"
 
     gather_node = get_next_node(convert_node)
     assert gather_node.get_type_name() == "Gather"

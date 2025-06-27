@@ -44,6 +44,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
+from nncf.tensor import TensorDataType
 
 InplaceInsertionFnType = Callable[[ov.Node, int, str], ov.Node]
 
@@ -700,7 +701,7 @@ def create_ov_codebook_subgraph(
     :return: OpenVINO subgraph.
     """
     codebook_const = opset.constant(codebook.data, name=name)
-    if codebook.dtype != ov.Type.f16:
+    if codebook.dtype != TensorDataType.float16:
         codebook_const = opset.convert(codebook_const, destination_type=ov.Type.f16)
 
     codebook_indexes = opset.constant(indexes.data, dtype=dtype, name=name + "_nncf_codebook_idxs")
