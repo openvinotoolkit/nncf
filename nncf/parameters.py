@@ -49,7 +49,7 @@ class ModelType(StrEnum):
 
 class AlgorithmType(StrEnum):
     """
-    Describes the algorithm applying to the model.
+    Type of an algorithm that is applied to the model.
     :param MINMAX: The MinMaxQuantization algorithm.
     :param WEIGHTS_COMPRESSION: The WeightCompression algorithm.
     """
