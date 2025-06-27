@@ -351,7 +351,7 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
         ),
     ],
 )
-def test_compression_with_сodebook_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
+def test_compression_with_codebook_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
     model = IntegerModel().ov_model
     codebook_params = nncf.CodebookParameters(codebook)
 
