@@ -41,7 +41,6 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters 
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
 from nncf.quantization.advanced_parameters import CodebookParameters
-from nncf.quantization.algorithms.weight_compression.group_quantization import reshape_weight_for_grouped_quantization
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -52,6 +51,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import _cal
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType

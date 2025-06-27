@@ -23,9 +23,9 @@ from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params

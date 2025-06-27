@@ -40,10 +40,10 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend

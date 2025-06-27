@@ -26,9 +26,9 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
 from nncf.parameters import CompressionFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
-from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
