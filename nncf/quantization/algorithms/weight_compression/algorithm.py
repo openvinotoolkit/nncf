@@ -476,7 +476,7 @@ class WeightCompression(Algorithm):
                 mode=self._mode, group_size=group_size_values[weight_param.weight_name]
             )
 
-        # Check if group size is valid for each weight in ratio_defining_params
+        # Check if group size is valid for each weight in weight_params
         failed_nodes = []
         for w_params in weight_params:
             if w_params.compression_config is None or w_params.compression_config.group_size == -1:
@@ -545,8 +545,8 @@ class WeightCompression(Algorithm):
                 reduction_channel_size, _ = get_reduction_channel_size(weight_shape, w_params.reduction_axes)
                 node_strings[i] = f"{w_params.node_with_weight.node_name} (weight shape: {weight_shape})"
             nncf_logger.warning(
-                "Large enough flexible group size value cannot be found for some nodes. They will be compressed to the "
-                "backup mode. Nodes:\n\t" + "\n\t".join(node_strings)
+                "Large enough flexible group size value cannot be found for some nodes. They will be compressed "
+                "according to the backup mode. Nodes:\n\t" + "\n\t".join(node_strings)
             )
 
         return group_size_data
