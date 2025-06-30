@@ -354,7 +354,7 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
         ),
     ],
 )
-def test_compression_with_codebook_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
+def test_codebook_compression_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
     model = IntegerModel().ov_model
     codebook_params = nncf.CodebookParameters(codebook)
 
@@ -1165,7 +1165,9 @@ def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
         (np.array([i for i in range(-8, 8)], np.int8), ov.Type.i8, 5),
         (np.array([i for i in range(-(2**6), 2**6)], np.int8), ov.Type.i8, 5),
         (
-            Tensor(np.array([i for i in range(-(2**6), 2**6)])).as_openvino_tensor().astype(TensorDataType.f8e4m3),
+            Tensor(np.array([np.sign(i) * 2 ** np.abs(i) for i in range(-6, 6)]))
+            .as_openvino_tensor()
+            .astype(TensorDataType.f8e4m3),
             ov.Type.f8e4m3,
             5,
         ),
