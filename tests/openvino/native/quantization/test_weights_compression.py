@@ -1725,6 +1725,29 @@ def test_nf4_quantization_mid_quant(weight, scale):
     np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
 
 
+@pytest.mark.parametrize(
+    "codebook_values",
+    [
+        np.array([0.2, 0.2, 0.3, 0.4], dtype=np.float32),
+        np.array([0.5, 0.2, 0.3, 0.4], dtype=np.float32),
+        np.array([[-1, 0, 1, 2, 3], [-1, 0, 1, 2, 3]], dtype=np.float32),
+        np.array([5], dtype=np.float32),
+    ],
+)
+def test_codebook_is_correct_array(codebook_values):
+    codebook_params = nncf.CodebookParameters(codebook_values)
+    model = SequentialMatmulModel().ov_model
+
+    # The codebook should be a non empty 1D numpy array and sorted
+    with pytest.raises(nncf.ValidationError):
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.CODEBOOK,
+            group_size=-1,
+            advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
+        )
+
+
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_matmul_model() -> ov.Model:
