@@ -370,7 +370,6 @@ class CodebookParameters:
     :param codebook: The codebook (LUT) for the weight compression.
         Applicable for vector quantization. Must be a numpy array, ov Tensor, or torch Tensor.
     :type codebook: TTensor
-    :param dts_type: The type of the codebook.
     """
 
     codebook: Optional[TTensor] = None

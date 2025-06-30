@@ -10,7 +10,7 @@
 # limitations under the License.
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Any, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import numpy as np
 
@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.parameters import CompressWeightsMode
 
 TWeightType = TypeVar("TWeightType")
+TTensor = TypeVar("TTensor")
 
 
 @dataclass
@@ -32,7 +33,7 @@ class WeightCompressionConfig:
 
     mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
     group_size: Optional[int] = -1
-    codebook_values: Optional[Any] = None
+    codebook_values: Optional[TTensor] = None
 
     @property
     def num_bits(self):

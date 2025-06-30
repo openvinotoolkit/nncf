@@ -68,7 +68,7 @@ def reshape_weight_for_grouped_quantization(
 
 
 def calculate_float_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, max_val=6.0
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tensor:
     """
     Calculates the scale for nf4 or e2m1 quantization.
@@ -76,7 +76,6 @@ def calculate_float_quantization_params(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
     :param config: Weight compression configuration.
-    :param max_val: Maximal value of e2m1 type.
     :return: Scale tensor of float32 type for float quantization.
     """
     assert not config.is_integer
@@ -86,6 +85,7 @@ def calculate_float_quantization_params(
 
     scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
     if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
+        max_val = 6.0 if config.mode == CompressWeightsMode.E2M1 else max(np.abs(config.get_numpy_codebook()))
         scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
@@ -122,7 +122,6 @@ def do_float_quantization(
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
-    max_val: float = 6.0,
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding (nf4, e2m1) weight quantization.
@@ -134,7 +133,6 @@ def do_float_quantization(
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :param max_val: Maximal value of destination type.
     :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor and
              optional indexes for codebook.
     """
@@ -158,9 +156,7 @@ def do_float_quantization(
 
     scale = precomputed_scale
     if scale is None:
-        if config.is_codebook:
-            max_val = max(np.abs(config.get_numpy_codebook()))
-        scale = calculate_float_quantization_params(weight, reduction_axes, config, max_val)
+        scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
         if original_weight_backend == TensorBackend.ov:
@@ -505,7 +501,7 @@ def _calculate_nf4_quantized_weight(norm_weight: Tensor) -> Tensor:
 
 def _calculate_codebook_quantized_weight(
     norm_weight: Tensor, quantiles: Tensor = None, center_of_quantiles: Tensor = None
-) -> Tensor:
+) -> tuple[Tensor, Tensor]:
     """
     Performs quantization by quantiles (if center_of_quantiles is None). Look-up table is used to
     "round" or "quantize" to the closest quant.

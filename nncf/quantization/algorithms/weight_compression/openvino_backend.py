@@ -220,7 +220,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         const_dtype,
         should_add_convert_node: bool,
         compressed_weight: Optional[CompressedWeight] = None,
-        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         scale_dtype = ov.Type.f16
         if compression_config.mode == CompressWeightsMode.NF4:
@@ -333,7 +332,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     const_dtype=const_dtype,
                     should_add_convert_node=should_add_convert_node,
                     compressed_weight=compressed_weight,
-                    advanced_parameters=advanced_parameters,
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error
