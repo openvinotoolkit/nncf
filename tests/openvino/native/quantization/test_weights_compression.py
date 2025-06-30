@@ -19,6 +19,7 @@ import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
+from mypy.memprofile import defaultdict
 from openvino import opset13 as opset
 
 import nncf
@@ -61,6 +62,7 @@ from tests.cross_fw.test_templates.template_test_weights_compression import Temp
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
+from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
@@ -1546,6 +1548,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return AWQMatmulModel().ov_model
 
     @staticmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> ov.Model:
+        return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes).ov_model
+
+    @staticmethod
     def get_awq_act_model(with_multiply, n_layers):
         return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
 
@@ -1624,8 +1630,16 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_num_int4_nodes(model: ov.Model) -> int:
         num = 0
         for op in model.get_ops():
-            if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.i4:
+            if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
                 num += 1
+        return num
+
+    @staticmethod
+    def get_num_int4_group_sizes(model: ov.Model) -> dict[int, int]:
+        num = defaultdict(int)
+        for op in model.get_ops():
+            if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
+                num[op.get_output_shape(0)[-1]] += 1
         return num
 
     @pytest.fixture(params=INT4_NF4_MODES)

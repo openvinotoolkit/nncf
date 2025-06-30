@@ -284,8 +284,18 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> TModel:
+        "Returns a backend model with matmuls having different channel sizes."
+
+    @staticmethod
+    @abstractmethod
     def get_num_int4_nodes(model: TModel):
         "Returns number of int4 nodes."
+
+    @staticmethod
+    @abstractmethod
+    def get_num_int4_group_sizes(model: TModel) -> dict[int, int]:
+        "Returns number of int4 nodes for each group size."
 
     @staticmethod
     @abstractmethod
@@ -405,6 +415,52 @@ class TemplateWeightCompression(ABC):
             info_messages = [args[0] for args, _ in mock_info.call_args_list]
             info_msg = f"Wasn't able to set the specified group size value ({group_size}) to some nodes."
             assert any(info_msg in msg for msg in info_messages)
+
+    @pytest.mark.parametrize(
+        ["model_channel_sizes", "ratio", "group_size", "min_flex_group_size", "ref_num_group_sizes"],
+        [
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, 32, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, 16, {16: 3, 32: 1}),
+            ([8, 8, 16, 16, 16, 32], 0.5, 32, 16, {16: 3}),
+        ],
+    )
+    def test_flexible_group_size(
+        self,
+        model_channel_sizes,
+        ratio,
+        group_size,
+        min_flex_group_size,
+        ref_num_group_sizes,
+    ):
+        """
+        Verifies that:
+            - an exception is raised for an invalid group size
+            - a warning is logged when a flexible group size value cannot be found
+            - an info message is logged when the group size is adjusted to a valid value
+        """
+        model = self.get_different_channel_size_model(model_channel_sizes)
+        input_example = self.to_tensor(np.ones([1, model_channel_sizes[0], model_channel_sizes[0]], dtype=np.float32))
+        dataset = Dataset([input_example])
+        kwargs = dict(
+            model=model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=ratio,
+            all_layers=True,
+            group_size=group_size,
+            dataset=dataset,
+            advanced_parameters=nncf.AdvancedCompressionParameters(
+                group_size_params=nncf.AdvancedGroupSizeParameters(
+                    enable_flexible_group_size=True, min_flexible_group_size=min_flex_group_size
+                )
+            ),
+        )
+
+        compress_weights(**kwargs)
+
+        num_group_sizes = self.get_num_int4_group_sizes(model)
+        assert ref_num_group_sizes == num_group_sizes, (
+            f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
+        )
 
     @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])

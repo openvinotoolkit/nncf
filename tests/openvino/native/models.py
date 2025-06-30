@@ -817,6 +817,27 @@ class SequentialMatmulModel(OVReferenceModel):
         return model
 
 
+class DifferentChannelSizeMatmulModel(OVReferenceModel):
+    def _create_ov_model(self, channel_sizes: list[int]):
+        input_node = opset.parameter([1, channel_sizes[0], channel_sizes[0]], name="Input_1")
+
+        last_node = input_node
+        for i in range(1, len(channel_sizes) + 1):
+            prev_channel_size = channel_sizes[i - 1]
+            channel_size = channel_sizes[min(i, len(channel_sizes) - 1)]
+            weights_data = np.arange(0, channel_size * prev_channel_size).reshape(channel_size, prev_channel_size)
+            current_weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
+            current_node = opset.matmul(
+                last_node, current_weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i}"
+            )
+            last_node = current_node
+
+        result = opset.result(last_node, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
 class IdentityMatmul(OVReferenceModel):
     def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
         """
