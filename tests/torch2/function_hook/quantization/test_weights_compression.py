@@ -10,11 +10,12 @@
 # limitations under the License.
 
 
+from collections import defaultdict
+
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mypy.memprofile import defaultdict
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -90,9 +91,6 @@ class DifferentChannelSizeMatmulModel(nn.Module):
         for layer in self.layers:
             x = layer(x)
         return x
-
-    def get_weight_names_in_exec_order(self):
-        return [f"layers:{i}:weight" for i in range(len(self.main_values))]
 
 
 class MatMulModel(torch.nn.Module):

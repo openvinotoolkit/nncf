@@ -11,6 +11,7 @@
 
 import inspect
 import os
+from collections import defaultdict
 from typing import Callable
 from unittest.mock import patch
 
@@ -19,7 +20,6 @@ import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
-from mypy.memprofile import defaultdict
 from openvino import opset13 as opset
 
 import nncf
