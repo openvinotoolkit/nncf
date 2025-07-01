@@ -51,8 +51,6 @@ import re
 import subprocess
 from pathlib import Path
 
-from setuptools import build_meta as build_meta  # noqa
-
 NNCF_VERSION_FILE = "src/nncf/version.py"
 
 

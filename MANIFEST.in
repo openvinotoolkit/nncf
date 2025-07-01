@@ -1,5 +1,4 @@
 graft src/nncf/torch/extensions
-prune src/nncf/torch/extensions/__pycache__/*
 graft src/nncf/common/hardware/configs
 include LICENSE
 include licensing/third-party-programs.txt
