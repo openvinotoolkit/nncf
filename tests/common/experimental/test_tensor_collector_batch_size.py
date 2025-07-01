@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
@@ -72,7 +73,7 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         statistic_branch_random_name = "1"
         collector = TensorCollector(MinMaxTensorStatistic)
         reduction_axes = get_reduction_axes([batch_axis], shape)
-        aggregation_axes = (0, 1)
+        aggregation_axes = RangeInitCollectorParams._get_aggregation_axes(True, shape)
         kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
         reducer = reducer(**kwargs)
         aggregator = aggregator(
@@ -104,3 +105,21 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         aggregated_tensor_batch_10 = list(collector._aggregate().values())
 
         assert fns.allclose(fns.stack(aggregated_tensor_batch_1), fns.stack(aggregated_tensor_batch_10))
+
+    def test_stisticstics_no_batch_size(self, reducers, aggregators, inplace):
+        statistic_branch_random_name = "1"
+        collector = TensorCollector()
+        reduction_axes, aggregation_axes = RangeInitCollectorParams.get_reduction_aggregation_axes(
+            shape_to_reduce=(), quantization_axes=(), batchwise_statistics=True
+        )
+        kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
+        reducer = reducers(**kwargs)
+        aggregator = aggregators(
+            aggregation_axes=aggregation_axes,
+        )
+        collector.register_statistic_branch(statistic_branch_random_name, reducer, aggregator)
+        item = self.to_backend_tensor(np.array(1, dtype=np.float32))
+        input_ = {hash(reducer): [Tensor(item)]}
+        collector.register_inputs(input_)
+        stats = collector.get_statistics()
+        fns.allclose(stats[statistic_branch_random_name], item)
