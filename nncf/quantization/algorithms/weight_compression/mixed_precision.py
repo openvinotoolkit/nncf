@@ -88,7 +88,8 @@ class MixedPrecisionCriterion(Algorithm):
         :param dataset: Not required.
         :param all_weight_params: List of all ratio defining parameters of the model, i.e. the parameters which
             inclusion or exclusion from the primary precision group will affect the ratio.
-        :param weight_param_candidates: List of valid weight parameters to be considered for the primary precision group.
+        :param weight_param_candidates: List of valid weight parameters to be considered for the primary precision
+            group.
         :return: List of weight parameters that should be compressed to primary precision.
         """
         self._set_backend_entity(model)
