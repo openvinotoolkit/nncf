@@ -500,7 +500,7 @@ def _calculate_nf4_quantized_weight(norm_weight: Tensor) -> Tensor:
 
 
 def _calculate_codebook_quantized_weight(
-    norm_weight: Tensor, quantiles: Tensor = None, center_of_quantiles: Tensor = None
+    norm_weight: Tensor, quantiles: np.array = None, center_of_quantiles: np.array = None
 ) -> tuple[Tensor, Tensor]:
     """
     Performs quantization by quantiles (if center_of_quantiles is None). Look-up table is used to

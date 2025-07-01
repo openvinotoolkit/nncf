@@ -29,6 +29,8 @@ class WeightCompressionConfig:
     :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping. Defaults to -1.
+    :param codebook_values: Optional codebook values for CODEBOOK compression mode.
+        Must be fns.Tensor which wraps numpy array, ov or torch tensor.
     """
 
     mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
