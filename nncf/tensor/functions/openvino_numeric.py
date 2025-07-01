@@ -37,6 +37,15 @@ DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.int4: ov.Type.i4,
 }
 
+NATIVE_OV_CAST_DTYPES = [
+    TensorDataType.bfloat16,
+    TensorDataType.int4,
+    TensorDataType.uint4,
+    TensorDataType.nf4,
+    TensorDataType.f8e4m3,
+    TensorDataType.f8e5m2,
+]
+
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
@@ -62,16 +71,8 @@ def _(a: ov.Tensor) -> TensorBackend:
 
 @numeric.astype.register
 def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
-    ov_cast_types = [
-        TensorDataType.bfloat16,
-        TensorDataType.int4,
-        TensorDataType.uint4,
-        TensorDataType.nf4,
-        TensorDataType.f8e4m3,
-        TensorDataType.f8e5m2,
-    ]
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
-    if a_dtype in ov_cast_types or dtype in ov_cast_types:
+    if a_dtype in NATIVE_OV_CAST_DTYPES or dtype in NATIVE_OV_CAST_DTYPES:
         # Cast using OpenVINO because the target or source dtype requires special handling
         return _astype_ov(a, dtype)
     return ov.Tensor(numeric.astype(a.data, dtype).data)
@@ -96,14 +97,7 @@ def _(a: ov.Tensor, shape: Union[int, tuple[int, ...]]) -> ov.Tensor:
 def _(a: ov.Tensor) -> NDArray[Any]:
     # Cannot convert bfloat16, uint4, int4, nf4, f8e4m3, f8e5m2 to numpy directly
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
-    if a_dtype in [
-        TensorDataType.bfloat16,
-        TensorDataType.uint4,
-        TensorDataType.int4,
-        TensorDataType.nf4,
-        TensorDataType.f8e4m3,
-        TensorDataType.f8e5m2,
-    ]:
+    if a_dtype in NATIVE_OV_CAST_DTYPES:
         dtype = TensorDataType.float32
         if a_dtype == TensorDataType.uint4:
             dtype = TensorDataType.uint8
