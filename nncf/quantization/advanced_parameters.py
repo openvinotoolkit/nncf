@@ -368,7 +368,7 @@ class CodebookParameters:
     Contains parameters for codebook compression algorithm.
 
     :param codebook: The codebook (LUT) for the weight compression.
-        Applicable for vector quantization. Must be a numpy array, ov Tensor, or torch Tensor.
+        Applicable for vector quantization. Must be a numpy array or ov Tensor.
     :type codebook: TTensor
     """
 
