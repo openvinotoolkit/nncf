@@ -252,7 +252,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         if compression_config.is_codebook:
-            n_quants = compressed_weight.tensor.max()
+            n_quants = compressed_weight.codebook.size - 1
             compression_dtype = ov.Type.u16 if n_quants > 255 else (ov.Type.u8 if n_quants > 15 else ov.Type.u4)
             converted_const = create_ov_codebook_subgraph(
                 codebook=compressed_weight.codebook,

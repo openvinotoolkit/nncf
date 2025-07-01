@@ -686,13 +686,13 @@ class WeightCompression(Algorithm):
             # del is used to prematurely mark non-necessary data as free for garbage collection
             del self.awq_algo
 
-        compressed_weights = None
+        precomputed_compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
 
         if self._gptq:
             del statistics
-            model, compressed_weights = self._gptq_algo.apply(
+            model, precomputed_compressed_weights = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
                 dataset=dataset,
@@ -701,7 +701,7 @@ class WeightCompression(Algorithm):
             )
         else:
             if self._scale_estimation:
-                compressed_weights = self._scale_estimation_algo.apply(
+                precomputed_compressed_weights = self._scale_estimation_algo.apply(
                     model=model,
                     graph=graph,
                     all_weight_params=all_weight_params,
@@ -724,7 +724,7 @@ class WeightCompression(Algorithm):
             model,
             graph,
             track(all_weight_params, description=description, weights=all_weight_sizes),
-            compressed_weights,
+            precomputed_compressed_weights,
             lora_correction_algo,
             self._compression_format,
             self._advanced_parameters,
