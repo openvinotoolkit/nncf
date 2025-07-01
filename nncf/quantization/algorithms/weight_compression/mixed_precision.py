@@ -81,6 +81,15 @@ class MixedPrecisionCriterion(Algorithm):
         """
         Selects which weights should be compressed to a primary (4 bit) precision based on computed layers'
         sensitivities, ratio of parameters.
+
+        :param model: Model for which the mixed precision criterion is applied.
+        :param graph: NNCFGraph of the model.
+        :param statistic_points: Statistic points for which statistics should be collected.
+        :param dataset: Not required.
+        :param all_weight_params: Set of all ratio defining parameters of the model, i.e. the parameters which
+            inclusion or exclusion from the primary precision group will affect the ratio.
+        :param weight_param_candidates: Set of valid weight parameters to be considered for the primary precision group.
+        :return: List of weight parameters that should be compressed to primary precision.
         """
         self._set_backend_entity(model)
 
