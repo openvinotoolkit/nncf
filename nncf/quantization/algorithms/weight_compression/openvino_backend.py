@@ -33,6 +33,7 @@ from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -114,9 +115,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        if node.layer_attributes.input_attributes["transpose"]:
-            msg = "Transposed input is not supported"
-            raise nncf.UnsupportedModelError(msg)
         constant_ports = node.layer_attributes.get_const_port_ids()
         activation_ports = [
             e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
@@ -133,6 +131,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return result
 
     def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph) -> Tensor:
+        if not node_with_weight.layer_attributes.constant_attributes[weight_port_id]["transpose"]:
+            msg = "Only transposed weights are supported"
+            raise nncf.UnsupportedModelError(msg)
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
         weight_tensor = get_const_value_as_numpy_tensor(weight_node)
@@ -199,7 +200,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             A_W = opset.constant(lora_A.data)
             B_W = opset.constant(lora_B.data)
 
-        A_MM = opset.matmul(input_node, A_W, transpose_a=False, transpose_b=True)
+        A_MM = opset.matmul(
+            input_node,
+            A_W,
+            transpose_a=wc_params.node_with_weight.layer_attributes.input_attributes["transpose"],
+            transpose_b=True,
+        )
         B_MM = opset.matmul(A_MM, B_W, transpose_a=False, transpose_b=True)
 
         node_output_port = mm_node.output(0)
@@ -366,6 +372,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         return filter_func
+
+    @staticmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
+        return get_activation_channel_axis(node, port_id, input_shape)
 
 
 class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):
