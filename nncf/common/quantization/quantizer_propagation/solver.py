@@ -157,7 +157,7 @@ class QuantizationProposal:
                 if strict:
                     compatible_initial_qconfs = list(
                         filter(
-                            final_qconfig.is_compatible,
+                            final_qconfig.is_compatible_with,
                             self.quantizer_setup.quantization_points[qp_id].possible_qconfigs,
                         )
                     )

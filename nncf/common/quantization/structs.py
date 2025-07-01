@@ -142,7 +142,7 @@ class QuantizerConfig:
         is_redundant = is_redundant and (downstream_qconfig.narrow_range == self.narrow_range)
         return is_redundant
 
-    def is_compatible(self, other: "QuantizerConfig") -> bool:
+    def is_compatible_with(self, other: "QuantizerConfig") -> bool:
         """
         Return True if the current QuantizerConfig and the other QuantizerConfig
         do not contradict each other.
