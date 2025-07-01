@@ -312,7 +312,7 @@
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionLoss">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionLoss</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionLoss</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
 <p>Used to calculate the additional loss to be added to the base loss during the
 training process. It uses the model graph to measure variables and activations
@@ -321,7 +321,7 @@ sparsity algorithm calculates the number of non-zero weights in convolutional
 and fully-connected layers to construct the loss function.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionLoss.calculate">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.calculate" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.calculate" title="Permalink to this definition">#</a></dt>
 <dd><p>Calculates and returns the compression loss value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -338,7 +338,7 @@ and fully-connected layers to construct the loss function.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionLoss.load_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.load_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.load_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Loads the compression loss state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -353,7 +353,7 @@ call.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionLoss.get_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.get_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.get_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the compression loss state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -364,7 +364,7 @@ call.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionLoss.__call__">
-<span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.__call__" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionLoss.__call__" title="Permalink to this definition">#</a></dt>
 <dd><p>Calculates and returns the compression loss value. Same as <cite>.calculate()</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -383,7 +383,7 @@ call.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionScheduler">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionScheduler</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionScheduler</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
 <p>Implements the logic of compression method control during the training process.
 May change the method hyperparameters in regard to the current training step
@@ -400,7 +400,7 @@ called at the beginning of each training step and epoch, respectively:</p>
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionScheduler.step">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">next_step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.step" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">next_step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.step" title="Permalink to this definition">#</a></dt>
 <dd><p>Should be called at the beginning of each training step to prepare
 the compression method to continue training the model in the <cite>next_step</cite>.</p>
 <dl class="field-list simple">
@@ -416,7 +416,7 @@ will update the state of the compression method.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionScheduler.epoch_step">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">epoch_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">next_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.epoch_step" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">epoch_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">next_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.epoch_step" title="Permalink to this definition">#</a></dt>
 <dd><p>Should be called at the beginning of each training epoch to prepare
 the compression method to continue training the model in the <cite>next_epoch</cite>.</p>
 <dl class="field-list simple">
@@ -432,7 +432,7 @@ will update the state of the compression method.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionScheduler.load_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.load_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.load_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Loads the compression scheduler state, but does not update the state of the
 compression method.</p>
 <dl class="field-list simple">
@@ -447,7 +447,7 @@ compression method.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionScheduler.get_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.get_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionScheduler.get_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the compression scheduler state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -460,12 +460,12 @@ compression method.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionStage">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionStage</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionStage" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionStage</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionStage" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.IntEnum</span></code></p>
 <p>Specifies the compression stage for the model.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionStage.__add__">
-<span class="sig-name descname"><span class="pre">__add__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionStage.__add__" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">__add__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionStage.__add__" title="Permalink to this definition">#</a></dt>
 <dd><p>Defines compression stage of a composite compression controller, consist of
 two algorithms, where <cite>self</cite> is the compression stage of the first algorithm
 and other - compression stage of the second one.</p>
@@ -494,7 +494,7 @@ and other - compression stage of the second one.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionAlgorithmController</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionAlgorithmController</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
 <p>A handle to the compression-specific modifications made to the model.
 Hosts entities that are to be used during the training process, such as compression scheduler and compression loss.</p>
@@ -506,7 +506,7 @@ to enable algorithm-specific compression during fine-tuning built by the <cite>C
 </dl>
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.model">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">TModel</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.model" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">TModel</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.model" title="Permalink to this definition">#</a></dt>
 <dd><p>The compressed model object with which this controller is associated.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -517,7 +517,7 @@ to enable algorithm-specific compression during fine-tuning built by the <cite>C
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.loss">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">loss</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#nncf.api.compression.CompressionLoss" title="nncf.api.compression.CompressionLoss"><span class="pre">CompressionLoss</span></a></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.loss" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">loss</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#nncf.api.compression.CompressionLoss" title="nncf.api.compression.CompressionLoss"><span class="pre">CompressionLoss</span></a></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.loss" title="Permalink to this definition">#</a></dt>
 <dd><p>The compression loss for this particular algorithm combination.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -528,7 +528,7 @@ to enable algorithm-specific compression during fine-tuning built by the <cite>C
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.scheduler">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scheduler</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#nncf.api.compression.CompressionScheduler" title="nncf.api.compression.CompressionScheduler"><span class="pre">CompressionScheduler</span></a></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.scheduler" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scheduler</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#nncf.api.compression.CompressionScheduler" title="nncf.api.compression.CompressionScheduler"><span class="pre">CompressionScheduler</span></a></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.scheduler" title="Permalink to this definition">#</a></dt>
 <dd><p>The compression scheduler for this particular algorithm combination.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -539,7 +539,7 @@ to enable algorithm-specific compression during fine-tuning built by the <cite>C
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.name">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.name" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.name" title="Permalink to this definition">#</a></dt>
 <dd><p>Name of the compression algorithm that is being controlled.
 Should be unique to identify the controller and its state among other controllers and their states.</p>
 <dl class="field-list simple">
@@ -551,7 +551,7 @@ Should be unique to identify the controller and its state among other controller
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.compression_rate">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.compression_rate" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.compression_rate" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level,
 or the ratio of filters pruned).</p>
 <dl class="field-list simple">
@@ -563,7 +563,7 @@ or the ratio of filters pruned).</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.maximal_compression_rate">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">maximal_compression_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.maximal_compression_rate" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">maximal_compression_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.maximal_compression_rate" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the maximal model compression rate supported by the compression controller.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -574,7 +574,7 @@ or the ratio of filters pruned).</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.load_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.load_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.load_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Loads the compression controller state from the map of algorithm name to the dictionary with state attributes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -588,7 +588,7 @@ or the ratio of filters pruned).</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.get_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.get_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.get_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the compression controller state, which is the map of the algorithm name to the dictionary with the
 corresponding state attributes.</p>
 <dl class="field-list simple">
@@ -600,7 +600,7 @@ corresponding state attributes.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.get_compression_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_compression_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.get_compression_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_compression_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.get_compression_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the compression state - builder and controller state.
 This state should be used to unambiguously resume compression via <cite>compression_state</cite> argument of
 <cite>create_compressed_model</cite> method.</p>
@@ -616,7 +616,7 @@ This state should be used to unambiguously resume compression via <cite>compress
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.compression_stage">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_stage</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.compression_stage" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_stage</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.compression_stage" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the compression stage. Should be used on saving best checkpoints
 to distinguish between uncompressed, partially compressed, and fully
 compressed models.</p>
@@ -632,7 +632,7 @@ compressed models.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.statistics">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quickly_collected_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.statistics" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quickly_collected_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.statistics" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a <cite>NNCFStatistics</cite> class instance that contains compression algorithm statistics.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -648,7 +648,7 @@ need to keep track of statistics on each training batch/step/iteration.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.strip_model">
-<span class="sig-name descname"><span class="pre">strip_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.strip_model" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">strip_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.strip_model" title="Permalink to this definition">#</a></dt>
 <dd><p>Strips auxiliary layers that were used for the model compression, as it’s
 only needed for training. The method is used before exporting the model
 in the target format.</p>
@@ -672,7 +672,7 @@ in the target format.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.prepare_for_export">
-<span class="sig-name descname"><span class="pre">prepare_for_export</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.prepare_for_export" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">prepare_for_export</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.prepare_for_export" title="Permalink to this definition">#</a></dt>
 <dd><p>Prepare the compressed model for exporting to a backend-specific model serialization format.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -683,7 +683,7 @@ in the target format.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.strip">
-<span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.strip" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.strip" title="Permalink to this definition">#</a></dt>
 <dd><p>Removes auxiliary layers and operations added during the compression process, resulting in a clean
 model ready for deployment. The functionality of the model object is still preserved as a compressed model.</p>
 <dl class="field-list simple">
@@ -706,7 +706,7 @@ will return the currently associated model object “stripped” in-place.</p></
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.export_model">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">export_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">save_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.export_model" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">export_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">save_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.export_model" title="Permalink to this definition">#</a></dt>
 <dd><p>Exports the compressed model to the specified format for deployment.</p>
 <p>Makes method-specific preparations of the model, (e.g. removing auxiliary
 layers that were used for the model compression), then exports the model to
@@ -738,7 +738,7 @@ specified in the following format:</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.disable_scheduler">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">disable_scheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.disable_scheduler" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">disable_scheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.disable_scheduler" title="Permalink to this definition">#</a></dt>
 <dd><p>Disables current compression scheduler during training by changing it to a dummy one that does not change
 the compression rate.</p>
 <dl class="field-list simple">
@@ -752,13 +752,13 @@ the compression rate.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionAlgorithmBuilder</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.api.compression.</span></span><span class="sig-name descname"><span class="pre">CompressionAlgorithmBuilder</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
 <p>Determines which modifications should be made to the original model in order to enable algorithm-specific
 compression during fine-tuning.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.name">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.name" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.name" title="Permalink to this definition">#</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>name of the compression algorithm that is being built. Should be unique to identify the builder</p>
@@ -772,7 +772,7 @@ compression during fine-tuning.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.apply_to">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">apply_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.apply_to" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">apply_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.apply_to" title="Permalink to this definition">#</a></dt>
 <dd><p>Applies algorithm-specific modifications to the model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -790,7 +790,7 @@ algorithm-specific compression during fine-tuning.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.build_controller">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">build_controller</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.build_controller" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">build_controller</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.build_controller" title="Permalink to this definition">#</a></dt>
 <dd><p>Builds an instance of algorithm-specific <cite>nncf.api.compression.CompressionAlgorithmController</cite>
 to handle the additional modules, parameters, and hooks inserted into the model to enable algorithm-specific
 compression.</p>
@@ -810,7 +810,7 @@ algorithm-specific compression during fine-tuning.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.get_transformation_layout">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_transformation_layout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.get_transformation_layout" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_transformation_layout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.get_transformation_layout" title="Permalink to this definition">#</a></dt>
 <dd><p>Computes necessary model transformations to enable algorithm-specific
 compression.</p>
 <dl class="field-list simple">
@@ -829,7 +829,7 @@ a list of algorithm-specific modifications.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.initialize">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.initialize" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.initialize" title="Permalink to this definition">#</a></dt>
 <dd><p>Initialize model parameters before training.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -844,7 +844,7 @@ algorithm-specific compression during fine-tuning.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.load_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.load_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.load_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Initializes object from the supplied state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -858,7 +858,7 @@ algorithm-specific compression during fine-tuning.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmBuilder.get_state">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.get_state" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_state</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmBuilder.get_state" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
 represents state of the object.</p>
 <dl class="field-list simple">

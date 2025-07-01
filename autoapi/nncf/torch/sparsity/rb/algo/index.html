@@ -300,7 +300,7 @@
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.torch.sparsity.rb.algo.</span></span><span class="sig-name descname"><span class="pre">RBSparsityController</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sparsified_module_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.torch.sparsity.rb.algo.</span></span><span class="sig-name descname"><span class="pre">RBSparsityController</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sparsified_module_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="../../base_algo/index.html#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController" title="nncf.torch.sparsity.base_algo.BaseSparsityAlgoController"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.torch.sparsity.base_algo.BaseSparsityAlgoController</span></code></a></p>
 <p>Controller for the regularization-based (RB) sparsity algorithm in PT.</p>
 <dl class="field-list simple">
@@ -314,7 +314,7 @@
 </dl>
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.current_sparsity_level">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_sparsity_level</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.current_sparsity_level" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_sparsity_level</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.current_sparsity_level" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the current sparsity level of the underlying model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -325,14 +325,14 @@
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.compression_rate">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_rate</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_rate" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_rate</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_rate" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level,
 or the ratio of filters pruned).</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.set_sparsity_level">
-<span class="sig-name descname"><span class="pre">set_sparsity_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sparsity_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_sparsified_module_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.set_sparsity_level" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">set_sparsity_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sparsity_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_sparsified_module_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.set_sparsity_level" title="Permalink to this definition">#</a></dt>
 <dd><p>Sets the sparsity level that should be applied to the model’s weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -346,7 +346,7 @@ or the ratio of filters pruned).</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.compression_stage">
-<span class="sig-name descname"><span class="pre">compression_stage</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_stage" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">compression_stage</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_stage" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns the compression stage. Should be used on saving best checkpoints
 to distinguish between uncompressed, partially compressed, and fully
 compressed models.</p>
@@ -362,13 +362,13 @@ compressed models.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.freeze">
-<span class="sig-name descname"><span class="pre">freeze</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.freeze" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">freeze</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.freeze" title="Permalink to this definition">#</a></dt>
 <dd><p>Freezes all sparsity masks. Sparsity masks will not be trained after calling this method.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.distributed">
-<span class="sig-name descname"><span class="pre">distributed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.distributed" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">distributed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.distributed" title="Permalink to this definition">#</a></dt>
 <dd><p>Should be called when distributed training with multiple training processes
 is going to be used (i.e. after the model is wrapped with DistributedDataParallel).
 Any special preparations for the algorithm to properly support distributed training
@@ -377,7 +377,7 @@ should be made inside this function.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.statistics">
-<span class="sig-name descname"><span class="pre">statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quickly_collected_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.statistics" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quickly_collected_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.statistics" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a <cite>NNCFStatistics</cite> class instance that contains compression algorithm statistics.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
