@@ -179,6 +179,8 @@ class ONNXModelTransformer(ModelTransformer):
             model_version=model.model_version,
             doc_string=model.doc_string,
         )
+        if hasattr(model, "functions") and getattr(model, "functions"):
+            new_model.functions.extend(model.functions)
         if model.metadata_props:
             values = {p.key: p.value for p in model.metadata_props}
             onnx.helper.set_model_props(new_model, values)
