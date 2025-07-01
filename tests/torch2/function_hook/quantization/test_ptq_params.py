@@ -18,6 +18,7 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
+from nncf.parameters import AlgorithmType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
@@ -45,7 +46,9 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
-    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH, device=device)
+    return PatternsManager.get_full_ignored_pattern_graph(
+        backend=BackendType.TORCH, device=device, algorithm_type=AlgorithmType.MINMAX
+    )
 
 
 class ToNNCFNetworkInterface:

@@ -21,6 +21,7 @@ import networkx.algorithms.isomorphism as ism  # type: ignore
 
 import nncf
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.parameters import AlgorithmType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
@@ -281,6 +282,7 @@ class PatternDesc:
     name: str
     devices: Optional[list[TargetDevice]] = None
     model_types: Optional[list[ModelType]] = None
+    algorithms: Optional[list[AlgorithmType]] = None
 
 
 class HWFusedPatternNames(Enum):
@@ -403,8 +405,13 @@ class IgnoredPatternNames(Enum):
         "multihead_attention_output",
         model_types=[ModelType.TRANSFORMER],
         devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU],
+        algorithms=[AlgorithmType.MINMAX],
     )
-    SE_BLOCK = PatternDesc("se_block")
-    FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
-    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")
-    ROPE = PatternDesc("rope", model_types=[ModelType.TRANSFORMER])
+    SE_BLOCK = PatternDesc("se_block", algorithms=[AlgorithmType.MINMAX])
+    FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation", algorithms=[AlgorithmType.MINMAX])
+    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot", algorithms=[AlgorithmType.MINMAX])
+    ROPE = PatternDesc(
+        "rope",
+        model_types=[ModelType.TRANSFORMER],
+        algorithms=[AlgorithmType.MINMAX, AlgorithmType.WEIGHTS_COMPRESSION],
+    )

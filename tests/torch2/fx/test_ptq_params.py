@@ -19,6 +19,7 @@ from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.parameters import AlgorithmType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
@@ -44,7 +45,9 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
-    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH_FX, device=device)
+    return PatternsManager.get_full_ignored_pattern_graph(
+        backend=BackendType.TORCH_FX, device=device, algorithm_type=AlgorithmType.MINMAX
+    )
 
 
 class TestPTQParams(TemplateTestPTQParams):

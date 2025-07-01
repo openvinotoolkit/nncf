@@ -26,6 +26,7 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.parameters import AlgorithmType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
@@ -45,7 +46,9 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
-    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.ONNX, device=device)
+    return PatternsManager.get_full_ignored_pattern_graph(
+        backend=BackendType.ONNX, device=device, algorithm_type=AlgorithmType.MINMAX
+    )
 
 
 class TestPTQParams(TemplateTestPTQParams):

@@ -36,6 +36,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.parameters import AlgorithmType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -360,7 +361,10 @@ class TemplateTestQuantizerConfig:
             backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=ModelType.TRANSFORMER
         )
         ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
-            backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=ModelType.TRANSFORMER
+            backend=self.get_backend_type(),
+            device=TargetDevice.ANY,
+            model_type=ModelType.TRANSFORMER,
+            algorithm_type=AlgorithmType.MINMAX,
         )
         q_setup = min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=hw_patterns, ignored_patterns=ignored_patterns
