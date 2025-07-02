@@ -309,7 +309,7 @@ def compress_weight(
     :param weight: The weight to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Compression configuration.
-    :param precomputed_compressed_weight: precomputed scale and zero point.
+    :param precomputed_compressed_weight: Contains precomputed scale and zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     precomputed_scale, precomputed_zero_point = (

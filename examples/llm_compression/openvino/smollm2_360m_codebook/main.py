@@ -49,17 +49,18 @@ QUESTIONS = [
 ]
 
 
-def default_codebook_example(model_id, output_dir):
+def load_model_and_tokenizer(model_id, export=True):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = OVModelForCausalLM.from_pretrained(
         model_id,
-        export=True,
+        export=export,
         load_in_8bit=False,
-        compile=False,
-        stateful=False,
-        ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
+    return model, tokenizer
 
+
+def default_codebook_example(model_id, output_dir):
+    model, tokenizer = load_model_and_tokenizer(model_id)
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
@@ -67,7 +68,7 @@ def default_codebook_example(model_id, output_dir):
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
-    model = OVModelForCausalLM.from_pretrained(output_dir, ov_config={"INFERENCE_PRECISION_HINT": "f32"})
+    model, tokenizer = load_model_and_tokenizer(output_dir, False)
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
 
@@ -75,15 +76,7 @@ def default_codebook_example(model_id, output_dir):
 
 
 def custom_codebook_example(model_id, output_dir):
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = OVModelForCausalLM.from_pretrained(
-        model_id,
-        export=True,
-        load_in_8bit=False,
-        compile=False,
-        stateful=False,
-        ov_config={"INFERENCE_PRECISION_HINT": "f32"},
-    )
+    model, tokenizer = load_model_and_tokenizer(model_id)
 
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
@@ -102,7 +95,7 @@ def custom_codebook_example(model_id, output_dir):
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
-    model = OVModelForCausalLM.from_pretrained(output_dir, ov_config={"INFERENCE_PRECISION_HINT": "f32"})
+    model, tokenizer = load_model_and_tokenizer(output_dir, False)
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print(f"Optimized model outputs:\n{answers_by_questions}\n")
 

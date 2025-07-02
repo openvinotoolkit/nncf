@@ -321,11 +321,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            precomputed_compressed_weight = (
-                None
-                if precomputed_compressed_weights is None
-                else precomputed_compressed_weights.get(wc_params.weight_name)
-            )
             try:
                 mul, compressed_weight = self._create_compression_subgraph(
                     weight=weight,
@@ -335,7 +330,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     weight_port_id=wc_params.weight_port_id,
                     const_dtype=const_dtype,
                     should_add_convert_node=should_add_convert_node,
-                    precomputed_compressed_weight=precomputed_compressed_weight,
+                    precomputed_compressed_weight=None
+                    if precomputed_compressed_weights is None
+                    else precomputed_compressed_weights.get(wc_params.weight_name),
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error

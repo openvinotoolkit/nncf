@@ -213,7 +213,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compression_config = wc_params.compression_config
             node = wc_params.node_with_weight
             weight = self.get_weight(node, wc_params.weight_port_id, model, graph)
-            precomputed_compressed_weight = compress_weight(
+            compressed_weight = compress_weight(
                 Tensor(weight),
                 wc_params.reduction_axes,
                 compression_config,
@@ -231,7 +231,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md
             if opset_version < 21 and dequantize_block_size > 0:
                 compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
-                    precomputed_compressed_weight, weight.shape, dequantize_block_size=None, apply_transpose=True
+                    compressed_weight, weight.shape, dequantize_block_size=None, apply_transpose=True
                 )
                 self._replace_matmul_with_matmulnbits(
                     model,
