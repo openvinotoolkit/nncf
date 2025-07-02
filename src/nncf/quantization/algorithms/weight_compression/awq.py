@@ -165,7 +165,7 @@ class AWQ(Algorithm):
             weight = weight.astype(TensorDataType.float32)
 
             if is_data_free:
-                scale = self._data_free_step(weight)
+                scale = self._data_free_step(weight, 1 - wp.reduction_axes[0])
             else:
                 scale = self._data_aware_step(wp, weight, statistics[k])
 
@@ -272,9 +272,9 @@ class AWQ(Algorithm):
 
         return scale
 
-    def _data_free_step(self, weight):
+    def _data_free_step(self, weight, axis):
         eps = fns.finfo(weight).eps
-        scale = fns.maximum(fns.mean(fns.abs(weight), axis=0), eps)
+        scale = fns.maximum(fns.mean(fns.abs(weight), axis=axis), eps)
         return 1 / scale
 
     def _get_awq_data(
