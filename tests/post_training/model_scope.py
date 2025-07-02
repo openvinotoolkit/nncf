@@ -579,7 +579,7 @@ WEIGHT_COMPRESSION_MODELS = [
             ),
         },
         # TODO: (andreyanufr) add torch.fx backend
-        "backends": [BackendType.OV, BackendType.TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.ONNX],
     },
 ]
 
