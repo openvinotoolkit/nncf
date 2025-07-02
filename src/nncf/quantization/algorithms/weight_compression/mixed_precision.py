@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from abc import ABC
 from abc import abstractmethod
 from typing import Iterable, Optional, TypeVar
@@ -41,18 +40,16 @@ THE_LOWEST_SENSITIVITY = 0
 
 class MixedPrecisionCriterion(Algorithm):
     """
-    Assigns mixed quantization scheme (e.g. uniform int8 or uniform int4/non-uniform fp4)
+    Computes mixed quantization scheme (e.g. uniform int8 or uniform int4/non-uniform fp4)
     for weights based on some criteria.
     """
 
-    def __init__(self, primary_config: WeightCompressionConfig, ratio: float, subset_size: Optional[int] = None):
+    def __init__(self, ratio: float, subset_size: Optional[int] = None):
         """
-        :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
         :param subset_size: Size of dataset subset for statistics.
         """
-        self._primary_config = primary_config
         self._ratio = ratio
         self._subset_size = subset_size
         self._algorithm_key = f"MPC_{hash(self)}"
@@ -78,27 +75,47 @@ class MixedPrecisionCriterion(Algorithm):
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-        weight_params: list[WeightCompressionParameters] = None,
-    ) -> None:
+        all_weight_params: list[WeightCompressionParameters] = None,
+        weight_param_candidates: list[WeightCompressionParameters] = None,
+    ) -> list[WeightCompressionParameters]:
         """
-        Assigns quantization precision based on computed layers' sensitivities, ratio of parameters.
+        Selects which weights should be compressed to a primary (4 bit) precision based on computed layers'
+        sensitivities, ratio of parameters.
+
+        :param model: Model for which the mixed precision criterion is applied.
+        :param graph: NNCFGraph of the model.
+        :param statistic_points: Statistic points for which statistics should be collected.
+        :param dataset: Not required.
+        :param all_weight_params: List of all ratio defining parameters of the model, i.e. the parameters which
+            inclusion or exclusion from the primary precision group will affect the ratio.
+        :param weight_param_candidates: List of valid weight parameters to be considered for the primary precision
+            group.
+        :return: List of weight parameters that should be compressed to primary precision.
         """
         self._set_backend_entity(model)
 
-        scores = self._calc_sensitivity(model, graph, weight_params, statistic_points)
-        num_all_weights = sum(wp.num_weights for wp in weight_params)
+        if weight_param_candidates is None:
+            weight_param_candidates = all_weight_params
 
+        scores = self._calc_sensitivity(model, graph, weight_param_candidates, statistic_points)
+
+        # Sum all weights to calculate the ratio. This way the weights which can't be compressed to primary precision
+        # will contribute to the backup group as well.
+        num_all_weights = sum(wp.num_weights for wp in all_weight_params)
+
+        selected_weight_params = []
         indexes_of_layers_in_ascending_order_of_scores = [
             i[0] for i in sorted(enumerate(scores), reverse=False, key=lambda x: x[1])
         ]
         num_weights_in_4bit = 0
         for index in indexes_of_layers_in_ascending_order_of_scores:
-            weight_param = weight_params[index]
+            weight_param = weight_param_candidates[index]
             current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_all_weights
             if current_ratio >= self._ratio:
                 break
-            weight_param.compression_config = self._primary_config
+            selected_weight_params.append(weight_param)
             num_weights_in_4bit += weight_param.num_weights
+        return selected_weight_params
 
     @abstractmethod
     def _set_backend_entity(self, model: TModel) -> None:

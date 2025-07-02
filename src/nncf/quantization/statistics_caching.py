@@ -69,7 +69,7 @@ def _register_mixed_precision(
 
     for sensitivity in sensitivities:
         criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity)
-        mixed_prec_algo = criterion_cls(None, None, subset_size)
+        mixed_prec_algo = criterion_cls(None, subset_size)
         statistic_points = mixed_prec_algo.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
         aggregator.register_statistic_points(statistic_points)
 

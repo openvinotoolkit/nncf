@@ -19,21 +19,21 @@ from tests.openvino.native.models import IdentityMatmul
 
 class TestOVMixedPrecisionAlgoBackend(TemplateTestMixedPrecisionAlgoBackend):
     def get_hawq_with_backend(self, subset_size):
-        hawq = HAWQCriterion(None, None, subset_size=subset_size)
+        hawq = HAWQCriterion(None, subset_size=subset_size)
         hawq._backend_entity = OVMixedPrecisionAlgoBackend(IdentityMatmul().ov_model)
         return hawq
 
     def get_mean_variance_with_backend(self, subset_size: int):
-        mean_variance = MeanVarianceCriterion(None, None, subset_size=subset_size)
+        mean_variance = MeanVarianceCriterion(None, subset_size=subset_size)
         mean_variance._backend_entity = OVMixedPrecisionAlgoBackend(IdentityMatmul().ov_model)
         return mean_variance
 
     def get_max_variance_with_backend(self, subset_size: int):
-        max_variance = MaxVarianceCriterion(None, None, subset_size=subset_size)
+        max_variance = MaxVarianceCriterion(None, subset_size=subset_size)
         max_variance._backend_entity = OVMixedPrecisionAlgoBackend(IdentityMatmul().ov_model)
         return max_variance
 
     def get_mean_max_with_backend(self, subset_size: int):
-        mean_max_variance = MeanMaxCriterion(None, None, subset_size=subset_size)
+        mean_max_variance = MeanMaxCriterion(None, subset_size=subset_size)
         mean_max_variance._backend_entity = OVMixedPrecisionAlgoBackend(IdentityMatmul().ov_model)
         return mean_max_variance
