@@ -30,7 +30,8 @@ class WeightCompressionConfig:
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping. Defaults to -1.
     :param codebook_values: Optional codebook values for CODEBOOK compression mode.
-        Must be fns.Tensor which wraps numpy array or ov tensor.
+        Must be fns.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
+        destination data type information available.
     """
 
     mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
