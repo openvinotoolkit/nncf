@@ -25,7 +25,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
-from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -250,7 +249,7 @@ class AWQ(Algorithm):
             for _ in range(self._steps):
                 cur_scale = gscale**alpha
                 weights_to_fake_quantize = gweight * cur_scale
-                if config.mode == CompressWeightsMode.NF4:
+                if not config.is_integer:
                     g_decompressed_weighs = float_quantize_dequantize_weight(
                         weights_to_fake_quantize, awq_config, reduction_axis
                     )

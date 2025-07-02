@@ -105,7 +105,7 @@ def do_float_quantization(
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
-) -> tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding nf4 weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
@@ -151,7 +151,7 @@ def do_float_quantization(
         compressed_weight = model([weight, precomputed_scale])[0]
         scale = precomputed_scale
 
-    return compressed_weight, scale
+    return compressed_weight, scale, None
 
 
 def integer_quantize_dequantize_weight(
