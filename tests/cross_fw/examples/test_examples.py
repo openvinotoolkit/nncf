@@ -87,7 +87,7 @@ def test_examples(
     if reuse_venv:
         # Use example directory as tmp_path
         tmp_path = (PROJECT_ROOT / example_params["requirements"]).parent
-    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
+    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:
         requirements = PROJECT_ROOT / example_params["requirements"]
