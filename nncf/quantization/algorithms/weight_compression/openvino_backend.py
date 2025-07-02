@@ -219,7 +219,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_port_id: int,
         const_dtype,
         should_add_convert_node: bool,
-        compressed_weight: Optional[CompressedWeight] = None,
+        precomputed_compressed_weights: Optional[CompressedWeight] = None,
     ):
         scale_dtype = ov.Type.f16
         if compression_config.mode == CompressWeightsMode.NF4:
@@ -248,7 +248,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 weight,
                 reduction_axes,
                 compression_config,
-                compressed_weight,
+                precomputed_compressed_weights,
             )
 
         if compression_config.is_codebook:
@@ -296,7 +296,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        compressed_weights: Optional[dict[str, CompressedWeight]] = None,
+        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
@@ -321,7 +321,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            compressed_weight = None if compressed_weights is None else compressed_weights.get(wc_params.weight_name)
+            precomputed_compressed_weights = (
+                None
+                if precomputed_compressed_weights is None
+                else precomputed_compressed_weights.get(wc_params.weight_name)
+            )
             try:
                 mul, compressed_weight = self._create_compression_subgraph(
                     weight=weight,
@@ -331,7 +335,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     weight_port_id=wc_params.weight_port_id,
                     const_dtype=const_dtype,
                     should_add_convert_node=should_add_convert_node,
-                    compressed_weight=compressed_weight,
+                    precomputed_compressed_weights=precomputed_compressed_weights,
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error

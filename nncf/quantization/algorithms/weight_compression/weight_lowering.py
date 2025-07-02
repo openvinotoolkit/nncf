@@ -301,7 +301,7 @@ def compress_weight(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
-    compressed_weight: CompressedWeight = None,
+    precomputed_compressed_weights: CompressedWeight = None,
 ) -> CompressedWeight:
     """
     Compress weight using compression configuration.
@@ -314,7 +314,9 @@ def compress_weight(
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     precomputed_scale, precomputed_zero_point = (
-        (compressed_weight.scale, compressed_weight.zero_point) if compressed_weight else (None, None)
+        (precomputed_compressed_weights.scale, precomputed_compressed_weights.zero_point)
+        if precomputed_compressed_weights
+        else (None, None)
     )
 
     if not config.is_integer:

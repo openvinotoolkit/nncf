@@ -456,7 +456,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: Union[GraphModelWrapper, torch.nn.Module],
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        compressed_weights: Optional[dict[str, CompressedWeight]] = None,
+        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
@@ -493,7 +493,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     Tensor(weight),
                     wc_params.reduction_axes,
                     compression_config,
-                    None if compressed_weights is None else compressed_weights.get(wc_params.weight_name),
+                    None
+                    if precomputed_compressed_weights is None
+                    else precomputed_compressed_weights.get(wc_params.weight_name),
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error
