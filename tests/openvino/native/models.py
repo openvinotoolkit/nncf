@@ -907,7 +907,7 @@ class GatherAndMatmulShareData(OVReferenceModel):
 
 
 class ScaledDotProductAttentionModel(OVReferenceModel):
-    def _create_ov_model(self):
+    def _create_ov_model(self, with_weights=False):
         input_ = opset.parameter([1, 1, 1, 64], name="Input_1")
         attn_mask = opset.parameter([1, 1, 1, 1], name="Input_2")
         x = opset.reshape(input_, [64], False)
@@ -919,6 +919,9 @@ class ScaledDotProductAttentionModel(OVReferenceModel):
         for _ in range(3):
             x_ = opset.reshape(x, [64], False)
             x_ = opset.reshape(x_, [1, 1, 1, 64], False)
+            if with_weights:
+                w_ = opset.constant(self._rng.random((64, 64)), dtype=np.float32)
+                x_ = opset.matmul(x_, w_, transpose_a=False, transpose_b=False)
             inputs.append(x_)
 
         attn = opset.scaled_dot_product_attention(*inputs, attn_mask)

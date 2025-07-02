@@ -14,8 +14,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[0]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            23,
-            29
+            26,
+            32
         ]
     },
     {
@@ -33,8 +33,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[1]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            46,
-            52
+            52,
+            58
         ]
     },
     {
@@ -52,8 +52,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[2]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            69,
-            75
+            78,
+            84
         ]
     },
     {
@@ -71,8 +71,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[3]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            92,
-            98
+            104,
+            110
         ]
     },
     {
@@ -90,8 +90,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[4]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            115,
-            121
+            130,
+            136
         ]
     },
     {
@@ -109,8 +109,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[5]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            138,
-            144
+            156,
+            162
         ]
     },
     {
@@ -128,8 +128,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[6]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            161,
-            167
+            182,
+            188
         ]
     },
     {
@@ -147,8 +147,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[7]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            184,
-            190
+            208,
+            214
         ]
     },
     {
@@ -166,8 +166,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[8]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            207,
-            213
+            234,
+            240
         ]
     },
     {
@@ -185,8 +185,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[9]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            230,
-            236
+            260,
+            266
         ]
     },
     {
@@ -204,8 +204,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[10]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            253,
-            259
+            286,
+            292
         ]
     },
     {
@@ -223,8 +223,8 @@
             "ViTForImageClassification/ViTModel[vit]/ViTEncoder[encoder]/ModuleList[layer]/ViTLayer[11]/ViTOutput[output]/__add___0"
         ],
         "ordinal_ids": [
-            276,
-            282
+            312,
+            318
         ]
     }
 ]

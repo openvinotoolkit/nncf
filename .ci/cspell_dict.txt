@@ -132,6 +132,7 @@ eprint
 eprinttype
 errstate
 evals
+execu
 extendleft
 facecolors
 fakequantizer
@@ -165,6 +166,7 @@ googlenet
 gptq
 graphdef
 groupnormalization
+groupsize
 groupwise
 grusequence
 gscale
@@ -234,6 +236,8 @@ lyalyushkin
 mapillary
 maskrcnn
 mathbb
+mathrm
+matmulnbits
 matmuls
 maxcolwidths
 maxpool
@@ -316,6 +320,7 @@ openvino
 openvinotoolkit
 oplambda
 opset
+opsets
 outgate
 ovawq
 overcalled

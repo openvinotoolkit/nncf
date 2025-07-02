@@ -23,6 +23,13 @@
   - Signed and unsigned
   - Per tensor/per channel
   - Exports to OpenVINO format
+- [Weight-Only Quantization-Aware Training (QAT) with absorbable Low-Rank Adapters (LoRA)](./usage/training_time_compression/quantization_aware_training_lora/Usage.md) (PyTorch)
+  - Post Training Weight Compression as initialization
+  - 2 formats (`FQ_LORA` and `FQ_LORA_NLS`) for 2 use cases: general accuracy improvement via distillation and tuning for downstream tasks
+  - Symmetric and asymmetric quantization modes
+  - Signed and unsigned
+  - Per channel quantization for 8bit and group-wise quantization for 4bit
+  - Exports to OpenVINO format with packed weight constant and decompressor
 
 ### Other algorithms
 

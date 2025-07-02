@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import os
+from urllib.error import HTTPError
 
 import networkx as nx
 import pytest
@@ -282,7 +283,7 @@ def get_test_models_desc(algorithm):
         ),
         pytest.param(
             ModelDesc("mobilenet_v2_slim.dot", test_models.HubMobileNetV2, [1, 224, 224, 3], True),
-            marks=SKIP_MAP[algorithm].get("mobilenet_v2_slim", ()),
+            marks=SKIP_MAP[algorithm].get("mobilenet_v2_slim", (pytest.mark.xfail(raises=HTTPError))),
         ),
     ]
 
