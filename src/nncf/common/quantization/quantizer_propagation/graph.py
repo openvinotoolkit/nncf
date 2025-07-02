@@ -43,7 +43,6 @@ from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationInsertionPointBase
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import should_consider_scope
@@ -1155,25 +1154,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             assert len(us_configs) == 1
             ds_config = ds_configs[0]
             us_config = us_configs[0]
-            is_redundant = True
-            is_redundant = is_redundant and (ds_config.num_bits == us_config.num_bits)
-
-            # Avoid asymmetric quantization if a symmetrically quantized tensor arrived
-            is_redundant = is_redundant and (
-                (ds_config.mode == us_config.mode)
-                or (ds_config.mode == QuantizationMode.ASYMMETRIC and us_config.mode == QuantizationMode.SYMMETRIC)
-            )
-
-            # Avoid per-channel quantization if a per-tensor-quantized tensor arrived
-            is_redundant = is_redundant and (
-                (ds_config.per_channel == us_config.per_channel)
-                or (ds_config.per_channel is True and us_config.per_channel is False)
-            )
-
-            # Strictly prohibit merging of config with different narrow_range params
-            is_redundant = is_redundant and (ds_config.narrow_range == us_config.narrow_range)
-
-            return is_redundant
+            return us_config.is_redundant_with_downstream_qconfig(ds_config)
 
         def merge_traverse_fn(
             curr_node_key: str, affecting_pq_and_prev_node_key: tuple[Optional[PropagatingQuantizer], str]

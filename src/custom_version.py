@@ -23,7 +23,7 @@ Environment Variable Instructions:
 1. **NNCF_RELEASE_BUILD**:
     - Set this environment variable to generate a release package using `python -m build` without including
       the commit hash in the version.
-    - If this variable is not set, the file `nncf/version.py` will be overridden with a custom version
+    - If this variable is not set, the file `src/nncf/version.py` will be overridden with a custom version
       that includes the commit hash. Example usage:
 
         NNCF_RELEASE_BUILD=1 python -m build
@@ -35,12 +35,12 @@ Environment Variable Instructions:
 
 Post-Build Recommendation:
 ---------------------------
-After generating the package, it is recommended to revert any changes to `nncf/version.py` to avoid potential conflicts.
+After generating the package, revert changes to src/nncf/version.py to prevent possible conflicts.
 This can be done using the following command:
 
-    git checkout nncf/version.py
+    git checkout src/nncf/version.py
 
-This ensures that `nncf/version.py` remains in its original state after the dynamic versioning process.
+This ensures that `src/nncf/version.py` remains in its original state after the dynamic versioning process.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ import re
 import subprocess
 from pathlib import Path
 
-NNCF_VERSION_FILE = "nncf/version.py"
+NNCF_VERSION_FILE = "src/nncf/version.py"
 
 
 def get_custom_version() -> str:

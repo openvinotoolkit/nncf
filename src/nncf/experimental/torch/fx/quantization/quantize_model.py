@@ -14,7 +14,6 @@ from typing import Optional
 
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
@@ -27,6 +26,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight_compression_needed
+from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
@@ -102,7 +102,7 @@ def quantize_impl(
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     quantized_model = _fold_conv_bn_qat(quantized_model)
-    pm = PassManager([DuplicateDQPass()])
+    pm = PassManager([DuplicateDQPassNoAnnotations()])
 
     quantized_model = pm(quantized_model).graph_module
     pm = PassManager([PortNodeMetaForQDQ()])
