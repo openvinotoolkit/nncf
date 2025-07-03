@@ -46,6 +46,39 @@ GROUND_TRUTH_STATE = {
                 "signedness_to_force": None,
                 "narrow_range": False,
             },
+            "qconfig_class": "QuantizerConfig",
+            "qip": {"target_node_name": "dummy"},
+            "qip_class": "WeightQuantizationInsertionPoint",
+        },
+        1: {
+            "directly_quantized_operator_node_names": ["MyConv/1[2]/3[4]/5"],
+            "qconfig": {
+                "mode": "symmetric",
+                "num_bits": 8,
+                "per_channel": False,
+                "signedness_to_force": None,
+                "narrow_range": False,
+            },
+            "qconfig_class": "QuantizerConfig",
+            "qip": {"input_port_id": 0, "target_node_name": "dummy"},
+            "qip_class": "ActivationQuantizationInsertionPoint",
+        },
+    },
+    "shared_input_operation_set_groups": {2: [0, 1]},
+    "unified_scale_groups": {2: [0, 1]},
+}
+
+STATE_LEGACY = {
+    "quantization_points": {
+        0: {
+            "directly_quantized_operator_node_names": ["MyConv/1[2]/3[4]/5"],
+            "qconfig": {
+                "mode": "symmetric",
+                "num_bits": 8,
+                "per_channel": False,
+                "signedness_to_force": None,
+                "narrow_range": False,
+            },
             "qip": {"target_node_name": "dummy"},
             "qip_class": "WeightQuantizationInsertionPoint",
         },
@@ -106,6 +139,14 @@ def test_quantizer_setup_serialization():
 
     check_serialization(scqs, comparator=single_config_quantizer_setup_cmp)
     assert scqs.get_state() == GROUND_TRUTH_STATE
+
+
+def test_legacy_qsetup():
+    qsetup = SingleConfigQuantizerSetup.from_state(STATE_LEGACY)
+    for qp in qsetup.quantization_points.values():
+        assert isinstance(qp.qconfig, QuantizerConfig)
+        assert not isinstance(qp.qconfig, ExtendedQuantizerConfig)
+    check_serialization(qsetup, comparator=single_config_quantizer_setup_cmp)
 
 
 def test_precision_float():

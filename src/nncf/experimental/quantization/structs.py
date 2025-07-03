@@ -11,6 +11,7 @@
 
 from typing import Any, Literal, Optional
 
+from nncf.common.quantization.structs import QUANTIZER_CONFIG_REGISTRY
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
@@ -21,6 +22,7 @@ from nncf.tensor.definitions import TensorDataType
 IntDtype = Literal[TensorDataType.int8, TensorDataType.uint8]
 
 
+@QUANTIZER_CONFIG_REGISTRY.register()
 class ExtendedQuantizerConfig(QuantizerConfig):
     """
     Extended configuration class for quantizers, including destination integer dtype.
