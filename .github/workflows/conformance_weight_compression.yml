@@ -45,6 +45,7 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
+          set +e
           python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
