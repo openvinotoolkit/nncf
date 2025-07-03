@@ -11,7 +11,6 @@ on:
       pytest_args:
         description: 'Pytest arguments'
         default: ''
-  pull_request:
 
 jobs:
   examples-cpu:
@@ -53,9 +52,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 4 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '-k tinyllama_data_free_backend_ONNX' }}
+            ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '-k tinyllama_data_free_backend_ONNX' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
           HOME_HF: "/home/runner/hf_home"
