@@ -18,7 +18,6 @@ from typing import Any, Optional
 import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import QUANTIZER_CONFIG_REGISTRY
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -26,6 +25,7 @@ from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
+from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
 
 QuantizationPointId = int
 
@@ -150,7 +150,6 @@ class SCQPointStateNames:
     INSERTION_POINT = "qip"
     INSERTION_POINT_CLASS_NAME = "qip_class"
     NAMES_OF_QUANTIZED_OPS = "directly_quantized_operator_node_names"
-    QUANTIZER_CONFIG_CLASS = "qconfig_class"
 
 
 class SingleConfigQuantizationPoint(QuantizationPointBase):
@@ -182,7 +181,6 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
             self._state_names.INSERTION_POINT: self.insertion_point.get_state(),
             self._state_names.INSERTION_POINT_CLASS_NAME: self.insertion_point.__class__.__name__,
             self._state_names.QCONFIG: self.qconfig.get_state(),
-            self._state_names.QUANTIZER_CONFIG_CLASS: self.qconfig.__class__.__name__,
             self._state_names.NAMES_OF_QUANTIZED_OPS: self.directly_quantized_operator_node_names,
         }
 
@@ -197,14 +195,14 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         insertion_point_cls = CommonStatefulClassesRegistry.get_registered_class(insertion_point_cls_name)
         insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])  # type: ignore
         qconfig_state = state[cls._state_names.QCONFIG]
-        if cls._state_names.QUANTIZER_CONFIG_CLASS in state:
-            qconfig_class = QUANTIZER_CONFIG_REGISTRY.get(state[cls._state_names.QUANTIZER_CONFIG_CLASS])
+        if QuantizerConfig().__dict__.keys() == qconfig_state.keys():
+            qconfig = QuantizerConfig.from_state(qconfig_state)
         else:
-            qconfig_class = QuantizerConfig
+            qconfig = ExtendedQuantizerConfig.from_state(qconfig_state)
 
         kwargs = {
             cls._state_names.INSERTION_POINT: insertion_point,
-            cls._state_names.QCONFIG: qconfig_class.from_state(qconfig_state),
+            cls._state_names.QCONFIG: qconfig,
             cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS],
         }
         return cls(**kwargs)

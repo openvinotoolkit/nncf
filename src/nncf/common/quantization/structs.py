@@ -17,7 +17,6 @@ import nncf
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.api_marker import api
-from nncf.common.utils.registry import Registry
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
@@ -52,10 +51,6 @@ class QuantizationScheme(StrEnum):
     ASYMMETRIC_LORA_NLS = "asymmetric_lora_nls"
 
 
-QUANTIZER_CONFIG_REGISTRY = Registry("quantization_config_registry")
-
-
-@QUANTIZER_CONFIG_REGISTRY.register()
 class QuantizerConfig:
     """
     A generic, framework-agnostic information on a configuration of a quantizer for abstract reasoning
