@@ -198,8 +198,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         dtype = None
         if isinstance(quantizer_config, ExtendedQuantizerConfig):
             dtype = quantizer_config.dest_dtype
-        if isinstance(quantizer_config, ExtendedQuantizerConfig):
-            dtype = quantizer_config.dest_dtype
         elif quantizer_config.mode != QuantizationScheme.SYMMETRIC:
             dtype = TensorDataType.uint8
         else:

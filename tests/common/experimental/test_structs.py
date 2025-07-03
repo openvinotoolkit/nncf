@@ -18,3 +18,5 @@ from nncf.tensor.definitions import TensorDataType
 def test_extended_q_config_non_supported_dest_dtype():
     with pytest.raises(RuntimeError):
         ExtendedQuantizerConfig(dest_dtype=TensorDataType.int4)
+    with pytest.raises(RuntimeError):
+        ExtendedQuantizerConfig(dest_dtype=None)

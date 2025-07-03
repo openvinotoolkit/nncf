@@ -18,6 +18,7 @@ import torch
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
@@ -304,13 +305,12 @@ def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
-    qconfig = ExtendedQuantizerConfig(
+    qconfig = QuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
         narrow_range=narrow_range,
         signedness_to_force=signedness_to_force,
-        dest_dtype=None,
     )
 
     quantizer = _get_quantizer(case_to_test, qconfig)
@@ -410,7 +410,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     _check_q_min_q_max(quantizer, signed, narrow_range)
 
 
-def _get_quantizer(case_to_test: CaseQuantParams, qconfig: ExtendedQuantizerConfig):
+def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig):
     fq_params = calculate_quantizer_parameters(case_to_test.stat, qconfig, case_to_test.quant_group, half_range=False)
 
     ch_axis = 1 if case_to_test.per_channel and case_to_test.quant_group == QuantizerGroup.WEIGHTS else 0
