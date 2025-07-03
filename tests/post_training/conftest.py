@@ -22,6 +22,9 @@ def pytest_addoption(parser):
     parser.addoption("--subset-size", type=int, default=None, help="Set subset size")
     parser.addoption("--fp32", action="store_true", help="Test original model")
     parser.addoption("--cuda", action="store_true", help="Enable CUDA_TORCH backend")
+    parser.addoption(
+        "--x86quantizer", action="store_true", help="Enable X86_QUANTIZER_NNCF and X86_QUANTIZER_AO backends"
+    )
     parser.addoption("--benchmark", action="store_true", help="Run benchmark_app")
     parser.addoption(
         "--torch-compile-validation",
@@ -77,6 +80,11 @@ def fixture_run_fp32_backend(pytestconfig):
 @pytest.fixture(scope="session", name="run_torch_cuda_backend")
 def fixture_run_torch_cuda_backend(pytestconfig):
     return pytestconfig.getoption("cuda")
+
+
+@pytest.fixture(scope="session", name="run_with_x86_quantizer")
+def fixture_run_with_x86quantizer(pytestconfig):
+    return pytestconfig.getoption("x86quantizer")
 
 
 @pytest.fixture(scope="session", name="run_benchmark_app")

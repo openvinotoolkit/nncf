@@ -125,7 +125,9 @@ def fixture_report_data(output_dir, run_benchmark_app, forked):
             df.to_csv(output_file, index=False)
 
 
-def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
+def maybe_skip_test_case(
+    test_model_param, run_fp32_backend, run_torch_cuda_backend, run_with_x86_quantizer, batch_size
+):
     if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
         pytest.skip("To run test for not quantized model use --fp32 argument")
     if (
@@ -135,6 +137,11 @@ def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_back
         pytest.skip(f"To run test for {test_model_param['backend'].value} backend use --cuda argument")
     if batch_size and batch_size > 1 and test_model_param.get("batch_size", 1) == 1:
         pytest.skip("The model does not support batch_size > 1. Please use --batch-size 1.")
+    if (
+        test_model_param["backend"] in [BackendType.X86_QUANTIZER_AO, BackendType.X86_QUANTIZER_NNCF]
+        and not run_with_x86_quantizer
+    ):
+        pytest.skip("To validate quantization with the X86Quantizer use the --x86quantizer argument")
     return test_model_param
 
 
@@ -202,6 +209,7 @@ def run_pipeline(
     batch_size: Optional[int],
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
+    run_with_x86_quantizer: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
@@ -214,7 +222,7 @@ def run_pipeline(
         msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
         raise nncf.ValidationError(msg)
     test_model_param = test_cases[test_case_name]
-    maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
+    maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, run_with_x86_quantizer, batch_size)
     pipeline_cls = test_model_param["pipeline_cls"]
     pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
     pipeline_kwargs.update(
@@ -272,6 +280,7 @@ def test_ptq_quantization(
     batch_size: Optional[int],
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
+    run_with_x86_quantizer: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
@@ -289,6 +298,7 @@ def test_ptq_quantization(
         batch_size,
         run_fp32_backend,
         run_torch_cuda_backend,
+        run_with_x86_quantizer,
         subset_size,
         run_benchmark_app,
         capsys,
@@ -325,6 +335,7 @@ def test_weight_compression(
         batch_size,
         run_fp32_backend,
         run_torch_cuda_backend,
+        False,  # Do not run with the X86Quantizer
         subset_size,
         run_benchmark_app,
         capsys,
