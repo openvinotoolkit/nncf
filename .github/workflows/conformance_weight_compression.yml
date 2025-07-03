@@ -67,6 +67,7 @@ jobs:
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv
+          if-no-files-found: ignore
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |
