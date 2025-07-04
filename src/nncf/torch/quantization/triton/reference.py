@@ -249,16 +249,16 @@ def backward_kernel(
     reciprocal = 1 / (input_range * range_sign)
     err = (output - input_) * reciprocal
     grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
-    grad_range = tl.sum(grad_range, keep_dims=True)
+    grad_range = tl.sum(grad_range)
 
     grad_input = grad_output * mask_in
 
     grad_low = grad_output * (mask_hi + mask_lo)
-    grad_low = tl.sum(grad_low, keep_dims=True)
+    grad_low = tl.sum(grad_low)
 
     tl.store(grad_input_ptr + offsets, grad_input, mask=offsets < input__elements)
-    tl.store(grad_low_ptr + input_low_offset, grad_low, mask=input_low_offset < input_low_elements)
-    tl.store(grad_range_ptr + input_range_offset, grad_range, mask=input_range_offset < input_range_elements)
+    tl.store(grad_low_ptr + offsets, grad_low, mask=offsets < input__elements)
+    tl.store(grad_range_ptr + offsets, grad_range, mask=offsets < input__elements)
 
 
 def forward(input_: torch.tensor, input_low: torch.tensor, input_range: torch.tensor, levels: int) -> torch.tensor:
