@@ -14,8 +14,6 @@ import triton
 import triton.language as tl
 from torch._inductor.runtime.triton_helpers import libdevice
 
-from nncf.torch.utils import sum_like
-
 
 def get_4d_tensor_meta(x: torch.tensor) -> torch.tensor:
     """
@@ -251,10 +249,12 @@ def backward_kernel(
     reciprocal = 1 / (input_range * range_sign)
     err = (output - input_) * reciprocal
     grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
+    grad_range = tl.sum(grad_range)
 
     grad_input = grad_output * mask_in
 
     grad_low = grad_output * (mask_hi + mask_lo)
+    grad_low = tl.sum(grad_low)
 
     tl.store(grad_input_ptr + offsets, grad_input, mask=offsets < input__elements)
     tl.store(grad_low_ptr + offsets, grad_low, mask=offsets < input__elements)
@@ -316,8 +316,8 @@ def backward(
     :return: Calculated grad_input, grad_low and grad_range as tuple of torch.tensor values.
     """
     grad_input = torch.empty_like(input_)
-    grad_low = torch.empty_like(input_)
-    grad_range = torch.empty_like(input_)
+    grad_low = torch.empty_like(input_low)
+    grad_range = torch.empty_like(input_range)
 
     grad_output_meta = get_4d_tensor_meta(grad_output)
     input__meta = get_4d_tensor_meta(input_)
@@ -347,9 +347,5 @@ def backward(
             grad_low,
             grad_range,
         )
-
-        # Temporary solution until possibility of sum like kernel in Triton would be confirmed.
-        grad_low = sum_like(grad_low, input_low)
-        grad_range = sum_like(grad_range, input_range)
 
     return grad_input, grad_low, grad_range
