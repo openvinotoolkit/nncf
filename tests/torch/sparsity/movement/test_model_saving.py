@@ -184,15 +184,18 @@ class TestONNXExport:
                     classifier_proj_size=3,
                 ),
             ),
-            Dict(
-                nncf_weight_ratio=0.43,
-                ov_weight_ratio=0.33,
-                recipe=SwinRunRecipe().model_config_(
-                    num_heads=[4],
-                    num_labels=1,
-                    num_channels=4,
-                    window_size=1,
+            pytest.param(
+                Dict(
+                    nncf_weight_ratio=0.43,
+                    ov_weight_ratio=0.33,
+                    recipe=SwinRunRecipe().model_config_(
+                        num_heads=[4],
+                        num_labels=1,
+                        num_channels=4,
+                        window_size=1,
+                    ),
                 ),
+                marks=pytest.mark.xfail(reason="Issue-168947: regression in OV 2025.2"),
             ),
             Dict(
                 nncf_weight_ratio=0.25,
