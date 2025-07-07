@@ -68,6 +68,7 @@ from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import MatMul
 from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
+from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
@@ -1532,6 +1533,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_matmul_model() -> ov.Model:
         return IdentityMatmul().ov_model
+
+    @staticmethod
+    def get_RoPE_model() -> ov.Model:
+        return RoPEModel().ov_model
 
     @staticmethod
     def get_sequential_matmul_model() -> ov.Model:

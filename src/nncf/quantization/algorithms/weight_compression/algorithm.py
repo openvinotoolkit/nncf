@@ -20,6 +20,8 @@ from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.patterns.patterns import GraphPattern
+from nncf.common.graph.patterns.patterns import Patterns
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
@@ -45,6 +47,7 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
+from nncf.scopes import get_ignored_names_by_ignored_patterns
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.tensor.definitions import TensorDataType
 
@@ -278,6 +281,7 @@ class WeightCompression(Algorithm):
         self._ratio = ratio
         self._ignored_scope = ignored_scope
         self._backend_entity = None
+        self._model_backend = None
         self._algorithm_key = f"CW_{hash(self)}"
         self._statistics = {}
         self._all_layers = all_layers
@@ -345,26 +349,36 @@ class WeightCompression(Algorithm):
 
         :param model: Backend-specific input model.
         """
-        model_backend = get_backend(model)
-        if model_backend == BackendType.OPENVINO:
+        self._model_backend = get_backend(model)
+        if self._model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model)
-        elif model_backend == BackendType.TORCH:
+        elif self._model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
-        elif model_backend == BackendType.TORCH_FX:
+        elif self._model_backend == BackendType.TORCH_FX:
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
-        elif model_backend == BackendType.ONNX:
+        elif self._model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
 
             self._backend_entity = ONNXWeightCompressionAlgoBackend(model)
         else:
-            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            msg = f"Cannot return backend-specific entity because {self._model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
+
+    def get_ignored_patterns(self) -> GraphPattern:
+        """
+        Returns backend-specific ignored patterns for the Weight Quantization algorithm.
+
+        :return: Backend-specific ignored patterns for the Weight Quantization algorithm
+        """
+        patterns = Patterns()
+        patterns.register(self._backend_entity.create_rope_pattern(), "rope")
+        return patterns.get_full_pattern_graph()
 
     def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> list[NNCFNode]:
         """
@@ -383,6 +397,10 @@ class WeightCompression(Algorithm):
         ignored_names = get_ignored_node_names_from_ignored_scope(
             self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
         )
+
+        ignored_patterns_names = get_ignored_names_by_ignored_patterns(nncf_graph, self.get_ignored_patterns())
+        ignored_names = ignored_names.union(ignored_patterns_names)
+
         for node in nncf_graph.topological_sort():
             is_node_with_weights = self._backend_entity.is_node_with_weights(node, nncf_graph)
             is_within_scope = should_consider_scope(node.node_name, ignored_names)

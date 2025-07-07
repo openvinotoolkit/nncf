@@ -16,6 +16,7 @@ from typing import Callable, Iterable, Optional, TypeVar
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -255,6 +256,15 @@ class WeightCompressionAlgoBackend(ABC):
         :param activation_port_id: Activation port id for the statistic collection target node.
         :param algorithm_key: Current algorithm key.
         :return: Backend-specific callable to filter statistic containers according to its statistic point.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_rope_pattern() -> GraphPattern:
+        """
+        Return RoPe block pattern.
+
+        :return: RoPe pattern.
         """
 
 
