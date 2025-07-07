@@ -50,7 +50,6 @@ def pytest_configure(config: Config) -> None:
     regen_dot = config.getoption("--regen-ref-data", False)
     if regen_dot:
         os.environ["NNCF_TEST_REGEN_DOT"] = "1"
-        os.environ["NNCF_TEST_REGEN_JSON"] = "1"
 
     nncf_debug = config.getoption("--nncf-debug", False)
     if nncf_debug:

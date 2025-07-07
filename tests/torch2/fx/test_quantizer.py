@@ -36,6 +36,7 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x
 import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.utils.os import safe_open
+from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -43,7 +44,6 @@ from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import O
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
-from nncf.tensor.definitions import TensorDataType
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
@@ -256,8 +256,6 @@ def _normalize_qsetup_state(setup: dict[str, Any]) -> None:
     for qp in setup["quantization_points"].values():
         sorted_dq = sorted(qp[dq_key])
         qconfig = qp["qconfig"].copy()
-        if "dest_dtype" in qconfig:
-            qconfig["dest_dtype"] = "INT8" if qconfig["dest_dtype"] is TensorDataType.int8 else "UINT8"
         sorted_qps[f"{tuple(sorted_dq)}_{qp['qip_class']}"] = qconfig
     setup["quantization_points"] = sorted_qps
 
@@ -287,9 +285,7 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
             idx += 1
             if node.node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
                 source_node = get_graph_node_by_name(fx_graph, node.node_name)
-                dtypes_map[new_node_name] = (
-                    TensorDataType.int8 if source_node.args[-1] == torch.int8 else TensorDataType.uint8
-                )
+                dtypes_map[new_node_name] = IntDtype.INT8 if source_node.args[-1] == torch.int8 else IntDtype.UINT8
         norm_nncf_graph.add_nncf_node(
             node_name=attrs[node.NODE_NAME_ATTR],
             node_type=attrs[node.NODE_TYPE_ATTR],

@@ -32,7 +32,6 @@ from nncf import AdvancedQuantizationParameters
 from nncf.common.logging.track_progress import track
 from nncf.experimental.torch.fx import OpenVINOQuantizer
 from nncf.experimental.torch.fx import quantize_pt2e
-from nncf.torch import disable_patching
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -130,7 +129,7 @@ class ImageClassificationBase(PTQTestPipeline):
         return []
 
     def _compress_torch_ao(self, quantizer):
-        with torch.no_grad(), disable_patching():
+        with torch.no_grad():
             prepared_model = prepare_pt2e(self.model, quantizer)
             subset_size = self.compression_params.get("subset_size", 300)
             for data in islice(self.calibration_dataset.get_inference_data(), subset_size):
@@ -167,7 +166,7 @@ class ImageClassificationBase(PTQTestPipeline):
         if self.compression_params.get("model_type", False):
             smooth_quant = self.compression_params["model_type"] == nncf.ModelType.TRANSFORMER
 
-        with disable_patching(), torch.no_grad():
+        with torch.no_grad():
             self.compressed_model = quantize_pt2e(
                 self.model,
                 quantizer,
@@ -186,7 +185,7 @@ class ImageClassificationBase(PTQTestPipeline):
 
             return
         if self.backend in [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]:
-            with disable_patching(), torch.no_grad():
+            with torch.no_grad():
                 super()._compress()
                 return
 

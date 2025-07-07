@@ -31,8 +31,8 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
+from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
-from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
 
@@ -160,7 +160,7 @@ class TorchAOQuantizerAdapter(Quantizer):
                 msg = f"Unknown qscheme: {qspec.qscheme}"
                 raise nncf.InternalError(msg)
 
-            dtype = TensorDataType.int8 if qspec.dtype is torch.int8 else TensorDataType.uint8
+            dtype = IntDtype.INT8 if qspec.dtype is torch.int8 else IntDtype.UINT8
             mode = (
                 QuantizationMode.SYMMETRIC
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]

@@ -26,7 +26,6 @@ from nncf.experimental.quantization.structs import IntDtype
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import Tensor
-from nncf.tensor.definitions import TensorDataType
 
 INPUT_SHAPE = (2, 3, 4, 5)
 
@@ -80,7 +79,7 @@ SYM_CASES = (
 
 
 @pytest.mark.parametrize("case_to_test", SYM_CASES)
-@pytest.mark.parametrize("dtype", [TensorDataType.uint8, TensorDataType.int8])
+@pytest.mark.parametrize("dtype", [IntDtype.UINT8, IntDtype.INT8])
 def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[IntDtype]):
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
@@ -98,7 +97,7 @@ def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[Int
     quantizer = _get_quantizer(case_to_test, qconfig)
     assert quantizer.qscheme is torch.per_channel_symmetric if case_to_test.per_channel else torch.per_tensor_symmetric
 
-    signed = signedness_to_force or dtype is TensorDataType.int8
+    signed = signedness_to_force or dtype is IntDtype.INT8
     if signed:
         assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int8))
     else:
@@ -381,7 +380,7 @@ ASYM_CASES = (
 
 
 @pytest.mark.parametrize("case_to_test,ref_zp", ASYM_CASES)
-@pytest.mark.parametrize("dtype", [TensorDataType.uint8, TensorDataType.int8])
+@pytest.mark.parametrize("dtype", [IntDtype.UINT8, IntDtype.INT8])
 def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int, list[int]], dtype: Optional[IntDtype]):
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
@@ -398,7 +397,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     quantizer = _get_quantizer(case_to_test, qconfig)
     assert quantizer.qscheme is torch.per_channel_affine if case_to_test.per_channel else torch.per_tensor_affine
 
-    signed = dtype is TensorDataType.int8
+    signed = dtype is IntDtype.INT8
     ref_zp = torch.tensor(ref_zp)
     if not signed:
         ref_zp += 127 if narrow_range else 128
