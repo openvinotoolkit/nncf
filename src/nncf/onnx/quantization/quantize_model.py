@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import sys
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
@@ -317,6 +318,7 @@ def compress_weights_impl(
         msg = "ONNX models with opset version < 13 do not support per-channel quantization."
         raise nncf.ValidationError(msg)
 
+    os.environ["NNCF_DISABLE_OPTIMIZED_COMPRESSION"] = "1"
     external_data_dir = get_external_data_dir(advanced_parameters)
     external_data_dir = check_external_data_location(model, external_data_dir)
     if external_data_dir:

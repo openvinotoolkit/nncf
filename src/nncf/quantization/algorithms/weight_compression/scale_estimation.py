@@ -83,6 +83,10 @@ class ScaleEstimation:
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
+
+            self._backend_entity = ONNXWeightCompressionAlgoBackend()
         else:
             msg = (
                 "Cannot return backend-specific Scale Estimation entity because"
@@ -193,9 +197,11 @@ class ScaleEstimation:
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
 
+        was_transposed = False
         if reduction_axis == 0:
             weight = fns.transpose(weight)
             reduction_axis = 1
+            was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
         cur_config = deepcopy(config)
@@ -356,6 +362,9 @@ class ScaleEstimation:
             result_scale = fns.squeeze(result_scale, axis=1)
         if zp is not None and config.group_size == -1:
             zp = fns.squeeze(zp, axis=1)
+
+        if was_transposed:
+            result_scale = fns.transpose(result_scale, axes=(1, 2, 0))
 
         return result_scale, zp
 
