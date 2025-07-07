@@ -9,23 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
-from nncf.parameters import StrEnum
+from nncf.tensor.definitions import TensorDataType
 
-
-class IntDtype(StrEnum):
-    """
-    Enum of possible integer types.
-    """
-
-    INT8 = "INT8"
-    UINT8 = "UINT8"
+IntDtype = Literal[TensorDataType.int8, TensorDataType.uint8]
 
 
 class ExtendedQuantizerConfig(QuantizerConfig):
@@ -40,7 +34,7 @@ class ExtendedQuantizerConfig(QuantizerConfig):
         signedness_to_force: Optional[bool] = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
         narrow_range: bool = QUANTIZATION_NARROW_RANGE,
-        dest_dtype: IntDtype = IntDtype.INT8,
+        dest_dtype: IntDtype = TensorDataType.int8,
     ):
         """
         :param num_bits: Bitwidth of the quantization.
@@ -54,6 +48,9 @@ class ExtendedQuantizerConfig(QuantizerConfig):
         :param dest_dtype: Target integer data type for quantized values.
         """
         super().__init__(num_bits, mode, signedness_to_force, per_channel, narrow_range)
+        if dest_dtype not in [TensorDataType.int8, TensorDataType.uint8]:
+            msg = f"Quantization configurations with dest_dtype=={dest_dtype} are not supported."
+            raise nncf.ParameterNotSupportedError(msg)
         self.dest_dtype = dest_dtype
 
     def __str__(self) -> str:

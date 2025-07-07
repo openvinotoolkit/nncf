@@ -12,7 +12,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from enum import auto
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from nncf.parameters import StrEnum
 
@@ -37,6 +37,10 @@ class TensorDataType(StrEnum):
     """
     Enum representing the different tensor data types.
     """
+
+    @staticmethod
+    def _generate_next_value_(name: str, start: int, count: int, last_values: list[Any]) -> Any:
+        return name.lower()
 
     float16 = auto()
     bfloat16 = auto()

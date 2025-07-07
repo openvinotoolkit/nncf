@@ -28,7 +28,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
-from nncf.experimental.quantization.structs import IntDtype
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
@@ -38,6 +37,7 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import StatisticsType
+from nncf.tensor.definitions import TensorDataType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
@@ -199,12 +199,12 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if isinstance(quantizer_config, ExtendedQuantizerConfig):
             dtype = quantizer_config.dest_dtype
         elif quantizer_config.mode != QuantizationScheme.SYMMETRIC:
-            dtype = IntDtype.UINT8
+            dtype = TensorDataType.uint8
         else:
             dtype = (
-                IntDtype.INT8
+                TensorDataType.int8
                 if quantizer_config.signedness_to_force or torch.any(parameters.input_low.data < 0.0)
-                else IntDtype.UINT8
+                else TensorDataType.uint8
             )
 
         if per_channel:
@@ -212,7 +212,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         else:
             observer = torch.ao.quantization.observer.MinMaxObserver
 
-        if dtype is IntDtype.INT8:
+        if dtype is TensorDataType.int8:
             level_high = 127
             level_low = -128
         else:
@@ -241,7 +241,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             observer=observer,
             quant_max=level_high,
             quant_min=level_low,
-            dtype=torch.qint8 if dtype is IntDtype.INT8 else torch.quint8,
+            dtype=torch.qint8 if dtype is TensorDataType.int8 else torch.quint8,
             qscheme=qscheme,
             eps=1e-16,
         )
