@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from copy import deepcopy
 from typing import Callable, Iterable, Optional
 
 import numpy as np
@@ -24,10 +25,17 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
@@ -46,6 +54,7 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -152,7 +161,15 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        raise NotImplementedError()
+        activation_port = 0
+        if node.metatype.possible_weight_ports:
+            activation_ports = deepcopy(node.metatype.possible_weight_ports)
+            for weight_port in node.layer_attributes.weight_attrs:
+                activation_ports.remove(weight_port)
+            assert len(activation_ports) == 1
+            activation_port = activation_ports[0]
+
+        return activation_port
 
     @staticmethod
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
@@ -459,3 +476,35 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         del self.name_to_node_map[original_matmul.name]
         # Update the node mapping
         self.name_to_node_map[matmul_n_bits.name] = matmul_n_bits
+
+
+class ONNXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, ONNXWeightCompressionAlgoBackend):
+    @staticmethod
+    def mean_variance_statistic_collector(
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MeanVarianceReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanVarianceTensorStatistic)
+        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def max_variance_statistic_collector(
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MaxVarianceReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MaxVarianceTensorStatistic)
+        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def mean_abs_max_statistic_collector(
+        reduction_axes: tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MeanAbsMaxReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanMagnitudeTensorStatistic)
+        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
+        return collector
