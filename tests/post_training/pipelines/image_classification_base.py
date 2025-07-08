@@ -9,11 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import os
 
+# From https://docs.pytorch.org/docs/stable/torch.compiler_aot_inductor.html:
+# For better performance during CPU inference,
+# it is suggested to enable freezing by setting export TORCHINDUCTOR_FREEZING=1 before running the Python script below.
+# The same behavior works in an environment with Intel® GPU as well.
 os.environ["TORCHINDUCTOR_FREEZING"] = "1"
 
+import copy
 from itertools import islice
 
 import numpy as np
