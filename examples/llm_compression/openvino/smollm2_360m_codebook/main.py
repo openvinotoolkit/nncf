@@ -12,18 +12,31 @@
 import numpy as np
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
+from transformers import logging
 
 import nncf
 
+logging.set_verbosity_error()
+
 
 def generate_answers(questions, model, tokenizer, max_new_tokens=50):
+    """Generate answers for a list of questions using the provided model and tokenizer.
+
+    Args:
+        questions : List of questions to be answered.
+        model : The model to use for generating answers.
+        tokenizer : The tokenizer to use for processing the input and output.
+        max_new_tokens (int, optional): Maximum number of new tokens to generate for each answer. Defaults to 50.
+
+    Returns:
+        dict: A dictionary mapping each question to its corresponding answer.
+    """
     messages = [
         {"role": "system", "content": "You are a chatbot who always responds as short as possible."},
         {"role": "user", "content": "What is the capital of Spain?"},
         {"role": "assistant", "content": "Madrid."},
     ]
     answers_by_questions = {}
-    model.request = None
 
     for question in questions:
         messages.append({"role": "user", "content": question})
@@ -37,8 +50,13 @@ def generate_answers(questions, model, tokenizer, max_new_tokens=50):
         answers_by_questions[question] = answer
         messages.append({"role": "assistant", "content": answer})
 
-    model.request = None
     return answers_by_questions
+
+
+def print_answers(header, answers_by_questions):
+    print(header)
+    for question, answer in answers_by_questions.items():
+        print(f"Q: {question}\nA: {answer}\n")
 
 
 QUESTIONS = [
@@ -50,7 +68,7 @@ QUESTIONS = [
 
 
 def load_model_and_tokenizer(model_id, export=True):
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=False)
     model = OVModelForCausalLM.from_pretrained(
         model_id,
         export=export,
@@ -62,7 +80,7 @@ def load_model_and_tokenizer(model_id, export=True):
 def default_codebook_example(model_id, output_dir):
     model, tokenizer = load_model_and_tokenizer(model_id)
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
-    print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
+    print_answers("Non-optimized model outputs:\n", answers_by_questions)
 
     model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CB4_F8E4M3, ratio=1.0, group_size=64)
     model.save_pretrained(output_dir)
@@ -70,7 +88,7 @@ def default_codebook_example(model_id, output_dir):
 
     model, tokenizer = load_model_and_tokenizer(output_dir, False)
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
-    print(f"Optimized model outputs:\n{answers_by_questions}\n")
+    print_answers("Optimized model outputs:\n", answers_by_questions)
 
     return list(answers_by_questions.values())
 
@@ -79,7 +97,7 @@ def custom_codebook_example(model_id, output_dir):
     model, tokenizer = load_model_and_tokenizer(model_id)
 
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
-    print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
+    print_answers("Non-optimized model outputs:\n", answers_by_questions)
 
     codebook_params = nncf.CodebookParameters(
         np.array([-64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64], dtype=np.int8)
@@ -97,7 +115,7 @@ def custom_codebook_example(model_id, output_dir):
 
     model, tokenizer = load_model_and_tokenizer(output_dir, False)
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
-    print(f"Optimized model outputs:\n{answers_by_questions}\n")
+    print_answers("Optimized model outputs:\n", answers_by_questions)
 
     return list(answers_by_questions.values())
 
