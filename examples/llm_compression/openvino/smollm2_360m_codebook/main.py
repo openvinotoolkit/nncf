@@ -9,14 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
+
 import numpy as np
 from optimum.intel.openvino import OVModelForCausalLM
+from torch.jit import TracerWarning
 from transformers import AutoTokenizer
 from transformers import logging
 
 import nncf
 
 logging.set_verbosity_error()
+warnings.filterwarnings("ignore", category=TracerWarning)
 
 
 def generate_answers(

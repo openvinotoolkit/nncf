@@ -454,12 +454,15 @@ class WeightCompression(Algorithm):
         return ratio_defining_params
 
     def _get_primary_config(self):
+        codebook_values = (
+            Tensor(CB4_QUANTILES)
+            if self._mode == CompressWeightsMode.CB4_F8E4M3
+            else Tensor(self._advanced_parameters.codebook_params.codebook)
+        )
         return WeightCompressionConfig(
             mode=self._mode,
             group_size=self._group_size,
-            codebook_values=Tensor(CB4_QUANTILES)
-            if self._mode == CompressWeightsMode.CB4_F8E4M3
-            else Tensor(self._advanced_parameters.codebook_params.codebook),
+            codebook_values=codebook_values,
         )
 
     def _set_weight_compression_config(
