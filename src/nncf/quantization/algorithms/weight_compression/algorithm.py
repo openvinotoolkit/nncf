@@ -39,7 +39,7 @@ from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.constants import get_cb4_quantiles
+from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -457,7 +457,7 @@ class WeightCompression(Algorithm):
         return WeightCompressionConfig(
             mode=self._mode,
             group_size=self._group_size,
-            codebook_values=get_cb4_quantiles()
+            codebook_values=Tensor(CB4_QUANTILES)
             if self._mode == CompressWeightsMode.CB4_F8E4M3
             else Tensor(self._advanced_parameters.codebook_params.codebook),
         )

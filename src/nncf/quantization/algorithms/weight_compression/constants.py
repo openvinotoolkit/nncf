@@ -11,9 +11,6 @@
 
 import numpy as np
 
-from nncf.tensor import Tensor
-from nncf.tensor import TensorDataType
-
 NF4_QUANTILES = np.array(
     [
         -1.0,
@@ -37,32 +34,27 @@ NF4_QUANTILES = np.array(
 )
 
 
-def get_cb4_quantiles() -> Tensor:
-    """
-    Returns the quantiles for the CB4 codebook.
-    """
-    CB4_QUANTILES = np.array(
-        [
-            -3.5,
-            -2.5,
-            -1.875,
-            -1.375,
-            -1.0,
-            -0.625,
-            -0.3125,
-            0.0,
-            0.28125,
-            0.5625,
-            0.875,
-            1.125,
-            1.5,
-            2.0,
-            2.5,
-            3.5,
-        ],
-        dtype=np.float32,
-    )
-    return Tensor(CB4_QUANTILES).as_openvino_tensor().astype(TensorDataType.f8e4m3)
+CB4_QUANTILES = np.array(
+    [
+        -3.5,
+        -2.5,
+        -1.875,
+        -1.375,
+        -1.0,
+        -0.625,
+        -0.3125,
+        0.0,
+        0.28125,
+        0.5625,
+        0.875,
+        1.125,
+        1.5,
+        2.0,
+        2.5,
+        3.5,
+    ],
+    dtype=np.float32,
+)
 
 
 CENTER_OF_NF4_QUANTILES = np.array(
