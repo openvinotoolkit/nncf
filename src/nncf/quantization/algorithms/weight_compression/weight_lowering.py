@@ -11,8 +11,6 @@
 import os
 from typing import Optional, Union
 
-import numpy as np
-
 import nncf
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.utils.backend import is_openvino_at_least
@@ -85,7 +83,7 @@ def calculate_float_quantization_params(
 
     scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
     if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
-        max_val = 6.0 if config.mode == CompressWeightsMode.E2M1 else max(np.abs(config.get_numpy_codebook()))
+        max_val = 6.0 if config.mode == CompressWeightsMode.E2M1 else fns.max(fns.abs(config.get_numpy_codebook()))
         scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
@@ -501,7 +499,7 @@ def _calculate_nf4_quantized_weight(norm_weight: Tensor) -> Tensor:
 
 
 def _calculate_codebook_quantized_weight(
-    norm_weight: Tensor, quantiles: np.ndarray = None, center_of_quantiles: np.ndarray = None
+    norm_weight: Tensor, quantiles: Tensor = None, center_of_quantiles: Tensor = None
 ) -> tuple[Tensor, Tensor]:
     """
     Performs quantization by quantiles (if center_of_quantiles is None). Look-up table is used to
@@ -518,7 +516,6 @@ def _calculate_codebook_quantized_weight(
     )
 
     if center_of_quantiles is None:
-        quantiles = np.array(quantiles)
         center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
     center_of_quantiles = fns.from_numpy(center_of_quantiles, backend=norm_weight.backend)
     indexes = fns.searchsorted(center_of_quantiles, norm_weight)

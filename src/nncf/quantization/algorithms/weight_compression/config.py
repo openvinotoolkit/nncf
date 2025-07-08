@@ -69,7 +69,7 @@ class WeightCompressionConfig:
         return self.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
 
     def get_numpy_codebook(self):
-        return self.codebook_values.as_numpy_tensor().data
+        return self.codebook_values.as_numpy_tensor()
 
     def __hash__(self):
         return hash((self.mode.value, self.group_size))

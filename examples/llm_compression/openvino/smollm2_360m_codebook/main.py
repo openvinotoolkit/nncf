@@ -23,6 +23,10 @@ logging.set_verbosity_error()
 warnings.filterwarnings("ignore", category=TracerWarning)
 
 
+MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
+COMPRESSED_MODEL_ID = "smollm2_360m_compressed_codebook"
+
+
 def generate_answers(
     questions: list[str], model: OVModelForCausalLM, tokenizer: AutoTokenizer, max_new_tokens: int = 50
 ) -> dict[str, str]:
@@ -151,11 +155,8 @@ def custom_codebook_example(model_id: str, compressed_model_id: str) -> None:
 
 
 def main():
-    model_id = "HuggingFaceTB/SmolLM2-360M-Instruct"
-    compressed_model_id = "smollm2_360m_compressed_codebook"
-
-    res = default_codebook_example(model_id, compressed_model_id)
-    res += custom_codebook_example(model_id, compressed_model_id + "_custom")
+    res = default_codebook_example(MODEL_ID, COMPRESSED_MODEL_ID)
+    res += custom_codebook_example(MODEL_ID, COMPRESSED_MODEL_ID + "_custom")
     return res
 
 
