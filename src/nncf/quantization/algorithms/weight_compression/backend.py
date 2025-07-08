@@ -260,11 +260,11 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_rope_pattern() -> GraphPattern:
+    def get_ignored_patterns() -> GraphPattern:
         """
-        Return RoPe block pattern.
+        Return backend-specific ignored patterns.
 
-        :return: RoPe pattern.
+        :return: backend-specific ignored patterns.
         """
 
 

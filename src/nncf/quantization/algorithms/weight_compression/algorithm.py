@@ -20,8 +20,7 @@ from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.patterns.patterns import GraphPattern
-from nncf.common.graph.patterns.patterns import Patterns
+from nncf.common.graph.graph import get_ignored_names_by_ignored_patterns
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
@@ -47,7 +46,6 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
-from nncf.scopes import get_ignored_names_by_ignored_patterns
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.tensor.definitions import TensorDataType
 
@@ -370,16 +368,6 @@ class WeightCompression(Algorithm):
             msg = f"Cannot return backend-specific entity because {self._model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
 
-    def get_ignored_patterns(self) -> GraphPattern:
-        """
-        Returns backend-specific ignored patterns for the Weight Quantization algorithm.
-
-        :return: Backend-specific ignored patterns for the Weight Quantization algorithm
-        """
-        patterns = Patterns()
-        patterns.register(self._backend_entity.create_rope_pattern(), "rope")
-        return patterns.get_full_pattern_graph()
-
     def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> list[NNCFNode]:
         """
         Collects nodes in the model's graph corresponding to the layers for weight compression.
@@ -398,7 +386,9 @@ class WeightCompression(Algorithm):
             self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
         )
 
-        ignored_patterns_names = get_ignored_names_by_ignored_patterns(nncf_graph, self.get_ignored_patterns())
+        ignored_patterns_names = get_ignored_names_by_ignored_patterns(
+            nncf_graph, self._backend_entity.get_ignored_patterns()
+        )
         ignored_names = ignored_names.union(ignored_patterns_names)
 
         for node in nncf_graph.topological_sort():

@@ -22,6 +22,7 @@ from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import get_ignored_names_by_ignored_patterns
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
@@ -68,7 +69,6 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
-from nncf.scopes import get_ignored_names_by_ignored_patterns
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
 TModel = TypeVar("TModel")

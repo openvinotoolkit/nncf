@@ -523,7 +523,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return transformed_model
 
     @staticmethod
-    def create_rope_pattern() -> GraphPattern:
+    def get_ignored_patterns() -> GraphPattern:
         return create_rope()
 
 

@@ -810,3 +810,18 @@ class NNCFGraph:
                 subgraph_list.append(self.get_node_by_key(node_key))
             output.append(subgraph_list)
         return output
+
+
+def get_ignored_names_by_ignored_patterns(nncf_graph: NNCFGraph, ignored_patterns: GraphPattern) -> set[str]:
+    """
+    Returns node names matched ignored_patterns.
+
+    :param nncf_graph: NNCFGraph instance.
+    :param ignored_patterns: Ignored patterns.
+    :return: A set of NNCF node names from the given NNCFGraph matched ignored_patterns.
+    """
+    nncf_node_names = set()
+    for subgraph in nncf_graph.find_matching_subgraphs(ignored_patterns, strict=False):
+        for nncf_node in subgraph:
+            nncf_node_names.add(nncf_node.node_name)
+    return nncf_node_names

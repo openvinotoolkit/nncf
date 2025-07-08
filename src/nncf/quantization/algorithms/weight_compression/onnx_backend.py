@@ -463,5 +463,5 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self.name_to_node_map[matmul_n_bits.name] = matmul_n_bits
 
     @staticmethod
-    def create_rope_pattern() -> GraphPattern:
+    def get_ignored_patterns() -> GraphPattern:
         return create_rope()
