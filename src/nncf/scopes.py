@@ -277,7 +277,7 @@ def get_ignored_names_by_ignored_patterns(nncf_graph: NNCFGraph, ignored_pattern
 
     :param nncf_graph: NNCFGraph instance.
     :param ignored_patterns: Ignored patterns.
-    :return: IgnoredScope with all node names matched ignored_patterns.
+    :return: A set of NNCF node names from the given NNCFGraph matched ignored_patterns.
     """
     nncf_node_names = set()
     for subgraph in nncf_graph.find_matching_subgraphs(ignored_patterns, strict=False):
