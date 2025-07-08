@@ -530,7 +530,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_lora_stateful",
