@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import json
-import os
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
@@ -207,6 +206,7 @@ def test_quantizer_setup(
     quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
     model_case: ModelCase,
     quantizer_params,
+    regen_ref_data,
 ):
     fx_model, _ = _build_torch_fx_model(model_case)
     quantizer = quantizer_builder(**quantizer_params)
@@ -226,7 +226,7 @@ def test_quantizer_setup(
     quantizer_setup = quantizer.get_quantization_setup(fx_model, nncf_graph)
     qsetup_config = quantizer_setup.get_state()
     _normalize_qsetup_state(qsetup_config)
-    if os.getenv("NNCF_TEST_REGEN_JSON") is not None:
+    if regen_ref_data:
         with safe_open(ref_qconfig_filename, "w") as file:
             json.dump(qsetup_config, file, indent=4)
 
