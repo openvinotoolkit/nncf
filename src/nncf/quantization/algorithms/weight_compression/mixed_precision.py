@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from abc import ABC
 from abc import abstractmethod
 from typing import Iterable, Optional, TypeVar
@@ -75,47 +76,30 @@ class MixedPrecisionCriterion(Algorithm):
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-        all_weight_params: list[WeightCompressionParameters] = None,
-        weight_param_candidates: list[WeightCompressionParameters] = None,
+        weight_params: list[WeightCompressionParameters] = None,
     ) -> list[WeightCompressionParameters]:
         """
         Selects which weights should be compressed to a primary (4 bit) precision based on computed layers'
         sensitivities, ratio of parameters.
-
-        :param model: Model for which the mixed precision criterion is applied.
-        :param graph: NNCFGraph of the model.
-        :param statistic_points: Statistic points for which statistics should be collected.
-        :param dataset: Not required.
-        :param all_weight_params: List of all ratio defining parameters of the model, i.e. the parameters which
-            inclusion or exclusion from the primary precision group will affect the ratio.
-        :param weight_param_candidates: List of valid weight parameters to be considered for the primary precision
-            group.
-        :return: List of weight parameters that should be compressed to primary precision.
         """
         self._set_backend_entity(model)
 
-        if weight_param_candidates is None:
-            weight_param_candidates = all_weight_params
+        scores = self._calc_sensitivity(model, graph, weight_params, statistic_points)
+        num_all_weights = sum(wp.num_weights for wp in weight_params)
 
-        scores = self._calc_sensitivity(model, graph, weight_param_candidates, statistic_points)
-
-        # Sum all weights to calculate the ratio. This way the weights which can't be compressed to primary precision
-        # will contribute to the backup group as well.
-        num_all_weights = sum(wp.num_weights for wp in all_weight_params)
-
-        selected_weight_params = []
+        primary_precision_weight_params = []
         indexes_of_layers_in_ascending_order_of_scores = [
             i[0] for i in sorted(enumerate(scores), reverse=False, key=lambda x: x[1])
         ]
         num_weights_in_4bit = 0
         for index in indexes_of_layers_in_ascending_order_of_scores:
-            weight_param = weight_param_candidates[index]
+            weight_param = weight_params[index]
             current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_all_weights
             if current_ratio >= self._ratio:
                 break
-            selected_weight_params.append(weight_param)
+            primary_precision_weight_params.append(weight_param)
             num_weights_in_4bit += weight_param.num_weights
-        return selected_weight_params
+        return primary_precision_weight_params
 
     @abstractmethod
     def _set_backend_entity(self, model: TModel) -> None:

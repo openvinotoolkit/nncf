@@ -372,7 +372,7 @@ class AdvancedGroupSizeParameters:
 
     If it's not possible to find a value satisfying these requirements, such weight is compressed to the backup
     precision. If ratio < 1.0 and some weights have to be compressed to the backup precision because of group size
-    issues, then these weights also contribute to the ratio of backup mode group.
+    issues, then these weights won't contribute to the ratio of backup mode group.
 
     :param enable_flexible_group_size: Whether to enable flexible group size searching.
     :type enable_flexible_group_size: bool

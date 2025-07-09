@@ -438,7 +438,7 @@ class WeightCompression(Algorithm):
 
     def _set_weight_compression_config(
         self,
-        weight_params: list[WeightCompressionParameters],
+        ratio_defining_params: list[WeightCompressionParameters],
         model: TModel,
         graph: NNCFGraph,
         statistics_points: StatisticPointsContainer,
@@ -446,7 +446,7 @@ class WeightCompression(Algorithm):
         """
         Sets the appropriate compression configuration for weights based on some criteria.
 
-        :param weight_params: Information about weights that are used for calculating ratio between primary and
+        :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
         :param model: The model.
         :param graph: The model graph associated with the model.
@@ -454,31 +454,27 @@ class WeightCompression(Algorithm):
         """
         if self._enable_flexible_group_size and self._group_size != -1:
             # Compute flexible group size values if enabled
-            flexible_group_size_data = self._get_flexible_group_size_data(weight_params)
+            flexible_group_size_data = self._get_flexible_group_size_data(ratio_defining_params)
             group_size_values = {w_param.weight_name: group_size for w_param, group_size in flexible_group_size_data}
-            valid_weight_params = [w_param for w_param, _ in flexible_group_size_data]
+            # Select a subset of ratio_defining_params that can be compressed with some group size
+            ratio_defining_params = [w_param for w_param, _ in flexible_group_size_data]
         else:
-            group_size_values = {w_param.weight_name: self._group_size for w_param in weight_params}
-            valid_weight_params = weight_params
+            group_size_values = {w_param.weight_name: self._group_size for w_param in ratio_defining_params}
 
-        if self._ratio == 1:
-            primary_precision_weight_params = valid_weight_params
-        else:
+        if self._ratio < 1 and len(ratio_defining_params) > 0:
             primary_precision_weight_params = self._mixed_precision_algo.apply(
-                model,
-                graph,
-                statistics_points,
-                all_weight_params=weight_params,
-                weight_param_candidates=valid_weight_params,
+                model, graph, statistics_points, weight_params=ratio_defining_params
             )
+        else:
+            primary_precision_weight_params = ratio_defining_params
         for weight_param in primary_precision_weight_params:
             weight_param.compression_config = WeightCompressionConfig(
                 mode=self._mode, group_size=group_size_values[weight_param.weight_name]
             )
 
-        # Check if group size is valid for each weight in weight_params
+        # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
-        for w_params in weight_params:
+        for w_params in ratio_defining_params:
             if w_params.compression_config is None or w_params.compression_config.group_size == -1:
                 continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
