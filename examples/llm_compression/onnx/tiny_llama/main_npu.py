@@ -34,7 +34,7 @@ def main():
     # The main_export function will export the model with opset 20, and then modified to 21.
     # This is a temporary solution until the NPU supports the MatMulNBits OP.
     print("Exporting ONNX model ...")
-    main_export(MODEL_ID, OUTPUT_DIR, task="text-generation-with-past", opset=20)
+    main_export(MODEL_ID, OUTPUT_DIR, task="text-generation-with-past", opset=20, no_post_process=True)
 
     # Load the exported pretrained model as an ONNX model. For models larger than 2GB,
     # set `load_external_data=False` to load only the model's topology without the weights.
