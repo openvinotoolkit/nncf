@@ -190,7 +190,7 @@ def constant_update_fn(
     value: torch.Tensor,
     input_port_id: int = 1,
     updated_node_name: Optional[str] = None,
-):
+) -> torch.fx.Node:
     """
     Updates constant of given node on the given input port id with given value.
 
@@ -199,6 +199,7 @@ def constant_update_fn(
     :param value: New value to use as the node constant.
     :param input_port_id: Target constant input port id.
     :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
+    :return: Updated constant node.
     """
     graph = model.graph
     old_const = _get_node_by_input_port_id(node, input_port_id)
@@ -220,6 +221,8 @@ def constant_update_fn(
 
     old_const.replace_all_uses_with(new_const, propagate_meta=True)
     graph.eliminate_dead_code()
+
+    return new_const
 
 
 def qdq_insertion_transformation_builder(
