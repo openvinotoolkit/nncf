@@ -438,6 +438,7 @@ class WeightCompression(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         statistics_points: StatisticPointsContainer,
+        group_size_values: dict[str, int],
     ) -> None:
         """
         Sets the appropriate compression configuration for weights based on some criteria.
@@ -447,22 +448,15 @@ class WeightCompression(Algorithm):
         :param model: The model.
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
+        :param group_size_values: A dictionary mapping weight names to their group size values.
         """
-        if self._enable_flexible_group_size and self._group_size != -1:
-            # Compute flexible group size values if enabled
-            flexible_group_size_data = self._get_flexible_group_size_data(ratio_defining_params)
-            group_size_values = {w_param.weight_name: group_size for w_param, group_size in flexible_group_size_data}
-            # Select a subset of ratio_defining_params that can be compressed with some group size
-            ratio_defining_params = [w_param for w_param, _ in flexible_group_size_data]
-        else:
-            group_size_values = {w_param.weight_name: self._group_size for w_param in ratio_defining_params}
-
         if self._ratio < 1 and len(ratio_defining_params) > 0:
             primary_precision_weight_params = self._mixed_precision_algo.apply(
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
         else:
             primary_precision_weight_params = ratio_defining_params
+
         for weight_param in primary_precision_weight_params:
             weight_param.compression_config = WeightCompressionConfig(
                 mode=self._mode, group_size=group_size_values[weight_param.weight_name]
@@ -711,7 +705,15 @@ class WeightCompression(Algorithm):
                 weight_names.add(weight_name)
 
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
-        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
+        if self._enable_flexible_group_size and self._group_size != -1:
+            # Compute flexible group size values if enabled
+            flexible_group_size_data = self._get_flexible_group_size_data(ratio_defining_params)
+            group_size_values = {w_param.weight_name: group_size for w_param, group_size in flexible_group_size_data}
+            # Select a subset of ratio_defining_params that can be compressed with some group size
+            ratio_defining_params = [w_param for w_param, _ in flexible_group_size_data]
+        else:
+            group_size_values = {w_param.weight_name: self._group_size for w_param in ratio_defining_params}
+        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
         ignored_scope_weight_statistics = self._get_ignored_scope_weight_statistics(model, graph)
         nncf_logger.info(
             self._get_bitwidth_distribution_str(
