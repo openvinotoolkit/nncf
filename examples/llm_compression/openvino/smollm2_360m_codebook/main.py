@@ -134,14 +134,14 @@ def custom_codebook_example(model_id: str, compressed_model_id: str) -> list[str
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print_answers("Non-optimized model outputs:\n", answers_by_questions)
 
-    codebook_params = nncf.CodebookParameters(np.array([-8, -4, -2, -1, 0, 1, 2, 4, 8], dtype=np.int8))
+    codebook = np.array([-8, -4, -2, -1, 0, 1, 2, 4, 8], dtype=np.int8)
 
     model.model = nncf.compress_weights(
         model.model,
         mode=nncf.CompressWeightsMode.CODEBOOK,
         ratio=1.0,
         group_size=-1,
-        advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
+        advanced_parameters=nncf.AdvancedCompressionParameters(codebook=codebook),
     )
     model.save_pretrained(compressed_model_id)
     tokenizer.save_pretrained(compressed_model_id)

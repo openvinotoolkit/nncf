@@ -10,21 +10,9 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 
 from nncf.tensor import Tensor
-
-
-@dataclass
-class Codebook:
-    """
-    Codebook parameters for weight compression.
-    :param codebook: The initial codebook for compression.
-    :param dst_type: The destination type for the codebook.
-    """
-
-    codebook: Optional[Tensor] = None
-    dst_type: Optional[Any] = None
 
 
 @dataclass
@@ -42,7 +30,7 @@ class CompressedWeight:
     tensor: Optional[Tensor] = None
     scale: Optional[Tensor] = None
     zero_point: Optional[Tensor] = None
-    codebook: Optional[Codebook] = None
+    codebook: Optional[Tensor] = None
 
     def is_codebook(self):
         """

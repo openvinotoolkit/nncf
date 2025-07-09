@@ -363,20 +363,6 @@ class AdvancedLoraCorrectionParameters:
 
 @api()
 @dataclass
-class CodebookParameters:
-    """
-    Contains parameters for codebook compression algorithm.
-
-    :param codebook: The codebook (LUT) for the weight compression.
-        Applicable for vector quantization. Must be a numpy array or ov Tensor.
-    :type codebook: TTensor
-    """
-
-    codebook: Optional[TTensor] = None
-
-
-@api()
-@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -395,8 +381,9 @@ class AdvancedCompressionParameters:
     :type lora_adapter_rank: int
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
-    :param codebook_params: Parameters for codebook compression.
-    :type codebook_params: CodebookParameters
+    :param codebook: The codebook (LUT) for the weight compression.
+        Applicable for vector quantization. Must be a numpy array or ov Tensor.
+    :type codebook: TTensor
     """
 
     statistics_path: Optional[str] = None
@@ -408,7 +395,7 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     lora_adapter_rank: int = 256
     backend_params: dict[str, Any] = field(default_factory=dict)
-    codebook_params: CodebookParameters = field(default_factory=CodebookParameters)
+    codebook: Optional[TTensor] = None
 
 
 @api()

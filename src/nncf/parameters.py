@@ -86,7 +86,7 @@ class CompressWeightsMode(StrEnum):
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     :param E2M1: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
     :param CODEBOOK: Codebook (LUT) quantization format.
-    :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values.
+    :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
 
     INT8_SYM = "int8_sym"

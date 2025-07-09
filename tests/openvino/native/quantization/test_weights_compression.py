@@ -40,7 +40,6 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
-from nncf.quantization.advanced_parameters import CodebookParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -356,13 +355,12 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
 )
 def test_codebook_compression_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
     model = IntegerModel().ov_model
-    codebook_params = nncf.CodebookParameters(codebook)
 
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.CODEBOOK,
         group_size=7,
-        advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
+        advanced_parameters=nncf.AdvancedCompressionParameters(codebook=codebook),
     )
     actual_stats = {}
     for op in compressed_model.get_ops():
@@ -1182,7 +1180,7 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
         ratio=1.0,
         group_size=group_size,
         all_layers=True,
-        advanced_parameters=AdvancedCompressionParameters(codebook_params=CodebookParameters(codebook=codebook)),
+        advanced_parameters=AdvancedCompressionParameters(codebook=codebook),
     )
     names_codebook = [
         op.get_friendly_name()
@@ -1728,7 +1726,7 @@ def test_nf4_quantization_mid_quant(weight, scale):
 
 
 @pytest.mark.parametrize(
-    "codebook_values",
+    "codebook",
     [
         np.array([0.2, 0.2, 0.3, 0.4], dtype=np.float32),
         np.array([0.5, 0.2, 0.3, 0.4], dtype=np.float32),
@@ -1736,8 +1734,7 @@ def test_nf4_quantization_mid_quant(weight, scale):
         np.array([5], dtype=np.float32),
     ],
 )
-def test_codebook_is_correct_array(codebook_values):
-    codebook_params = nncf.CodebookParameters(codebook_values)
+def test_codebook_is_correct_array(codebook):
     model = SequentialMatmulModel().ov_model
 
     # The codebook should be a non empty 1D numpy array and sorted
@@ -1746,7 +1743,7 @@ def test_codebook_is_correct_array(codebook_values):
             model,
             mode=CompressWeightsMode.CODEBOOK,
             group_size=-1,
-            advanced_parameters=nncf.AdvancedCompressionParameters(codebook_params=codebook_params),
+            advanced_parameters=nncf.AdvancedCompressionParameters(codebook=codebook),
         )
 
 
