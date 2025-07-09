@@ -388,9 +388,7 @@ class TemplateWeightCompression(ABC):
             **algorithm_dict,
             dataset=dataset,
             advanced_parameters=nncf.AdvancedCompressionParameters(
-                group_size_params=nncf.AdvancedGroupSizeParameters(
-                    enable_flexible_group_size=enable_flex, min_flexible_group_size=min_flex_group_size
-                )
+                enable_flexible_group_size=enable_flex, min_flexible_group_size=min_flex_group_size
             ),
         )
 
@@ -449,9 +447,7 @@ class TemplateWeightCompression(ABC):
             group_size=group_size,
             dataset=dataset,
             advanced_parameters=nncf.AdvancedCompressionParameters(
-                group_size_params=nncf.AdvancedGroupSizeParameters(
-                    enable_flexible_group_size=True, min_flexible_group_size=min_flex_group_size
-                )
+                enable_flexible_group_size=True, min_flexible_group_size=min_flex_group_size
             ),
         )
 

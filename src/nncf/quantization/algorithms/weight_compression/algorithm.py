@@ -35,7 +35,6 @@ from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
-from nncf.quantization.advanced_parameters import AdvancedGroupSizeParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
@@ -299,11 +298,8 @@ class WeightCompression(Algorithm):
         self._mixed_precision_algo = criterion_cls(self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
 
-        group_size_parameters = self._advanced_parameters.group_size_params
-        if group_size_parameters is None:
-            group_size_parameters = AdvancedGroupSizeParameters()
-        self._enable_flexible_group_size = group_size_parameters.enable_flexible_group_size
-        self._min_flexible_group_size = group_size_parameters.min_flexible_group_size
+        self._enable_flexible_group_size = self._advanced_parameters.enable_flexible_group_size
+        self._min_flexible_group_size = self._advanced_parameters.min_flexible_group_size
 
         if self._awq:
             awq_params = self._advanced_parameters.awq_params
