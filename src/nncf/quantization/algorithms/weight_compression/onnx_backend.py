@@ -213,13 +213,12 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compression_config = wc_params.compression_config
             node = wc_params.node_with_weight
             weight = self.get_weight(node, wc_params.weight_port_id, model, graph)
+            precomputed_compressed_weights = precomputed_compressed_weights or {}
             compressed_weight = compress_weight(
                 Tensor(weight),
                 wc_params.reduction_axes,
                 compression_config,
-                None
-                if precomputed_compressed_weights is None
-                else precomputed_compressed_weights.get(wc_params.weight_name),
+                precomputed_compressed_weights.get(wc_params.weight_name),
             )
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
             dequantize_axis = (

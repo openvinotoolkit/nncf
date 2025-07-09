@@ -48,6 +48,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import Weig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
@@ -182,17 +183,19 @@ def check_user_compression_configuration(
         )
         ranks = [advanced_parameters.lora_adapter_rank, advanced_parameters.lora_correction_params.adapter_rank]
 
-        if advanced_parameters.codebook_params.codebook is not None:
-            codebook = Tensor(advanced_parameters.codebook_params.codebook).as_numpy_tensor().data
+        codebook = advanced_parameters.codebook_params.codebook
+        if codebook is not None:
+            # OpenVINO Tensor is not support functions to validate codebook
+            np_codebook = Tensor(codebook).as_numpy_tensor()
             msg = None
-            if codebook.ndim != 1:
+            if np_codebook.ndim != 1:
                 msg = "The codebook must be a 1D array, but a multi-dimensional array is given."
-            if codebook.size < 2:
+            elif np_codebook.size < 2:
                 msg = (
                     "The codebook must contain at least two unique elements,"
                     "but a single-element or empty array is given."
                 )
-            if (codebook[:-1] >= codebook[1:]).any():
+            elif fns.any(np_codebook[:-1] >= np_codebook[1:]):
                 msg = "The codebook must be a sorted 1D array with unique elements, but an unsorted array is given."
             if msg:
                 raise nncf.ValidationError(msg)

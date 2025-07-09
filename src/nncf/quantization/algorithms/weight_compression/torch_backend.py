@@ -488,14 +488,13 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 raise nncf.InternalError(msg)
 
             try:
+                precomputed_compressed_weights = precomputed_compressed_weights or {}
                 # calculates compressed weights and decompression parameters
                 compressed_weight = compress_weight(
                     Tensor(weight),
                     wc_params.reduction_axes,
                     compression_config,
-                    None
-                    if precomputed_compressed_weights is None
-                    else precomputed_compressed_weights.get(wc_params.weight_name),
+                    precomputed_compressed_weights.get(wc_params.weight_name),
                 )
             except nncf.InvalidGroupSizeError as error:
                 first_caught_error = error
