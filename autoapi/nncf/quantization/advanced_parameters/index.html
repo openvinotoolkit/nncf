@@ -552,6 +552,8 @@ precision. Defaults to True.</p></li>
 <li><p><strong>lora_correction_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><em>AdvancedLoraCorrectionParameters</em></a>) – Advanced parameters for Lora Correction algorithm.</p></li>
 <li><p><strong>lora_adapter_rank</strong> (<em>int</em>) – Rank of lora adapters for FQ_LORA format. Defaults to 256.</p></li>
 <li><p><strong>backend_params</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
+<li><p><strong>codebook</strong> (<em>TTensor</em>) – The codebook (LUT) for the weight compression.
+Applicable for vector quantization. Must be a numpy array or ov Tensor.</p></li>
 </ul>
 </dd>
 </dl>

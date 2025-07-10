@@ -241,6 +241,9 @@ Classes
    :type lora_adapter_rank: int
    :param backend_params: Backend-specific parameters.
    :type backend_params: dict[str, Any]
+   :param codebook: The codebook (LUT) for the weight compression.
+       Applicable for vector quantization. Must be a numpy array or ov Tensor.
+   :type codebook: TTensor
 
 
 .. py:class:: AdvancedAccuracyRestorerParameters
