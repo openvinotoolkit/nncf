@@ -817,7 +817,13 @@ def _is_embedding(node: ov.Node) -> bool:
     allowed_types_list = ["f16", "f32", "f64"]
     const_port_id = 0
     input_tensor = node.input_value(const_port_id)
-    if input_tensor.get_element_type().get_type_name() in allowed_types_list:
+    input_type = input_tensor.get_element_type().get_type_name()
+
+    # TODO(aanuf): Implement a pattern based check for embedding.
+    if node.friendly_name.endswith("nncf_codebook"):
+        return False
+
+    if input_type in allowed_types_list:
         const_node = get_operation_const_op(node, const_port_id)
         if const_node is not None:
             return True

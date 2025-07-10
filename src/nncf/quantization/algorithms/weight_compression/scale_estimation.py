@@ -18,11 +18,11 @@ from nncf.common.logging.track_progress import track
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
-from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
@@ -97,7 +97,7 @@ class ScaleEstimation:
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> tuple[dict[str, Tensor], dict[str, Tensor]]:
+    ) -> dict[str, CompressedWeight]:
         """
         Estimates better scale for the int4 nodes in the model.
         Minimizes per-group difference between floating point MatMul and
@@ -117,7 +117,7 @@ class ScaleEstimation:
         self._backend_entity = backend_entity
         if self._backend_entity is None:
             self._set_backend_entity(model)
-        scales, zero_points = dict(), dict()
+        res = dict()
 
         for wp in track(all_weight_params, description="Applying Scale Estimation"):
             weight_name = wp.weight_name
@@ -125,7 +125,7 @@ class ScaleEstimation:
             config = wp.compression_config
 
             if config.num_bits != 4 or node_name not in statistics:
-                scales[weight_name] = None
+                res[weight_name] = CompressedWeight()
                 continue
 
             stats = statistics[node_name]
@@ -137,7 +137,7 @@ class ScaleEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
+            scale, zero_point = self.calculate_quantization_params(
                 stats,
                 weight,
                 wp.reduction_axes,
@@ -147,8 +147,9 @@ class ScaleEstimation:
                 self._scale_steps,
                 self._weight_penalty,
             )
+            res[weight_name] = CompressedWeight(None, scale, zero_point, None)
 
-        return scales, zero_points
+        return res
 
     @staticmethod
     def calculate_quantization_params(
@@ -201,7 +202,7 @@ class ScaleEstimation:
         cur_config.group_size = group_size
 
         original_weight = fns.zeros_like(weight) + weight
-        if config.mode == CompressWeightsMode.NF4:
+        if not config.is_integer:
             q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
                 original_weight, cur_config, reduction_axis, return_compressed_weight=True
             )
@@ -250,7 +251,7 @@ class ScaleEstimation:
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
-            if config.mode == CompressWeightsMode.NF4:
+            if not config.is_integer:
                 out = float_quantize_dequantize_weight(
                     original_weight,
                     config,
@@ -288,8 +289,8 @@ class ScaleEstimation:
             result_scale = near_to_ideal_scale
 
             if i < initial_steps - 1:
-                if config.mode == CompressWeightsMode.NF4:
-                    out, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
+                if not config.is_integer:
+                    out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
                 else:
                     out, _, _ = do_integer_quantization(
                         original_weight,
@@ -306,8 +307,8 @@ class ScaleEstimation:
             factor = 1.0 - 0.05 * scale_step
             scaled_scale = factor * scale
 
-            if config.mode == CompressWeightsMode.NF4:
-                out, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
+            if not config.is_integer:
+                out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
             else:
                 out, _, _ = do_integer_quantization(
                     original_weight,
@@ -322,7 +323,7 @@ class ScaleEstimation:
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
-            if config.mode == CompressWeightsMode.NF4:
+            if not config.is_integer:
                 out = float_quantize_dequantize_weight(original_weight, config, precomputed_scale=near_to_ideal_scale)
             else:
                 out = integer_quantize_dequantize_weight(

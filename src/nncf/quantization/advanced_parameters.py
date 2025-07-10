@@ -29,6 +29,8 @@ from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
+TTensor = Any
+
 
 @api(canonical_alias="nncf.OverflowFix")
 class OverflowFix(StrEnum):
@@ -393,6 +395,9 @@ class AdvancedCompressionParameters:
     :type lora_correction_params: AdvancedLoraCorrectionParameters
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
+    :param codebook: The codebook (LUT) for the weight compression.
+        Applicable for vector quantization. Must be a numpy array or ov Tensor.
+    :type codebook: TTensor
     """
 
     statistics_path: Optional[str] = None
@@ -406,6 +411,7 @@ class AdvancedCompressionParameters:
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
+    codebook: Optional[TTensor] = None
 
 
 @api()
