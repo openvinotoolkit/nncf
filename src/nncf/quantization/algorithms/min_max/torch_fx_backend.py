@@ -192,12 +192,16 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         channel_axis: int,
         parameters: FakeQuantizeParameters,
-        target_type: TargetType,
     ) -> FakeQuantize:
         per_channel = quantizer_config.per_channel
         dtype = None
         if isinstance(quantizer_config, ExtendedQuantizerConfig):
             dtype = quantizer_config.dest_dtype
+
+            if dtype not in [TensorDataType.int8, TensorDataType.uint8]:
+                msg = f"Quantization configurations with dest_dtype=={dtype} are not supported."
+                raise nncf.ParameterNotSupportedError(msg)
+
         elif quantizer_config.mode != QuantizationScheme.SYMMETRIC:
             dtype = TensorDataType.uint8
         else:
@@ -281,7 +285,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             quantizer_config,
             channel_axis,
             parameters,
-            target_point.target_type,
         )
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
         return FXApplyTransformationCommand(transformation)
@@ -299,7 +302,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             quantizer_config,
             channel_axis,
             parameters,
-            target_points[0].target_type,
         )
 
         transformations = []

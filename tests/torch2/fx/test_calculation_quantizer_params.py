@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 import torch
 
-from nncf.common.graph.transformations.commands import TargetType
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
@@ -24,6 +24,7 @@ from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorSt
 from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
 from nncf.experimental.quantization.structs import IntDtype
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
+from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -414,12 +415,7 @@ def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig):
     fq_params = calculate_quantizer_parameters(case_to_test.stat, qconfig, case_to_test.quant_group, half_range=False)
 
     ch_axis = 1 if case_to_test.per_channel and case_to_test.quant_group == QuantizerGroup.WEIGHTS else 0
-    target_type = (
-        TargetType.OPERATION_WITH_WEIGHTS
-        if case_to_test.quant_group == QuantizerGroup.WEIGHTS
-        else TargetType.PRE_LAYER_OPERATION
-    )
-    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, ch_axis, fq_params, target_type)
+    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, ch_axis, fq_params)
 
     assert quantizer.ch_axis == ch_axis
 
@@ -436,3 +432,27 @@ def _check_q_min_q_max(quantizer, signed, narrow_range):
 
     assert quantizer.quant_min == ref_quant_min
     assert quantizer.quant_max == ref_quant_max
+
+
+@pytest.mark.parametrize(
+    "dest_dtype",
+    [
+        TensorDataType.float16,
+        TensorDataType.bfloat16,
+        TensorDataType.float32,
+        TensorDataType.float64,
+        TensorDataType.f8e4m3,
+        TensorDataType.f8e5m2,
+        TensorDataType.nf4,
+        TensorDataType.int32,
+        TensorDataType.int64,
+        TensorDataType.uint4,
+        TensorDataType.int4,
+        None,
+    ],
+)
+def test_extended_q_config_non_supported_dest_dtype(dest_dtype):
+    qconfig = ExtendedQuantizerConfig(dest_dtype=dest_dtype)
+    params = FakeQuantizeParameters(-1.0, 1.0, -1.0, 1.0, 255)
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        FXMinMaxAlgoBackend._create_quantizer(quantizer_config=qconfig, channel_axis=1, parameters=params)

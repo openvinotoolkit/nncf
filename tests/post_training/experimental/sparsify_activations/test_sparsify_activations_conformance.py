@@ -58,7 +58,6 @@ def test_sparsify_activations(
         batch_size,
         run_fp32_backend,
         run_torch_cuda_backend,
-        False,  # Do not run with X86Quantizers
         subset_size,
         run_benchmark_app,
         capsys,

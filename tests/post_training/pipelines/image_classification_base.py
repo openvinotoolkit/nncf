@@ -27,8 +27,6 @@ from sklearn.metrics import accuracy_score
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
-from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
-from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 from torchvision import datasets
 
 import nncf
@@ -195,16 +193,12 @@ class ImageClassificationBase(PTQTestPipeline):
 
         quantizer = self._build_quantizer()
 
-        if self.backend in [BackendType.OV_QUANTIZER_NNCF, BackendType.X86_QUANTIZER_NNCF]:
+        if self.backend in [BackendType.OV_QUANTIZER_NNCF]:
             self._compress_nncf_pt2e(quantizer)
         else:
             self._compress_torch_ao(quantizer)
 
     def _build_quantizer(self) -> TorchAOQuantizer:
-        if self.backend in [BackendType.X86_QUANTIZER_AO, BackendType.X86_QUANTIZER_NNCF]:
-            quantizer = X86InductorQuantizer()
-            quantizer.set_global(get_default_x86_inductor_quantization_config())
-            return quantizer
         quantizer_kwargs = {}
         for key in (
             "mode",

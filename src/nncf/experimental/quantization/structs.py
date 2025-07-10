@@ -11,7 +11,6 @@
 
 from typing import Any, Literal, Optional
 
-import nncf
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
@@ -48,9 +47,6 @@ class ExtendedQuantizerConfig(QuantizerConfig):
         :param dest_dtype: Target integer data type for quantized values.
         """
         super().__init__(num_bits, mode, signedness_to_force, per_channel, narrow_range)
-        if dest_dtype not in [TensorDataType.int8, TensorDataType.uint8]:
-            msg = f"Quantization configurations with dest_dtype=={dest_dtype} are not supported."
-            raise nncf.ParameterNotSupportedError(msg)
         self.dest_dtype = dest_dtype
 
     def __str__(self) -> str:
