@@ -39,6 +39,7 @@ from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -46,6 +47,8 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
@@ -179,6 +182,24 @@ def check_user_compression_configuration(
             ]
         )
         ranks = [advanced_parameters.lora_adapter_rank, advanced_parameters.lora_correction_params.adapter_rank]
+
+        codebook = advanced_parameters.codebook
+        if codebook is not None:
+            # OpenVINO Tensor is not support functions to validate codebook
+            np_codebook = Tensor(codebook).as_numpy_tensor()
+            msg = None
+            if np_codebook.ndim != 1:
+                msg = "The codebook must be a 1D array, but a multi-dimensional array is given."
+            elif np_codebook.size < 2:
+                msg = (
+                    "The codebook must contain at least two unique elements,"
+                    "but a single-element or empty array is given."
+                )
+            elif fns.any(np_codebook[:-1] >= np_codebook[1:]):
+                msg = "The codebook must be a sorted 1D array with unique elements, but an unsorted array is given."
+            if msg:
+                raise nncf.ValidationError(msg)
+
     for size in values_to_check:
         if size <= 0:
             msg = f"The subset_size value should be positive, but subset_size={size} is given."
@@ -205,6 +226,10 @@ def check_user_compression_configuration(
         CompressionFormat.FQ_LORA_NLS,
     ]:
         msg = "LoRA Correction algorithm is not compatible with FQ, FQ_LORA and FQ_LORA_NLS compression formats."
+        raise nncf.ValidationError(msg)
+
+    if mode == CompressWeightsMode.CODEBOOK and (advanced_parameters is None or advanced_parameters.codebook is None):
+        msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
 
 
@@ -293,7 +318,7 @@ class WeightCompression(Algorithm):
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
 
-        primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
+        primary_config = self._get_primary_config()
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
@@ -429,6 +454,20 @@ class WeightCompression(Algorithm):
 
         return ratio_defining_params
 
+    def _get_primary_config(self):
+        codebook_values = None
+
+        if self._mode == CompressWeightsMode.CB4_F8E4M3:
+            codebook_values = Tensor(CB4_QUANTILES)
+        elif self._mode == CompressWeightsMode.CODEBOOK:
+            codebook_values = Tensor(self._advanced_parameters.codebook)
+
+        return WeightCompressionConfig(
+            mode=self._mode,
+            group_size=self._group_size,
+            codebook_values=codebook_values,
+        )
+
     def _set_weight_compression_config(
         self,
         ratio_defining_params: list[WeightCompressionParameters],
@@ -445,7 +484,7 @@ class WeightCompression(Algorithm):
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
         """
-        primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
+        primary_config = self._get_primary_config()
         if self._ratio == 1:
             for weight_param in ratio_defining_params:
                 weight_param.compression_config = primary_config
@@ -653,13 +692,13 @@ class WeightCompression(Algorithm):
             # del is used to prematurely mark non-necessary data as free for garbage collection
             del self.awq_algo
 
-        scales = {}
-        zero_points = {}
+        precomputed_compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
+
         if self._gptq:
             del statistics
-            model, scales, zero_points = self._gptq_algo.apply(
+            model, precomputed_compressed_weights = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
                 dataset=dataset,
@@ -668,7 +707,7 @@ class WeightCompression(Algorithm):
             )
         else:
             if self._scale_estimation:
-                scales, zero_points = self._scale_estimation_algo.apply(
+                precomputed_compressed_weights = self._scale_estimation_algo.apply(
                     model=model,
                     graph=graph,
                     all_weight_params=all_weight_params,
@@ -691,8 +730,7 @@ class WeightCompression(Algorithm):
             model,
             graph,
             track(all_weight_params, description=description, weights=all_weight_sizes),
-            scales,
-            zero_points,
+            precomputed_compressed_weights,
             lora_correction_algo,
             self._compression_format,
             self._advanced_parameters,
