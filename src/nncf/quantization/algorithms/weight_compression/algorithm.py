@@ -602,7 +602,7 @@ class WeightCompression(Algorithm):
                     "\nConsider setting group_size_fallback_mode to ADJUST to allow automatic adjustment "
                     "to smaller group size values when needed."
                 )
-            nncf_logger.warning(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
+            nncf_logger.info(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
 
         return valid_weight_params, group_size_values
 

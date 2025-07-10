@@ -374,10 +374,10 @@ class TemplateWeightCompression(ABC):
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
         [
             (32, nncf.GroupSizeFallbackMode.NONE, None, "exception"),
-            (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "warn_cant_apply"),
+            (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_apply"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
-            (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_cant_apply_with_adjust_suggestion"),
-            (32, None, None, "warn_cant_apply_with_adjust_suggestion"),
+            (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "info_cant_apply_with_adjust_suggestion"),
+            (32, None, None, "info_cant_apply_with_adjust_suggestion"),
         ],
     )
     def test_error_message_for_invalid_group_size(
@@ -422,21 +422,24 @@ class TemplateWeightCompression(ABC):
                 compress_weights(**kwargs)
 
             assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
-        elif expected_outcome.startswith("warn_cant_apply"):
-            with patch.object(nncf_logger, "warning") as mock_warning:
-                compress_weights(**kwargs)
-            warning_messages = [args[0] for args, _ in mock_warning.call_args_list]
-            warn_msg = "Group-wise quantization can't be applied to some nodes."
-            assert any(warn_msg in msg for msg in warning_messages)
-            if expected_outcome == "warn_cant_apply_with_adjust_suggestion":
-                warn_msg = "Consider setting group_size_fallback_mode to ADJUST"
-                assert any(warn_msg in msg for msg in warning_messages)
-        elif expected_outcome == "info_adjusted_group_size":
+        else:
             with patch.object(nncf_logger, "info") as mock_info:
                 compress_weights(**kwargs)
             info_messages = [args[0] for args, _ in mock_info.call_args_list]
-            info_msg = f"Some nodes can't be quantized with the specified group size ({group_size})"
-            assert any(info_msg in msg for msg in info_messages)
+
+            expected_info_messages = []
+            if expected_outcome.startswith("info_cant_apply"):
+                expected_info_messages.append("Group-wise quantization can't be applied to some nodes.")
+                if expected_outcome == "info_cant_apply_with_adjust_suggestion":
+                    expected_info_messages.append("Consider setting group_size_fallback_mode to ADJUST")
+            elif expected_outcome == "info_adjusted_group_size":
+                expected_info_messages.append(
+                    f"Some nodes can't be quantized with the specified group size ({group_size})"
+                )
+            else:
+                exc_msg = "Unexpected expected_outcome value"
+                raise Exception(exc_msg)
+            assert [any(exp_info_msg in msg for msg in info_messages) for exp_info_msg in expected_info_messages]
 
     @pytest.mark.parametrize(
         [
