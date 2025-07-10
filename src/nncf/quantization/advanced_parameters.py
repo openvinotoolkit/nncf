@@ -369,6 +369,22 @@ class AdvancedCompressionParameters:
 
     :param statistics_path: Directory path to dump statistics.
     :type statistics_path: str
+    :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
+    :type lora_adapter_rank: int
+    :param enable_flexible_group_size: Whether to enable flexible group size searching. When enabled, each weight
+    for which the channel size is not divisible by the general group size value will be compressed to a newly
+    calculated group size. The new group size value is the maximal power of two (i.e., 2^k) such that:
+        - channel size is divisible by it;
+        - it is less than the originally specified group size value;
+        - it is greater than or equal to `min_flexible_group_size`.
+
+    If it's not possible to find a value satisfying these requirements, such weight is compressed to the backup
+    precision. If ratio < 1.0 and some weights have to be compressed to the backup precision because of group size
+    issues, then these weights won't contribute to the ratio of backup mode group.
+    :type enable_flexible_group_size: bool
+    :param min_flexible_group_size: Minimum group size for flexible group size searching. Defaults to 16. The reason
+        behind this argument is to avoid too small group size values, which may lead to performance issues.
+    :type min_flexible_group_size: int
     :param awq_params: Advanced parameters for AWQ algorithm.
     :type awq_params: AdvancedAWQParameters
     :param scale_estimation_params: Advanced parameters for Scale Estimation algorithm.
@@ -377,8 +393,6 @@ class AdvancedCompressionParameters:
     :type gptq_params: AdvancedGPTQParameters
     :param lora_correction_params: Advanced parameters for Lora Correction algorithm.
     :type lora_correction_params: AdvancedLoraCorrectionParameters
-    :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
-    :type lora_adapter_rank: int
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
     :param codebook: The codebook (LUT) for the weight compression.
@@ -387,13 +401,15 @@ class AdvancedCompressionParameters:
     """
 
     statistics_path: Optional[str] = None
+    lora_adapter_rank: int = 256
+    enable_flexible_group_size: bool = False
+    min_flexible_group_size: int = 16
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
     scale_estimation_params: AdvancedScaleEstimationParameters = field(
         default_factory=AdvancedScaleEstimationParameters
     )
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
-    lora_adapter_rank: int = 256
     backend_params: dict[str, Any] = field(default_factory=dict)
     codebook: Optional[TTensor] = None
 

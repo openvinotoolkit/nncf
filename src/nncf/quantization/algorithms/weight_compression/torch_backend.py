@@ -46,7 +46,6 @@ from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBacke
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
@@ -469,8 +468,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         transformation_layout = TransformationLayout()
         is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
-        invalid_node_names = []
-        first_caught_error = None
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [
@@ -487,19 +484,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
                 raise nncf.InternalError(msg)
 
-            try:
-                precomputed_compressed_weights = precomputed_compressed_weights or {}
-                # calculates compressed weights and decompression parameters
-                compressed_weight = compress_weight(
-                    Tensor(weight),
-                    wc_params.reduction_axes,
-                    compression_config,
-                    precomputed_compressed_weights.get(wc_params.weight_name),
-                )
-            except nncf.InvalidGroupSizeError as error:
-                first_caught_error = error
-                invalid_node_names.append(wc_params.node_with_weight.node_name)
-                continue
+            precomputed_compressed_weights = precomputed_compressed_weights or {}
+            # calculates compressed weights and decompression parameters
+            compressed_weight = compress_weight(
+                Tensor(weight),
+                wc_params.reduction_axes,
+                compression_config,
+                precomputed_compressed_weights.get(wc_params.weight_name),
+            )
 
             if compression_format == CompressionFormat.DQ:
                 command = self.get_dq_insertion_command(compressed_weight, wc_params, model, graph, weight_node)
@@ -510,8 +502,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 )
             transformation_layout.register(command)
 
-        if first_caught_error:
-            handle_invalid_group_size_error(first_caught_error, invalid_node_names)
         # To have FQ's with requires_grad=True only
         model.requires_grad_(False)
 
