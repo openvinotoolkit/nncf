@@ -355,7 +355,11 @@ def test_calculate_scale_linear():
     assert np.all(np.isclose(ref_H, H.data))
 
     wc_params = WeightCompressionParameters(
-        weight_name="self.weight", node_with_weight=nodes[1], weight_port_id=1, num_weights=640, reduction_axes=(1,)
+        weight_name="self.weight",
+        node_with_weight=nodes[1],
+        weight_port_id=1,
+        weight_shape=weights.shape,
+        reduction_axes=(1,),
     )
     wc_params.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=16)
 

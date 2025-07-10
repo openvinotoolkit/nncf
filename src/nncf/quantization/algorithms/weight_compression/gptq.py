@@ -25,6 +25,7 @@ from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
@@ -83,7 +84,7 @@ class GPTQ:
         weight_compression_parameters: list[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> tuple[TModel, dict[str, Tensor], dict[str, Tensor]]:
+    ) -> tuple[TModel, dict[str, CompressedWeight]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
 
@@ -99,8 +100,7 @@ class GPTQ:
         if self._backend_entity is None:
             self._set_backend_entity(model)
 
-        scales = {}
-        zero_points = {}
+        res = {}
 
         target_nodes = []
         target_nodes_wc_params_map = {}
@@ -123,10 +123,9 @@ class GPTQ:
             _, input_tensors = next(iter(inputs.items()))
             hessian = self._calculate_hessian(node, input_tensors)
             scale, zero_point = self._quantize_weights(model, graph, wc_params, hessian, input_tensors)
-            scales[wc_params.weight_name] = scale
-            zero_points[wc_params.weight_name] = zero_point
+            res[wc_params.weight_name] = CompressedWeight(None, scale, zero_point, None)
 
-        return model, scales, zero_points
+        return model, res
 
     def get_statistic_points(
         self,
@@ -235,7 +234,9 @@ class GPTQ:
             else weight_tensor.shape[1]
         )
         reduction_axes = wc_params.reduction_axes
-        block_compression_config = WeightCompressionConfig(mode=wc_params.compression_config.mode)
+        block_compression_config = WeightCompressionConfig(
+            mode=wc_params.compression_config.mode, codebook_values=wc_params.compression_config.codebook_values
+        )
 
         damp = self._damp_percent * fns.mean(fns.diag(hessian))
         diag_indices = fns.arange(columns, backend=hessian.backend, device=hessian.device)
@@ -260,7 +261,7 @@ class GPTQ:
                 hessian_diag_val = hessian_inv_block[i, i]
 
                 if (i1 + i) % group_size == 0:
-                    if block_compression_config.mode == CompressWeightsMode.NF4:
+                    if not block_compression_config.is_integer:
                         scale = calculate_float_quantization_params(
                             weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
                         )
@@ -284,7 +285,7 @@ class GPTQ:
                         scales.append(scale)
                         zero_points.append(zero_point)
 
-                if block_compression_config.mode == CompressWeightsMode.NF4:
+                if not block_compression_config.is_integer:
                     quantized_col = float_quantize_dequantize_weight(
                         fns.unsqueeze(weight_col, 1),
                         block_compression_config,

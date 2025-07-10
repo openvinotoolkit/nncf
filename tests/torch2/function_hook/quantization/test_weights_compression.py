@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from collections import defaultdict
+
 import pytest
 import torch
 import torch.nn as nn
@@ -71,6 +73,24 @@ class SequentialMatmulModel(nn.Module):
 
     def get_weight_names_in_exec_order(self):
         return [f"layers:{i}:weight" for i in range(len(self.main_values))]
+
+
+class DifferentChannelSizeMatmulModel(nn.Module):
+    def __init__(self, channel_sizes: list[int]):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        self.channel_sizes = channel_sizes
+
+        for i in range(1, len(channel_sizes) + 1):
+            prev_channel_size = channel_sizes[i - 1]
+            channel_size = channel_sizes[min(i, len(channel_sizes) - 1)]
+            layer = nn.Linear(prev_channel_size, channel_size, bias=False)
+            self.layers.append(layer)
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 class MatMulModel(torch.nn.Module):
@@ -462,6 +482,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return AWQLinearModel()
 
     @staticmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> torch.nn.Module:
+        return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes)
+
+    @staticmethod
     def get_awq_act_model(with_multiply, n_layers):
         return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
 
@@ -537,7 +561,15 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     def get_num_int4_nodes(model: torch.nn.Module) -> int:
         num = 0
         for op in get_hook_storage(model).modules():
-            num += isinstance(op, INT4SymmetricWeightsDecompressor)
+            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+        return num
+
+    @staticmethod
+    def get_num_int4_group_sizes(model: torch.nn.Module) -> dict[int, int]:
+        num = defaultdict(int)
+        for op in get_hook_storage(model).modules():
+            if isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor)):
+                num[op.compressed_weight_shape[-1]] += 1
         return num
 
     @pytest.fixture(params=INT4_MODES)

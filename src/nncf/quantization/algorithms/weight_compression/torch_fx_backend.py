@@ -41,8 +41,8 @@ from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBacke
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
@@ -189,15 +189,12 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: torch.fx.GraphModule,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: dict[str, Tensor] = None,
-        precomputed_zero_points: dict[str, Tensor] = None,
-        lora_correction_algo: LoraCorrectionAlgorithm = None,
+        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> torch.fx.GraphModule:
         transformation_layout = TransformationLayout()
-        invalid_node_names = []
-        first_caught_error = None
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [
@@ -212,19 +209,16 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             if weight is None or not isinstance(weight, Tensor):
                 msg = f"Could not find a nncf.tensor in the model by name {weight_name}."
                 raise nncf.InternalError(msg)
-            try:
-                # calculates compressed weights and decompression parameters
-                compressed_weight = compress_weight(
-                    weight,
-                    wc_params.reduction_axes,
-                    compression_config,
-                    None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
-                    None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
-                )
-            except nncf.InvalidGroupSizeError as error:
-                first_caught_error = error
-                invalid_node_names.append(wc_params.node_with_weight.node_name)
-                continue
+
+            # calculates compressed weights and decompression parameters
+            compressed_weight = compress_weight(
+                weight,
+                wc_params.reduction_axes,
+                compression_config,
+                None
+                if precomputed_compressed_weights is None
+                else precomputed_compressed_weights.get(wc_params.weight_name),
+            )
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
@@ -274,8 +268,6 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     )
                 )
             )
-        if first_caught_error:
-            handle_invalid_group_size_error(first_caught_error, invalid_node_names)
         # apply transformations
         transformed_model = FXModelTransformer(model).transform(transformation_layout)
 

@@ -28,6 +28,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
@@ -148,8 +149,7 @@ class WeightCompressionAlgoBackend(ABC):
         model: TModel,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: dict[str, Tensor] = None,
-        precomputed_zero_points: dict[str, Tensor] = None,
+        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
@@ -160,8 +160,7 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
         :param weight_compression_parameters: An iterable of weight compression parameters.
-        :param precomputed_scales: Precomputed scales for weight compression.
-        :param precomputed_zero_points: Precomputed zero points for weight compression.
+        :param precomputed_compressed_weights: Precomputed scales, zero points, or codebook for weight compression.
         :param lora_correction_algo: An optional algorithm to reduce quantization noise after weight compression by
             using low-rank adapters. This algorithm not only overrides weights with their quantized counterparts but
             also expands the model's execution graph following the Low-Rank Adaptation (LoRA) concept.
