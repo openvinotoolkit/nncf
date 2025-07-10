@@ -367,6 +367,14 @@ class WeightCompression(Algorithm):
     def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
+    def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
+        """
+        Set target ignored scope for the Weight Compression algorithm.
+
+        :param ignored_scope: The ignored scope to set to the Weight Compression algorithm.
+        """
+        self._ignored_scope = ignored_scope
+
     def set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
