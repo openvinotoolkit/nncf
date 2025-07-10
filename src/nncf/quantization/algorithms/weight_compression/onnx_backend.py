@@ -473,13 +473,15 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
 class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):
     @staticmethod
-    def get_awq_patterns():
+    def get_awq_patterns() -> dict[str, Callable]:
         return get_awq_patterns(
             onnx_metatypes.ONNXMatMulMetatype, onnx_metatypes.ONNXMulLayerMetatype, ATOMIC_ACTIVATIONS_OPERATIONS
         )
 
     @staticmethod
-    def scale_insertion_command(source_node, next_nodes, source_node_output_port, scale):
+    def scale_insertion_command(
+        source_node: NNCFNode, next_nodes: list[NNCFNode], source_node_output_port: int, scale: np.ndarray
+    ):
         return ONNXCommandCreator.multiply_insertion_command(
             source_node, next_nodes, source_node_output_port, scale, f"{source_node.node_name}/awq_mul"
         )
