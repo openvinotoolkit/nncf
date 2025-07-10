@@ -279,7 +279,6 @@ class WeightCompression(Algorithm):
         self._ratio = ratio
         self._ignored_scope = ignored_scope
         self._backend_entity = None
-        self._model_backend = None
         self._algorithm_key = f"CW_{hash(self)}"
         self._statistics = {}
         self._all_layers = all_layers
@@ -347,25 +346,25 @@ class WeightCompression(Algorithm):
 
         :param model: Backend-specific input model.
         """
-        self._model_backend = get_backend(model)
-        if self._model_backend == BackendType.OPENVINO:
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model)
-        elif self._model_backend == BackendType.TORCH:
+        elif model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
-        elif self._model_backend == BackendType.TORCH_FX:
+        elif model_backend == BackendType.TORCH_FX:
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
-        elif self._model_backend == BackendType.ONNX:
+        elif model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
 
             self._backend_entity = ONNXWeightCompressionAlgoBackend(model)
         else:
-            msg = f"Cannot return backend-specific entity because {self._model_backend.value} is not supported!"
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
 
     def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> list[NNCFNode]:
