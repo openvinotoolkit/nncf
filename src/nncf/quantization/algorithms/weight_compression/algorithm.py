@@ -36,6 +36,7 @@ from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
@@ -234,6 +235,14 @@ def check_user_compression_configuration(
         msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
 
+    if advanced_parameters and not isinstance(advanced_parameters.group_size_fallback_mode, GroupSizeFallbackMode):
+        msg = (
+            f"Unsupported group size fallback mode: {advanced_parameters.group_size_fallback_mode.value}. "
+            f"Supported modes are: {GroupSizeFallbackMode.NONE.value}, {GroupSizeFallbackMode.IGNORE.value}, "
+            f"{GroupSizeFallbackMode.ADJUST.value}."
+        )
+        raise nncf.ValidationError(msg)
+
 
 class WeightCompression(Algorithm):
     """
@@ -324,8 +333,8 @@ class WeightCompression(Algorithm):
         self._mixed_precision_algo = criterion_cls(self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
 
-        self._enable_flexible_group_size = self._advanced_parameters.enable_flexible_group_size
-        self._min_flexible_group_size = self._advanced_parameters.min_flexible_group_size
+        self._group_size_fallback_mode = self._advanced_parameters.group_size_fallback_mode
+        self._min_adjusted_group_size = self._advanced_parameters.min_adjusted_group_size
 
         if self._awq:
             awq_params = self._advanced_parameters.awq_params
@@ -523,71 +532,79 @@ class WeightCompression(Algorithm):
             if reduction_channel_size % w_params.compression_config.group_size != 0:
                 failed_nodes.append((w_params.node_with_weight.node_name, reduction_channel_size))
         if len(failed_nodes) > 0:
-            names = ",".join(f'"{name}"' for name, _ in failed_nodes)
+            names = "\n\t".join(f'"{name}" (channel size: {channel_size})' for name, channel_size in failed_nodes)
             msg = (
-                "Failed to apply group-wise quantization with "
-                f"group size value {self._group_size} and channel size value {failed_nodes[0][1]}.\n"
+                f"Failed to apply group-wise quantization with group size value {self._group_size}.\n"
                 "Ensure that the group size is divisible by the channel size, "
-                "or include this node and others with similar issues in the ignored scope:\n"
-                f"nncf.compress_weight(\n\t..., \n\tignored_scope=IgnoredScope(names=[{names}]\n\t)\n)"
+                "or consider setting `group_size_fallback_mode` to IGNORE or ADJUST. Failed nodes:\n\t" + names
             )
             raise nncf.InvalidGroupSizeError(msg)
 
-    def _get_flexible_group_size_data(
+    def _handle_group_size_fallback(
         self, weight_params: list[WeightCompressionParameters]
-    ) -> list[tuple[WeightCompressionParameters, int]]:
+    ) -> tuple[list[WeightCompressionParameters], dict[str, int]]:
         """
-        Compute flexible group size values.
-        :param weight_params: Weight parameters for which to compute flexible group size.
-        :return: A list of tuples, where each tuple pair contains a WeightCompressionParameters object and the
-            group size values associated with it. If group size can't be assigned to some weight parameter
-            it won't be included in the result.
+        Handles the group size fallback logic for weight compression:
+            - If fallback mode is NONE or group size is -1, returns the weight parameters as is.
+            - If fallback mode is IGNORE, ignores the weights that are not divisible by the group size.
+            - IF fallback mode is ADJUST, adjusts, if possible, the group size for weights that are not divisible by
+                the group size.
         """
-        flexible_group_size_not_found_weight_params = []
-        group_size_data = []
+        if self._group_size_fallback_mode == GroupSizeFallbackMode.NONE or self._group_size == -1:
+            # Return as is
+            group_size_values = {w_params.weight_name: self._group_size for w_params in weight_params}
+            return weight_params, group_size_values
+
+        group_size_values = {}
+        valid_weight_params = []
+        invalid_weight_params = []
+        adjusted_weight_params = []
         for w_params in weight_params:
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
             if reduction_channel_size % self._group_size == 0:
-                # The weight can be compressed with the given group size, nothing else to do
-                group_size_data.append((w_params, self._group_size))
+                valid_weight_params.append(w_params)
+                group_size_values[w_params.weight_name] = self._group_size
                 continue
 
-            # Find the maximal power of two that divides reduction_channel_size
-            flexible_group_size = reduction_channel_size & (~reduction_channel_size + 1)
+            if self._group_size_fallback_mode == GroupSizeFallbackMode.ADJUST:
+                # The maximal power of two that divides reduction_channel_size
+                adjusted_group_size = reduction_channel_size & (~reduction_channel_size + 1)
+                if adjusted_group_size >= self._min_adjusted_group_size:
+                    valid_weight_params.append(w_params)
+                    group_size_values[w_params.weight_name] = adjusted_group_size
+                    adjusted_weight_params.append((w_params, adjusted_group_size))
+                    continue
 
-            if flexible_group_size < self._min_flexible_group_size:
-                flexible_group_size_not_found_weight_params.append(w_params)
-            else:
-                group_size_data.append((w_params, flexible_group_size))
+            invalid_weight_params.append(w_params)
 
-        node_strings = []
-        for i, (w_params, new_group_size) in enumerate(group_size_data):
-            if new_group_size == self._group_size:
-                continue
-            weight_shape = w_params.weight_shape
-            reduction_channel_size, _ = get_reduction_channel_size(weight_shape, w_params.reduction_axes)
-            node_strings.append(
-                f"{w_params.node_with_weight.node_name} "
-                f"(weight shape: {weight_shape}, adjusted group size: {new_group_size})"
-            )
-        if len(node_strings) > 0:
+        if len(adjusted_weight_params) > 0:
+            # Adjusted group size value for some nodes
+            log_lines = [
+                f"{w.node_with_weight.node_name} (weight shape: {w.weight_shape}, adjusted group size: {adjusted_gs})"
+                for w, adjusted_gs in adjusted_weight_params
+            ]
             nncf_logger.info(
-                f"Wasn't able to set the specified group size value ({self._group_size}) to some nodes. These nodes "
-                f"will have an adjusted group size value:\n\t" + "\n\t".join(node_strings)
+                f"Some nodes can't be quantized with the specified group size ({self._group_size}). "
+                "Adjusted group size values will be used:\n\t" + "\n\t".join(log_lines)
             )
 
-        if len(flexible_group_size_not_found_weight_params) > 0:
-            node_strings = [""] * len(flexible_group_size_not_found_weight_params)
-            for i, w_params in enumerate(flexible_group_size_not_found_weight_params):
-                weight_shape = w_params.weight_shape
-                reduction_channel_size, _ = get_reduction_channel_size(weight_shape, w_params.reduction_axes)
-                node_strings[i] = f"{w_params.node_with_weight.node_name} (weight shape: {weight_shape})"
-            nncf_logger.warning(
-                "Large enough flexible group size value cannot be found for some nodes. They will be compressed "
-                "according to the backup mode. Nodes:\n\t" + "\n\t".join(node_strings)
+        if len(invalid_weight_params) > 0:
+            # Either group size fallback mode is IGNORE or valid adjusted group size wasn't found
+            log_lines = [
+                f"{w.node_with_weight.node_name} (weight shape: {w.weight_shape})" for w in invalid_weight_params
+            ]
+            log_message = (
+                "Group-wise quantization can't be applied to some nodes. They will be quantized using the "
+                f"{self._backup_mode.value} fallback mode."
             )
+            if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
+                log_message += (
+                    "\nConsider setting group_size_fallback_mode to ADJUST to allow automatic adjustment "
+                    "to smaller group size values when needed."
+                )
+            nncf_logger.warning(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
 
-        return group_size_data
+        return valid_weight_params, group_size_values
 
     @staticmethod
     def _proportion_str(num_weights_list: list[int], total_num_weights: int, total_num_params: int) -> str:
@@ -757,14 +774,7 @@ class WeightCompression(Algorithm):
                 weight_names.add(weight_name)
 
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
-        if self._enable_flexible_group_size and self._group_size != -1:
-            # Compute flexible group size values if enabled
-            flexible_group_size_data = self._get_flexible_group_size_data(ratio_defining_params)
-            group_size_values = {w_param.weight_name: group_size for w_param, group_size in flexible_group_size_data}
-            # Select a subset of ratio_defining_params that can be compressed with some group size
-            ratio_defining_params = [w_param for w_param, _ in flexible_group_size_data]
-        else:
-            group_size_values = {w_param.weight_name: self._group_size for w_param in ratio_defining_params}
+        ratio_defining_params, group_size_values = self._handle_group_size_fallback(ratio_defining_params)
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
         ignored_scope_weight_statistics = self._get_ignored_scope_weight_statistics(model, graph)
         nncf_logger.info(
