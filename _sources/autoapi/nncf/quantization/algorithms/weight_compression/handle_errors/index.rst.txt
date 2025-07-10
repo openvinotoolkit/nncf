@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.quantization.algorithms.weight_compression.handle_errors`
-=======================================================================
-
-.. py:module:: nncf.quantization.algorithms.weight_compression.handle_errors
-
-

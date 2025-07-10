@@ -546,11 +546,35 @@ precision. Defaults to True.</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>statistics_path</strong> (<em>str</em>) – Directory path to dump statistics.</p></li>
+<li><p><strong>lora_adapter_rank</strong> (<em>int</em>) – Rank of lora adapters for FQ_LORA format. Defaults to 256.</p></li>
+<li><p><strong>enable_flexible_group_size</strong> – Whether to enable flexible group size searching. When enabled, each weight</p></li>
+</ul>
+</dd>
+</dl>
+<p>for which the channel size is not divisible by the general group size value will be compressed to a newly
+calculated group size. The new group size value is the maximal power of two (i.e., 2^k) such that:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>channel size is divisible by it;</p></li>
+<li><p>it is less than the originally specified group size value;</p></li>
+<li><p>it is greater than or equal to <cite>min_flexible_group_size</cite>.</p></li>
+</ul>
+</div></blockquote>
+<p>If it’s not possible to find a value satisfying these requirements, such weight is compressed to the backup
+precision. If ratio &lt; 1.0 and some weights have to be compressed to the backup precision because of group size
+issues, then these weights won’t contribute to the ratio of backup mode group.
+:type enable_flexible_group_size: bool
+:param min_flexible_group_size: Minimum group size for flexible group size searching. Defaults to 16. The reason</p>
+<blockquote>
+<div><p>behind this argument is to avoid too small group size values, which may lead to performance issues.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
 <li><p><strong>awq_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAWQParameters" title="nncf.quantization.advanced_parameters.AdvancedAWQParameters"><em>AdvancedAWQParameters</em></a>) – Advanced parameters for AWQ algorithm.</p></li>
 <li><p><strong>scale_estimation_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters" title="nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters"><em>AdvancedScaleEstimationParameters</em></a>) – Advanced parameters for Scale Estimation algorithm.</p></li>
 <li><p><strong>gptq_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedGPTQParameters" title="nncf.quantization.advanced_parameters.AdvancedGPTQParameters"><em>AdvancedGPTQParameters</em></a>) – Advanced parameters for GPTQ algorithm.</p></li>
 <li><p><strong>lora_correction_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><em>AdvancedLoraCorrectionParameters</em></a>) – Advanced parameters for Lora Correction algorithm.</p></li>
-<li><p><strong>lora_adapter_rank</strong> (<em>int</em>) – Rank of lora adapters for FQ_LORA format. Defaults to 256.</p></li>
 <li><p><strong>backend_params</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
 <li><p><strong>codebook</strong> (<em>TTensor</em>) – The codebook (LUT) for the weight compression.
 Applicable for vector quantization. Must be a numpy array or ov Tensor.</p></li>
