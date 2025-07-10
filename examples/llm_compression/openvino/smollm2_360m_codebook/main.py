@@ -156,6 +156,7 @@ def custom_codebook_example(model_id: str, compressed_model_id: str) -> list[str
 def main():
     res = default_codebook_example(MODEL_ID, COMPRESSED_MODEL_ID)
     res += custom_codebook_example(MODEL_ID, COMPRESSED_MODEL_ID + "_custom")
+
     return res
 
 
