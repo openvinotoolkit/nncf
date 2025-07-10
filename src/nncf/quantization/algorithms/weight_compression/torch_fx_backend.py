@@ -20,6 +20,7 @@ import nncf.tensor
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -53,6 +54,7 @@ from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
+from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -272,6 +274,10 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = FXModelTransformer(model).transform(transformation_layout)
 
         return transformed_model
+
+    @staticmethod
+    def get_ignored_patterns() -> GraphPattern:
+        return create_rope()
 
 
 class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompressionAlgoBackend):

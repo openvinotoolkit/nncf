@@ -66,6 +66,7 @@ from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
@@ -509,6 +510,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
+
+    @staticmethod
+    def get_ignored_patterns() -> GraphPattern:
+        return create_rope()
 
 
 class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
