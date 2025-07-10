@@ -203,7 +203,7 @@ def fp8_llm_quantization() -> dict[str, float]:
 def codebook_llm_compression() -> list[str]:
     from examples.llm_compression.openvino.smollm2_360m_codebook.main import main as codebook_llm_compression_main
 
-    return codebook_llm_compression_main()
+    return {"answers": codebook_llm_compression_main()}
 
 
 def llm_compression_distillation_qat_with_lora() -> float:
