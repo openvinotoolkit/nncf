@@ -40,7 +40,6 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
-from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
@@ -75,6 +74,7 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import PTLoraNLSSpec
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import SQMultiply
 
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):

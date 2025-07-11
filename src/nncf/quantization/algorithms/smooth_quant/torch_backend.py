@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable
+from typing import Callable
 
 import torch
 
@@ -31,41 +31,11 @@ from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWra
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
-from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-
-
-@COMPRESSION_MODULES.register()
-class SQMultiply(torch.nn.Module, StatefulModuleInterface):
-    SCALE_SHAPE_KEY = "scale_shape"
-
-    def __init__(self, scale_shape: tuple[int, ...]):
-        super().__init__()
-        self._scale_value = CompressionParameter(torch.empty(scale_shape))
-
-    @property
-    def scale(self) -> torch.nn.Parameter:
-        return self._scale_value
-
-    @scale.setter
-    def scale(self, value: torch.tensor):
-        self._scale_value.data = value
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.mul(x, self._scale_value)
-
-    def get_config(self) -> dict[str, Any]:
-        return {self.SCALE_SHAPE_KEY: list(self._scale_value.shape)}
-
-    @classmethod
-    def from_config(cls, state) -> "SQMultiply":
-        return SQMultiply(state[cls.SCALE_SHAPE_KEY])
-
+from nncf.torch.quantization.layers import SQMultiply
 
 PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
 
