@@ -110,6 +110,10 @@ class AWQ(Algorithm):
             from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQAlgoAlgoBackend
 
             self._backend_entity = FXAWQAlgoAlgoBackend()
+        elif model_backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXAWQAlgoAlgoBackend
+
+            self._backend_entity = ONNXAWQAlgoAlgoBackend(model)
         else:
             msg = f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
