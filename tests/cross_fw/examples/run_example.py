@@ -224,9 +224,9 @@ def llm_compression_distillation_qat_with_lora() -> float:
         "--limit=0.2",
     ]
 
-    perplexity_diff_torch, best_ov_perplexity = distillation_qat_with_lora_main(args)
+    best_ov_perplexity = distillation_qat_with_lora_main(args)
 
-    return {"perplexity_diff_torch": perplexity_diff_torch, "best_ov_perplexity": best_ov_perplexity}
+    return {"best_ov_perplexity": best_ov_perplexity}
 
 
 def llm_compression_qat_with_nls() -> float:
