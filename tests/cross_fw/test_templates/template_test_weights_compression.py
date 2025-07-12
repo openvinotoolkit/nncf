@@ -374,10 +374,10 @@ class TemplateWeightCompression(ABC):
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
         [
             (32, nncf.GroupSizeFallbackMode.NONE, None, "exception"),
-            (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_apply"),
+            (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_ignored"),
+            (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_adjust"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
-            (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "info_cant_apply_with_adjust_suggestion"),
-            (32, None, None, "info_cant_apply_with_adjust_suggestion"),
+            (32, None, None, "warn_ignored"),
         ],
     )
     def test_error_message_for_invalid_group_size(
@@ -391,7 +391,8 @@ class TemplateWeightCompression(ABC):
         """
         Verifies that:
             - an exception is raised for an invalid group size
-            - a warning is logged when a flexible group size value cannot be found
+            - a warning message is logged when a node is ignored due to an invalid group size
+            - an info message is logged when an adjustable group size value cannot be found
             - an info message is logged when the group size is adjusted to a valid value
         """
         if algorithm in self.get_not_supported_algorithms():
@@ -422,24 +423,22 @@ class TemplateWeightCompression(ABC):
                 compress_weights(**kwargs)
 
             assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
-        else:
+        elif expected_outcome == "warn_ignored":
+            with patch.object(nncf_logger, "warning") as mock_warning:
+                compress_weights(**kwargs)
+            warning_messages = [args[0] for args, _ in mock_warning.call_args_list]
+            warn_msg = "They will be ignored and kept with original precision."
+            assert any(warn_msg in msg for msg in warning_messages)
+        elif expected_outcome in ["info_adjusted_group_size", "info_cant_adjust"]:
             with patch.object(nncf_logger, "info") as mock_info:
                 compress_weights(**kwargs)
             info_messages = [args[0] for args, _ in mock_info.call_args_list]
-
-            expected_info_messages = []
-            if expected_outcome.startswith("info_cant_apply"):
-                expected_info_messages.append("Group-wise quantization can't be applied to some nodes.")
-                if expected_outcome == "info_cant_apply_with_adjust_suggestion":
-                    expected_info_messages.append("Consider setting group_size_fallback_mode to ADJUST")
-            elif expected_outcome == "info_adjusted_group_size":
-                expected_info_messages.append(
-                    f"Some nodes can't be quantized with the specified group size ({group_size})"
-                )
-            else:
-                exc_msg = "Unexpected expected_outcome value"
-                raise Exception(exc_msg)
-            assert [any(exp_info_msg in msg for msg in info_messages) for exp_info_msg in expected_info_messages]
+            info_msg = (
+                "Adjusted group size values will be used:"
+                if expected_outcome == "info_adjusted_group_size"
+                else "A valid adjusted group size value can't be fount for some nodes."
+            )
+            assert any(info_msg in msg for msg in info_messages)
 
     @pytest.mark.parametrize(
         [
@@ -451,13 +450,14 @@ class TemplateWeightCompression(ABC):
             "ref_num_group_sizes",
         ],
         [
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 0.5, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 2}),
         ],
     )
-    def test_flexible_group_size(
+    def test_group_size_fallback_modes(
         self,
         model_channel_sizes,
         ratio,
@@ -466,12 +466,6 @@ class TemplateWeightCompression(ABC):
         min_adjusted_group_size,
         ref_num_group_sizes,
     ):
-        """
-        Verifies that:
-            - an exception is raised for an invalid group size
-            - a warning is logged when a flexible group size value cannot be found
-            - an info message is logged when the group size is adjusted to a valid value
-        """
         model = self.get_different_channel_size_model(model_channel_sizes)
         input_example = self.to_tensor(np.ones([1, model_channel_sizes[0], model_channel_sizes[0]], dtype=np.float32))
         dataset = Dataset([input_example])
@@ -482,11 +476,12 @@ class TemplateWeightCompression(ABC):
             all_layers=True,
             group_size=group_size,
             dataset=dataset,
-            advanced_parameters=nncf.AdvancedCompressionParameters(
+        )
+        if fallback_mode is not None:
+            kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
                 group_size_fallback_mode=fallback_mode,
                 min_adjusted_group_size=min_adjusted_group_size,
-            ),
-        )
+            )
 
         compress_weights(**kwargs)
 
