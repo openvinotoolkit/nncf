@@ -79,7 +79,7 @@ class FP8Type(StrEnum):
 @api()
 class GroupSizeFallbackMode(StrEnum):
     """
-    Specifies how to handle nodes that do not support the specified group size.
+    Specifies how to handle nodes that do not support the given group size.
 
     :param NONE: Do not apply any group size fallback. If the group size is not supported by the node, an error will
         be raised.
@@ -397,7 +397,7 @@ class AdvancedCompressionParameters:
     :type statistics_path: str
     :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
     :type lora_adapter_rank: int
-    :param group_size_fallback_mode: Specifies how to handle nodes that do not support the specified group size.
+    :param group_size_fallback_mode: Specifies how to handle nodes that do not support the given group size.
     :type group_size_fallback_mode: GroupSizeFallbackMode
     :param min_adjusted_group_size: Minimum group size for adjustable group size searching. Defaults to 16. The reason
         behind this argument is to avoid too small group size values, which may lead to performance issues.

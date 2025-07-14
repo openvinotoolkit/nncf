@@ -436,7 +436,7 @@ class TemplateWeightCompression(ABC):
             info_msg = (
                 "Adjusted group size values will be used:"
                 if expected_outcome == "info_adjusted_group_size"
-                else "A valid adjusted group size value can't be fount for some nodes."
+                else "A valid adjusted group size value can't be found for some nodes."
             )
             assert any(info_msg in msg for msg in info_messages)
 

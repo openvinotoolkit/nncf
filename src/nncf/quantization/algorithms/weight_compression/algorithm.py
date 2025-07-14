@@ -576,7 +576,7 @@ class WeightCompression(Algorithm):
             log_message = (
                 f"Group-wise quantization with group size {self._group_size} can't be applied to some nodes. "
                 "They will be ignored and kept with original precision.\n"
-                "Consider setting group_size_fallback_mode to ADJUST to allow automatic adjustment "
+                "Consider setting group_size_fallback_mode to ADJUST, which enables automatic adjustment "
                 "to smaller group size values."
             )
             nncf_logger.warning(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
@@ -634,7 +634,7 @@ class WeightCompression(Algorithm):
                 f"{w.node_with_weight.node_name} (weight shape: {w.weight_shape})" for w in invalid_weight_params
             ]
             log_message = (
-                "A valid adjusted group size value can't be fount for some nodes. They will be quantized using the "
+                "A valid adjusted group size value can't be found for some nodes. They will be quantized using the "
                 f"{self._backup_mode.value} backup mode."
             )
             nncf_logger.info(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
