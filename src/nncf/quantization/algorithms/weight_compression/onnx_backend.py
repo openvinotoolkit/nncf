@@ -21,6 +21,7 @@ import nncf.tensor.functions as fns
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -43,6 +44,7 @@ from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
 from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.quantization.ignored_patterns import create_rope
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -458,3 +460,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         del self.name_to_node_map[original_matmul.name]
         # Update the node mapping
         self.name_to_node_map[matmul_n_bits.name] = matmul_n_bits
+
+    @staticmethod
+    def get_ignored_patterns() -> GraphPattern:
+        return create_rope()

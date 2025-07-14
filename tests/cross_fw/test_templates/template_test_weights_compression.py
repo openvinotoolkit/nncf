@@ -79,6 +79,10 @@ class TemplateWeightCompression(ABC):
     def get_matmul_model() -> TModel:
         """Returns a backend model for test_data_based_criterion."""
 
+    @abstractmethod
+    def get_RoPE_model() -> TModel:
+        """Returns a backend model for test_rope_weight_compression."""
+
     @pytest.mark.parametrize(
         ("mode", "ref_act_score", "ref_score"),
         (
@@ -320,6 +324,24 @@ class TemplateWeightCompression(ABC):
         )
 
         int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
+        assert int4_num_nodes == int4_ref_num_compressed
+
+    def test_rope_weight_compression(self):
+        model = self.get_RoPE_model()
+        sz = 8
+        n_samples = 10
+
+        dataset = Dataset([self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)])
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+        )
+
+        int4_ref_num_compressed = 0
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed
 

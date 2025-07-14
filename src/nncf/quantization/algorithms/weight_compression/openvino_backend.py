@@ -17,6 +17,7 @@ import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -41,6 +42,7 @@ from nncf.openvino.graph.transformations.command_creation import OVCommandCreato
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.optimized_functions import clear_ov_model_cache
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
+from nncf.openvino.quantization.ignored_patterns import create_rope
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
@@ -366,6 +368,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         return filter_func
+
+    @staticmethod
+    def get_ignored_patterns() -> GraphPattern:
+        return create_rope()
 
 
 class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):
