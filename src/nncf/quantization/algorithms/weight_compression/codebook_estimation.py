@@ -13,6 +13,9 @@ from copy import deepcopy
 from typing import Optional, TypeVar
 import numpy as np
 
+import openvino as ov
+from openvino.runtime import opset13 as opset
+
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
@@ -93,6 +96,20 @@ f8e4m3_data = np.array(
     , 3.8400000e+02, 4.1600000e+02, 4.4800000e+02]
 )
 
+def fp8_convert(in_shape):
+    input = opset.parameter(
+        in_shape, dtype=ov.Type.f32
+    )
+    scale_convert = opset.convert(input, ov.Type.f8e4m3)
+    scale_convert = opset.convert(scale_convert, ov.Type.f32)
+    result = opset.result(scale_convert, name="Result")
+    result.get_output_tensor(0).set_names(set(["Result"]))
+    model = ov.Model([result], [input])
+
+    compiled_model = ov.compile_model(model)
+
+    return compiled_model
+
 
 class CodebookEstimation:
     """
@@ -167,11 +184,11 @@ class CodebookEstimation:
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
 
-            if config.num_bits != 4 or node_name not in statistics:
+            if config.num_bits != 4:# or node_name not in statistics:
                 res[weight_name] = CompressedWeight()
                 continue
 
-            stats = statistics[node_name]
+            stats = None #statistics[node_name]
 
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
@@ -180,17 +197,17 @@ class CodebookEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            scale, zero_point = self.calculate_quantization_params(
+            codebook, scale, indexes = self.calculate_codebook(
                 stats,
                 weight,
                 wp.reduction_axes,
                 config,
-                self._subset_size,
-                self._initial_steps,
-                self._scale_steps,
-                self._weight_penalty,
+                # self._subset_size,
+                # self._initial_steps,
+                # self._scale_steps,
+                # self._weight_penalty,
             )
-            res[weight_name] = CompressedWeight(None, scale, zero_point, None)
+            res[weight_name] = CompressedWeight(indexes, scale, None, codebook)
 
         return res
 
@@ -200,10 +217,10 @@ class CodebookEstimation:
         weight: Tensor,
         reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
-        subset_size: int = 32,
-        initial_steps: int = 5,
-        scale_steps: int = 10,
-        weight_penalty: float = -1.0,
+        # subset_size: int = 32,
+        # initial_steps: int = 5,
+        # scale_steps: int = 10,
+        # weight_penalty: float = -1.0,
     ) -> Tensor:
 
         reduction_axis = reduction_axes[0]
@@ -213,23 +230,49 @@ class CodebookEstimation:
             weight = fns.transpose(weight)
             reduction_axis = 1
 
-        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+        if config.group_size != -1:
+            weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+        
+        orig_shape = weight.shape
         
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
         norm_weight = _calculate_normalized_weight(weight, scale)
         
-        codebook, indexes = weights_clusterization_k_means(norm_weight)
+        codebook, indexes = weights_clusterization_k_means(norm_weight)#.as_numpy_tensor().data)
         
-        
-            
+        converter = fp8_convert(codebook.shape)
+        indexes = indexes.reshape(orig_shape)
         
         fp8_scales = np.unique(np.abs(f8e4m3_data))
-        fp8_scales = fp8_scales[scale >= 1.0]
+        fp8_scales = fp8_scales[fp8_scales >= 1.0]
         
+        best_codebook = None
+        min_diff = float("inf")
+        best_scale = None
         
+        weight = weight.as_numpy_tensor().data
+        scale = scale.as_numpy_tensor().data
+
+        min_diffs = []
+        for fp8_scale in fp8_scales:
+            scaled_codebook = codebook * fp8_scale
+            scaled_codebook = converter(scaled_codebook)[0]
+            
+            
+            dequantized_weight = scaled_codebook[indexes]
+            dequantized_weight = dequantized_weight * scale
+            dequantized_weight = dequantized_weight / fp8_scale
+            
+            diff = np.mean(np.abs(weight - dequantized_weight))
+            
+            if diff < min_diff:
+                min_diff = diff
+                best_codebook = deepcopy(scaled_codebook)
+                best_scale = fp8_scale
+                min_diffs.append(min_diff)
         
-        
-        return None
+        print("\t", min_diffs)
+        return Tensor(best_codebook), Tensor(scale / best_scale), indexes
 
 
 def most_common(lst):
@@ -272,17 +315,21 @@ class KMeansHist:
             elif i == len(quants) - 1:
                 res.append(values[-1])
             else:
-                prev = values[np.where(n_frequencies <= quants[i])[0][-1]]
-                next_ = values[np.where(n_frequencies <= quants[i + 1])[0][-1]]
+                prev = values[np.where(n_frequencies <= quants[i])[0][-1]].item()
+                next_ = values[np.where(n_frequencies <= quants[i + 1])[0][-1]].item()
                 res.append((prev + next_) / 2)
 
-        res = np.array(res).reshape(1, -1)
+        res = np.array(res)#.reshape(1, -1)
         return res
 
     @staticmethod
-    def create_histogramm(data, data_range=(-1.0, 1.0), granularity=0.01):
+    def create_histogramm(data, granularity=0.01):
         centers = []
         step = granularity
+        
+        granularity = granularity * (data.max() - data.min())
+
+        data_range=(data.min().item(), data.max().item())
         prev = data_range[0]
 
         while prev < data_range[1]:
@@ -293,15 +340,15 @@ class KMeansHist:
         centroid_idxs = round(centers, data)
 
         res = [[], [], []]
-        for i in range(centers.shape[1]):
+        for i in range(centers.size):
             idxs = np.where(centroid_idxs == i)
             if len(idxs[0]) == 0:
                 continue
             res[0].append(centers[i])
-            res[1].append(np.sum(data[idxs, :]))
+            res[1].append(np.sum(data[idxs]))
             res[2].append(len(idxs[0]))
 
-        res[0] = np.array(res[0]).reshape(-1, 1)
+        res[0] = np.array(res[0])#.reshape(-1, 1)
         res[1] = np.array(res[1])
         res[2] = np.array(res[2])
 
@@ -315,10 +362,10 @@ class KMeansHist:
         self.hist = self.create_histogramm(X_train)
 
         init_by_hist = self.get_init(self.hist[0], self.hist[2], self.n_clusters)
-        init_by_hist[0, 0] = init[0]
-        init_by_hist[0, -1] = init[-1]
-        zero_idx = np.argmin(np.abs(init_by_hist[0, :]))
-        init_by_hist[0, zero_idx] = init[0, zero_idx]
+        init_by_hist[0] = init[0]
+        init_by_hist[0] = init[-1]
+        zero_idx = np.argmin(np.abs(init_by_hist[:]))
+        init_by_hist[zero_idx] = 0.0 #init[0, zero_idx]
         fixed[1] = zero_idx
         init = init_by_hist
 
@@ -332,13 +379,13 @@ class KMeansHist:
             centroid_idxs = round(self.centroids, self.hist[0])
             for i in range(self.n_clusters):
                 idxs = np.where(centroid_idxs == i)
-                self.centroids[:, i] = np.sum(self.hist[1][idxs]) / np.sum(self.hist[2][idxs])
+                self.centroids[i] = np.sum(self.hist[1][idxs]) / np.sum(self.hist[2][idxs])
 
             for i, centroid in enumerate(self.centroids):
                 if np.isnan(centroid).any():  # Catch any np.nans, resulting from a centroid having no points
                     self.centroids[i] = prev_centroids[i]
             for idx in fixed:
-                self.centroids[:, idx] = init[:, idx]
+                self.centroids[idx] = init[idx]
             iteration += 1
             if np.all(np.abs(self.centroids - prev_centroids) < 0.00001).any():
                 break
@@ -360,9 +407,9 @@ def weights_clusterization_k_means(weight, n_centroids=2**4):
     n_init[0] = weight.min()
     n_init[-1] = weight.max()
 
-    kmeans = KMeansHist(n_centroids, max_iter=1)
+    kmeans = KMeansHist(n_centroids, max_iter=15)
     
-    n_init = kmeans.get_init(weight, n_init, n_centroids)
+    #n_init = kmeans.get_init(weight, n_init, n_centroids)
     
     #kmeans.fit(weight.reshape(-1, 1), n_init.reshape(1, -1), fixed=[0, 7, 15])
     kmeans.fit(weight, n_init, fixed=[0, 7, 15])

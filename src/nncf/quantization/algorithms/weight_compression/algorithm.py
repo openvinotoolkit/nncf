@@ -40,6 +40,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.codebook_estimation import CodebookEstimation
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -352,6 +353,8 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.scale_steps,
                 scale_estimation_params.weight_penalty,
             )
+        
+        self._codebook_estimation_algo = CodebookEstimation()
 
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
@@ -785,6 +788,15 @@ class WeightCompression(Algorithm):
         precomputed_compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
+        
+        if self._mode == CompressWeightsMode.CODEBOOK:
+            precomputed_compressed_weights = self._codebook_estimation_algo.apply(
+                model=model,
+                graph=graph,
+                all_weight_params=all_weight_params,
+                statistics=statistics,
+                backend_entity=self._backend_entity,
+            )
 
         if self._gptq:
             del statistics
