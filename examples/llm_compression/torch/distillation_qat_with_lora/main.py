@@ -271,13 +271,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "start from scratch by post-training weight compression initialization.",
     )
     parser.add_argument("--lora_rank", type=int, default=256, help="Rank of lora adapters")
-    parser.add_argument(
-        "--fast_eval",
-        action="store_true",
-        help="Enable faster evaluation by applying in-place quantization to the model weights. "
-        "This method uses additional GPU memory for memory copying. By default, evaluation is slower "
-        "but conserves GPU memory.",
-    )
 
     # Data params
     parser.add_argument("--num_train_samples", type=int, default=1024, help="Number of training samples")
@@ -317,7 +310,6 @@ def main(argv) -> float:
     """
     parser = get_argument_parser()
     args = parser.parse_args(argv)
-    pprint(vars(args))
     assert torch.cuda.is_available()
     transformers.set_seed(42)
     device = "cuda"
@@ -328,12 +320,11 @@ def main(argv) -> float:
         awq=True,
         scale_estimation=True,
         compression_format=CompressionFormat.FQ_LORA,
-        advanced_parameters=AdvancedCompressionParameters(
-            awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=True), lora_adapter_rank=args.lora_rank
-        ),
     )
-    pprint(compression_config)
-
+    pprint({"CLI arguments": vars(args), "Major compression parameters": compression_config})
+    compression_config["advanced_parameters"] = AdvancedCompressionParameters(
+        awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=True), lora_adapter_rank=args.lora_rank
+    )
     # Configure output and log files.
     output_dir = Path(args.output_dir)
     tensorboard_dir = output_dir / "tb" / datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
