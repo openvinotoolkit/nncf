@@ -213,11 +213,14 @@ class AWQ(Algorithm):
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
 
+        assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
+        reduction_axis = wp.reduction_axes[0]
+
         prev_s, prev_w = None, None
         if prev_statistics is not None and prev_weight is not None:
             prev_s, _ = process_stats(prev_statistics, self._subset_size)
             prev_s = prev_s.astype(TensorDataType.float32).max().item()
-            prev_w = fns.mean(fns.abs(prev_weight), axis=1)
+            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
 
         top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
         topk_idxs = fns.argsort(-s)[:top_k]
@@ -231,9 +234,6 @@ class AWQ(Algorithm):
             groups_to_correct.add(idx.data // group_size)
 
         groups_to_correct = list(groups_to_correct)
-
-        assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
-        reduction_axis = wp.reduction_axes[0]
 
         if reduction_axis == 0:
             weight = fns.transpose(weight)
@@ -266,11 +266,15 @@ class AWQ(Algorithm):
 
                 if prev_s is not None:
                     threshold = 0.25 * 65504  # take the threshold from the fp16 type with some margin
-                    magnitudes = (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[1]
+                    # per channel magnitudes for the previous MatMul
+                    # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
+                    magnitudes = (
+                        (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
+                    )
                     cur_scale = fns.where(
                         magnitudes < threshold,
                         cur_scale,
-                        prev_w[offset : offset + group_size] * prev_s * prev_weight.shape[1] / threshold,
+                        prev_w[offset : offset + group_size] * prev_s * prev_weight.shape[reduction_axis] / threshold,
                     )
 
                 weights_to_fake_quantize = gweight * cur_scale
