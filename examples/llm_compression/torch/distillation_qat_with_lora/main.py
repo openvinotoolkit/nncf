@@ -419,9 +419,7 @@ def main(argv) -> float:
                 total_steps += 1
                 tb.add_scalar("loss", aggregated_loss, total_steps)
 
-        # No need to save the model's state, since it isn't changed after initialization.
-        # Saving the NNCF checkpoint is sufficient regardless of the --basic_init option.
-        save_checkpoint(model, ckpt_file, model_state=False)
+        save_checkpoint(model, ckpt_file, model_state=not args.basic_init)
 
     del model
     # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
