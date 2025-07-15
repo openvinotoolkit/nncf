@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-import re
 from abc import ABC
 from abc import abstractmethod
 from typing import TypeVar
@@ -372,25 +371,28 @@ class TemplateWeightCompression(ABC):
 
     @pytest.mark.parametrize("algorithm", (None, "awq", "scale_estimation", "gptq", "lora_correction"))
     @pytest.mark.parametrize(
-        ["group_size", "enable_flex", "min_flex_group_size", "expected_outcome"],
+        ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
         [
-            (32, False, None, "exception"),
-            (32, True, 16, "warn_backup_mode"),
-            (32, True, 8, "info_adjusted_group_size"),
+            (32, nncf.GroupSizeFallbackMode.ERROR, None, "exception"),
+            (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_ignored"),
+            (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_adjust"),
+            (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
+            (32, None, None, "warn_ignored"),
         ],
     )
     def test_error_message_for_invalid_group_size(
         self,
         algorithm,
         group_size,
-        enable_flex,
-        min_flex_group_size,
+        fallback_mode,
+        min_adjusted_group_size,
         expected_outcome,
     ):
         """
         Verifies that:
             - an exception is raised for an invalid group size
-            - a warning is logged when a flexible group size value cannot be found
+            - a warning message is logged when a node is ignored due to an invalid group size
+            - an info message is logged when an adjustable group size value cannot be found
             - an info message is logged when the group size is adjusted to a valid value
         """
         if algorithm in self.get_not_supported_algorithms():
@@ -409,55 +411,61 @@ class TemplateWeightCompression(ABC):
             all_layers=True,
             **algorithm_dict,
             dataset=dataset,
-            advanced_parameters=nncf.AdvancedCompressionParameters(
-                enable_flexible_group_size=enable_flex, min_flexible_group_size=min_flex_group_size
-            ),
         )
+        if fallback_mode is not None or min_adjusted_group_size is not None:
+            kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
+                group_size_fallback_mode=fallback_mode,
+                min_adjusted_group_size=min_adjusted_group_size,
+            )
 
         if expected_outcome == "exception":
             with pytest.raises(InvalidGroupSizeError) as exc_info:
                 compress_weights(**kwargs)
 
-            names = re.findall(r"IgnoredScope\(names=\[(.*?)\]\)", re.sub(r"[\n\t]", "", str(exc_info.value)))
-            assert len(names) == 1, f"Error message should contain ignored scope to avoid issue: {str(exc_info.value)}"
-            name_list = [name.strip('"') for name in names[0].split(",")]
-
-            compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
-        elif expected_outcome == "warn_backup_mode":
+            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+        elif expected_outcome == "warn_ignored":
             with patch.object(nncf_logger, "warning") as mock_warning:
                 compress_weights(**kwargs)
             warning_messages = [args[0] for args, _ in mock_warning.call_args_list]
-            warn_msg = "Large enough flexible group size value cannot be found for some nodes."
+            warn_msg = "They will be ignored and kept with original precision."
             assert any(warn_msg in msg for msg in warning_messages)
-        elif expected_outcome == "info_adjusted_group_size":
+        elif expected_outcome in ["info_adjusted_group_size", "info_cant_adjust"]:
             with patch.object(nncf_logger, "info") as mock_info:
                 compress_weights(**kwargs)
             info_messages = [args[0] for args, _ in mock_info.call_args_list]
-            info_msg = f"Wasn't able to set the specified group size value ({group_size}) to some nodes."
+            info_msg = (
+                "Adjusted group size values will be used:"
+                if expected_outcome == "info_adjusted_group_size"
+                else "A valid adjusted group size value can't be found for some nodes."
+            )
             assert any(info_msg in msg for msg in info_messages)
 
     @pytest.mark.parametrize(
-        ["model_channel_sizes", "ratio", "group_size", "min_flex_group_size", "ref_num_group_sizes"],
         [
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, 32, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, 16, {16: 3, 32: 1}),
-            ([8, 8, 16, 16, 16, 32], 0.5, 32, 16, {16: 2}),
+            "model_channel_sizes",
+            "ratio",
+            "group_size",
+            "fallback_mode",
+            "min_adjusted_group_size",
+            "ref_num_group_sizes",
+        ],
+        [
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 0.5, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 2}),
         ],
     )
-    def test_flexible_group_size(
+    def test_group_size_fallback_modes(
         self,
         model_channel_sizes,
         ratio,
         group_size,
-        min_flex_group_size,
+        fallback_mode,
+        min_adjusted_group_size,
         ref_num_group_sizes,
     ):
-        """
-        Verifies that:
-            - an exception is raised for an invalid group size
-            - a warning is logged when a flexible group size value cannot be found
-            - an info message is logged when the group size is adjusted to a valid value
-        """
         model = self.get_different_channel_size_model(model_channel_sizes)
         input_example = self.to_tensor(np.ones([1, model_channel_sizes[0], model_channel_sizes[0]], dtype=np.float32))
         dataset = Dataset([input_example])
@@ -468,10 +476,12 @@ class TemplateWeightCompression(ABC):
             all_layers=True,
             group_size=group_size,
             dataset=dataset,
-            advanced_parameters=nncf.AdvancedCompressionParameters(
-                enable_flexible_group_size=True, min_flexible_group_size=min_flex_group_size
-            ),
         )
+        if fallback_mode is not None:
+            kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
+                group_size_fallback_mode=fallback_mode,
+                min_adjusted_group_size=min_adjusted_group_size,
+            )
 
         compress_weights(**kwargs)
 
