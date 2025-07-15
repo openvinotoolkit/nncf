@@ -215,7 +215,7 @@ def llm_compression_distillation_qat_with_lora() -> float:
         "--epochs=1",
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
         "--num_train_samples=128",
-        "--calib_seqlen=128",
+        "--train_seqlen=128",
         "--lora_rank=8",
         "--batch_size=16",
         "--microbatch_size=4",
