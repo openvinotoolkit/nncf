@@ -220,7 +220,6 @@ def llm_compression_distillation_qat_with_lora() -> float:
         "--batch_size=16",
         "--microbatch_size=4",
         "--lr=5e-4",
-        "--fast_eval",
         "--limit=0.2",
     ]
 
