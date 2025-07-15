@@ -271,10 +271,18 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "start from scratch by post-training weight compression initialization.",
     )
     parser.add_argument("--lora_rank", type=int, default=256, help="Rank of lora adapters")
+    parser.add_argument(
+        "--basic_init",
+        action="store_true",
+        help="Whether to initialize quantization with basic min-max round-to-nearest schema. By default, advanced "
+        "data-aware post-training methods are used: AWQ + Scale Estimation. These methods typically provide better "
+        "accuracy, but require a calibration dataset and additional initialization time "
+        "(~20 sec for 1B and ~80 sec for 8B models).",
+    )
 
     # Data params
     parser.add_argument("--num_train_samples", type=int, default=1024, help="Number of training samples")
-    parser.add_argument("--calib_seqlen", type=int, default=1024, help="Calibration data context length.")
+    parser.add_argument("--train_seqlen", type=int, default=1024, help="Train data context length.")
     parser.add_argument("--eval_seqlen", type=int, default=2048, help="Evaluation data context length.")
     parser.add_argument(
         "--limit",
@@ -297,7 +305,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--microbatch_size",
         type=int,
-        default=8,
+        default=2,
         help="Size of each training microbatch. Gradients will be accumulated until the batch size is reached.",
     )
     return parser
@@ -317,13 +325,14 @@ def main(argv) -> float:
     compression_config = dict(
         mode=CompressWeightsMode.INT4_ASYM,
         group_size=64,
-        awq=True,
-        scale_estimation=True,
+        awq=not args.basic_init,
+        scale_estimation=not args.basic_init,
         compression_format=CompressionFormat.FQ_LORA,
     )
     pprint({"CLI arguments": vars(args), "Major compression parameters": compression_config})
     compression_config["advanced_parameters"] = AdvancedCompressionParameters(
-        awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=True), lora_adapter_rank=args.lora_rank
+        awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=not args.basic_init),
+        lora_adapter_rank=args.lora_rank,
     )
     # Configure output and log files.
     output_dir = Path(args.output_dir)
@@ -343,10 +352,14 @@ def main(argv) -> float:
 
     # Prepare training and calibration data
     train_loader = get_wikitext2(
-        num_samples=args.num_train_samples, seqlen=args.calib_seqlen, tokenizer=tokenizer, device=device
+        num_samples=args.num_train_samples, seqlen=args.train_seqlen, tokenizer=tokenizer, device=device
     )
-    calib_loader = get_wikitext2(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
-    calib_dataset = Dataset(map(get_model_input, calib_loader))
+    if args.basic_init:
+        calib_loader = get_wikitext2(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
+        dataset = Dataset(map(get_model_input, calib_loader))
+    else:
+        example_input = {k: v.to(device) for k, v in model.dummy_inputs.items()}
+        dataset = Dataset([example_input])
 
     # Pre-compute hiddens of teacher model for distillation loss.
     orig_hiddens = calc_hiddens(model, train_loader)
@@ -355,8 +368,8 @@ def main(argv) -> float:
     if args.resume and ckpt_file.exists():
         model = load_checkpoint(model, ckpt_file)
     else:
-        model = compress_weights(model, dataset=calib_dataset, **compression_config)
-        save_checkpoint(model, ckpt_file)
+        model = compress_weights(model, dataset=dataset, **compression_config)
+        save_checkpoint(model, ckpt_file, model_state=not args.basic_init)
     fq_lr = args.lr / 10
     weight_decay = args.lr
     param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
@@ -406,7 +419,9 @@ def main(argv) -> float:
                 total_steps += 1
                 tb.add_scalar("loss", aggregated_loss, total_steps)
 
-        save_checkpoint(model, ckpt_file)
+        # No need to save the model's state, since it isn't changed after initialization.
+        # Saving the NNCF checkpoint is sufficient regardless of the --basic_init option.
+        save_checkpoint(model, ckpt_file, model_state=False)
 
     del model
     # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
