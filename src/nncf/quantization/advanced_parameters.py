@@ -81,8 +81,7 @@ class GroupSizeFallbackMode(StrEnum):
     """
     Specifies how to handle nodes that do not support the given group size.
 
-    :param NONE: Do not apply any group size fallback. If the group size is not supported by the node, an error will
-        be raised.
+    :param ERROR: Raise an error if the given group size is not supported by a node.
     :param IGNORE: Skip nodes that cannot be compressed with the given group size.
     :param ADJUST: Automatically compute a suitable group size for unsupported nodes.
         When selected, each weight for which the channel size is not divisible by the general group size value will
@@ -97,7 +96,7 @@ class GroupSizeFallbackMode(StrEnum):
         issues, then these weights won't contribute to the ratio of backup mode group.
     """
 
-    NONE = "none"
+    ERROR = "error"
     IGNORE = "ignore"
     ADJUST = "adjust"
 

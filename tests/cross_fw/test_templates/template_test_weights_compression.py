@@ -373,7 +373,7 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize(
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
         [
-            (32, nncf.GroupSizeFallbackMode.NONE, None, "exception"),
+            (32, nncf.GroupSizeFallbackMode.ERROR, None, "exception"),
             (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_ignored"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_adjust"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
