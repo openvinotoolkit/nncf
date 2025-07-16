@@ -329,6 +329,9 @@ def compress_weight(
     )
 
     if not config.is_integer:
+        if precomputed_compressed_weight is not None and precomputed_compressed_weight.tensor is not None and precomputed_compressed_weight.codebook is not None:
+            return precomputed_compressed_weight
+
         compressed_weight, scale, indexes = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
         if indexes is not None:
             return CompressedWeight(

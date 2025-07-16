@@ -36,6 +36,8 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
+from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
+
 TModel = TypeVar("TModel")
 
 
@@ -183,6 +185,9 @@ class CodebookEstimation:
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
+            
+            if not 'return_proj' in node_name:
+                continue
 
             if config.num_bits != 4:# or node_name not in statistics:
                 res[weight_name] = CompressedWeight()
@@ -246,33 +251,35 @@ class CodebookEstimation:
         fp8_scales = np.unique(np.abs(f8e4m3_data))
         fp8_scales = fp8_scales[fp8_scales >= 1.0]
         
-        best_codebook = None
+        best_codebook = codebook #converter(codebook)[0]
+        print("Best codebook:", best_codebook)
+
         min_diff = float("inf")
-        best_scale = None
+        best_scale = 1.0
         
         weight = weight.as_numpy_tensor().data
         scale = scale.as_numpy_tensor().data
 
-        min_diffs = []
-        for fp8_scale in fp8_scales:
-            scaled_codebook = codebook * fp8_scale
-            scaled_codebook = converter(scaled_codebook)[0]
+        # min_diffs = []
+        # for fp8_scale in fp8_scales:
+        #     scaled_codebook = codebook * fp8_scale
+        #     scaled_codebook = converter(scaled_codebook)[0]
             
             
-            dequantized_weight = scaled_codebook[indexes]
-            dequantized_weight = dequantized_weight * scale
-            dequantized_weight = dequantized_weight / fp8_scale
+        #     dequantized_weight = scaled_codebook[indexes]
+        #     dequantized_weight = dequantized_weight * scale
+        #     dequantized_weight = dequantized_weight / fp8_scale
             
-            diff = np.mean(np.abs(weight - dequantized_weight))
+        #     diff = np.mean(np.abs(weight - dequantized_weight))
             
-            if diff < min_diff:
-                min_diff = diff
-                best_codebook = deepcopy(scaled_codebook)
-                best_scale = fp8_scale
-                min_diffs.append(min_diff)
+        #     if diff < min_diff:
+        #         min_diff = diff
+        #         best_codebook = deepcopy(scaled_codebook)
+        #         best_scale = fp8_scale
+        #         min_diffs.append(min_diff)
         
-        print("\t", min_diffs)
-        return Tensor(best_codebook), Tensor(scale / best_scale), indexes
+        #print("\t", min_diffs)
+        return Tensor(best_codebook), Tensor(scale / best_scale), Tensor(indexes)
 
 
 def most_common(lst):
@@ -361,9 +368,9 @@ class KMeansHist:
 
         self.hist = self.create_histogramm(X_train)
 
-        init_by_hist = self.get_init(self.hist[0], self.hist[2], self.n_clusters)
+        init_by_hist = CB4_QUANTILES #self.get_init(self.hist[0], self.hist[2], self.n_clusters)
         init_by_hist[0] = init[0]
-        init_by_hist[0] = init[-1]
+        init_by_hist[-1] = init[-1]
         zero_idx = np.argmin(np.abs(init_by_hist[:]))
         init_by_hist[zero_idx] = 0.0 #init[0, zero_idx]
         fixed[1] = zero_idx
@@ -407,7 +414,7 @@ def weights_clusterization_k_means(weight, n_centroids=2**4):
     n_init[0] = weight.min()
     n_init[-1] = weight.max()
 
-    kmeans = KMeansHist(n_centroids, max_iter=15)
+    kmeans = KMeansHist(n_centroids, max_iter=25)
     
     #n_init = kmeans.get_init(weight, n_init, n_centroids)
     
