@@ -17,12 +17,12 @@ import pytest
 import torch
 
 import nncf
+from nncf.common.quantization.structs import IntDtype
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.quantization.structs import ExtendedQuantizerConfig
-from nncf.experimental.quantization.structs import IntDtype
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
@@ -87,7 +87,7 @@ def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[Int
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
     signedness_to_force = None
-    qconfig = ExtendedQuantizerConfig(
+    qconfig = TypedQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
@@ -387,7 +387,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.ASYMMETRIC
-    qconfig = ExtendedQuantizerConfig(
+    qconfig = TypedQuantizerConfig(
         num_bits=8,
         mode=mode,
         per_channel=per_ch,
@@ -452,7 +452,7 @@ def _check_q_min_q_max(quantizer, signed, narrow_range):
     ],
 )
 def test_extended_q_config_non_supported_dest_dtype(dest_dtype):
-    qconfig = ExtendedQuantizerConfig(dest_dtype=dest_dtype)
+    qconfig = TypedQuantizerConfig(dest_dtype=dest_dtype)
     params = FakeQuantizeParameters(-1.0, 1.0, -1.0, 1.0, 255)
     with pytest.raises(nncf.ParameterNotSupportedError):
         FXMinMaxAlgoBackend._create_quantizer(quantizer_config=qconfig, channel_axis=1, parameters=params)
