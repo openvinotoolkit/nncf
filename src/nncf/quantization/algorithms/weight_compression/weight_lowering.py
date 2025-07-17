@@ -78,7 +78,7 @@ def reshape_weight_for_grouped_quantization(
 
 
 def calculate_float_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, signed: bool = False
 ) -> Tensor:
     """
     Calculates the scale for nf4 or e2m1 quantization.
@@ -93,7 +93,12 @@ def calculate_float_quantization_params(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
+    if signed:
+        scale_neg = fns.min(weight, axis=reduction_axes, keepdims=True)
+        scale_pos = fns.max(weight, axis=reduction_axes, keepdims=True)
+        scale = fns.where(fns.abs(scale_neg) >= fns.abs(scale_pos), scale_neg, scale_pos)
+    else:
+        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
     if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
         max_val = 6.0 if config.mode == CompressWeightsMode.E2M1 else fns.max(fns.abs(config.get_numpy_codebook()))
         scale = scale / max_val

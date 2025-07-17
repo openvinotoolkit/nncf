@@ -186,8 +186,8 @@ class CodebookEstimation:
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
             
-            if not 'return_proj' in node_name:
-                continue
+            # if not 'return_proj' in node_name:
+            #     continue
 
             if config.num_bits != 4:# or node_name not in statistics:
                 res[weight_name] = CompressedWeight()
@@ -240,7 +240,7 @@ class CodebookEstimation:
         
         orig_shape = weight.shape
         
-        scale = calculate_float_quantization_params(weight, reduction_axes, config)
+        scale = calculate_float_quantization_params(weight, reduction_axes, config, signed=True)
         norm_weight = _calculate_normalized_weight(weight, scale)
         
         codebook, indexes = weights_clusterization_k_means(norm_weight)#.as_numpy_tensor().data)
@@ -251,7 +251,7 @@ class CodebookEstimation:
         fp8_scales = np.unique(np.abs(f8e4m3_data))
         fp8_scales = fp8_scales[fp8_scales >= 1.0]
         
-        best_codebook = codebook #converter(codebook)[0]
+        best_codebook = converter(codebook)[0]
         print("Best codebook:", best_codebook)
 
         min_diff = float("inf")
@@ -334,7 +334,7 @@ class KMeansHist:
         centers = []
         step = granularity
         
-        granularity = granularity * (data.max() - data.min())
+        #granularity = granularity * (data.max() - data.min())
 
         data_range=(data.min().item(), data.max().item())
         prev = data_range[0]
@@ -413,8 +413,9 @@ def weights_clusterization_k_means(weight, n_centroids=2**4):
     n_init = [0, 0]
     n_init[0] = weight.min()
     n_init[-1] = weight.max()
+    print("n_init:", n_init)
 
-    kmeans = KMeansHist(n_centroids, max_iter=25)
+    kmeans = KMeansHist(n_centroids, max_iter=10)
     
     #n_init = kmeans.get_init(weight, n_init, n_centroids)
     
