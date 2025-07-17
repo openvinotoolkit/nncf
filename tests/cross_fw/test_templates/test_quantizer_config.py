@@ -371,10 +371,6 @@ class TemplateTestQuantizerConfig:
         state["quantization_points"][6]["directly_quantized_operator_node_names"] = sorted(
             state["quantization_points"][6]["directly_quantized_operator_node_names"]
         )
-        # helper to find the diff in qconfigs
-        # pip install dictdiffer
-        # from dictdiffer import diff
-        # diff_res = list(diff(state, self.REF_TRANSFORMER_SETUP_STATE))
         assert state == self.REF_TRANSFORMER_SETUP_STATE
 
     REF_EMBEDDING_MODEL_SETUP_STATE = {
