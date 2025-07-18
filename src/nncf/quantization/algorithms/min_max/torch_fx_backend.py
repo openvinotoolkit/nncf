@@ -76,10 +76,6 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.PTDropoutMetatype]
 
     @property
-    def read_variable_metatypes(self) -> list[OperatorMetatype]:
-        return []
-
-    @property
     def conv_metatypes(self) -> list[OperatorMetatype]:
         return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
 
