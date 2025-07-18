@@ -1092,6 +1092,8 @@ class AWQModel_fp16_overlow(OVReferenceModel):
             mat_mul_emb, weights_gate_proj, transpose_a=False, transpose_b=True, name="MatMul_gate_proj"
         )
 
+        mat_mul_gate_proj = opset.relu(mat_mul_gate_proj, name="ReLU_gate_proj")
+
         node_multiply = opset.multiply(mat_mul_up_proj, mat_mul_gate_proj, name="Multiply")
 
         weights_down_proj = AWQMatmulModel.get_weights(
