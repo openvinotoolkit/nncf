@@ -309,7 +309,7 @@ class KMeansHist:
 
     @staticmethod
     def get_init(values, frequencies, n_clusters):
-        step = 1.0 / n_clusters
+        step = 1.0 / (n_clusters - 1)
         denum = np.sum(frequencies)
         quants = [i * step for i in range(n_clusters)]
         n_frequencies = frequencies / denum
