@@ -271,11 +271,16 @@ class AWQ(Algorithm):
                     magnitudes = (
                         (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
                     )
-                    cur_scale = fns.where(
-                        magnitudes < threshold,
-                        cur_scale,
-                        prev_w[offset : offset + group_size] * prev_s * prev_weight.shape[reduction_axis] / threshold,
-                    )
+                    if magnitudes.max() >= threshold:
+                        cur_scale = AWQ._clamp_scale(
+                            magnitudes,
+                            threshold,
+                            cur_scale,
+                            prev_w[offset : offset + group_size]
+                            * prev_s
+                            * prev_weight.shape[reduction_axis]
+                            / threshold,
+                        )
 
                 weights_to_fake_quantize = gweight * cur_scale
                 if not config.is_integer:
@@ -299,6 +304,10 @@ class AWQ(Algorithm):
                 scale.data[offset : offset + group_size] = best_scale.data
 
         return scale
+
+    @staticmethod
+    def _clamp_scale(magnitudes, threshold, scale, clamped_scale):
+        return fns.where(magnitudes < threshold, scale, clamped_scale)
 
     def _data_free_step(self, weight, axis):
         eps = fns.finfo(weight).eps

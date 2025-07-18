@@ -63,6 +63,7 @@ from tests.cross_fw.test_templates.template_test_weights_compression import Temp
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
+from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
@@ -1595,6 +1596,23 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+
+
+def test_awq_fp16_overflow_fix(mocker):
+    """
+    Special model with low magnitude activations for testing the fix for overflow in AWQ fp16 quantization.
+    """
+    dim = 8
+    model = AWQModel_fp16_overlow(dim=8).ov_model
+    dataset = Dataset(16 * [0.01 * np.ones((1, 2 * dim + 1, dim))])
+
+    from nncf.quantization.algorithms.weight_compression.algorithm import AWQ
+
+    awq_spy = mocker.spy(AWQ, "_clamp_scale")
+
+    compress_weights(model, mode=CompressWeightsMode.INT4_SYM, group_size=-1, dataset=dataset, awq=True, ratio=1.0)
+
+    assert awq_spy.call_count == 36
 
 
 @pytest.mark.parametrize("n_extra_dims", [0, 1, 2])
