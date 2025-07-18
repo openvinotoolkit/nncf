@@ -172,9 +172,7 @@ class AWQ(Algorithm):
                     # for MatMul->Multiply->MatMul pattern we need to use statistics from the first MatMul
                     prev_weight_data = self._backend_entity.get_weight_names_and_port_ids(merge_node, graph)
                     _, prev_weight_port_id = prev_weight_data[0]
-                    prev_weight = self._backend_entity.get_weight(
-                        merge_node, prev_weight_port_id, model, graph
-                    )
+                    prev_weight = self._backend_entity.get_weight(merge_node, prev_weight_port_id, model, graph)
 
                     prev_statistics = statistics[merge_node.node_name]
                 scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
