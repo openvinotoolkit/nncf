@@ -174,7 +174,7 @@ class AWQ(Algorithm):
                     _, prev_weight_port_id = prev_weight_data[0]
                     prev_weight = self._backend_entity.get_weight(
                         merge_node, prev_weight_port_id, model, graph
-                    )  # get_const_value(wp.weight_node)
+                    )
 
                     prev_statistics = statistics[merge_node.node_name]
                 scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
