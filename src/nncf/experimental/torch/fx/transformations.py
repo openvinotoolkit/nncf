@@ -15,12 +15,9 @@ from typing import Any, Callable, Optional, Union
 
 import torch
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx.node import map_arg
 from torch.fx.passes.infra.pass_base import PassBase
 from torch.fx.passes.infra.pass_base import PassResult
-from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
 import nncf.torch
@@ -29,6 +26,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.quantization.qdq_parameters import TorchQDQParameters
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
@@ -223,16 +221,16 @@ def constant_update_fn(
 
 
 def qdq_insertion_transformation_builder(
-    quantizer: FakeQuantize, target_points: list[PTTargetPoint]
+    parameters: TorchQDQParameters, target_points: list[PTTargetPoint]
 ) -> TransformationFNType:
     """
-    Returns transformation which inserts quantize-dequantize operations with parameters
-    inherited from the given quantizer to each given target point.
+    Returns transformation which inserts quantize-dequantize operations with
+    the given parameters to each given target point.
 
-    :param quantizer: Quantizer module to inherit quantization parameters from.
+    :param quantizer: Quantization parameters.
     :param target_points: List of target point used to insert quantize-dequantize pairs.
-    :return: Transformation which inserts quantize-dequantize operations with parameters
-        inherited from the given quantizer to each given target point.
+    :return: Transformation which inserts quantize-dequantize operations with
+        the given parameters to each given target point.
     """
 
     def qdq_insertion_transformation(model: torch.fx.GraphModule):
@@ -243,7 +241,7 @@ def qdq_insertion_transformation_builder(
             )
             raise nncf.InternalError(msg)
         for target_point in target_points:
-            insert_one_qdq(model, target_point, quantizer)
+            insert_one_qdq(model, target_point, parameters)
 
     return qdq_insertion_transformation
 
@@ -311,38 +309,38 @@ def output_insertion_transformation_builder(target_point: PTTargetPoint) -> Tran
     return output_insertion_transformation
 
 
-def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, quantizer: FakeQuantize):
+def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, parameters: TorchQDQParameters):
     """
     Inserts quantize-dequantize after the target node to the target model.
 
     :param model: Target model.
     :param target_node: Target node, quantizer-dequantizer pair is inserted just after the
         target node.
-    :param quantizer: Quantizer module to inherit quantization parameters from.
+    :param parameters: Quantization parameters.
     """
-    # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
+    # Copied from torchao.quantization.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
     quantize_op: Optional[Callable] = None
 
-    dtype = torch.int8 if quantizer.quant_min < 0 else torch.uint8
-    if quantizer.is_per_channel:
+    dtype = torch.int8 if parameters.quant_min < 0 else torch.uint8
+    if parameters.is_per_channel:
         qparams = {
-            "_scale_": quantizer.scale,
-            "_zero_point_": quantizer.zero_point,
-            "_axis_": quantizer.ch_axis,
-            "_quant_min_": quantizer.quant_min,
-            "_quant_max_": quantizer.quant_max,
+            "_scale_": parameters.scale,
+            "_zero_point_": parameters.zero_point,
+            "_axis_": parameters.ch_axis,
+            "_quant_min_": parameters.quant_min,
+            "_quant_max_": parameters.quant_max,
             "_dtype_": dtype,
         }
         quantize_op = torch.ops.quantized_decomposed.quantize_per_channel.default
         dequantize_op = torch.ops.quantized_decomposed.dequantize_per_channel.default
     else:
         qparams = {
-            "_scale_": float(quantizer.scale),
-            "_zero_point_": int(quantizer.zero_point),
-            "_quant_min_": quantizer.quant_min,
-            "_quant_max_": quantizer.quant_max,
+            "_scale_": float(parameters.scale),
+            "_zero_point_": int(parameters.zero_point),
+            "_quant_min_": parameters.quant_min,
+            "_quant_max_": parameters.quant_max,
             "_dtype_": dtype,
         }
         quantize_op = torch.ops.quantized_decomposed.quantize_per_tensor.default
@@ -721,19 +719,6 @@ def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
         _set_meta_for_matches(model, matches)
 
 
-def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
-    """
-    Applies quantization transformations to the model.
-
-    :param model: Model to apply transformations to.
-    """
-    # BatchNorm operations have 3 output ports,
-    # to make it easier for algorithms to work
-    # with the target graph BatchNorm operations
-    # are being fused
-    _fuse_conv_bn_(model)
-
-
 def fold_constant_except_qdq(model: torch.fx.GraphModule):
     """
     Performs constant folding avoiding quantize-dequantize pattern.
@@ -826,3 +811,52 @@ class DuplicateDQPassNoAnnotations(PassBase):
         graph_module.graph.eliminate_dead_code()
         graph_module.recompile()
         return PassResult(graph_module, True)
+
+
+def get_device(module: torch.nn.Module) -> torch.device:
+    """
+    Retrieves device of the first parameter of the given module.
+    If there are no parameters - returns CPU device.
+
+    :param module: A torch.nn.Module instance.
+    :return: A device of the first parameter of the given module.
+        If there are no parameters - returns CPU device.
+    """
+    try:
+        named_param = next(module.parameters())
+    except StopIteration:
+        named_param = None
+    if named_param is None:
+        return torch.device("cpu")
+    return named_param.device
+
+
+def create_getattr_from_value(module: torch.nn.Module, graph: torch.fx.Graph, prefix: str, value: Any) -> torch.fx.Node:
+    """
+    Given a value of any type, creates a getattr node corresponding to the value and
+    registers the value as a buffer to the module.
+
+    :param module: A torch.nn.Module instance.
+    :param graph: A torch.fx.Graph instance.
+    :param prefix: A string to use as a name prefix for the new getattr node.
+    :param value: A value
+    :return: A getattr node corresponding to the given value.
+    """
+
+    def get_new_attr_name(module: torch.nn.Module, prefix: str):
+        def get_attr_name(i: int):
+            return prefix + str(i)
+
+        i = 0
+        attr_name = get_attr_name(i)
+        while hasattr(module, attr_name):
+            i += 1
+            attr_name = get_attr_name(i)
+        return attr_name
+
+    attr_name = get_new_attr_name(module, prefix.replace(".", "_"))
+    device = get_device(module)
+    new_value = value.detach().clone() if isinstance(value, torch.Tensor) else torch.tensor(value, device=device)
+    module.register_buffer(attr_name, new_value)
+    attr_node = graph.create_node("get_attr", attr_name)
+    return attr_node

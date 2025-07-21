@@ -1,7 +1,7 @@
 strict digraph {
 "0 _scale_0" [id=0, type="get_attr"];
 "1 _zero_point_0" [id=1, type="get_attr"];
-"2 _frozen_param0" [id=2, type="get_attr"];
+"2 quantize_per_channel_default" [id=2, type="get_attr"];
 "3 dequantize_per_channel_default" [id=3, type="dequantize_per_channel"];
 "4 x" [id=4, type=input];
 "5 quantize_per_tensor_default" [id=5, type="quantize_per_tensor"];
@@ -28,7 +28,7 @@ strict digraph {
 "26 output" [id=26, type=output];
 "0 _scale_0" -> "3 dequantize_per_channel_default" [style=solid, label="(12,)"];
 "1 _zero_point_0" -> "3 dequantize_per_channel_default" [style=solid, label="(12,)"];
-"2 _frozen_param0" -> "3 dequantize_per_channel_default" [style=solid, label="(12, 4)"];
+"2 quantize_per_channel_default" -> "3 dequantize_per_channel_default" [style=solid, label="(12, 4)"];
 "3 dequantize_per_channel_default" -> "7 linear" [style=solid, label=None];
 "4 x" -> "5 quantize_per_tensor_default" [style=solid, label="(1, 2, 4)"];
 "5 quantize_per_tensor_default" -> "6 dequantize_per_tensor_default" [style=solid, label=None];

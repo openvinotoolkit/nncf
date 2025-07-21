@@ -15,11 +15,6 @@ from typing import Any, Union
 
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
-from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
-from torch.ao.quantization.quantizer import Quantizer as TorchAOQuantizer
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec
-from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -34,12 +29,26 @@ from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.tensor.definitions import TensorDataType
 
+try:
+    from torchao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
+    from torchao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
+    from torchao.quantization.pt2e.quantizer import Quantizer as TorchAOQuantizer
+    from torchao.quantization.pt2e.quantizer.quantizer import QuantizationSpec
+    from torchao.quantization.pt2e.quantizer.quantizer import SharedQuantizationSpec
+except ImportError:
+    from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
+    from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
+    from torch.ao.quantization.quantizer import Quantizer as TorchAOQuantizer
+    from torch.ao.quantization.quantizer.quantizer import QuantizationSpec
+    from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec
+
+
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
 
 
 class TorchAOQuantizerAdapter(Quantizer):
     """
-    Implementation of the NNCF Quantizer interface for any given torch.ao quantizer.
+    Implementation of the NNCF Quantizer interface for any given torchao quantizer.
     """
 
     def __init__(self, quantizer: TorchAOQuantizer):
@@ -120,7 +129,7 @@ class TorchAOQuantizerAdapter(Quantizer):
     def get_quantizer_config_from_annotated_model(annotated: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
         """
         Process a torch.fx.GraphModule annotated with quantization specifications
-        (e.g., via torch.ao observers) and generates a corresponding NNCF quantization setup object,
+        (e.g., via torchao observers) and generates a corresponding NNCF quantization setup object,
         which maps quantization configurations to graph edges.
 
         :param annotated: A torch.fx.GraphModule that has been annotated with Torch quantization observers.
@@ -149,7 +158,7 @@ class TorchAOQuantizerAdapter(Quantizer):
             if qspec is None:
                 continue
             if not isinstance(qspec, QuantizationSpec):
-                msg = f"Unknown torch.ao quantization spec: {qspec}"
+                msg = f"Unknown torchao quantization spec: {qspec}"
                 raise nncf.InternalError(msg)
 
             if qspec.qscheme in [torch.per_channel_affine, torch.per_channel_symmetric]:

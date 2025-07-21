@@ -15,12 +15,7 @@ from typing import Any
 
 import pytest
 import torch
-import torch.ao.quantization
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.observer import MinMaxObserver
-from torch.ao.quantization.observer import PerChannelMinMaxObserver
-from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
 import nncf.common
@@ -28,16 +23,17 @@ import nncf.common.factory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.quantization.qdq_parameters import TorchQDQParameters
 from nncf.experimental.torch.fx.transformations import _get_node_by_input_port_id
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import create_getattr_from_value
 from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
@@ -278,27 +274,15 @@ class TestQDQInsertion:
     REF_SCALE = torch.tensor([1.0])
     REF_ZERO_POINT = torch.tensor([0.0])
 
-    def _get_quantizer(
-        self, per_channel: bool, symmetric: bool, q_min: torch.Tensor, q_max: torch.Tensor, dtype: torch.dtype
-    ) -> FakeQuantize:
-        if symmetric:
-            qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
-        else:
-            qscheme = torch.per_channel_affine if per_channel else torch.per_tensor_affine
-        observer = PerChannelMinMaxObserver if per_channel else MinMaxObserver
-
-        quantizer = FakeQuantize(
-            observer=observer,
+    def _get_torch_qdq_params(self, per_channel: bool, q_min: torch.Tensor, q_max: torch.Tensor) -> TorchQDQParameters:
+        return TorchQDQParameters(
             quant_min=q_min,
             quant_max=q_max,
-            dtype=dtype,
-            qscheme=qscheme,
-            eps=1e-5,
+            scale=self.REF_SCALE,
+            zero_point=self.REF_ZERO_POINT,
+            is_per_channel=per_channel,
+            ch_axis=-1,
         )
-        quantizer.scale = self.REF_SCALE
-        quantizer.zero_point = self.REF_ZERO_POINT
-
-        return quantizer
 
     def _check_qdq_params(
         self, captured_model: torch.fx.GraphModule, target_point: PTTargetPoint, dtype: torch.dtype, per_channel: bool
@@ -333,15 +317,13 @@ class TestQDQInsertion:
     def test_one_target_point(
         self,
         is_per_channel: bool,
-        quantization_mode: QuantizationMode,
         q_min: int,
         q_max: int,
         dtype: torch.dtype,
         target_point: PTTargetPoint,
     ):
-        symmetric = quantization_mode == QuantizationMode.SYMMETRIC
-        quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
-        transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
+        torch_qdq_params = self._get_torch_qdq_params(is_per_channel, q_min, q_max)
+        transformation = qdq_insertion_transformation_builder(torch_qdq_params, [target_point])
 
         model = MultiBranchesConnectedModelWithConcat()
         captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
@@ -381,16 +363,14 @@ class TestQDQInsertion:
     def test_shared_target_point(
         self,
         is_per_channel: bool,
-        quantization_mode: QuantizationMode,
         q_min: int,
         q_max: int,
         dtype: torch.dtype,
         target_points: PTTargetPoint,
         weights: bool,
     ):
-        symmetric = quantization_mode == QuantizationMode.SYMMETRIC
-        quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
-        transformation = qdq_insertion_transformation_builder(quantizer, target_points)
+        torch_qdq_params = self._get_torch_qdq_params(is_per_channel, q_min, q_max)
+        transformation = qdq_insertion_transformation_builder(torch_qdq_params, target_points)
 
         model = MultiBranchesConnectedModelWithConcat()
         captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))

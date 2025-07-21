@@ -14,10 +14,6 @@ from typing import Optional
 
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
-from torch.ao.quantization.pt2e.utils import _disallow_eval_train
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
-from torch.ao.quantization.quantizer import Quantizer
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
@@ -37,6 +33,17 @@ from nncf.experimental.torch.fx.transformations import compress_post_quantize_tr
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+
+try:
+    from torchao.quantization.pt2e.quantizer import Quantizer
+    from torchao.quantization.pt2e.quantizer.port_metadata_pass import PortNodeMetaForQDQ
+    from torchao.quantization.pt2e.utils import _disallow_eval_train
+    from torchao.quantization.pt2e.utils import _fuse_conv_bn_
+except ImportError:
+    from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
+    from torch.ao.quantization.pt2e.utils import _disallow_eval_train
+    from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
+    from torch.ao.quantization.quantizer import Quantizer
 
 
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
