@@ -355,11 +355,11 @@ def main(argv) -> float:
         num_samples=args.num_train_samples, seqlen=args.train_seqlen, tokenizer=tokenizer, device=device
     )
     if args.basic_init:
-        calib_loader = get_wikitext2(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
-        dataset = Dataset(map(get_model_input, calib_loader))
-    else:
         example_input = {k: v.to(device) for k, v in model.dummy_inputs.items()}
         dataset = Dataset([example_input])
+    else:
+        calib_loader = get_wikitext2(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
+        dataset = Dataset(map(get_model_input, calib_loader))
 
     # Pre-compute hiddens of teacher model for distillation loss.
     orig_hiddens = calc_hiddens(model, train_loader)
