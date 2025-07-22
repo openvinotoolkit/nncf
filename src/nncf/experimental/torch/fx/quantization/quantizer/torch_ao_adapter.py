@@ -29,9 +29,10 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
 
@@ -71,7 +72,7 @@ class TorchAOQuantizerAdapter(Quantizer):
         from_node: torch.fx.Node,
         to_nodes: list[torch.fx.Node],
         annotated_model: torch.fx.GraphModule,
-        qconfig: QuantizerConfig,
+        qconfig: TypedQuantizerConfig,
     ) -> list[QuantizationPointBase]:
         """
         Creates quantization points based on the nodes and edges.
@@ -79,7 +80,7 @@ class TorchAOQuantizerAdapter(Quantizer):
         :param from_node: The originating node in the computation graph.
         :param to_nodes: The list of destination nodes of the from_node.
         :param annotated_model: The torch.fx.GraphModule instance.
-        :param qconfig: The torch.ao quantization configuration.
+        :param qconfig: The TorchFX quantization configuration.
         :return: A list of NNCF quantization points.
         """
         to_n = to_nodes[0]
@@ -159,15 +160,19 @@ class TorchAOQuantizerAdapter(Quantizer):
                 msg = f"Unknown qscheme: {qspec.qscheme}"
                 raise nncf.InternalError(msg)
 
-            signed = qspec.dtype is torch.int8
+            dtype = TensorDataType.int8 if qspec.dtype is torch.int8 else TensorDataType.uint8
             mode = (
                 QuantizationMode.SYMMETRIC
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
                 else QuantizationMode.ASYMMETRIC
             )
-            narrow_range = qspec.quant_min % 2 != 0
-            qconfig = QuantizerConfig(
-                mode=mode, signedness_to_force=signed, per_channel=per_channel, narrow_range=narrow_range
+            narrow_range = qspec.quant_max - qspec.quant_min == 254
+            qconfig = TypedQuantizerConfig(
+                mode=mode,
+                signedness_to_force=False,
+                per_channel=per_channel,
+                narrow_range=narrow_range,
+                dest_dtype=dtype,
             )
 
             joined_edges = defaultdict(list)

@@ -21,6 +21,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
@@ -193,9 +194,19 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         insertion_point_cls_name = state[cls._state_names.INSERTION_POINT_CLASS_NAME]
         insertion_point_cls = CommonStatefulClassesRegistry.get_registered_class(insertion_point_cls_name)
         insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])  # type: ignore
+        qconfig_state = state[cls._state_names.QCONFIG]
+        # Need to instantiate TypedQuantizerConfig
+        # to support additional fields used by ExecuTorch-specific quantizer configs.
+        # TODO (dlyakhov): Refactor and generalize quantizer config deserialization to cleanly handle both
+        # standard and extended formats without relying on manual key comparison (ticket 170078).
+        if QuantizerConfig().__dict__.keys() == qconfig_state.keys():
+            qconfig = QuantizerConfig.from_state(qconfig_state)
+        else:
+            qconfig = TypedQuantizerConfig.from_state(qconfig_state)
+
         kwargs = {
             cls._state_names.INSERTION_POINT: insertion_point,
-            cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
+            cls._state_names.QCONFIG: qconfig,
             cls._state_names.NAMES_OF_QUANTIZED_OPS: state[cls._state_names.NAMES_OF_QUANTIZED_OPS],
         }
         return cls(**kwargs)

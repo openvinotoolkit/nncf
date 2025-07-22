@@ -14,6 +14,8 @@ from enum import Enum
 from enum import auto
 from typing import Optional, Union
 
+from nncf.parameters import StrEnum
+
 T_SHAPE_ARRAY = tuple[int, ...]
 T_SHAPE = Union[int, T_SHAPE_ARRAY]
 T_AXIS = Optional[T_SHAPE]
@@ -31,7 +33,7 @@ class TensorBackend(Enum):
     ov = auto()
 
 
-class TensorDataType(Enum):
+class TensorDataType(StrEnum):
     """
     Enum representing the different tensor data types.
     """
