@@ -49,8 +49,6 @@ from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_matmul_with_constant
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 
 
@@ -179,10 +177,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return config
 
     @staticmethod
-    def _get_channel_axis(target_point: PTTargetPoint, per_channel: bool) -> int:
-        if not per_channel:
-            return 0
-        if target_point.is_weight_target_point():
+    def _get_channel_axis(is_weight_quantizer: bool) -> int:
+        if is_weight_quantizer:
             # TODO(dlyakhov): support transpose conv/ make channel_idx common
             return 0
         return 1
@@ -190,8 +186,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _create_quantizer(
         quantizer_config: QuantizerConfig,
-        channel_axis: int,
         parameters: FakeQuantizeParameters,
+        is_weight_quantizer: bool,
     ) -> FakeQuantize:
         per_channel = quantizer_config.per_channel
         dtype = None
@@ -251,26 +247,13 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         )
 
         fakequantizer.scale = scale
-        fakequantizer.ch_axis = channel_axis
         fakequantizer.zero_point = zero_point
+        if per_channel:
+            fakequantizer.ch_axis = FXMinMaxAlgoBackend._get_channel_axis(is_weight_quantizer)
 
         # Disable observer to save parameters
         fakequantizer.disable_observer()
         return fakequantizer
-
-    @staticmethod
-    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape) -> None:
-        if isinstance(quantizer, AsymmetricQuantizer):
-            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data.reshape(scale_shape))
-            input_range = parameters.input_high - parameters.input_low
-            # Subtract eps from the input_range to make quantizer parameters equal to
-            # original parameters on the forward call.
-            quantizer.input_range = torch.nn.Parameter((input_range.data - quantizer.eps).reshape(scale_shape))
-        else:
-            quantizer.signed = bool(torch.any(parameters.input_low.data < 0))
-            # Subtract eps from the scale to make quantizer parameters equal to
-            # original parameters on the forward call.
-            quantizer.scale = torch.nn.Parameter((parameters.input_high.data - quantizer.eps).reshape(scale_shape))
 
     @staticmethod
     def create_quantizer_insertion_command(
@@ -279,12 +262,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
     ) -> FXApplyTransformationCommand:
-        channel_axis = FXMinMaxAlgoBackend._get_channel_axis(target_point, quantizer_config.per_channel)
-
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
-            quantizer_config,
-            channel_axis,
-            parameters,
+            quantizer_config, parameters, target_point.is_weight_target_point()
         )
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
         return FXApplyTransformationCommand(transformation)
@@ -296,12 +275,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
     ) -> list[PTSharedFnInsertionCommand]:
-        channel_axis = FXMinMaxAlgoBackend._get_channel_axis(target_points[0], quantizer_config.per_channel)
-
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
-            quantizer_config,
-            channel_axis,
-            parameters,
+            quantizer_config, parameters, target_points[0].is_weight_target_point()
         )
 
         transformations = []

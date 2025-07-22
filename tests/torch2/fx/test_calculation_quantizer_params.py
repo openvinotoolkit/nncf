@@ -414,9 +414,13 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
 def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig):
     fq_params = calculate_quantizer_parameters(case_to_test.stat, qconfig, case_to_test.quant_group, half_range=False)
 
-    ch_axis = 1 if case_to_test.per_channel and case_to_test.quant_group == QuantizerGroup.WEIGHTS else 0
-    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, ch_axis, fq_params)
+    quantizer = FXMinMaxAlgoBackend._create_quantizer(
+        qconfig, fq_params, is_weight_quantizer=case_to_test.quant_group == QuantizerGroup.WEIGHTS
+    )
 
+    ch_axis = -1
+    if case_to_test.per_channel:
+        ch_axis = 0 if case_to_test.quant_group == QuantizerGroup.WEIGHTS else 1
     assert quantizer.ch_axis == ch_axis
 
     return quantizer
@@ -455,4 +459,4 @@ def test_extended_q_config_non_supported_dest_dtype(dest_dtype):
     qconfig = TypedQuantizerConfig(dest_dtype=dest_dtype)
     params = FakeQuantizeParameters(-1.0, 1.0, -1.0, 1.0, 255)
     with pytest.raises(nncf.ParameterNotSupportedError):
-        FXMinMaxAlgoBackend._create_quantizer(quantizer_config=qconfig, channel_axis=1, parameters=params)
+        FXMinMaxAlgoBackend._create_quantizer(quantizer_config=qconfig, parameters=params, is_weight_quantizer=False)
