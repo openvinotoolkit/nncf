@@ -239,7 +239,6 @@ def do_float_quantization(
         compressed_weight = norm_weight.as_openvino_tensor().astype(target_dtype)
     else:
         compressed_weight = _calculate_float_quantized_weight(norm_weight, config.mode)
-        # compressed_weight = norm_weight
     return compressed_weight, scale
 
 
@@ -554,6 +553,19 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, mode: CompressWeights
     quantile_centers = fns.from_numpy(quantile_centers_np, backend=norm_weight.backend)
     indexes = fns.searchsorted(quantile_centers, norm_weight)
     quantiles = fns.from_numpy(quantiles_np, backend=indexes.backend)
+
+    if mode == CompressWeightsMode.E2M1:
+        # Round to the nearest even quantile
+        shifted_indexes = fns.clip(indexes + 1, 0, quantiles.size - 1)
+        left = quantiles[indexes]
+        right = quantiles[shifted_indexes]
+        dist_left = fns.abs(norm_weight - left)
+        dist_right = fns.abs(norm_weight - right)
+        choose_right = fns.logical_or(
+            dist_right < dist_left, fns.logical_and(dist_left == dist_right, (shifted_indexes + 1) % 2 == 0)
+        )
+        indexes = fns.where(choose_right, shifted_indexes, indexes)
+
     quantized_weight = quantiles[indexes]
     return quantized_weight
 

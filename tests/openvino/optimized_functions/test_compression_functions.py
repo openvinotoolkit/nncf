@@ -151,19 +151,18 @@ def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantizati
     reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
 )
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
-# @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
-@pytest.mark.parametrize("config", FP4_COMPRESSION_CONFIGS[-2:])
+@pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
     ("quantization_task", "tensor_backend"),
     [
         (QuantizationTask.Q, TensorBackend.numpy),
-        # (QuantizationTask.Q, "auto"),
+        (QuantizationTask.Q, "auto"),
         # NumPy backend should support OV tensors as inputs only for quantization task
-        # (QuantizationTask.Q, TensorBackend.ov),
-        # (QuantizationTask.Q_DQ, TensorBackend.numpy),
-        # (QuantizationTask.Q_DQ, "auto"),
-        # (QuantizationTask.Q_DQ_RQ, TensorBackend.numpy),
-        # (QuantizationTask.Q_DQ_RQ, "auto"),
+        (QuantizationTask.Q, TensorBackend.ov),
+        (QuantizationTask.Q_DQ, TensorBackend.numpy),
+        (QuantizationTask.Q_DQ, "auto"),
+        (QuantizationTask.Q_DQ_RQ, TensorBackend.numpy),
+        (QuantizationTask.Q_DQ_RQ, "auto"),
     ],
 )
 @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
@@ -525,8 +524,8 @@ def _check_values(results):
                 f"NumPy result: {format_list_of_floats(numpy_result.data[not_equal_mask])}\n"
             )
             if "input" in results[ComputationBackend.OV] and "input" in results[ComputationBackend.NumPy]:
-                numpy_input = results[ComputationBackend.NumPy]['input'].data
-                ov_input = results[ComputationBackend.OV]['input'].data
+                numpy_input = results[ComputationBackend.NumPy]["input"].data
+                ov_input = results[ComputationBackend.OV]["input"].data
                 np.testing.assert_allclose(numpy_input, ov_input, atol=0, rtol=0)
                 msg += f"Input values   : {format_list_of_floats(numpy_input[not_equal_mask])}\n"
                 misaligned_groups_mask = np.any(not_equal_mask, axis=-1)

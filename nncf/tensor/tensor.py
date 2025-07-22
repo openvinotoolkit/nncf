@@ -144,6 +144,9 @@ class Tensor:
         self._data //= unwrap_tensor_data(other)
         return self
 
+    def __mod__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return cast(Tensor, _call_function("_binary_op_nowarn", self, other, operator.mod))
+
     def __matmul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data @ unwrap_tensor_data(other))
 

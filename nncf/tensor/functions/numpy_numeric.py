@@ -348,6 +348,11 @@ def _(x1: T_NUMPY_ARRAY, x2: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
     return np.logical_or(x1, x2)
 
 
+@numeric.logical_and.register
+def _(x1: T_NUMPY_ARRAY, x2: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
+    return np.logical_and(x1, x2)
+
+
 @numeric.masked_mean.register
 def _(
     x: T_NUMPY_ARRAY,
