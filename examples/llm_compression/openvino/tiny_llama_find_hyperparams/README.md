@@ -19,9 +19,7 @@ To run the example you should install the corresponding Python dependencies:
 - Install dependencies:
 
 ```bash
-pip install -U pip
-pip install ../../../../
-pip install -r requirements.txt
+pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example

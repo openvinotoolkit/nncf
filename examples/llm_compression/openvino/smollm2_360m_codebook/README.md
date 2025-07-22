@@ -10,9 +10,7 @@ To use this example:
 - Install dependencies:
 
 ```bash
-pip install -U pip
-pip install -r requirements.txt
-pip install ../../../../
+pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example
