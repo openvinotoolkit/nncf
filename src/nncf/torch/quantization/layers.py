@@ -1533,3 +1533,30 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         result = result.reshape(self.result_shape) if self.result_shape is not None else result
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result
+
+
+@COMPRESSION_MODULES.register()
+class SQMultiply(torch.nn.Module, StatefulModuleInterface):
+    SCALE_SHAPE_KEY = "scale_shape"
+
+    def __init__(self, scale_shape: tuple[int, ...]):
+        super().__init__()
+        self._scale_value = CompressionParameter(torch.empty(scale_shape))
+
+    @property
+    def scale(self) -> torch.nn.Parameter:
+        return self._scale_value
+
+    @scale.setter
+    def scale(self, value: torch.tensor):
+        self._scale_value.data = value
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.mul(x, self._scale_value)
+
+    def get_config(self) -> dict[str, Any]:
+        return {self.SCALE_SHAPE_KEY: list(self._scale_value.shape)}
+
+    @classmethod
+    def from_config(cls, state) -> "SQMultiply":
+        return SQMultiply(state[cls.SCALE_SHAPE_KEY])
