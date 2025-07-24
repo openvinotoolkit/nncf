@@ -263,7 +263,11 @@ class AWQ(Algorithm):
                 cur_scale = gscale**alpha
 
                 if prev_s is not None:
-                    threshold = 0.25 * 65504  # take the threshold from the fp16 type with some margin
+                    FP16_MAX_VALUE = 65504.0
+                    FP16_OVERFLOW_MARGIN = 0.25
+                    threshold = (
+                        FP16_OVERFLOW_MARGIN * FP16_MAX_VALUE
+                    )  # take the threshold from the fp16 type with some margin
                     # per channel magnitudes for the previous MatMul
                     # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
                     magnitudes = (
