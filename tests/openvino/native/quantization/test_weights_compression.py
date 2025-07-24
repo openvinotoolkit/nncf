@@ -1614,6 +1614,13 @@ def test_awq_fp16_overflow_fix(mocker):
 
     assert awq_spy.call_count == 36
 
+    for call, res in zip(awq_spy.call_args_list, awq_spy.spy_return_list):
+        scale = call[0][2]
+        clamped_scale = call[0][3]
+        assert np.all(scale.data <= clamped_scale.data)
+        assert np.all(scale.data <= res.data)
+        assert np.any(scale.data < res.data)
+
 
 @pytest.mark.parametrize("n_extra_dims", [0, 1, 2])
 def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
