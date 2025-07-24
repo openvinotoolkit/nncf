@@ -223,7 +223,7 @@
         "requirements": "examples/llm_compression/onnx/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 77
+            "word_count": 75
         }
     },
     "llm_tune_params": {
