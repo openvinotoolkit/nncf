@@ -40,6 +40,10 @@ TTensor = TypeVar("TTensor")
 TWeightType = TypeVar("TWeightType")
 
 
+FP16_MAX_VALUE = 65504.0
+FP16_OVERFLOW_MARGIN = 0.25
+
+
 @dataclass
 class AWQCompressionInfo:
     """
@@ -263,8 +267,6 @@ class AWQ(Algorithm):
                 cur_scale = gscale**alpha
 
                 if prev_s is not None:
-                    FP16_MAX_VALUE = 65504.0
-                    FP16_OVERFLOW_MARGIN = 0.25
                     threshold = (
                         FP16_OVERFLOW_MARGIN * FP16_MAX_VALUE
                     )  # take the threshold from the fp16 type with some margin
