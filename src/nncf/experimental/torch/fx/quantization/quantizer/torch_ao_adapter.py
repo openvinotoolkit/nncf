@@ -98,7 +98,7 @@ class TorchAOQuantizerAdapter(Quantizer):
 
         qps = []
         for to_n_ in to_nodes:
-            input_port_id = to_n_.args.index(from_node)
+            input_port_id = TorchAOQuantizerAdapter._get_node_args(to_n_).index(from_node)
             qip = ActivationQuantizationInsertionPoint(to_n_.name, input_port_id)
             qp = SingleConfigQuantizationPoint(qip, qconfig, [to_n_.name])
             qps.append(qp)
@@ -166,7 +166,12 @@ class TorchAOQuantizerAdapter(Quantizer):
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
                 else QuantizationMode.ASYMMETRIC
             )
-            narrow_range = qspec.quant_max - qspec.quant_min == 254
+
+            if qspec.quant_min is None or qspec.quant_max is None:
+                narrow_range = False
+            else:
+                narrow_range = qspec.quant_max - qspec.quant_min == 254
+
             qconfig = TypedQuantizerConfig(
                 mode=mode,
                 signedness_to_force=False,
