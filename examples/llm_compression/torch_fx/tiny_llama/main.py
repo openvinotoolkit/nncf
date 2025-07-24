@@ -22,7 +22,7 @@ from transformers.models.llama import LlamaTokenizerFast
 
 import nncf
 
-MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
 def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
@@ -62,7 +62,16 @@ def main() -> str:
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        input_ids = tokenizer("What is PyTorch?", return_tensors="pt")
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a friendly chatbot who always responds in the style of a pirate",
+            },
+            {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
+        ]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+        input_ids = tokenizer(prompt, return_tensors="pt")
         print("Warmup...")
         output = compressed_model_hf.generate(input_ids["input_ids"])
 
