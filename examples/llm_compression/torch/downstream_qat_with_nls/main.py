@@ -95,15 +95,20 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> list[dict[s
     return [{"params": adapters_to_train, "lr": lora_lr}, {"params": scales_to_train, "lr": fq_lr}]
 
 
-def save_checkpoint(model: nn.Module, ckpt_file: Path) -> None:
+def save_checkpoint(model: nn.Module, ckpt_file: Path, model_state: bool = True) -> None:
     """
-    Saves the state of a tuned model from a checkpoint.
+    Stores the current state of a quantized model to a checkpoint file.
 
-    :param model: The model to load the checkpoint into.
-    :param ckpt_file: Path to the checkpoint file.
+    :param model: The model whose state will be saved to checkpoint.
+    :param ckpt_file: Path to store the checkpoint file.
+    :param model_state: Whether to save the complete model weights in addition to NNCF state. Required when using
+        AWQ method which fuses scaling factors into weights. When False, only NNCF configuration and state are saved,
+        as they're maintained separately from the model's weights.
     """
     hook_storage = get_hook_storage(model)
     ckpt = {"nncf_state_dict": hook_storage.state_dict(), "nncf_config": nncf.torch.get_config(model)}
+    if model_state:
+        ckpt["model_state"] = model.state_dict()
     torch.save(ckpt, ckpt_file)
 
 
@@ -118,6 +123,8 @@ def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
     """
     ckpt = torch.load(ckpt_file, weights_only=False, map_location="cpu")
     model = load_from_config(model, ckpt["nncf_config"])
+    if "model_state" in ckpt:
+        model.load_state_dict(ckpt["model_state"])
     hook_storage = get_hook_storage(model)
     hook_storage.load_state_dict(ckpt["nncf_state_dict"])
     return model
@@ -846,7 +853,7 @@ def main(argv) -> float:
             dataset=Dataset([{k: v.to(device) for k, v in model_input.items()}]),
             **compression_config,
         )
-        save_checkpoint(model, ckpt_file)
+        save_checkpoint(model, ckpt_file, False)
 
     with create_eval_model(model, args.fast_eval, args.pretrained, torch_dtype, ckpt_file) as eval_model:
         results_compression_before_finetuning = lm_eval(eval_model, task=args.task, batch_size=args.eval_batch_size)
@@ -957,7 +964,7 @@ def main(argv) -> float:
                     tb.add_scalar("learning_rate", current_lr, total_microbatches)
                     tb.add_scalar("loss", aggregated_loss, total_microbatches)
 
-            save_checkpoint(model, ckpt_file)
+            save_checkpoint(model, ckpt_file, False)
 
     # Evaluate after training using a dedicated function
     overall_result, ov_result = evaluate_after_training(

@@ -208,6 +208,12 @@ def fp8_llm_quantization() -> dict[str, float]:
     return {"answers": list(result.values())}
 
 
+def codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_codebook.main import main as codebook_llm_compression_main
+
+    return {"answers": codebook_llm_compression_main()}
+
+
 def llm_compression_distillation_qat_with_lora() -> float:
     from examples.llm_compression.torch.distillation_qat_with_lora.main import main as distillation_qat_with_lora_main
 
@@ -217,18 +223,17 @@ def llm_compression_distillation_qat_with_lora() -> float:
         "--epochs=1",
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
         "--num_train_samples=128",
-        "--calib_seqlen=128",
+        "--train_seqlen=128",
         "--lora_rank=8",
         "--batch_size=16",
         "--microbatch_size=4",
         "--lr=5e-4",
-        "--fast_eval",
         "--limit=0.2",
     ]
 
-    perplexity_diff_torch, best_ov_perplexity = distillation_qat_with_lora_main(args)
+    best_ov_perplexity = distillation_qat_with_lora_main(args)
 
-    return {"perplexity_diff_torch": perplexity_diff_torch, "best_ov_perplexity": best_ov_perplexity}
+    return {"best_ov_perplexity": best_ov_perplexity}
 
 
 def llm_compression_qat_with_nls() -> float:
