@@ -792,16 +792,7 @@ class WeightCompression(Algorithm):
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
-<<<<<<< HEAD:src/nncf/quantization/algorithms/weight_compression/algorithm.py
-                is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
-                is_same_bit_compression = (
-                    weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and self._mode in INT8_MODES
-                )
-                               
-                if is_target_node and is_supported_dtype and not is_same_bit_compression:
-=======
                 if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
->>>>>>> 029437d67 (fixed backup precsion):nncf/quantization/algorithms/weight_compression/algorithm.py
                     if (
                         self._group_size != -1
                         and self._all_layers
