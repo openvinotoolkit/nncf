@@ -89,6 +89,7 @@ class WeightCompressionParameters:
     :param weight_name: Unique weight name.
     :param node_with_weight: Node with weight in the NNCF graph.
     :param weight_port_id: Number of elements in the weight array.
+    :param weight_dtype: Data type of the weight tensor.
     :param weight_shape: Shape of the weight array.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param compression_config: Configuration of weight compression for the weight node.

@@ -899,11 +899,11 @@ def check_compressed_matmul_subgraph(start_node, activation_dtype, weight_dtype,
         (ov.Type.f8e4m3, ov.Type.f32),
         (ov.Type.f8e5m2, ov.Type.f32),
         (ov.Type.f16, ov.Type.f16),
-        (ov.Type.f8e4m3, ov.Type.f32),
-        (ov.Type.f8e5m2, ov.Type.f32),
+        (ov.Type.f8e4m3, ov.Type.f16),
+        (ov.Type.f8e5m2, ov.Type.f16),
         (ov.Type.bf16, ov.Type.bf16),
-        (ov.Type.f8e4m3, ov.Type.f32),
-        (ov.Type.f8e5m2, ov.Type.f32),
+        (ov.Type.f8e4m3, ov.Type.bf16),
+        (ov.Type.f8e5m2, ov.Type.bf16),
     ],
     ids=[
         "w32a32",
@@ -1891,7 +1891,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_ignored_scope_name() -> str:
-        return "MatMul_6"
+        return "MatMul_5"
 
     @staticmethod
     def get_num_int4_nodes(model: ov.Model) -> int:

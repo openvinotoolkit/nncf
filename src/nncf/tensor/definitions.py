@@ -66,6 +66,22 @@ class TensorDataType(StrEnum):
             TensorDataType.nf4,
         ]
 
+    def itemsize(self) -> int:
+        """
+        Returns the size of a single item in bits for the tensor data type.
+
+        :return: The item size in bits.
+        """
+        if self in [TensorDataType.nf4, TensorDataType.uint4, TensorDataType.int4]:
+            return 4
+        if self in [TensorDataType.f8e4m3, TensorDataType.f8e5m2, TensorDataType.int8, TensorDataType.uint8]:
+            return 8
+        if self in [TensorDataType.float16, TensorDataType.bfloat16]:
+            return 16
+        if self in [TensorDataType.float32, TensorDataType.int32]:
+            return 32
+        return 64
+
 
 class TensorDeviceType(Enum):
     """

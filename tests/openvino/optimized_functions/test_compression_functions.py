@@ -80,7 +80,7 @@ REDUCTION_AXES = (1,)
 
 RANDOM_TENSOR_CACHE_CONTAINER = ResultsCache()
 
-SUPPORTED_DTYPES = [
+SUPPORTED_WEIGHT_DTYPES = [
     TensorDataType.float32,
     TensorDataType.float16,
     TensorDataType.bfloat16,
@@ -172,7 +172,7 @@ def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantizati
         (QuantizationTask.Q_DQ_RQ, "auto"),
     ],
 )
-@pytest.mark.parametrize("dtype", SUPPORTED_DTYPES)
+@pytest.mark.parametrize("dtype", SUPPORTED_WEIGHT_DTYPES)
 @pytest.mark.parametrize("precompute_s_zp", [False, True], ids=["no-precompute", "precompute"])
 def test_quantization_alignment(weight_shape, config, quantization_task, tensor_backend, dtype, precompute_s_zp):
     d1, d2 = weight_shape
@@ -279,7 +279,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
-@pytest.mark.parametrize("dtype", SUPPORTED_DTYPES)
+@pytest.mark.parametrize("dtype", SUPPORTED_WEIGHT_DTYPES)
 def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype):
     results = defaultdict(dict)
     # Iterate over two implementations
@@ -310,7 +310,7 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
     reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
 )
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
-@pytest.mark.parametrize("weight_dtype", SUPPORTED_DTYPES)
+@pytest.mark.parametrize("weight_dtype", SUPPORTED_WEIGHT_DTYPES)
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
     "compression_kwargs",

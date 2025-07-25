@@ -362,7 +362,7 @@ class TemplateWeightCompression(ABC):
                 ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
             )
 
-        int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed
 

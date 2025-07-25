@@ -15,6 +15,8 @@ from collections import defaultdict
 from functools import reduce
 from typing import Any, Iterable, Optional, TypeVar
 
+import numpy as np
+
 import nncf
 from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -566,7 +568,17 @@ class WeightCompression(Algorithm):
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
             if reduction_channel_size % self._group_size != 0:
                 nodes_to_exclude[w_params.node_with_weight.node_name] = w_params.weight_shape
-                skipped_weight_params.append(WeightCompressionParameters(w_params.weight_name, w_params.node_with_weight, w_params.weight_port_id, w_params.weight_dtype, w_params.weight_size, w_params.reduction_axes, None))
+                skipped_weight_params.append(
+                    WeightCompressionParameters(
+                        w_params.weight_name,
+                        w_params.node_with_weight,
+                        w_params.weight_port_id,
+                        w_params.weight_dtype,
+                        w_params.weight_shape,
+                        w_params.reduction_axes,
+                        None,
+                    )
+                )
 
         if nodes_to_exclude:
             ratio_defining_params = [
@@ -745,22 +757,30 @@ class WeightCompression(Algorithm):
                 ignored_scope_weight_statistics.append(weight_size)
         return ignored_scope_weight_statistics
 
-    @staticmethod
-    def is_weight_compression_supported(weight_dtype: TensorDataType, compression_mode: CompressWeightsMode) -> bool:
+    def is_weight_compression_supported(
+        self, weight_dtype: TensorDataType, compression_mode: CompressWeightsMode
+    ) -> bool:
         """
         Determines if a given weight data type and compression mode combination is supported for weight compression.
 
         :param weight_dtype: The data type of the weights to be compressed.
         :param compression_mode: The compression mode to be applied.
-        :return: True if the combination of weight_dtype and compression_mode is supported for compression,
+        :return: True if the combination of wgit eight_dtype and compression_mode is supported for compression,
             False otherwise. Specifically, returns False if the data type is one of the supported
             float8 types and the mode is an INT8 mode (i.e., same-bit compression is not supported).
         """
         is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
-        is_same_bit_compression = (
-            weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2] and compression_mode in INT8_MODES
-        )
-        return is_supported_dtype and not is_same_bit_compression
+
+        no_bit_reduction = compression_mode in INT8_MODES and weight_dtype in [
+            TensorDataType.f8e4m3,
+            TensorDataType.f8e5m2,
+        ]
+
+        if compression_mode == CompressWeightsMode.CODEBOOK:
+            codebook_bits = np.log2(Tensor(self._advanced_parameters.codebook).size)
+            no_bit_reduction &= codebook_bits >= weight_dtype.itemsize
+
+        return is_supported_dtype and not no_bit_reduction
 
     def apply(
         self,
@@ -783,7 +803,7 @@ class WeightCompression(Algorithm):
         for i, node in enumerate(nodes_to_compress):
             is_target_node = should_consider_scope(node.node_name, ignored_names)
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
-                is_last_layer = i == n - 1 
+                is_last_layer = i == n - 1
                 if weight_name in weight_names:
                     is_last_layer_skipped = is_last_layer
                     continue
@@ -834,7 +854,7 @@ class WeightCompression(Algorithm):
 
         # get subset nodes to define compression ratio
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
-        
+
         # handle group size fallback modes
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
@@ -844,7 +864,7 @@ class WeightCompression(Algorithm):
             ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(ratio_defining_params)
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
-        
+
         # collect statistics for the weights compression
         statistics = None
         if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
