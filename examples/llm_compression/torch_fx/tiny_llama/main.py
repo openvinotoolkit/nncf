@@ -69,10 +69,9 @@ def main() -> str:
             },
             {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
         ]
-        input_ids = tokenizer.apply_chat_template(messages, 
-                                                  tokenize=True, 
-                                                  add_generation_prompt=True, 
-                                                  return_tensors="pt")
+        input_ids = tokenizer.apply_chat_template(
+            messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+        )
 
         print("Warmup...")
         output = compressed_model_hf.generate(input_ids)
