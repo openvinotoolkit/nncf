@@ -4,13 +4,19 @@ This example demonstrates how to apply static FP8 quantization to [HuggingFaceTB
 
 ## Prerequisites
 
-To use this example:
+Before running this example, ensure you have Python 3.9+ installed and set up your environment:
 
-- Create a separate Python* environment and activate it: `python3 -m venv nncf_env && source nncf_env/bin/activate`
-- Install dependencies:
+### 1. Create and activate a virtual environment
 
 ```bash
-pip install ../../../../ -r requirements.txt
+python3 -m venv nncf_env
+source nncf_env/bin/activate  # On Windows: nncf_env\Scripts\activate.bat
+```
+
+### 2. Install NNCF and other dependencies
+
+```bash
+python3 -m pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example
@@ -21,4 +27,8 @@ To run example:
 python main.py
 ```
 
-It will automatically download the dataset and baseline model and save the resulting model.
+This will automatically:
+
+- Download the SmolLM2 model and dataset
+- Apply weight compression using NNCF
+- Save the optimized model
