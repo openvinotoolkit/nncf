@@ -24,3 +24,7 @@ python main.py
 ```
 
 It will automatically download baseline model and save the resulting model.
+
+## Set ONNX Opset (Optional)
+
+The exported model uses ONNX opset version 21 by default. You can override this by specifying a different opset version when running the script. For example: `python main.py 14`
