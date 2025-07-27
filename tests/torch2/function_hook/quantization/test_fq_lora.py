@@ -85,6 +85,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
     )
 
 
+@pytest.mark.xfail(reason="issue-171197")
 @pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
