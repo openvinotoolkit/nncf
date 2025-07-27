@@ -15,4 +15,4 @@ efficientnet_pytorch==0.7.1
 datasets==3.0.1
 transformers==4.52.1
 optimum-intel==1.24.0
-optimum==1.25.0
+optimum==1.26.0
