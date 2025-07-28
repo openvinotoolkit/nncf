@@ -32,3 +32,11 @@ This will automatically:
 - Download the TinyLlama model and dataset
 - Apply weight compression using NNCF
 - Save the optimized model
+
+### Set ONNX Opset (Optional)
+
+The exported model uses ONNX opset version 21 by default. You can override this by specifying a different opset version when running the script. For example:
+
+```bash
+python main.py 14
+```

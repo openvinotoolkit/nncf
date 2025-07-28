@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import time
 from pathlib import Path
 
@@ -40,10 +41,17 @@ def main():
     # the directory containing the model’s external data files.
     onnx_model = onnx.load(OUTPUT_DIR / "model.onnx", load_external_data=False)
 
+    # Convert model to the target opset version if necessary.
+    opset = 21 if len(sys.argv) < 2 else int(sys.argv[1])
+    if onnx_model.opset_import[0].version != opset:
+        onnx_model = onnx.version_converter.convert_version(onnx_model, opset)
+
     compressed_onnx_model = nncf.compress_weights(
         onnx_model,
         mode=nncf.CompressWeightsMode.INT4_SYM,
-        ratio=0.8,
+        ratio=1.0,
+        all_layers=True,
+        ignored_scope=nncf.IgnoredScope(types=["Gather"]),
         advanced_parameters=nncf.AdvancedCompressionParameters(
             backend_params={BackendParameters.EXTERNAL_DATA_DIR: OUTPUT_DIR}
         ),
