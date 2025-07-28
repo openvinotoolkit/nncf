@@ -254,9 +254,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             n_quants = compressed_weight.codebook.size - 1
             compression_dtype = ov.Type.u16 if n_quants > 255 else (ov.Type.u8 if n_quants > 15 else ov.Type.u4)
             converted_const = create_ov_codebook_subgraph(
-                codebook=compressed_weight.codebook
-                if compression_config.mode == CompressWeightsMode.CODEBOOK
-                else compressed_weight.codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3),
+                compressed_weight.codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3),
                 indexes=compressed_weight.tensor,
                 dtype=compression_dtype,
                 name=const_node_name,

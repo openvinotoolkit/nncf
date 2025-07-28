@@ -364,6 +364,7 @@ class WeightCompression(Algorithm):
             or self._scale_estimation
             or self._lora_correction
             or self._gptq
+            or self._codebook_estimation_algo
         )
 
     @property
