@@ -218,12 +218,20 @@
             "word_count": 65
         }
     },
+    "llm_compression_fx": {
+        "backend": "torchfx",
+        "requirements": "examples/llm_compression/torch_fx/tiny_llama/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 56
+      }
+    },
     "llm_compression_onnx": {
         "backend": "onnx",
         "requirements": "examples/llm_compression/onnx/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 77
+            "word_count": 75
         }
     },
     "llm_tune_params": {

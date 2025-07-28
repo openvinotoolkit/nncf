@@ -20,7 +20,6 @@ on:
         type: boolean
         default: false
 
-
 concurrency:
   group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
   cancel-in-progress: false
@@ -197,6 +196,7 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
+          NNCF_EXTENSION_LOAD_TIMEOUT: 180
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |

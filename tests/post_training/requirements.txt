@@ -10,14 +10,14 @@ pytest-split
 
 librosa==0.10.0
 memory-profiler==0.61.0
-optimum-intel==1.23.0
-optimum==1.25.0
+optimum-intel==1.24.0
+optimum==1.26.0
 scikit-learn>=1.2.2,<=1.5.0
 soundfile==0.12.1
 tensorboard==2.13.0
 tensorflow-io==0.32.0
 timm==0.9.2
 accelerate==1.1.0
-transformers==4.51.3
+transformers==4.52.1
 whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.2.0.0#subdirectory=tools/who_what_benchmark
 datasets==3.1.0

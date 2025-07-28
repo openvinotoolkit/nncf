@@ -1,5 +1,6 @@
 {
     "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression]": 222.974,
+    "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression_fx]": 394,
     "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression_synthetic]": 873.780,
     "tests/cross_fw/examples/test_examples.py::test_examples[llm_tune_params]": 1018.932,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_onnx_mobilenet_v2]": 178.509,
