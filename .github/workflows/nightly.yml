@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: 3.10.14
       - name: Install NNCF and test requirements
-        run: pip install -e . -r tests/tensorflow/requirements.txt
+        run: pip install . -r tests/tensorflow/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run TensorFlow precommit
