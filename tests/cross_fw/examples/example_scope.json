@@ -215,7 +215,7 @@
         "requirements": "examples/llm_compression/openvino/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 65
+            "word_count": 86
         }
     },
     "llm_compression_fx": {
@@ -224,7 +224,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "word_count": 56
-      }
+        }
     },
     "llm_compression_onnx": {
         "backend": "onnx",
@@ -256,7 +256,11 @@
         "backend": "torch",
         "requirements": "examples/quantization_aware_training/torch/anomalib/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "python_version": [3,10,0],
+        "python_version": [
+            3,
+            10,
+            0
+        ],
         "accuracy_tolerance_after_training": 0.02,
         "accuracy_tolerance": 0.08,
         "accuracy_metrics": {

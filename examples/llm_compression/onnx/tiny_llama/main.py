@@ -24,7 +24,7 @@ from nncf.onnx.quantization.backend_parameters import BackendParameters
 ROOT = Path(__file__).parent.resolve()
 
 
-MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 OUTPUT_DIR = ROOT / "tinyllama_compressed"
 
 
@@ -65,10 +65,13 @@ def main():
 
     ov_model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, from_onnx=True)
 
-    input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
+    messages = [{"role": "user", "content": "What is PyTorch?"}]
+    input_ids = tokenizer.apply_chat_template(
+        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+    ).to(device=model.device)
 
     start_t = time.time()
-    output = ov_model.generate(**input_ids, max_new_tokens=100)
+    output = ov_model.generate(input_ids, max_new_tokens=100)
     print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])
