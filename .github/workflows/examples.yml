@@ -197,6 +197,7 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
+          NNCF_EXTENSION_LOAD_TIMEOUT: 180
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |
