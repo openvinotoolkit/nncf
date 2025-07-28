@@ -17,7 +17,6 @@ from transformers import GenerationConfig
 from transformers import GenerationMixin
 from transformers import PretrainedConfig
 from transformers import PreTrainedModel
-from transformers.cache_utils import StaticCacheConfig
 from transformers.integrations.executorch import TorchExportableModuleWithStaticCache
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.models.llama.configuration_llama import LlamaConfig
