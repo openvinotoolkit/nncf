@@ -773,7 +773,7 @@ class WeightCompression(Algorithm):
 
         no_bit_reduction = False
         if compression_mode in INT8_MODES:
-            no_bit_reduction = weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2]  
+            no_bit_reduction = weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2]
         elif compression_mode == CompressWeightsMode.CODEBOOK:
             codebook_bits = np.log2(Tensor(self._advanced_parameters.codebook).size)
             no_bit_reduction = codebook_bits >= weight_dtype.itemsize()
