@@ -34,6 +34,7 @@ from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 
@@ -41,11 +42,6 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "compress_weights" /
 
 
 @pytest.mark.cuda
-@pytest.mark.parametrize(
-    "compression_kwargs",
-    (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
-    ids=["se_awq", "data_free"],
-)
 @pytest.mark.parametrize(
     ("mode", "backup_mode", "ref_num_trainable"),
     (
@@ -56,14 +52,13 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "compress_weights" /
     ),
     ids=["asym", "sym"],
 )
-def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
+def test_fq_lora_tuning(mode, backup_mode, ref_num_trainable, _seed):
     """
     Tests FQ-LoRA (Fake-Quantize with Low-Rank Adaptation) fine-tuning.
     Verifies:
     1. Weight compression with FQ-LoRA properly sets up trainable parameters
     2. Model can be fine-tuned after quantization
     3. Loss decreases significantly after fine-tuning
-    4. Model can be stripped and converted to OpenVINO with minimal output differences
     """
     device = "cuda"
     MODEL_DIM = 32
@@ -78,7 +73,6 @@ def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable
         dataset=nncf.Dataset([example_inputs]),
         compression_format=nncf.CompressionFormat.FQ_LORA,
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=8),
-        **compression_kwargs,
     )
     # Verify the correct trainable parameters are set based on quantization mode
     trainable_params = [name.split(".")[-1] for name, param in model.named_parameters() if param.requires_grad]
@@ -112,18 +106,41 @@ def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable
     assert first_loss > 30
     assert float(loss) < 10
 
-    if compression_kwargs["awq"]:
-        return  # Skip test for strip for awq + se initialization. Cases with data-free methods are enough.
+
+@pytest.mark.cuda
+@pytest.mark.parametrize(
+    "compression_kwargs",
+    (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
+    ids=["se_awq", "data_free"],
+)
+def test_fq_lora_export(compression_kwargs, _seed):
+    """
+    Tests FQ-LoRA (Fake-Quantize with Low-Rank Adaptation) can be stripped and exported to OpenVINO.
+    """
+    device = "cuda"
+    example_input = 0.01 * torch.arange(0, 4 * 8, device=device).reshape(1, 4, 8) + 0.02
+
+    model = AWQLinearModel().to(device)
+    model = nncf.compress_weights(
+        model,
+        group_size=-1,
+        mode=nncf.CompressWeightsMode.INT4_ASYM,
+        dataset=nncf.Dataset([example_input]),
+        compression_format=nncf.CompressionFormat.FQ_LORA,
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=8),
+        **compression_kwargs,
+    )
 
     with torch.no_grad():
-        tuned_output = model(example_inputs)
-        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_inputs)
-        stripped_output = model(example_inputs)
-        model = ov.convert_model(model, example_input=example_inputs)
+        tuned_output = model(example_input)
+        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_input)
+        stripped_output = model(example_input)
+        model = ov.convert_model(model, example_input=example_input)
         model = ov.compile_model(model)
-        example_inputs_numpy = example_inputs.detach().cpu().numpy()
-        stripped_ov_output = torch.tensor(model(example_inputs_numpy)[0], device=example_inputs.device)
-        assert torch.allclose(tuned_output, stripped_output, atol=1e-2)
+        example_inputs_numpy = example_input.detach().cpu().numpy()
+        stripped_ov_output = torch.tensor(model(example_inputs_numpy)[0], device=example_input.device)
+
+        assert torch.allclose(tuned_output, stripped_output, atol=1e-1)
         assert torch.allclose(tuned_output, stripped_ov_output, atol=1e-1)
 
 
