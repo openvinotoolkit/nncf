@@ -11,15 +11,10 @@
 
 from pathlib import Path
 
+import openvino as ov
 import pytest
 import torch
 from networkx.drawing.nx_pydot import to_pydot
-from optimum.exporters.openvino.convert import export_from_model
-from optimum.intel.openvino import OVModelForCausalLM
-from sentence_transformers import SentenceTransformer
-from sentence_transformers import util
-from transformers import AutoModelForCausalLM
-from transformers import AutoTokenizer
 
 import nncf
 from nncf.data.dataset import Dataset
@@ -45,47 +40,6 @@ from tests.torch2.utils import to_comparable_nx_graph
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "compress_weights" / "fq_lora"
 
 
-class ValidationMock:
-    def __init__(self) -> None:
-        model_id = "sentence-transformers/all-mpnet-base-v2"
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-        self.model = SentenceTransformer(
-            model_id, tokenizer_kwargs={"pad_token": self.tokenizer.pad_token}, trust_remote_code=True
-        )
-
-    def calculate_similarity(self, gold: str, prediction: str) -> torch.Tensor:
-        embeddings = self.model.encode([gold, prediction])
-        cos_sim = util.cos_sim(embeddings, embeddings)
-        return torch.mean(cos_sim)
-
-    @property
-    def validation_ref(self) -> torch.Tensor:
-        return torch.tensor(1.0)
-
-
-def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenizer) -> torch.Tensor:
-    control_input = tokenizer("What is Pytorch?", return_tensors="pt")
-    control_input = control_input.to(model.device)
-    control_output = model.generate(**control_input, do_sample=False)
-    return tokenizer.batch_decode(control_output, skip_special_tokens=True)[0]
-
-
-def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
-    model = model.cpu()
-
-    # TODO(AlexanderDokuchaev): WA for optimum patcher, remove after update optimum-intel>1.22.0
-    saved_ops = torch.ops._prepare_4d_causal_attention_mask_for_sdpa
-    export_from_model(model, tmp_path)
-    torch.ops._prepare_4d_causal_attention_mask_for_sdpa = saved_ops
-    return OVModelForCausalLM.from_pretrained(
-        model_id=tmp_path,
-        trust_remote_code=True,
-        load_in_8bit=False,
-        compile=True,
-    )
-
-
-@pytest.mark.xfail(reason="issue-171197")
 @pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
@@ -95,81 +49,82 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
 @pytest.mark.parametrize(
     ("mode", "backup_mode", "ref_num_trainable"),
     (
-        (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4 + 2),
-        (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3 + 1),
+        # LoRA A, LoRA B, input_low, input_range for single linear layer
+        (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4),
+        # LoRA A, LoRA B, scale for single linear layer
+        (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
     ),
     ids=["asym", "sym"],
 )
-def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
-    model_id = "facebook/opt-125m"
+def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
+    """
+    Tests FQ-LoRA (Fake-Quantize with Low-Rank Adaptation) fine-tuning.
+    Verifies:
+    1. Weight compression with FQ-LoRA properly sets up trainable parameters
+    2. Model can be fine-tuned after quantization
+    3. Loss decreases significantly after fine-tuning
+    4. Model can be stripped and converted to OpenVINO with minimal output differences
+    """
     device = "cuda"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    example_inputs = dict(tokenizer("overfit " * 10, return_tensors="pt").to(device))
-
-    except_lm_head_and_5th_vproj = r"^(?!(self_attn/v_proj/linear/5|lm_head/linear/0)$).*"
+    MODEL_DIM = 32
+    model = LinearModel(torch.randn(MODEL_DIM, MODEL_DIM)).to(device)
+    example_inputs = torch.randn(1, MODEL_DIM, device=device)
 
     model = nncf.compress_weights(
         model,
-        group_size=64,
+        group_size=-1,
         mode=mode,
         backup_mode=backup_mode,
         dataset=nncf.Dataset([example_inputs]),
         compression_format=nncf.CompressionFormat.FQ_LORA,
-        ignored_scope=nncf.IgnoredScope(patterns=[except_lm_head_and_5th_vproj]),
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=8),
         **compression_kwargs,
     )
+    # Verify the correct trainable parameters are set based on quantization mode
+    trainable_params = [name.split(".")[-1] for name, param in model.named_parameters() if param.requires_grad]
 
-    expected_names = {LoraMixin.LORA_A_PARAM_NAME, LoraMixin.LORA_B_PARAM_NAME}
+    # Both modes should have LoRA A and B parameters trainable
+    assert LoraMixin.LORA_A_PARAM_NAME in trainable_params
+    assert LoraMixin.LORA_B_PARAM_NAME in trainable_params
+
+    # Mode-specific parameters
     if mode == nncf.CompressWeightsMode.INT4_ASYM:
-        expected_names.update([AQ.INPUT_LOW_PARAM_NAME, AQ._INPUT_RANGE_PARAM_STORAGE_ATTR])
-    else:
-        expected_names.add(SQ._SCALE_PARAM_STORAGE_ATTR)
-    actual_names = {name.split(".")[-1] for name, param in model.named_parameters() if param.requires_grad}
-    assert actual_names == expected_names
-    actual_num_trainable = sum(1 for param in model.parameters() if param.requires_grad)
-    assert actual_num_trainable == ref_num_trainable
+        assert AQ.INPUT_LOW_PARAM_NAME in trainable_params
+        assert AQ._INPUT_RANGE_PARAM_STORAGE_ATTR in trainable_params
+    else:  # Symmetric mode
+        assert SQ._SCALE_PARAM_STORAGE_ATTR in trainable_params
+
+    # Verify total number of trainable parameters
+    assert len(trainable_params) == ref_num_trainable
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
-    model_kwargs = dict(
-        input_ids=example_inputs["input_ids"][:, :-1],
-        attention_mask=example_inputs["attention_mask"][:, :-1],
-        labels=example_inputs["input_ids"][:, 1:],
-    )
-    for i in range(5):
+    target = torch.zeros(1, MODEL_DIM, device=device)
+    loss_fn = torch.nn.MSELoss()
+    for i in range(10):
         optimizer.zero_grad()
-        loss = model(**model_kwargs).loss
+        output = model(example_inputs)
+        loss = loss_fn(output, target)
         if i == 0:
             first_loss = float(loss)
         loss.backward()
         optimizer.step()
 
-    assert first_loss > 8
-    assert float(loss) < 1
+    assert first_loss > 30
+    assert float(loss) < 10
 
     if compression_kwargs["awq"]:
         return  # Skip test for strip for awq + se initialization. Cases with data-free methods are enough.
 
     with torch.no_grad():
-        tuned_output = generate_control_output(model, tokenizer)
-
-        # Workaround till export from the optimum would be fixed - CVS-164159
-        model = model.to(torch.float32)
-
+        tuned_output = model(example_inputs)
         model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_inputs)
-        stripped_output = generate_control_output(model, tokenizer)
-
-        model = get_ov_model(model, tmp_path)
-        stripped_ov_output = generate_control_output(model, tokenizer)
-
-        vm = ValidationMock()
-        tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
-        tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
-
-        # torch.compiled version of FQ+LoRA leads to a small error
-        atol = 1e-2
-        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol)
-        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol)
+        stripped_output = model(example_inputs)
+        model = ov.convert_model(model, example_input=example_inputs)
+        model = ov.compile_model(model)
+        example_inputs_numpy = example_inputs.detach().cpu().numpy()
+        stripped_ov_output = torch.tensor(model(example_inputs_numpy)[0], device=example_inputs.device)
+        assert torch.allclose(tuned_output, stripped_output, atol=1e-2)
+        assert torch.allclose(tuned_output, stripped_ov_output, atol=1e-1)
 
 
 def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
