@@ -23,6 +23,7 @@ from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
 from nncf import Dataset
+from nncf import IgnoredScope
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
@@ -52,6 +53,7 @@ def quantize_pt2e(
     activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     batchwise_statistics: Optional[bool] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
     fold_quantize: bool = True,
     do_copy: bool = False,
 ) -> torch.fx.GraphModule:
@@ -79,6 +81,8 @@ def quantize_pt2e(
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is None, which means
         it set True if batch_size > 1 otherwise False.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :param fold_quantize: Boolean flag for whether fold the quantize op or not. The value is True by default.
     :param do_copy: The copy of the given model is being quantized if do_copy == True,
         otherwise the model is quantized inplace. Default value is False.
@@ -117,6 +121,7 @@ def quantize_pt2e(
         smooth_quant_params=smooth_quant_params,
         activations_range_estimator_params=activations_range_estimator_params,
         weights_range_estimator_params=weights_range_estimator_params,
+        ignored_scope=ignored_scope,
         batchwise_statistics=batchwise_statistics,
     )
 

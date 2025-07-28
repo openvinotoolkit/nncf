@@ -1,0 +1,35 @@
+strict digraph {
+"0 conv1_weight" [id=0, type="get_attr"];
+"1 conv2_weight" [id=1, type="get_attr"];
+"2 x" [id=2, type=input];
+"3 _frozen_param0" [id=3, type="get_attr"];
+"4 dequantize_per_tensor_default" [id=4, type="dequantize_per_tensor"];
+"5 conv2d" [id=5, type=conv2d];
+"6 quantize_per_tensor_default_1" [id=6, type="quantize_per_tensor"];
+"7 dequantize_per_tensor_default_4" [id=7, type="dequantize_per_tensor"];
+"8 dequantize_per_tensor_default_3" [id=8, type="dequantize_per_tensor"];
+"9 conv2d_1" [id=9, type=conv2d];
+"10 quantize_per_tensor_default_2" [id=10, type="quantize_per_tensor"];
+"11 dequantize_per_tensor_default_2" [id=11, type="dequantize_per_tensor"];
+"12 cat" [id=12, type=cat];
+"13 conv2d_2" [id=13, type=conv2d];
+"14 add" [id=14, type=add];
+"15 output" [id=15, type=output];
+"0 conv1_weight" -> "9 conv2d_1" [style=solid, label="(1, 3, 1, 1)"];
+"1 conv2_weight" -> "13 conv2d_2" [style=solid, label="(1, 2, 1, 1)"];
+"2 x" -> "5 conv2d" [style=solid, label="(1, 3, 3, 3)"];
+"2 x" -> "9 conv2d_1" [style=solid, label="(1, 3, 3, 3)"];
+"3 _frozen_param0" -> "4 dequantize_per_tensor_default" [style=solid, label="(1, 3, 1, 1)"];
+"4 dequantize_per_tensor_default" -> "5 conv2d" [style=solid, label="(1, 3, 1, 1)"];
+"5 conv2d" -> "6 quantize_per_tensor_default_1" [style=solid, label="(1, 1, 3, 3)"];
+"6 quantize_per_tensor_default_1" -> "7 dequantize_per_tensor_default_4" [style=solid, label="(1, 1, 3, 3)"];
+"6 quantize_per_tensor_default_1" -> "8 dequantize_per_tensor_default_3" [style=solid, label="(1, 1, 3, 3)"];
+"7 dequantize_per_tensor_default_4" -> "12 cat" [style=solid, label="(1, 1, 3, 3)"];
+"8 dequantize_per_tensor_default_3" -> "14 add" [style=solid, label="(1, 1, 3, 3)"];
+"9 conv2d_1" -> "10 quantize_per_tensor_default_2" [style=solid, label="(1, 1, 3, 3)"];
+"10 quantize_per_tensor_default_2" -> "11 dequantize_per_tensor_default_2" [style=solid, label="(1, 1, 3, 3)"];
+"11 dequantize_per_tensor_default_2" -> "12 cat" [style=solid, label="(1, 1, 3, 3)"];
+"12 cat" -> "13 conv2d_2" [style=solid, label="(1, 2, 3, 3)"];
+"13 conv2d_2" -> "14 add" [style=solid, label="(1, 1, 3, 3)"];
+"14 add" -> "15 output" [style=solid, label="(1, 1, 3, 3)"];
+}

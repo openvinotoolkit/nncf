@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
@@ -35,6 +36,7 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQu
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
+from nncf import IgnoredScope
 from nncf.common.graph import NNCFGraph
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx import quantize_pt2e
@@ -52,6 +54,7 @@ from tests.torch.test_models.synthetic import ConcatModelWithTwoOutputs
 from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
+from tests.torch.test_models.synthetic import SimpleResidualConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 from tests.torch2.fx.helpers import get_torch_fx_model
 
@@ -391,14 +394,20 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
         raise RuntimeError(msg)
 
 
-class OneNodeAnnotationQuantizer(TorchAOQuantizer):
-    def __init__(self, node_name: str, annotation: TorchAOQuantizationSpec):
-        self._node_name = node_name
-        self._annotation = annotation
+@dataclass
+class ManualAnnotation:
+    node_name: str
+    annotation: TorchAOQuantizationSpec
+
+
+class ManualAnnotationQuantizer(TorchAOQuantizer):
+    def __init__(self, annotations: list[ManualAnnotation]):
+        self._annotations = annotations
 
     def annotate(self, model: torch.fx.GraphModule):
-        target_node = get_graph_node_by_name(model.graph, self._node_name)
-        target_node.meta["quantization_annotation"] = self._annotation
+        for annotation in self._annotations:
+            target_node = get_graph_node_by_name(model.graph, annotation.node_name)
+            target_node.meta["quantization_annotation"] = annotation.annotation
 
         return model
 
@@ -431,7 +440,7 @@ REF_NONE_Q_MIN_Q_MAX_SETUP = {
 def test_none_q_min_q_max_quantizer(dtype):
     qspec = TorchAOQuantizationSpec(dtype=dtype, observer_or_fake_quant_ctr=None, qscheme=torch.per_tensor_symmetric)
     annotation = QuantizationAnnotation(output_qspec=qspec)
-    quantizer = OneNodeAnnotationQuantizer("linear", annotation)
+    quantizer = ManualAnnotationQuantizer([ManualAnnotation("linear", annotation)])
 
     adapted_quantizer = TorchAOQuantizerAdapter(quantizer)
 
@@ -472,8 +481,55 @@ def test_adapter_inp_concat_idx():
         dtype=torch.int8, observer_or_fake_quant_ctr=None, qscheme=torch.per_tensor_symmetric
     )
     annotation = QuantizationAnnotation(input_qspec_map={conv2d: qspec})
-    quantizer = OneNodeAnnotationQuantizer("cat", annotation)
+    quantizer = ManualAnnotationQuantizer([ManualAnnotation("cat", annotation)])
 
     adapted_quantizer = TorchAOQuantizerAdapter(quantizer)
     setup = adapted_quantizer.get_quantization_setup(model, GraphConverter.create_nncf_graph(model))
     assert setup.get_state() == REF_INP_CONCAT_SETUP
+
+
+def test_quantize_pt2e_ignored_scope():
+    # Quantizer is using the graph nodes in anotation,
+    # so for separate graphs we need separate quantizers
+    def make_manual_quantizer(model: torch.fx.GraphModule):
+        manual_annotations = []
+        qspec = TorchAOQuantizationSpec(
+            dtype=torch.uint8,
+            observer_or_fake_quant_ctr=None,
+            qscheme=torch.per_tensor_symmetric,
+            quant_min=0,
+            quant_max=255,
+        )
+        conv_2d = get_graph_node_by_name(model.graph, "conv2d")
+        conv_annotation = QuantizationAnnotation(input_qspec_map={conv_2d.args[1]: qspec}, output_qspec=qspec)
+        manual_annotations.append(ManualAnnotation("conv2d", conv_annotation))
+        input_annotation = QuantizationAnnotation(
+            input_qspec_map={get_graph_node_by_name(model.graph, "conv2d_1"): qspec}
+        )
+        manual_annotations.append(ManualAnnotation("cat", input_annotation))
+        return ManualAnnotationQuantizer(manual_annotations)
+
+    dummy_input = torch.ones(SimpleResidualConcatModel.INPUT_SHAPE)
+    fx_model = get_torch_fx_model(SimpleResidualConcatModel(), dummy_input)
+    fx_model_copy = deepcopy(fx_model)
+    quantizer = make_manual_quantizer(fx_model)
+
+    quantized = quantize_pt2e(fx_model, quantizer, calibration_dataset=nncf.Dataset([dummy_input]))
+    nncf_graph = GraphConverter.create_nncf_graph(quantized)
+
+    path_to_dot = FX_QUANTIZED_DIR_NAME / get_dot_filename("before_ignored_scope")
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
+    quantizer = make_manual_quantizer(fx_model_copy)
+    quantized_ignored = quantize_pt2e(
+        fx_model_copy,
+        quantizer,
+        calibration_dataset=nncf.Dataset([dummy_input]),
+        ignored_scope=IgnoredScope(names=["conv2d", "cat"]),
+    )
+    nncf_graph = GraphConverter.create_nncf_graph(quantized_ignored)
+
+    path_to_dot = FX_QUANTIZED_DIR_NAME / get_dot_filename("after_ignored_scope")
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())

@@ -1,0 +1,23 @@
+strict digraph {
+"0 conv_weight" [id=0, type="get_attr"];
+"1 conv1_weight" [id=1, type="get_attr"];
+"2 conv2_weight" [id=2, type="get_attr"];
+"3 x" [id=3, type=input];
+"4 conv2d" [id=4, type=conv2d];
+"5 conv2d_1" [id=5, type=conv2d];
+"6 cat" [id=6, type=cat];
+"7 conv2d_2" [id=7, type=conv2d];
+"8 add" [id=8, type=add];
+"9 output" [id=9, type=output];
+"0 conv_weight" -> "4 conv2d" [style=solid, label="(1, 3, 1, 1)"];
+"1 conv1_weight" -> "5 conv2d_1" [style=solid, label="(1, 3, 1, 1)"];
+"2 conv2_weight" -> "7 conv2d_2" [style=solid, label="(1, 2, 1, 1)"];
+"3 x" -> "4 conv2d" [style=solid, label="(1, 3, 3, 3)"];
+"3 x" -> "5 conv2d_1" [style=solid, label="(1, 3, 3, 3)"];
+"4 conv2d" -> "6 cat" [style=solid, label="(1, 1, 3, 3)"];
+"4 conv2d" -> "8 add" [style=solid, label="(1, 1, 3, 3)"];
+"5 conv2d_1" -> "6 cat" [style=solid, label="(1, 1, 3, 3)"];
+"6 cat" -> "7 conv2d_2" [style=solid, label="(1, 2, 3, 3)"];
+"7 conv2d_2" -> "8 add" [style=solid, label="(1, 1, 3, 3)"];
+"8 add" -> "9 output" [style=solid, label="(1, 1, 3, 3)"];
+}

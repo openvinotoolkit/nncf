@@ -11,6 +11,7 @@
 
 from typing import Optional, TypeVar
 
+from nncf import IgnoredScope
 from nncf.experimental.quantization.algorithms.range_estimator.algorithm import MinMaxRangeEstimator
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
@@ -35,6 +36,7 @@ def experimental_create_ptq_pipeline(
     smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
     activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
     batchwise_statistics: bool = False,
 ) -> Pipeline:
     """
@@ -58,6 +60,8 @@ def experimental_create_ptq_pipeline(
         of activations of the model.
     :param weights_range_estimator_params: Contains parameters for estimating the range
         of weights of the model.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is False.
     :return: An experimental post-training quantization pipeline.
@@ -82,6 +86,7 @@ def experimental_create_ptq_pipeline(
                 batchwise_statistics=batchwise_statistics,
                 activations_range_estimator_params=activations_range_estimator_params,
                 weights_range_estimator_params=weights_range_estimator_params,
+                ignored_scope=ignored_scope,
             )
         ]
     )

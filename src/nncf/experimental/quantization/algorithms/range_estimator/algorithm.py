@@ -12,13 +12,16 @@
 from typing import Optional, TypeVar
 
 from nncf import Dataset
+from nncf import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
 TModel = TypeVar("TModel")
 
@@ -32,6 +35,7 @@ class MinMaxRangeEstimator(Algorithm):
         batchwise_statistics: bool = False,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        ignored_scope: Optional[IgnoredScope] = None,
     ):
         """
         :param quantizer: Instance of Quantizer to retrieve a quantization config
@@ -47,6 +51,8 @@ class MinMaxRangeEstimator(Algorithm):
             parameters for activation.
         :param weights_range_estimator_params: Quantization range estimation parameters
             for weights.
+        :param ignored_scope: An ignored scope that defined the list of model control
+            flow graph nodes to be ignored during quantization.
         """
         self._quantizer = quantizer
         self._min_max_algo = MinMaxQuantization(
@@ -56,6 +62,7 @@ class MinMaxRangeEstimator(Algorithm):
             activations_range_estimator_params=activations_range_estimator_params,
             weights_range_estimator_params=weights_range_estimator_params,
         )
+        self._ignored_scope = ignored_scope or IgnoredScope()
 
     @property
     def available_backends(self) -> list[BackendType]:
@@ -76,8 +83,33 @@ class MinMaxRangeEstimator(Algorithm):
             raise RuntimeError(msg)
         return self._min_max_algo.apply(model=model, graph=graph, statistic_points=statistic_points)
 
+    @staticmethod
+    def _apply_ignored_scope_inplace(
+        quantizer_setup: SingleConfigQuantizerSetup, ignored_scope: IgnoredScope, nncf_graph: NNCFGraph
+    ) -> None:
+        """
+        Applies ignored scope to the given quantizer setup inplace.
+
+        :param quantizer_setup: A given quantizer setup.
+        :param ignored_scope: An ignored scope to apply to the quantizer setup.
+        :param nncf_grpah: A NNCFGraph instance.
+        """
+        ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
+        if not ignored_names:
+            return
+
+        ignored_keys = []
+        for key, qp in quantizer_setup.quantization_points.items():
+            if any(name in ignored_names for name in qp.directly_quantized_operator_node_names):
+                ignored_keys.append(key)
+
+        for key in ignored_keys:
+            quantizer_setup.discard(key)
+
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         quantizer_setup = self._quantizer.get_quantization_setup(model, graph)
+        # Filter the resulting quantizer_setup using the given ignored_scope
+        self._apply_ignored_scope_inplace(quantizer_setup, self._ignored_scope, graph)
         self._min_max_algo._set_backend_entity(model)
         self._min_max_algo._init_cache()
         self._min_max_algo.fill_quantization_target_points(quantizer_setup, graph)

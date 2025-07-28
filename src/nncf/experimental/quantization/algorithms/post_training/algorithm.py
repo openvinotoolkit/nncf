@@ -13,6 +13,7 @@ import itertools
 from typing import Callable, Optional, TypeVar
 
 from nncf import Dataset
+from nncf import IgnoredScope
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -45,6 +46,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        ignored_scope: Optional[IgnoredScope] = None,
         batchwise_statistics: bool = False,
     ):
         """
@@ -61,6 +63,8 @@ class ExperimentalPostTrainingQuantization(Algorithm):
             of activations of the model.
         :param weights_range_estimator_params: Contains parameters for estimating the range
             of weights of the model.
+        :param ignored_scope: An ignored scope that defined the list of model control
+            flow graph nodes to be ignored during quantization.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
             for each item of the batch or for the entire batch, default is False.
         """
@@ -73,6 +77,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
             smooth_quant_params=smooth_quant_params,
             activations_range_estimator_params=activations_range_estimator_params,
             weights_range_estimator_params=weights_range_estimator_params,
+            ignored_scope=ignored_scope,
             batchwise_statistics=batchwise_statistics,
         )
 
