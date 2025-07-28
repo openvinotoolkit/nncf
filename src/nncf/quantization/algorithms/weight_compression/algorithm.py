@@ -771,14 +771,12 @@ class WeightCompression(Algorithm):
         """
         is_supported_dtype = weight_dtype in SUPPORTED_DATA_TYPES
 
-        no_bit_reduction = compression_mode in INT8_MODES and weight_dtype in [
-            TensorDataType.f8e4m3,
-            TensorDataType.f8e5m2,
-        ]
-
-        if compression_mode == CompressWeightsMode.CODEBOOK:
+        no_bit_reduction = False
+        if compression_mode in INT8_MODES:
+            no_bit_reduction = weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2]  
+        elif compression_mode == CompressWeightsMode.CODEBOOK:
             codebook_bits = np.log2(Tensor(self._advanced_parameters.codebook).size)
-            no_bit_reduction &= codebook_bits >= weight_dtype.itemsize
+            no_bit_reduction = codebook_bits >= weight_dtype.itemsize()
 
         return is_supported_dtype and not no_bit_reduction
 

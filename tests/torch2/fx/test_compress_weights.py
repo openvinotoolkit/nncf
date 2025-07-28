@@ -434,7 +434,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_ignored_scope_name() -> str:
-        return "linear_5"
+        return "linear_4"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
