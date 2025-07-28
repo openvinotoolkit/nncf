@@ -4,15 +4,19 @@ This example demonstrates how to optimize Large Language Models (LLMs) in ONNX f
 
 ## Prerequisites
 
-To use this example:
+Before running this example, ensure you have Python 3.9+ installed and set up your environment:
 
-- Create a separate Python* environment and activate it: `python3 -m venv nncf_env && source nncf_env/bin/activate`
-- Install dependencies:
+### 1. Create and activate a virtual environment
 
 ```bash
-pip install -U pip
-pip install -r requirements.txt
-pip install ../../../../
+python3 -m venv nncf_env
+source nncf_env/bin/activate  # On Windows: nncf_env\Scripts\activate.bat
+```
+
+### 2. Install NNCF and other dependencies
+
+```bash
+python3 -m pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example
@@ -23,8 +27,16 @@ To run example:
 python main.py
 ```
 
-It will automatically download baseline model and save the resulting model.
+This will automatically:
 
-## Set ONNX Opset (Optional)
+- Download the TinyLlama model and dataset
+- Apply weight compression using NNCF
+- Save the optimized model
 
-The exported model uses ONNX opset version 21 by default. You can override this by specifying a different opset version when running the script. For example: `python main.py 14`
+### Set ONNX Opset (Optional)
+
+The exported model uses ONNX opset version 21 by default. You can override this by specifying a different opset version when running the script. For example: 
+
+```bash 
+python main.py 14
+```

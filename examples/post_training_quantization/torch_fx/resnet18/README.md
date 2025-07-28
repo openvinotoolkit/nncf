@@ -11,14 +11,21 @@ The example includes the following steps:
   - Accuracy drop of the quantized model (INT8) over the pre-trained model (FP32)
   - Performance speed up of the quantized model (INT8)
 
-## Install requirements
+## Prerequisites
 
-At this point it is assumed that you have already installed NNCF. You can find information on installation NNCF [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
+Before running this example, ensure you have Python 3.9+ installed and set up your environment:
 
-To work with the example you should install the corresponding Python package dependencies:
+### 1. Create and activate a virtual environment
 
 ```bash
-pip install -r requirements.txt
+python3 -m venv nncf_env
+source nncf_env/bin/activate  # On Windows: nncf_env\Scripts\activate.bat
+```
+
+### 2. Install NNCF and other dependencies
+
+```bash
+python3 -m pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example
