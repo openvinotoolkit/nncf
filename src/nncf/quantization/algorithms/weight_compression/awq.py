@@ -124,7 +124,6 @@ class AWQ(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
-        nodes_to_compress: list[NNCFNode],
         statistics: Optional[dict[str, WCTensorStatistic]] = None,
         wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> TModel:
@@ -133,14 +132,13 @@ class AWQ(Algorithm):
         :param model: Model for applying algorithm.
         :param graph: Model graph.
         :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
         :param statistics: Input activation statistics for each node.
         :param wc_backend_entity: Weight compression algorithm backend.
         :return: A resulting model.
         """
         self._set_backend_entity(model, wc_backend_entity)
 
-        awq_data = self._get_awq_data(graph, all_weight_params, nodes_to_compress)
+        awq_data = self._get_awq_data(graph, all_weight_params)
         if len(awq_data) == 0:
             return model
 
@@ -319,13 +317,12 @@ class AWQ(Algorithm):
         return 1 / scale
 
     def _get_awq_data(
-        self, graph: NNCFGraph, all_weight_params: list[WeightCompressionParameters], nodes_to_compress: list[NNCFNode]
+        self, graph: NNCFGraph, all_weight_params: list[WeightCompressionParameters]
     ) -> dict[str, AWQCompressionInfo]:
         """
         Finds awq patterns in graph and returns it.
         :param graph: Model graph.
         :param all_weight_params: list of all weight parameters.
-        :param nodes_to_compress: list of nodes for processing.
         :return: A dict with node names and matched AWQ patterns.
         """
         matches = []
@@ -358,7 +355,7 @@ class AWQ(Algorithm):
 
             if weight_params.compression_config.num_bits != 4:
                 continue
-            target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
+            target_node = weight_params.node_with_weight
 
             # avoid matching different patterns for the same node
             if target_node.node_name in awq_data:
@@ -370,7 +367,7 @@ class AWQ(Algorithm):
                 merge_node_names = []
                 for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                     merge_node_names.append(weight_op_friendly_name)
-                merge_node = nodes_to_compress[name_mapping[merge_node_names[-1]]]
+                merge_node = all_weight_params[name_mapping[merge_node_names[-1]]].node_with_weight
             else:  # pattern Act->MatMul or Act->Multiply->MatMul
                 merge_node = nncf_node
 

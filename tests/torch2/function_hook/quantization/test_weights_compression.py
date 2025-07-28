@@ -560,7 +560,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_ignored_scope_name() -> str:
-        return "linear6/linear/0"
+        return "linear5/linear/0"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:

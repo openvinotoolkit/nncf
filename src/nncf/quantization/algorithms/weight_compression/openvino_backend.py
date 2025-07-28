@@ -294,6 +294,23 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             mul = opset.convert(mul, const_dtype, name=f"{const_node_name}/fq_weights_{weight_port_id}/convert")
         return mul, compressed_weight
 
+    def _replace_node(self, src_node, new_node):
+        """
+        Replace all occurrences of a source constant node with a new node in the computational graph with
+        the elimination of unnecessary convert operations.
+
+        :param src_node: The source node (typically a constant node) to be replaced.
+        :param new_node: The new node that will replace the source node in the graph.
+        :return: None. The graph is modified in place.
+        """
+        new_output_type = new_node.get_element_type()
+        for target_input in src_node.output(0).get_target_inputs():
+            target_node = target_input.get_node()
+            if target_node.get_type_name() == "Convert" and target_node.get_element_type() == new_output_type:
+                self._replace_node(target_node, new_node)
+            else:
+                target_input.replace_source_output(new_node.output(0))
+
     def transform_model(
         self,
         model: ov.Model,
@@ -335,9 +352,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 else precomputed_compressed_weights.get(wc_params.weight_name),
             )
 
-            mul_output = mul.output(0)
-            for target_input in const_node.output(0).get_target_inputs():
-                target_input.replace_source_output(mul_output)
+            self._replace_node(const_node, mul)
+
             if lora_correction_algo is not None and lora_correction_algo.is_applicable(wc_params):
                 # These tensors can potentially be in ov backend
                 weight = weight.as_numpy_tensor()
