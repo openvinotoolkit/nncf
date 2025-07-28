@@ -9,13 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import dataclasses
 import operator
 from collections import OrderedDict
 from collections import defaultdict
 from functools import reduce
 from typing import Any, Iterable, Optional, TypeVar
-
-import numpy as np
 
 import nncf
 from nncf import Dataset
@@ -462,7 +461,7 @@ class WeightCompression(Algorithm):
         and backup precisions.
 
         :param all_weight_params: List of all weight parameters.
-        :param is_last_layer_shared: Indicates whether the last layer was already excluded from compression.
+        :param is_last_layer_skipped: Indicates whether the last layer was already excluded from compression.
         :return: Information about each weight node that is considered for mixed precision.
         """
         if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
@@ -568,17 +567,7 @@ class WeightCompression(Algorithm):
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
             if reduction_channel_size % self._group_size != 0:
                 nodes_to_exclude[w_params.node_with_weight.node_name] = w_params.weight_shape
-                skipped_weight_params.append(
-                    WeightCompressionParameters(
-                        w_params.weight_name,
-                        w_params.node_with_weight,
-                        w_params.weight_port_id,
-                        w_params.weight_dtype,
-                        w_params.weight_shape,
-                        w_params.reduction_axes,
-                        None,
-                    )
-                )
+                skipped_weight_params.append(dataclasses.replace(w_params, compression_config=None))
 
         if nodes_to_exclude:
             ratio_defining_params = [
@@ -775,7 +764,7 @@ class WeightCompression(Algorithm):
         if compression_mode in INT8_MODES:
             no_bit_reduction = weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2]
         elif compression_mode == CompressWeightsMode.CODEBOOK:
-            codebook_bits = np.log2(Tensor(self._advanced_parameters.codebook).size)
+            codebook_bits = Tensor(self._advanced_parameters.codebook).size.bit_length() - 1
             no_bit_reduction = codebook_bits >= weight_dtype.itemsize()
 
         return is_supported_dtype and not no_bit_reduction
@@ -803,6 +792,8 @@ class WeightCompression(Algorithm):
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 is_last_layer = i == n - 1
                 if weight_name in weight_names:
+                    # If the last layer has shared weights then skiped
+                    # to avoid processing the same weight more than once
                     is_last_layer_skipped = is_last_layer
                     continue
 
@@ -810,6 +801,7 @@ class WeightCompression(Algorithm):
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
+                wc_config = None
                 if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
                     if (
                         self._group_size != -1
@@ -828,7 +820,6 @@ class WeightCompression(Algorithm):
                             f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                         )
 
-                    wc_config = None
                     if self._backup_mode != BackupMode.NONE:
                         mode = (
                             CompressWeightsMode.INT8_ASYM
@@ -846,14 +837,14 @@ class WeightCompression(Algorithm):
                     is_last_layer_skipped = is_last_layer
                     skipped_weight_params.append(
                         WeightCompressionParameters(
-                            weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, None
+                            weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, wc_config
                         )
                     )
 
-        # get subset nodes to define compression ratio
+        # Get subset of nodes to define compression ratio
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
 
-        # handle group size fallback modes
+        # Handle group size fallback modes
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
                 all_weight_params, ratio_defining_params, skipped_weight_params
@@ -863,7 +854,7 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
-        # collect statistics for the weights compression
+        # Collect statistics for the weights compression
         statistics = None
         if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
             weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
@@ -882,16 +873,15 @@ class WeightCompression(Algorithm):
                 matmul_input_to_output_nodes_map, statistic_points
             )
 
-        # set weight compression configuration
+        # Set weight compression configuration
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
 
-        # print statistics
+        # Print statistics
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        # Filter all_weight_params and nodes_to_compress by excluding nodes
-        # that should remain in their original floating-point precision
+        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
         all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
 
         if self._awq:
