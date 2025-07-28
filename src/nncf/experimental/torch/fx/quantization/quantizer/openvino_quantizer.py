@@ -13,14 +13,6 @@ from collections import defaultdict
 from typing import Optional, Union
 
 import torch.fx
-from torch.ao.quantization.observer import HistogramObserver
-from torch.ao.quantization.observer import PerChannelMinMaxObserver
-from torch.ao.quantization.quantizer.quantizer import EdgeOrNode
-from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation as TorchAOQuantizationAnnotation
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpecBase as TorchAOQuantizationSpecBase
-from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
-from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 
 import nncf
 from nncf import IgnoredScope
@@ -42,6 +34,25 @@ from nncf.quantization.advanced_parameters import FP8QuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
+
+try:
+    from torchao.quantization.pt2e.observer import HistogramObserver
+    from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
+    from torchao.quantization.pt2e.quantizer.quantizer import EdgeOrNode
+    from torchao.quantization.pt2e.quantizer.quantizer import QuantizationAnnotation as TorchAOQuantizationAnnotation
+    from torchao.quantization.pt2e.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
+    from torchao.quantization.pt2e.quantizer.quantizer import QuantizationSpecBase as TorchAOQuantizationSpecBase
+    from torchao.quantization.pt2e.quantizer.quantizer import Quantizer as TorchAOQuantizer
+    from torchao.quantization.pt2e.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
+except ImportError:
+    from torch.ao.quantization.observer import HistogramObserver
+    from torch.ao.quantization.observer import PerChannelMinMaxObserver
+    from torch.ao.quantization.quantizer.quantizer import EdgeOrNode
+    from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation as TorchAOQuantizationAnnotation
+    from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
+    from torch.ao.quantization.quantizer.quantizer import QuantizationSpecBase as TorchAOQuantizationSpecBase
+    from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
+    from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 
 QUANT_ANNOTATION_KEY = "quantization_annotation"
 

@@ -17,6 +17,7 @@ import torch.fx
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
@@ -27,7 +28,6 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
-from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
 from nncf.parameters import BackupMode
@@ -87,8 +87,9 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    # To make it easier for bias correction algorithms.
-    apply_quantization_transformations(copied_model)
+    # Fuse batch norms to convolutions bias
+    # the same way it done in torchao
+    _fuse_conv_bn_(copied_model)
 
     nncf_graph = NNCFGraphFactory.create(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)

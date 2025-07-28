@@ -96,18 +96,17 @@ def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[Int
         dest_dtype=dtype,
     )
 
-    quantizer = _get_quantizer(case_to_test, qconfig)
-    assert quantizer.qscheme is torch.per_channel_symmetric if case_to_test.per_channel else torch.per_tensor_symmetric
+    params = _get_qdq_params(case_to_test, qconfig)
 
     signed = signedness_to_force or dtype is TensorDataType.int8
     if signed:
-        assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int8))
+        assert torch.allclose(params.zero_point, torch.tensor(0, dtype=torch.int8))
     else:
-        assert torch.allclose(quantizer.zero_point, torch.tensor(127 if narrow_range else 128, dtype=torch.uint8))
+        assert torch.allclose(params.zero_point, torch.tensor(127 if narrow_range else 128, dtype=torch.uint8))
 
-    scale = quantizer.scale.detach().numpy()
+    scale = params.scale.detach().numpy()
     assert np.allclose(scale, case_to_test.ref_scale)
-    _check_q_min_q_max(quantizer, signed, narrow_range)
+    _check_q_min_q_max(params, signed, narrow_range)
 
 
 SYM_CASES_SIGNEDNESS_TO_FORSE = (
@@ -314,17 +313,16 @@ def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool
         signedness_to_force=signedness_to_force,
     )
 
-    quantizer = _get_quantizer(case_to_test, qconfig)
-    assert quantizer.qscheme is torch.per_channel_symmetric if case_to_test.per_channel else torch.per_tensor_symmetric
+    params = _get_qdq_params(case_to_test, qconfig)
 
     signed = signedness_to_force or ref_signed
 
-    assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int8 if signed else torch.uint8))
+    assert torch.allclose(params.zero_point, torch.tensor(0, dtype=torch.int8 if signed else torch.uint8))
 
-    scale = quantizer.scale.detach().numpy()
+    scale = params.scale.detach().numpy()
     assert np.allclose(scale, case_to_test.ref_scale)
 
-    _check_q_min_q_max(quantizer, signed, narrow_range)
+    _check_q_min_q_max(params, signed, narrow_range)
 
 
 ASYM_CASES = (
@@ -396,8 +394,7 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
         dest_dtype=dtype,
     )
 
-    quantizer = _get_quantizer(case_to_test, qconfig)
-    assert quantizer.qscheme is torch.per_channel_affine if case_to_test.per_channel else torch.per_tensor_affine
+    quantizer = _get_qdq_params(case_to_test, qconfig)
 
     signed = dtype is TensorDataType.int8
     ref_zp = torch.tensor(ref_zp)
@@ -411,22 +408,23 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int,
     _check_q_min_q_max(quantizer, signed, narrow_range)
 
 
-def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig):
+def _get_qdq_params(case_to_test: CaseQuantParams, qconfig: QuantizerConfig):
     fq_params = calculate_quantizer_parameters(case_to_test.stat, qconfig, case_to_test.quant_group, half_range=False)
 
-    quantizer = FXMinMaxAlgoBackend._create_quantizer(
+    qdq_params = FXMinMaxAlgoBackend._get_torch_qdq_params(
         qconfig, fq_params, is_weight_quantizer=case_to_test.quant_group == QuantizerGroup.WEIGHTS
     )
 
     ch_axis = -1
     if case_to_test.per_channel:
         ch_axis = 0 if case_to_test.quant_group == QuantizerGroup.WEIGHTS else 1
-    assert quantizer.ch_axis == ch_axis
+    assert qdq_params.ch_axis == ch_axis
+    assert qdq_params.is_per_channel == qconfig.per_channel
 
-    return quantizer
+    return qdq_params
 
 
-def _check_q_min_q_max(quantizer, signed, narrow_range):
+def _check_q_min_q_max(params, signed, narrow_range):
     if signed:
         ref_quant_min = -127 if narrow_range else -128
         ref_quant_max = 127
@@ -434,8 +432,8 @@ def _check_q_min_q_max(quantizer, signed, narrow_range):
         ref_quant_min = 0
         ref_quant_max = 254 if narrow_range else 255
 
-    assert quantizer.quant_min == ref_quant_min
-    assert quantizer.quant_max == ref_quant_max
+    assert params.quant_min == ref_quant_min
+    assert params.quant_max == ref_quant_max
 
 
 @pytest.mark.parametrize(
@@ -459,4 +457,6 @@ def test_extended_q_config_non_supported_dest_dtype(dest_dtype):
     qconfig = TypedQuantizerConfig(dest_dtype=dest_dtype)
     params = FakeQuantizeParameters(-1.0, 1.0, -1.0, 1.0, 255)
     with pytest.raises(nncf.ParameterNotSupportedError):
-        FXMinMaxAlgoBackend._create_quantizer(quantizer_config=qconfig, parameters=params, is_weight_quantizer=False)
+        FXMinMaxAlgoBackend._get_torch_qdq_params(
+            quantizer_config=qconfig, parameters=params, is_weight_quantizer=False
+        )

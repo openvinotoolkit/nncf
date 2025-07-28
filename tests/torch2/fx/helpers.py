@@ -20,9 +20,9 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx.passes.graph_drawer import FxGraphDrawer
 
-from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
@@ -160,7 +160,7 @@ def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Ten
     :return: Exported GraphModule.
     """
     fx_model = get_torch_fx_model(model, ex_input)
-    apply_quantization_transformations(fx_model)
+    _fuse_conv_bn_(fx_model)
     return fx_model
 
 

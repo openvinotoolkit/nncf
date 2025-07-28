@@ -22,15 +22,6 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
-from torch.ao.quantization.quantize_pt2e import convert_pt2e
-from torch.ao.quantization.quantize_pt2e import prepare_pt2e
-from torch.ao.quantization.quantizer import xnnpack_quantizer
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
-from torch.ao.quantization.quantizer.quantizer import Quantizer
-from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
-from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
-from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -50,6 +41,29 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 from tests.torch2.fx.helpers import get_torch_fx_model
+
+TORCHAO_IS_AVAILABLE = False
+try:
+    from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+    from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
+    from torchao.quantization.pt2e.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
+    from torchao.quantization.pt2e.quantizer.quantizer import Quantizer
+    from torchao.quantization.pt2e.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
+    from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import X86InductorQuantizer
+    from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
+    from torchao.quantization.pt2e.utils import _fuse_conv_bn_
+
+    TORCHAO_IS_AVAILABLE = True
+except ImportError:
+    from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
+    from torch.ao.quantization.quantize_pt2e import convert_pt2e
+    from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+    from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
+    from torch.ao.quantization.quantizer.quantizer import Quantizer
+    from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
+    from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
+    from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
+
 
 FX_QUANTIZED_DIR_NAME = TEST_ROOT / "torch2" / "data" / "fx"
 
@@ -77,12 +91,6 @@ def get_qconf_filename(model_name: str) -> str:
 def get_x86_quantizer(*args, **kwarsg) -> X86InductorQuantizer:
     quantizer = X86InductorQuantizer()
     quantizer.set_global(get_default_x86_inductor_quantization_config())
-    return quantizer
-
-
-def get_xnnpack_quantizer(*args, **kwargs) -> xnnpack_quantizer.XNNPACKQuantizer:
-    quantizer = xnnpack_quantizer.XNNPACKQuantizer()
-    quantizer.set_global(xnnpack_quantizer.get_symmetric_quantization_config())
     return quantizer
 
 
@@ -140,11 +148,10 @@ def _get_calibration_dataset(example_input: torch.Tensor) -> nncf.Dataset:
 @pytest.mark.parametrize(
     "quantizer_builder",
     [
-        get_xnnpack_quantizer,
         get_x86_quantizer,
         get_openvino_quantizer,
     ],
-    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
+    ids=["X86InductorQuantizer", "OpenVINOQuantizer"],
 )
 def test_quantized_model(
     quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
@@ -196,11 +203,10 @@ def test_quantized_model(
 @pytest.mark.parametrize(
     "quantizer_builder",
     [
-        get_xnnpack_quantizer,
         get_x86_quantizer,
         get_openvino_quantizer,
     ],
-    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
+    ids=["X86InductorQuantizer", "OpenVINOQuantizer"],
 )
 def test_quantizer_setup(
     quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
@@ -265,7 +271,7 @@ def _normalize_qsetup_state(setup: dict[str, Any]) -> None:
 def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
     """
     Normalizes the given NNCFGraph by renaming quantize/dequantize nodes to ensure consistent naming across runs.
-    XNNPACKQuantizer and X86InductorQuantizer quantizers insert quantize and dequantize nodes
+    X86InductorQuantizer quantizer inserts quantize and dequantize nodes
     with inconsistent names across runs. This function assigns standardized names to such nodes
     to maintain consistency.
 
@@ -320,6 +326,8 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
     ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
 def test_openvino_quantizer_with_torch_ao_convert_pt2e(model_case: ModelCase, quantizer_params):
+    if not TORCHAO_IS_AVAILABLE:
+        pytest.skip("Test requires torchao to be installed.")
     quantizer = get_openvino_quantizer(**quantizer_params)
     fx_model, example_input = _build_torch_fx_model(model_case)
     prepared_model = prepare_pt2e(fx_model, quantizer)
