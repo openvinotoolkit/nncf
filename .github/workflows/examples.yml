@@ -19,7 +19,7 @@ on:
         description: 'Skip tests on gpu'
         type: boolean
         default: false
-
+  pull_request:
 
 concurrency:
   group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
