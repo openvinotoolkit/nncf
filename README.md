@@ -8,8 +8,6 @@
 [Usage](#usage) •
 [Tutorials and Samples](#demos-tutorials-and-samples) •
 [Third-party integration](#third-party-repository-integration) •
-[Model Zoo](./docs/ModelZoo.md)
-
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Fnncf)](https://docs.openvino.ai/nncf)
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
@@ -29,7 +27,7 @@ NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
 [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
 NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different
-use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](./docs/ModelZoo.md).
+use cases and models.
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
@@ -425,19 +423,6 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 | [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
 
-### Training-Time Compression Examples
-
-Examples of full pipelines including compression, training, and inference for classification, detection, and segmentation tasks:
-
-| Example Name                                                                                               |   Compression Algorithm   |  Backend   |        Domain         |
-|:-----------------------------------------------------------------------------------------------------------|:-------------------------:|:----------:|:---------------------:|
-| [PyTorch Image Classification](./examples/torch/classification/README.md)                                  | Training-Time Compression |  PyTorch   | Image Classification  |
-| [PyTorch Object Detection](./examples/torch/object_detection/README.md)                                    | Training-Time Compression |  PyTorch   |   Object Detection    |
-| [PyTorch Semantic Segmentation](./examples/torch/semantic_segmentation/README.md)                          | Training-Time Compression |  PyTorch   | Semantic Segmentation |
-| [TensorFlow Image Classification](./examples/tensorflow/classification/README.md)                          | Training-Time Compression | TensorFlow | Image Classification  |
-| [TensorFlow Object Detection](./examples/tensorflow/object_detection/README.md)                            | Training-Time Compression | TensorFlow |   Object Detection    |
-| [TensorFlow Instance Segmentation](./examples/tensorflow/segmentation/README.md)                           | Training-Time Compression | TensorFlow | Instance Segmentation |
-
 <a id="third-party-repository-integration"></a>
 
 ## Third-party Repository Integration
@@ -488,10 +473,6 @@ conda install -c conda-forge nncf
 System requirements of NNCF correspond to the used backend. System requirements for each backend and
 the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
 
-## NNCF Compressed Model Zoo
-
-List of models and compression results for them can be found at our [NNCF Model Zoo page](./docs/ModelZoo.md).
-
 ## Citing
 
 ```bi
@@ -510,9 +491,7 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 ## Useful links
 
 - [Documentation](./docs)
-- Example scripts (model objects available through links in respective README.md files):
-  - [PyTorch](./examples/torch)
-  - [TensorFlow](./examples/tensorflow)
+- [Examples](./examples)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)

@@ -145,7 +145,6 @@ $input\\_low^{*} = 0$
 $input\\_range^{*} = scale$
 
 The most common case of applying quantization is 8-bit uniform quantization.
-NNCF example scripts provide a plethora of configuration files that implement this case ([PyTorch](/examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json), [TensorFlow](/examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json))
 
 ---
 
@@ -253,9 +252,6 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-The [example](/examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
-using the template in a full-fledged configuration file is provided with the [classification sample](/examples/torch/classification/README.md) for PyTorch.
-
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than
 two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files
@@ -326,8 +322,6 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
             nncf_config, init_loader, criterion, train_criterion_fn,
             autoq_eval_fn, val_loader, config.device)
 ```
-
-The complete config [example](/examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_autoq_staged.json) that applies AutoQ to MobileNetV2 is provided within the [classification sample](/examples/torch/classification/README.md) for PyTorch.
 
 ## Example configuration files
 
