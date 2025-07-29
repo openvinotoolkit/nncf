@@ -1,4 +1,4 @@
-transformers==4.48.0
+transformers==4.52.1
 datasets==2.14.7
 openvino==2025.1
 optimum==1.24.0
