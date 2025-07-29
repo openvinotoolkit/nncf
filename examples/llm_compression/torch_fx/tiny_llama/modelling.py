@@ -20,6 +20,7 @@ from transformers import PreTrainedModel
 from transformers.integrations.executorch import TorchExportableModuleWithStaticCache
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.models.llama.configuration_llama import LlamaConfig
+from transformers.cache_utils import StaticCacheConfig
 
 
 class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
@@ -97,7 +98,7 @@ def convert_and_export_with_cache(model: PreTrainedModel) -> tuple[ExportedProgr
     model_config = None
     gen_config = None
     model.generation_config.cache_implementation = "static"
-    model.generation_config.cache_config = {"batch_size": 1, "max_cache_len": 512}
+    model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
     model.generation_config.max_new_tokens = 100
     gen_config = model.generation_config
     model_config = model.config
