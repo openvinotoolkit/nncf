@@ -471,7 +471,6 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
   NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
   export new models based on available model templates as well as run the exported models with OpenVINO.
 
-
 <a id="installation-guide"></a>
 
 ## Installation Guide
