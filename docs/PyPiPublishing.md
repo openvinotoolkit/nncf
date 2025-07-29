@@ -13,7 +13,7 @@ NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
 [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
 NNCF provides [samples](https://github.com/openvinotoolkit/nncf/blob/develop/#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different
-use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
+use cases and models.
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
@@ -32,7 +32,6 @@ For more information about NNCF, see:
 - [Key Features](#key-features)
 - [Installation](#installation-guide)
 - [Third-party integration](#third-party-repository-integration)
-- [NNCF Compressed Model Zoo](#nncf-compressed-model-zoo)
 
 ## Key Features<a id="key-features"></a>
 
@@ -109,10 +108,6 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
   NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
-
-## NNCF Compressed Model Zoo<a id="nncf-compressed-model-zoo"></a>
-
-List of models and compression results for them can be found at our [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
 
 ## Citing
 
