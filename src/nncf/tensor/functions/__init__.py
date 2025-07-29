@@ -36,7 +36,6 @@ from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item
 from nncf.tensor.functions.numeric import log2 as log2
-from nncf.tensor.functions.numeric import logical_and as logical_and
 from nncf.tensor.functions.numeric import logical_or as logical_or
 from nncf.tensor.functions.numeric import masked_mean as masked_mean
 from nncf.tensor.functions.numeric import masked_median as masked_median

@@ -84,6 +84,12 @@ class Tensor:
 
     # built-in operations
 
+    def __or__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return Tensor(self.data | unwrap_tensor_data(other))
+
+    def __and__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return Tensor(self.data & unwrap_tensor_data(other))
+
     def __add__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data + unwrap_tensor_data(other))
 

@@ -613,18 +613,6 @@ def logical_or(x1: Tensor, x2: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
-def logical_and(x1: Tensor, x2: Tensor) -> Tensor:
-    """
-    Computes the element-wise logical AND of the given input tensors.
-    Zeros are treated as False and nonzeros are treated as True.
-
-    :param x1: The input tensor.
-    :param x2: The tensor to compute and with.
-    :return: Result of elementwise and operation between input_ and other tensor.
-    """
-
-
-@tensor_dispatcher
 def masked_mean(x: Tensor, mask: Tensor, axis: T_AXIS, keepdims: bool = False) -> Tensor:
     """
     Computes the masked mean of elements across given dimensions of Tensor.

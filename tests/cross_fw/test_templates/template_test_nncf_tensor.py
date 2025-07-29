@@ -48,6 +48,8 @@ OPERATOR_MAP = {
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
+BOOLEAN_OPERATOR_MAP = {"and": operator.and_, "or": operator.or_}
+
 COMPARISON_OPERATOR_MAP = {
     "lt": operator.lt,
     "le": operator.le,
@@ -97,6 +99,25 @@ class TemplateTestNNCFTensorOperators:
         assert tensor_a.dtype == tensor_b.dtype
         assert id(tensor_a.data) is not id(tensor_b.data)
         assert all(tensor_a == tensor_b)
+
+    @pytest.mark.parametrize("op_name", BOOLEAN_OPERATOR_MAP.keys())
+    @pytest.mark.parametrize("value", [True, False])
+    def test_operators_bool(self, op_name, value):
+        tensor_a = self.to_tensor([True, False])
+
+        nncf_tensor_a = Tensor(tensor_a)
+
+        fn = BOOLEAN_OPERATOR_MAP[op_name]
+        res = fn(tensor_a, value)
+        res_nncf = fn(nncf_tensor_a, value)
+
+        assert res.dtype == res_nncf.data.dtype
+        assert all(res == res_nncf.data)
+        assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
@@ -1982,6 +2003,8 @@ class TemplateTestNNCFTensorOperators:
                     TensorDataType.int4,
                     TensorDataType.uint4,
                     TensorDataType.nf4,
+                    TensorDataType.f4e2m1,
+                    TensorDataType.f8e8m0,
                     TensorDataType.f8e4m3,
                     TensorDataType.f8e5m2,
                 ]
@@ -2014,6 +2037,8 @@ class TemplateTestNNCFTensorOperators:
                     TensorDataType.int4,
                     TensorDataType.uint4,
                     TensorDataType.nf4,
+                    TensorDataType.f4e2m1,
+                    TensorDataType.f8e8m0,
                     TensorDataType.f8e4m3,
                     TensorDataType.f8e5m2,
                 ]

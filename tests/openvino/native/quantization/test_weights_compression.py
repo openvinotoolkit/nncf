@@ -1763,7 +1763,7 @@ def test_nf4_quantization_mid_quant(weight, scale):
     scale = Tensor(scale)
     # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
     norm_weight = _calculate_normalized_weight(weight, scale)
-    nf4_quant = _calculate_float_quantized_weight(norm_weight)
+    nf4_quant = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.NF4)
 
     norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
     ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()

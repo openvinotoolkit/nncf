@@ -108,6 +108,8 @@ def do_float_quantization(
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding float weight quantization.
+    For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
+    For E2M1 quantization quantizes the weights to 16 levels on [-6, 6] interval.
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.

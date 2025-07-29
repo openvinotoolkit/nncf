@@ -504,7 +504,7 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, mode: CompressWeights
     Performs float (currently NF4 or F4E2M1) quantization. Look-up table is used to "round" or "quantize" to the
     closest quant.
 
-    :param norm_weight: Weight tensor to quantize.
+    :param norm_weight: Normalized weight tensor to quantize.
     :return: Tensor with floating-point values, where each of them corresponds to 1 out of 16 quants.
     """
     assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
@@ -515,15 +515,11 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, mode: CompressWeights
     quantiles = fns.from_numpy(quantiles_np, backend=indexes.backend)
 
     if mode == CompressWeightsMode.E2M1:
-        # Round to the nearest even quantile
+        # If in-between two quantiles, round to the nearest even quantile.
         shifted_indexes = fns.clip(indexes + 1, 0, quantiles.size - 1)
-        left = quantiles[indexes]
-        right = quantiles[shifted_indexes]
-        dist_left = fns.abs(norm_weight - left)
-        dist_right = fns.abs(norm_weight - right)
-        choose_right = fns.logical_or(
-            dist_right < dist_left, fns.logical_and(dist_left == dist_right, (shifted_indexes + 1) % 2 == 0)
-        )
+        dist_left = fns.abs(norm_weight - quantiles[indexes])
+        dist_right = fns.abs(norm_weight - quantiles[shifted_indexes])
+        choose_right = (dist_right < dist_left) | ((dist_left == dist_right) & ((shifted_indexes + 1) % 2 == 0))
         indexes = fns.where(choose_right, shifted_indexes, indexes)
 
     quantized_weight = quantiles[indexes]

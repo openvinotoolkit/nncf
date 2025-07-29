@@ -417,12 +417,6 @@ def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
         return tf.logical_or(x1, x2)
 
 
-@numeric.logical_and.register
-def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
-    with tf.device(x1.device):
-        return tf.logical_and(x1, x2)
-
-
 @numeric.masked_mean.register
 def _(
     x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, tuple[int, ...]]], keepdims: bool = False

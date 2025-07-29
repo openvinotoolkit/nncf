@@ -366,11 +366,6 @@ def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     return torch.logical_or(x1, x2)
 
 
-@numeric.logical_and.register
-def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
-    return torch.logical_and(x1, x2)
-
-
 @numeric.masked_mean.register
 def _(x: torch.Tensor, mask: Optional[torch.Tensor], axis: T_AXIS, keepdims: bool = False) -> torch.Tensor:
     if mask is None:
