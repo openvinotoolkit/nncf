@@ -23,6 +23,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
+from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.tensor import Tensor
 
 # Modification Notes:
@@ -358,6 +359,7 @@ def test_calculate_scale_linear():
         weight_name="self.weight",
         node_with_weight=nodes[1],
         weight_port_id=1,
+        weight_dtype=TensorDataType.float32,
         weight_shape=weights.shape,
         reduction_axes=(1,),
     )

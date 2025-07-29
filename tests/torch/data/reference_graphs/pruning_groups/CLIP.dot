@@ -1,43 +1,43 @@
-strict digraph  {
-0 [color=grey, label="Block: S:1__O:0
+strict digraph {
+0 [label="Block: S:1__O:0
 Producers: 10
-Consumers: ", style=filled];
-1 [color=red, label="Block: S:2__O:0
+Consumers: ", color=grey, style=filled];
+1 [label="Block: S:2__O:0
 Producers: 10
-Consumers: ", style=filled];
-2 [color=red, label="Block: S:1__O:2
+Consumers: ", color=red, style=filled];
+2 [label="Block: S:1__O:2
 Producers: 10
-Consumers: ", style=filled];
-3 [color=grey, label="Block: S:1__O:0
+Consumers: ", color=red, style=filled];
+3 [label="Block: S:1__O:0
 Producers: 11
-Consumers: ", style=filled];
-4 [color=red, label="Block: S:2__O:0
+Consumers: ", color=grey, style=filled];
+4 [label="Block: S:2__O:0
 Producers: 11
-Consumers: ", style=filled];
-5 [color=red, label="Block: S:1__O:2
+Consumers: ", color=red, style=filled];
+5 [label="Block: S:1__O:2
 Producers: 11
-Consumers: ", style=filled];
-6 [color=grey, label="Block: S:1__O:0
+Consumers: ", color=red, style=filled];
+6 [label="Block: S:1__O:0
 Producers: 12
-Consumers: ", style=filled];
-7 [color=red, label="Block: S:2__O:0
+Consumers: ", color=grey, style=filled];
+7 [label="Block: S:2__O:0
 Producers: 12
-Consumers: ", style=filled];
-8 [color=red, label="Block: S:1__O:2
+Consumers: ", color=red, style=filled];
+8 [label="Block: S:1__O:2
 Producers: 12
-Consumers: ", style=filled];
-9 [color=red, label="Block: S:1__O:0
-Producers: 22
-Consumers: ", style=filled];
-10 [color=grey, label="Block: S:1__O:0
-Producers: 25
-Consumers: ", style=filled];
-11 [color=green, label="Block: S:1__O:0
-Producers: 25
-Consumers: 29", style=filled];
-12 [color=red, label="Block: S:1__O:0
-Producers: 29
-Consumers: ", style=filled];
+Consumers: ", color=red, style=filled];
+9 [label="Block: S:1__O:0
+Producers: 27
+Consumers: ", color=red, style=filled];
+10 [label="Block: S:1__O:0
+Producers: 30
+Consumers: ", color=grey, style=filled];
+11 [label="Block: S:1__O:0
+Producers: 30
+Consumers: 34", color=green, style=filled];
+12 [label="Block: S:1__O:0
+Producers: 34
+Consumers: ", color=red, style=filled];
 0 -> 1;
 0 -> 2;
 3 -> 4;

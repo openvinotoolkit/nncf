@@ -26,8 +26,10 @@ from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer import xnnpack_quantizer
+from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation
 from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
 from torch.ao.quantization.quantizer.quantizer import Quantizer
+from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
@@ -46,6 +48,8 @@ from nncf.tensor.definitions import TensorDataType
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
+from tests.torch.test_models.synthetic import ConcatModelWithTwoOutputs
+from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
@@ -385,3 +389,91 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
     else:
         msg = f"Quantizers was not found for the unified scales pair {unified_scale_node_names}"
         raise RuntimeError(msg)
+
+
+class OneNodeAnnotationQuantizer(TorchAOQuantizer):
+    def __init__(self, node_name: str, annotation: TorchAOQuantizationSpec):
+        self._node_name = node_name
+        self._annotation = annotation
+
+    def annotate(self, model: torch.fx.GraphModule):
+        target_node = get_graph_node_by_name(model.graph, self._node_name)
+        target_node.meta["quantization_annotation"] = self._annotation
+
+        return model
+
+    def validate(self, model):
+        return
+
+
+REF_NONE_Q_MIN_Q_MAX_SETUP = {
+    "quantization_points": {
+        0: {
+            "qip": {"target_node_name": "linear", "input_port_id": None},
+            "qip_class": "ActivationQuantizationInsertionPoint",
+            "qconfig": {
+                "num_bits": 8,
+                "mode": "symmetric",
+                "signedness_to_force": False,
+                "per_channel": False,
+                "narrow_range": False,
+                "dest_dtype": "int8",
+            },
+            "directly_quantized_operator_node_names": ["output"],
+        }
+    },
+    "unified_scale_groups": {},
+    "shared_input_operation_set_groups": {},
+}
+
+
+@pytest.mark.parametrize("dtype", [torch.int8, torch.uint8])
+def test_none_q_min_q_max_quantizer(dtype):
+    qspec = TorchAOQuantizationSpec(dtype=dtype, observer_or_fake_quant_ctr=None, qscheme=torch.per_tensor_symmetric)
+    annotation = QuantizationAnnotation(output_qspec=qspec)
+    quantizer = OneNodeAnnotationQuantizer("linear", annotation)
+
+    adapted_quantizer = TorchAOQuantizerAdapter(quantizer)
+
+    model = get_torch_fx_model(LinearModel(torch.ones(3, 3)), torch.ones(1, 3, 3, 3))
+    setup = adapted_quantizer.get_quantization_setup(model, GraphConverter.create_nncf_graph(model))
+
+    ref = REF_NONE_Q_MIN_Q_MAX_SETUP.copy()
+    ref["quantization_points"][0]["qconfig"]["dest_dtype"] = "int8" if dtype == torch.int8 else "uint8"
+    assert setup.get_state() == ref
+
+
+REF_INP_CONCAT_SETUP = {
+    "quantization_points": {
+        0: {
+            "qip": {"target_node_name": "cat", "input_port_id": 0},
+            "qip_class": "ActivationQuantizationInsertionPoint",
+            "qconfig": {
+                "num_bits": 8,
+                "mode": "symmetric",
+                "signedness_to_force": False,
+                "per_channel": False,
+                "narrow_range": False,
+                "dest_dtype": "int8",
+            },
+            "directly_quantized_operator_node_names": ["cat"],
+        }
+    },
+    "unified_scale_groups": {},
+    "shared_input_operation_set_groups": {},
+}
+
+
+def test_adapter_inp_concat_idx():
+    model = get_torch_fx_model(ConcatModelWithTwoOutputs(), torch.ones(ConcatModelWithTwoOutputs.INPUT_SHAPE))
+    conv2d = get_graph_node_by_name(model.graph, "conv2d")
+
+    qspec = TorchAOQuantizationSpec(
+        dtype=torch.int8, observer_or_fake_quant_ctr=None, qscheme=torch.per_tensor_symmetric
+    )
+    annotation = QuantizationAnnotation(input_qspec_map={conv2d: qspec})
+    quantizer = OneNodeAnnotationQuantizer("cat", annotation)
+
+    adapted_quantizer = TorchAOQuantizerAdapter(quantizer)
+    setup = adapted_quantizer.get_quantization_setup(model, GraphConverter.create_nncf_graph(model))
+    assert setup.get_state() == REF_INP_CONCAT_SETUP

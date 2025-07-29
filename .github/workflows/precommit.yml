@@ -7,6 +7,8 @@ on:
       - '**/*.md'
       - '.ci/*'
       - 'docs/**/*'
+      - 'examples/*'
+      - 'licensing/*'
       - 'tests/post_training/*'  # post_training tests runs on Jenkins
       - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
