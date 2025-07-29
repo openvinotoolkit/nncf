@@ -817,6 +817,27 @@ class SequentialMatmulModel(OVReferenceModel):
         return model
 
 
+class DifferentChannelSizeMatmulModel(OVReferenceModel):
+    def _create_ov_model(self, channel_sizes: list[int]):
+        input_node = opset.parameter([1, channel_sizes[0], channel_sizes[0]], name="Input_1")
+
+        last_node = input_node
+        for i in range(1, len(channel_sizes) + 1):
+            prev_channel_size = channel_sizes[i - 1]
+            channel_size = channel_sizes[min(i, len(channel_sizes) - 1)]
+            weights_data = np.arange(0, channel_size * prev_channel_size).reshape(channel_size, prev_channel_size)
+            current_weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
+            current_node = opset.matmul(
+                last_node, current_weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i}"
+            )
+            last_node = current_node
+
+        result = opset.result(last_node, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
 class IdentityMatmul(OVReferenceModel):
     def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
         """
@@ -1042,6 +1063,48 @@ class AWQActMatmulModel(OVReferenceModel):
         weights_data = np.arange(0, 64).reshape(8, 8) - 32
         weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_lm_head")
         out_node = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
+
+        result = opset.result(out_node, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
+class AWQModel_fp16_overlow(OVReferenceModel):
+    """
+    Model for testing AWQ algorithm with fp16 overflow fix.
+    """
+
+    def _create_ov_model(self, dim=8):
+        input_node = opset.parameter([1, 2 * dim + 1, dim], name="Input_1")
+        weights_emb = AWQMatmulModel.get_weights(np.ones((dim, dim)) / dim, False, name="weights_emb")
+        mat_mul_emb = opset.matmul(input_node, weights_emb, transpose_a=False, transpose_b=True, name="MatMul_emb")
+
+        weights_up_proj = AWQMatmulModel.get_weights(100.0 * np.ones((2 * dim, dim)), False, name="weights_up_proj")
+        mat_mul_up_proj = opset.matmul(
+            mat_mul_emb, weights_up_proj, transpose_a=False, transpose_b=True, name="MatMul_up_proj"
+        )
+
+        weights_gate_proj = AWQMatmulModel.get_weights(
+            0.00001 * np.ones((2 * dim, dim)), False, name="weights_gate_proj"
+        )
+        mat_mul_gate_proj = opset.matmul(
+            mat_mul_emb, weights_gate_proj, transpose_a=False, transpose_b=True, name="MatMul_gate_proj"
+        )
+
+        mat_mul_gate_proj = opset.relu(mat_mul_gate_proj, name="ReLU_gate_proj")
+
+        node_multiply = opset.multiply(mat_mul_up_proj, mat_mul_gate_proj, name="Multiply")
+
+        weights_down_proj = AWQMatmulModel.get_weights(
+            np.arange(0, 2 * dim**2).reshape(dim, 2 * dim), False, name="weights_down_proj"
+        )
+        mat_mul_down_proj = opset.matmul(
+            node_multiply, weights_down_proj, transpose_a=False, transpose_b=True, name="MatMul_down_proj"
+        )
+
+        weights = AWQMatmulModel.get_weights(np.ones((dim, dim)), False, name="lm_head")
+        out_node = opset.matmul(mat_mul_down_proj, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
 
         result = opset.result(out_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))

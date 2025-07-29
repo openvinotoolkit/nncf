@@ -87,7 +87,7 @@ def test_examples(
     if reuse_venv:
         # Use example directory as tmp_path
         tmp_path = (PROJECT_ROOT / example_params["requirements"]).parent
-    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
+    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:
         requirements = PROJECT_ROOT / example_params["requirements"]
@@ -107,7 +107,10 @@ def test_examples(
     subprocess.run(f"{pip_with_venv} list", check=True, shell=True)
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
+    example_dir = Path(example_params["requirements"]).parent
+    env["PYTHONPATH"] = (
+        f"{PROJECT_ROOT}{os.pathsep}{example_dir}"  # need this to be able to import from tests.* in run_example.py
+    )
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
     if device != "cuda":
         env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU

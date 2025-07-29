@@ -1,6 +1,6 @@
-graft nncf/torch/extensions
-graft nncf/common/hardware/configs
+graft src/nncf/torch/extensions
+graft src/nncf/common/hardware/configs
 include LICENSE
 include licensing/third-party-programs.txt
 include docs/PyPiPublishing.md
-include custom_version.py
+include src/custom_version.py
