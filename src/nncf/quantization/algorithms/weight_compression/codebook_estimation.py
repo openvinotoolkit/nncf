@@ -278,8 +278,10 @@ class CodebookEstimation:
         diff = float('inf')
         
         variants[0] = CB4_QUANTILES
+        variants[1] = np.array([i for i in range(-8, 8)])
+        best_i = -1
         
-        for var in variants:
+        for i_var, var in enumerate(variants):
             var = converter(var)[0]
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
@@ -289,11 +291,12 @@ class CodebookEstimation:
             if cur_diff < diff:
                 diff = cur_diff
                 best_codebook = var
-            else:
-                print("Was skip: ", diff, cur_diff)
+                best_i = i_var
+            # else:
+            #     print("Was skip: ", diff, cur_diff)
                 #print("Best codebook:", best_codebook)
             
-            
+        print("Best codebook:", best_codebook, "diff:", diff, "best_i:", best_i)
 
         # min_diffs = []
         # for fp8_scale in fp8_scales:
