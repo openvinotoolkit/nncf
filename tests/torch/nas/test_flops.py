@@ -11,6 +11,7 @@
 from functools import partial
 
 import pytest
+from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -21,7 +22,6 @@ from tests.torch.nas.descriptors import MultiElasticityTestDesc
 from tests.torch.nas.descriptors import RefModelStats
 from tests.torch.nas.test_elastic_depth import DepthBasicConvTestModel
 from tests.torch.test_models import DenseNet121
-from tests.torch.test_models import mobilenet_v2
 
 pytestmark = pytest.mark.legacy
 RESNET50_BLOCK_TO_SKIP = [

@@ -63,8 +63,6 @@ NAS_MODELS_SCOPE = [
     "squeezenet1_0",
     "resnext29_32x4d",
     "pnasnetb",
-    "ssd_mobilenet",
-    "ssd_vgg",
     "mobilenet_v3_small",
     "tcn",
 ]

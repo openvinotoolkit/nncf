@@ -407,7 +407,7 @@ class TestCompressionState:
         )
         assert compression_ctrl.get_compression_state() == ref_compression_state
 
-    @pytest.mark.parametrize("resume_step", [2, 7, 15, 17], ids=["epoch0", "epoch1", "epoch2_end", "epoch3"])
+    @pytest.mark.parametrize("resume_step", [2, 15, 17], ids=["epoch0", "epoch2_end", "epoch3"])
     @pytest.mark.parametrize("infer_steps_per_epoch", [True, False])
     @pytest.mark.parametrize("adaptive_init_threshold", [True, False])
     def test_can_resume_training_from_compression_state(

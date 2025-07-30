@@ -1,5 +1,4 @@
 -c ../../constraints.txt
--r ../../examples/torch/requirements.txt
 onnx
 onnxruntime
 pytest
