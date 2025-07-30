@@ -113,10 +113,10 @@ def test_examples(
         subprocess.run(wwb_override_cmd_line, check=True, shell=True)
         # until version conflict between anomalib, which requires torch<2.2.0
         # and autoawq, which requires torch>=2.2.0, (WWB requires autoawq)
-        # is resolved, let's re-install torchvision
-        cmd_reinstall_torchvision = f"{pip_with_venv} install torchvision==0.22.0"
-        logger.info(f"Re-installing torchvision: {cmd_reinstall_torchvision}")
-        subprocess.run(cmd_reinstall_torchvision, check=True, shell=True)
+        # is resolved, let's re-install torch
+        cmd_reinstall_torch = f"{pip_with_venv} install torch==2.1.0"
+        logger.info(f"Re-installing torch: {cmd_reinstall_torch}")
+        subprocess.run(cmd_reinstall_torch, check=True, shell=True)
 
     cmd_list_packages = f"{pip_with_venv} list"
     logger.info(f"Listing installed packages: {cmd_list_packages}")
