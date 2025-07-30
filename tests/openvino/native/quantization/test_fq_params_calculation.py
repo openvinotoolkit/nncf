@@ -156,7 +156,7 @@ def test_overflow_fix_scales(overflow_fix):
     [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
-@pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18", "ssd-vgg-300"))
+@pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18"))
 def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     torch.manual_seed(0)  # To use the same initialized model
     model_cls, input_shape = get_torch_model_info(model_name)

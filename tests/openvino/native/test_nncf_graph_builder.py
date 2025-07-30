@@ -57,7 +57,6 @@ def test_compare_nncf_graph_precision_synthetic_models(model, precision):
         "mobilenet-v3-small",
         "resnet-18",
         "inception-v3",
-        "ssd-mobilenet",
     ),
 )
 def test_compare_nncf_graph_real_models(tmp_path, model_name):

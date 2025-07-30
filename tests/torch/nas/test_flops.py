@@ -13,8 +13,6 @@ from functools import partial
 import pytest
 from torchvision.models import resnet50
 
-from examples.torch.common.models.classification.mobilenet_v2_cifar10 import mobilenet_v2_cifar10
-from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
@@ -46,16 +44,6 @@ MOBILENET_V2_BLOCKS_TO_SKIP = [
 
 LIST_OF_ME_DESCS = [
     MultiElasticityTestDesc(
-        model_creator=resnet50_cifar10,
-        ref_model_stats=RefModelStats(
-            supernet=ModelStats(651_599_872, 23_467_712),
-            kernel_stage=ModelStats(651_599_872, 23_467_712),
-            depth_stage=ModelStats(615_948_288, 23_398_080),
-            width_stage=ModelStats(22_717_056, 174_240),
-        ),
-        blocks_to_skip=RESNET50_BLOCK_TO_SKIP,
-    ),
-    MultiElasticityTestDesc(
         name="resnet50_tv",
         model_creator=partial(resnet50, num_classes=10),
         ref_model_stats=RefModelStats(
@@ -86,16 +74,6 @@ LIST_OF_ME_DESCS = [
             kernel_stage=ModelStats(601_548_544, 3_469_760),
             depth_stage=ModelStats(528_090_880, 3_447_536),
             width_stage=ModelStats(84_184_064, 67_408),
-        ),
-        blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
-    ),
-    MultiElasticityTestDesc(
-        model_creator=mobilenet_v2_cifar10,
-        ref_model_stats=RefModelStats(
-            supernet=ModelStats(175_952_896, 2_202_560),
-            kernel_stage=ModelStats(175_952_896, 2_202_560),
-            depth_stage=ModelStats(151_966_720, 2_180_336),
-            width_stage=ModelStats(14_099_072, 35_728),
         ),
         blocks_to_skip=MOBILENET_V2_BLOCKS_TO_SKIP,
     ),

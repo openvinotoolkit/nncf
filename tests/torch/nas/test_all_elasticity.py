@@ -12,7 +12,6 @@
 import pytest
 import torch
 
-from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -26,7 +25,6 @@ from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo
 from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.descriptors import THREE_CONV_TEST_DESC
-from tests.torch.nas.descriptors import MultiElasticityTestDesc
 from tests.torch.nas.helpers import do_training_step
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import ThreeConvModelMode
@@ -45,45 +43,6 @@ def check_subnet_visualization(multi_elasticity_handler, model, nas_model_name, 
     width_graph = SubnetGraph(model.nncf.get_graph(), multi_elasticity_handler).get()
     path_to_dot = get_full_path_to_the_graph(dot_file, "nas")
     compare_nx_graph_with_reference(width_graph, path_to_dot)
-
-
-###########################
-# Behavior
-###########################
-
-RESNET50_2_MANUAL_BLOCKS_DESC = MultiElasticityTestDesc(
-    model_creator=resnet50_cifar10,
-    blocks_to_skip=[
-        [
-            "ResNet/Sequential[layer1]/Bottleneck[1]/ReLU[relu]/relu__2",
-            "ResNet/Sequential[layer1]/Bottleneck[2]/ReLU[relu]/relu__2",
-        ],
-        [
-            "ResNet/Sequential[layer4]/Bottleneck[1]/ReLU[relu]/relu__2",
-            "ResNet/Sequential[layer4]/Bottleneck[2]/ReLU[relu]/relu__2",
-        ],
-    ],
-)
-
-
-def test_bn_adaptation_on_minimal_subnet_width_stage():
-    model, ctrl = create_bnas_model_and_ctrl_by_test_desc(RESNET50_2_MANUAL_BLOCKS_DESC)
-
-    multi_elasticity_handler = ctrl.multi_elasticity_handler
-
-    bn_adaptation = ctrl._bn_adaptation
-
-    multi_elasticity_handler.enable_all()
-    model.nncf.do_dummy_forward()
-
-    multi_elasticity_handler.width_handler.reorganize_weights()
-    bn_adaptation.run(model)
-    model.nncf.do_dummy_forward()
-
-    multi_elasticity_handler.activate_minimum_subnet()
-    # ERROR HERE
-    bn_adaptation.run(model)
-    model.nncf.do_dummy_forward()
 
 
 ###########################

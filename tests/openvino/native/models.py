@@ -17,14 +17,12 @@ from typing import Callable, Optional
 import numpy as np
 import openvino as ov
 from openvino import opset13 as opset
+from torchvision.models import mobilenet_v2
+from torchvision.models import mobilenet_v3_small
 
 from nncf.common.utils.registry import Registry
 from tests.torch.test_models.inceptionv3 import inception_v3
-from tests.torch.test_models.mobilenet import mobilenet_v2
-from tests.torch.test_models.mobilenet_v3 import mobilenet_v3_small
 from tests.torch.test_models.resnet import ResNet18
-from tests.torch.test_models.ssd_mobilenet import ssd_mobilenet
-from tests.torch.test_models.ssd_vgg import ssd_vgg300
 from tests.torch.test_models.swin import SwinTransformerBlock
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
@@ -36,8 +34,6 @@ def get_torch_model_info(model_name: str) -> tuple[Callable, tuple[int]]:
         "mobilenet-v3-small": (mobilenet_v3_small, (1, 3, 224, 224)),
         "resnet-18": (ResNet18, (1, 3, 224, 224)),
         "inception-v3": (inception_v3, (1, 3, 224, 224)),
-        "ssd-vgg-300": (ssd_vgg300, (1, 3, 300, 300)),
-        "ssd-mobilenet": (ssd_mobilenet, (1, 3, 300, 300)),
         "swin-block": (partial(SwinTransformerBlock, dim=8, input_resolution=[4, 4], num_heads=2), (1, 16, 8)),
     }
     return models[model_name]

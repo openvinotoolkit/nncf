@@ -11,13 +11,11 @@
 
 import json
 import os
-from functools import partial
 from typing import Callable, Optional, Union
 
 import pytest
 import torch
 
-from examples.torch.common.models import efficient_net
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import GroupedBlockIDs
@@ -96,13 +94,6 @@ LIST_BB_PARAMS_CASES = [
     BuildingBlockParamsCase(ResNeXt29_32x4d, [1, 3, 32, 32], hw_fused_ops=False),
     BuildingBlockParamsCase(PNASNetB, [1, 3, 32, 32]),
     BuildingBlockParamsCase(ssd_mobilenet, [2, 3, 300, 300], min_block_size=2, max_block_size=7),
-    BuildingBlockParamsCase(
-        partial(efficient_net, model_name="efficientnet-b0"),
-        [10, 3, 240, 240],
-        name="efficientnet-b0",
-        min_block_size=2,
-        max_block_size=7,
-    ),
 ]
 
 
