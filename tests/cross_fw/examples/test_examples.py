@@ -76,7 +76,9 @@ def test_examples(
     ov_version_override: str,
     data: str,
     reuse_venv: bool,
+    caplog: pytest.LogCaptureFixture,
 ):
+    caplog.set_level(logging.INFO)
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
     python_version = sys.version_info
