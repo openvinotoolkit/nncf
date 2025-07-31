@@ -10,14 +10,11 @@
 # limitations under the License.
 import subprocess
 import sys
-import logging
 from pathlib import Path
 from typing import Callable
 
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
-
-logger = logging.getLogger(__name__)
 
 def is_windows() -> bool:
     return "win32" in sys.platform
@@ -67,24 +64,24 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     if venv_type == "virtualenv":
         virtualenv = Path(sys.executable).parent / "virtualenv"
         cmd_create_venv = f"{virtualenv} -ppython{version_string} {venv_path}"
-        logger.info(f"Creating virtualenv: {cmd_create_venv}")
+        print(f"Creating virtualenv: {cmd_create_venv}")
         subprocess.check_call(cmd_create_venv, shell=True)
     elif venv_type == "venv":
         cmd_create_venv = f"{sys.executable} -m venv {venv_path}"
-        logger.info(f"Creating venv: {cmd_create_venv}")
+        print(f"Creating venv: {cmd_create_venv}")
         subprocess.check_call(cmd_create_venv, shell=True)
 
     cmd_upgrade_pip = f"{pip_with_venv} install --upgrade pip"
-    logger.info(f"Upgrading pip: {cmd_upgrade_pip}")
+    print(f"Upgrading pip: {cmd_upgrade_pip}")
     subprocess.check_call(cmd_upgrade_pip, shell=True)
 
     cmd_upgrade_tools = f"{pip_with_venv} install --upgrade wheel setuptools"
-    logger.info(f"Upgrading wheel and setuptools: {cmd_upgrade_tools}")
+    print(f"Upgrading wheel and setuptools: {cmd_upgrade_tools}")
     subprocess.check_call(cmd_upgrade_tools, shell=True)
 
     if package_type in ["build_s", "build_w"]:
         cmd_install_build = f"{pip_with_venv} install build"
-        logger.info(f"Installing build: {cmd_install_build}")
+        print(f"Installing build: {cmd_install_build}")
         subprocess.check_call(cmd_install_build, shell=True)
 
     run_path = tmp_path / "run"
@@ -112,13 +109,13 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         msg = f"Invalid package type: {package_type}"
         raise ValueError(msg)
 
-    logger.info(f"Running package command: {run_cmd_line}")
+    print(f"Running package command: {run_cmd_line}")
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
 
     if package_type in ["build_s", "build_w"]:
         package_path = find_file_by_extension(dist_path, ".tar.gz" if package_type == "build_s" else ".whl")
         cmd_install_package = f"{pip_with_venv} install {package_path}"
-        logger.info(f"Installing package: {cmd_install_package}")
+        print(f"Installing package: {cmd_install_package}")
         subprocess.run(cmd_install_package, check=True, shell=True)
 
     if backends:
@@ -126,7 +123,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
         extra_reqs = " ".join(packages)
         cmd_install_backends = f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt"
-        logger.info(f"Installing backend packages: {cmd_install_backends}")
+        print(f"Installing backend packages: {cmd_install_backends}")
         subprocess.run(
             cmd_install_backends,
             check=True,

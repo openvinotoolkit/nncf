@@ -13,7 +13,6 @@ import os
 import subprocess
 import sys
 import time
-import logging
 from pathlib import Path
 from typing import Any
 
@@ -42,8 +41,6 @@ PERFORMANCE_METRICS = "performance_metrics"
 
 NUM_RETRY_ON_CONNECTION_ERROR = 2
 RETRY_TIMEOUT = 60
-
-logger = logging.getLogger(__name__)
 
 def example_test_cases():
     example_scope = load_json(EXAMPLE_SCOPE_PATH)
@@ -76,9 +73,7 @@ def test_examples(
     ov_version_override: str,
     data: str,
     reuse_venv: bool,
-    caplog: pytest.LogCaptureFixture,
 ):
-    caplog.set_level(logging.INFO)
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
     python_version = sys.version_info
@@ -96,7 +91,7 @@ def test_examples(
     if "requirements" in example_params:
         requirements = PROJECT_ROOT / example_params["requirements"]
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
-        logger.info(f"Installing requirements: {run_cmd_line}")
+        print(f"Installing requirements: {run_cmd_line}")
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
@@ -105,21 +100,21 @@ def test_examples(
         extra_index_url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
         wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
         wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
-        logger.info(f"Installing OpenVINO version override: {ov_version_cmd_line}")
+        print(f"Installing OpenVINO version override: {ov_version_cmd_line}")
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
-        logger.info(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
+        print(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
         subprocess.run(uninstall_cmd_line, check=True, shell=True)
-        logger.info(f"Installing WWB module: {wwb_override_cmd_line}")
+        print(f"Installing WWB module: {wwb_override_cmd_line}")
         subprocess.run(wwb_override_cmd_line, check=True, shell=True)
         # until version conflict between anomalib, which requires torch<2.2.0
         # and autoawq, which requires torch>=2.2.0, (WWB requires autoawq)
         # is resolved, let's re-install torch
         cmd_reinstall_torch = f"{pip_with_venv} install torch==2.1.0"
-        logger.info(f"Re-installing torch: {cmd_reinstall_torch}")
+        print(f"Re-installing torch: {cmd_reinstall_torch}")
         subprocess.run(cmd_reinstall_torch, check=True, shell=True)
 
     cmd_list_packages = f"{pip_with_venv} list"
-    logger.info(f"Listing installed packages: {cmd_list_packages}")
+    print(f"Listing installed packages: {cmd_list_packages}")
     subprocess.run(cmd_list_packages, check=True, shell=True)
 
     env = os.environ.copy()
