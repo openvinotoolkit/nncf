@@ -88,8 +88,17 @@ def test_examples(
         tmp_path = (PROJECT_ROOT / example_params["requirements"]).parent
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
+    install_wwb = False
     if "requirements" in example_params:
         requirements = PROJECT_ROOT / example_params["requirements"]
+
+        # Install whowhatbench later only if
+        # explicitly required by the example
+        with open(requirements, 'r', encoding='utf-8') as f:
+            requirements_content = f.read()
+            if 'whowhatbench' in requirements_content:
+                install_wwb = True
+
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
         print(f"Installing requirements: {run_cmd_line}")
         subprocess.run(run_cmd_line, check=True, shell=True)
@@ -98,20 +107,16 @@ def test_examples(
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         uninstall_cmd_line = f"{pip_with_venv} uninstall --yes openvino-genai openvino_tokenizers"
         extra_index_url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
-        wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
-        wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
         print(f"Installing OpenVINO version override: {ov_version_cmd_line}")
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
-        print(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
-        subprocess.run(uninstall_cmd_line, check=True, shell=True)
-        print(f"Installing WWB module: {wwb_override_cmd_line}")
-        subprocess.run(wwb_override_cmd_line, check=True, shell=True)
-        # until version conflict between anomalib, which requires torch<2.2.0
-        # and autoawq, which requires torch>=2.2.0, (WWB requires autoawq)
-        # is resolved, let's re-install torch
-        cmd_reinstall_torch = f"{pip_with_venv} install torch==2.1.0"
-        print(f"Re-installing torch: {cmd_reinstall_torch}")
-        subprocess.run(cmd_reinstall_torch, check=True, shell=True)
+
+        if install_wwb:
+            wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
+            wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
+            print(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
+            subprocess.run(uninstall_cmd_line, check=True, shell=True)
+            print(f"Installing WWB module: {wwb_override_cmd_line}")
+            subprocess.run(wwb_override_cmd_line, check=True, shell=True)
 
     cmd_list_packages = f"{pip_with_venv} list"
     print(f"Listing installed packages: {cmd_list_packages}")
