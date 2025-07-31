@@ -16,6 +16,7 @@ from typing import Callable
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
+
 def is_windows() -> bool:
     return "win32" in sys.platform
 

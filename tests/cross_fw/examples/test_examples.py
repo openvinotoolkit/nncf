@@ -42,6 +42,7 @@ PERFORMANCE_METRICS = "performance_metrics"
 NUM_RETRY_ON_CONNECTION_ERROR = 2
 RETRY_TIMEOUT = 60
 
+
 def example_test_cases():
     example_scope = load_json(EXAMPLE_SCOPE_PATH)
     for example_name, example_params in example_scope.items():
@@ -94,9 +95,9 @@ def test_examples(
 
         # Install whowhatbench later only if
         # explicitly required by the example
-        with open(requirements, 'r', encoding='utf-8') as f:
+        with open(requirements, encoding="utf-8") as f:
             requirements_content = f.read()
-            if 'whowhatbench' in requirements_content:
+            if "whowhatbench" in requirements_content:
                 install_wwb = True
 
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
@@ -112,7 +113,9 @@ def test_examples(
 
         if install_wwb:
             wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
-            wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
+            wwb_override_cmd_line = (
+                f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
+            )
             print(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
             subprocess.run(uninstall_cmd_line, check=True, shell=True)
             print(f"Installing WWB module: {wwb_override_cmd_line}")
