@@ -64,15 +64,26 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
 
     if venv_type == "virtualenv":
         virtualenv = Path(sys.executable).parent / "virtualenv"
-        subprocess.check_call(f"{virtualenv} -ppython{version_string} {venv_path}", shell=True)
+        cmd_create_venv = f"{virtualenv} -ppython{version_string} {venv_path}"
+        print(f"Creating virtualenv: {cmd_create_venv}")
+        subprocess.check_call(cmd_create_venv, shell=True)
     elif venv_type == "venv":
-        subprocess.check_call(f"{sys.executable} -m venv {venv_path}", shell=True)
+        cmd_create_venv = f"{sys.executable} -m venv {venv_path}"
+        print(f"Creating venv: {cmd_create_venv}")
+        subprocess.check_call(cmd_create_venv, shell=True)
 
-    subprocess.check_call(f"{pip_with_venv} install --upgrade pip", shell=True)
-    subprocess.check_call(f"{pip_with_venv} install --upgrade wheel setuptools", shell=True)
+    cmd_upgrade_pip = f"{pip_with_venv} install --upgrade pip"
+    print(f"Upgrading pip: {cmd_upgrade_pip}")
+    subprocess.check_call(cmd_upgrade_pip, shell=True)
+
+    cmd_upgrade_tools = f"{pip_with_venv} install --upgrade wheel setuptools"
+    print(f"Upgrading wheel and setuptools: {cmd_upgrade_tools}")
+    subprocess.check_call(cmd_upgrade_tools, shell=True)
 
     if package_type in ["build_s", "build_w"]:
-        subprocess.check_call(f"{pip_with_venv} install build", shell=True)
+        cmd_install_build = f"{pip_with_venv} install build"
+        print(f"Installing build: {cmd_install_build}")
+        subprocess.check_call(cmd_install_build, shell=True)
 
     run_path = tmp_path / "run"
     run_path.mkdir(exist_ok=True)
@@ -99,19 +110,23 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         msg = f"Invalid package type: {package_type}"
         raise ValueError(msg)
 
+    print(f"Running package command: {run_cmd_line}")
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
 
     if package_type in ["build_s", "build_w"]:
         package_path = find_file_by_extension(dist_path, ".tar.gz" if package_type == "build_s" else ".whl")
         cmd_install_package = f"{pip_with_venv} install {package_path}"
+        print(f"Installing package: {cmd_install_package}")
         subprocess.run(cmd_install_package, check=True, shell=True)
 
     if backends:
         # Install backend specific packages with according version from constraints.txt
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
         extra_reqs = " ".join(packages)
+        cmd_install_backends = f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt"
+        print(f"Installing backend packages: {cmd_install_backends}")
         subprocess.run(
-            f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt",
+            cmd_install_backends,
             check=True,
             shell=True,
             cwd=PROJECT_ROOT,
