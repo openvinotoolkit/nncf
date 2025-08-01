@@ -725,3 +725,11 @@ class SimpleConcatModel(torch.nn.Module):
         b = self.conv1(x)
         c = torch.cat([a, b], dim=1)
         return self.conv2(c)
+
+
+class ConcatModelWithTwoOutputs(SimpleConcatModel):
+    def forward(self, x):
+        a = self.conv(x)
+        b = self.conv1(x)
+        c = torch.cat([a, b], dim=1)
+        return self.conv2(c), a

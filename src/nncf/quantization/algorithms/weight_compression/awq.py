@@ -40,6 +40,10 @@ TTensor = TypeVar("TTensor")
 TWeightType = TypeVar("TWeightType")
 
 
+FP16_MAX_VALUE = 65504.0
+FP16_OVERFLOW_MARGIN = 0.25
+
+
 @dataclass
 class AWQCompressionInfo:
     """
@@ -124,7 +128,6 @@ class AWQ(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
-        nodes_to_compress: list[NNCFNode],
         statistics: Optional[dict[str, WCTensorStatistic]] = None,
         wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> TModel:
@@ -133,14 +136,13 @@ class AWQ(Algorithm):
         :param model: Model for applying algorithm.
         :param graph: Model graph.
         :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
         :param statistics: Input activation statistics for each node.
         :param wc_backend_entity: Weight compression algorithm backend.
         :return: A resulting model.
         """
         self._set_backend_entity(model, wc_backend_entity)
 
-        awq_data = self._get_awq_data(graph, all_weight_params, nodes_to_compress)
+        awq_data = self._get_awq_data(graph, all_weight_params)
         if len(awq_data) == 0:
             return model
 
@@ -157,6 +159,7 @@ class AWQ(Algorithm):
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
+            is_mergeable = self._backend_entity.is_node_with_weights(merge_node, graph)
 
             nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
 
@@ -170,7 +173,15 @@ class AWQ(Algorithm):
             if is_data_free:
                 scale = self._data_free_step(weight, 1 - wp.reduction_axes[0])
             else:
-                scale = self._data_aware_step(wp, weight, statistics[k])
+                prev_weight, prev_statistics = None, None
+                if is_mergeable:
+                    # for MatMul->Multiply->MatMul pattern we need to use statistics from the first MatMul
+                    prev_weight_data = self._backend_entity.get_weight_names_and_port_ids(merge_node, graph)
+                    _, prev_weight_port_id = prev_weight_data[0]
+                    prev_weight = self._backend_entity.get_weight(merge_node, prev_weight_port_id, model, graph)
+
+                    prev_statistics = statistics[merge_node.node_name]
+                scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
 
             w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
             a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
@@ -178,9 +189,7 @@ class AWQ(Algorithm):
             scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
-            if self._backend_entity.is_node_with_weights(
-                merge_node, graph
-            ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
+            if is_mergeable:  # for MatMul->Multiply->MatMul pattern the scale is merged to the first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
@@ -201,12 +210,21 @@ class AWQ(Algorithm):
 
         return transformed_model
 
-    def _data_aware_step(self, wp, weight, statistics):
+    def _data_aware_step(self, wp, weight, statistics, prev_weight=None, prev_statistics=None):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
         s, X = process_stats(statistics, self._subset_size)
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
+
+        assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
+        reduction_axis = wp.reduction_axes[0]
+
+        prev_s, prev_w = None, None
+        if prev_statistics is not None and prev_weight is not None:
+            prev_s, _ = process_stats(prev_statistics, self._subset_size)
+            prev_s = prev_s.astype(TensorDataType.float32).max().item()
+            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
 
         top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
         topk_idxs = fns.argsort(-s)[:top_k]
@@ -220,9 +238,6 @@ class AWQ(Algorithm):
             groups_to_correct.add(idx.data // group_size)
 
         groups_to_correct = list(groups_to_correct)
-
-        assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
-        reduction_axis = wp.reduction_axes[0]
 
         if reduction_axis == 0:
             weight = fns.transpose(weight)
@@ -252,6 +267,27 @@ class AWQ(Algorithm):
             alpha = self._alpha_min
             for _ in range(self._steps):
                 cur_scale = gscale**alpha
+
+                if prev_s is not None:
+                    threshold = (
+                        FP16_OVERFLOW_MARGIN * FP16_MAX_VALUE
+                    )  # take the threshold from the fp16 type with some margin
+                    # per channel magnitudes for the previous MatMul
+                    # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
+                    magnitudes = (
+                        (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
+                    )
+                    if magnitudes.max() >= threshold:
+                        cur_scale = AWQ._clamp_scale(
+                            magnitudes,
+                            threshold,
+                            cur_scale,
+                            prev_w[offset : offset + group_size]
+                            * prev_s
+                            * prev_weight.shape[reduction_axis]
+                            / threshold,
+                        )
+
                 weights_to_fake_quantize = gweight * cur_scale
                 if not config.is_integer:
                     g_decompressed_weighs = float_quantize_dequantize_weight(
@@ -275,19 +311,22 @@ class AWQ(Algorithm):
 
         return scale
 
+    @staticmethod
+    def _clamp_scale(magnitudes, threshold, scale, clamped_scale):
+        return fns.where(magnitudes < threshold, scale, clamped_scale)
+
     def _data_free_step(self, weight, axis):
         eps = fns.finfo(weight).eps
         scale = fns.maximum(fns.mean(fns.abs(weight), axis=axis), eps)
         return 1 / scale
 
     def _get_awq_data(
-        self, graph: NNCFGraph, all_weight_params: list[WeightCompressionParameters], nodes_to_compress: list[NNCFNode]
+        self, graph: NNCFGraph, all_weight_params: list[WeightCompressionParameters]
     ) -> dict[str, AWQCompressionInfo]:
         """
         Finds awq patterns in graph and returns it.
         :param graph: Model graph.
         :param all_weight_params: list of all weight parameters.
-        :param nodes_to_compress: list of nodes for processing.
         :return: A dict with node names and matched AWQ patterns.
         """
         matches = []
@@ -320,7 +359,7 @@ class AWQ(Algorithm):
 
             if weight_params.compression_config.num_bits != 4:
                 continue
-            target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
+            target_node = weight_params.node_with_weight
 
             # avoid matching different patterns for the same node
             if target_node.node_name in awq_data:
@@ -332,7 +371,7 @@ class AWQ(Algorithm):
                 merge_node_names = []
                 for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                     merge_node_names.append(weight_op_friendly_name)
-                merge_node = nodes_to_compress[name_mapping[merge_node_names[-1]]]
+                merge_node = all_weight_params[name_mapping[merge_node_names[-1]]].node_with_weight
             else:  # pattern Act->MatMul or Act->Multiply->MatMul
                 merge_node = nncf_node
 

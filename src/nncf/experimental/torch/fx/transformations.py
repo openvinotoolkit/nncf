@@ -28,6 +28,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
@@ -135,7 +136,7 @@ def module_insertion_transformation_builder(
                         user.replace_input_with(target_node, new_node)
 
             else:
-                prev_node = _get_node_by_input_port_id(target_node, target_point.input_port_id)
+                prev_node = get_node_args(target_node)[target_point.input_port_id]
                 _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
@@ -201,7 +202,7 @@ def constant_update_fn(
     :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
     """
     graph = model.graph
-    old_const = _get_node_by_input_port_id(node, input_port_id)
+    old_const = get_node_args(node)[input_port_id]
 
     if old_const.op != "get_attr":
         msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
@@ -442,20 +443,7 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
     if target_type == TargetType.OPERATOR_POST_HOOK:
         return target_node
 
-    return _get_node_by_input_port_id(target_node, target_point.input_port_id)
-
-
-def _get_node_by_input_port_id(node: torch.fx.Node, input_port_id: int) -> torch.fx.Node:
-    """
-    Retrieves an input node from the given node and the input port id.
-
-    :param node: Given input node.
-    :param input_port_id: Given input port id.
-    :return: An input node from the given node and the input port id.
-    """
-    if node.target == torch.ops.aten.cat.default:
-        return node.args[0][input_port_id]
-    return node.args[input_port_id]
+    return get_node_args(target_node)[target_point.input_port_id]
 
 
 def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Callable:

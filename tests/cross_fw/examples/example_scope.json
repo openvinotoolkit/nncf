@@ -215,7 +215,15 @@
         "requirements": "examples/llm_compression/openvino/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 65
+            "word_count": 86
+        }
+    },
+    "llm_compression_fx": {
+        "backend": "torchfx",
+        "requirements": "examples/llm_compression/torch_fx/tiny_llama/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 56
         }
     },
     "llm_compression_onnx": {
@@ -223,7 +231,7 @@
         "requirements": "examples/llm_compression/onnx/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 77
+            "word_count": 75
         }
     },
     "llm_tune_params": {
@@ -248,7 +256,11 @@
         "backend": "torch",
         "requirements": "examples/quantization_aware_training/torch/anomalib/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "python_version": [3,10,0],
+        "python_version": [
+            3,
+            10,
+            0
+        ],
         "accuracy_tolerance_after_training": 0.02,
         "accuracy_tolerance": 0.08,
         "accuracy_metrics": {
@@ -307,8 +319,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.1,
         "accuracy_metrics": {
-            "perplexity_diff_torch": 0.75,
-            "best_ov_perplexity": 34.94
+            "best_ov_perplexity": 32.26
         }
     },
     "llm_compression_qat_with_nls": {

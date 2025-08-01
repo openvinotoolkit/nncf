@@ -57,6 +57,8 @@ class BackendType(Enum):
     CUDA_TORCH = "CUDA_TORCH"
     FX_TORCH = "FX_TORCH"
     CUDA_FX_TORCH = "CUDA_FX_TORCH"
+    OV_QUANTIZER_NNCF = "OV_QUANTIZER_NNCF"
+    OV_QUANTIZER_AO = "OV_QUANTIZER_AO"
     ONNX = "ONNX"
     OV = "OV"
     OPTIMUM = "OPTIMUM"
@@ -65,7 +67,12 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]
+FX_BACKENDS = [
+    BackendType.FX_TORCH,
+    BackendType.CUDA_FX_TORCH,
+    BackendType.OV_QUANTIZER_NNCF,
+    BackendType.OV_QUANTIZER_AO,
+]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120

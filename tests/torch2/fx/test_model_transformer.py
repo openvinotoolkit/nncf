@@ -33,8 +33,8 @@ from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-from nncf.experimental.torch.fx.transformations import _get_node_by_input_port_id
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
@@ -247,7 +247,7 @@ def test_constant_update_transformation(concat: bool):
     transformation(captured_model)
 
     target_graph_node = get_graph_node_by_name(captured_model.graph, target_node_name)
-    new_const_node = _get_node_by_input_port_id(target_graph_node, input_port_id)
+    new_const_node = get_node_args(target_graph_node)[input_port_id]
     assert get_tensor_constant_from_node(new_const_node, captured_model) == new_value
 
     transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
@@ -305,7 +305,7 @@ class TestQDQInsertion:
     ):
         target_node = get_graph_node_by_name(captured_model.graph, target_point.target_node_name)
         if target_point.target_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.OPERATOR_PRE_HOOK]:
-            dq_node = _get_node_by_input_port_id(target_node, target_point.input_port_id)
+            dq_node = get_node_args(target_node)[target_point.input_port_id]
             q_node = dq_node.args[0]
         else:
             q_node = list(target_node.users)[0]

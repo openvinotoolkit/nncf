@@ -20,6 +20,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolut
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
@@ -97,4 +98,16 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             conv_metatype=OVConvolutionMetatype,
             add_metatype=OVAddMetatype,
             conv_layer_attrs=OVLayerAttributes({}),
+        )
+
+    def test_self_attn_output_with_read_value(self):
+        self.test_model_type_transformer_quantization_config(
+            NNCFGraphTransformer(
+                matmul_metatype=OVMatMulMetatype,
+                softmax_metatype=OVSoftmaxMetatype,
+                mul_metatype=OVMultiplyMetatype,
+                const_metatype=OVConstantMetatype,
+                transpose_metatype=OVReadValueMetatype,
+                matmul_layer_weighted_attrs=OVLayerAttributes({}),
+            )
         )
