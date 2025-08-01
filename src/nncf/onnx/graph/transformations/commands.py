@@ -133,7 +133,7 @@ class ONNXMultiplyInsertionCommand(ONNXInsertionCommand):
         :param destination_node_names: New layer consumers.
         :param multiply_node_name: New layer name.
         """
-        super().__init__(target_point)
+        super().__init__(target_point, None)
         self.scale_value = scale_value
         self.destination_node_names = destination_node_names
         self.multiply_node_name = multiply_node_name

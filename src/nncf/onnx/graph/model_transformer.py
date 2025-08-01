@@ -111,7 +111,12 @@ class ONNXModelTransformer(ModelTransformer):
             elif isinstance(transformation, ONNXMultiplyInsertionCommand):
                 multiply_insert_transformations.append(transformation)
         # Inplace transformations, using deepcopy of model
-        if quantizer_insert_transformations or initializer_update_transformations or qdq_node_removing_transformations:
+        if (
+            quantizer_insert_transformations
+            or initializer_update_transformations
+            or qdq_node_removing_transformations
+            or multiply_insert_transformations
+        ):
             model = deepcopy(self._model)
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
@@ -497,7 +502,7 @@ class ONNXModelTransformer(ModelTransformer):
                 name=transformation.multiply_node_name,
             )
             target_index = get_node_index(model, target_node_name)
-            model.graph.insert(target_index + 1, mul_node)
+            model.graph.node.insert(target_index + 1, mul_node)
 
             for name in transformation.destination_node_names:
                 node = node_name_to_node[name]
