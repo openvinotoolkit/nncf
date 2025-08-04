@@ -315,6 +315,7 @@
     "llm_compression_distillation_qat_with_lora": {
         "backend": "torch",
         "device": "cuda",
+        "CUDA_VISIBLE_DEVICES": "0",
         "requirements": "examples/llm_compression/torch/distillation_qat_with_lora/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.1,
