@@ -131,9 +131,12 @@ def test_examples(
         f"{PROJECT_ROOT}{os.pathsep}{example_dir}"  # need this to be able to import from tests.* in run_example.py
     )
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
+    env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
+
     if device != "cuda":
         env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
-    env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
+    elif "CUDA_VISIBLE_DEVICES" in example_params:
+        env["CUDA_VISIBLE_DEVICES"] = example_params["CUDA_VISIBLE_DEVICES"]
 
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
