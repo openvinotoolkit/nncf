@@ -90,7 +90,7 @@ class AWQ(Algorithm):
 
     @property
     def available_backends(self) -> list[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.ONNX]
 
     def _set_backend_entity(
         self, model: TModel, wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None
