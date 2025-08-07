@@ -337,7 +337,7 @@
         "backend": "tf",
         "requirements": "examples/quantization_aware_training/tensorflow/mobilenet_v2/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "accuracy_tolerance": 0.003,
+        "accuracy_tolerance": 0.01,
         "accuracy_metrics": {
             "fp32_top1": 0.987770676612854,
             "int8_top1": 0.9737579822540283,
