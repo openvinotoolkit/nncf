@@ -366,10 +366,12 @@ class ScaleEstimation:
         if was_transposed:
             if config.group_size == -1:
                 result_scale = fns.transpose(result_scale)
-                zp = fns.transpose(zp)
+                if zp is not None:
+                    zp = fns.transpose(zp)
             else:
                 result_scale = fns.transpose(result_scale, axes=(1, 2, 0))
-                zp = fns.transpose(zp, axes=(1, 2, 0))
+                if zp is not None:
+                    zp = fns.transpose(zp, axes=(1, 2, 0))
 
         return result_scale, zp
 
