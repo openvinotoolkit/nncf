@@ -502,7 +502,7 @@ class PTQTestPipeline(BaseTestPipeline):
             )
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
-            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),), strict=True)
             # Torch export is used to save the model because ov.convert_model does not fully claim support for
             # Converting ExportedProgram
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")
