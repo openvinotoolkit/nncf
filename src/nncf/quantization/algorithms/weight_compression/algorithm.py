@@ -377,7 +377,7 @@ class WeightCompression(Algorithm):
 
     @property
     def available_backends(self) -> list[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
 
     def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
         """
