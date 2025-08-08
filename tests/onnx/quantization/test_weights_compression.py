@@ -559,7 +559,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         num = defaultdict(int)
         for i in model.graph.initializer:
             if i.data_type in [onnx.TensorProto.UINT4, onnx.TensorProto.INT4]:
-                shape = tuple(i.dims)
+                shape = list(reversed(i.dims))
                 num[shape[-1]] += 1
         return num
 
