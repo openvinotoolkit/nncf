@@ -372,7 +372,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             weights_data = np.arange(0, 16).reshape(4, 4).astype(np.float32)
             weights_data[-1, -1] = main_value
             weights_data = weights_data.T
-            mb.add_matmul(x, shape=weights_data.shape, output=output if i == 4 else None, data=weights_data)
+            x = mb.add_matmul(x, shape=weights_data.shape, output=output if i == 4 else None, data=weights_data)
 
         return mb.build()
 
