@@ -45,7 +45,6 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
-from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
@@ -281,29 +280,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
 
 class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompressionAlgoBackend):
-    @staticmethod
-    def mean_variance_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
-        return PTMixedPrecisionAlgoBackend.mean_variance_statistic_collector(
-            reduction_axes=reduction_axes, subset_size=subset_size
-        )
-
-    @staticmethod
-    def max_variance_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
-        return PTMixedPrecisionAlgoBackend.max_variance_statistic_collector(
-            reduction_axes=reduction_axes, subset_size=subset_size
-        )
-
-    @staticmethod
-    def mean_abs_max_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
-        return PTMixedPrecisionAlgoBackend.mean_abs_max_statistic_collector(
-            reduction_axes=reduction_axes, subset_size=subset_size
-        )
+    pass
 
 
 class FXAWQMultiply(torch.nn.Module):
