@@ -100,5 +100,6 @@ def convert_and_export_with_cache(model: PreTrainedModel):
             example_cache_position,
         ),
         dynamic_shapes=dynamic_shapes,
+        strict=True,
     ).run_decompositions(decomp_table={})
     return exported_program, model_config, gen_config

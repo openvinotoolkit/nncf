@@ -149,7 +149,9 @@ def get_torch_fx_model(
 
     model.eval()
     with torch.no_grad():
-        return torch.export.export_for_training(model, args=device_ex_input, dynamic_shapes=dynamic_shapes).module()
+        return torch.export.export_for_training(
+            model, args=device_ex_input, dynamic_shapes=dynamic_shapes, strict=True
+        ).module()
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
