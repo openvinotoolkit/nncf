@@ -43,10 +43,22 @@ class RemovableHookHandle:
         - If no hooks left under the key, the key is also removed from the storage.
         """
         storage: Optional[nn.ModuleDict] = self.storage_ref()
-        if storage is not None and self.key in storage and self.id in storage[self.key]:
-            del storage[self.key][self.id]
-            if not storage[self.key]:
-                del storage[self.key]
+        if storage is None or self.key not in storage:
+            # hook storage has been garbage collected or key is not present
+            return
+
+        hooks_dict = storage[self.key]
+        if not isinstance(hooks_dict, nn.ModuleDict):
+            msg = f"Expected nn.ModuleDict for key={self.key}, got {type(hooks_dict)}"
+            raise TypeError(msg)
+
+        if self.id not in hooks_dict:
+            # hook with the specified id was already removed
+            return
+
+        del hooks_dict[self.id]
+        if not storage[self.key]:
+            del storage[self.key]
 
 
 class HookStorage(nn.Module):
@@ -106,8 +118,13 @@ class HookStorage(nn.Module):
         if hook_key not in storage_dict:
             storage_dict[hook_key] = nn.ModuleDict()
 
-        hook_id = cls._get_next_hook_id(storage_dict[hook_key])
-        storage_dict[hook_key][hook_id] = hook
+        hooks_dict = storage_dict[hook_key]
+        if not isinstance(hooks_dict, nn.ModuleDict):
+            msg = f"Expected nn.ModuleDict for key={hook_key}, got {type(hooks_dict)}"
+            raise TypeError(msg)
+
+        hook_id = cls._get_next_hook_id(hooks_dict)
+        hooks_dict[hook_id] = hook
 
         return RemovableHookHandle(storage_dict, hook_key, hook_id)
 
@@ -148,7 +165,8 @@ class HookStorage(nn.Module):
         hook_key = cls._generate_key(op_name, port_id)
         if hook_key not in storage_dict:
             return value
-        for hook in storage_dict[hook_key].values():
+        hooks_dict = cast(nn.ModuleDict, storage_dict[hook_key])
+        for hook in hooks_dict.values():
             value = hook(value)
         return value
 
