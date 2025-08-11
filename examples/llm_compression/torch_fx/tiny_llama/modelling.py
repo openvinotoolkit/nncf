@@ -112,6 +112,7 @@ def convert_and_export_with_cache(model: PreTrainedModel) -> tuple[ExportedProgr
             example_input_ids,
             example_cache_position,
         ),
+        strict=True,
         dynamic_shapes=dynamic_shapes,
     ).run_decompositions(decomp_table={})
     return exported_program, model_config, gen_config
