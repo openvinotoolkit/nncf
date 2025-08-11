@@ -146,6 +146,18 @@ def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     return torch.count_nonzero(a, dim=axis)
 
 
+@numeric.histogram.register
+def _(
+    a: torch.Tensor,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+    weight: Optional[torch.Tensor] = None,
+    density: bool = False,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    return torch.histogram(input=a, bins=bins, range=range, weight=weight, density=density)
+
+
 @numeric.isempty.register
 def _(a: torch.Tensor) -> bool:
     return a.numel() == 0

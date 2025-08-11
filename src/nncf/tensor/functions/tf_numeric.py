@@ -145,6 +145,29 @@ def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Te
         return tf.math.count_nonzero(a, axis=axis)
 
 
+@numeric.histogram.register
+def _(
+    a: tf.Tensor,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+    weight: Optional[tf.Tensor] = None,
+    density: bool = False,
+) -> tuple[tf.Tensor, tf.Tensor]:
+    with tf.device(a.device):
+        if weight is not None or density is not None:
+            msg = "Histogram function is not implemented yet for weight and density parameters in TensorFlow"
+            raise InternalError(msg)
+        if range is None:
+            min_ = tf.reduce_min(a, axis=None)
+            max_ = tf.reduce_max(a, axis=None)
+            range = (min_, max_)
+
+        edges = tf.linspace(min_, max_, bins + 1)
+        counts = tf.histogram_fixed_width(a, range, bins)
+        return counts, edges
+
+
 @numeric.isempty.register
 def _(a: tf.Tensor) -> bool:
     return bool(tf.equal(tf.size(a), 0))
