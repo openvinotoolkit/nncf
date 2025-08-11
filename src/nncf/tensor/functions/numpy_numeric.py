@@ -133,6 +133,18 @@ def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
     return np.array(np.count_nonzero(a, axis=axis))
 
 
+@numeric.histogram.register
+def _(
+    a: T_NUMPY,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+    weight: Optional[T_NUMPY] = None,
+    density: bool = False,
+) -> tuple[T_NUMPY, T_NUMPY]:
+    return np.histogram(a=a, bins=bins, range=range, weights=weight, density=density)
+
+
 @numeric.isempty.register
 def _(a: T_NUMPY) -> bool:
     return a.size == 0

@@ -202,6 +202,31 @@ def count_nonzero(a: Tensor, axis: T_AXIS = None) -> Tensor:
 
 
 @tensor_dispatcher
+def histogram(
+    a: Tensor,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+    weight: Optional[Tensor] = None,
+    density: bool = False,
+) -> Tensor:
+    """
+    Computes a histogram of the values in a tensor.
+
+    :param a:  The input tensor.
+    :param bins: Defines the number of equal-width bins.
+    :param range: Defines the range of the bins. If not provided, range is simply (a.min(), a.max())
+    :param weight: If provided, weight should have the same shape as input.
+        Each value in input contributes its associated weight towards its bin’s result.
+    :param density: If False, the result will contain the count (or total weight) in each bin.
+        If True, the result is the value of the probability density function over the bins,
+        normalized such that the integral over the range of the bins is 1.
+    :return: A tuple of a 1D Tensor containing the values of the histogram and
+        a 1D Tensor containing the edges of the histogram bins.
+    """
+
+
+@tensor_dispatcher
 def isempty(a: Tensor) -> bool:
     """
     Return True if input tensor is empty.
