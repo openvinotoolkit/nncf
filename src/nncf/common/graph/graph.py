@@ -622,7 +622,9 @@ class NNCFGraph:
         """
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
-            attrs_node = {"id": str(node[NNCFNode.ID_NODE_ATTR]), "type": node[NNCFNode.NODE_TYPE_ATTR]}
+            attrs_node = {"id": str(node[NNCFNode.ID_NODE_ATTR])}
+            if "0x" not in node[NNCFNode.NODE_TYPE_ATTR]:
+                attrs_node["type"] = node[NNCFNode.NODE_TYPE_ATTR]
             for attr in ["color", "label", "style"]:
                 if attr in node:
                     attrs_node[attr] = node[attr]
