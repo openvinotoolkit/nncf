@@ -623,6 +623,8 @@ class NNCFGraph:
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
             attrs_node = {"id": str(node[NNCFNode.ID_NODE_ATTR])}
+            # Filter types which have a reference to a memory in its name.
+            # Relevant for torchFX dynamic graphs since torch==2.8.0
             if "0x" not in node[NNCFNode.NODE_TYPE_ATTR]:
                 attrs_node["type"] = node[NNCFNode.NODE_TYPE_ATTR]
             for attr in ["color", "label", "style"]:
