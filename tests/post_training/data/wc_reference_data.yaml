@@ -107,7 +107,7 @@ tinyllama_scale_estimation_per_channel_backend_FX_TORCH:
     message: "Issue-165013"
   atol: 0.006 # difference across devices: 0.80873 vs 0.81389
 tinyllama_scale_estimation_per_channel_backend_ONNX:
-  metric_value: 0.80837
+  metric_value: 0.80878
   num_int4: 188
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH:
@@ -127,9 +127,9 @@ tinyllama_data_free_awq_backend_TORCH:
   num_int4: 94
   num_int8: 124
 tinyllama_data_free_awq_backend_ONNX:
-  metric_value: 0.82562
-  num_int4: 264
-  num_int8: 84
+  metric_value: 0.8597
+  num_int4: 230
+  num_int8: 124
 tinyllama_data_aware_backend_ONNX:
   metric_value: 0.85807
   num_int4: 230
