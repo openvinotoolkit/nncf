@@ -419,7 +419,7 @@ AUDIO_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(48)}, consumers={ConsumerInfo(51)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(50)}, consumers={ConsumerInfo(53)}),
         ],
     ),
 ]
