@@ -16,6 +16,6 @@ transformers==4.53.0
 
 sentence-transformers==4.1.0
 optimum-intel==1.25.1
-optimum==1.26.0
+optimum==1.27.0
 accelerate==1.1.0
 fastdownload==0.0.7
