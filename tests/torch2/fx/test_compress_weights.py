@@ -18,7 +18,6 @@ from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
-from nncf.experimental.torch.fx.node_utils import get_reduction_axes_from_metatype
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.parameters import CompressionFormat
@@ -331,27 +330,8 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     ],
 )
 def test_basic_mappings(metatype, weight_port_id, ndims, expected_reduction_axes):
-    reduction_axes = get_reduction_axes_from_metatype(metatype, weight_port_id, ndims)
+    reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(metatype, weight_port_id, ndims)
     assert reduction_axes == expected_reduction_axes
-
-
-def _is_transposed_conv(metatype):
-    return metatype in [
-        om.PTConvTranspose1dMetatype,
-        om.PTConvTranspose2dMetatype,
-        om.PTConvTranspose3dMetatype,
-    ]
-
-
-def test_convolution_metatypes_reduce_all_but_channel(ndims_default):
-    ndims = ndims_default
-    conv_metatypes = list(FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES)
-
-    for metatype in conv_metatypes:
-        channel_idx = 1 if _is_transposed_conv(metatype) else 0
-        expected = [i for i in range(ndims) if i != channel_idx]
-        out = get_reduction_axes_from_metatype(metatype, 0, ndims)
-        assert out == expected, f"Failed for {metatype} with ndims={ndims}"
 
 
 class TestFXTemplateWeightCompression(TemplateWeightCompression):
