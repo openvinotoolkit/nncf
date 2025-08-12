@@ -25,11 +25,11 @@ from tests.post_training.pipelines.image_classification_base import ImageClassif
 
 
 def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export_for_training(model, args).module()
+    return torch.export.export_for_training(model, args, strict=True).module()
 
 
 def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export(model, args).module()
+    return torch.export.export(model, args, strict=True).module()
 
 
 @dataclass
@@ -103,7 +103,7 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         elif self.backend in [BackendType.OV, BackendType.FP32]:
             with torch.no_grad():
                 if self.model_params.export_torch_before_ov_convert:
-                    model = torch.export.export(model, (self.dummy_tensor,))
+                    model = torch.export.export(model, (self.dummy_tensor,), strict=True)
                 self.model = ov.convert_model(model, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
@@ -125,7 +125,7 @@ class ImageClassificationTorchvision(ImageClassificationBase):
             ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in FX_BACKENDS:
-            exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),), strict=True)
             torch.export.save(exported_model, self.fp32_model_dir / "fx_model_fp32.pt2")
 
             if self.backend is BackendType.CUDA_FX_TORCH:
