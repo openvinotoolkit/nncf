@@ -234,6 +234,14 @@
             "word_count": 75
         }
     },
+    "llm_compression_scale_estimation_onnx": {
+        "backend": "onnx",
+        "requirements": "examples/llm_compression/onnx/tiny_llama_scale_estimation/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 81
+        }
+    },
     "llm_tune_params": {
         "backend": "openvino",
         "requirements": "examples/llm_compression/openvino/tiny_llama_find_hyperparams/requirements.txt",

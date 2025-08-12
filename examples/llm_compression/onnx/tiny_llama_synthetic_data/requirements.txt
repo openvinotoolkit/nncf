@@ -1,5 +1,0 @@
-transformers
-openvino==2025.2.0
-optimum-intel[openvino]
-onnx==1.17.0
-onnxruntime==1.21.1

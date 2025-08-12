@@ -249,7 +249,7 @@ class LMWeightCompression(BaseTestPipeline):
                     "tensor(int64)": np.int64,
                 }
                 for input_name in self.model_hf.key_value_input_names:
-                    inputs[input_name] = np.empty(
+                    inputs[input_name] = np.zeros(
                         shape=(1, 4, 0, 64), dtype=onnx_type_to_numpy[self.model_hf.input_dtypes[input_name]]
                     )
 
