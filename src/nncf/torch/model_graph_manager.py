@@ -22,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -372,43 +373,43 @@ def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_
 
 
 def get_reduction_axes_from_metatype(metatype: OperatorMetatype, weight_port_id: int, ndims: int):
-        """
-        Determine the axes along which weight tensor reduction should occur for a given operator metatype.
+    """
+    Determine the axes along which weight tensor reduction should occur for a given operator metatype.
 
-        Args:
-            metatype: The metatype of the operator node containing the weight.
-            weight_port_id: The index of the input port corresponding to the weight tensor.
-            ndims: Number of dimensions in the weight tensor.
+    Args:
+        metatype: The metatype of the operator node containing the weight.
+        weight_port_id: The index of the input port corresponding to the weight tensor.
+        ndims: Number of dimensions in the weight tensor.
 
-        Returns:
-            List of axes to reduce over, or None if no reduction axes are determined.
-        """
-        reduction_axes = None
-        if metatype == om.PTAtenEmbeddingMetatype:
-            reduction_axes = [1]
-        elif metatype == om.PTLinearMetatype:
+    Returns:
+        List of axes to reduce over, or None if no reduction axes are determined.
+    """
+    reduction_axes = None
+    if metatype == om.PTAtenEmbeddingMetatype:
+        reduction_axes = [1]
+    elif metatype == om.PTLinearMetatype:
+        reduction_axes = [ndims - 1]
+    elif metatype == om.PTMatMulMetatype:
+        if weight_port_id == 0:
             reduction_axes = [ndims - 1]
-        elif metatype == om.PTMatMulMetatype:
-            if weight_port_id == 0:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 1:
-                reduction_axes = [max(0, ndims - 2)]
-        elif metatype == om.PTAddmmMetatype:
-            if weight_port_id == 1:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 2:
-                reduction_axes = [max(0, ndims - 2)]
-        elif metatype in FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
-            channel_idx = (
-                1
-                if metatype
-                in [om.PTConvTranspose1dMetatype, 
-                    om.PTConvTranspose2dMetatype, 
-                    om.PTConvTranspose3dMetatype]
-                else 0
-            )
-            reduction_axes = [i for i in range(ndims) if i != channel_idx]
-        return reduction_axes
+        elif weight_port_id == 1:
+            reduction_axes = [max(0, ndims - 2)]
+    elif metatype == om.PTAddmmMetatype:
+        if weight_port_id == 1:
+            reduction_axes = [ndims - 1]
+        elif weight_port_id == 2:
+            reduction_axes = [max(0, ndims - 2)]
+    elif metatype in CONVOLUTION_METATYPES:
+        channel_idx = (
+            1
+            if metatype
+            in [om.PTConvTranspose1dMetatype, 
+                om.PTConvTranspose2dMetatype, 
+                om.PTConvTranspose3dMetatype]
+            else 0
+        )
+        reduction_axes = [i for i in range(ndims) if i != channel_idx]
+    return reduction_axes
 
 
 def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
