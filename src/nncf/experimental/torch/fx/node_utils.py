@@ -38,6 +38,42 @@ def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
     msg = f"Node with name {name} is not found"
     raise RuntimeError(msg)
 
+def get_reduction_axes_from_metatype(node_with_weight_metatype: om, weight_port_id: int, ndims: int):
+    """
+    Determine the axes along which weight tensor reduction should occur for a given operator metatype.
+
+    Args:
+        node_with_weight_metatype: The metatype of the operator node containing the weight.
+        weight_port_id: The index of the input port corresponding to the weight tensor.
+        ndims: Number of dimensions in the weight tensor.
+
+    Returns:
+        List of axes to reduce over, or None if no reduction axes are determined.
+    """
+    reduction_axes = None
+    if node_with_weight_metatype == om.PTAtenEmbeddingMetatype:
+        reduction_axes = [1]
+    elif node_with_weight_metatype == om.PTLinearMetatype:
+        reduction_axes = [ndims - 1]
+    elif node_with_weight_metatype == om.PTMatMulMetatype:
+        if weight_port_id == 0:
+            reduction_axes = [ndims - 1]
+        elif weight_port_id == 1:
+            reduction_axes = [max(0, ndims - 2)]
+    elif node_with_weight_metatype == om.PTAddmmMetatype:
+        if weight_port_id == 1:
+            reduction_axes = [ndims - 1]
+        elif weight_port_id == 2:
+            reduction_axes = [max(0, ndims - 2)]
+    elif node_with_weight_metatype in FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
+        channel_idx = (
+            1
+            if node_with_weight_metatype
+            in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
+            else 0
+        )
+        reduction_axes = [i for i in range(ndims) if i != channel_idx]
+    return reduction_axes
 
 def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.GraphModule) -> torch.nn.Parameter:
     """

@@ -33,6 +33,7 @@ from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.node_utils import get_reduction_axes_from_metatype
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.parameters import CompressionFormat
@@ -89,40 +90,13 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_name_port_ids
 
     @staticmethod
-    def get_reduction_axes_from_node(node_with_weight_metatype: OperatorMetatype, weight_port_id, ndims):
-        reduction_axes = None
-        if node_with_weight_metatype == om.PTAtenEmbeddingMetatype:
-            reduction_axes = [1]
-        elif node_with_weight_metatype == om.PTLinearMetatype:
-            reduction_axes = [ndims - 1]
-        elif node_with_weight_metatype == om.PTMatMulMetatype:
-            if weight_port_id == 0:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 1:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight_metatype == om.PTAddmmMetatype:
-            if weight_port_id == 1:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 2:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight_metatype in FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
-            channel_idx = (
-                1
-                if node_with_weight_metatype
-                in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
-                else 0
-            )
-            reduction_axes = [i for i in range(ndims) if i != channel_idx]
-        return reduction_axes
-
-    @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
         node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(edge.tensor_shape)
-        reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_node(node_with_weight_metatype, weight_port_id, ndims)
+        reduction_axes = get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
         return tuple(reduction_axes)
 
     @staticmethod
