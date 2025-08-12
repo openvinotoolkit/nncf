@@ -32,8 +32,8 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
-from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.node_utils import get_reduction_axes_from_metatype
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.parameters import CompressionFormat
@@ -51,7 +51,6 @@ from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids

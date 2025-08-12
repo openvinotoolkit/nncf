@@ -18,17 +18,17 @@ from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
-from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.node_utils import get_reduction_axes_from_metatype
-from nncf.torch.graph import operator_metatypes as om
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
-from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
+from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
@@ -316,22 +316,24 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     # Result should be in the precision of the model
     assert result.dtype == dtype
 
+
 @pytest.mark.parametrize(
     "metatype,weight_port_id,ndims,expected_reduction_axes",
     [
         (om.PTAtenEmbeddingMetatype, 0, 4, [1]),
-        (om.PTLinearMetatype,        0, 4, [3]),
-        (om.PTMatMulMetatype,        0, 4, [3]),
-        (om.PTMatMulMetatype,        1, 4, [2]),
-        (om.PTAddmmMetatype,         1, 4, [3]),
-        (om.PTAddmmMetatype,         2, 4, [2]),
-        (om.PTMatMulMetatype,        1, 1, [0]),
-        (om.PTMatMulMetatype,        1, 2, [0]),
+        (om.PTLinearMetatype, 0, 4, [3]),
+        (om.PTMatMulMetatype, 0, 4, [3]),
+        (om.PTMatMulMetatype, 1, 4, [2]),
+        (om.PTAddmmMetatype, 1, 4, [3]),
+        (om.PTAddmmMetatype, 2, 4, [2]),
+        (om.PTMatMulMetatype, 1, 1, [0]),
+        (om.PTMatMulMetatype, 1, 2, [0]),
     ],
 )
 def test_basic_mappings(metatype, weight_port_id, ndims, expected_reduction_axes):
     reduction_axes = get_reduction_axes_from_metatype(metatype, weight_port_id, ndims)
     assert reduction_axes == expected_reduction_axes
+
 
 def _is_transposed_conv(metatype):
     return metatype in [
@@ -340,6 +342,7 @@ def _is_transposed_conv(metatype):
         om.PTConvTranspose3dMetatype,
     ]
 
+
 def test_convolution_metatypes_reduce_all_but_channel(ndims_default):
     ndims = ndims_default
     conv_metatypes = list(FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES)
@@ -347,8 +350,9 @@ def test_convolution_metatypes_reduce_all_but_channel(ndims_default):
     for metatype in conv_metatypes:
         channel_idx = 1 if _is_transposed_conv(metatype) else 0
         expected = [i for i in range(ndims) if i != channel_idx]
-        out = get_reduction_axes_from_metatype(mt, 0, ndims)
+        out = get_reduction_axes_from_metatype(metatype, 0, ndims)
         assert out == expected, f"Failed for {metatype} with ndims={ndims}"
+
 
 class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod

@@ -17,6 +17,7 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.experimental.torch.fx.groups import FX_OPERATORS_WITH_BIAS_METATYPES
+from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 from nncf.tensor import Tensor
 
 
@@ -37,6 +38,7 @@ def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
             return node
     msg = f"Node with name {name} is not found"
     raise RuntimeError(msg)
+
 
 def get_reduction_axes_from_metatype(node_with_weight_metatype: om, weight_port_id: int, ndims: int):
     """
@@ -74,6 +76,7 @@ def get_reduction_axes_from_metatype(node_with_weight_metatype: om, weight_port_
         )
         reduction_axes = [i for i in range(ndims) if i != channel_idx]
     return reduction_axes
+
 
 def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.GraphModule) -> torch.nn.Parameter:
     """
