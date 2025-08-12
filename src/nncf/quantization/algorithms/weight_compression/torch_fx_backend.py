@@ -90,7 +90,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         port_ids = get_weight_tensor_port_ids(node, graph)
         weight_name_port_ids = [(get_const_node(node, pid, graph).node_name, pid) for pid in port_ids]
         return weight_name_port_ids
-    
+
     @staticmethod
     def get_reduction_axes_from_metatype(node_with_weight_metatype: OperatorMetatype, weight_port_id: int, ndims: int):
         """
@@ -123,9 +123,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             channel_idx = (
                 1
                 if node_with_weight_metatype
-                in [om.PTConvTranspose1dMetatype, 
-                    om.PTConvTranspose2dMetatype, 
-                    om.PTConvTranspose3dMetatype]
+                in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
                 else 0
             )
             reduction_axes = [i for i in range(ndims) if i != channel_idx]
@@ -138,9 +136,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(edge.tensor_shape)
-        reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(node_with_weight_metatype, 
-                                                                                         weight_port_id, 
-                                                                                         ndims)
+        reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(
+            node_with_weight_metatype, weight_port_id, ndims
+        )
         return tuple(reduction_axes)
 
     @staticmethod

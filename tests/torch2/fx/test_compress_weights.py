@@ -24,7 +24,6 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
-from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.graph import operator_metatypes as om
