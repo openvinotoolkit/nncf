@@ -15,6 +15,9 @@ import torch
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import PT_CONVOLUTION_METATYPES
+from nncf.torch.graph.operator_metatypes import PT_EMBEDDING_METATYPES
+from nncf.torch.graph.operator_metatypes import PT_MATMUL_METATYPES
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -82,19 +85,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
-    MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-    EMBEDDING_METATYPES = [om.PTEmbeddingMetatype, om.PTAtenEmbeddingMetatype]
-    CONVOLUTION_METATYPES = [
-        om.PTConv1dMetatype,
-        om.PTConv2dMetatype,
-        om.PTConv3dMetatype,
-        om.PTDepthwiseConv1dSubtype,
-        om.PTDepthwiseConv2dSubtype,
-        om.PTDepthwiseConv3dSubtype,
-        om.PTConvTranspose1dMetatype,
-        om.PTConvTranspose2dMetatype,
-        om.PTConvTranspose3dMetatype,
-    ]
+    MATMUL_METATYPES = PT_MATMUL_METATYPES
+    EMBEDDING_METATYPES = PT_EMBEDDING_METATYPES
+    CONVOLUTION_METATYPES = PT_CONVOLUTION_METATYPES
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:

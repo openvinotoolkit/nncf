@@ -28,6 +28,7 @@ from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXW
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.model_graph_manager import get_reduction_axes_from_metatype
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
@@ -330,7 +331,7 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     ],
 )
 def test_basic_mappings(metatype, weight_port_id, ndims, expected_reduction_axes):
-    reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(metatype, weight_port_id, ndims)
+    reduction_axes = get_reduction_axes_from_metatype(metatype, weight_port_id, ndims)
     assert reduction_axes == expected_reduction_axes
 
 
