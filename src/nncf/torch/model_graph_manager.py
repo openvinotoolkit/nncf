@@ -370,6 +370,7 @@ def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_
         return (1,)
     return (0,)
 
+
 def get_reduction_axes_from_metatype(metatype: OperatorMetatype, weight_port_id: int, ndims: int):
         """
         Determine the axes along which weight tensor reduction should occur for a given operator metatype.
@@ -408,6 +409,7 @@ def get_reduction_axes_from_metatype(metatype: OperatorMetatype, weight_port_id:
             )
             reduction_axes = [i for i in range(ndims) if i != channel_idx]
         return reduction_axes
+
 
 def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """

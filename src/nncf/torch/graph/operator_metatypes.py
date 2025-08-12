@@ -31,20 +31,6 @@ ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
-PT_MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-PT_EMBEDDING_METATYPES = [om.PTEmbeddingMetatype, om.PTAtenEmbeddingMetatype]
-PT_CONVOLUTION_METATYPES = [
-    om.PTConv1dMetatype,
-    om.PTConv2dMetatype,
-    om.PTConv3dMetatype,
-    om.PTDepthwiseConv1dSubtype,
-    om.PTDepthwiseConv2dSubtype,
-    om.PTDepthwiseConv3dSubtype,
-    om.PTConvTranspose1dMetatype,
-    om.PTConvTranspose2dMetatype,
-    om.PTConvTranspose3dMetatype,
-]
-
 
 class PTOperatorMetatype(OperatorMetatype):
     """
@@ -1241,3 +1227,17 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
 ]
 
 MATMUL_METATYPES = [PTLinearMetatype, PTMatMulMetatype, PTAddmmMetatype]
+
+EMBEDDING_METATYPES = [PTEmbeddingMetatype, PTAtenEmbeddingMetatype]
+
+CONVOLUTION_METATYPES = [
+    PTConv1dMetatype,
+    PTConv2dMetatype,
+    PTConv3dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTDepthwiseConv2dSubtype,
+    PTDepthwiseConv3dSubtype,
+    PTConvTranspose1dMetatype,
+    PTConvTranspose2dMetatype,
+    PTConvTranspose3dMetatype,
+]

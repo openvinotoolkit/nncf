@@ -15,9 +15,6 @@ import torch
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
-from nncf.torch.graph.operator_metatypes import PT_CONVOLUTION_METATYPES
-from nncf.torch.graph.operator_metatypes import PT_EMBEDDING_METATYPES
-from nncf.torch.graph.operator_metatypes import PT_MATMUL_METATYPES
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -57,6 +54,9 @@ from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPESS
+from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -85,9 +85,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
-    MATMUL_METATYPES = PT_MATMUL_METATYPES
-    EMBEDDING_METATYPES = PT_EMBEDDING_METATYPES
-    CONVOLUTION_METATYPES = PT_CONVOLUTION_METATYPES
+    MATMUL_METATYPES = MATMUL_METATYPES
+    EMBEDDING_METATYPES = EMBEDDING_METATYPES
+    CONVOLUTION_METATYPES = CONVOLUTION_METATYPESS
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
