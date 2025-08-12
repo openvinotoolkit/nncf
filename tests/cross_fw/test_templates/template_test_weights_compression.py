@@ -540,7 +540,7 @@ class TemplateWeightCompression(ABC):
                 min_adjusted_group_size=min_adjusted_group_size,
             )
 
-        compress_weights(**kwargs)
+        model = compress_weights(**kwargs)
 
         num_group_sizes = self.get_num_int4_group_sizes(model)
         assert ref_num_group_sizes == num_group_sizes, (
