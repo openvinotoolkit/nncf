@@ -17,6 +17,7 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.experimental.torch.fx.groups import FX_OPERATORS_WITH_BIAS_METATYPES
+from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
 from nncf.tensor import Tensor
 
 
