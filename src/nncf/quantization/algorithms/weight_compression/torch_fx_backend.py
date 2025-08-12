@@ -138,7 +138,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(edge.tensor_shape)
-        reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
+        reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(node_with_weight_metatype, 
+                                                                                         weight_port_id, 
+                                                                                         ndims)
         return tuple(reduction_axes)
 
     @staticmethod
