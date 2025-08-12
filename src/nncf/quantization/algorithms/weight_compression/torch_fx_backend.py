@@ -51,7 +51,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import comp
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.graph import operator_metatypes as om
-from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPESS
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -67,7 +67,7 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     MATMUL_METATYPES = MATMUL_METATYPES
     EMBEDDING_METATYPES = EMBEDDING_METATYPES
-    CONVOLUTION_METATYPES = CONVOLUTION_METATYPESS
+    CONVOLUTION_METATYPES = CONVOLUTION_METATYPES
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:

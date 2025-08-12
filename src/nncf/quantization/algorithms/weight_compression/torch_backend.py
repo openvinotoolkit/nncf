@@ -54,7 +54,7 @@ from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPESS
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
@@ -87,7 +87,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     }
     MATMUL_METATYPES = MATMUL_METATYPES
     EMBEDDING_METATYPES = EMBEDDING_METATYPES
-    CONVOLUTION_METATYPES = CONVOLUTION_METATYPESS
+    CONVOLUTION_METATYPES = CONVOLUTION_METATYPES
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
