@@ -8,6 +8,8 @@
 [Usage](#usage) •
 [Tutorials and Samples](#demos-tutorials-and-samples) •
 [Third-party integration](#third-party-repository-integration) •
+[Model Zoo](./docs/ModelZoo.md)
+
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Fnncf)](https://docs.openvino.ai/nncf)
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
@@ -27,7 +29,7 @@ NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
 [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
 NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different
-use cases and models.
+use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](./docs/ModelZoo.md).
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
@@ -411,17 +413,25 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 
 Compact scripts demonstrating quantization and corresponding inference speed boost:
 
-| Example Name                                                                                                                                                                                |              Compression Algorithm               |  Backend   |         Domain         |
-|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
+| Example Name                                                                                                                             |              Compression Algorithm               |  Backend   |         Domain         |
+|:-----------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
 | [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
 | [OpenVINO YOLOv8](./examples/post_training_quantization/openvino/yolov8/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
 | [OpenVINO YOLOv8 QwAС](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
 | [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
 | [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |
 | [PyTorch SSD](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                                                        |            Post-Training Quantization            |  PyTorch   |    Object Detection    |
-| [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                        |            Post-Training Quantization            |  TorchFX   |    Image Classification    |
+| [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |
 | [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
+
+### Quantization-Aware Training Examples
+
+| Example Name                                                                        |   Compression Algorithm     | Backend |        Domain        |
+|:------------------------------------------------------------------------------------|:---------------------------:|:-------:|:--------------------:|
+| [PyTorch Resnet18](./examples/quantization_aware_training/torch/resnet18/README.md) | Quantization-Aware Training | PyTorch | Image Classification |
+| [PyTorch Anomalib](./examples/quantization_aware_training/torch/anomalib/README.md) | Quantization-Aware Training | PyTorch | Anomaly Detection    |
+
 
 <a id="third-party-repository-integration"></a>
 
@@ -477,6 +487,10 @@ conda install -c conda-forge nncf
 System requirements of NNCF correspond to the used backend. System requirements for each backend and
 the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
 
+## NNCF Compressed Model Zoo
+
+List of models and compression results for them can be found at our [NNCF Model Zoo page](./docs/ModelZoo.md).
+
 ## Citing
 
 ```bi
@@ -495,13 +509,13 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 ## Useful links
 
 - [Documentation](./docs)
-- [Examples](./examples)
+- Example scripts (model objects available through links in respective README.md files):
+  - [PyTorch](./examples/torch)
+  - [TensorFlow](./examples/tensorflow)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
-- [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
-- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
 
 ## Telemetry
 
