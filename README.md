@@ -500,6 +500,8 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
+- [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
+- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
 
 ## Telemetry
 
