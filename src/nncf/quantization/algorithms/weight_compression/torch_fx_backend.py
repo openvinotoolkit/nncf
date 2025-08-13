@@ -55,7 +55,7 @@ from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.model_graph_manager import get_reduction_axes_from_metatype
+from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
@@ -94,7 +94,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(edge.tensor_shape)
-        reduction_axes = get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
+        reduction_axes = get_weight_compression_reduction_axes(node_with_weight_metatype, weight_port_id, ndims)
         return tuple(reduction_axes)
 
     @staticmethod

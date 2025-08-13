@@ -329,7 +329,7 @@ def test_model_devices_and_precisions(use_cuda, dtype):
         (om.PTMatMulMetatype, 1, 2, [0]),
     ],
 )
-def test_basic_mappings(metatype, weight_port_id, ndims, expected_reduction_axes):
+def test_get_reduction_axes(metatype, weight_port_id, ndims, expected_reduction_axes):
     reduction_axes = get_reduction_axes_from_metatype(metatype, weight_port_id, ndims)
     assert reduction_axes == expected_reduction_axes
 

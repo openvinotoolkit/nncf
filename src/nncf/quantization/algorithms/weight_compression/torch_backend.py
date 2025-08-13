@@ -64,7 +64,7 @@ from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
-from nncf.torch.model_graph_manager import get_reduction_axes_from_metatype
+from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -133,7 +133,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(weight_node.layer_attributes.shape)
-        reduction_axes = get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
+        reduction_axes = get_weight_compression_reduction_axes(node_with_weight_metatype, weight_port_id, ndims)
         return tuple(reduction_axes)
 
     @staticmethod
