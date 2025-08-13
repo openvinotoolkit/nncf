@@ -65,9 +65,6 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
-    MATMUL_METATYPES = MATMUL_METATYPES
-    EMBEDDING_METATYPES = EMBEDDING_METATYPES
-    CONVOLUTION_METATYPES = CONVOLUTION_METATYPES
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
