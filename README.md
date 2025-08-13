@@ -432,7 +432,6 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 | [PyTorch Resnet18](./examples/quantization_aware_training/torch/resnet18/README.md) | Quantization-Aware Training | PyTorch | Image Classification |
 | [PyTorch Anomalib](./examples/quantization_aware_training/torch/anomalib/README.md) | Quantization-Aware Training | PyTorch | Anomaly Detection    |
 
-
 <a id="third-party-repository-integration"></a>
 
 ## Third-party Repository Integration
@@ -509,9 +508,7 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 ## Useful links
 
 - [Documentation](./docs)
-- Example scripts (model objects available through links in respective README.md files):
-  - [PyTorch](./examples/torch)
-  - [TensorFlow](./examples/tensorflow)
+- [Examples](./examples)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
