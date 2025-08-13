@@ -54,9 +54,6 @@ from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
-from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
-from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -65,6 +62,7 @@ from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
+from nncf.torch.model_graph_manager import get_reduction_axes_from_metatype
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -130,31 +128,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+        node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(weight_node.layer_attributes.shape)
-        reduction_axes = None
-        if node_with_weight.metatype == om.PTEmbeddingMetatype:
+        reduction_axes = get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
+        if node_with_weight_metatype == om.PTEmbeddingMetatype:
             reduction_axes = [1]
-        elif node_with_weight.metatype == om.PTLinearMetatype:
-            reduction_axes = [ndims - 1]
-        elif node_with_weight.metatype == om.PTMatMulMetatype:
-            if weight_port_id == 0:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 1:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight.metatype == om.PTAddmmMetatype:
-            if weight_port_id == 1:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 2:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight.metatype in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
-            channel_idx = (
-                1
-                if node_with_weight.metatype
-                in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
-                else 0
-            )
-            reduction_axes = [i for i in range(ndims) if i != channel_idx]
         return tuple(reduction_axes)
 
     @staticmethod

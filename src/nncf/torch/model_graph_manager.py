@@ -376,13 +376,11 @@ def get_reduction_axes_from_metatype(metatype: OperatorMetatype, weight_port_id:
     """
     Determine the axes along which weight tensor reduction should occur for a given operator metatype.
 
-    Args:
-        metatype: The metatype of the operator node containing the weight.
-        weight_port_id: The index of the input port corresponding to the weight tensor.
-        ndims: Number of dimensions in the weight tensor.
+    :param metatype: The metatype of the operator node containing the weight.
+    :param weight_port_id: The index of the input port corresponding to the weight tensor.
+    :param ndims: Number of dimensions in the weight tensor.
 
-    Returns:
-        List of axes to reduce over, or None if no reduction axes are determined.
+    :return: list of axes to reduce over, or None if no reduction axes are determined.
     """
     reduction_axes = None
     if metatype == om.PTAtenEmbeddingMetatype:

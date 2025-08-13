@@ -50,12 +50,9 @@ from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.torch.graph import operator_metatypes as om
-from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
-from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
-from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_reduction_axes_from_metatype
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
@@ -65,7 +62,6 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
-
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
         return FXWeightCompressionAlgoBackend.MATMUL_METATYPES
@@ -89,53 +85,13 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_name_port_ids
 
     @staticmethod
-    def get_reduction_axes_from_metatype(node_with_weight_metatype: OperatorMetatype, weight_port_id: int, ndims: int):
-        """
-        Determine the axes along which weight tensor reduction should occur for a given operator metatype.
-
-        Args:
-            node_with_weight_metatype: The metatype of the operator node containing the weight.
-            weight_port_id: The index of the input port corresponding to the weight tensor.
-            ndims: Number of dimensions in the weight tensor.
-
-        Returns:
-            List of axes to reduce over, or None if no reduction axes are determined.
-        """
-        reduction_axes = None
-        if node_with_weight_metatype == om.PTAtenEmbeddingMetatype:
-            reduction_axes = [1]
-        elif node_with_weight_metatype == om.PTLinearMetatype:
-            reduction_axes = [ndims - 1]
-        elif node_with_weight_metatype == om.PTMatMulMetatype:
-            if weight_port_id == 0:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 1:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight_metatype == om.PTAddmmMetatype:
-            if weight_port_id == 1:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 2:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight_metatype in FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
-            channel_idx = (
-                1
-                if node_with_weight_metatype
-                in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
-                else 0
-            )
-            reduction_axes = [i for i in range(ndims) if i != channel_idx]
-        return reduction_axes
-
-    @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
         node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(edge.tensor_shape)
-        reduction_axes = FXWeightCompressionAlgoBackend.get_reduction_axes_from_metatype(
-            node_with_weight_metatype, weight_port_id, ndims
-        )
+        reduction_axes = get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
         return tuple(reduction_axes)
 
     @staticmethod
