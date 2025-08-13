@@ -374,7 +374,7 @@ def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_
 
 def get_weight_compression_reduction_axes(
     metatype: OperatorMetatype, weight_port_id: int, ndims: int
-) -> Optional[list[int]]:
+) -> list[int]:
     """
     Returns reduction axes for the given parameters without axes that corresponds to weight channels of a node with the
     given metatype.
@@ -384,32 +384,31 @@ def get_weight_compression_reduction_axes(
     :param ndims: Number of dimensions in the weight tensor.
     :return: list of axes to reduce over, or None if no reduction axes are determined.
     """
-    reduction_axes = None
     if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
-        reduction_axes = [1]
+        return [1]
     elif metatype == om.PTLinearMetatype:
-        reduction_axes = [ndims - 1]
+        return [ndims - 1]
     elif metatype == om.PTMatMulMetatype:
         if weight_port_id == 0:
-            reduction_axes = [ndims - 1]
+            return [ndims - 1]
         elif weight_port_id == 1:
-            reduction_axes = [max(0, ndims - 2)]
+            return [max(0, ndims - 2)]
     elif metatype == om.PTAddmmMetatype:
         if weight_port_id == 1:
-            reduction_axes = [ndims - 1]
+            return [ndims - 1]
         elif weight_port_id == 2:
-            reduction_axes = [max(0, ndims - 2)]
+            return [max(0, ndims - 2)]
     elif metatype in CONVOLUTION_METATYPES:
         channel_idx = (
             1
             if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
             else 0
         )
-        reduction_axes = [i for i in range(ndims) if i != channel_idx]
+        return [i for i in range(ndims) if i != channel_idx]
     else:
-        msg = f"The given metatype {metatype} does not map to a pre-defined reduction axes"
+        msg = f"""The given metatype {metatype} with weight on {weight_port_id} 
+        does not map to a pre-defined reduction axes"""
         raise nncf.InternalError(msg)
-    return reduction_axes
 
 
 def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
