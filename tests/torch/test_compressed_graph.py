@@ -22,6 +22,8 @@ import pytest
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torchvision.models import mobilenet_v2
+from torchvision.models import mobilenet_v3_small
 
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
@@ -228,10 +230,8 @@ TEST_MODELS_DESC = [
     ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]),
     ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]),
     ModelDesc("shuflenet_g2", test_models.ShuffleNetG2, [1, 3, 32, 32]),
-    ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
-    ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [2, 3, 32, 32]),
-    ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v2", mobilenet_v2, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v3_small", mobilenet_v3_small, [2, 3, 32, 32]),
     ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
     ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
     ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
@@ -852,7 +852,7 @@ def test_output_quantization(_case_config):
 TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True), [2, 3, 299, 299]),
-    ModelDesc("mobilenet_v2", test_models.MobileNetV2, [2, 3, 32, 32]),
+    ModelDesc("mobilenet_v2", mobilenet_v2, [2, 3, 32, 32]),
 ]
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.NPU)]

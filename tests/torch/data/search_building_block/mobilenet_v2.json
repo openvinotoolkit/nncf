@@ -1,0 +1,66 @@
+{
+    "blocks": [
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[3]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[4]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[5]/__add___0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[6]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[7]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[8]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[8]/__add___0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[9]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[9]/__add___0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[10]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[13]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[14]/Sequential[conv]/NNCFConv2d[2]/conv2d_0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[15]/__add___0"
+        },
+        {
+            "start_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[15]/__add___0",
+            "end_node_name": "MobileNetV2/Sequential[features]/InvertedResidual[16]/__add___0"
+        }
+    ],
+    "group_dependent": {
+        "0": [
+            0
+        ],
+        "1": [
+            1,
+            2
+        ],
+        "2": [
+            3,
+            4,
+            5
+        ],
+        "3": [
+            6,
+            7
+        ],
+        "4": [
+            8,
+            9
+        ]
+    }
+}

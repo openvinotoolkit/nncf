@@ -12,8 +12,10 @@ from functools import partial
 from typing import Any, Callable, Optional
 
 import torch
+from torchvision.models import efficientnet_b0
+from torchvision.models import mobilenet_v2
+from torchvision.models import mobilenet_v3_small
 
-from examples.torch.common.models import efficient_net
 from nncf import NNCFConfig
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_kernel import ElasticKernelHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -40,8 +42,6 @@ from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import TwoConvModel
 from tests.torch.nas.models.tcn import TCN
 from tests.torch.nas.models.vgg_k7 import VGG11_K7
-from tests.torch.test_models import mobilenet_v2
-from tests.torch.test_models import mobilenet_v3_small
 
 
 # TODO(nlyalyus) reduce number of creators and descriptors. create wrapper of TrainingAlgorithm  (ticket 81015)
@@ -98,14 +98,12 @@ NAS_MODEL_DESCS = {
     "densenet_121": [test_models.DenseNet121, [1, 3, 32, 32]],
     "mobilenet_v2": [mobilenet_v2, [1, 3, 32, 32]],
     "mobilenet_v3_small": [mobilenet_v3_small, [1, 3, 32, 32]],
-    "efficient_net_b0": [partial(efficient_net, model_name="efficientnet-b0", pretrained=False), [1, 3, 240, 240]],
+    "efficient_net_b0": [partial(efficientnet_b0, pretrained=False), [1, 3, 240, 240]],
     "squeezenet1_0": [test_models.squeezenet1_0, [1, 3, 32, 32]],
     "shufflenetv2": [partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]],
-    "ssd_mobilenet": [test_models.ssd_mobilenet, [2, 3, 300, 300]],
     "resnext29_32x4d": [test_models.ResNeXt29_32x4d, [1, 3, 32, 32]],
     "pnasnetb": [test_models.PNASNetB, [1, 3, 32, 32]],
     "unet": [test_models.UNet, [1, 3, 360, 480]],
-    "ssd_vgg": [test_models.ssd_vgg300, [2, 3, 300, 300]],
     "tcn": [partial(TCN, input_size=1, output_size=10, num_channels=[25] * 8, kernel_size=7, dropout=0.05), [1, 1, 3]],
 }
 

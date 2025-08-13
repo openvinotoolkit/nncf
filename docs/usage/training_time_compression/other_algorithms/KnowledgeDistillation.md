@@ -55,8 +55,6 @@ specify `knowledge_distillation` algorithm and its type in the config:
 }
 ```
 
-See this [config file](/examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json) for an example, and [NNCF config schema](https://openvinotoolkit.github.io/nncf/) for reference to the available configuration parameters for the algorithm.
-
 ## Limitations
 
 - The algorithm is supported for PyTorch only.

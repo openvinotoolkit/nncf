@@ -16,6 +16,7 @@ import pytest
 import torch
 import torch.utils.data
 from torch import nn
+from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from nncf.common.quantization.structs import QuantizerGroup
@@ -30,10 +31,8 @@ from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_gra
 from tests.torch.quantization.test_hawq_precision_init import create_test_dataloaders
 from tests.torch.quantization.test_hawq_precision_init import get_path_to_bitwidth_dump
 from tests.torch.quantization.test_hawq_precision_init import precision_init_dumping_worker
-from tests.torch.quantization.test_hawq_precision_init import ssd_vgg_512_test
 from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
-from tests.torch.test_models.mobilenet import mobilenet_v2
 
 pytestmark = pytest.mark.legacy
 
@@ -127,14 +126,6 @@ AUTOQ_TEST_PARAMS = (
             ["Inception3/BasicConv2d[Conv2d_2a_3x3]/NNCFConv2d[conv]/conv2d_0"], target_group=QuantizerGroup.WEIGHTS
         )
         .eval_subset_ratio(RATIO),
-    ),
-    AutoQTestStruct(
-        model_creator=ssd_vgg_512_test,
-        config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).eval_subset_ratio(RATIO),
-    ),
-    AutoQTestStruct(
-        model_creator=ssd_vgg_512_test,
-        config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).with_ratio(RATIO),
     ),
 )
 
