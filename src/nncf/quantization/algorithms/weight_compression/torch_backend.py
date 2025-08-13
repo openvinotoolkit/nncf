@@ -14,7 +14,6 @@ from typing import Callable, Iterable, Optional, Union
 import torch
 
 import nncf
-import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -135,8 +134,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(weight_node.layer_attributes.shape)
         reduction_axes = get_reduction_axes_from_metatype(node_with_weight_metatype, weight_port_id, ndims)
-        if node_with_weight_metatype == om.PTEmbeddingMetatype:
-            reduction_axes = [1]
         return tuple(reduction_axes)
 
     @staticmethod

@@ -379,11 +379,10 @@ def get_reduction_axes_from_metatype(metatype: OperatorMetatype, weight_port_id:
     :param metatype: The metatype of the operator node containing the weight.
     :param weight_port_id: The index of the input port corresponding to the weight tensor.
     :param ndims: Number of dimensions in the weight tensor.
-
     :return: list of axes to reduce over, or None if no reduction axes are determined.
     """
     reduction_axes = None
-    if metatype == om.PTAtenEmbeddingMetatype:
+    if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
         reduction_axes = [1]
     elif metatype == om.PTLinearMetatype:
         reduction_axes = [ndims - 1]
