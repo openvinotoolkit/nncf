@@ -406,6 +406,9 @@ def get_weight_compression_reduction_axes(
             else 0
         )
         reduction_axes = [i for i in range(ndims) if i != channel_idx]
+    else:
+        msg = f"The given metatype {metatype} does not map to a pre-defined reduction axes"
+        raise nncf.InternalError(msg)
     return reduction_axes
 
 
