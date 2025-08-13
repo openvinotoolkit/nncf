@@ -54,6 +54,9 @@ from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
+from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -86,22 +89,22 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
-        return PTWeightCompressionAlgoBackend.MATMUL_METATYPES
+        return MATMUL_METATYPES
 
     @property
     def embedding_metatypes(self) -> list[OperatorMetatype]:
-        return PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
+        return EMBEDDING_METATYPES
 
     @property
     def convolution_metatypes(self) -> list[OperatorMetatype]:
-        return PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
+        return CONVOLUTION_METATYPES
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         if (
-            node.metatype not in PTWeightCompressionAlgoBackend.MATMUL_METATYPES
-            and node.metatype not in PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
-            and node.metatype not in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
+            node.metatype not in MATMUL_METATYPES
+            and node.metatype not in EMBEDDING_METATYPES
+            and node.metatype not in CONVOLUTION_METATYPES
         ):
             return False
         for prev_node in graph.get_previous_nodes(node):
@@ -489,7 +492,7 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
         return get_awq_patterns(
-            PTWeightCompressionAlgoBackend.MATMUL_METATYPES,
+            MATMUL_METATYPES,
             PTMulMetatype,
             ATOMIC_ACTIVATIONS_OPERATIONS[GraphPattern.METATYPE_ATTR],
         )

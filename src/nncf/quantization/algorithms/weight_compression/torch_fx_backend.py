@@ -50,6 +50,9 @@ from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
+from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_reduction_axes_from_metatype
@@ -64,15 +67,15 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
-        return FXWeightCompressionAlgoBackend.MATMUL_METATYPES
+        return MATMUL_METATYPES
 
     @property
     def embedding_metatypes(self) -> list[OperatorMetatype]:
-        return FXWeightCompressionAlgoBackend.EMBEDDING_METATYPES
+        return EMBEDDING_METATYPES
 
     @property
     def convolution_metatypes(self) -> list[OperatorMetatype]:
-        return FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
+        return CONVOLUTION_METATYPES
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
