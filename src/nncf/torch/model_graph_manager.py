@@ -402,10 +402,7 @@ def get_reduction_axes_from_metatype(metatype: OperatorMetatype, weight_port_id:
     elif metatype in CONVOLUTION_METATYPES:
         channel_idx = (
             1
-            if metatype
-            in [om.PTConvTranspose1dMetatype, 
-                om.PTConvTranspose2dMetatype, 
-                om.PTConvTranspose3dMetatype]
+            if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
             else 0
         )
         reduction_axes = [i for i in range(ndims) if i != channel_idx]
