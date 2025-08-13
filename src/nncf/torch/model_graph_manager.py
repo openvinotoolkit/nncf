@@ -372,9 +372,7 @@ def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_
     return (0,)
 
 
-def get_weight_compression_reduction_axes(
-    metatype: OperatorMetatype, weight_port_id: int, ndims: int
-) -> list[int]:
+def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_port_id: int, ndims: int) -> list[int]:
     """
     Returns reduction axes for the given parameters without axes that corresponds to weight channels of a node with the
     given metatype.
