@@ -85,9 +85,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
-    MATMUL_METATYPES = MATMUL_METATYPES
-    EMBEDDING_METATYPES = EMBEDDING_METATYPES
-    CONVOLUTION_METATYPES = CONVOLUTION_METATYPES
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
