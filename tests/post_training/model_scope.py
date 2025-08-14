@@ -578,8 +578,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=False)
             ),
         },
-        # TODO: (andreyanufr) add torch.fx backend
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.ONNX],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
 ]
 
