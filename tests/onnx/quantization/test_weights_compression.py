@@ -377,11 +377,11 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def to_tensor(x) -> np.ndarray:
+    def to_tensor(x: np.ndarray) -> np.ndarray:
         return np.array(x)
 
     @staticmethod
-    def check_weights(model, ref_ids: list[int]) -> None:
+    def check_weights(model: onnx.ModelProto, ref_ids: list[int]) -> None:
         names = {i.name for i in model.graph.initializer if i.data_type == onnx.TensorProto.INT4}
         low_precision_nodes = {f"W_{i}_quantized" for i in ref_ids}
         assert low_precision_nodes == names
@@ -391,7 +391,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return ["gptq", "lora_correction"]
 
     @staticmethod
-    def wrap_model(model, data) -> onnx.ModelProto:
+    def wrap_model(model: onnx.ModelProto, data: Any) -> onnx.ModelProto:
         return model
 
     @staticmethod
@@ -434,7 +434,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         ).T
 
     @staticmethod
-    def get_orig_weight(model) -> Tensor:
+    def get_orig_weight(model: onnx.ModelProto) -> Tensor:
         return Tensor(get_tensor_value(model, "W_0"))
 
     @pytest.fixture(params=(CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
@@ -442,7 +442,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return request.param
 
     @staticmethod
-    def get_decompressed_weight(compressed_model, input):
+    def get_decompressed_weight(compressed_model: onnx.ModelProto, input: np.ndarray):
         graph = NNCFGraphFactory.create(compressed_model)
         mapping = get_input_edges_mapping(graph)
         transformation_layout = TransformationLayout()

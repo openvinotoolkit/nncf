@@ -20,6 +20,7 @@ import torch
 from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
+from torch.onnx.errors import OnnxExporterWarning
 from transformers import AutoTokenizer
 from transformers import LlamaTokenizerFast
 
@@ -31,16 +32,23 @@ MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 OUTPUT_DIR = ROOT / "tinyllama_compressed"
 
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
+warnings.filterwarnings("ignore", category=OnnxExporterWarning)
 
 
-def tiny_llama_transform_func(item: dict[str, str], tokenizer: LlamaTokenizerFast, onnx_model: onnx.ModelProto):
+def tiny_llama_transform_func(
+    item: dict[str, str], tokenizer: LlamaTokenizerFast, onnx_model: onnx.ModelProto
+) -> dict[str, np.ndarray]:
     """
-    Prepares model input tensors for TinyLlama ONNX model inference.
+    Prepares input tensors for model inference from a data item.
 
-    :param item: A dictionary containing a `text` field with input string.
-    :param tokenizer: A tokenizer object.
-    :param onnx_model: The ONNX model to extract input tensor data types from.
-    :return: A dictionary containing prepared model inputs.
+    This method tokenizes the input text, generates the required tensors (`input_ids`,
+    `attention_mask`, `position_ids`), and initializes empty past key/value tensors
+    for the transformer model.
+
+    :param item: A dictionary containing the input text under the "text" key.
+    :param tokenizer: The tokenizer used to tokenize the input text.
+    :param onnx_model: The ONNX model used to extract input tensor data types.
+    :return: A dictionary that can be used for model inference.
     """
     input_name_to_np_dtype = {
         i.name: onnx.helper.tensor_dtype_to_np_dtype(i.type.tensor_type.elem_type) for i in onnx_model.graph.input
@@ -57,7 +65,7 @@ def tiny_llama_transform_func(item: dict[str, str], tokenizer: LlamaTokenizerFas
         "position_ids": position_ids.reshape(*attention_mask.shape),
     }
 
-    def gen_pkv(num_heads, head_dim, num_layers):
+    def gen_pkv(num_heads: int, head_dim: int, num_layers: int):
         res = {}
         shape = (1, num_heads, 0, head_dim)
         for i in range(num_layers):

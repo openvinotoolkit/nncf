@@ -288,7 +288,7 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
         """
 
 
-class MixedPrecisionAlgoBackend(ABC):
+class MixedPrecisionAlgoBackend:
     @staticmethod
     def hawq_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
         reducer = RawReducer()
