@@ -190,10 +190,12 @@ def _prepare_quantization_model_inputs(
     # Set dynamic shapes if needed
     if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
+        # TODO(andrey-churkin): This is a workaround to support an arbitrary reduction axis.
+        # We should use `reduction_axes`` here and make it a non-optional parameter.
         if scale_shape is not None:
-            scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
+            scale_shape = tuple(-1 if d != 1 else d for d in scale_shape)
         if zero_point_shape is not None:
-            zero_point_shape = (-1,) * (len(zero_point_shape) - 1) + (1,)
+            zero_point_shape = tuple(-1 if d != 1 else d for d in zero_point_shape)
 
     return weight_shape, scale_shape, zero_point_shape
 

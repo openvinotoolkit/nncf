@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from copy import deepcopy
 from typing import Callable, Iterable, Optional
 
 import numpy as np
@@ -53,6 +54,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
+from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -159,7 +161,15 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        raise NotImplementedError()
+        activation_port = 0
+        if node.metatype.possible_weight_ports:
+            activation_ports = deepcopy(node.metatype.possible_weight_ports)
+            for weight_port in node.layer_attributes.weight_attrs:
+                activation_ports.remove(weight_port)
+            assert len(activation_ports) == 1
+            activation_port = activation_ports[0]
+
+        return activation_port
 
     @staticmethod
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
@@ -339,6 +349,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
             new_initializers.append(zero_point_initializer)
 
+        node_name = f"{weight_name}_DequantizeLinear"
         if block_size != 0:
             dequantize_node = helper.make_node(
                 "DequantizeLinear",
@@ -346,13 +357,11 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 outputs=[dequantized_weight_output],
                 block_size=block_size,
                 axis=axis,
+                name=node_name,
             )
         else:
             dequantize_node = helper.make_node(
-                "DequantizeLinear",
-                inputs=deq_inputs,
-                outputs=[dequantized_weight_output],
-                axis=axis,
+                "DequantizeLinear", inputs=deq_inputs, outputs=[dequantized_weight_output], axis=axis, name=node_name
             )
 
         # Add the node and initializers to the model
@@ -485,3 +494,7 @@ class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):
         return ONNXCommandCreator.multiply_insertion_command(
             source_node, next_nodes, source_node_output_port, scale, f"{source_node.node_name}/awq_mul"
         )
+
+
+class ONNXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, ONNXWeightCompressionAlgoBackend):
+    pass

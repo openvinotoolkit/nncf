@@ -47,10 +47,13 @@ class ONNXModelTransformer(ModelTransformer):
     SCALE_TENSOR_NAME_PREFIX = "scale_"
     ZERO_POINT_NAME_PREFIX = "zero_point_"
 
-    def __init__(self, model: onnx.ModelProto):
-        inferred_model = onnx.shape_inference.infer_shapes(model)
+    def __init__(self, model: onnx.ModelProto, inplace: bool = False):
+        # TODO(andrey-churkin): We should not call infer_shapes here. If the model contains loaded weights
+        # and is larger than 2GB, this method silently returns an empty model.
+        inferred_model = model if inplace else onnx.shape_inference.infer_shapes(model)
         super().__init__(inferred_model)
         self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
+        self._inplace = inplace
 
     def _get_target_edge(
         self,
@@ -117,7 +120,7 @@ class ONNXModelTransformer(ModelTransformer):
             or qdq_node_removing_transformations
             or multiply_insert_transformations
         ):
-            model = deepcopy(self._model)
+            model = self._model if self._inplace else deepcopy(self._model)
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
             if qdq_node_removing_transformations:

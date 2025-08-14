@@ -634,7 +634,6 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
-            "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }
@@ -643,15 +642,6 @@ def compress_weights(
             msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
-            msg = (
-                "ONNX backend only supports data-free sensitivity metric. "
-                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-        if dataset:
-            msg = "ONNX only supports data-free weights compression. Set the 'dataset' option to None"
-            raise nncf.ParameterNotSupportedError(msg)
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "ONNX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)

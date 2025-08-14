@@ -228,19 +228,20 @@ def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[i
         return list(edge.dims)
     tensor_type = edge.type.tensor_type
     shape = []
-    if tensor_type.HasField("shape"):
-        for d in tensor_type.shape.dim:
-            if d.HasField("dim_value"):
-                dim_value = d.dim_value
-                if isinstance(dim_value, int):
-                    shape.append(dim_value)
-                else:
-                    return shape
-            elif d.HasField("dim_param"):
-                # flexible shape  make manually -1
-                shape.append(-1)
-            else:
-                return shape
+    if not tensor_type.HasField("shape"):
+        return shape  # shape is unknown
+
+    for dim in tensor_type.shape.dim:
+        if dim.HasField("dim_value"):
+            shape.append(dim.dim_value)  # Known dimension (int)
+        elif dim.HasField("dim_param"):
+            shape.append(-1)  # Symbolic dimension (string)
+        else:
+            # Unknown dimension
+            # TODO(andrey-churkin): It's not clear what we should add in this case.
+            # None is probably the better choice.
+            shape.append(-1)
+
     return shape
 
 

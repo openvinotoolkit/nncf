@@ -25,17 +25,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -550,32 +543,4 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
 
 
 class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompressionAlgoBackend):
-    @staticmethod
-    def mean_variance_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
-        reducer = MeanVarianceReducer(reduction_axes)
-        aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector(MeanVarianceTensorStatistic)
-        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
-        return collector
-
-    @staticmethod
-    def max_variance_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
-        reducer = MaxVarianceReducer(reduction_axes)
-        aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector(MaxVarianceTensorStatistic)
-        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
-        return collector
-
-    @staticmethod
-    def mean_abs_max_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
-        reducer = MeanAbsMaxReducer(reduction_axes)
-        aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector(MeanMagnitudeTensorStatistic)
-        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
-        return collector
+    pass
