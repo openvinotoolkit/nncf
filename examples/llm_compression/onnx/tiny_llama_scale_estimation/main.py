@@ -10,15 +10,18 @@
 # limitations under the License.
 
 import time
+import warnings
 from functools import partial
 from pathlib import Path
 
 import numpy as np
 import onnx
+import torch
 from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoTokenizer
+from transformers import LlamaTokenizerFast
 
 import nncf
 from nncf.onnx.quantization.backend_parameters import BackendParameters
@@ -27,8 +30,18 @@ ROOT = Path(__file__).parent.resolve()
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 OUTPUT_DIR = ROOT / "tinyllama_compressed"
 
+warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 
-def tiny_llama_transform_func(item, tokenizer, onnx_model: onnx.ModelProto):
+
+def tiny_llama_transform_func(item: dict[str, str], tokenizer: LlamaTokenizerFast, onnx_model: onnx.ModelProto):
+    """
+    Prepares model input tensors for TinyLlama ONNX model inference.
+
+    :param item: A dictionary containing a `text` field with input string.
+    :param tokenizer: A tokenizer object.
+    :param onnx_model: The ONNX model to extract input tensor data types from.
+    :return: A dictionary containing prepared model inputs.
+    """
     input_name_to_np_dtype = {
         i.name: onnx.helper.tensor_dtype_to_np_dtype(i.type.tensor_type.elem_type) for i in onnx_model.graph.input
     }
@@ -73,7 +86,7 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
-    # Prepare calibration dataset train[:1000]
+    # Prepare calibration dataset
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, onnx_model=onnx_model)
