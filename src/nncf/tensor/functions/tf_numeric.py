@@ -104,11 +104,6 @@ def _(a: tf.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
 
 
-@numeric.repeat.register
-def _(a: tf.tensor, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> tf.tensor:
-    return tf.repeat(a, repeats=repeats, axis=axis)
-
-
 @numeric.reshape.register
 def _(a: tf.Tensor, shape: Union[int, tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):
@@ -148,29 +143,6 @@ def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Te
 def _(a: tf.Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.math.count_nonzero(a, axis=axis)
-
-
-@numeric.histogram.register
-def _(
-    a: tf.Tensor,
-    bins: int,
-    *,
-    range: Optional[tuple[float, float]] = None,
-    weight: Optional[tf.Tensor] = None,
-    density: bool = False,
-) -> tuple[tf.Tensor, tf.Tensor]:
-    with tf.device(a.device):
-        if weight is not None or density is not None:
-            msg = "Histogram function is not implemented yet for weight and density parameters in TensorFlow"
-            raise InternalError(msg)
-        if range is None:
-            min_ = tf.reduce_min(a, axis=None)
-            max_ = tf.reduce_max(a, axis=None)
-            range = (min_, max_)
-
-        edges = tf.linspace(min_, max_, bins + 1)
-        counts = tf.histogram_fixed_width(a, range, bins)
-        return counts, edges
 
 
 @numeric.isempty.register
