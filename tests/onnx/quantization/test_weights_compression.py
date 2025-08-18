@@ -374,7 +374,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             weights_data = weights_data.T
             x = mb.add_matmul(x, shape=weights_data.shape, output=output if i == 4 else None, data=weights_data)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def to_tensor(x: np.ndarray) -> np.ndarray:
@@ -408,7 +408,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         weights = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8).T
         mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def get_scale_estimation_ref():
@@ -544,7 +544,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             )
             x = mb.add_matmul(x, shape=w_data.shape, output=output if i == len(channel_sizes) else None, data=w_data)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def get_num_int4_nodes(model: onnx.ModelProto) -> int:
