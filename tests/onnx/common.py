@@ -142,7 +142,11 @@ class ModelBuilder:
         )
         return output
 
-    def build(self) -> onnx.ModelProto:
+    def build(self, opset_version: int = 13, ir_version: int = 9) -> onnx.ModelProto:
         graph = onnx.helper.make_graph(self._nodes, self._graph_name, self._inputs, self._outputs, self._initializers)
-        model = onnx.helper.make_model(graph)
+
+        op = onnx.OperatorSetIdProto()
+        op.version = opset_version
+
+        model = onnx.helper.make_model(graph, opset_imports=[op], ir_version=ir_version)
         return model
