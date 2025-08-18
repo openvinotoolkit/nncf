@@ -62,6 +62,17 @@ def _(a: T_NUMPY) -> TensorBackend:
     return TensorBackend.numpy
 
 
+@numeric.bucketize.register
+def _(a: T_NUMPY, boundaries: T_NUMPY, *, right: bool) -> T_NUMPY:
+    side = "right" if right else "left"
+    return np.searchsorted(boundaries, a, side=side)
+
+
+@numeric.bincount.register
+def _(a: T_NUMPY, *, weights: Optional[T_NUMPY], minlength: int = 0) -> T_NUMPY:
+    return np.bincount(a=a, weights=weights, minlength=minlength)
+
+
 @numeric.squeeze.register
 def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY:
     return np.squeeze(a, axis=axis)
@@ -95,6 +106,11 @@ def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
 @numeric.dtype.register
 def _(a: T_NUMPY) -> TensorDataType:
     return DTYPE_MAP_REV[np.dtype(a.dtype)]
+
+
+@numeric.repeat.register
+def _(a: T_NUMPY, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> T_NUMPY:
+    return np.repeat(a, repeats=repeats, axis=axis)
 
 
 @numeric.reshape.register
@@ -230,6 +246,11 @@ def _(
     return np.array(np.median(a, axis=axis, keepdims=keepdims))  # type: ignore [arg-type]
 
 
+@numeric.floor.register
+def _(a: T_NUMPY) -> T_NUMPY:
+    return np.floor(a)
+
+
 @numeric.round.register
 def _(a: T_NUMPY, decimals: int = 0) -> T_NUMPY_ARRAY:
     return np.round(a, decimals=decimals)
@@ -301,6 +322,11 @@ def _(a: T_NUMPY) -> T_NUMBER:
     return a.item()
 
 
+@numeric.cumsum.register
+def cumsum(a: T_NUMPY, axis: Optional[int] = None) -> T_NUMPY:
+    return np.cumsum(a, axis=axis)
+
+
 @numeric.sum.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))
@@ -353,6 +379,11 @@ def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False
 @numeric.diag.register
 def _(a: T_NUMPY, k: int = 0) -> T_NUMPY_ARRAY:
     return np.diag(a, k=k)
+
+
+@numeric.linspace.register
+def _(start: T_NUMPY, stop: T_NUMPY, num: int) -> T_NUMPY:
+    return np.linspace(start=start, stop=stop, num=num, endpoint=True)[0]
 
 
 @numeric.logical_or.register
