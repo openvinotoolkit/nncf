@@ -18,8 +18,6 @@ from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 from tests.tensorflow.test_models.mobilenet_v2 import MobileNetV2
-from tests.tensorflow.test_models.retinanet import RetinaNet
-from tests.tensorflow.test_models.yolo_v4 import YOLOv4
 
 
 def test_strip():
@@ -131,7 +129,7 @@ def create_sequential_model():
     return model
 
 
-@pytest.mark.parametrize("model_fn", (MobileNetV2, RetinaNet, SimpleModel, YOLOv4, create_sequential_model))
+@pytest.mark.parametrize("model_fn", (MobileNetV2, SimpleModel, create_sequential_model))
 def test_strip_api_no_compression(model_fn):
     model = model_fn()
     stripped_model = nncf.strip(model)

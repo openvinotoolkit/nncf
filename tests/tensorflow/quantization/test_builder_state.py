@@ -13,8 +13,6 @@ from functools import partial
 
 import tensorflow as tf
 
-from examples.tensorflow.classification.main import load_checkpoint
-from examples.tensorflow.classification.main import load_compression_state
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -33,6 +31,7 @@ from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
 from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.utils.state import TFCompressionState
+from nncf.tensorflow.utils.state import TFCompressionStateLoader
 from tests.cross_fw.shared.serialization import check_serialization
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
@@ -41,6 +40,22 @@ from tests.tensorflow.quantization.test_algorithm_quantization import check_spec
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 from tests.tensorflow.test_bn_adaptation import get_dataset_for_test
 from tests.tensorflow.test_callbacks import REF_CKPT_DIR
+
+
+def load_checkpoint(checkpoint, ckpt_path):
+    if tf.io.gfile.isdir(ckpt_path):
+        path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
+    else:
+        path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + ".index") else None
+
+    status = checkpoint.restore(path_to_checkpoint)
+    status.expect_partial()
+
+
+def load_compression_state(ckpt_path: str):
+    checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
+    load_checkpoint(checkpoint, ckpt_path)
+    return checkpoint.compression_state.state
 
 
 def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker):
