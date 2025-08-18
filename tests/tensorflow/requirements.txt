@@ -1,5 +1,4 @@
 -c ../../constraints.txt
--r ../../examples/tensorflow/requirements.txt
 PyYAML
 tensorflow-metadata==1.13.0
 pytest
