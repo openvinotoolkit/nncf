@@ -16,9 +16,6 @@ from collections import deque
 from copy import deepcopy
 from typing import Any, Optional, TypeVar, Union
 
-import torch
-from torch.ao.quantization.observer import UniformQuantizationObserverBase
-
 import nncf
 import nncf.tensor
 import nncf.tensor.functions as fns
@@ -848,39 +845,14 @@ def _move_axes_flatten_cat(
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
 
 
-REDUCERS_MAP = {
-    StatisticsType.MIN: MinReducer,
-    StatisticsType.MAX: MaxReducer,
-    StatisticsType.ABS_MAX: AbsMaxReducer,
-    StatisticsType.MEAN: MeanReducer,
-    StatisticsType.QUANTILE: QuantileReducer,
-    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
-}
+class HistogramAggregator(AggregatorBase):
+    """
+    NNCF implementation of the torch.ao.quantization.observer.HistogramObserver.
+    Intended to be combined with a single RawReducer.
+    The aggregator records the running histogram of the input tensor values along with
+    min/max values. Only the reduction_axis==None is supported.
 
-AGGREGATORS_MAP = {
-    AggregatorType.MIN: MinAggregator,
-    AggregatorType.MAX: MaxAggregator,
-    AggregatorType.MEAN: MeanAggregator,
-    AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
-    AggregatorType.MEDIAN: MedianAggregator,
-    AggregatorType.MEDIAN_NO_OUTLIERS: MedianNoOutliersAggregator,
-}
-
-
-class HistogramObserver(UniformQuantizationObserverBase):
-    r"""
-    The module records the running histogram of tensor values along with
-    min/max values. ``calculate_qparams`` will calculate scale and zero_point.
-
-    Args:
-        bins: Number of bins to use for the histogram
-        dtype: dtype argument to the `quantize` node needed to implement the
-               reference model spec
-        qscheme: Quantization scheme to be used
-        reduce_range: Reduces the range of the quantized data type by 1 bit
-        eps: Epsilon value for float32, Defaults to `torch.finfo(torch.float32).eps`.
-
-    The scale and zero point are computed as follows:
+    The min and max are computed as follows:
 
     1. Create the histogram of the incoming inputs.
         The histogram is computed continuously, and the ranges per bin change
@@ -888,80 +860,67 @@ class HistogramObserver(UniformQuantizationObserverBase):
     2. Search the distribution in the histogram for optimal min/max values.
         The search for the min/max values ensures the minimization of the
         quantization error with respect to the floating point model.
-    3. Compute the scale and zero point the same way as in the
-        :class:`~torchao.quantization.pt2e.MinMaxObserver`
     """
 
-    histogram: torch.Tensor
-    min_val: torch.Tensor
-    max_val: torch.Tensor
+    histogram: Tensor
+    min_val: Tensor
+    max_val: Tensor
 
     def __init__(
         self,
         bins: int = 2048,
-        dtype: torch.dtype = torch.quint8,
-        qscheme=torch.per_tensor_affine,
-        reduce_range=False,
-        quant_min=None,
-        quant_max=None,
-        factory_kwargs=None,
-        eps=torch.finfo(torch.float32).eps,
-        is_dynamic=False,
-        **kwargs,
+        dist_nbits: int = 8,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
     ) -> None:
-        # if not is_per_tensor(qscheme):
-        #    raise NotImplementedError(
-        #        "HistogramObserver's qscheme only support torch.per_tensor_symmetric \
-        #            and torch.per_tensor_affine."
-        #    )
-        # if is_dynamic:
-        #    raise NotImplementedError("HistogramObserver doesn't support dynamic quantization")
-        # bins: The number of bins used for histogram calculation.
-        super().__init__(
-            dtype=dtype,
-            qscheme=qscheme,
-            reduce_range=reduce_range,
-            quant_min=quant_min,
-            quant_max=quant_max,
-            factory_kwargs=factory_kwargs,
-            eps=eps,
-            is_dynamic=is_dynamic,
-            **kwargs,
-        )
-        factory_kwargs = torch.nn.factory_kwargs(factory_kwargs)
+        """
+        :param bins: Number of bins to use for the histogram
+        :param dist_nbits: Target quantization number of bits to calculate the quantization error.
+        :param num_samples: Maximum number of samples to collect. Aggregator
+            skips tensor registration if tensor registration was called num_samples times before.
+            Aggregator never skips registration if num_samples is None.
+        """
+        super().__init__(num_samples=num_samples, window_size=window_size)
         self.bins = bins
-        self.register_buffer("histogram", torch.zeros(self.bins, **factory_kwargs))
-        self.register_buffer("min_val", torch.tensor(float("inf"), **factory_kwargs))
-        self.register_buffer("max_val", torch.tensor(float("-inf"), **factory_kwargs))
-        self.dst_nbins = 2 ** torch.iinfo(self.dtype).bits
+        self.min_val = None
+        self.max_val = None
+        self.dst_nbins = 2**dist_nbits
         self.upsample_rate = 16  # used to reduce quantization errors when upscaling histogram
 
-    def _get_norm(self, delta_begin: torch.Tensor, delta_end: torch.Tensor, density: torch.Tensor) -> torch.Tensor:
-        r"""
-        Compute the norm of the values uniformaly distributed between
+    def _get_norm(self, delta_begin: Tensor, delta_end: Tensor, density: Tensor) -> Tensor:
+        """
+        Compute the L2 norm of the values uniformaly distributed between
         delta_begin and delta_end.
-        Currently only L2 norm is supported.
 
         norm = density * (integral_{begin, end} x^2)
              = density * (end^3 - begin^3) / 3
+
+        :param delta_begin: Start of the integral interval.
+        :param delta_end: End of the integral interval.
+        :param density: Density of the elements in the histogram.
+        :return: The norm of the values uniformaly distributed between delta_begin and delta_end.
         """
         norm = (delta_end * delta_end * delta_end - delta_begin * delta_begin * delta_begin) / 3
         return density * norm
 
-    def _compute_quantization_error(self, next_start_bin: int, next_end_bin: int):
-        r"""
-        Compute the quantization error if we use start_bin to end_bin as the
-        min and max to do the quantization.
+    def _compute_quantization_error(self, next_start_bin: int, next_end_bin: int, bin_width: float) -> float:
         """
-        bin_width = (self.max_val.item() - self.min_val.item()) / self.bins
+        Computes the L2 norm of quantization error when mapping histogram bins into a reduced set of
+        quantization bins using the specified range [next_start_bin, next_end_bin].
 
+        :param next_start_bin: The index of the first source histogram bin included
+            in the quantization range.
+        :param next_end_bin: The index of the last source histogram bin included
+            in the quantization range.
+        :param bin_width: The width of a single source histogram bin.
+        :return: A scalar float value representing the total quantization error
+            for the given bin range.
+        """
         dst_bin_width = bin_width * (next_end_bin - next_start_bin + 1) / self.dst_nbins
         if dst_bin_width == 0.0:
             return 0.0
 
-        self.bins = torch.tensor(float(self.bins))
-        src_bin = fns.linspace(torch.tensor(0.0), self.bins - 1, int(self.bins.item()))
-        # src_bin = torch.arange(self.bins, device=self.histogram.device)
+        src_bin = fns.arange(0, self.bins, backend=self.histogram.backend)
         # distances from the beginning of first dst_bin to the beginning and
         # end of src_bin
         src_bin_begin = (src_bin - next_start_bin) * bin_width
@@ -978,43 +937,42 @@ class HistogramObserver(UniformQuantizationObserverBase):
         )
         density = self.histogram / bin_width
 
-        norm = fns.zeros((int(self.bins.item()),), backend=src_bin_begin.backend)
+        norm = fns.zeros((self.bins,), backend=src_bin_begin.backend)
 
         delta_begin = src_bin_begin - dst_bin_of_begin_center
         delta_end = dst_bin_width / 2
         norm += self._get_norm(
             delta_begin,
-            (fns.zeros((int(self.bins.item()),), backend=src_bin_begin.backend) + 1) * delta_end,
+            (fns.zeros((self.bins,), backend=src_bin_begin.backend) + 1) * delta_end,
             density,
         )
 
-        norm += (dst_bin_of_end - dst_bin_of_begin - 1) * self._get_norm(
-            torch.tensor(-dst_bin_width / 2), torch.tensor(dst_bin_width / 2), density
-        )
+        norm += (dst_bin_of_end - dst_bin_of_begin - 1) * self._get_norm(-dst_bin_width / 2, dst_bin_width / 2, density)
 
         dst_bin_of_end_center = dst_bin_of_end * dst_bin_width + dst_bin_width / 2
 
         delta_begin = -dst_bin_width / 2
         delta_end = src_bin_end - dst_bin_of_end_center
-        norm += self._get_norm(torch.tensor(delta_begin), delta_end, density)
+        norm += self._get_norm(delta_begin, delta_end, density)
 
         return fns.sum(norm).item()
 
-    def _non_linear_param_search(self) -> tuple[torch.Tensor, torch.Tensor]:
-        r"""
-        Non-linear parameter search.
-
+    def _non_linear_param_search(self) -> tuple[Tensor, Tensor]:
+        """
         An approximation for L2 error minimization for selecting min/max.
         By selecting new min/max, we filter out outliers in input distribution.
         This follows the implementation of NormMinimization::NonlinearQuantizationParamsSearch in
         caffe2/quantization/server/norm_minimization.cc
+        By selecting new min/max, we filter out outliers in input distribution.
+
+        :return: An approximation for L2 error minimization for selecting min/max.
         """
-        assert self.histogram.size()[0] == self.bins, "bins mismatch"
-        bin_width = (self.max_val - self.min_val) / self.bins
+        assert self.histogram.shape[0] == self.bins, "bins mismatch"
+        bin_width = (self.max_val.item() - self.min_val.item()) / self.bins
 
         # cumulative sum
         total = fns.sum(self.histogram).item()
-        cSum = fns.cumsum(self.histogram, axis=0).data
+        cSum = fns.cumsum(self.histogram, axis=0)
 
         stepsize = 1e-5  # granularity
         alpha = 0.0  # lower bound
@@ -1052,7 +1010,7 @@ class HistogramObserver(UniformQuantizationObserverBase):
                 continue
 
             # calculate the quantization error using next_start_bin and next_end_bin
-            norm = self._compute_quantization_error(next_start_bin, next_end_bin)
+            norm = self._compute_quantization_error(next_start_bin, next_end_bin, bin_width)
 
             if norm > norm_min:
                 break
@@ -1066,23 +1024,30 @@ class HistogramObserver(UniformQuantizationObserverBase):
 
     def _upscale_histogram(
         self,
-        histogram: torch.Tensor,
-        orig_min: torch.Tensor,
-        orig_max: torch.Tensor,
-        update_min: torch.Tensor,
-        update_max: torch.Tensor,
+        histogram: Tensor,
+        orig_min: Tensor,
+        orig_max: Tensor,
+        update_min: Tensor,
+        update_max: Tensor,
     ):
-        # this turns the histogram into a more fine-coarsed histogram to reduce
-        # bin quantization errors
+        """
+        Updates the histogram into a more fine-coarsed histogram to reduce bin quantization errors.
+
+        :param histogram: The input histogram tensor of size bins.
+        :param orig_min: The lower boundary of the original histogram range.
+        :param orig_max: The upper boundary of the original histogram range.
+        :param update_min: The lower boundary of the updated histogram range.
+        :param update_max: The upper boundary of the updated histogram range.
+        :return: A histogram tensor of size bins aligned with the updated range [update_min, update_max].
+        """
         histogram = fns.repeat(histogram, self.upsample_rate) / self.upsample_rate
         bin_size = (orig_max - orig_min) / (self.bins * self.upsample_rate)
-        bin_size = nncf.tensor.Tensor(bin_size)
         mid_points_histogram = (
             fns.linspace(
                 orig_min,
                 orig_max,
                 self.bins * self.upsample_rate + 1,
-            ).data[:-1]
+            )[:-1]
             + 0.5 * bin_size
         )
         boundaries_new_histogram = fns.linspace(update_min, update_max, self.bins + 1)
@@ -1095,18 +1060,31 @@ class HistogramObserver(UniformQuantizationObserverBase):
         bucket_assignments[bucket_assignments >= self.bins] = self.bins - 1
         bucket_assignments[bucket_assignments < 0] = 0
 
-        update_histogram = fns.bincount(bucket_assignments, weights=histogram, minlength=self.bins).data
+        update_histogram = fns.bincount(bucket_assignments, weights=histogram, minlength=self.bins)
         return update_histogram
 
     def _combine_histograms(
         self,
-        orig_hist: torch.Tensor,
-        orig_min: torch.Tensor,
-        orig_max: torch.Tensor,
-        update_hist: torch.Tensor,
-        update_min: torch.Tensor,
-        update_max: torch.Tensor,
-    ) -> torch.Tensor:
+        orig_hist: Tensor,
+        orig_min: Tensor,
+        orig_max: Tensor,
+        update_hist: Tensor,
+        update_min: Tensor,
+        update_max: Tensor,
+    ) -> Tensor:
+        """
+        Combines the original histogram with an updated histogram, aligning both
+        to the target range [update_min, update_max].
+
+        :param orig_hist: The original histogram tensor of size bins.
+        :param orig_min: The lower boundary of the original histogram range.
+        :param orig_max: The upper boundary of the original histogram range.
+        :param update_hist: The histogram tensor of size bins in the updated range.
+        :param update_min: The lower boundary of the updated histogram range.
+        :param update_max: The upper boundary of the updated histogram range.
+        :return: A histogram tensor of size bins representing the combined
+            distribution in the updated range.
+        """
         # If the new min and max are the same as the current min and max,
         # we can just add the new histogram to the original histogram
         if update_min == orig_min and update_max == orig_max:
@@ -1137,71 +1115,70 @@ class HistogramObserver(UniformQuantizationObserverBase):
 
         return update_hist + transformed_orig_hist
 
-    def reset_histogram(self, x: torch.Tensor, min_val: torch.Tensor, max_val: torch.Tensor) -> None:
-        self.min_val.resize_(min_val.shape)
-        self.min_val.copy_(min_val)
-        self.max_val.resize_(max_val.shape)
-        self.max_val.copy_(max_val)
-        assert min_val.numel() == 1 and max_val.numel() == 1, "histogram min/max values must be scalar."
-        new_histogram = fns.histogram(x, self.bins, range=(min_val.item(), max_val.item()))[0].data  # type: ignore[arg-type]
-        self.histogram.detach_().resize_(new_histogram.shape)
-        self.histogram.copy_(new_histogram)
+    def reset_histogram(self, x: Tensor, min_val: Tensor, max_val: Tensor) -> None:
+        """
+        Resets and initializes the histogram based on the provided tensor and range.
 
-    def forward(self, x_orig: torch.Tensor) -> torch.Tensor:  # pyre-ignore[14]
-        if x_orig.numel() == 0:
-            return x_orig
-        x = x_orig.detach()
-        x_min, x_max = torch.aminmax(x)
-        # want to ignore torch.inf since we don't actually
-        # want to make our quantization range infinite
-        # and in practice those values will be clamped
-        if x_min == -torch.inf or x_max == torch.inf:
-            # warnings.warn("torch.inf detected in input tensor, ignoring input")
-            x = x[x.abs() != torch.inf]
-            if x.numel() == 0:
-                return x_orig
-            x_min, x_max = torch.aminmax(x)
+        :param x: The input tensor used to build the histogram.
+        :param min_val: The scalar tensor specifying the lower boundary of the histogram range.
+        :param max_val: The scalar tensor specifying the upper boundary of the histogram range.
+        """
+        self.min_val = min_val
+        self.max_val = max_val
+        self.histogram = fns.histogram(x, self.bins, range=(min_val.item(), max_val.item()))[0]
+
+    def _register_reduced_input_impl(self, x: Tensor):
+        if fns.isempty(x):
+            return
+
+        x_min, x_max = fns.min(x), fns.max(x)
 
         current_min = self.min_val
         current_max = self.max_val
 
-        is_uninitialized = self.min_val == float("inf") or self.max_val == float("-inf")
+        is_uninitialized = self.min_val is None or self.max_val is None
         if is_uninitialized:
             self.reset_histogram(x, x_min, x_max)
-        else:
-            update_min, update_max = x_min, x_max
-            new_min = torch.min(current_min, update_min)
-            new_max = torch.max(current_max, update_max)
+            return
 
-            # TODO: For some reason, this is required for it to pass torchscript test
-            # new_min and new_max should already have requires_grad set to False
-            # new_min, new_max = new_min.detach(), new_max.detach()
-            update_histogram = fns.histogram(x, self.bins, range=(new_min.item(), new_max.item()))[0].data.to(
-                self.histogram.device
-            )  # type: ignore[arg-type]
-            if new_min == current_min and new_max == current_max:
-                combined_histogram = self.histogram + update_histogram
-                self.histogram.detach_().resize_(combined_histogram.shape)
-                self.histogram.copy_(combined_histogram)
-            else:
-                combined_histogram = self._combine_histograms(
-                    self.histogram,
-                    current_min,
-                    current_max,
-                    update_histogram,
-                    new_min,
-                    new_max,
-                )
-                self.histogram.detach_().resize_(combined_histogram.shape)
-                self.histogram.copy_(combined_histogram)
-                self.min_val.detach_().resize_(new_min.shape)
-                self.min_val.copy_(new_min)
-                self.max_val.detach_().resize_(new_max.shape)
-                self.max_val.copy_(new_max)
+        update_min, update_max = x_min, x_max
+        new_min = fns.minimum(current_min, update_min)
+        new_max = fns.maximum(current_max, update_max)
 
-        return x_orig
+        update_histogram = fns.histogram(x, self.bins, range=(new_min.item(), new_max.item()))[0]
+        if new_min == current_min and new_max == current_max:
+            self.histogram = self.histogram + update_histogram
+            return
 
-    @torch.jit.export
-    def calculate_qparams(self):
-        new_min, new_max = self._non_linear_param_search()
-        return new_min, new_max
+        self.histogram = self._combine_histograms(
+            self.histogram,
+            current_min,
+            current_max,
+            update_histogram,
+            new_min,
+            new_max,
+        )
+        self.min_val = new_min
+        self.max_val = new_max
+
+    def _aggregate_impl(self) -> Any:
+        return self._non_linear_param_search()
+
+
+REDUCERS_MAP = {
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
+}
+
+AGGREGATORS_MAP = {
+    AggregatorType.MIN: MinAggregator,
+    AggregatorType.MAX: MaxAggregator,
+    AggregatorType.MEAN: MeanAggregator,
+    AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
+    AggregatorType.MEDIAN: MedianAggregator,
+    AggregatorType.MEDIAN_NO_OUTLIERS: MedianNoOutliersAggregator,
+}

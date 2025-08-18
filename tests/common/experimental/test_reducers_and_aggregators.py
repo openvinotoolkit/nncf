@@ -24,7 +24,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
-from nncf.experimental.common.tensor_statistics.collectors import HistogramObserver as OurHistObserver
+from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator as OurHistObserver
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
@@ -618,9 +618,9 @@ class TemplateTestReducersAggregators:
         for s in range(1, 10):
             inp = s * torch.range(1, 32) - 16
             orig.forward(inp)
-            our.forward(inp)
+            our.register_reduced_input(inp)
 
         orig_min, orig_max = orig._non_linear_param_search()
-        our_min, our_max = our._non_linear_param_search()
+        our_min, our_max = our.aggregate()
         print(orig_min - our_min)
         print(orig_max - our_max)
