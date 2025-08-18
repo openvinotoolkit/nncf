@@ -17,12 +17,14 @@ from typing import Any, Iterator, Optional
 
 import numpy as np
 import pytest
+from torch.ao.quantization.observer import HistogramObserver as OrigHistObserver
 
 import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.experimental.common.tensor_statistics.collectors import HistogramObserver as OurHistObserver
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
@@ -606,3 +608,19 @@ class TemplateTestReducersAggregators:
 
         ret_val = aggregator.aggregate()
         assert fns.allclose(ret_val, reference_output)
+
+    def test_histogramm_aggregator(self):
+        import torch
+
+        orig = OrigHistObserver(bins=64)
+        our = OurHistObserver(bins=64)
+
+        for s in range(1, 10):
+            inp = s * torch.range(1, 32) - 16
+            orig.forward(inp)
+            our.forward(inp)
+
+        orig_min, orig_max = orig._non_linear_param_search()
+        our_min, our_max = our._non_linear_param_search()
+        print(orig_min - our_min)
+        print(orig_max - our_max)

@@ -104,6 +104,11 @@ def _(a: tf.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
 
 
+@numeric.repeat.register
+def _(a: tf.tensor, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> tf.tensor:
+    return tf.repeat(a, repeats=repeats, axis=axis)
+
+
 @numeric.reshape.register
 def _(a: tf.Tensor, shape: Union[int, tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):

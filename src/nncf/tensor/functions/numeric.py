@@ -47,6 +47,50 @@ def backend(a: Tensor) -> TensorBackend:
 
 
 @tensor_dispatcher
+def bucketize(a: Tensor, boundaries: Tensor, *, right: bool) -> Tensor:
+    """
+    Returns the indices of the buckets to which each value in the input belongs,
+    where the boundaries of the buckets are set by boundaries.
+    Return a new tensor with the same size as input.
+    If right is False (default), then the left boundary is open.
+    Note that this behavior is opposite the behavior of numpy.digitize.
+    More formally, the returned index satisfies the following rules:
+    +----------------------------------------------+
+    | right |  returned index i satisfies          |
+    -----------------------------------------------|
+    | False | boundaries[i-1] < a <= boundaries[i] |
+    -----------------------------------------------|
+    | True  | boundaries[i-1] <= a < boundaries[i] |
+    +----------------------------------------------+
+
+    :param a: Input tensor.
+    :param boundaries: 1-D tensor, must contain a strictly increasing sequence, or the return value is undefined.
+    :param right: Determines the behavior for values in boundaries. See the table above.
+    :return: Tensor of insertion points with the same shape as v.
+    """
+
+
+@tensor_dispatcher
+def bincount(a: Tensor, *, weights: Optional[Tensor], minlength: int = 0) -> Tensor:
+    """
+    Count number of occurrences of each value in array of non-negative ints.
+
+    The number of bins (of size 1) is one larger than the largest value in x.
+    If minlength is specified, there will be at least this number of bins in the output array
+    (though it will be longer if necessary, depending on the contents of x).
+    Each bin gives the number of occurrences of its index value in x.
+    If weights is specified the input array is weighted by it, i.e.
+    if a value n is found at position i, out[n] += weight[i] instead of out[n] += 1.
+
+    :param a: Input array.
+    :param weight: Weights, array of the same shape as a.
+    :param minlength: A minimum number of bins for the output array.
+    :return: The result of binning the input array.
+        The length of out is equal to max(np.amax(x)+1, minlength).
+    """
+
+
+@tensor_dispatcher
 def squeeze(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
     """
     Remove axes of length one from a.
@@ -124,6 +168,20 @@ def dtype(a: Tensor) -> TensorDataType:
 
     :param a: The input tensor.
     :return: The data type of the tensor.
+    """
+
+
+@tensor_dispatcher
+def repeat(a: Tensor, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> Tensor:
+    """
+    Repeats elements of a tensor along a specified axis.
+
+    :param a: Input tensor.
+    :param repeats: The number of repetitions for each element.
+        repeats is broadcasted to fit the shape of the given axis.
+    :param axis: The axis along which to repeat values.
+        By default, use the flattened input array, and return a flat output array.
+    :return: A tensor with repeated elements.
     """
 
 
@@ -209,7 +267,7 @@ def histogram(
     range: Optional[tuple[float, float]] = None,
     weight: Optional[Tensor] = None,
     density: bool = False,
-) -> Tensor:
+) -> tuple[Tensor, Tensor]:
     """
     Computes a histogram of the values in a tensor.
 
@@ -379,6 +437,16 @@ def median(a: Tensor, axis: T_AXIS = None, keepdims: bool = False) -> Tensor:
 
 
 @tensor_dispatcher
+def floor(a: Tensor) -> Tensor:
+    """
+    Return the floor of the input, element-wise.
+
+    :param a: The input tensor.
+    :return: The floor of the input, element-wise.
+    """
+
+
+@tensor_dispatcher
 def round(a: Tensor, decimals: int = 0) -> Tensor:
     """
     Evenly round to the given number of decimals.
@@ -516,6 +584,19 @@ def item(a: Tensor) -> Union[int, float, bool]:
 
 
 @tensor_dispatcher
+def cumsum(a: Tensor, axis: Optional[int] = None) -> Tensor:
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    :param a: The input tensor.
+    :param axis: Axis along which the cumulative sum is computed.
+        The default (None) is to compute the cumsum over the flattened array.
+    :return: A new tensor holding the result. The result has the same size as a,
+        and the same shape as a if axis is not None or a is a 1-d array.
+    """
+
+
+@tensor_dispatcher
 def sum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Sum of tensor elements over a given axis.
@@ -622,6 +703,18 @@ def diag(a: Tensor, k: int = 0) -> Tensor:
     :param k: Diagonal in question. The default is 0. Use k > 0 for diagonals above the main diagonal, and k < 0
         for diagonals below the main diagonal.
     :return: A tensor with the extracted diagonal.
+    """
+
+
+@tensor_dispatcher
+def linspace(start: Tensor, stop: Tensor, num: int) -> Tensor:
+    """
+    Return a tensor filled with evenly spaced numbers over a specified interval.
+
+    :param start: The starting value for the set of points.
+    :param end: The ending value for the set of points.
+    :param num: Number of samples to generate. Must be non-negative.
+    :return: A tensor with num equally spaced samples in the closed interval [start, stop].
     """
 
 

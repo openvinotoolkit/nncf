@@ -61,6 +61,16 @@ def _(a: torch.Tensor) -> TensorBackend:
     return TensorBackend.torch
 
 
+@numeric.bucketize.register
+def backetize(a: torch.Tensor, boundaries: torch.Tensor, *, right: bool) -> torch.Tensor:
+    return torch.bucketize(a, boundaries, right=right)
+
+
+@numeric.bincount.register
+def bincount(a: torch.Tensor, *, weights: Optional[torch.Tensor], minlength: int = 0) -> torch.Tensor:
+    return torch.bincount(input=a, weights=weights, minlength=minlength)
+
+
 @numeric.squeeze.register
 def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     if axis is None:
@@ -106,6 +116,11 @@ def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
 @numeric.dtype.register
 def _(a: torch.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
+
+
+@numeric.repeat.register
+def _(a: torch.Tensor, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> torch.Tensor:
+    return torch.repeat_interleave(a, repeats=repeats, dim=axis)
 
 
 @numeric.reshape.register
@@ -252,6 +267,11 @@ def median(
     return quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
 
+@numeric.floor.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.floor(a)
+
+
 @numeric.round.register
 def _(a: torch.Tensor, decimals: int = 0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
@@ -326,6 +346,11 @@ def _(a: torch.Tensor) -> T_NUMBER:
     return a.item()
 
 
+@numeric.cumsum.register
+def cumsum(a: torch.Tensor, axis: Optional[int] = None) -> torch.Tensor:
+    return torch.cumsum(a, dim=axis)
+
+
 @numeric.sum.register
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     return torch.sum(a, dim=axis, keepdim=keepdims)
@@ -371,6 +396,11 @@ def _(a: torch.Tensor, axis: int = -1, descending: bool = False, stable: bool = 
 @numeric.diag.register
 def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
     return torch.diag(a, diagonal=k)
+
+
+@numeric.linspace.register
+def _(start: torch.Tensor, stop: torch.Tensor, num: int) -> torch.Tensor:
+    return torch.linspace(start=start, end=stop, steps=num)
 
 
 @numeric.logical_or.register
