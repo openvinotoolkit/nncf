@@ -405,7 +405,7 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
             else 0
         )
         return [i for i in range(ndims) if i != channel_idx]
-    
+
     raise nncf.InternalError(msg)
 
 
