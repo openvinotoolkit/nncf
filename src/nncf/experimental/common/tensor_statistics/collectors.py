@@ -920,7 +920,7 @@ class HistogramAggregator(AggregatorBase):
         if dst_bin_width == 0.0:
             return 0.0
 
-        src_bin = fns.arange(0, self.bins, backend=self.histogram.backend)
+        src_bin = fns.arange(0, self.bins, backend=self.histogram.backend, device=self.histogram.device)
         # distances from the beginning of first dst_bin to the beginning and
         # end of src_bin
         src_bin_begin = (src_bin - next_start_bin) * bin_width
@@ -937,13 +937,13 @@ class HistogramAggregator(AggregatorBase):
         )
         density = self.histogram / bin_width
 
-        norm = fns.zeros((self.bins,), backend=src_bin_begin.backend)
+        norm = fns.zeros((self.bins,), backend=src_bin_begin.backend, device=self.histogram.device)
 
         delta_begin = src_bin_begin - dst_bin_of_begin_center
         delta_end = dst_bin_width / 2
         norm += self._get_norm(
             delta_begin,
-            (fns.zeros((self.bins,), backend=src_bin_begin.backend) + 1) * delta_end,
+            (fns.zeros((self.bins,), backend=src_bin_begin.backend, device=self.histogram.device) + 1) * delta_end,
             density,
         )
 
@@ -1095,8 +1095,7 @@ class HistogramAggregator(AggregatorBase):
         if orig_min == orig_max:
             bin_value = fns.sum(orig_hist)
             transformed_orig_hist = (
-                fns.histogram(orig_min, bins=self.bins, range=(update_min.item(), update_max.item()))[0].data  # type: ignore[arg-type]
-                * bin_value
+                fns.histogram(orig_min, bins=self.bins, range=(update_min.item(), update_max.item())) * bin_value
             )
             return transformed_orig_hist + update_hist
 
@@ -1125,12 +1124,9 @@ class HistogramAggregator(AggregatorBase):
         """
         self.min_val = min_val
         self.max_val = max_val
-        self.histogram = fns.histogram(x, self.bins, range=(min_val.item(), max_val.item()))[0]
+        self.histogram = fns.histogram(x, self.bins, range=(min_val.item(), max_val.item()))
 
     def _register_reduced_input_impl(self, x: Tensor):
-        if fns.isempty(x):
-            return
-
         x_min, x_max = fns.min(x), fns.max(x)
 
         current_min = self.min_val
@@ -1145,10 +1141,7 @@ class HistogramAggregator(AggregatorBase):
         new_min = fns.minimum(current_min, update_min)
         new_max = fns.maximum(current_max, update_max)
 
-        update_histogram = fns.histogram(x, self.bins, range=(new_min.item(), new_max.item()))[0]
-        if new_min == current_min and new_max == current_max:
-            self.histogram = self.histogram + update_histogram
-            return
+        update_histogram = fns.histogram(x, self.bins, range=(new_min.item(), new_max.item()))
 
         self.histogram = self._combine_histograms(
             self.histogram,

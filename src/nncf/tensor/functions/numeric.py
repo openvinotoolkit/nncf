@@ -267,7 +267,7 @@ def histogram(
     range: Optional[tuple[float, float]] = None,
     weight: Optional[Tensor] = None,
     density: bool = False,
-) -> tuple[Tensor, Tensor]:
+) -> Tensor:
     """
     Computes a histogram of the values in a tensor.
 
@@ -279,8 +279,7 @@ def histogram(
     :param density: If False, the result will contain the count (or total weight) in each bin.
         If True, the result is the value of the probability density function over the bins,
         normalized such that the integral over the range of the bins is 1.
-    :return: A tuple of a 1D Tensor containing the values of the histogram and
-        a 1D Tensor containing the edges of the histogram bins.
+    :return: A 1D Tensor containing the values of the histogram.
     """
 
 
