@@ -384,19 +384,19 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
     """
     if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
         return [1]
-    elif metatype == om.PTLinearMetatype:
+    if metatype == om.PTLinearMetatype:
         return [ndims - 1]
-    elif metatype == om.PTMatMulMetatype:
+    if metatype == om.PTMatMulMetatype:
         if weight_port_id == 0:
             return [ndims - 1]
-        elif weight_port_id == 1:
+        if weight_port_id == 1:
             return [max(0, ndims - 2)]
-    elif metatype == om.PTAddmmMetatype:
+    if metatype == om.PTAddmmMetatype:
         if weight_port_id == 1:
             return [ndims - 1]
-        elif weight_port_id == 2:
+        if weight_port_id == 2:
             return [max(0, ndims - 2)]
-    elif metatype in CONVOLUTION_METATYPES:
+    if metatype in CONVOLUTION_METATYPES:
         channel_idx = (
             1
             if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
