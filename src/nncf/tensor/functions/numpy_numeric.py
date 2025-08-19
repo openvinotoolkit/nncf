@@ -70,7 +70,7 @@ def _(a: T_NUMPY, boundaries: T_NUMPY, *, right: bool) -> T_NUMPY:
 
 @numeric.bincount.register
 def _(a: T_NUMPY, *, weights: Optional[T_NUMPY], minlength: int = 0) -> T_NUMPY:
-    return np.bincount(a=a, weights=weights, minlength=minlength)
+    return np.bincount(a, weights=weights, minlength=minlength)
 
 
 @numeric.squeeze.register
@@ -157,8 +157,8 @@ def _(
     range: Optional[tuple[float, float]] = None,
     weight: Optional[T_NUMPY] = None,
     density: bool = False,
-) -> tuple[T_NUMPY, T_NUMPY]:
-    return np.histogram(a=a, bins=bins, range=range, weights=weight, density=density)
+) -> T_NUMPY:
+    return np.histogram(a=a, bins=bins, range=range, weights=weight, density=density)[0]
 
 
 @numeric.isempty.register
@@ -383,7 +383,7 @@ def _(a: T_NUMPY, k: int = 0) -> T_NUMPY_ARRAY:
 
 @numeric.linspace.register
 def _(start: T_NUMPY, stop: T_NUMPY, num: int) -> T_NUMPY:
-    return np.linspace(start=start, stop=stop, num=num, endpoint=True)[0]
+    return np.linspace(start=start, stop=stop, num=num, endpoint=True)
 
 
 @numeric.logical_or.register

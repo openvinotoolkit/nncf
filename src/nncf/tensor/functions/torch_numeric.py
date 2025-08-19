@@ -169,8 +169,9 @@ def _(
     range: Optional[tuple[float, float]] = None,
     weight: Optional[torch.Tensor] = None,
     density: bool = False,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    return torch.histogram(input=a, bins=bins, range=range, weight=weight, density=density)
+) -> torch.Tensor:
+    return torch.histc(input=a, bins=bins, min=range[0], max=range[1])
+    # return torch.histogram(input=a, bins=bins, range=range, weight=weight, density=density)
 
 
 @numeric.isempty.register
@@ -400,7 +401,7 @@ def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
 
 @numeric.linspace.register
 def _(start: torch.Tensor, stop: torch.Tensor, num: int) -> torch.Tensor:
-    return torch.linspace(start=start, end=stop, steps=num)
+    return torch.linspace(start=start, end=stop, steps=num, device=start.device)
 
 
 @numeric.logical_or.register
