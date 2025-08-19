@@ -382,6 +382,8 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
     :param ndims: Number of dimensions in the weight tensor.
     :return: list of axes to reduce over, or None if no reduction axes are determined.
     """
+    msg = f"The given metatype {metatype} with weight on {weight_port_id} does not map to a pre-defined reduction axes"
+
     if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
         return [1]
     if metatype == om.PTLinearMetatype:
@@ -403,10 +405,8 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
             else 0
         )
         return [i for i in range(ndims) if i != channel_idx]
-    else:
-        msg = f"""The given metatype {metatype} with weight on {weight_port_id} 
-        does not map to a pre-defined reduction axes"""
-        raise nncf.InternalError(msg)
+    
+    raise nncf.InternalError(msg)
 
 
 def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
