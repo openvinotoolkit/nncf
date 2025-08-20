@@ -23,6 +23,7 @@ from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.range_estimator import StatisticsType
@@ -1154,8 +1155,9 @@ class HistogramAggregator(AggregatorBase):
         self.min_val = new_min
         self.max_val = new_max
 
-    def _aggregate_impl(self) -> Any:
-        return self._non_linear_param_search()
+    def _aggregate_impl(self) -> dict[str, float]:
+        min_, max_ = self._non_linear_param_search()
+        return {MinMaxTensorStatistic.MIN_STAT: min_, MinMaxTensorStatistic.MAX_STAT: max_}
 
 
 REDUCERS_MAP = {
@@ -1165,6 +1167,7 @@ REDUCERS_MAP = {
     StatisticsType.MEAN: MeanReducer,
     StatisticsType.QUANTILE: QuantileReducer,
     StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
+    StatisticsType.RAW: RawReducer,
 }
 
 AGGREGATORS_MAP = {
@@ -1174,4 +1177,5 @@ AGGREGATORS_MAP = {
     AggregatorType.MEAN_NO_OUTLIERS: MeanNoOutliersAggregator,
     AggregatorType.MEDIAN: MedianAggregator,
     AggregatorType.MEDIAN_NO_OUTLIERS: MedianNoOutliersAggregator,
+    AggregatorType.HISTOGRAM: HistogramAggregator,
 }

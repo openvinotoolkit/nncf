@@ -27,6 +27,7 @@ from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 TTensor = Any
@@ -272,8 +273,12 @@ class AdvancedQuantizationParameters:
     quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     # Range estimator parameters
-    activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
-    weights_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
+    activations_range_estimator_params: Union[RangeEstimatorParameters, StatisticsCollectorParameters] = field(
+        default_factory=RangeEstimatorParameters
+    )
+    weights_range_estimator_params: Union[RangeEstimatorParameters, StatisticsCollectorParameters] = field(
+        default_factory=RangeEstimatorParameters
+    )
 
     # Advanced BiasCorrection algorithm parameters
     bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
