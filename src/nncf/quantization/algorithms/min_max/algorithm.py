@@ -67,6 +67,7 @@ from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -433,6 +434,15 @@ class MinMaxQuantization(Algorithm):
         if user_params is None:
             return deepcopy(params)
 
+        if isinstance(user_params, StatisticsCollectorParameters):
+            if quantizer_config.per_channel:
+                msg = (
+                    f"Could not create signle aggregator with parameters {user_params}",
+                    " Per channel statistic collection is not supported for the single aggregator case yet.",
+                )
+                raise nncf.InternalError(msg)
+            return deepcopy(user_params)
+
         min_changes = changes_asdict(user_params.min)
         min_statistic_collector = dataclasses.replace(params.min, **min_changes)
 
@@ -495,7 +505,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_statistic_collector(
         self,
-        range_estimator_params: RangeEstimatorParameters,
+        range_estimator_params: Union[RangeEstimatorParameters, StatisticsCollectorParameters],
         use_abs_max: bool,
         reduction_axes: Optional[tuple[int, ...]],
         aggregation_axes: Optional[tuple[int, ...]],
@@ -513,10 +523,24 @@ class MinMaxQuantization(Algorithm):
         :param num_samples: Maximum number of samples to collect.
         :return: TensorCollector for the statistics calculation.
         """
+        collector = TensorCollector(MinMaxTensorStatistic)
+        if isinstance(range_estimator_params, StatisticsCollectorParameters):
+            if range_estimator_params.statistics_type is not StatisticsType.RAW:
+                msg = "Only RAW statistic type is suppored for single aggregator case."
+                raise nncf.InternalError(msg)
+
+            if range_estimator_params.aggregator_type is not AggregatorType.HISTOGRAM:
+                msg = "Only HISTOGRAM aggregator type is suppored for single aggregator case."
+                raise nncf.InternalError(msg)
+
+            reducer = self._backend_entity.reducer_map[StatisticsType.RAW]()
+            aggregator = AGGREGATORS_MAP[AggregatorType.HISTOGRAM]()
+            collector.register_statistic_branch(MinMaxTensorStatistic.MIN_MAX_STAT, reducer, aggregator)
+            return collector
+
         if not self._backend_entity.supports_inplace_statistics:
             inplace = False
 
-        collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
             [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
