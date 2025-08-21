@@ -1,7 +1,7 @@
 torch==2.8.0
 transformers>=4.48.0
 openvino==2025.3.0.*
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre2.0
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
 optimum-intel[openvino]
 onnx==1.17.0
 onnxruntime==1.21.1

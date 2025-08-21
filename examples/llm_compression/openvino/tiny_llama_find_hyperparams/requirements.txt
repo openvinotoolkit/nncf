@@ -3,7 +3,7 @@ whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@releases/20
 --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/ --pre
 numpy>=1.23.5,<2
 openvino==2025.3.0.*
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre2.0
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
 optimum-intel>=1.22.0
 transformers>=4.48.0
 onnx==1.17.0

@@ -3,4 +3,4 @@ tqdm
 scikit-learn
 fastdownload
 openvino==2025.3.0.*
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre2.0
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
