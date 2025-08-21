@@ -21,4 +21,4 @@ accelerate==1.9.0
 transformers==4.52.1
 whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@releases/2025/3#subdirectory=tools/who_what_benchmark
 --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/ --pre
-datasets==3.1.0
+datasets==3.6.0
