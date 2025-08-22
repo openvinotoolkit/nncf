@@ -21,7 +21,6 @@ from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
 from nncf.tensor.functions.numeric import atleast_1d as atleast_1d
 from nncf.tensor.functions.numeric import bincount as bincount
-from nncf.tensor.functions.numeric import bucketize as bucketize
 from nncf.tensor.functions.numeric import ceil as ceil
 from nncf.tensor.functions.numeric import clip as clip
 from nncf.tensor.functions.numeric import concatenate as concatenate

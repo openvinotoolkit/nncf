@@ -61,11 +61,6 @@ def _(a: torch.Tensor) -> TensorBackend:
     return TensorBackend.torch
 
 
-@numeric.bucketize.register
-def backetize(a: torch.Tensor, boundaries: torch.Tensor, *, right: bool) -> torch.Tensor:
-    return torch.bucketize(a, boundaries, right=right)
-
-
 @numeric.bincount.register
 def bincount(a: torch.Tensor, *, weights: Optional[torch.Tensor], minlength: int = 0) -> torch.Tensor:
     return torch.bincount(input=a, weights=weights, minlength=minlength)
@@ -119,7 +114,7 @@ def _(a: torch.Tensor) -> TensorDataType:
 
 
 @numeric.repeat.register
-def _(a: torch.Tensor, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> torch.Tensor:
+def _(a: torch.Tensor, repeats: Union[int, torch.Tensor], *, axis: Optional[int] = None) -> torch.Tensor:
     return torch.repeat_interleave(a, repeats=repeats, dim=axis)
 
 
@@ -167,11 +162,10 @@ def _(
     bins: int,
     *,
     range: Optional[tuple[float, float]] = None,
-    weight: Optional[torch.Tensor] = None,
-    density: bool = False,
 ) -> torch.Tensor:
+    if range is None:
+        return torch.histc(input=a, bins=bins)
     return torch.histc(input=a, bins=bins, min=range[0], max=range[1])
-    # return torch.histogram(input=a, bins=bins, range=range, weight=weight, density=density)
 
 
 @numeric.isempty.register
@@ -399,11 +393,6 @@ def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
     return torch.diag(a, diagonal=k)
 
 
-@numeric.linspace.register
-def _(start: torch.Tensor, stop: torch.Tensor, num: int) -> torch.Tensor:
-    return torch.linspace(start=start, end=stop, steps=num, device=start.device)
-
-
 @numeric.logical_or.register
 def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     return torch.logical_or(x1, x2)
@@ -497,6 +486,19 @@ def eye(
     pt_dtype = convert_to_torch_dtype(dtype)
     p_args = (n,) if m is None else (n, m)
     return torch.eye(*p_args, dtype=pt_dtype, device=pt_device)
+
+
+def linspace(
+    start: float,
+    end: float,
+    num: int,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    pt_device = convert_to_torch_device(device)
+    pt_dtype = convert_to_torch_dtype(dtype)
+    return torch.linspace(start, end, num, dtype=pt_dtype, device=pt_device)
 
 
 def arange(

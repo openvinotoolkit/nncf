@@ -39,6 +39,7 @@ from nncf.experimental.common.tensor_statistics.collectors import PercentileAggr
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import functions as fns
 
 DEFAULT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
@@ -702,9 +703,9 @@ class TemplateTestReducersAggregators:
             observer.register_reduced_input(inp)
 
         assert fns.allclose(observer.histogram, ref_hist)
-        assert fns.allclose(observer.min_val, ref_min)
-        assert fns.allclose(observer.max_val, ref_max)
+        assert np.allclose(observer.min_val, ref_min)
+        assert np.allclose(observer.max_val, ref_max)
 
-        aggr_min, aggr_max = observer.aggregate()
-        assert fns.allclose(aggr_min, ref_aggr_min)
-        assert fns.allclose(aggr_max, ref_aggr_max)
+        aggr = observer.aggregate()
+        assert np.allclose(aggr[MinMaxTensorStatistic.MIN_STAT], ref_aggr_min)
+        assert np.allclose(aggr[MinMaxTensorStatistic.MAX_STAT], ref_aggr_max)
