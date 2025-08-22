@@ -62,12 +62,6 @@ def _(a: T_NUMPY) -> TensorBackend:
     return TensorBackend.numpy
 
 
-@numeric.bucketize.register
-def _(a: T_NUMPY, boundaries: T_NUMPY, *, right: bool) -> T_NUMPY:
-    side = "right" if right else "left"
-    return np.searchsorted(boundaries, a, side=side)
-
-
 @numeric.bincount.register
 def _(a: T_NUMPY, *, weights: Optional[T_NUMPY], minlength: int = 0) -> T_NUMPY:
     return np.bincount(a, weights=weights, minlength=minlength)
@@ -109,7 +103,7 @@ def _(a: T_NUMPY) -> TensorDataType:
 
 
 @numeric.repeat.register
-def _(a: T_NUMPY, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> T_NUMPY:
+def _(a: T_NUMPY, repeats: Union[int, T_NUMPY_ARRAY], *, axis: Optional[int] = None) -> T_NUMPY:
     return np.repeat(a, repeats=repeats, axis=axis)
 
 
@@ -155,10 +149,8 @@ def _(
     bins: int,
     *,
     range: Optional[tuple[float, float]] = None,
-    weight: Optional[T_NUMPY] = None,
-    density: bool = False,
 ) -> T_NUMPY:
-    return np.histogram(a=a, bins=bins, range=range, weights=weight, density=density)[0]
+    return np.histogram(a=a, bins=bins, range=range)[0]
 
 
 @numeric.isempty.register
@@ -381,11 +373,6 @@ def _(a: T_NUMPY, k: int = 0) -> T_NUMPY_ARRAY:
     return np.diag(a, k=k)
 
 
-@numeric.linspace.register
-def _(start: T_NUMPY, stop: T_NUMPY, num: int) -> T_NUMPY:
-    return np.linspace(start=start, stop=stop, num=num, endpoint=True)
-
-
 @numeric.logical_or.register
 def _(x1: T_NUMPY_ARRAY, x2: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
     return np.logical_or(x1, x2)
@@ -461,6 +448,19 @@ def eye(
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
     return np.eye(n, m, dtype=np_dtype)
+
+
+def linspace(
+    start: float,
+    end: float,
+    num: int,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> T_NUMPY_ARRAY:
+    validate_device(device)
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.linspace(start, end, num, dtype=np_dtype)
 
 
 def arange(

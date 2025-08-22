@@ -533,13 +533,19 @@ def convert_quantization_parameters_to_dict(params: Optional[QuantizationParamet
     return result
 
 
-def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters) -> dict[str, Any]:
+def convert_range_estimator_parameters_to_dict(
+    params: Union[RangeEstimatorParameters, StatisticsCollectorParameters],
+) -> dict[str, Any]:
     """
     Converts range estimator parameters to the dict in the legacy format
 
     :param params: Range estimator parameters
     :return: range estimator parameters as dict in the legacy format
     """
+    if isinstance(params, StatisticsCollectorParameters):
+        msg = "Single branch statistic collection is not supported for this backend yet."
+        raise nncf.ParameterNotSupportedError(msg)
+
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
         msg = "clipping_value parameter is not supported in the legacy format"
         raise nncf.ParameterNotSupportedError(msg)

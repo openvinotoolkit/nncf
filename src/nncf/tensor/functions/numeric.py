@@ -47,30 +47,6 @@ def backend(a: Tensor) -> TensorBackend:
 
 
 @tensor_dispatcher
-def bucketize(a: Tensor, boundaries: Tensor, *, right: bool) -> Tensor:
-    """
-    Returns the indices of the buckets to which each value in the input belongs,
-    where the boundaries of the buckets are set by boundaries.
-    Return a new tensor with the same size as input.
-    If right is False (default), then the left boundary is open.
-    Note that this behavior is opposite the behavior of numpy.digitize.
-    More formally, the returned index satisfies the following rules:
-    +----------------------------------------------+
-    | right |  returned index i satisfies          |
-    -----------------------------------------------|
-    | False | boundaries[i-1] < a <= boundaries[i] |
-    -----------------------------------------------|
-    | True  | boundaries[i-1] <= a < boundaries[i] |
-    +----------------------------------------------+
-
-    :param a: Input tensor.
-    :param boundaries: 1-D tensor, must contain a strictly increasing sequence, or the return value is undefined.
-    :param right: Determines the behavior for values in boundaries. See the table above.
-    :return: Tensor of insertion points with the same shape as v.
-    """
-
-
-@tensor_dispatcher
 def bincount(a: Tensor, *, weights: Optional[Tensor], minlength: int = 0) -> Tensor:
     """
     Count number of occurrences of each value in array of non-negative ints.
@@ -172,7 +148,7 @@ def dtype(a: Tensor) -> TensorDataType:
 
 
 @tensor_dispatcher
-def repeat(a: Tensor, repeats: Union[int, list[int]], *, axis: Optional[int] = None) -> Tensor:
+def repeat(a: Tensor, repeats: Union[int, Tensor], *, axis: Optional[int] = None) -> Tensor:
     """
     Repeats elements of a tensor along a specified axis.
 
@@ -265,8 +241,6 @@ def histogram(
     bins: int,
     *,
     range: Optional[tuple[float, float]] = None,
-    weight: Optional[Tensor] = None,
-    density: bool = False,
 ) -> Tensor:
     """
     Computes a histogram of the values in a tensor.
@@ -274,11 +248,6 @@ def histogram(
     :param a:  The input tensor.
     :param bins: Defines the number of equal-width bins.
     :param range: Defines the range of the bins. If not provided, range is simply (a.min(), a.max())
-    :param weight: If provided, weight should have the same shape as input.
-        Each value in input contributes its associated weight towards its bin’s result.
-    :param density: If False, the result will contain the count (or total weight) in each bin.
-        If True, the result is the value of the probability density function over the bins,
-        normalized such that the integral over the range of the bins is 1.
     :return: A 1D Tensor containing the values of the histogram.
     """
 
@@ -706,18 +675,6 @@ def diag(a: Tensor, k: int = 0) -> Tensor:
 
 
 @tensor_dispatcher
-def linspace(start: Tensor, stop: Tensor, num: int) -> Tensor:
-    """
-    Return a tensor filled with evenly spaced numbers over a specified interval.
-
-    :param start: The starting value for the set of points.
-    :param end: The ending value for the set of points.
-    :param num: Number of samples to generate. Must be non-negative.
-    :return: A tensor with num equally spaced samples in the closed interval [start, stop].
-    """
-
-
-@tensor_dispatcher
 def logical_or(x1: Tensor, x2: Tensor) -> Tensor:
     """
     Computes the element-wise logical OR of the given input tensors.
@@ -843,6 +800,31 @@ def eye(
     :return: A tensor where all elements are equal to zero, except for the k-th diagonal, whose values are equal to one.
     """
     return Tensor(get_numeric_backend_fn("eye", backend)(n, m, dtype=dtype, device=device))
+
+
+def linspace(
+    start: float,
+    stop: float,
+    num: int,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a tensor filled with evenly spaced numbers over a specified interval.
+
+    :param start: The starting value for the set of points.
+    :param end: The ending value for the set of points.
+    :param num: Number of samples to generate. Must be non-negative.
+    :param backend: The backend type for which the tensor is required.
+    :param dtype: The data type of the returned tensor If dtype is not given, infer the data type
+        from the other input arguments.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor with num equally spaced samples in the closed interval [start, stop].
+    """
+    return Tensor(get_numeric_backend_fn("linspace", backend)(start, stop, num, dtype=dtype, device=device))
 
 
 def arange(

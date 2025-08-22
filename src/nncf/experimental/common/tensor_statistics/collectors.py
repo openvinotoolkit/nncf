@@ -864,8 +864,8 @@ class HistogramAggregator(AggregatorBase):
     """
 
     histogram: Tensor
-    min_val: Tensor
-    max_val: Tensor
+    min_val: float
+    max_val: float
 
     def __init__(
         self,
@@ -938,13 +938,13 @@ class HistogramAggregator(AggregatorBase):
         )
         density = self.histogram / bin_width
 
-        norm = fns.zeros((self.bins,), backend=src_bin_begin.backend, device=self.histogram.device)
+        norm = fns.zeros((self.bins,), backend=self.histogram.backend, device=self.histogram.device)
 
         delta_begin = src_bin_begin - dst_bin_of_begin_center
         delta_end = dst_bin_width / 2
         norm += self._get_norm(
             delta_begin,
-            (fns.zeros((self.bins,), backend=src_bin_begin.backend, device=self.histogram.device) + 1) * delta_end,
+            (fns.zeros((self.bins,), backend=self.histogram.backend, device=self.histogram.device) + 1) * delta_end,
             density,
         )
 
@@ -969,7 +969,7 @@ class HistogramAggregator(AggregatorBase):
         :return: An approximation for L2 error minimization for selecting min/max.
         """
         assert self.histogram.shape[0] == self.bins, "bins mismatch"
-        bin_width = (self.max_val.item() - self.min_val.item()) / self.bins
+        bin_width = (self.max_val - self.min_val) / self.bins
 
         # cumulative sum
         total = fns.sum(self.histogram).item()
@@ -1048,12 +1048,16 @@ class HistogramAggregator(AggregatorBase):
                 orig_min,
                 orig_max,
                 self.bins * self.upsample_rate + 1,
+                backend=self.histogram.backend,
+                device=self.histogram.device,
             )[:-1]
             + 0.5 * bin_size
         )
-        boundaries_new_histogram = fns.linspace(update_min, update_max, self.bins + 1)
+        boundaries_new_histogram = fns.linspace(
+            update_min, update_max, self.bins + 1, backend=self.histogram.backend, device=self.histogram.device
+        )
         # this maps the mid-poits of the histogram to the new histogram's space
-        bucket_assignments = fns.bucketize(mid_points_histogram, boundaries_new_histogram, right=True) - 1
+        bucket_assignments = fns.searchsorted(boundaries_new_histogram, mid_points_histogram, side="right") - 1
         # this then maps the histogram mid-points in the new space, weighted by the original histogram's values
         # this is just the old histogram in the new histogram's space
 
@@ -1115,7 +1119,7 @@ class HistogramAggregator(AggregatorBase):
 
         return update_hist + transformed_orig_hist
 
-    def reset_histogram(self, x: Tensor, min_val: Tensor, max_val: Tensor) -> None:
+    def reset_histogram(self, x: Tensor, min_val: float, max_val: float) -> None:
         """
         Resets and initializes the histogram based on the provided tensor and range.
 
@@ -1125,10 +1129,10 @@ class HistogramAggregator(AggregatorBase):
         """
         self.min_val = min_val
         self.max_val = max_val
-        self.histogram = fns.histogram(x, self.bins, range=(min_val.item(), max_val.item()))
+        self.histogram = fns.histogram(x, self.bins, range=(min_val, max_val))
 
     def _register_reduced_input_impl(self, x: Tensor):
-        x_min, x_max = fns.min(x), fns.max(x)
+        x_min, x_max = fns.min(x).item(), fns.max(x).item()
 
         current_min = self.min_val
         current_max = self.max_val
@@ -1139,10 +1143,10 @@ class HistogramAggregator(AggregatorBase):
             return
 
         update_min, update_max = x_min, x_max
-        new_min = fns.minimum(current_min, update_min)
-        new_max = fns.maximum(current_max, update_max)
+        new_min = min(current_min, update_min)
+        new_max = max(current_max, update_max)
 
-        update_histogram = fns.histogram(x, self.bins, range=(new_min.item(), new_max.item()))
+        update_histogram = fns.histogram(x, self.bins, range=(new_min, new_max))
 
         self.histogram = self._combine_histograms(
             self.histogram,
