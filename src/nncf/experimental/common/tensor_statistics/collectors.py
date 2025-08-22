@@ -28,6 +28,7 @@ from nncf.experimental.common.tensor_statistics.statistics import TensorStatisti
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
+from nncf.tensor.definitions import TensorDataType
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 AggregationAxes = tuple[int, ...]
@@ -1161,7 +1162,14 @@ class HistogramAggregator(AggregatorBase):
 
     def _aggregate_impl(self) -> dict[str, float]:
         min_, max_ = self._non_linear_param_search()
-        return {MinMaxTensorStatistic.MIN_STAT: min_, MinMaxTensorStatistic.MAX_STAT: max_}
+        return {
+            MinMaxTensorStatistic.MIN_STAT: fns.tensor(
+                min_, backend=self.histogram.backend, device=self.histogram.device, dtype=TensorDataType.float32
+            ),
+            MinMaxTensorStatistic.MAX_STAT: fns.tensor(
+                max_, backend=self.histogram.backend, device=self.histogram.device, dtype=TensorDataType.float32
+            ),
+        }
 
 
 REDUCERS_MAP = {
