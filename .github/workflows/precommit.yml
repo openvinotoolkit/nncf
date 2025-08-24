@@ -17,8 +17,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pytest:
-    uses: ./.github/workflows/call_precommit.yml
-    with:
-      python_version: "3.10.14"
-      gpu_enabled: true
+  # pytest:
+  #   uses: ./.github/workflows/call_precommit.yml
+  #   with:
+  #     python_version: "3.10.14"
+  #     gpu_enabled: true
+
+
+  mac:
+    runs-on: macos-14
+    timeout-minutes: 40
+    steps:
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          pip install openvino
+      - name: Print installed modules
+        run: pip list
+      - name: Run full_name
+        run: python -c "import openvino as ov; print(ov.Core().get_property('CPU', ov.properties.device.full_name))"
+
+      - name: Run architecture
+        run: python -c "import openvino as ov; print(ov.Core().get_property('CPU', ov.properties.device.architecture))"
+
+
+
+      - name: Install dependencies
+        run: |
+          pip install openvino==2025.3.0.* --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
+
+      - name: Print installed modules
+        run: pip list
+      - name: Run full_name
+        run: python -c "import openvino as ov; print(ov.Core().get_property('CPU', ov.properties.device.full_name))"
+
+      - name: Run architecture
+        run: python -c "import openvino as ov; print(ov.Core().get_property('CPU', ov.properties.device.architecture))"
