@@ -1,4 +1,5 @@
 tensorflow==2.15.1
 tensorflow-datasets
 tqdm
-openvino==2025.2.0
+openvino==2025.3.0.*
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
