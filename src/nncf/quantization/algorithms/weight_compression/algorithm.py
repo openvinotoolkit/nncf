@@ -780,7 +780,7 @@ class WeightCompression(Algorithm):
         Collects and processes weight compression parameters for all nodes in the model,
         applies all processing steps including group size fallback handling and compression
         configuration setting.
-        
+
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
         :param statistic_points: Optional pre-collected statistic points.
@@ -790,15 +790,15 @@ class WeightCompression(Algorithm):
             Statistics collected for data-aware compression. None if data-free compression.
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
-        
+
         initial_all_weight_params: list[WeightCompressionParameters] = []
         skipped_weight_params: list[WeightCompressionParameters] = []
-        
+
         weight_names = set()
         is_last_layer_skipped = False
         n = len(nodes_to_compress)
         ignored_names = self.get_ignored_node_names(graph)
-        
+
         for i, node in enumerate(nodes_to_compress):
             is_target_node = should_consider_scope(node.node_name, ignored_names)
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
@@ -840,7 +840,7 @@ class WeightCompression(Algorithm):
                         )
                         if self.is_weight_compression_supported(weight_dtype, mode):
                             wc_config = WeightCompressionConfig(mode=mode)
-                            
+
                     weight_params = WeightCompressionParameters(
                         weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, wc_config
                     )
@@ -890,10 +890,11 @@ class WeightCompression(Algorithm):
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        final_all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
-        
-        return final_all_weight_params, skipped_weight_params, statistics
+        final_all_weight_params = list(
+            filter(lambda w_params: w_params.compression_config is not None, all_weight_params)
+        )
 
+        return final_all_weight_params, statistics
 
     def apply(
         self,
@@ -905,7 +906,7 @@ class WeightCompression(Algorithm):
         self.set_backend_entity(model)
 
         # Get processed weight compression parameters ready for compression
-        all_weight_params, skipped_weight_params, statistics = self.get_processed_weight_compression_parameters(
+        all_weight_params, statistics = self.get_processed_weight_compression_parameters(
             model, graph, statistic_points, dataset
         )
 
