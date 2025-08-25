@@ -15,6 +15,7 @@ import pytest
 import torch
 from torch import nn
 
+import nncf
 import nncf.torch.graph.operator_metatypes as om
 import tests.cross_fw.test_templates.helpers as helpers
 from nncf.common.graph.graph import NNCFGraph
@@ -375,18 +376,55 @@ def test_update_fused_bias(model_cls):
     "metatype,weight_port_id,ndims,expected_reduction_axes",
     [
         (om.PTAtenEmbeddingMetatype, 0, 4, [1]),
+        (om.PTAtenEmbeddingMetatype, 0, 2, [1]),
+        (om.PTEmbeddingMetatype, 0, 4, [1]),
+        (om.PTEmbeddingMetatype, 0, 3, [1]),
         (om.PTLinearMetatype, 0, 4, [3]),
+        (om.PTLinearMetatype, 0, 2, [1]),
+        (om.PTLinearMetatype, 0, 3, [2]),
         (om.PTMatMulMetatype, 0, 4, [3]),
         (om.PTMatMulMetatype, 1, 4, [2]),
+        (om.PTMatMulMetatype, 0, 2, [1]),
+        (om.PTMatMulMetatype, 1, 2, [0]),
+        (om.PTMatMulMetatype, 1, 1, [0]),
+        (om.PTMatMulMetatype, 0, 3, [2]),
+        (om.PTMatMulMetatype, 1, 3, [1]),
         (om.PTAddmmMetatype, 1, 4, [3]),
         (om.PTAddmmMetatype, 2, 4, [2]),
-        (om.PTMatMulMetatype, 1, 1, [0]),
-        (om.PTMatMulMetatype, 1, 2, [0]),
+        (om.PTAddmmMetatype, 1, 2, [1]),
+        (om.PTAddmmMetatype, 2, 2, [0]),
+        (om.PTAddmmMetatype, 1, 3, [2]),
+        (om.PTAddmmMetatype, 2, 3, [1]),
+        (om.PTAddmmMetatype, 2, 1, [0]),
+        (om.PTConv1dMetatype, 0, 3, [1, 2]),
+        (om.PTConv2dMetatype, 0, 4, [1, 2, 3]),
+        (om.PTConv3dMetatype, 0, 5, [1, 2, 3, 4]),
+        (om.PTConvTranspose1dMetatype, 0, 3, [0, 2]),
+        (om.PTConvTranspose2dMetatype, 0, 4, [0, 2, 3]),
+        (om.PTConvTranspose3dMetatype, 0, 5, [0, 2, 3, 4]),
+        (om.PTConv1dMetatype, 0, 4, [1, 2, 3]),
+        (om.PTConv2dMetatype, 0, 3, [1, 2]),
+        (om.PTConvTranspose1dMetatype, 0, 4, [0, 2, 3]),
+        (om.PTConvTranspose2dMetatype, 0, 3, [0, 2]),
     ],
 )
 def test_get_reduction_axes(metatype, weight_port_id, ndims, expected_reduction_axes):
     reduction_axes = get_weight_compression_reduction_axes(metatype, weight_port_id, ndims)
     assert reduction_axes == expected_reduction_axes
+
+
+@pytest.mark.parametrize(
+    "metatype,weight_port_id,ndims",
+    [
+        (om.PTRELUMetatype, 0, 4),
+        (om.PTMatMulMetatype, 2, 4),
+        (om.PTAddmmMetatype, 0, 4),
+        (om.PTAddmmMetatype, 3, 4),
+    ],
+)
+def test_get_reduction_axes_unsupported_cases(metatype, weight_port_id, ndims):
+    with pytest.raises(nncf.InternalError):
+        get_weight_compression_reduction_axes(metatype, weight_port_id, ndims)
 
 
 class TestGetWeightChannelAxes:
