@@ -769,30 +769,42 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
-    def apply(
+    def get_processed_weight_compression_parameters(
         self,
         model: TModel,
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
-        self.set_backend_entity(model)
-
+    ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], dict[str, Any]]:
+        """
+        Collects and processes weight compression parameters for all nodes in the model,
+        applies all processing steps including group size fallback handling and compression
+        configuration setting.
+        
+        :param model: Backend-specific input model.
+        :param graph: NNCFGraph instance.
+        :param statistic_points: Optional pre-collected statistic points.
+        :param dataset: Optional dataset for statistics collection.
+        :return: A tuple containing Final processed list of weight parameters ready for compression,
+            List of weight parameters that were skipped
+            Statistics collected for data-aware compression. None if data-free compression.
+        """
         nodes_to_compress = self.get_nodes_to_compress(graph)
-
-        all_weight_params: list[WeightCompressionParameters] = []
+        
+        initial_all_weight_params: list[WeightCompressionParameters] = []
         skipped_weight_params: list[WeightCompressionParameters] = []
-
+        
         weight_names = set()
         is_last_layer_skipped = False
         n = len(nodes_to_compress)
         ignored_names = self.get_ignored_node_names(graph)
+        
         for i, node in enumerate(nodes_to_compress):
             is_target_node = should_consider_scope(node.node_name, ignored_names)
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 is_last_layer = i == n - 1
                 if weight_name in weight_names:
-                    # If the last layer has shared weights then skiped
+                    # If the last layer has shared weights then skip
                     # to avoid processing the same weight more than once
                     is_last_layer_skipped = is_last_layer
                     continue
@@ -828,10 +840,11 @@ class WeightCompression(Algorithm):
                         )
                         if self.is_weight_compression_supported(weight_dtype, mode):
                             wc_config = WeightCompressionConfig(mode=mode)
+                            
                     weight_params = WeightCompressionParameters(
                         weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, wc_config
                     )
-                    all_weight_params.append(weight_params)
+                    initial_all_weight_params.append(weight_params)
                     weight_names.add(weight_name)
                 else:
                     is_last_layer_skipped = is_last_layer
@@ -841,10 +854,9 @@ class WeightCompression(Algorithm):
                         )
                     )
 
-        # Get subset of nodes to define compression ratio
-        ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
+        ratio_defining_params = self._get_ratio_defining_params(initial_all_weight_params, is_last_layer_skipped)
 
-        # Handle group size fallback modes
+        all_weight_params = initial_all_weight_params
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
                 all_weight_params, ratio_defining_params, skipped_weight_params
@@ -854,7 +866,7 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
-        # Collect statistics for the weights compression
+        # Step 4: Collect statistics for data-aware compression
         statistics = None
         if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
             weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
@@ -873,19 +885,36 @@ class WeightCompression(Algorithm):
                 matmul_input_to_output_nodes_map, statistic_points
             )
 
-        # Set weight compression configuration
+        # Step 5: Set weight compression configuration
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
 
-        # Print statistics
+        # Step 6: Print statistics
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
-        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+        # Step 7: Filter out nodes that should remain in their original floating-point precision
+        final_all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+        
+        return final_all_weight_params, skipped_weight_params, statistics
+
+
+    def apply(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
+        self.set_backend_entity(model)
+
+        # Get processed weight compression parameters ready for compression
+        all_weight_params, skipped_weight_params, statistics = self.get_processed_weight_compression_parameters(
+            model, graph, statistic_points, dataset
+        )
 
         if self._awq:
-            model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
+            self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
             statistics = self.awq_algo.update_statistics(statistics)
             # del is used to prematurely mark non-necessary data as free for garbage collection
