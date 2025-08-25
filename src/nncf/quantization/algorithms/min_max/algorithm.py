@@ -497,16 +497,39 @@ class MinMaxQuantization(Algorithm):
         return self._get_statistic_collector(
             range_estimator_params,
             collector_params.use_abs_max,
+            shape,
             reduction_axes,
             aggregation_axes,
             self._inplace_statistics,
             num_samples=num_samples,
         )
 
+    def _get_hist_collector(self, shape, reduction_axes, range_estimator_params) -> TensorCollector:
+        # if shape is not None and reduction_axes is not None and len(shape) != len(reduction_axes):
+        #    msg = (
+        #        "Reduction axes do not cover the whole shape,"
+        #        " single aggregator case supports len(shape) == len(reduction_axes) case only"
+        #    )
+        #    raise nncf.InternalError(msg)
+        if range_estimator_params.statistics_type is not StatisticsType.RAW:
+            msg = "Only RAW statistic type is suppored for single aggregator case."
+            raise nncf.InternalError(msg)
+
+        if range_estimator_params.aggregator_type is not AggregatorType.HISTOGRAM:
+            msg = "Only HISTOGRAM aggregator type is suppored for single aggregator case."
+            raise nncf.InternalError(msg)
+
+        reducer = self._backend_entity.reducer_map[StatisticsType.RAW]()
+        aggregator = AGGREGATORS_MAP[AggregatorType.HISTOGRAM]()
+        collector = TensorCollector(MinMaxTensorStatistic)
+        collector.register_statistic_branch(MinMaxTensorStatistic.MIN_MAX_STAT, reducer, aggregator)
+        return collector
+
     def _get_statistic_collector(
         self,
         range_estimator_params: Union[RangeEstimatorParameters, StatisticsCollectorParameters],
         use_abs_max: bool,
+        shape: Optional[tuple[int, ...]],
         reduction_axes: Optional[tuple[int, ...]],
         aggregation_axes: Optional[tuple[int, ...]],
         inplace: bool,
@@ -523,21 +546,17 @@ class MinMaxQuantization(Algorithm):
         :param num_samples: Maximum number of samples to collect.
         :return: TensorCollector for the statistics calculation.
         """
+        if isinstance(range_estimator_params, StatisticsCollectorParameters) or (
+            range_estimator_params.min.statistics_type == StatisticsType.MIN
+            and range_estimator_params.max.statistics_type == StatisticsType.MAX
+            and range_estimator_params.min.aggregator_type == AggregatorType.MEAN
+            and range_estimator_params.max.aggregator_type == AggregatorType.MEAN
+        ):
+            if isinstance(range_estimator_params, RangeEstimatorParameters):
+                range_estimator_params = StatisticsCollectorParameters(StatisticsType.RAW, AggregatorType.HISTOGRAM)
+            return self._get_hist_collector(shape, reduction_axes, range_estimator_params)
+
         collector = TensorCollector(MinMaxTensorStatistic)
-        if isinstance(range_estimator_params, StatisticsCollectorParameters):
-            if range_estimator_params.statistics_type is not StatisticsType.RAW:
-                msg = "Only RAW statistic type is suppored for single aggregator case."
-                raise nncf.InternalError(msg)
-
-            if range_estimator_params.aggregator_type is not AggregatorType.HISTOGRAM:
-                msg = "Only HISTOGRAM aggregator type is suppored for single aggregator case."
-                raise nncf.InternalError(msg)
-
-            reducer = self._backend_entity.reducer_map[StatisticsType.RAW]()
-            aggregator = AGGREGATORS_MAP[AggregatorType.HISTOGRAM]()
-            collector.register_statistic_branch(MinMaxTensorStatistic.MIN_MAX_STAT, reducer, aggregator)
-            return collector
-
         if not self._backend_entity.supports_inplace_statistics:
             inplace = False
 
