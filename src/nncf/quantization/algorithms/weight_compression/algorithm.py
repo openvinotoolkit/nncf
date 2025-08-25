@@ -791,7 +791,7 @@ class WeightCompression(Algorithm):
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
 
-        initial_all_weight_params: list[WeightCompressionParameters] = []
+        all_weight_params: list[WeightCompressionParameters] = []
         skipped_weight_params: list[WeightCompressionParameters] = []
 
         weight_names = set()
@@ -804,7 +804,7 @@ class WeightCompression(Algorithm):
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 is_last_layer = i == n - 1
                 if weight_name in weight_names:
-                    # If the last layer has shared weights then skip
+                    # If the last layer has shared weights then skip it
                     # to avoid processing the same weight more than once
                     is_last_layer_skipped = is_last_layer
                     continue
@@ -844,7 +844,7 @@ class WeightCompression(Algorithm):
                     weight_params = WeightCompressionParameters(
                         weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, wc_config
                     )
-                    initial_all_weight_params.append(weight_params)
+                    all_weight_params.append(weight_params)
                     weight_names.add(weight_name)
                 else:
                     is_last_layer_skipped = is_last_layer
@@ -854,9 +854,9 @@ class WeightCompression(Algorithm):
                         )
                     )
 
-        ratio_defining_params = self._get_ratio_defining_params(initial_all_weight_params, is_last_layer_skipped)
+        ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
 
-        all_weight_params = initial_all_weight_params
+        # Handle group size fallback modes
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
                 all_weight_params, ratio_defining_params, skipped_weight_params
@@ -911,7 +911,7 @@ class WeightCompression(Algorithm):
         )
 
         if self._awq:
-            self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
+            model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
             statistics = self.awq_algo.update_statistics(statistics)
             # del is used to prematurely mark non-necessary data as free for garbage collection
