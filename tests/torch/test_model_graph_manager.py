@@ -31,6 +31,7 @@ from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_potential_fused_node
 from nncf.torch.model_graph_manager import get_weight_channel_axes
+from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from nncf.torch.model_graph_manager import is_quantized_weights
@@ -368,6 +369,24 @@ def test_update_fused_bias(model_cls):
         assert torch.all(torch.isclose(model.conv.bias, torch.tensor([0.3000, 1.3000])))
         assert torch.all(torch.isclose(model.bn.bias, torch.tensor([-1.0600, -3.6000])))
         assert torch.all(torch.isclose(model.conv.bias * model.bn.weight + model.bn.bias, ref_new_bias))
+
+
+@pytest.mark.parametrize(
+    "metatype,weight_port_id,ndims,expected_reduction_axes",
+    [
+        (om.PTAtenEmbeddingMetatype, 0, 4, [1]),
+        (om.PTLinearMetatype, 0, 4, [3]),
+        (om.PTMatMulMetatype, 0, 4, [3]),
+        (om.PTMatMulMetatype, 1, 4, [2]),
+        (om.PTAddmmMetatype, 1, 4, [3]),
+        (om.PTAddmmMetatype, 2, 4, [2]),
+        (om.PTMatMulMetatype, 1, 1, [0]),
+        (om.PTMatMulMetatype, 1, 2, [0]),
+    ],
+)
+def test_get_reduction_axes(metatype, weight_port_id, ndims, expected_reduction_axes):
+    reduction_axes = get_weight_compression_reduction_axes(metatype, weight_port_id, ndims)
+    assert reduction_axes == expected_reduction_axes
 
 
 class TestGetWeightChannelAxes:

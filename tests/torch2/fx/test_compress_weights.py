@@ -26,8 +26,6 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.torch.graph import operator_metatypes as om
-from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
@@ -314,24 +312,6 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     assert compressed_model.state_dict()["asymmetric_weights_decompressor_w._scale"].dtype == torch.float16
     # Result should be in the precision of the model
     assert result.dtype == dtype
-
-
-@pytest.mark.parametrize(
-    "metatype,weight_port_id,ndims,expected_reduction_axes",
-    [
-        (om.PTAtenEmbeddingMetatype, 0, 4, [1]),
-        (om.PTLinearMetatype, 0, 4, [3]),
-        (om.PTMatMulMetatype, 0, 4, [3]),
-        (om.PTMatMulMetatype, 1, 4, [2]),
-        (om.PTAddmmMetatype, 1, 4, [3]),
-        (om.PTAddmmMetatype, 2, 4, [2]),
-        (om.PTMatMulMetatype, 1, 1, [0]),
-        (om.PTMatMulMetatype, 1, 2, [0]),
-    ],
-)
-def test_get_reduction_axes(metatype, weight_port_id, ndims, expected_reduction_axes):
-    reduction_axes = get_weight_compression_reduction_axes(metatype, weight_port_id, ndims)
-    assert reduction_axes == expected_reduction_axes
 
 
 class TestFXTemplateWeightCompression(TemplateWeightCompression):

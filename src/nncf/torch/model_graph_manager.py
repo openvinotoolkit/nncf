@@ -380,10 +380,8 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
     :param metatype: The metatype of the operator node containing the weight.
     :param weight_port_id: The index of the input port corresponding to the weight tensor.
     :param ndims: Number of dimensions in the weight tensor.
-    :return: list of axes to reduce over, or None if no reduction axes are determined.
+    :return: list of axes to reduce over
     """
-    msg = f"The given metatype {metatype} with weight on {weight_port_id} does not map to a pre-defined reduction axes"
-
     if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
         return [1]
     if metatype == om.PTLinearMetatype:
@@ -406,6 +404,7 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
         )
         return [i for i in range(ndims) if i != channel_idx]
 
+    msg = f"The given metatype {metatype} with weight on {weight_port_id} does not map to a pre-defined reduction axes"
     raise nncf.InternalError(msg)
 
 
