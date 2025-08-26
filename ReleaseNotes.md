@@ -10,7 +10,7 @@ Post-training Quantization:
   - ...
 - Features:
   - Introduced `group_size_fallback_mode` advanced weight compression parameter. This specifies how to handle nodes that do not support a default group size value. By default it is set to `GroupSizeFallbackMode.IGNORE`. This corresponds to skipping nodes that cannot be compressed with the given group size.
-  - Added support for external quantizers in the `quantize_pt2e` API, including [XNNPACKQuantizer](https://docs.pytorch.org/executorch/stable/backends-xnnpack.html#quantization) and [CoreMLQuantizer](https://docs.pytorch.org/executorch/stable/backends-coreml.html#quantization). 
+  - Added support for external quantizers in the `quantize_pt2e` API, including [XNNPACKQuantizer](https://docs.pytorch.org/executorch/stable/backends-xnnpack.html#quantization) and [CoreMLQuantizer](https://docs.pytorch.org/executorch/stable/backends-coreml.html#quantization).
 - Fixes:
   - ...
 - Improvements:
