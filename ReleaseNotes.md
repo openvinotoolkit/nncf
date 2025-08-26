@@ -19,7 +19,10 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Qwen-Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-mcp/llm-agent-mcp.ipynb)
+  - [Post-Training Optimization of FLUX.1 Kontext Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flux.1-kontext/flux.1-kontext.ipynb)
+  - [Post-Training Optimization of Qwen3 Embedding Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-embedding/qwen3-embedding.ipynb)
+  - [Post-Training Optimization of GLM-4.1V-9B-Thinking Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm4.1-v-thinking/glm4.1-v-thinking.ipynb)
 - Known issues:
   - ...
 
