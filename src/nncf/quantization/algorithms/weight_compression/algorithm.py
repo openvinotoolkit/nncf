@@ -769,42 +769,6 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
-    def collect_weight_compression_statistics(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        dataset: Dataset,
-        weight_params: list[WeightCompressionParameters],
-        statistic_points: Optional[StatisticPointsContainer] = None,
-    ) -> Optional[dict[str, Any]]:
-        """
-        Collects statistics for weight compression if data-aware compression or
-        mixed-precision is enabled.
-
-        :param model: Backend-specific input model.
-        :param graph: NNCFGraph instance.
-        :param dataset: Dataset for statistics collection.
-        :param weight_params: Weight parameters for which to collect statistics.
-        :param statistic_points: Optional pre-collected statistic points.
-        :return: Statistics and Statistic points container.
-        """
-        statistics = None
-        if not (self._data_aware_mixed_precision or self._data_aware_compression) and not dataset:
-            return statistics, statistic_points
-        matmul_nodes_to_compress = [
-            wp.node_with_weight
-            for wp in weight_params
-            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
-        ]
-        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
-
-        if statistic_points is None:
-            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-
-        statistics = self._get_statistics_for_weights_compression(matmul_input_to_output_nodes_map, statistic_points)
-        return statistics, statistic_points
-
     def get_weight_compression_parameters(
         self,
         model: TModel,
@@ -902,10 +866,23 @@ class WeightCompression(Algorithm):
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
         # Collect statistics for the weights compression
-        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-        statistics, statistic_points = self.collect_weight_compression_statistics(
-            model, graph, dataset, weight_params, statistic_points
-        )
+        statistics = None
+        if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
+            weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+            matmul_nodes_to_compress = [
+                wp.node_with_weight
+                for wp in weight_params
+                if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+            ]
+            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
+                matmul_nodes_to_compress, graph
+            )
+            if statistic_points is None:
+                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
+            statistics = self._get_statistics_for_weights_compression(
+                matmul_input_to_output_nodes_map, statistic_points
+            )
 
         # Set weight compression configuration
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
