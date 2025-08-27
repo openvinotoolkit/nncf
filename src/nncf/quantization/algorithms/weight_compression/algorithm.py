@@ -778,7 +778,7 @@ class WeightCompression(Algorithm):
     ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], dict[str, Any]]:
         """
         Collects and processes weight compression parameters for all nodes in the model,
-        applies all processing steps including mixed precision assignment, group size fallback 
+        applies all processing steps including mixed precision assignment, group size fallback
         handling and compression configuration setting.
 
         :param model: Backend-specific input model.
@@ -895,9 +895,7 @@ class WeightCompression(Algorithm):
         )
 
         # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
-        all_weight_params = list(
-            filter(lambda w_params: w_params.compression_config is not None, all_weight_params)
-        )
+        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
 
         return all_weight_params, statistics
 
