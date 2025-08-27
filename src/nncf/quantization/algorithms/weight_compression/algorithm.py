@@ -778,8 +778,8 @@ class WeightCompression(Algorithm):
     ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], dict[str, Any]]:
         """
         Collects and processes weight compression parameters for all nodes in the model,
-        applies all processing steps including group size fallback handling and compression
-        configuration setting.
+        applies all processing steps including mixed precision assignment, group size fallback 
+        handling and compression configuration setting.
 
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
