@@ -785,7 +785,7 @@ class WeightCompression(Algorithm):
         :param graph: NNCFGraph instance.
         :param statistic_points: Optional pre-collected statistic points.
         :param dataset: Optional dataset for statistics collection.
-        :return: A list of weight compression parameters based on the Weight Compression algorithm configuration.
+        :return: A tuple of weight compression parameters based on the Weight Compression algorithm configuration.
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
 
