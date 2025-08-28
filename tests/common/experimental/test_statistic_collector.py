@@ -11,6 +11,7 @@
 
 from abc import abstractmethod
 from typing import Optional
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -364,6 +365,7 @@ class TemplateTestStatisticCollector:
 
     def test_mean_max_stat_building(self):
         tensor_collector = TensorCollector(MeanTensorStatistic)
+        tensor_collector._stat_container.__post_init__ = MagicMock()
         tensor_collector.register_statistic_branch(
             MeanTensorStatistic.MEAN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
         )
