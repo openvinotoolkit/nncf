@@ -86,6 +86,7 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
+            del outputs
             del processed_outputs
             processed_samples += 1
         if processed_samples == 0:
