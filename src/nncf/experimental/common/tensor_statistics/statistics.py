@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections import deque
 from dataclasses import dataclass
 from dataclasses import fields
 from typing import Any, ClassVar
@@ -111,7 +110,7 @@ class MeanTensorStatistic(TensorStatistic):
 
     def __post_init__(self):
         if isinstance(self.shape[0], Tensor):
-            # If in-place shape reducer and Noop aggregator were used, shape is a sequence containing a single tensor
+            # If shape reducer and Noop aggregator were used, shape is a sequence containing a single tensor
             self.shape = tuple(self.shape[0].data.tolist())
 
     def __eq__(self, other: TensorStatistic):

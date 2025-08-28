@@ -26,6 +26,7 @@ from nncf.experimental.common.tensor_statistics.statistics import TensorStatisti
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 AggregationAxes = tuple[int, ...]
@@ -428,7 +429,8 @@ class ShapeReducer(TensorReducerBase):
         super().__init__(inplace=inplace)
 
     def _reduce_out_of_place(self, x: list[TensorType]) -> list[tuple[int, ...]]:
-        return [x[0].shape]
+        # Return as tensor for consistency
+        return [fns.tensor(x[0].shape, backend=x[0].backend, dtype=TensorDataType.int32, device=x[0].device)]
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
