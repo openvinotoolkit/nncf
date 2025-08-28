@@ -11,7 +11,7 @@
 
 from abc import abstractmethod
 from typing import Optional
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -365,17 +365,17 @@ class TemplateTestStatisticCollector:
 
     def test_mean_max_stat_building(self):
         tensor_collector = TensorCollector(MeanTensorStatistic)
-        tensor_collector._stat_container.__post_init__ = MagicMock()
-        tensor_collector.register_statistic_branch(
-            MeanTensorStatistic.MEAN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
-        )
-        tensor_collector.register_statistic_branch(
-            MeanTensorStatistic.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
-        )
-        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
-        statistic = tensor_collector.get_statistics()
-        assert isinstance(statistic, MeanTensorStatistic)
-        assert statistic.mean_values == statistic.shape == Tensor(np.array(1))
+        with patch.object(tensor_collector._stat_container, "__post_init__"):
+            tensor_collector.register_statistic_branch(
+                MeanTensorStatistic.MEAN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
+            )
+            tensor_collector.register_statistic_branch(
+                MeanTensorStatistic.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
+            )
+            tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
+            statistic = tensor_collector.get_statistics()
+            assert isinstance(statistic, MeanTensorStatistic)
+            assert statistic.mean_values == statistic.shape == Tensor(np.array(1))
 
     def test_median_mad_stat_building(self):
         class DummyMADPercentileAggregator(DummyTensorAggregator):
