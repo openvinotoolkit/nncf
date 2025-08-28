@@ -12,12 +12,14 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections import deque
 from dataclasses import dataclass
 from dataclasses import fields
 from typing import Any, ClassVar
 
 import nncf
 from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
 
@@ -107,6 +109,11 @@ class MeanTensorStatistic(TensorStatistic):
     mean_values: Tensor
     shape: tuple[int, ...]
 
+    def __post_init__(self):
+        if isinstance(self.shape, (deque, list)):
+            # If NoopAggregator was used, shape can be a sequence containing a single tensor
+            self.shape = tuple(self.shape[0].data.tolist())
+
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
@@ -114,16 +121,15 @@ class MeanTensorStatistic(TensorStatistic):
 
     def _get_serialized_data(self) -> dict[str, Tensor]:
         backend = self.mean_values.backend
-        dtype = self.mean_values.dtype
         device = self.mean_values.device
         return {
             self.MEAN_STAT: self.mean_values,
-            self.SHAPE_STAT: fns.tensor(self.shape, backend=backend, dtype=dtype, device=device),
+            self.SHAPE_STAT: fns.tensor(self.shape, backend=backend, dtype=TensorDataType.int32, device=device),
         }
 
     def load_data(self, loaded_data: dict[str, Tensor]) -> None:
         self.mean_values = loaded_data[self.MEAN_STAT]
-        self.shape_values = tuple(loaded_data[self.SHAPE_STAT].tolist())
+        self.shape = tuple(loaded_data[self.SHAPE_STAT].data.tolist())
 
 
 @dataclass
@@ -261,14 +267,13 @@ class WCTensorStatistic(TensorStatistic):
 
     def _get_serialized_data(self) -> dict[str, Tensor]:
         backend = self.mean_values[0].backend
-        dtype = self.mean_values[0].dtype
         device = self.mean_values[0].device
         return {
             self.MEAN_STAT: fns.stack(self.mean_values),
             self.SHAPE_STAT: fns.tensor(
-                [[dim.data for dim in shape] for shape in self.shape_values],
+                self.shape_values,
                 backend=backend,
-                dtype=dtype,
+                dtype=TensorDataType.int32,
                 device=device,
             ),
         }
@@ -283,5 +288,5 @@ class WCTensorStatistic(TensorStatistic):
         if cls.MEAN_STAT in config and config[cls.MEAN_STAT] is not None:
             mean_values = [fns.squeeze(it) for it in config[cls.MEAN_STAT]]
         if cls.SHAPE_STAT in config and config[cls.SHAPE_STAT] is not None:
-            shape_values = [tuple(it) for it in config[cls.SHAPE_STAT]]
+            shape_values = [tuple(it.data.tolist()) for it in config[cls.SHAPE_STAT]]
         return cls(mean_values=mean_values, shape_values=shape_values)
