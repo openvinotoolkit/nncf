@@ -110,8 +110,8 @@ class MeanTensorStatistic(TensorStatistic):
     shape: tuple[int, ...]
 
     def __post_init__(self):
-        if isinstance(self.shape, (deque, list)):
-            # If NoopAggregator was used, shape can be a sequence containing a single tensor
+        if isinstance(self.shape[0], Tensor):
+            # If in-place shape reducer and Noop aggregator were used, shape is a sequence containing a single tensor
             self.shape = tuple(self.shape[0].data.tolist())
 
     def __eq__(self, other: TensorStatistic):
