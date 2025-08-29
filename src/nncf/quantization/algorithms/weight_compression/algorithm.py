@@ -775,7 +775,7 @@ class WeightCompression(Algorithm):
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> tuple[list[WeightCompressionParameters], dict[str, Any]]:
+    ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
         """
         Generates a list of weight compression parameters based on the Weight Compression algorithm
         configuration. Determines the appropriate precision, group size, and other parameters for
