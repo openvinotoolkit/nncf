@@ -124,6 +124,7 @@ QUANTIZATION_MODELS = [
         "model_id": "vit_b_16",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
+            "ignored_scope": nncf.IgnoredScope(types=["select"]),
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alpha=0.15,
