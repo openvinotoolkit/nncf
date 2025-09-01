@@ -566,8 +566,7 @@ class NoopAggregator(AggregatorBase):
         if return_first and num_samples is not None and num_samples > 1:
             msg = "NoopAggregator with return_first=True should not have num_samples > 1"
             raise nncf.InternalError(msg)
-        num_samples = 1 if return_first else num_samples
-        super().__init__(None, num_samples=num_samples)
+        super().__init__(None, num_samples=1 if return_first else num_samples)
         self._return_first = return_first
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
