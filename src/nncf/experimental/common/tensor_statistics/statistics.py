@@ -100,7 +100,7 @@ class AbsMaxTensorStatistic(TensorStatistic):
         return False
 
 
-@dataclass
+@dataclass(init=False)
 class MeanTensorStatistic(TensorStatistic):
     MEAN_STAT: ClassVar[str] = "mean_values"
     SHAPE_STAT: ClassVar[str] = "shape"
@@ -108,10 +108,9 @@ class MeanTensorStatistic(TensorStatistic):
     mean_values: Tensor
     shape: tuple[int, ...]
 
-    def __post_init__(self):
-        if len(self.shape) > 0 and isinstance(self.shape[0], Tensor):
-            # When shape reducer and Noop aggregator are used, shape is a sequence containing a single tensor
-            self.shape = tuple(self.shape[0].data.tolist())
+    def __init__(self, mean_values: Tensor, shape: Tensor) -> None:
+        self.mean_values = mean_values
+        self.shape = tuple(shape.data.tolist())
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):

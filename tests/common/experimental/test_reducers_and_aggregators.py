@@ -36,7 +36,6 @@ from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import functions as fns
 
@@ -297,15 +296,16 @@ class TemplateTestReducersAggregators:
         for val in aggregated:
             assert fns.allclose(val, self.get_nncf_tensor(input_))
 
-    def test_shape_aggregator(self):
-        aggregator = ShapeAggregator()
+    def test_noop_aggregator_return_first(self):
+        aggregator = NoopAggregator(None, return_first=True)
+
         ref_shape = (1, 3, 5, 7, 9)
-        input_ = np.empty(ref_shape)
-        for _ in range(3):
-            aggregator.register_reduced_input(self.get_nncf_tensor(input_))
+        input_ = np.arange(np.prod(ref_shape)).reshape(ref_shape)
+        aggregator.register_reduced_input(self.get_nncf_tensor(input_))
 
         assert aggregator._collected_samples == 1
-        assert ref_shape == aggregator.aggregate()
+        aggregated = aggregator.aggregate()
+        assert fns.allclose(aggregated, self.get_nncf_tensor(input_))
 
     @pytest.mark.parametrize(
         "offline_aggregators_test_desc",

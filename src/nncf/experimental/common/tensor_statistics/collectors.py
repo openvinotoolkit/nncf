@@ -428,8 +428,8 @@ class ShapeReducer(TensorReducerBase):
     def __init__(self, inplace: bool = False):
         super().__init__(inplace=inplace)
 
-    def _reduce_out_of_place(self, x: list[TensorType]) -> list[tuple[int, ...]]:
-        # Return as tensor for consistency
+    def _reduce_out_of_place(self, x: list[TensorType]) -> list[TensorType]:
+        # Return as tensor for consistency, because in-place reducer returns a tensor
         return [fns.tensor(x[0].shape, backend=x[0].backend, dtype=TensorDataType.int32, device=x[0].device)]
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
@@ -557,25 +557,19 @@ class MeanPerChReducer(TensorReducerBase):
 
 
 class NoopAggregator(AggregatorBase):
-    def __init__(self, num_samples: Optional[int]):
+    def __init__(self, num_samples: Optional[int], return_first: bool = False):
+        if return_first and num_samples is not None and num_samples > 1:
+            msg = "NoopAggregator with return_first=True should not have num_samples > 1"
+            raise nncf.InternalError(msg)
+        num_samples = 1 if num_samples is None and return_first else num_samples
         super().__init__(None, num_samples=num_samples)
+        self._return_first = return_first
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         self._container.append(x)
 
     def _aggregate_impl(self):
-        return self._container
-
-
-class ShapeAggregator(AggregatorBase):
-    def __init__(self):
-        super().__init__(None, num_samples=1)
-
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        self._container = x
-
-    def _aggregate_impl(self):
-        return self._container.shape
+        return self._container[0] if self._return_first else self._container
 
 
 class OnlineAggregatorBase(AggregatorBase, ABC):

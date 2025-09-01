@@ -313,7 +313,7 @@ def get_mean_statistic_collector(
         "window_size": window_size,
     }
     aggregate_mean = MeanAggregator(**kwargs)
-    aggregate_noop = NoopAggregator(num_samples=1)
+    aggregate_noop = NoopAggregator(num_samples=1, return_first=True)
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
