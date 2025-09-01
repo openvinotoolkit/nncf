@@ -558,10 +558,15 @@ class MeanPerChReducer(TensorReducerBase):
 
 class NoopAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int], return_first: bool = False):
+        """
+        :param num_samples: The number of samples to collect. If None, all samples are collected.
+        :param return_first: If True, the first collected sample is returned on aggregate call.
+            If False, all collected samples are returned as a list.
+        """
         if return_first and num_samples is not None and num_samples > 1:
             msg = "NoopAggregator with return_first=True should not have num_samples > 1"
             raise nncf.InternalError(msg)
-        num_samples = 1 if num_samples is None and return_first else num_samples
+        num_samples = 1 if return_first else num_samples
         super().__init__(None, num_samples=num_samples)
         self._return_first = return_first
 
