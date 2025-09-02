@@ -564,7 +564,7 @@ class NoopAggregator(AggregatorBase):
         :param return_first: If True, the first collected sample is returned on aggregate call.
             If False, all collected samples are returned as a list.
         """
-        if return_first and num_samples is not None and num_samples > 1:
+        if return_first and num_samples is not None and num_samples != 1:
             msg = "NoopAggregator with return_first=True should not have num_samples > 1"
             raise nncf.InternalError(msg)
         super().__init__(None, num_samples=1 if return_first else num_samples)
