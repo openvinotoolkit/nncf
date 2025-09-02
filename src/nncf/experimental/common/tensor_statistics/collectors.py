@@ -559,6 +559,7 @@ class MeanPerChReducer(TensorReducerBase):
 class NoopAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int], return_first: bool = False):
         """
+        Creates an aggregator that only accumulates data without any additional processing.
         :param num_samples: The number of samples to collect. If None, all samples are collected.
         :param return_first: If True, the first collected sample is returned on aggregate call.
             If False, all collected samples are returned as a list.
