@@ -777,9 +777,11 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
         """
-        Generates a mapping of target node names to the collected statistics based on the provided
-        statistic_points. If statistic_points is None, collects required compression statistics on
-        the given dataset.
+        Generates a list of weight compression parameters based on the Weight Compression algorithm
+        configuration. Determines the appropriate quantization parameters for each node eligible for 
+        weight compression. Also, Generates a mapping of target node names to the collected statistics 
+        based on the provided statistic_points. If statistic_points is None, collects required 
+        compression statistics on the given dataset.
 
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
