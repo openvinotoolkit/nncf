@@ -205,6 +205,9 @@ class Tensor:
     def as_numpy_tensor(self) -> Tensor:
         return cast(Tensor, _call_function("as_numpy_tensor", self))
 
+    def tolist(self) -> Any:
+        return _call_function("tolist", self)
+
     def as_openvino_tensor(self) -> Tensor:
         x = self
         if x.backend == TensorBackend.numpy:
