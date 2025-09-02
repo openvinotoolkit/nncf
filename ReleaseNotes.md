@@ -49,11 +49,11 @@ Compression-aware training:
 
 Deprecations/Removals:
 
-- ...
+- Removed examples that used `create_compressed_model`
 
 Requirements:
 
-- ...
+- Updated PyTorch (2.8.0) and Torchvision (0.23.0) versions.
 
 ## New in Release 2.17.0
 
