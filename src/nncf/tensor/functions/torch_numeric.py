@@ -497,3 +497,8 @@ def tensor(
 @numeric.as_numpy_tensor.register
 def _(a: torch.Tensor) -> NDArray[Any]:
     return a.cpu().detach().numpy()
+
+
+@numeric.tolist.register
+def _(a: torch.Tensor) -> Any:
+    return a.tolist()
