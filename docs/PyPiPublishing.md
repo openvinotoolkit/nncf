@@ -26,13 +26,13 @@ For more information about NNCF, see:
 - [NNCF API documentation](https://openvinotoolkit.github.io/nncf/autoapi/nncf/)
 - [Usage examples](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage)
 - [Notebook tutorials](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/README.md#model-training)
+- [NNCF Compressed Model Zoo](#nncf-compressed-model-zoo)
 
 ## Table of contents
 
 - [Key Features](#key-features)
 - [Installation](#installation-guide)
 - [Third-party integration](#third-party-repository-integration)
-- [NNCF Compressed Model Zoo](#nncf-compressed-model-zoo)
 
 ## Key Features<a id="key-features"></a>
 
@@ -89,14 +89,13 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 ### Used by
 
-- [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
-
-  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
-  export new models based on available model templates as well as run the exported models with OpenVINO.
-
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
-  NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
+  NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel. For instance, the command below exports the [Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) model to OpenVINO format with INT4-quantized weights:
+
+  ```bash
+  optimum-cli export openvino -m meta-llama/Llama-3.2-3B-Instruct --weight-format int4 ./Llama-3.2-3B-Instruct-int4
+  ```
 
 - [Ultralytics](https://docs.ultralytics.com/integrations/openvino)
 
@@ -109,6 +108,11 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
   NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+
+- [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
+
+  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
+  export new models based on available model templates as well as run the exported models with OpenVINO.
 
 ## NNCF Compressed Model Zoo<a id="nncf-compressed-model-zoo"></a>
 

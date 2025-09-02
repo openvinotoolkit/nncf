@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "2.18.0"
+__version__ = "2.19.0"
 
 
-BKC_TORCH_SPEC = "==2.7.*"
+BKC_TORCH_SPEC = "==2.8.*"
 BKC_TF_SPEC = "==2.15.*"
 STRICT_TF_SPEC = ">=2.9.3,<2.16.0"

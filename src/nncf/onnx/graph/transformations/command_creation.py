@@ -16,6 +16,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
+from nncf.onnx.graph.transformations.commands import ONNXMultiplyInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
@@ -59,3 +60,15 @@ class ONNXCommandCreator(CommandCreator):
     @staticmethod
     def create_command_to_insert_bias(node_without_bias, bias_value):
         raise NotImplementedError
+
+    @staticmethod
+    def multiply_insertion_command(
+        source_node: NNCFNode,
+        destination_nodes: list[NNCFNode],
+        source_out_port: int,
+        scale_value: np.ndarray,
+        multiply_node_name: str,
+    ) -> ONNXMultiplyInsertionCommand:
+        target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, source_node.node_name, source_out_port)
+        destination_node_names = [d.node_name for d in destination_nodes]
+        return ONNXMultiplyInsertionCommand(target_point, scale_value, destination_node_names, multiply_node_name)

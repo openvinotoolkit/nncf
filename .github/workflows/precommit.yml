@@ -7,9 +7,9 @@ on:
       - '**/*.md'
       - '.ci/*'
       - 'docs/**/*'
+      - 'examples/**/*'
+      - 'licensing/*'
       - 'tests/post_training/*'  # post_training tests runs on Jenkins
-      - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
-      - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
       - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
 concurrency:

@@ -11,7 +11,7 @@
 import math
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import Any, Callable, Optional, TypeVar
 from unittest.mock import patch
 
 import numpy as np
@@ -109,10 +109,12 @@ class TemplateWeightCompression(ABC):
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
         """Casts a backend tensor to backend tensor with specified dtype."""
 
+    @staticmethod
     @abstractmethod
     def get_matmul_model() -> TModel:
         """Returns a backend model for test_data_based_criterion."""
 
+    @staticmethod
     @abstractmethod
     def get_RoPE_model() -> TModel:
         """Returns a backend model for test_rope_weight_compression."""
@@ -129,7 +131,7 @@ class TemplateWeightCompression(ABC):
     def test_data_based_criterion(self, mode, ref_score, ref_act_score, mocker):
         model = self.get_matmul_model()
         data = self.cast_to(self.to_tensor(ACTIVATION), dtype=TensorDataType.float32)
-        dataset = Dataset([data])
+        dataset = Dataset([data], self.get_transform_func())
         criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
         scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
         act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
@@ -149,14 +151,17 @@ class TemplateWeightCompression(ABC):
         assert math.isclose(scores[0], ref_score, rel_tol=1e-05, abs_tol=1e-08)
         assert math.isclose(ref_act_score, act_scores, rel_tol=1e-05, abs_tol=1e-08)
 
+    @staticmethod
     @abstractmethod
     def get_sequential_matmul_model() -> TModel:
         """Returns a backend model for test_mixed_precision."""
 
+    @staticmethod
     @abstractmethod
     def to_tensor(x: TTensor) -> TTensor:
         """Returns a backend tensor."""
 
+    @staticmethod
     @abstractmethod
     def check_weights(model: TModel, ref_ids: list[int]) -> None:
         """Checks that only weights with specified ids are compressed in int4 format."""
@@ -200,7 +205,7 @@ class TemplateWeightCompression(ABC):
         model = self.get_sequential_matmul_model()
         first = self.to_tensor(np.ones([1, 4, 4], dtype=np.float32))
         second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(1, 4, 4)
-        dataset = Dataset([first, second])
+        dataset = Dataset([first, second], self.get_transform_func())
         compressed_model = compress_weights(
             model,
             mode=CompressWeightsMode.INT4_SYM,
@@ -236,7 +241,7 @@ class TemplateWeightCompression(ABC):
         # prepare dataset with one input tensor
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
-        dataset = Dataset([input])
+        dataset = Dataset([input], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -251,10 +256,12 @@ class TemplateWeightCompression(ABC):
         reference = self.get_scale_estimation_ref()
         assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
 
+    @staticmethod
     @abstractmethod
     def get_orig_weight(model: TModel) -> Tensor:
         """Returns original weight."""
 
+    @staticmethod
     @abstractmethod
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
@@ -269,7 +276,7 @@ class TemplateWeightCompression(ABC):
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input[:, :, OUTLIER_CHANNEL] *= 1000  # make one channel relatively higher, should have lowest error.
         input = self.to_tensor(input)
-        dataset = Dataset([input])
+        dataset = Dataset([input], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             compressed_model = compress_weights(
@@ -282,12 +289,15 @@ class TemplateWeightCompression(ABC):
                 dataset=dataset,
             )
 
+        reduction_axes = self.get_reduction_axes()
         decompressed_weight_before_se = integer_quantize_dequantize_weight(
-            original_weight, config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1), reduction_axes=1
+            original_weight,
+            config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1),
+            reduction_axes=reduction_axes,
         )
         decompressed_weight_after_se = self.get_decompressed_weight(compressed_model, input)
-        error_before_se = get_relative_error(original_weight, decompressed_weight_before_se)
-        error_after_se = get_relative_error(original_weight, decompressed_weight_after_se)
+        error_before_se = get_relative_error(original_weight, decompressed_weight_before_se, axis=1 - reduction_axes)
+        error_after_se = get_relative_error(original_weight, decompressed_weight_after_se, axis=1 - reduction_axes)
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
@@ -299,7 +309,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_num_multiply_from_awq():
+    def get_num_multiply_from_awq(model: TModel) -> int:
         "Returns number of Multiply nodes from AWQ."
 
     @pytest.fixture
@@ -312,7 +322,7 @@ class TemplateWeightCompression(ABC):
         n_awq_target = n_layers - 1  # first MatMul is always int8
         model = self.get_awq_act_model(with_multiply, n_layers)
 
-        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))])
+        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
         with SpyWeightCompressionStatisticsContext(mocker):
             model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -349,7 +359,10 @@ class TemplateWeightCompression(ABC):
         sz = 8
         n_samples = 10
 
-        dataset = Dataset([self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)])
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, 8, sz], dtype=np.float32)) for i in range(n_samples)],
+            self.get_transform_func(),
+        )
 
         with SpyWeightCompressionStatisticsContext(mocker):
             compressed_model = compress_weights(
@@ -371,7 +384,10 @@ class TemplateWeightCompression(ABC):
         sz = 8
         n_samples = 10
 
-        dataset = Dataset([self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)])
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)],
+            self.get_transform_func(),
+        )
         compressed_model = compress_weights(
             model,
             mode=CompressWeightsMode.INT4_SYM,
@@ -395,7 +411,7 @@ class TemplateWeightCompression(ABC):
 
         input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
         input = self.to_tensor(input)
-        dataset = Dataset([input])
+        dataset = Dataset([input], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -442,7 +458,7 @@ class TemplateWeightCompression(ABC):
         model = self.get_awq_model()
         hidden_dim = 8
         input_example = self.to_tensor(np.ones([1, 4, hidden_dim], dtype=np.float32))
-        dataset = Dataset([input_example])
+        dataset = Dataset([input_example], self.get_transform_func())
         algorithm_dict = {algorithm: True} if algorithm else {}
         kwargs = dict(
             model=model,
@@ -509,7 +525,7 @@ class TemplateWeightCompression(ABC):
     ):
         model = self.get_different_channel_size_model(model_channel_sizes)
         input_example = self.to_tensor(np.ones([1, model_channel_sizes[0], model_channel_sizes[0]], dtype=np.float32))
-        dataset = Dataset([input_example])
+        dataset = Dataset([input_example], self.get_transform_func())
         kwargs = dict(
             model=model,
             mode=CompressWeightsMode.INT4_SYM,
@@ -524,7 +540,7 @@ class TemplateWeightCompression(ABC):
                 min_adjusted_group_size=min_adjusted_group_size,
             )
 
-        compress_weights(**kwargs)
+        model = compress_weights(**kwargs)
 
         num_group_sizes = self.get_num_int4_group_sizes(model)
         assert ref_num_group_sizes == num_group_sizes, (
@@ -542,7 +558,7 @@ class TemplateWeightCompression(ABC):
         model = self.wrap_model(model, input_data)
 
         if dataset is not None:
-            dataset = Dataset([self.to_tensor(dataset)])
+            dataset = Dataset([self.to_tensor(dataset)], self.get_transform_func())
 
         fn_name = "_data_free_step" if dataset is None or not prefer_data_aware_scaling else "_data_aware_step"
 
@@ -565,3 +581,11 @@ class TemplateWeightCompression(ABC):
         n_awq = self.get_num_multiply_from_awq(compressed_model)
         assert n_awq == n_awq_target
         assert collect_spy.call_count == n_awq, f"Statistics should be collected {n_awq_target} times."
+
+    @staticmethod
+    def get_transform_func() -> Optional[Callable[..., Any]]:
+        return None
+
+    @staticmethod
+    def get_reduction_axes() -> int:
+        return 1

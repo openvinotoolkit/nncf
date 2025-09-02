@@ -23,13 +23,12 @@ import torch
 import torch.utils.data
 from numpy.random import random_sample
 from torch import nn
+from torchvision.datasets import CIFAR10
+from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
 import nncf
-from examples.common.sample_config import SampleConfig
-from examples.torch.classification.main import create_cifar
-from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
@@ -74,10 +73,17 @@ from tests.torch.quantization.quantization_helpers import post_compression_test_
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
-from tests.torch.test_models.mobilenet import MobileNetV2
-from tests.torch.test_models.mobilenet import mobilenet_v2
 
 pytestmark = pytest.mark.legacy
+
+
+def create_cifar(config, dataset_config, is_train, transform):
+    create_cifar_fn = None
+    if dataset_config == "cifar10":
+        create_cifar_fn = partial(CIFAR10, config.dataset_dir, train=is_train, transform=transform)
+    if create_cifar_fn:
+        return safe_thread_call(partial(create_cifar_fn, download=True), partial(create_cifar_fn, download=False))
+    return None
 
 
 def create_test_dataloaders(config: NNCFConfig, dataset_dir):
@@ -246,21 +252,6 @@ class HAWQConfigBuilder(BaseConfigBuilder):
         return config
 
 
-def ssd_vgg_512_test():
-    ssd_params = SampleConfig(
-        {
-            "steps": [8, 16, 32, 64, 128, 256, 512],
-            "min_sizes": [35.84, 76.8, 153.6, 230.4, 307.2, 384.0, 460.8],
-            "max_sizes": [76.8, 153.6, 230.4, 307.2, 384.0, 460.8, 537.6],
-            "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2, 3], [2], [2]],
-            "variance": [0.1, 0.1, 0.2, 0.2],
-            "clip": False,
-            "flip": True,
-        }
-    )
-    return SSD_VGG(cfg=ssd_params, size=512, num_classes=21)
-
-
 def get_avg_traces(model, init_device: str):
     num_layers = len(get_all_modules_by_type(model, ["Conv2d", "Linear"]))
     return torch.randperm(num_layers).to(init_device) + 1
@@ -347,14 +338,6 @@ HAWQ_TEST_PARAMS = (
         avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
         config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_npu().liberal_mode().with_ratio(1.5),
     ),
-    HAWQTestStruct(
-        model_creator=ssd_vgg_512_test,
-        config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_npu().with_ratio(1.09),
-    ),
-    HAWQTestStruct(
-        model_creator=ssd_vgg_512_test,
-        config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_npu().liberal_mode().with_ratio(1.5),
-    ),
 )
 
 
@@ -435,7 +418,7 @@ def test_can_choose_pareto_optimal_sequence(ratios):
 
 def test_hawq_hw_npu_config_e2e(_seed, dataset_dir, tmp_path):
     config = HAWQConfigBuilder().for_npu().liberal_mode().with_ratio(1.5).build()
-    model = MobileNetV2(num_classes=10)
+    model = mobilenet_v2(num_classes=10)
     criterion = nn.CrossEntropyLoss()
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -556,8 +539,8 @@ def get_skipped_quantized_weight_node_names() -> list[NNCFNodeName]:
 
 def test_disable_quantizer_gradients():
     _, parameters_to_restore, model, *_ = disable_quantizer_gradients()
-    assert len(parameters_to_restore.originally_disabled_gradients) == 353
-    assert len(parameters_to_restore.skipped_gradients_to_enable) == 2
+    assert len(parameters_to_restore.originally_disabled_gradients) == 354
+    assert len(parameters_to_restore.skipped_gradients_to_enable) == 3
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     path_to_ref = str(TEST_ROOT / "torch/data/hawq_reference/mobilenet_v2_requires_grad_per_param.json")
     compare_with_ref_if_exists(actual_requires_grad_per_param, path_to_ref)
@@ -577,7 +560,7 @@ def disable_quantizer_gradients():
         "sample_size": [2, 3, 10, 10],
     }
     register_bn_adaptation_init_args(config)
-    model = MobileNetV2(num_classes=10)
+    model = mobilenet_v2()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     original_requires_grad_per_param = get_requires_grad_per_param(model)
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]

@@ -242,6 +242,17 @@ class LMWeightCompression(BaseTestPipeline):
                 fx_inputs += (torch.from_numpy(inputs["input_ids"]).to(self.model_hf.device),)
                 fx_inputs += (torch.from_numpy(inputs["position_ids"]).to(self.model_hf.device).squeeze(0),)
                 inputs = fx_inputs
+            elif self.backend == BackendType.ONNX:
+                batch_size = input_ids.shape[0]
+                onnx_type_to_numpy = {
+                    "tensor(float)": np.float32,
+                    "tensor(int64)": np.int64,
+                }
+                for input_name in self.model_hf.key_value_input_names:
+                    inputs[input_name] = np.zeros(
+                        shape=(1, 4, 0, 64), dtype=onnx_type_to_numpy[self.model_hf.input_dtypes[input_name]]
+                    )
+
             return inputs
 
         return transform_fn
@@ -363,7 +374,7 @@ class LMWeightCompression(BaseTestPipeline):
 
             self.compressed_model = nncf.compress_weights(
                 self.model,
-                dataset=None,  # ONNX backend supports only data free compression
+                dataset=self.calibration_dataset,
                 **self.compression_params,
             )
         else:

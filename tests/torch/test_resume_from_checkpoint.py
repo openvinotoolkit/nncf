@@ -9,26 +9,125 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import itertools
+from copy import deepcopy
 from functools import partial
 
 import pytest
+import torch
+import torchvision
 from torch.nn import DataParallel
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.torch import load_state
 from nncf.torch import register_default_init_args
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.quantization.algo import QuantizationBuilder
+from nncf.torch.utils import safe_thread_call
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_manual_precision_init import PrecisionInitTestDesc
+from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
+from tests.torch.test_models.synthetic import AddTwoConv
 
 pytestmark = pytest.mark.legacy
+
+
+def load_model(model, pretrained=True, num_classes=1000, model_params=None) -> torch.nn.Module:
+    if model_params is None:
+        model_params = {}
+    if model in torchvision.models.__dict__:
+        load_model_fn = partial(
+            torchvision.models.__dict__[model], num_classes=num_classes, pretrained=pretrained, **model_params
+        )
+    else:
+        msg = "Undefined model name"
+        raise Exception(msg)
+    loaded_model = safe_thread_call(load_model_fn)
+
+    return loaded_model
+
+
+class BitwidthDistributionStatistics:
+    def __init__(self, num_wq_per_bitwidth, num_aq_per_bitwidth):
+        self.num_wq_per_bitwidth = num_wq_per_bitwidth
+        self.num_aq_per_bitwidth = num_aq_per_bitwidth
+
+
+class PrecisionInitTestDesc:
+    def __init__(self):
+        self.model_creator = AddTwoConv
+        config = get_quantization_config_without_range_init()
+        config["compression"]["initializer"].update(
+            {
+                "precision": {
+                    "bitwidth_per_scope": [
+                        [2, "AddTwoConv/NNCFConv2d[conv1]/conv2d_0|WEIGHT"],
+                        [4, "AddTwoConv/NNCFConv2d[conv2]/conv2d_0|WEIGHT"],
+                    ]
+                }
+            }
+        )
+        config["target_device"] = "TRIAL"
+        config["compression"]["activations"] = {"bits": 6}
+        self.config = config
+        self.ref_bits = [
+            (WeightQuantizerId(target_node_name="AddTwoConv/NNCFConv2d[conv1]/conv2d_0"), 2),
+            (WeightQuantizerId(target_node_name="AddTwoConv/NNCFConv2d[conv2]/conv2d_0"), 4),
+            (NonWeightQuantizerId(target_node_name="AddTwoConv/NNCFConv2d[conv2]/conv2d_0"), 6),
+            (NonWeightQuantizerId(target_node_name="AddTwoConv/NNCFConv2d[conv1]/conv2d_0"), 6),
+            (NonWeightQuantizerId("/nncf_model_input_0"), 6),
+        ]
+        self.expected_stats = BitwidthDistributionStatistics(
+            num_wq_per_bitwidth={4: 1, 2: 1}, num_aq_per_bitwidth={6: 3}
+        )
+        self.config_to_resume = None
+
+    def __str__(self):
+        return "resume_with_same" if self.config == self.config_to_resume else "resume_without_init"
+
+    def config_with_all_inits(self):
+        self.config["compression"]["initializer"].update(
+            {"range": {"num_init_samples": 1}, "batchnorm_adaptation": {"num_bn_adaptation_samples": 1}}
+        )
+        return self
+
+    def resume_with_the_same_config(self):
+        self.config_to_resume = deepcopy(self.config)
+        return self
+
+    def resume_with_the_same_config_without_init(self):
+        self.config_to_resume = deepcopy(self.config)
+        self.config_to_resume["compression"]["initializer"] = {}
+        return self
+
+    @staticmethod
+    def setup_init_spies(mocker):
+        from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+        from nncf.torch.quantization.algo import QuantizationBuilder
+        from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitializer
+
+        parse_range_init = mocker.spy(QuantizationBuilder, "_parse_range_init_params")
+        get_stats = mocker.spy(QuantizationBuilder, "_get_statistics_for_final_range_init")
+        run_bn_adapt = mocker.spy(BatchnormAdaptationAlgorithm, "run")
+        apply_manual_precision_init = mocker.spy(ManualPrecisionInitializer, "apply_init")
+        return [get_stats, parse_range_init, run_bn_adapt, apply_manual_precision_init]
+
+    def check_precision_init(self, compression_ctrl):
+        for qid, quantizer in compression_ctrl.all_quantizations.items():
+            expected_bit = [ref_bit for (ref_qid, ref_bit) in self.ref_bits if ref_qid == qid][0]
+            assert quantizer.num_bits == expected_bit, f"Unexpected number of bits for {str(qid)}"
+
+        nncf_stats = compression_ctrl.statistics()
+        actual_stats = nncf_stats.quantization
+
+        assert self.expected_stats.num_wq_per_bitwidth == actual_stats.num_wq_per_bitwidth
+        assert self.expected_stats.num_aq_per_bitwidth == actual_stats.num_aq_per_bitwidth
 
 
 @pytest.fixture()
