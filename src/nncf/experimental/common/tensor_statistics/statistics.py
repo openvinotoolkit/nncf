@@ -110,7 +110,7 @@ class MeanTensorStatistic(TensorStatistic):
 
     def __init__(self, mean_values: Tensor, shape: Tensor) -> None:
         self.mean_values = mean_values
-        self.shape = tuple(shape.as_numpy_tensor().data.tolist())
+        self.shape = tuple(shape.tolist())
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
@@ -127,7 +127,7 @@ class MeanTensorStatistic(TensorStatistic):
 
     def load_data(self, loaded_data: dict[str, Tensor]) -> None:
         self.mean_values = loaded_data[self.MEAN_STAT]
-        self.shape = tuple(loaded_data[self.SHAPE_STAT].as_numpy_tensor().data.tolist())
+        self.shape = tuple(loaded_data[self.SHAPE_STAT].tolist())
 
 
 @dataclass
@@ -286,5 +286,5 @@ class WCTensorStatistic(TensorStatistic):
         if cls.MEAN_STAT in config and config[cls.MEAN_STAT] is not None:
             mean_values = [fns.squeeze(it) for it in config[cls.MEAN_STAT]]
         if cls.SHAPE_STAT in config and config[cls.SHAPE_STAT] is not None:
-            shape_values = [tuple(it.as_numpy_tensor().data.tolist()) for it in config[cls.SHAPE_STAT]]
+            shape_values = [tuple(it.tolist()) for it in config[cls.SHAPE_STAT]]
         return cls(mean_values=mean_values, shape_values=shape_values)
