@@ -377,7 +377,7 @@ class WeightCompression(Algorithm):
 
     @property
     def available_backends(self) -> list[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
 
     def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
         """
@@ -885,7 +885,7 @@ class WeightCompression(Algorithm):
         all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
 
         if self._awq:
-            self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
+            model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
             statistics = self.awq_algo.update_statistics(statistics)
             # del is used to prematurely mark non-necessary data as free for garbage collection

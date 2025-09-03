@@ -1227,3 +1227,17 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
 ]
 
 MATMUL_METATYPES = [PTLinearMetatype, PTMatMulMetatype, PTAddmmMetatype]
+
+EMBEDDING_METATYPES = [PTEmbeddingMetatype, PTAtenEmbeddingMetatype]
+
+CONVOLUTION_METATYPES = [
+    PTConv1dMetatype,
+    PTConv2dMetatype,
+    PTConv3dMetatype,
+    PTDepthwiseConv1dSubtype,
+    PTDepthwiseConv2dSubtype,
+    PTDepthwiseConv3dSubtype,
+    PTConvTranspose1dMetatype,
+    PTConvTranspose2dMetatype,
+    PTConvTranspose3dMetatype,
+]

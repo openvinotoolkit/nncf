@@ -184,6 +184,14 @@ def llm_compression_onnx() -> dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def llm_compression_scale_estimation_onnx() -> dict[str, float]:
+    from examples.llm_compression.onnx.tiny_llama_scale_estimation.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
 def llm_tune_params() -> dict[str, float]:
     from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
 

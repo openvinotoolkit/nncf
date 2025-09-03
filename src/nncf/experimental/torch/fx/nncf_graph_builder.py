@@ -107,7 +107,7 @@ class GraphConverter:
                 node_type = "__getitem__"
             else:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
-                node_type = str(node.target)
+                node_type = node.target.__name__
             node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
         else:
             node_type = node.op

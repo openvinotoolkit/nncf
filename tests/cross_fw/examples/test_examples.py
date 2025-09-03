@@ -89,22 +89,41 @@ def test_examples(
         tmp_path = (PROJECT_ROOT / example_params["requirements"]).parent
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
+    install_wwb = False
     if "requirements" in example_params:
         requirements = PROJECT_ROOT / example_params["requirements"]
+
+        # Install whowhatbench later only if
+        # explicitly required by the example
+        with open(requirements, encoding="utf-8") as f:
+            requirements_content = f.read()
+            if "whowhatbench" in requirements_content:
+                install_wwb = True
+
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
+        print(f"Installing requirements: {run_cmd_line}")
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         uninstall_cmd_line = f"{pip_with_venv} uninstall --yes openvino-genai openvino_tokenizers"
         extra_index_url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
-        wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
-        wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
+        print(f"Installing OpenVINO version override: {ov_version_cmd_line}")
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
-        subprocess.run(uninstall_cmd_line, check=True, shell=True)
-        subprocess.run(wwb_override_cmd_line, check=True, shell=True)
 
-    subprocess.run(f"{pip_with_venv} list", check=True, shell=True)
+        if install_wwb:
+            wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
+            wwb_override_cmd_line = (
+                f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
+            )
+            print(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
+            subprocess.run(uninstall_cmd_line, check=True, shell=True)
+            print(f"Installing WWB module: {wwb_override_cmd_line}")
+            subprocess.run(wwb_override_cmd_line, check=True, shell=True)
+
+    cmd_list_packages = f"{pip_with_venv} list"
+    print(f"Listing installed packages: {cmd_list_packages}")
+    subprocess.run(cmd_list_packages, check=True, shell=True)
 
     env = os.environ.copy()
     example_dir = Path(example_params["requirements"]).parent
@@ -112,9 +131,12 @@ def test_examples(
         f"{PROJECT_ROOT}{os.pathsep}{example_dir}"  # need this to be able to import from tests.* in run_example.py
     )
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
+    env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
+
     if device != "cuda":
         env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
-    env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
+    elif "CUDA_VISIBLE_DEVICES" in example_params:
+        env["CUDA_VISIBLE_DEVICES"] = example_params["CUDA_VISIBLE_DEVICES"]
 
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)

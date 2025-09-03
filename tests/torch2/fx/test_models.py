@@ -182,7 +182,9 @@ TEST_MODELS_QUANIZED = (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (3, 3)],
-        [Dim.AUTO, Dim.AUTO, Dim.AUTO],
+        # (dlyakhov) Last dim has to be static, without that an assert is
+        # being inserted to the fx graph to check the last dim is equal to 4
+        [Dim.AUTO, Dim.AUTO, Dim.STATIC],
     ),
 )
 

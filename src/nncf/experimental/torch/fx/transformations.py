@@ -28,6 +28,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
@@ -119,27 +120,46 @@ def module_insertion_transformation_builder(
     """
 
     def module_insertion_transformation(model: torch.fx.GraphModule):
-        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
-        # Insert call_module nodes to the model
-        graph = model.graph
-        for idx, target_point in enumerate(target_points):
-            new_node = _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
-            target_node = get_graph_node_by_name(graph, target_point.target_node_name)
-
-            if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-                _set_new_node_meta(new_node, [target_node], module_to_insert, model)
-                with graph.inserting_after(target_node):
-                    for user in list(target_node.users):
-                        if user is new_node:
-                            continue
-                        user.replace_input_with(target_node, new_node)
-
-            else:
-                prev_node = _get_node_by_input_port_id(target_node, target_point.input_port_id)
-                _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
-                target_node.replace_input_with(prev_node, new_node)
+        return module_insertion(model, module_to_insert, target_points, target_module_name)
 
     return module_insertion_transformation
+
+
+def module_insertion(
+    model: torch.fx.GraphModule,
+    module_to_insert: torch.nn.Module,
+    target_points: list[PTTargetPoint],
+    target_module_name: str,
+) -> None:
+    """
+    Inserts given module to a target model
+    and calls given module after each target points replacing inputs/outputs
+    of the target node.
+
+    :param model: Target torch GraphModule.
+    :param module_to_insert: Given torch.nn.Module to insert.
+    :param target_points: Target points to insert the target module.
+    :param target_module_name: Target model attribute name for the module_to_insert.
+    """
+    module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
+    # Insert call_module nodes to the model
+    graph = model.graph
+    for idx, target_point in enumerate(target_points):
+        new_node = _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
+        target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+
+        if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+            _set_new_node_meta(new_node, [target_node], module_to_insert, model)
+            with graph.inserting_after(target_node):
+                for user in list(target_node.users):
+                    if user is new_node:
+                        continue
+                    user.replace_input_with(target_node, new_node)
+
+        else:
+            prev_node = get_node_args(target_node)[target_point.input_port_id]
+            _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
+            target_node.replace_input_with(prev_node, new_node)
 
 
 def leaf_module_insertion_transformation_builder(
@@ -157,13 +177,30 @@ def leaf_module_insertion_transformation_builder(
     """
 
     def leaf_module_insertion_transformation(model: torch.fx.GraphModule):
-        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
-        # Insert call_module nodes to the model
-        graph = model.graph
-        for idx, target_point in enumerate(target_points):
-            _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
+        leaf_module_insertion(model, module_to_insert, target_points, target_module_name)
 
     return leaf_module_insertion_transformation
+
+
+def leaf_module_insertion(
+    model: torch.fx.GraphModule,
+    module_to_insert: torch.nn.Module,
+    target_points: list[PTTargetPoint],
+    target_module_name: str,
+) -> None:
+    """
+    Inserts given module to a target model and calls given module after each target points.
+
+    :param model: Target torch GraphModule.
+    :param module_to_insert: Given torch.nn.Module to insert.
+    :param target_points: Target points to insert the target module.
+    :param target_module_name: Target model attribute name for the module_to_insert.
+    """
+    module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
+    # Insert call_module nodes to the model
+    graph = model.graph
+    for idx, target_point in enumerate(target_points):
+        _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
 
 
 def constant_update_transformation_builder(
@@ -179,12 +216,12 @@ def constant_update_transformation_builder(
     """
 
     def constant_update_transformation(model: torch.fx.GraphModule):
-        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id)
+        constant_update(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id)
 
     return constant_update_transformation
 
 
-def constant_update_fn(
+def constant_update(
     model: torch.fx.GraphModule,
     node: torch.fx.Node,
     value: torch.Tensor,
@@ -201,7 +238,7 @@ def constant_update_fn(
     :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
     """
     graph = model.graph
-    old_const = _get_node_by_input_port_id(node, input_port_id)
+    old_const = get_node_args(node)[input_port_id]
 
     if old_const.op != "get_attr":
         msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
@@ -262,12 +299,25 @@ def node_removal_transformation_builder(node: NNCFNode, input_port_id: int) -> T
 
     def node_removal_transformation(model: torch.fx.GraphModule):
         target_node = get_graph_node_by_name(model.graph, node.node_name)
-        input_node = target_node.all_input_nodes[input_port_id]
-        for user in list(target_node.users):
-            user.replace_input_with(target_node, input_node)
-        model.graph.eliminate_dead_code()
+        node_removal(model, target_node, input_port_id)
 
     return node_removal_transformation
+
+
+def node_removal(model: torch.fx.GraphModule, target_node: torch.fx.Node, input_port_id: int) -> None:
+    """
+    Removes the target node from the model and connects
+    target node previous node on the given input port id with all target node outputs.
+
+    :param model: Target torch GraphModule.
+    :param node: Target node to remove.
+    :param input_port_id: Input port id which points to input node which should be connected
+        to the target node outputs.
+    """
+    input_node = target_node.all_input_nodes[input_port_id]
+    for user in list(target_node.users):
+        user.replace_input_with(target_node, input_node)
+    model.graph.eliminate_dead_code()
 
 
 def output_insertion_transformation_builder(target_point: PTTargetPoint) -> TransformationFNType:
@@ -281,34 +331,46 @@ def output_insertion_transformation_builder(target_point: PTTargetPoint) -> Tran
     """
 
     def output_insertion_transformation(model: torch.fx.GraphModule):
-        graph = model.graph
-        target_node = get_graph_node_by_name(graph, target_point.target_node_name)
-        input_node = get_input_node(target_point, target_node)
-
-        # Clone node output to safe it from inplace operations affects
-        with graph.inserting_after(input_node):
-            cloned_input = graph.create_node(
-                "call_function",
-                torch.ops.aten.clone.default,
-                (input_node,),
-                name=input_node.name + "_cloned",
-            )
-        cloned_input.meta["val"] = copy(input_node.meta.get("val"))
-
-        # Update args of the output node as one output could be present in the model
-        # TODO(dlyakhov) Support case when there are no outputs in the input model.
-        output_nodes = [node for node in model.graph.nodes if node.op == "output"]
-        assert len(output_nodes) == 1
-        output_node = output_nodes[0]
-
-        args = output_node.args
-        assert len(args) == 1
-        if isinstance(args[0], torch.fx.Node):
-            args = (args,)
-        args = tuple(args[0]) + (cloned_input,)
-        output_node.args = (args,)
+        output_insertion(model, target_point)
 
     return output_insertion_transformation
+
+
+def output_insertion(model: torch.fx.GraphModule, target_point: PTTargetPoint) -> None:
+    """
+    Inserts clone operation on the given target point
+    and extend the model outputs with the inserted cloned value.
+
+    :param model: Target torch GraphModule.
+    :param model: torch.fx.GraphModule instance.
+    :param target_point: Target point to insert clone and extend the model outputs.
+    """
+    graph = model.graph
+    target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+    input_node = get_input_node(target_point, target_node)
+
+    # Clone node output to safe it from inplace operations affects
+    with graph.inserting_after(input_node):
+        cloned_input = graph.create_node(
+            "call_function",
+            torch.ops.aten.clone.default,
+            (input_node,),
+            name=input_node.name + "_cloned",
+        )
+    cloned_input.meta["val"] = copy(input_node.meta.get("val"))
+
+    # Update args of the output node as one output could be present in the model
+    # TODO(dlyakhov) Support case when there are no outputs in the input model.
+    output_nodes = [node for node in model.graph.nodes if node.op == "output"]
+    assert len(output_nodes) == 1
+    output_node = output_nodes[0]
+
+    args = output_node.args
+    assert len(args) == 1
+    if isinstance(args[0], torch.fx.Node):
+        args = (args,)
+    args = tuple(args[0]) + (cloned_input,)
+    output_node.args = (args,)
 
 
 def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, quantizer: FakeQuantize):
@@ -442,20 +504,7 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
     if target_type == TargetType.OPERATOR_POST_HOOK:
         return target_node
 
-    return _get_node_by_input_port_id(target_node, target_point.input_port_id)
-
-
-def _get_node_by_input_port_id(node: torch.fx.Node, input_port_id: int) -> torch.fx.Node:
-    """
-    Retrieves an input node from the given node and the input port id.
-
-    :param node: Given input node.
-    :param input_port_id: Given input port id.
-    :return: An input node from the given node and the input port id.
-    """
-    if node.target == torch.ops.aten.cat.default:
-        return node.args[0][input_port_id]
-    return node.args[input_port_id]
+    return get_node_args(target_node)[target_point.input_port_id]
 
 
 def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Callable:
@@ -497,19 +546,6 @@ def _set_module_to_the_graph_module(
     assert not hasattr(model, module_name_in_model)
     setattr(model, module_name_in_model, module_to_insert)
     return module_name_in_model
-
-
-def _is_supported_batch_norm_for_training(node: torch.fx.Node):
-    """
-    Return True if the given node refers to an aten batch norm op QAT supports.
-    """
-    supported_ops = [
-        torch.ops.aten.batch_norm.default,
-        torch.ops.aten._native_batch_norm_legit.default,
-        torch.ops.aten.cudnn_batch_norm.default,
-        torch.ops.aten.miopen_batch_norm.default,
-    ]
-    return node.target in supported_ops
 
 
 def _get_pattern_replacement_per_channel() -> tuple[
@@ -629,7 +665,7 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
             result = torch.ops.quantized_decomposed.quantize_per_tensor.default(
                 weight_node, scale_node, zp_node, -128, 127, torch.int8
             )
-        constant_update_fn(model, mul_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
+        constant_update(model, mul_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
 
 
 def _reshape_scale_zp(
@@ -651,8 +687,8 @@ def _reshape_scale_zp(
     new_shape[axis] = scale.shape[0]
     scale = scale.reshape(new_shape)
     zp = zp.reshape(new_shape)
-    constant_update_fn(model, sub_node, zp, 1, updated_node_name="zero_point_updated_constant")
-    constant_update_fn(model, mul_node, scale, 1, updated_node_name="scale_updated_constant")
+    constant_update(model, sub_node, zp, 1, updated_node_name="zero_point_updated_constant")
+    constant_update(model, mul_node, scale, 1, updated_node_name="scale_updated_constant")
 
 
 def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
@@ -674,7 +710,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
         if not args:
             continue
         result = node.target(quantize_node.target(*args), *args[1:])
-        constant_update_fn(
+        constant_update(
             model,
             quantize_node,
             result,

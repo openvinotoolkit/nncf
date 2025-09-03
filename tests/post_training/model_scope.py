@@ -423,7 +423,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_stateful",
@@ -447,7 +447,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
             ),
         },
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
@@ -530,7 +530,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_lora_stateful",
@@ -579,7 +579,7 @@ WEIGHT_COMPRESSION_MODELS = [
             ),
         },
         # TODO: (andreyanufr) add torch.fx backend
-        "backends": [BackendType.OV, BackendType.TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.ONNX],
     },
 ]
 

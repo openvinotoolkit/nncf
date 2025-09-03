@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from copy import deepcopy
 from typing import Callable, Iterable, Optional
 
 import numpy as np
@@ -30,6 +31,8 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.model_transformer import remove_initializer
@@ -43,11 +46,15 @@ from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
 from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
+from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.quantization.ignored_patterns import create_rope
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
+from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
+from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -154,7 +161,15 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        raise NotImplementedError()
+        activation_port = 0
+        if node.metatype.possible_weight_ports:
+            activation_ports = deepcopy(node.metatype.possible_weight_ports)
+            for weight_port in node.layer_attributes.weight_attrs:
+                activation_ports.remove(weight_port)
+            assert len(activation_ports) == 1
+            activation_port = activation_ports[0]
+
+        return activation_port
 
     @staticmethod
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
@@ -181,7 +196,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: onnx.ModelProto, graph: NNCFGraph, weight: Tensor
     ):
-        node = self.name_to_node_map[node_with_weight.target_node_name]
+        node = self.name_to_node_map[node_with_weight.node_name]
         initializer_name = node.input[weight_port_id]
         set_initializer(initializer_name, model, weight.data)
 
@@ -334,6 +349,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
             new_initializers.append(zero_point_initializer)
 
+        node_name = f"{weight_name}_DequantizeLinear"
         if block_size != 0:
             dequantize_node = helper.make_node(
                 "DequantizeLinear",
@@ -341,13 +357,11 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 outputs=[dequantized_weight_output],
                 block_size=block_size,
                 axis=axis,
+                name=node_name,
             )
         else:
             dequantize_node = helper.make_node(
-                "DequantizeLinear",
-                inputs=deq_inputs,
-                outputs=[dequantized_weight_output],
-                axis=axis,
+                "DequantizeLinear", inputs=deq_inputs, outputs=[dequantized_weight_output], axis=axis, name=node_name
             )
 
         # Add the node and initializers to the model
@@ -464,3 +478,23 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
         return create_rope()
+
+
+class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):
+    @staticmethod
+    def get_awq_patterns() -> dict[str, Callable]:
+        return get_awq_patterns(
+            onnx_metatypes.ONNXMatMulMetatype, onnx_metatypes.ONNXMulLayerMetatype, ATOMIC_ACTIVATIONS_OPERATIONS
+        )
+
+    @staticmethod
+    def scale_insertion_command(
+        source_node: NNCFNode, next_nodes: list[NNCFNode], source_node_output_port: int, scale: np.ndarray
+    ):
+        return ONNXCommandCreator.multiply_insertion_command(
+            source_node, next_nodes, source_node_output_port, scale, f"{source_node.node_name}/awq_mul"
+        )
+
+
+class ONNXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, ONNXWeightCompressionAlgoBackend):
+    pass

@@ -9,14 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
 import re
 
 import pytest
 import torch
 
 import nncf
-from examples.torch.common.model_loader import load_model
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.checkpoint_loading import KeyMatcher
@@ -28,14 +26,6 @@ from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import PTTensorListComparator
-
-
-def test_export_sq_11_is_ok(tmp_path):
-    test_path = str(tmp_path.joinpath("test.onnx"))
-    model = load_model("squeezenet1_1", pretrained=False)
-    dummy_input = torch.randn(1, 3, 224, 224)
-    torch.onnx.export(model, dummy_input, test_path, verbose=False)
-    os.remove(test_path)
 
 
 def test_load_state_skips_not_matched_params__from_larger_to_smaller():
