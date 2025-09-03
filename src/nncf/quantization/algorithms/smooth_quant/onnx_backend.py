@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from typing import Callable
 
 import numpy as np
@@ -27,9 +28,10 @@ from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.onnx.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.node_utils import get_act_quantization_axis
 from nncf.onnx.graph.node_utils import get_weight_quantization_axis
-from nncf.onnx.graph.onnx_helper import get_tensor_value
+from nncf.onnx.graph.onnx_helper import get_array_from_tensor
 from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXMultiplyInsertionCommand
@@ -65,15 +67,15 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        weight_ports = list(node.layer_attributes.weight_attrs.keys())
-        activation_ports = [
-            e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in weight_ports
-        ]
+        activation_port = 0
+        if node.metatype.possible_weight_ports:
+            activation_ports = deepcopy(node.metatype.possible_weight_ports)
+            for weight_port in node.layer_attributes.weight_attrs:
+                activation_ports.remove(weight_port)
+            assert len(activation_ports) == 1
+            activation_port = activation_ports[0]
 
-        if len(activation_ports) != 1:
-            msg = f"Too many weight or activation ports for {node.node_name} node"
-            raise nncf.InternalError(msg)
-        return activation_ports[0]
+        return activation_port
 
     @staticmethod
     def get_abs_max_channel_collector(
@@ -97,7 +99,33 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_value(node_with_weight: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> Tensor:
         port_id = ONNXSmoothQuantAlgoBackend._get_weight_tensor_port_id(node_with_weight)
         weight_name = node_with_weight.layer_attributes.weight_attrs[port_id]["name"]
-        return Tensor(get_tensor_value(model, weight_name))
+
+        # TODO(andrey-churkin): Think about how it could be simplified
+        def _get_all_tensors():
+            yield from model.graph.initializer
+
+            for node in model.graph.node:
+                for attr in node.attribute:
+                    if attr.HasField("t"):
+                        if node.op_type == "Constant":
+                            output = list(node.output)[0]
+                            yield (output, attr.t)
+                        yield attr.t
+                    yield from attr.tensors
+
+        value = None
+        for item in _get_all_tensors():
+            if isinstance(item, tuple):
+                name, tensor = item
+            else:
+                name = item.name
+                tensor = item
+
+            if name == weight_name:
+                value = get_array_from_tensor(model, tensor)
+                break
+
+        return Tensor(value)
 
     @staticmethod
     def weight_update_command(
@@ -120,16 +148,29 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        if node.metatype == ONNXMatMulMetatype:
+            if port_id == 0:
+                return -1
+            if port_id == 1:
+                return -2
+
         return get_act_quantization_axis(node, port_id)
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode) -> int:
         port_id = ONNXSmoothQuantAlgoBackend._get_weight_tensor_port_id(node)
+
+        if node.metatype == ONNXMatMulMetatype:
+            if port_id == 0:
+                return -1
+            if port_id == 1:
+                return -2
+
         return get_weight_quantization_axis(node, port_id)
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return node.is_shared
+        return bool(node.is_shared())
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:

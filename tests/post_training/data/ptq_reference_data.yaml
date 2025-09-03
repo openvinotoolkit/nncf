@@ -78,6 +78,8 @@ torchvision/vit_b_16_backend_FP32:
   metric_value: 0.8107
 torchvision/vit_b_16_backend_OV:
   metric_value: 0.80948
+torchvision/vit_b_16_backend_ONNX:
+  metric_value: -1
 torchvision/vit_b_16_backend_FX_TORCH:
   metric_value: 0.80922
   exception_xfail_reason:
@@ -98,6 +100,8 @@ torchvision/swin_v2_s_backend_FP32:
   metric_value: 0.83712
 torchvision/swin_v2_s_backend_OV:
   metric_value: 0.83638
+torchvision/swin_v2_s_backend_ONNX:
+  metric_value: -1
 torchvision/swin_v2_s_backend_FX_TORCH:
   metric_value: 0.8360
   exception_xfail_reason:
