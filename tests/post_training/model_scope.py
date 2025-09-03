@@ -120,14 +120,60 @@ QUANTIZATION_MODELS = [
         "batch_size": 128,
     },
     {
-        "reported_name": "torchvision/vit_b_16",
+        "reported_name": "torchvision/vit_b_16_default_sq",
         "model_id": "vit_b_16",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
-            "ignored_scope": nncf.IgnoredScope(types=["select"]),
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alpha=0.15,
+                activations_range_estimator_params=StatisticsCollectorParameters(
+                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
+                ),
+            ),
+        },
+        "backends": FX_BACKENDS + [BackendType.OV],
+        "batch_size": 1,
+    },
+    {
+        "reported_name": "torchvision/vit_b_16_05",
+        "model_id": "vit_b_16",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alpha=0.5,
+                activations_range_estimator_params=StatisticsCollectorParameters(
+                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
+                ),
+            ),
+        },
+        "backends": FX_BACKENDS + [BackendType.OV],
+        "batch_size": 1,
+    },
+    {
+        "reported_name": "torchvision/vit_b_16_075",
+        "model_id": "vit_b_16",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alpha=0.75,
+                activations_range_estimator_params=StatisticsCollectorParameters(
+                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
+                ),
+            ),
+        },
+        "backends": FX_BACKENDS + [BackendType.OV],
+        "batch_size": 1,
+    },
+    {
+        "reported_name": "torchvision/vit_b_16_no_sq",
+        "model_id": "vit_b_16",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alpha=-1,
                 activations_range_estimator_params=StatisticsCollectorParameters(
                     statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
                 ),
