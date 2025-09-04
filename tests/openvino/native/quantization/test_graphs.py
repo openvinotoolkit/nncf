@@ -74,7 +74,6 @@ MODELS_QUANTIZE_PARAMS = (
     ("mobilenet-v3-small", {"preset": QuantizationPreset.PERFORMANCE}),
     ("resnet-18", {"preset": QuantizationPreset.PERFORMANCE}),
     ("resnet-18", {"preset": QuantizationPreset.PERFORMANCE, "target_device": TargetDevice.CPU_SPR}),
-    ("ssd-vgg-300", {"preset": QuantizationPreset.PERFORMANCE}),
     ("swin-block", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),
 )
 

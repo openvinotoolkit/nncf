@@ -145,7 +145,6 @@ $input\\_low^{*} = 0$
 $input\\_range^{*} = scale$
 
 The most common case of applying quantization is 8-bit uniform quantization.
-NNCF example scripts provide a plethora of configuration files that implement this case ([PyTorch](/examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json), [TensorFlow](/examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json))
 
 ---
 
@@ -253,9 +252,6 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-The [example](/examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of
-using the template in a full-fledged configuration file is provided with the [classification sample](/examples/torch/classification/README.md) for PyTorch.
-
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than
 two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files
@@ -274,7 +270,7 @@ file.
 
 ### AutoQ
 
-NNCF provides an alternate mode, namely AutoQ, for mixed-precision automation. It is an AutoML-based technique that automatically learns the layer-wise bitwidth with explored experiences. Based on [HAQ](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_HAQ_Hardware-Aware_Automated_Quantization_With_Mixed_Precision_CVPR_2019_paper.pdf), AutoQ utilizes an actor-critic algorithm, Deep Deterministic Policy Gradient (DDPG) for efficient search over the bitwidth space. DDPG is trained in an episodic fashion, converging to a deterministic mixed-precision policy after a number of episodes. An episode is constituted by stepping, the DDPG transitions from quantizer to quantizer sequentially to predict a precision of a layer. Each quantizer essentially denotes a state in RL framework and it is represented by attributes of the associated layers. For example, a quantizer for 2D Convolution is represented by its quantizer Id (integer), input and output channel size, feature map dimension, stride size, if it is depthwise, number of parameters etc. It is recommended to check out `_get_layer_attr` in [quantization_env.py](/nncf/torch/automl/environment/quantization_env.py#L370) for the featurization of different network layer types.
+NNCF provides an alternate mode, namely AutoQ, for mixed-precision automation. It is an AutoML-based technique that automatically learns the layer-wise bitwidth with explored experiences. Based on [HAQ](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_HAQ_Hardware-Aware_Automated_Quantization_With_Mixed_Precision_CVPR_2019_paper.pdf), AutoQ utilizes an actor-critic algorithm, Deep Deterministic Policy Gradient (DDPG) for efficient search over the bitwidth space. DDPG is trained in an episodic fashion, converging to a deterministic mixed-precision policy after a number of episodes. An episode is constituted by stepping, the DDPG transitions from quantizer to quantizer sequentially to predict a precision of a layer. Each quantizer essentially denotes a state in RL framework and it is represented by attributes of the associated layers. For example, a quantizer for 2D Convolution is represented by its quantizer Id (integer), input and output channel size, feature map dimension, stride size, if it is depthwise, number of parameters etc. It is recommended to check out `_get_layer_attr` in [quantization_env.py](/src/nncf/torch/automl/environment/quantization_env.py#L370) for the featurization of different network layer types.
 
 When the agent enters a state/quantizer, it receives the state features and forward passes them through its network. The output of the forward pass is a scalar continuous action output which is subsequently mapped to the bitwidth options of the particular quantizer. The episode terminates after the prediction of the last quantizer and a complete layer-wise mixed-precision policy is obtained. To ensure a policy fits in the user-specified compression ratio, the policy is post processed by reducing the precision sequentially from the last quantizer until the compression ratio is met.
 
@@ -326,8 +322,6 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
             nncf_config, init_loader, criterion, train_criterion_fn,
             autoq_eval_fn, val_loader, config.device)
 ```
-
-The complete config [example](/examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_autoq_staged.json) that applies AutoQ to MobileNetV2 is provided within the [classification sample](/examples/torch/classification/README.md) for PyTorch.
 
 ## Example configuration files
 

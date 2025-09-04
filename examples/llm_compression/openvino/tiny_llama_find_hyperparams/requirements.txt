@@ -1,8 +1,6 @@
 datasets
-whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@releases/2025/2#subdirectory=tools/who_what_benchmark
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/ --pre
-numpy>=1.23.5,<2
-openvino==2025.2.0
+whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.3.0.0#subdirectory=tools/who_what_benchmark
+openvino==2025.3.0
 optimum-intel>=1.22.0
 transformers>=4.48.0
 onnx==1.17.0

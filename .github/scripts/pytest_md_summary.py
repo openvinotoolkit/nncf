@@ -39,19 +39,19 @@ def parse_xml_report(xml_file) -> None:
         time_duration = float(testcase.get("time", "0"))
         message = ""
         if testcase.find("failure") is not None:
-            status = "$${\color{red}Failed}$$"
+            status = "Failed"
             message = testcase.find("failure").get("message", "")
         elif testcase.find("error") is not None:
-            status = "$${\color{red}Error}$$"
+            status = "Error"
         elif testcase.find("skipped") is not None:
             if "xfail" in testcase.find("skipped").get("type", ""):
-                status = "$${\color{orange}xfail}$$"
+                status = "Xfail"
                 message = testcase.find("skipped").get("message", "")
             else:
-                status = "$${\color{yellow}Skipped}$$"
+                status = "Skipped"
                 message = testcase.find("skipped").get("message", "")
         else:
-            status = "$${\color{green}Ok}$$"
+            status = "Ok"
 
         # Append each row to the table
         if message:

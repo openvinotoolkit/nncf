@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from collections import defaultdict
+
 import pytest
 import torch
 import torch.nn as nn
@@ -38,6 +40,7 @@ from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
+from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -71,6 +74,24 @@ class SequentialMatmulModel(nn.Module):
 
     def get_weight_names_in_exec_order(self):
         return [f"layers:{i}:weight" for i in range(len(self.main_values))]
+
+
+class DifferentChannelSizeMatmulModel(nn.Module):
+    def __init__(self, channel_sizes: list[int]):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        self.channel_sizes = channel_sizes
+
+        for i in range(1, len(channel_sizes) + 1):
+            prev_channel_size = channel_sizes[i - 1]
+            channel_size = channel_sizes[min(i, len(channel_sizes) - 1)]
+            layer = nn.Linear(prev_channel_size, channel_size, bias=False)
+            self.layers.append(layer)
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 class MatMulModel(torch.nn.Module):
@@ -450,6 +471,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return MatMulModel(255 * torch.eye(3, dtype=torch.float32))
 
     @staticmethod
+    def get_RoPE_model() -> torch.nn.Module:
+        return RoPEModel()
+
+    @staticmethod
     def get_sequential_matmul_model() -> torch.nn.Module:
         return SequentialMatmulModel()
 
@@ -460,6 +485,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_model() -> torch.nn.Module:
         return AWQLinearModel()
+
+    @staticmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> torch.nn.Module:
+        return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes)
 
     @staticmethod
     def get_awq_act_model(with_multiply, n_layers):
@@ -531,13 +560,21 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_ignored_scope_name() -> str:
-        return "linear6/linear/0"
+        return "linear5/linear/0"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:
         num = 0
         for op in get_hook_storage(model).modules():
-            num += isinstance(op, INT4SymmetricWeightsDecompressor)
+            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+        return num
+
+    @staticmethod
+    def get_num_int4_group_sizes(model: torch.nn.Module) -> dict[int, int]:
+        num = defaultdict(int)
+        for op in get_hook_storage(model).modules():
+            if isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor)):
+                num[op.compressed_weight_shape[-1]] += 1
         return num
 
     @pytest.fixture(params=INT4_MODES)

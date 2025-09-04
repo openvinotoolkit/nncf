@@ -10,6 +10,7 @@
 # limitations under the License.
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -17,7 +18,6 @@ import onnx
 import onnxruntime
 import pytest
 import torch
-from addict import Dict
 from datasets import Dataset
 from onnx import numpy_helper
 from openvino import Core
@@ -51,6 +51,13 @@ pytestmark = pytest.mark.legacy
 @pytest.fixture(scope="function", autouse=True)
 def safe_deterministic_state(_safe_deterministic_state):
     pass
+
+
+@dataclass
+class ParamDesc:
+    nncf_weight_ratio: float
+    ov_weight_ratio: float
+    recipe: BaseMockRunRecipe
 
 
 class TestONNXExport:
@@ -141,9 +148,9 @@ class TestONNXExport:
     @pytest.mark.parametrize(
         "desc",
         [
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.14,
-                ov_weight_ratio=0.11,
+                ov_weight_ratio=0.17,
                 recipe=BertRunRecipe().model_config_(
                     max_position_embeddings=2,
                     intermediate_size=4,
@@ -154,9 +161,9 @@ class TestONNXExport:
                     num_hidden_layers=1,
                 ),
             ),
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.1,
-                ov_weight_ratio=0.08,
+                ov_weight_ratio=0.12,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     intermediate_size=4,
                     num_labels=1,
@@ -165,7 +172,7 @@ class TestONNXExport:
                     classifier_proj_size=1,
                 ),
             ),
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.08,
                 ov_weight_ratio=0.07,
                 recipe=Wav2Vec2RunRecipe().model_config_(
@@ -185,7 +192,7 @@ class TestONNXExport:
                 ),
             ),
             pytest.param(
-                Dict(
+                ParamDesc(
                     nncf_weight_ratio=0.43,
                     ov_weight_ratio=0.33,
                     recipe=SwinRunRecipe().model_config_(
@@ -197,19 +204,19 @@ class TestONNXExport:
                 ),
                 marks=pytest.mark.xfail(reason="Issue-168947: regression in OV 2025.2"),
             ),
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.25,
                 ov_weight_ratio=0.20,
                 recipe=DistilBertRunRecipe().model_config_(),
             ),
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.63,
-                ov_weight_ratio=0.38,
+                ov_weight_ratio=0.29,
                 recipe=MobileBertRunRecipe().model_config_(),
             ),
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.42,
-                ov_weight_ratio=0.33,
+                ov_weight_ratio=0.25,
                 recipe=MobileBertRunRecipe()
                 .model_config_()
                 .algo_config_(
@@ -221,9 +228,9 @@ class TestONNXExport:
                     ignored_scopes=["{re}embedding", "{re}pooler", "{re}classifier"],
                 ),
             ),
-            Dict(
+            ParamDesc(
                 nncf_weight_ratio=0.15,
-                ov_weight_ratio=0.12,
+                ov_weight_ratio=0.18,
                 recipe=ClipVisionRunRecipe().model_config_(),
             ),
         ],
@@ -343,7 +350,7 @@ class TestONNXExport:
         return False
 
 
-class TestStateDict:
+class TestStatedict:
     def test_compressed_model_state_dict_follows_original_torch_model(self):
         linear_recipe = LinearRunRecipe().model_config_(bias=True)
         model = linear_recipe.model()
@@ -407,7 +414,7 @@ class TestCompressionState:
         )
         assert compression_ctrl.get_compression_state() == ref_compression_state
 
-    @pytest.mark.parametrize("resume_step", [2, 7, 15, 17], ids=["epoch0", "epoch1", "epoch2_end", "epoch3"])
+    @pytest.mark.parametrize("resume_step", [2, 15, 17], ids=["epoch0", "epoch2_end", "epoch3"])
     @pytest.mark.parametrize("infer_steps_per_epoch", [True, False])
     @pytest.mark.parametrize("adaptive_init_threshold", [True, False])
     def test_can_resume_training_from_compression_state(

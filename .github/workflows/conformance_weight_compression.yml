@@ -25,7 +25,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -40,11 +40,12 @@ jobs:
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
-        run: pip install -e . -r tests/post_training/requirements.txt
+        run: pip install . -r tests/post_training/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
         run: |
+          set +e
           python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
@@ -66,6 +67,7 @@ jobs:
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv
+          if-no-files-found: ignore
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |

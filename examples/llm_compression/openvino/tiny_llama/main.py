@@ -20,7 +20,7 @@ import nncf
 
 
 def main():
-    MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+    MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     OUTPUT_DIR = "tinyllama_compressed"
 
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
@@ -57,11 +57,15 @@ def main():
     )
     model.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"KV_CACHE_PRECISION": "f16"})
-    input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
+    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR)
+
+    messages = [{"role": "user", "content": "What is PyTorch?"}]
+    input_ids = tokenizer.apply_chat_template(
+        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+    ).to(device=model.device)
 
     start_t = time.time()
-    output = model.generate(**input_ids, max_new_tokens=100)
+    output = model.generate(input_ids, max_new_tokens=100)
     print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])

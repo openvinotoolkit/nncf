@@ -9,22 +9,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-import re
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import Any, Callable, Optional, TypeVar
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+import nncf
 import nncf.tensor.functions as fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
+from nncf import nncf_logger
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
 from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -64,6 +68,39 @@ class SpyAWQ(AWQ):
         spy_instance = self
 
 
+class SpyWeightCompressionStatisticsContext:
+    def __init__(self, mocker):
+        self.mocker = mocker
+        self.unique_tensor_collectors = set()
+        self.statistic_point_spy = None
+
+    def __enter__(self):
+        original_method = StatisticPointsContainer.get_algo_statistics_for_node
+
+        def side_effect(*args, **kwargs):
+            results = []
+            for tc in original_method(*args, **kwargs):
+                results.append(tc)
+                self.unique_tensor_collectors.add(tc)
+            return results
+
+        self.mocker.patch.object(
+            StatisticPointsContainer, "get_algo_statistics_for_node", autospec=True, side_effect=side_effect
+        )
+        self.statistic_point_spy = self.mocker.spy(WeightCompression, "get_statistic_points")
+        return self
+
+    def __exit__(self, *args):
+        statistic_points = self.statistic_point_spy.spy_return
+        number_tensor_collectors = 0
+        for node_statistics_points in statistic_points.values():
+            for _statistics_point in node_statistics_points:
+                tensor_collectors = _statistics_point.algorithm_to_tensor_collectors.values()
+                number_tensor_collectors += len(tensor_collectors)
+
+        assert len(self.unique_tensor_collectors) == number_tensor_collectors
+
+
 class TemplateWeightCompression(ABC):
     # Test Mixed Precision
 
@@ -72,9 +109,15 @@ class TemplateWeightCompression(ABC):
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
         """Casts a backend tensor to backend tensor with specified dtype."""
 
+    @staticmethod
     @abstractmethod
     def get_matmul_model() -> TModel:
         """Returns a backend model for test_data_based_criterion."""
+
+    @staticmethod
+    @abstractmethod
+    def get_RoPE_model() -> TModel:
+        """Returns a backend model for test_rope_weight_compression."""
 
     @pytest.mark.parametrize(
         ("mode", "ref_act_score", "ref_score"),
@@ -88,33 +131,37 @@ class TemplateWeightCompression(ABC):
     def test_data_based_criterion(self, mode, ref_score, ref_act_score, mocker):
         model = self.get_matmul_model()
         data = self.cast_to(self.to_tensor(ACTIVATION), dtype=TensorDataType.float32)
-        dataset = Dataset([data])
+        dataset = Dataset([data], self.get_transform_func())
         criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
         scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
         act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
 
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=0.5,
-            group_size=1,
-            dataset=dataset,
-            sensitivity_metric=mode,
-            all_layers=True,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=0.5,
+                group_size=1,
+                dataset=dataset,
+                sensitivity_metric=mode,
+                all_layers=True,
+            )
         scores = scores_spy.spy_return
         act_scores = act_scores_spy.spy_return
         assert math.isclose(scores[0], ref_score, rel_tol=1e-05, abs_tol=1e-08)
         assert math.isclose(ref_act_score, act_scores, rel_tol=1e-05, abs_tol=1e-08)
 
+    @staticmethod
     @abstractmethod
     def get_sequential_matmul_model() -> TModel:
         """Returns a backend model for test_mixed_precision."""
 
+    @staticmethod
     @abstractmethod
     def to_tensor(x: TTensor) -> TTensor:
         """Returns a backend tensor."""
 
+    @staticmethod
     @abstractmethod
     def check_weights(model: TModel, ref_ids: list[int]) -> None:
         """Checks that only weights with specified ids are compressed in int4 format."""
@@ -154,11 +201,11 @@ class TemplateWeightCompression(ABC):
             (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
         ),
     )
-    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids):
+    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, mocker):
         model = self.get_sequential_matmul_model()
         first = self.to_tensor(np.ones([1, 4, 4], dtype=np.float32))
         second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(1, 4, 4)
-        dataset = Dataset([first, second])
+        dataset = Dataset([first, second], self.get_transform_func())
         compressed_model = compress_weights(
             model,
             mode=CompressWeightsMode.INT4_SYM,
@@ -194,29 +241,32 @@ class TemplateWeightCompression(ABC):
         # prepare dataset with one input tensor
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
-        dataset = Dataset([input])
+        dataset = Dataset([input], self.get_transform_func())
 
-        _ = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=1.0,
-            group_size=8,
-            scale_estimation=True,
-            all_layers=True,
-            dataset=dataset,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=8,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
         reference = self.get_scale_estimation_ref()
         assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
 
+    @staticmethod
     @abstractmethod
     def get_orig_weight(model: TModel) -> Tensor:
         """Returns original weight."""
 
+    @staticmethod
     @abstractmethod
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
-    def test_scale_estimation_outlier_channel_has_lowest_error(self):
+    def test_scale_estimation_outlier_channel_has_lowest_error(self, mocker):
         """Checks that outlier channel has a lowest error after quantization."""
         OUTLIER_CHANNEL = 4
         model = self.get_model_for_test_scale_estimation()
@@ -226,24 +276,28 @@ class TemplateWeightCompression(ABC):
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input[:, :, OUTLIER_CHANNEL] *= 1000  # make one channel relatively higher, should have lowest error.
         input = self.to_tensor(input)
-        dataset = Dataset([input])
+        dataset = Dataset([input], self.get_transform_func())
 
-        compressed_model = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=1.0,
-            group_size=-1,
-            scale_estimation=True,
-            all_layers=True,
-            dataset=dataset,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            compressed_model = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=-1,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
 
+        reduction_axes = self.get_reduction_axes()
         decompressed_weight_before_se = integer_quantize_dequantize_weight(
-            original_weight, config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1), reduction_axes=1
+            original_weight,
+            config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1),
+            reduction_axes=reduction_axes,
         )
         decompressed_weight_after_se = self.get_decompressed_weight(compressed_model, input)
-        error_before_se = get_relative_error(original_weight, decompressed_weight_before_se)
-        error_after_se = get_relative_error(original_weight, decompressed_weight_after_se)
+        error_before_se = get_relative_error(original_weight, decompressed_weight_before_se, axis=1 - reduction_axes)
+        error_after_se = get_relative_error(original_weight, decompressed_weight_after_se, axis=1 - reduction_axes)
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
@@ -255,7 +309,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_num_multiply_from_awq():
+    def get_num_multiply_from_awq(model: TModel) -> int:
         "Returns number of Multiply nodes from AWQ."
 
     @pytest.fixture
@@ -263,13 +317,14 @@ class TemplateWeightCompression(ABC):
         return None
 
     @pytest.mark.parametrize("with_multiply", (True, False))
-    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply):
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply, mocker):
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
         model = self.get_awq_act_model(with_multiply, n_layers)
 
-        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))])
-        model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+        with SpyWeightCompressionStatisticsContext(mocker):
+            model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
         awq_num = self.get_num_multiply_from_awq(model)
         assert awq_num == n_awq_target
@@ -281,32 +336,67 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> TModel:
+        "Returns a backend model with matmuls having different channel sizes."
+
+    @staticmethod
+    @abstractmethod
     def get_num_int4_nodes(model: TModel):
         "Returns number of int4 nodes."
+
+    @staticmethod
+    @abstractmethod
+    def get_num_int4_group_sizes(model: TModel) -> dict[int, int]:
+        "Returns number of int4 nodes for each group size."
 
     @staticmethod
     @abstractmethod
     def get_ignored_scope_name() -> str:
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
-    def test_awq_with_ignored_scope(self):
+    def test_awq_with_ignored_scope(self, mocker):
         model = self.get_awq_model()
         sz = 8
         n_samples = 10
 
-        dataset = Dataset([self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)])
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, 8, sz], dtype=np.float32)) for i in range(n_samples)],
+            self.get_transform_func(),
+        )
 
+        with SpyWeightCompressionStatisticsContext(mocker):
+            compressed_model = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                dataset=dataset,
+                awq=True,
+                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
+            )
+
+        int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
+        assert int4_num_nodes == int4_ref_num_compressed
+
+    def test_rope_weight_compression(self):
+        model = self.get_RoPE_model()
+        sz = 8
+        n_samples = 10
+
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)],
+            self.get_transform_func(),
+        )
         compressed_model = compress_weights(
             model,
             mode=CompressWeightsMode.INT4_SYM,
             ratio=1.0,
             group_size=-1,
             dataset=dataset,
-            awq=True,
-            ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
         )
 
-        int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_ref_num_compressed = 0
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed
 
@@ -315,59 +405,147 @@ class TemplateWeightCompression(ABC):
     def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    def test_awq_scale_reference(self, monkeypatch):
+    def test_awq_scale_reference(self, monkeypatch, mocker):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
         model = self.get_awq_model()
 
         input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
         input = self.to_tensor(input)
-        dataset = Dataset([input])
+        dataset = Dataset([input], self.get_transform_func())
 
-        _ = compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=-1,
-            dataset=dataset,
-            awq=True,
-        )
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                dataset=dataset,
+                awq=True,
+            )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
             assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
 
     @pytest.mark.parametrize("algorithm", (None, "awq", "scale_estimation", "gptq", "lora_correction"))
-    def test_error_message_for_invalid_group_size(self, algorithm):
+    @pytest.mark.parametrize(
+        ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
+        [
+            (32, nncf.GroupSizeFallbackMode.ERROR, None, "exception"),
+            (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_ignored"),
+            (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_adjust"),
+            (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
+            (32, None, None, "warn_ignored"),
+        ],
+    )
+    def test_error_message_for_invalid_group_size(
+        self,
+        algorithm,
+        group_size,
+        fallback_mode,
+        min_adjusted_group_size,
+        expected_outcome,
+    ):
         """
-        Verifies that an exception is raised for an invalid group size
-        and the error message suggests either adding the node to the ignored scope or adjusting the group size.
+        Verifies that:
+            - an exception is raised for an invalid group size
+            - a warning message is logged when a node is ignored due to an invalid group size
+            - an info message is logged when an adjustable group size value cannot be found
+            - an info message is logged when the group size is adjusted to a valid value
         """
         if algorithm in self.get_not_supported_algorithms():
             pytest.skip("Skipping test for not supported algorithms")
 
         model = self.get_awq_model()
         hidden_dim = 8
-        invalid_group_size = hidden_dim + 1
         input_example = self.to_tensor(np.ones([1, 4, hidden_dim], dtype=np.float32))
-        dataset = Dataset([input_example])
+        dataset = Dataset([input_example], self.get_transform_func())
         algorithm_dict = {algorithm: True} if algorithm else {}
         kwargs = dict(
             model=model,
             mode=CompressWeightsMode.INT4_ASYM,
             ratio=1.0,
-            group_size=invalid_group_size,
+            group_size=group_size,
             all_layers=True,
             **algorithm_dict,
             dataset=dataset,
         )
+        if fallback_mode is not None or min_adjusted_group_size is not None:
+            kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
+                group_size_fallback_mode=fallback_mode,
+                min_adjusted_group_size=min_adjusted_group_size,
+            )
 
-        with pytest.raises(InvalidGroupSizeError) as exc_info:
-            compress_weights(**kwargs)
+        if expected_outcome == "exception":
+            with pytest.raises(InvalidGroupSizeError) as exc_info:
+                compress_weights(**kwargs)
 
-        names = re.findall(r"IgnoredScope\(names=\[(.*?)\]\)", re.sub(r"[\n\t]", "", str(exc_info.value)))
-        assert len(names) == 1, f"Error message should contain ignored scope to avoid issue: {str(exc_info.value)}"
-        name_list = [name.strip('"') for name in names[0].split(",")]
+            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+        elif expected_outcome == "warn_ignored":
+            with patch.object(nncf_logger, "warning") as mock_warning:
+                compress_weights(**kwargs)
+            warning_messages = [args[0] for args, _ in mock_warning.call_args_list]
+            warn_msg = "They will be ignored and kept with original precision."
+            assert any(warn_msg in msg for msg in warning_messages)
+        elif expected_outcome in ["info_adjusted_group_size", "info_cant_adjust"]:
+            with patch.object(nncf_logger, "info") as mock_info:
+                compress_weights(**kwargs)
+            info_messages = [args[0] for args, _ in mock_info.call_args_list]
+            info_msg = (
+                "Adjusted group size values will be used:"
+                if expected_outcome == "info_adjusted_group_size"
+                else "A valid adjusted group size value can't be found for some nodes."
+            )
+            assert any(info_msg in msg for msg in info_messages)
 
-        compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
+    @pytest.mark.parametrize(
+        [
+            "model_channel_sizes",
+            "ratio",
+            "group_size",
+            "fallback_mode",
+            "min_adjusted_group_size",
+            "ref_num_group_sizes",
+        ],
+        [
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
+            ([8, 8, 16, 16, 16, 32], 0.5, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 2}),
+        ],
+    )
+    def test_group_size_fallback_modes(
+        self,
+        model_channel_sizes,
+        ratio,
+        group_size,
+        fallback_mode,
+        min_adjusted_group_size,
+        ref_num_group_sizes,
+    ):
+        model = self.get_different_channel_size_model(model_channel_sizes)
+        input_example = self.to_tensor(np.ones([1, model_channel_sizes[0], model_channel_sizes[0]], dtype=np.float32))
+        dataset = Dataset([input_example], self.get_transform_func())
+        kwargs = dict(
+            model=model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=ratio,
+            all_layers=True,
+            group_size=group_size,
+            dataset=dataset,
+        )
+        if fallback_mode is not None:
+            kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
+                group_size_fallback_mode=fallback_mode,
+                min_adjusted_group_size=min_adjusted_group_size,
+            )
+
+        model = compress_weights(**kwargs)
+
+        num_group_sizes = self.get_num_int4_group_sizes(model)
+        assert ref_num_group_sizes == num_group_sizes, (
+            f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
+        )
 
     @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
@@ -380,7 +558,7 @@ class TemplateWeightCompression(ABC):
         model = self.wrap_model(model, input_data)
 
         if dataset is not None:
-            dataset = Dataset([self.to_tensor(dataset)])
+            dataset = Dataset([self.to_tensor(dataset)], self.get_transform_func())
 
         fn_name = "_data_free_step" if dataset is None or not prefer_data_aware_scaling else "_data_aware_step"
 
@@ -403,3 +581,11 @@ class TemplateWeightCompression(ABC):
         n_awq = self.get_num_multiply_from_awq(compressed_model)
         assert n_awq == n_awq_target
         assert collect_spy.call_count == n_awq, f"Statistics should be collected {n_awq_target} times."
+
+    @staticmethod
+    def get_transform_func() -> Optional[Callable[..., Any]]:
+        return None
+
+    @staticmethod
+    def get_reduction_axes() -> int:
+        return 1

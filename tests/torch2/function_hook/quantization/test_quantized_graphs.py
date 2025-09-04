@@ -15,6 +15,8 @@ from typing import Any
 import pytest
 import torch
 from networkx.drawing.nx_pydot import to_pydot
+from torchvision.models import mobilenet_v2
+from torchvision.models import mobilenet_v3_small
 
 import nncf
 from nncf.parameters import ModelType
@@ -61,8 +63,8 @@ TEST_MODELS_DESC = [
     # TODO(AlexanderDokuchaev): too long without disabled tracing of ssd_head - no_nncf_trace()
     # (ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]), {}),
     # (ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]), {}),
-    (ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [1, 3, 32, 32]), {}),
-    (ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [1, 3, 32, 32]), {}),
+    (ModelDesc("mobilenet_v2", mobilenet_v2, [1, 3, 32, 32]), {}),
+    (ModelDesc("mobilenet_v3_small", mobilenet_v3_small, [1, 3, 32, 32]), {}),
     (ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]), {}),
 ]
 
