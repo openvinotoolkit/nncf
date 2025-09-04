@@ -19,7 +19,7 @@ ifdef NUM_WORKERS
 endif
 
 install-pre-commit:
-	pip install pre-commit==3.2.2
+	pip install pre-commit==4.3.0
 
 
 ###############################################################################
