@@ -447,6 +447,8 @@ class PTQTestPipeline(BaseTestPipeline):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
+            self.compressed_model = self.model
+            return
             self.compressed_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,

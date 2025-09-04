@@ -37,6 +37,7 @@ class StatisticsType(Enum):
     QUANTILE = "quantile"
     ABS_QUANTILE = "abs_quantile"
     MEAN = "mean"
+    RAW = "raw"
 
 
 @api()
@@ -59,6 +60,7 @@ class AggregatorType(Enum):
     MEDIAN = "median"
     MEAN_NO_OUTLIERS = "mean_no_outliers"
     MEDIAN_NO_OUTLIERS = "median_no_outliers"
+    HISTOGRAM = "histogram"
 
 
 @api()

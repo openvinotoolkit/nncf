@@ -23,6 +23,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
@@ -38,6 +39,8 @@ from nncf.experimental.common.tensor_statistics.collectors import PercentileAggr
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 DEFAULT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
@@ -606,3 +609,105 @@ class TemplateTestReducersAggregators:
 
         ret_val = aggregator.aggregate()
         assert fns.allclose(ret_val, reference_output)
+
+    @pytest.mark.parametrize(
+        "ref_hist,ref_min,ref_max,ref_aggr_min,ref_aggr_max",
+        [
+            (
+                np.array(
+                    [
+                        1.0000,
+                        0.0000,
+                        1.0000,
+                        4.5000,
+                        5.5000,
+                        6.7500,
+                        3.2500,
+                        9.0000,
+                        2.1250,
+                        7.8750,
+                        4.3750,
+                        5.6250,
+                        6.6250,
+                        3.3750,
+                        8.8750,
+                        1.1250,
+                        9.0000,
+                        1.0000,
+                        3.3750,
+                        6.6250,
+                        5.6250,
+                        4.3750,
+                        7.8750,
+                        2.1250,
+                        9.0000,
+                        3.2500,
+                        6.7500,
+                        5.5000,
+                        4.5000,
+                        7.7500,
+                        2.2500,
+                        0.0000,
+                        10.0000,
+                        2.2500,
+                        7.7500,
+                        4.5000,
+                        5.5000,
+                        6.7500,
+                        3.2500,
+                        9.0000,
+                        2.1250,
+                        7.8750,
+                        4.3750,
+                        5.6250,
+                        6.6250,
+                        3.3750,
+                        1.0000,
+                        9.0000,
+                        1.1250,
+                        8.8750,
+                        3.3750,
+                        6.6250,
+                        5.6250,
+                        4.3750,
+                        7.8750,
+                        2.1250,
+                        9.0000,
+                        3.2500,
+                        6.7500,
+                        5.5000,
+                        4.5000,
+                        1.0000,
+                        0.0000,
+                        1.0000,
+                    ]
+                ),
+                -135,
+                135,
+                -135,
+                130.7812,
+            )
+        ],
+    )
+    def test_histogramm_aggregator(self, ref_hist, ref_min, ref_max, ref_aggr_min, ref_aggr_max):
+        observer = HistogramAggregator(bins=64)
+
+        # Check 3 branches:
+        # 1) Initialization of the histogram (iter 0)
+        # 2) Upscaling the historical histogram to the new min/max
+        # and combining the current histogram with the historical one (iter 1-8)
+        # 3) Do not streaching the historical histogram (new_min == past_min and new_max == past_max)
+        # and update the historical histogram by the new one. (iter 9)
+        for s in range(0, 10):
+            inp = max(s, 8) * (np.arange(1, 32) - 16)
+            inp = self.get_nncf_tensor(inp, dtype=Dtype.FLOAT)
+            observer.register_reduced_input(inp)
+
+        assert fns.allclose(observer.histogram, ref_hist)
+        assert np.allclose(observer.min_val, ref_min)
+        assert np.allclose(observer.max_val, ref_max)
+
+        aggr = observer.aggregate()
+        assert all(isinstance(val, Tensor) for val in aggr.values())
+        assert fns.allclose(aggr[MinMaxTensorStatistic.MIN_STAT], ref_aggr_min)
+        assert fns.allclose(aggr[MinMaxTensorStatistic.MAX_STAT], ref_aggr_max)
