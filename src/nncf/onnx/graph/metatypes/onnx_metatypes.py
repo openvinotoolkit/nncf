@@ -108,7 +108,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "ConvOp"
     op_names = ["Conv"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    weight_channel_axis = 1
+    weight_channel_axis = 0
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
