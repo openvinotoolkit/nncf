@@ -120,4 +120,4 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def get_matmul_metatype():
-        return PTLinearMetatype
+        return [PTLinearMetatype]

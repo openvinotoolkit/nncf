@@ -181,4 +181,4 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def get_matmul_metatype():
-        return OVMatMulMetatype
+        return [OVMatMulMetatype]

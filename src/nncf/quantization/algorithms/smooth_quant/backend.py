@@ -113,13 +113,12 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int, nncf_graph: NNCFGraph) -> Tensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> Tensor:
         """
         Returns the weight value for the node with weight.
 
         :param node_with_weight: The node with weight.
         :param model: The model that contains this operation.
-        :param port_id: The input port ID to get weight input.
         :param nncf_graph: NNCFGraph instance.
         :return: The weight value.
         """
@@ -141,7 +140,11 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: TTensor, source_output_port_id: int, nodes: list[NNCFNode]
+        source_node: NNCFNode,
+        scale_value: TTensor,
+        source_output_port_id: int,
+        nodes: list[NNCFNode],
+        scale_node_name: str,
     ) -> TransformationCommand:
         """
         Returns command to insert Smooth Quant node.
@@ -150,6 +153,7 @@ class SmoothQuantAlgoBackend(ABC):
         :param scale_value: Smooth Quant value.
         :param source_output_port_id: Output port for source node.
         :param nodes: List of consumers for Smooth node.
+        :param scale_node_name: Scale node name.
         :return: TransformationCommand instance.
         """
 

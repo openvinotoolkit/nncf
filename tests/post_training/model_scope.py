@@ -119,7 +119,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
         },
-        "backends": FX_BACKENDS + [BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 1,
     },
     {
@@ -130,7 +130,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
-        "backends": FX_BACKENDS + [BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 1,
     },
     # Timm models
