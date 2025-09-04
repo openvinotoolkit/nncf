@@ -823,3 +823,13 @@ def as_numpy_tensor(a: Tensor) -> Tensor:
     :param a: Tensor to change backend for.
     :return: Tensor in numpy backend.
     """
+
+
+@tensor_dispatcher
+def tolist(a: Tensor) -> Any:
+    """
+    Returns the tensor as a nested list.
+    For scalars, a standard Python number is returned, just like with item().
+
+    :return: The tensor as a nested list.
+    """

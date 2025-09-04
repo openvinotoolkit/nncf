@@ -573,3 +573,8 @@ def tensor(
 @numeric.as_numpy_tensor.register
 def _(a: tf.Tensor) -> npt.NDArray[Any]:
     return a.numpy()
+
+
+@numeric.tolist.register
+def _(a: tf.Tensor) -> Any:
+    return a.numpy().tolist()
