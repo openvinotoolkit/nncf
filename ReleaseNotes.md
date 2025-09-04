@@ -27,7 +27,7 @@ Compression-aware training:
   - (PyTorch) Streamlined "QAT with absorbable LoRA" by removing checkpoint selection based on validation set. This change significantly reduces overall tuning time and maximum allocated memory. While [the results on Wikitext](/examples/llm_compression/torch/distillation_qat_with_lora/README.md#results-on-wikitext) are slightly worse, it provides a more efficient and faster tuning pipeline (e.g. reduced from 32 minutes to 25 minutes for SmoLM-1.7B).
 - Tutorials:
   - (TorchFX) Added [example](examples/llm_compression/torch_fx/tiny_llama/README.md) for compression of TinnyLama-1.1B.
-  - Update [example](examples/llm_compression/onnx/tiny_llama/main.py) to meet NPU implementation.
+  - Updated [example](examples/llm_compression/onnx/tiny_llama/main.py) to meet NPU implementation.
   - Implemented fast evaluation and improved output in [example](examples/llm_compression/torch/downstream_qat_with_nls/README.md).
 
 Deprecations/Removals:
