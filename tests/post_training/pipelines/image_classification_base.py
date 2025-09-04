@@ -90,24 +90,25 @@ class ImageClassificationBase(PTQTestPipeline):
     def _validate_torch_compile(
         self, val_loader: torch.utils.data.DataLoader, predictions: np.ndarray, references: np.ndarray
     ):
-        if self.backend in [
-            BackendType.FX_TORCH,
-            BackendType.CUDA_FX_TORCH,
-            BackendType.OV_QUANTIZER_AO,
-            BackendType.OV_QUANTIZER_NNCF,
-        ]:
-            compiled_model = torch.compile(
-                self.compressed_model.cpu(), backend="openvino", options={"aot_autograd": True}
-            )
-        else:
-            compiled_model = torch.compile(self.compressed_model)
-        for i, (images, target) in enumerate(val_loader):
-            # W/A for memory leaks when using torch DataLoader and OpenVINO
-            pred = compiled_model(images)
-            pred = torch.argmax(pred, dim=1)
-            predictions[i] = pred.numpy()
-            references[i] = target.numpy()
-        return predictions, references
+        with torch.no_grad():
+            if self.backend in [
+                BackendType.FX_TORCH,
+                BackendType.CUDA_FX_TORCH,
+                BackendType.OV_QUANTIZER_AO,
+                BackendType.OV_QUANTIZER_NNCF,
+            ]:
+                compiled_model = torch.compile(
+                    self.compressed_model.cpu(), backend="openvino", options={"aot_autograd": True}
+                )
+            else:
+                compiled_model = torch.compile(self.compressed_model)
+            for i, (images, target) in enumerate(val_loader):
+                # W/A for memory leaks when using torch DataLoader and OpenVINO
+                pred = compiled_model(images)
+                pred = torch.argmax(pred, dim=1)
+                predictions[i] = pred.numpy()
+                references[i] = target.numpy()
+            return predictions, references
 
     def _validate(self) -> None:
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)

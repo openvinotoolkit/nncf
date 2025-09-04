@@ -447,6 +447,8 @@ class PTQTestPipeline(BaseTestPipeline):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
+            self.compressed_model = self.model
+            return
             self.compressed_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,
@@ -502,34 +504,40 @@ class PTQTestPipeline(BaseTestPipeline):
             )
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
-            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
-            # Torch export is used to save the model because ov.convert_model does not fully claim support for
-            # Converting ExportedProgram
-            torch.export.save(exported_model, self.output_model_dir / "model.pt2")
-            # torch.compile is used to cache the OV model because this is the default user journey with Torch FX
-            # backend. This is also neccesary because PT FE translation in OV for convert_model
-            # and the translations used for torch.compile sometimes differ. This method can help
-            # ensure that the correct OV graph is being verified.
-            mod = torch.compile(
-                exported_model.module(),
-                backend="openvino",
-                options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
-            )
-            mod(self.dummy_tensor)
+            #from torch.fx.passes.graph_drawer import FxGraphDrawer
 
-            # Get the OV *.xml files in torch compile cache directory
-            cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))
-            if len(cached_ov_model_files) > 1:
-                msg = "Graph break encountered in torch compile!"
-                raise nncf.InternalError(msg)
-            elif len(cached_ov_model_files) == 0:
-                msg = "Openvino Model Files Not Found!"
-                raise FileNotFoundError(msg)
-            self.path_compressed_ir = cached_ov_model_files[0]
+            #output_svg_path = str(self.output_model_dir / "graph_module.svg")
+            #g = FxGraphDrawer(self.compressed_model.cpu(), output_svg_path)
+            #g.get_dot_graph().write_svg(output_svg_path)
+            with torch.no_grad():
+                exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
+                # Torch export is used to save the model because ov.convert_model does not fully claim support for
+                # Converting ExportedProgram
+                torch.export.save(exported_model, self.output_model_dir / "model.pt2")
+                # torch.compile is used to cache the OV model because this is the default user journey with Torch FX
+                # backend. This is also neccesary because PT FE translation in OV for convert_model
+                # and the translations used for torch.compile sometimes differ. This method can help
+                # ensure that the correct OV graph is being verified.
+                mod = torch.compile(
+                    exported_model.module(),
+                    backend="openvino",
+                    options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
+                )
+                mod(self.dummy_tensor)
 
-            if self.backend == BackendType.CUDA_FX_TORCH:
-                self.model = self.model.cuda()
-                self.dummy_tensor = self.dummy_tensor.cuda()
+                # Get the OV *.xml files in torch compile cache directory
+                cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))
+                if len(cached_ov_model_files) > 1:
+                    msg = "Graph break encountered in torch compile!"
+                    raise nncf.InternalError(msg)
+                elif len(cached_ov_model_files) == 0:
+                    msg = "Openvino Model Files Not Found!"
+                    raise FileNotFoundError(msg)
+                self.path_compressed_ir = cached_ov_model_files[0]
+
+                if self.backend == BackendType.CUDA_FX_TORCH:
+                    self.model = self.model.cuda()
+                    self.dummy_tensor = self.dummy_tensor.cuda()
 
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
