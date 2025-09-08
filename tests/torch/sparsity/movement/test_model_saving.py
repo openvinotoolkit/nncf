@@ -150,7 +150,7 @@ class TestONNXExport:
         [
             ParamDesc(
                 nncf_weight_ratio=0.14,
-                ov_weight_ratio=0.11,
+                ov_weight_ratio=0.17,
                 recipe=BertRunRecipe().model_config_(
                     max_position_embeddings=2,
                     intermediate_size=4,
@@ -163,7 +163,7 @@ class TestONNXExport:
             ),
             ParamDesc(
                 nncf_weight_ratio=0.1,
-                ov_weight_ratio=0.08,
+                ov_weight_ratio=0.12,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     intermediate_size=4,
                     num_labels=1,
@@ -211,12 +211,12 @@ class TestONNXExport:
             ),
             ParamDesc(
                 nncf_weight_ratio=0.63,
-                ov_weight_ratio=0.38,
+                ov_weight_ratio=0.29,
                 recipe=MobileBertRunRecipe().model_config_(),
             ),
             ParamDesc(
                 nncf_weight_ratio=0.42,
-                ov_weight_ratio=0.33,
+                ov_weight_ratio=0.25,
                 recipe=MobileBertRunRecipe()
                 .model_config_()
                 .algo_config_(
@@ -230,7 +230,7 @@ class TestONNXExport:
             ),
             ParamDesc(
                 nncf_weight_ratio=0.15,
-                ov_weight_ratio=0.12,
+                ov_weight_ratio=0.18,
                 recipe=ClipVisionRunRecipe().model_config_(),
             ),
         ],
