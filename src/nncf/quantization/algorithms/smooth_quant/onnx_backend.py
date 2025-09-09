@@ -81,7 +81,7 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
-        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes, inplace=inplace)
+        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
         aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
