@@ -88,7 +88,7 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def _get_weight_tensor_port_id(node: NNCFNode) -> int:
-        weight_ports = list(node.layer_attributes.weight_attrs.keys())
+        weight_ports = list(node.layer_attributes.weight_attrs)
         if len(weight_ports) != 1:
             msg = f"Found more than 1 port for {node.node_name} node"
             raise nncf.InternalError(msg)
@@ -150,7 +150,9 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         """
         Returns the zero-based index of the C_IN axis for the input (activation) tensor.
 
+        :param node: A node whose C_IN axis of the input tensor should be returned.
         :param port_id: Specifies the input port of the node that consumes the input (activation) tensor.
+        :return: A zero-based index of the C_IN axis for the input (activation) tensor.
         """
         if node.metatype == ONNXConvolutionMetatype:
             # [N, C, H, W]
@@ -172,17 +174,15 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
                 if transposed:
                     # X^T * W: [C_IN, B]^T * [C_IN, C_OUT]
                     return -2
-                else:
-                    # X * W: [B, C_IN] * [C_IN, C_OUT]
-                    return -1
+                # X * W: [B, C_IN] * [C_IN, C_OUT]
+                return -1
 
             if port_id == 1:
                 if transposed:
                     # W * X^T: [C_OUT, C_IN] * [B, C_IN]^T
                     return -1
-                else:
-                    # W * X: [C_OUT, C_IN] * [C_IN, B]
-                    return -2
+                # W * X: [C_OUT, C_IN] * [C_IN, B]
+                return -2
 
         msg = f"Unsupported operation type {node.metatype} in node {node.node_name}"
         raise nncf.ValidationError(msg)
@@ -191,6 +191,9 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_channel_axis(node: NNCFNode) -> int:
         """
         Returns the zero-based index of the C_IN axis for the weight tensor.
+
+        :param node: A node whose C_IN axis of the weight tensor should be returned.
+        :return: A zero-based index of the C_IN axis for the weight tensor.
         """
         port_id = ONNXSmoothQuantAlgoBackend._get_weight_tensor_port_id(node)
 
@@ -213,16 +216,14 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             if port_id == 0:
                 if transposed:
                     return -2
-                else:
-                    return -1
+                return -1
 
             if port_id == 1:
                 if transposed:
                     # X * W^T: [B, C_IN] * [C_OUT, C_IN]^T
                     return -1
-                else:
-                    # X * W: [B, C_IN] * [C_IN, C_OUT]
-                    return -2
+                # X * W: [B, C_IN] * [C_IN, C_OUT]
+                return -2
 
         msg = f"Unsupported operation type {node.metatype} in node {node.node_name}"
         raise nncf.ValidationError(msg)

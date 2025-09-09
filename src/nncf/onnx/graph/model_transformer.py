@@ -403,6 +403,7 @@ class ONNXModelTransformer(ModelTransformer):
                         array = transformation.new_value.astype(onnx.helper.tensor_dtype_to_np_dtype(attr.t.data_type))
                         tensor_proto = onnx.numpy_helper.from_array(array)
                         attr.t.CopyFrom(tensor_proto)
+                        break
 
         return model
 
@@ -511,7 +512,6 @@ class ONNXModelTransformer(ModelTransformer):
             port_id = transformation.target_point.port_id
             target_node_name = transformation.target_point.target_node_name
             transform_type = transformation.target_point.type
-            # input_edges_mapping = transformation.input_edges_mapping
             output_tensor_name = ONNXModelTransformer._get_target_edge(
                 port_id, target_node_name, transform_type, node_name_to_node, input_edges_mapping
             )
