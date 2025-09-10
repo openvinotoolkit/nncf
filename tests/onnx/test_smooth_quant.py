@@ -110,8 +110,6 @@ class TestONNXSQAlgorithm(TemplateTestSQAlgorithm):
     def check_scales(model: onnx.ModelProto, reference_values: dict[str, np.ndarray], model_cls) -> None:
         names_map = ONNX_LINEAR_MODEL_SQ_OP_MAP if model_cls is LinearMultiShapeModel else ONNX_CONV_MODEL_SQ_OP_MAP
 
-        # TODO(andrey-churkin):
-
         for ref_names, ref_value in reference_values.items():
             for name in ref_names:
                 initializer_name = f"{names_map[name]}_scale"
