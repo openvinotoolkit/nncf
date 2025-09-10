@@ -393,10 +393,8 @@ class ONNXModelTransformer(ModelTransformer):
 
             constant_node = output_name_to_node_map.get(input_name, None)
 
-            # TODO(andrey-churkin): We should check here that transformation.new_value has the same data type
-            # as the old value. If it is different, we should cast it to the type of the old value.
             if constant_node is None:
-                set_initializer(input_name, model, transformation.new_value.astype(np.float32))
+                set_initializer(input_name, model, transformation.new_value)
             else:
                 for attr in constant_node.attribute:
                     if attr.name == "value":
@@ -554,6 +552,11 @@ def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np
     :param new_value: New value for the initializer tensor.
     """
     initializer = get_tensor(model, initializer_name)
+
+    required_dtype = onnx.helper.tensor_dtype_to_np_dtype(initializer.data_type)
+    if new_value.dtype != required_dtype:
+        new_value = new_value.astype(required_dtype)
+
     new_tensor = onnx.numpy_helper.from_array(new_value, initializer_name)
     initializer.CopyFrom(new_tensor)
 
