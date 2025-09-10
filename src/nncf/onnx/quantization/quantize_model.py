@@ -317,10 +317,17 @@ def compress_weights_impl(
         msg = "ONNX models with opset version < 13 do not support per-channel quantization."
         raise nncf.ValidationError(msg)
 
+    # NOTE: If a dataset is provided, it means we are going to use data-aware methods.
+    # In this case, we should check the protobuf size to ensure it can be serialized and
+    # passed into the session. Otherwise, the model should be loaded without external data.
+    if dataset is not None:
+        check_model_protobuf_size(model)
+
     external_data_dir = get_external_data_dir(advanced_parameters)
     external_data_dir = check_external_data_location(model, external_data_dir)
     if external_data_dir:
         set_metadata(model, MetadataKey.EXTERNAL_DATA_DIR, external_data_dir)
+    model = apply_preprocess_passes(model)
 
     compression_algorithm = WeightCompression(
         mode,

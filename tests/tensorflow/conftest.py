@@ -37,12 +37,6 @@ def clear_session():
 def pytest_addoption(parser):
     parser.addoption("--data", type=Path, default=None, help="Path to test datasets")
     parser.addoption(
-        "--sota-checkpoints-dir", type=Path, default=None, help="Path to checkpoints directory for sota accuracy test"
-    )
-    parser.addoption(
-        "--sota-data-dir", type=Path, default=None, help="Path to datasets directory for sota accuracy test"
-    )
-    parser.addoption(
         "--metrics-dump-path",
         type=Path,
         default=None,
@@ -58,16 +52,6 @@ def pytest_addoption(parser):
     parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
     parser.addoption("--run-weekly-tests", action="store_true", default=False, help="To run weekly tests")
     parser.addoption("--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests")
-
-
-@pytest.fixture(scope="module")
-def sota_checkpoints_dir(request):
-    return request.config.getoption("--sota-checkpoints-dir")
-
-
-@pytest.fixture(scope="module")
-def sota_data_dir(request):
-    return request.config.getoption("--sota-data-dir")
 
 
 @pytest.fixture(scope="module")

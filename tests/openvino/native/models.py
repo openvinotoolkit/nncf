@@ -17,14 +17,12 @@ from typing import Callable, Optional
 import numpy as np
 import openvino as ov
 from openvino import opset13 as opset
+from torchvision.models import mobilenet_v2
+from torchvision.models import mobilenet_v3_small
 
 from nncf.common.utils.registry import Registry
 from tests.torch.test_models.inceptionv3 import inception_v3
-from tests.torch.test_models.mobilenet import mobilenet_v2
-from tests.torch.test_models.mobilenet_v3 import mobilenet_v3_small
 from tests.torch.test_models.resnet import ResNet18
-from tests.torch.test_models.ssd_mobilenet import ssd_mobilenet
-from tests.torch.test_models.ssd_vgg import ssd_vgg300
 from tests.torch.test_models.swin import SwinTransformerBlock
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
@@ -36,8 +34,6 @@ def get_torch_model_info(model_name: str) -> tuple[Callable, tuple[int]]:
         "mobilenet-v3-small": (mobilenet_v3_small, (1, 3, 224, 224)),
         "resnet-18": (ResNet18, (1, 3, 224, 224)),
         "inception-v3": (inception_v3, (1, 3, 224, 224)),
-        "ssd-vgg-300": (ssd_vgg300, (1, 3, 300, 300)),
-        "ssd-mobilenet": (ssd_mobilenet, (1, 3, 300, 300)),
         "swin-block": (partial(SwinTransformerBlock, dim=8, input_resolution=[4, 4], num_heads=2), (1, 16, 8)),
     }
     return models[model_name]
@@ -1063,6 +1059,48 @@ class AWQActMatmulModel(OVReferenceModel):
         weights_data = np.arange(0, 64).reshape(8, 8) - 32
         weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_lm_head")
         out_node = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
+
+        result = opset.result(out_node, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
+class AWQModel_fp16_overlow(OVReferenceModel):
+    """
+    Model for testing AWQ algorithm with fp16 overflow fix.
+    """
+
+    def _create_ov_model(self, dim=8):
+        input_node = opset.parameter([1, 2 * dim + 1, dim], name="Input_1")
+        weights_emb = AWQMatmulModel.get_weights(np.ones((dim, dim)) / dim, False, name="weights_emb")
+        mat_mul_emb = opset.matmul(input_node, weights_emb, transpose_a=False, transpose_b=True, name="MatMul_emb")
+
+        weights_up_proj = AWQMatmulModel.get_weights(100.0 * np.ones((2 * dim, dim)), False, name="weights_up_proj")
+        mat_mul_up_proj = opset.matmul(
+            mat_mul_emb, weights_up_proj, transpose_a=False, transpose_b=True, name="MatMul_up_proj"
+        )
+
+        weights_gate_proj = AWQMatmulModel.get_weights(
+            0.00001 * np.ones((2 * dim, dim)), False, name="weights_gate_proj"
+        )
+        mat_mul_gate_proj = opset.matmul(
+            mat_mul_emb, weights_gate_proj, transpose_a=False, transpose_b=True, name="MatMul_gate_proj"
+        )
+
+        mat_mul_gate_proj = opset.relu(mat_mul_gate_proj, name="ReLU_gate_proj")
+
+        node_multiply = opset.multiply(mat_mul_up_proj, mat_mul_gate_proj, name="Multiply")
+
+        weights_down_proj = AWQMatmulModel.get_weights(
+            np.arange(0, 2 * dim**2).reshape(dim, 2 * dim), False, name="weights_down_proj"
+        )
+        mat_mul_down_proj = opset.matmul(
+            node_multiply, weights_down_proj, transpose_a=False, transpose_b=True, name="MatMul_down_proj"
+        )
+
+        weights = AWQMatmulModel.get_weights(np.ones((dim, dim)), False, name="lm_head")
+        out_node = opset.matmul(mat_mul_down_proj, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
 
         result = opset.result(out_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))

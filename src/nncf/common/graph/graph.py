@@ -810,3 +810,18 @@ class NNCFGraph:
                 subgraph_list.append(self.get_node_by_key(node_key))
             output.append(subgraph_list)
         return output
+
+
+def get_node_names_matching_graph_pattern(nncf_graph: NNCFGraph, graph_pattern: GraphPattern) -> set[str]:
+    """
+    Returns the names of nodes in the given NNCFGraph that match the specified graph pattern.
+
+    :param nncf_graph: An instance of NNCFGraph to search for matching subgraphs.
+    :param graph_pattern: A GraphPattern instance used to identify matching subgraphs.
+    :return: A set of node names from the NNCFGraph that match the given graph pattern.
+    """
+    nncf_node_names = set()
+    for subgraph in nncf_graph.find_matching_subgraphs(graph_pattern, strict=False):
+        for nncf_node in subgraph:
+            nncf_node_names.add(nncf_node.node_name)
+    return nncf_node_names

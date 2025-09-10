@@ -45,14 +45,6 @@ Developers may use other tools locally (such as `pylint`) as long as no tool-spe
 
 Please refrain from adding huge binary files into the repository. If binary files have to be added, mark these to use Git LFS via the [.gitattributes](./.gitattributes) file.
 
-## Model identifiers
-
-When adding model configs and checkpoints to be showcased in NNCF's sample script, follow the format for naming these files:
-
-1. The base name must be the same for the NNCF config file, AC config file, checkpoint file (PT/ONNX/OV) or checkpoint folder (TF), and other associated artifacts.
-2. This name should be composed with the following format: `{model_name}_{dataset_name}` for FP32 models, `{topology_name}_{dataset_name}_{compression_algorithms_applied}`. The format may be extended if there are multiple models with the same topology, dataset and compression algos applied, which only differ in something else such as exact value of achieved sparsity. Align the naming of the new checkpoints with the existing ones.
-3. Additional human-readable information on the model such as expected metrics and compression algorithm specifics (e.g. level of pruning/sparsity, per-tensor/per-channel quantizer configuration etc.) should be stored in a registry file (`tests/torch/sota_checkpoints_eval.json` for PT, `tests/tensorflow/sota_checkpoints_eval.json` for TF)
-
 ## Copyright
 
 1) If code was borrowed, ensure the license is checked and that no legal risks exist. For questions, contact valentina.kats@intel.com.

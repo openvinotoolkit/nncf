@@ -94,14 +94,17 @@ def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str
 
 
 def get_ref_from_json(
-    model_name: str, model_metatypes: dict[NNCFNodeName, Union[type[OperatorMetatype], bool]], attributes=False
+    model_name: str,
+    model_metatypes: dict[NNCFNodeName, Union[type[OperatorMetatype], bool]],
+    regen_ref_data: bool,
+    attributes=False,
 ) -> dict[NNCFNodeName, Union[type[OperatorMetatype], bool]]:
     model_json_name = get_json_filename(model_name)
     complete_path = get_full_path_to_json(model_json_name, attributes)
 
     json_parent_dir = Path(complete_path).parent
 
-    if os.getenv("NNCF_TEST_REGEN_JSON") is not None:
+    if regen_ref_data:
         if not os.path.exists(json_parent_dir):
             os.makedirs(json_parent_dir)
         with safe_open(complete_path, "w") as file:
@@ -112,7 +115,7 @@ def get_ref_from_json(
 
 
 @pytest.mark.parametrize("test_case", TEST_MODELS, ids=[m.model_id for m in TEST_MODELS])
-def test_model(test_case: ModelCase):
+def test_model(test_case: ModelCase, regen_ref_data: bool):
     device = torch.device("cpu")
     model_name = test_case.model_id
     model = test_case.model_builder()
@@ -131,7 +134,7 @@ def test_model(test_case: ModelCase):
 
     # Check metatypes
     model_metatypes = {n.node_name: n.metatype.__name__ for n in nncf_graph.get_all_nodes()}
-    ref_metatypes = get_ref_from_json(model_name, model_metatypes)
+    ref_metatypes = get_ref_from_json(model_name, model_metatypes, regen_ref_data=regen_ref_data)
     assert model_metatypes == ref_metatypes
 
 
@@ -179,7 +182,9 @@ TEST_MODELS_QUANIZED = (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (3, 3)],
-        [Dim.AUTO, Dim.AUTO, Dim.AUTO],
+        # (dlyakhov) Last dim has to be static, without that an assert is
+        # being inserted to the fx graph to check the last dim is equal to 4
+        [Dim.AUTO, Dim.AUTO, Dim.STATIC],
     ),
 )
 
@@ -266,12 +271,14 @@ def check_compressed_post_quantized(quantized_model):
         assert result.dtype == torch.float32
 
 
-def test_is_shared_attribute_default():
+def test_is_shared_attribute_default(regen_ref_data: bool):
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
     fx_model = get_torch_fx_model(model, ex_inputs)
     nncf_graph = GraphConverter.create_nncf_graph(fx_model)
 
     shared_attributes = {n.node_name: n.is_shared() for n in nncf_graph.get_all_nodes()}
-    ref_attributes = get_ref_from_json("default_shared_attribute_test_model", shared_attributes, attributes=True)
+    ref_attributes = get_ref_from_json(
+        "default_shared_attribute_test_model", shared_attributes, attributes=True, regen_ref_data=regen_ref_data
+    )
     assert shared_attributes == ref_attributes

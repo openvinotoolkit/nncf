@@ -83,7 +83,7 @@ class ModelTransformerFactory:
 
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 
-            return ONNXModelTransformer(cast(ModelProto, model))
+            return ONNXModelTransformer(cast(ModelProto, model), inplace=inplace)
         if model_backend == BackendType.OPENVINO:
             from openvino import Model
 

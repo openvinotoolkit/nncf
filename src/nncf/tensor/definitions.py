@@ -14,6 +14,8 @@ from enum import Enum
 from enum import auto
 from typing import Optional, Union
 
+from nncf.parameters import StrEnum
+
 T_SHAPE_ARRAY = tuple[int, ...]
 T_SHAPE = Union[int, T_SHAPE_ARRAY]
 T_AXIS = Optional[T_SHAPE]
@@ -31,7 +33,7 @@ class TensorBackend(Enum):
     ov = auto()
 
 
-class TensorDataType(Enum):
+class TensorDataType(StrEnum):
     """
     Enum representing the different tensor data types.
     """
@@ -63,6 +65,30 @@ class TensorDataType(Enum):
             TensorDataType.f8e5m2,
             TensorDataType.nf4,
         ]
+
+    def itemsize(self) -> int:
+        """
+        Returns the size of a single item in bits for the tensor data type.
+
+        :return: The item size in bits.
+        """
+        itemsize_bits = {
+            TensorDataType.nf4: 4,
+            TensorDataType.uint4: 4,
+            TensorDataType.int4: 4,
+            TensorDataType.f8e4m3: 8,
+            TensorDataType.f8e5m2: 8,
+            TensorDataType.int8: 8,
+            TensorDataType.uint8: 8,
+            TensorDataType.float16: 16,
+            TensorDataType.bfloat16: 16,
+            TensorDataType.float32: 32,
+            TensorDataType.int32: 32,
+            TensorDataType.float64: 64,
+            TensorDataType.int64: 64,
+        }
+
+        return itemsize_bits[self]
 
 
 class TensorDeviceType(Enum):

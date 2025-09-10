@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import torch.fx
 
 import nncf.torch.graph.operator_metatypes as om
@@ -88,3 +90,15 @@ def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphM
     # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
     graph_bias_const = get_graph_node_by_name(model.graph, bias_node.node_name)
     return Tensor(get_tensor_constant_from_node(graph_bias_const, model))
+
+
+def get_node_args(node: torch.fx.Node) -> tuple[Any, ...]:
+    """
+    Correctly retrieves arguments of the given node.
+
+    :param node: The given node.
+    :return: The arguments of the given node.
+    """
+    if node.target == torch.ops.aten.cat.default:
+        return node.args[0]
+    return node.args

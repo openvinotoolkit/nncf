@@ -11,13 +11,12 @@
 
 import json
 import os
-from functools import partial
 from typing import Callable, Optional, Union
 
 import pytest
 import torch
+from torchvision.models import mobilenet_v2
 
-from examples.torch.common.models import efficient_net
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import GroupedBlockIDs
@@ -28,12 +27,10 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.test_elastic_depth import INCEPTION_INPUT_SIZE
 from tests.torch.nas.test_elastic_depth import RESNET50_INPUT_SIZE
-from tests.torch.test_models import MobileNetV2
 from tests.torch.test_models import PNASNetB
 from tests.torch.test_models import ResNet18
 from tests.torch.test_models import ResNeXt29_32x4d
 from tests.torch.test_models import squeezenet1_0
-from tests.torch.test_models import ssd_mobilenet
 from tests.torch.test_models.inceptionv3 import Inception3
 from tests.torch.test_models.resnet import ResNet50
 
@@ -87,7 +84,7 @@ class BuildingBlockParamsCase:
 
 LIST_BB_PARAMS_CASES = [
     BuildingBlockParamsCase(ResNet50, RESNET50_INPUT_SIZE, hw_fused_ops=False),
-    BuildingBlockParamsCase(MobileNetV2, RESNET50_INPUT_SIZE),
+    BuildingBlockParamsCase(mobilenet_v2, RESNET50_INPUT_SIZE),
     BuildingBlockParamsCase(Inception3, INCEPTION_INPUT_SIZE, min_block_size=23, name="Inception3_big_blocks"),
     BuildingBlockParamsCase(
         Inception3, INCEPTION_INPUT_SIZE, min_block_size=4, max_block_size=5, name="Inception3_small_blocks"
@@ -95,14 +92,6 @@ LIST_BB_PARAMS_CASES = [
     BuildingBlockParamsCase(squeezenet1_0, RESNET50_INPUT_SIZE),
     BuildingBlockParamsCase(ResNeXt29_32x4d, [1, 3, 32, 32], hw_fused_ops=False),
     BuildingBlockParamsCase(PNASNetB, [1, 3, 32, 32]),
-    BuildingBlockParamsCase(ssd_mobilenet, [2, 3, 300, 300], min_block_size=2, max_block_size=7),
-    BuildingBlockParamsCase(
-        partial(efficient_net, model_name="efficientnet-b0"),
-        [10, 3, 240, 240],
-        name="efficientnet-b0",
-        min_block_size=2,
-        max_block_size=7,
-    ),
 ]
 
 

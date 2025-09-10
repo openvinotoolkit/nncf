@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import types
 from copy import deepcopy
 from functools import partial
@@ -27,34 +28,81 @@ from tests.torch2.function_hook import helpers
 ADD_VALUE = 2.0
 
 
-@pytest.mark.parametrize("forward_type", ["origin", "partial", "bound", "fn"])
-def test_wrapper(forward_type: str):
-    example_input = helpers.ConvModel.get_example_inputs()
-    model = helpers.ConvModel()
+def decorator(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        output = func(self, *args, **kwargs)
+        return output
+
+    return wrapper
+
+
+class ModelWithDecoratorForward(torch.nn.Module):
+    @decorator
+    def forward(self, x):
+        return x
+
+
+def build_partial_forward(model):
+    old_forward = model.forward
+
+    def new_forward(self, x):
+        return old_forward(x)
+
+    model.forward = partial(new_forward, model)
+
+    return model
+
+
+def build_methodtype_forward(model):
+    old_forward = model.forward
+
+    def new_forward(self, x):
+        return old_forward(x)
+
+    model.forward = types.MethodType(new_forward, model)
+    return model
+
+
+def build_fn_forward(model):
+    old_forward = model.forward
+
+    def new_forward(x):
+        return old_forward(x)
+
+    model.forward = new_forward
+    return model
+
+
+def build_update_wrapper_forward(model):
+    old_forward = model.forward
+
+    def new_forward(self, x):
+        return old_forward(x)
+
+    model.forward = functools.update_wrapper(partial(new_forward, model), old_forward)
+
+    return model
+
+
+MODEL_BUILDER = {
+    "origin": lambda x: x,
+    "partial": build_partial_forward,
+    "update_wrapper": build_update_wrapper_forward,
+    "methodtype": build_methodtype_forward,
+    "fn": build_fn_forward,
+}
+
+
+@pytest.mark.parametrize(
+    "model_cls", [helpers.ConvModel, ModelWithDecoratorForward], ids=["ConvModel", "ModelWithDecoratorForward"]
+)
+@pytest.mark.parametrize("modifier_type", list(MODEL_BUILDER))
+def test_wrapper(model_cls, modifier_type):
+    example_input = torch.ones([1, 1, 3, 3])
+    model = model_cls()
     model.eval()
-
-    model._old_forward = model.forward
-
-    if forward_type == "partial":
-        # Like in accelerate module
-        def new_forward(self, x):
-            return self._old_forward(x)
-
-        model.forward = partial(new_forward, model)
-
-    elif forward_type == "methodtype":
-
-        def new_forward(self, x):
-            return model._old_forward(x)
-
-        model.forward = types.MethodType(new_forward, model)
-    elif forward_type == "fn":
-        old_forward = model.forward
-
-        def new_forward(x):
-            return old_forward(x)
-
-        model.forward = new_forward
+    model = MODEL_BUILDER[modifier_type](model)
 
     with torch.no_grad():
         ret = model(example_input)

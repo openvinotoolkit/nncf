@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import time
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from nncf.onnx.quantization.backend_parameters import BackendParameters
 ROOT = Path(__file__).parent.resolve()
 
 
-MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 OUTPUT_DIR = ROOT / "tinyllama_compressed"
 
 
@@ -40,10 +41,17 @@ def main():
     # the directory containing the model’s external data files.
     onnx_model = onnx.load(OUTPUT_DIR / "model.onnx", load_external_data=False)
 
+    # Convert model to the target opset version if necessary.
+    opset = 21 if len(sys.argv) < 2 else int(sys.argv[1])
+    if onnx_model.opset_import[0].version != opset:
+        onnx_model = onnx.version_converter.convert_version(onnx_model, opset)
+
     compressed_onnx_model = nncf.compress_weights(
         onnx_model,
         mode=nncf.CompressWeightsMode.INT4_SYM,
-        ratio=0.8,
+        ratio=1.0,
+        all_layers=True,
+        ignored_scope=nncf.IgnoredScope(types=["Gather"]),
         advanced_parameters=nncf.AdvancedCompressionParameters(
             backend_params={BackendParameters.EXTERNAL_DATA_DIR: OUTPUT_DIR}
         ),
@@ -57,10 +65,13 @@ def main():
 
     ov_model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, from_onnx=True)
 
-    input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
+    messages = [{"role": "user", "content": "What is PyTorch?"}]
+    input_ids = tokenizer.apply_chat_template(
+        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+    ).to(device=model.device)
 
     start_t = time.time()
-    output = ov_model.generate(**input_ids, max_new_tokens=100)
+    output = ov_model.generate(input_ids, max_new_tokens=100)
     print("Elapsed time: ", time.time() - start_t)
 
     output_text = tokenizer.decode(output[0])

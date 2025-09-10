@@ -19,6 +19,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.cross_fw.shared.serialization import check_serialization
@@ -93,6 +94,10 @@ def test_quantizer_setup_serialization():
 
     scqp_2 = SingleConfigQuantizationPoint(aqip, qc, directly_quantized_operator_node_names=[str(scope)])
     check_serialization(scqp_2)
+
+    ex_qc = TypedQuantizerConfig()
+    scqp_ex = SingleConfigQuantizationPoint(aqip, ex_qc, directly_quantized_operator_node_names=[str(scope)])
+    check_serialization(scqp_ex)
 
     scqs = SingleConfigQuantizerSetup()
     scqs.quantization_points = {0: scqp_1, 1: scqp_2}
