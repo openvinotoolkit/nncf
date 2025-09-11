@@ -25,6 +25,7 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.onnx.graph.metatypes.groups import POSSIBLE_WEIGHT_LAYER_METATYPES
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
@@ -186,6 +187,7 @@ def _get_bias_attr(
     node: onnx.NodeProto,
     model: onnx.ModelProto,
     parents_node_mapping: dict[str, onnx.NodeProto],
+    children_node_mapping
 ) -> dict[str, str]:
     """
     Returns bias tensor attributes.
@@ -197,6 +199,25 @@ def _get_bias_attr(
     """
     bias_attrs = {}
     metatype = get_metatype(model, node)
+
+    if metatype == ONNXMatMulMetatype:
+        weight_port_ids = _get_weight_port_ids(node, model, parents_node_mapping)
+        if weight_port_ids:
+            y = node.output[0]  # only 1 output
+            consumers = children_node_mapping[y]
+            if len(consumers) == 1 and consumers[0].op_type == "Add":
+                add_node = consumers[0]
+                for port_id, input_name in enumerate(add_node.input):
+                    if input_name != y:
+                        bias_attrs["name"] = input_name
+                        bias_attrs["port_id"] = port_id
+
+                bias_attrs["add_node"] = add_node.name
+
+                # `name` should be or output from constant or `initializer`
+
+        return bias_attrs
+
     if _is_node_with_bias(node, model):
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         bias_edge_name = get_tensor_edge_name(model, node, bias_tensor_port_id, parents_node_mapping)
@@ -358,7 +379,8 @@ class GraphConverter:
             is_shared = None
             weight_attrs = {}
             node_attrs = _get_node_attrs(node, onnx_model)
-            bias_attrs = _get_bias_attr(node, onnx_model, parents_node_mapping)
+            bias_attrs = _get_bias_attr(node, onnx_model, parents_node_mapping, children_node_mapping)
+
             if weight_port_ids:  # If node has weight
                 weight_edge_names = []
                 for weight_port_id in weight_port_ids:

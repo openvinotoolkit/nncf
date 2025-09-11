@@ -104,6 +104,10 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[str, str]:
+        output = node.layer_attributes.bias_attrs.get("add_node", None)
+        if output:
+            return node.node_name, output
+
         return node.node_name, node.node_name
 
     @staticmethod
