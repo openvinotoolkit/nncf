@@ -260,6 +260,7 @@ miopen
 mistralai
 mixtral
 mmdeploy
+mmebench
 mnli
 mobilebert
 mobilenet

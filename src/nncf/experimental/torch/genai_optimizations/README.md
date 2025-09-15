@@ -4,17 +4,50 @@ This module provides experimental optimizations for GenAI models in PyTorch. The
 
 ## Supported Generative AI Scenarios
 
-- Multimodal understanding and text generation
+- Visual language text generation
 
 ## Supported Generative AI Optimization Methods
 
 - [**Visual Token Pruning**](./visual_token_pruning.py):
   Designed to accelerate inference in VLMs, where the number of input visual tokens is often significantly larger than that of textual tokens. Pruning these tokens reduces first-token latency and overall FLOPs while preserving accuracy. In this repository, we implement a visual token pruning method called [CDPruner](https://arxiv.org/pdf/2506.10967), which maximizes the conditional diversity of retained tokens. It can reduce FLOPs by 95% and CUDA latency by 78%, while maintaining 94% of the original accuracy.
 
+## Prerequisites
+
+Before running benchmarks, ensure you have **Python 3.9+** installed and set up your environment.
+
+### 1. Create and activate a virtual environment
+
+```bash
+python3 -m venv nncf_env
+source nncf_env/bin/activate      # On Windows: nncf_env\Scripts\activate.bat
+```
+
+### 2. Install NNCF and other dependencies
+
+```bash
+python3 -m pip install ../../../ -r requirements.txt```
+```
+
 ## Benchmarks
 
-- [MME: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models](./benchmarks/mmebench.py). Supported and tested models include:
-  - [llava-hf/llava-1.5-7b-hf](https://huggingface.co/llava-hf/llava-1.5-7b-hf)
-  - [llava-hf/llava-v1.6-mistral-7b-hf](https://huggingface.co/llava-hf/llava-v1.6-mistral-7b-hf)
-  - [Qwen/Qwen2.5-VL-3B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct)
-  - [Qwen/Qwen2-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct)
+### [MME: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models](./benchmarks/mmebench.py)
+
+#### Supported and tested models
+
+- [llava-hf/llava-1.5-7b-hf](https://huggingface.co/llava-hf/llava-1.5-7b-hf)
+- [llava-hf/llava-v1.6-mistral-7b-hf](https://huggingface.co/llava-hf/llava-v1.6-mistral-7b-hf)
+- [Qwen/Qwen2.5-VL-3B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct)
+- [Qwen/Qwen2-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen2-VL-2B-Instruct)
+
+#### Run Example
+
+Run the following command in the prepared Python environment:
+
+```bash
+python benchmarks/mmebench.py \
+    --subset artwork \
+    --model Qwen/Qwen2.5-VL-3B-Instruct \
+    --enable_visual_pruning \
+    --num_keep_tokens 128 \
+    --theta 0.5
+```
