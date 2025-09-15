@@ -1,0 +1,5 @@
+accelerate==1.9.0
+datasets==2.14.7
+transformers>=4.48.0
+torch==2.8.0
+torchvision==0.23.0

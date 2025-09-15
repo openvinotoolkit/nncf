@@ -118,7 +118,7 @@ def evaluate(args):
         model_name,
         trust_remote_code=True,
         # attn_implementation="eager",
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         device_map="auto",
         token=os.environ.get("HF_TOKEN", None),
         temperature=None,
