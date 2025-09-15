@@ -223,6 +223,7 @@ legr
 levelname
 libname
 linalg
+llava
 logicaland
 logicalnot
 logicalor

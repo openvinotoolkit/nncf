@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# This logic is largely copied from the https://github.com/starreeze/efuf/blob/main/evaluate/mme/calculation.py
 import os
 import string
 from argparse import ArgumentParser
