@@ -25,6 +25,7 @@ from transformers import AutoProcessor
 from transformers import set_seed
 
 from nncf.experimental.torch.genai_optimizations import get_inputs_embeds
+from nncf.experimental.torch.genai_optimizations.benchmarks.utils import add_visual_pruning_args
 
 
 class MetricCalculator:
@@ -218,14 +219,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, required=True, help="Huggingface model repo")
     parser.add_argument("--subset", choices=eval_type_dict, required=True, help="MME category name")
 
-    parser.add_argument("--enable_visual_pruning", action="store_true", help="Enable visual token pruning")
-    parser.add_argument("--num_keep_tokens", type=int, default=128, help="Number of visual tokens to keep")
-    parser.add_argument(
-        "--theta",
-        type=float,
-        default=0.5,
-        help="Balance factor to control the trade-off between diversity and relevance",
-    )
+    add_visual_pruning_args(parser)
     args = parser.parse_args()
 
     evaluate(args)
