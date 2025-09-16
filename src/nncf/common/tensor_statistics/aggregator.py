@@ -86,8 +86,11 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
-            del outputs
+            # Manually dereference output tensors to hint gc to remove them. Without it,
+            # the processed_outputs and outputs remain during model inference,
+            # increasing the peak memory consumption.
             del processed_outputs
+            del outputs
             processed_samples += 1
         if processed_samples == 0:
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
