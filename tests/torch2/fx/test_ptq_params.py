@@ -34,6 +34,7 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
+from tests.torch.test_models.synthetic import OneDepthwiseConvModel
 from tests.torch2.function_hook.quantization.helper import get_single_no_weight_matmul_nncf_graph
 from tests.torch2.fx.helpers import get_single_conv_nncf_graph
 from tests.torch2.fx.helpers import get_torch_fx_model_q_transformed
@@ -90,14 +91,22 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
+        input_tensor = torch.ones((1, 3, 32, 32))
         linear_model = LinearPTQParamsTestModel()
-        linear_model = get_torch_fx_model_q_transformed(linear_model, torch.ones((1, 3, 32, 32)))
+        linear_model = get_torch_fx_model_q_transformed(linear_model, input_tensor)
+        depthwise_model = OneDepthwiseConvModel()
+        depthwise_model = get_torch_fx_model_q_transformed(depthwise_model, input_tensor)
 
         return {
             "test_range_estimator_per_tensor": {
                 "model": linear_model,
                 "nncf_graph": GraphConverter.create_nncf_graph(linear_model),
                 "stat_points_num": 5,
+            },
+            "test_range_estimator_per_channel": {
+                "model": depthwise_model,
+                "nncf_graph": GraphConverter.create_nncf_graph(depthwise_model),
+                "stat_points_num": 2,
             },
             "test_quantize_outputs": {
                 "nncf_graph": get_single_conv_nncf_graph().nncf_graph,

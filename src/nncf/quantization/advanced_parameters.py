@@ -27,7 +27,6 @@ from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 TTensor = Any
@@ -273,12 +272,8 @@ class AdvancedQuantizationParameters:
     quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     # Range estimator parameters
-    activations_range_estimator_params: Union[RangeEstimatorParameters, StatisticsCollectorParameters] = field(
-        default_factory=RangeEstimatorParameters
-    )
-    weights_range_estimator_params: Union[RangeEstimatorParameters, StatisticsCollectorParameters] = field(
-        default_factory=RangeEstimatorParameters
-    )
+    activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
+    weights_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
 
     # Advanced BiasCorrection algorithm parameters
     bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
@@ -533,19 +528,13 @@ def convert_quantization_parameters_to_dict(params: Optional[QuantizationParamet
     return result
 
 
-def convert_range_estimator_parameters_to_dict(
-    params: Union[RangeEstimatorParameters, StatisticsCollectorParameters],
-) -> dict[str, Any]:
+def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters) -> dict[str, Any]:
     """
     Converts range estimator parameters to the dict in the legacy format
 
     :param params: Range estimator parameters
     :return: range estimator parameters as dict in the legacy format
     """
-    if isinstance(params, StatisticsCollectorParameters):
-        msg = "Single branch statistic collection is not supported for this backend yet."
-        raise nncf.ParameterNotSupportedError(msg)
-
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
         msg = "clipping_value parameter is not supported in the legacy format"
         raise nncf.ParameterNotSupportedError(msg)

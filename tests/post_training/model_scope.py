@@ -23,9 +23,7 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
-from nncf.quantization.range_estimator import AggregatorType
-from nncf.quantization.range_estimator import StatisticsCollectorParameters
-from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
@@ -92,11 +90,6 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
             "subset_size": 2,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": FX_BACKENDS
         + [
@@ -127,9 +120,6 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alpha=0.15,
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                ),
             ),
         },
         "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
@@ -143,9 +133,6 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alpha=0.5,
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                ),
             ),
         },
         "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
@@ -160,7 +147,9 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alpha=-1.0, activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -172,6 +161,9 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -198,11 +190,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -214,11 +201,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -230,11 +212,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -247,11 +224,6 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": [BackendType.ONNX, BackendType.OV],
         "batch_size": 128,
@@ -263,11 +235,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -280,9 +247,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -294,11 +259,6 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 4,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": NNCF_PTQ_BACKENDS,
         "batch_size": 64,
@@ -310,6 +270,9 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -322,6 +285,9 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
         },
         "backends": [BackendType.ONNX, BackendType.OV],
         "batch_size": 128,
@@ -333,6 +299,9 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -345,6 +314,9 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
         },
         "backends": [BackendType.ONNX, BackendType.OV],
         "batch_size": 128,
@@ -357,9 +329,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -373,9 +343,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -389,11 +357,6 @@ QUANTIZATION_MODELS = [
             "subset_size": 9,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": [BackendType.OV],
         "batch_size": 32,
@@ -408,9 +371,6 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                ),
             ),
         },
         "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
@@ -423,11 +383,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -438,11 +393,6 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": NNCF_PTQ_BACKENDS,
         "batch_size": 128,
@@ -455,11 +405,6 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -471,11 +416,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=StatisticsCollectorParameters(
-                    statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM
-                )
-            ),
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,

@@ -153,3 +153,8 @@ class RangeEstimatorParametersSet:
         min=StatisticsCollectorParameters(statistics_type=StatisticsType.QUANTILE, aggregator_type=AggregatorType.MEAN),
         max=StatisticsCollectorParameters(statistics_type=StatisticsType.QUANTILE, aggregator_type=AggregatorType.MEAN),
     )
+
+    HISTOGRAM = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM),
+        max=StatisticsCollectorParameters(statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM),
+    )
