@@ -22,7 +22,7 @@ Multimodal Large Language Models:
 
 ## Prerequisites
 
-Before running benchmarks, ensure you have **Python 3.9+** installed and set up your environment.
+Before running algorithms, ensure you have **Python 3.9+** installed and set up your environment.
 
 ### 1. Create and activate a virtual environment
 
@@ -35,36 +35,4 @@ source nncf_env/bin/activate      # On Windows: nncf_env\Scripts\activate.bat
 
 ```bash
 python3 -m pip install ../../../ -r requirements.txt```
-```
-
-## Benchmarks
-
-### [MME: A Comprehensive Evaluation Benchmark for Multimodal Large Language Models](https://arxiv.org/pdf/2306.13394)
-
-MME measures both perception and cognition abilities across 14 subtasks. Its concise instruction design enables fair comparison of MLLMs without the need for extensive prompt engineering.
-
-Run the following command in the prepared Python environment:
-
-```bash
-python benchmarks/mmebench.py \
-    --subset artwork \
-    --model Qwen/Qwen2.5-VL-3B-Instruct \
-    --enable_visual_pruning \
-    --num_keep_tokens 128 \
-    --theta 0.5
-```
-
-### [MILEBENCH: Benchmarking MLLMs in Long Context](https://arxiv.org/pdf/2404.18532)
-
-MILEBENCH is a pioneering benchmark designed to rigorously evaluate the multimodal long-context capabilities of MLLMs. It encompasses diverse tasks requiring both comprehension and generation, and introduces two distinct evaluation sets—diagnostic and realistic—that systematically assess models’ capacity for long-context adaptation and effective task completion.
-
-Run the following command in the prepared Python environment:
-
-```bash
-python benchmarks/milebench.py \
-    --subset WikiVQA \
-    --model Qwen/Qwen2-VL-2B-Instruct \
-    --enable_visual_pruning \
-    --num_keep_tokens 64 \
-    --theta 0.5
 ```

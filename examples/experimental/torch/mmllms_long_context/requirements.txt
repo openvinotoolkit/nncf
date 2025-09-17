@@ -1,0 +1,2 @@
+datasets==2.14.7
+rouge==1.0.1

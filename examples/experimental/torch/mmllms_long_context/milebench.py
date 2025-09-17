@@ -31,7 +31,6 @@ from transformers import AutoProcessor
 
 from nncf import nncf_logger
 from nncf.experimental.torch.genai_optimizations import get_inputs_embeds
-from nncf.experimental.torch.genai_optimizations.benchmarks.utils import add_visual_pruning_args
 
 
 class MileBenchDataset:
@@ -385,32 +384,6 @@ class Eval:
             raise ValueError(error_msg)
 
 
-def get_model_class(model_name):
-    if "Qwen2.5-VL" in model_name:
-        from transformers import Qwen2_5_VLForConditionalGeneration
-
-        return Qwen2_5_VLForConditionalGeneration
-    elif "Qwen2-VL" in model_name:
-        from transformers import Qwen2VLForConditionalGeneration
-
-        return Qwen2VLForConditionalGeneration
-    elif "llava-1.5" in model_name:
-        from transformers import LlavaForConditionalGeneration
-
-        return LlavaForConditionalGeneration
-    elif "llava-v1.6" in model_name:
-        from transformers import LlavaNextForConditionalGeneration
-
-        return LlavaNextForConditionalGeneration
-    elif "Phi" in model_name:
-        from transformers import AutoModelForCausalLM
-
-        return AutoModelForCausalLM
-    else:
-        error_msg = f"{model_name} is not supported."
-        raise NotImplementedError(error_msg)
-
-
 def evaluate(dataset, processor, model, num_keep_tokens, theta):
     with torch.no_grad():
         answers = []
@@ -445,6 +418,40 @@ def evaluate(dataset, processor, model, num_keep_tokens, theta):
     scorer = Eval()
     score = scorer.evaluate(answers, args.subset, question_type)
     print(f"Score: {score}")
+
+
+def get_model_class(model_name):
+    if "Qwen2.5-VL" in model_name:
+        from transformers import Qwen2_5_VLForConditionalGeneration
+
+        return Qwen2_5_VLForConditionalGeneration
+    elif "Qwen2-VL" in model_name:
+        from transformers import Qwen2VLForConditionalGeneration
+
+        return Qwen2VLForConditionalGeneration
+    elif "llava-1.5" in model_name:
+        from transformers import LlavaForConditionalGeneration
+
+        return LlavaForConditionalGeneration
+    elif "llava-v1.6" in model_name:
+        from transformers import LlavaNextForConditionalGeneration
+
+        return LlavaNextForConditionalGeneration
+    elif "Phi" in model_name:
+        from transformers import AutoModelForCausalLM
+
+        return AutoModelForCausalLM
+    else:
+        error_msg = f"{model_name} is not supported."
+        raise NotImplementedError(error_msg)
+
+
+def add_visual_pruning_args(parser):
+    group = parser.add_argument_group("Visual Token Pruning Arguments")
+    group.add_argument("--enable_visual_pruning", action="store_true", help="Enable visual token pruning")
+    group.add_argument("--num_keep_tokens", type=int, default=128, help="Number of visual tokens to keep")
+    group.add_argument("--theta", type=float, default=0.5, help="Balance factor for diversity vs relevance")
+    return parser
 
 
 if __name__ == "__main__":
