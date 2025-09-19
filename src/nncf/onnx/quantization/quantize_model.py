@@ -30,7 +30,9 @@ from nncf.onnx.graph.model_metadata import remove_metadata
 from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.passes import apply_preprocess_passes
+from nncf.onnx.graph.passes import compress_quantize_weights_transformation
 from nncf.onnx.quantization.backend_parameters import get_external_data_dir
+from nncf.onnx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -177,6 +179,9 @@ def quantize_impl(
         remove_metadata(quantized_model, MetadataKey.EXTERNAL_DATA_DIR)
         load_external_data_for_model(quantized_model, external_data_dir)
 
+    if is_weight_compression_needed(advanced_parameters):
+        compress_quantize_weights_transformation(quantized_model)
+
     return quantized_model
 
 
@@ -291,6 +296,9 @@ def quantize_with_accuracy_control_impl(
             validation_dataset_size,
             evaluator,
         )
+
+    if is_weight_compression_needed(advanced_quantization_parameters):
+        compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model
 

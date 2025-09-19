@@ -19,9 +19,24 @@ class BackendParameters:
     """
     :param EXTERNAL_DATA_DIR: An absolute path to the directory where the external data
         files are stored. All external data files must be located in the same folder.
+    :param COMPRESS_WEIGHTS: TODO
     """
 
+    COMPRESS_WEIGHTS = "compress_weights"
     EXTERNAL_DATA_DIR = "external_data_dir"
+
+
+def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
+    """
+    Determines whether weight compression is needed based on the provided
+    advanced quantization parameters.
+
+    :param advanced_parameters: Advanced quantization parameters.
+    :return: True if weight compression is needed, False otherwise.
+    """
+    if advanced_parameters is not None and advanced_parameters.backend_params is not None:
+        return advanced_parameters.backend_params.get(BackendParameters.COMPRESS_WEIGHTS, True)
+    return True
 
 
 def get_external_data_dir(

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional, Union, Any
 
 import numpy as np
 import onnx
@@ -373,3 +373,24 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
     packed_weight = packed.transpose(2, 0, 1)
 
     return packed_weight
+
+
+def get_node_attr_value(node: onnx.NodeProto, attr_name: str) -> Optional[Any]:
+    """
+    TODO
+
+    :param node:
+    :param attr_name:
+    :return:
+    """
+    matching = [x for x in node.attribute if x.name == attr_name]
+    attr_value = None
+    if len(matching) > 1:
+        raise ValueError(f"Node has multiple attributes with name {attr_name}")
+    if len(matching) < 1:
+        # raise ValueError(f"Node has no attribute with name {attr_name}")
+        return None
+
+    attr_value = onnx.helper.get_attribute_value(matching[0])
+
+    return attr_value

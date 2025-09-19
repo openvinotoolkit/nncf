@@ -10,9 +10,11 @@
 # limitations under the License.
 
 import onnx
+from onnx.reference.ops import load_op
 
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
+from nncf.onnx.graph.onnx_helper import get_node_attr_value
 
 
 def eliminate_nop_cast(model: onnx.ModelProto) -> onnx.ModelProto:
@@ -77,3 +79,51 @@ def apply_preprocess_passes(model: onnx.ModelProto) -> onnx.ModelProto:
     # Otherwise, not all no-op Cast nodes will be found.
     preprocessed_model = eliminate_nop_cast(preprocessed_model)
     return preprocessed_model
+
+
+def compress_quantize_weights_transformation(model: onnx.ModelProto):
+    """
+    :param model:
+    """
+    initializer = {x.name: x for x in model.graph.initializer}
+    # value_info = {i.name: i for i in model.graph.value_info}
+
+    nodes_to_remove = []
+
+    version = model.opset_import[0].version
+    QuantizeLinear = load_op("", "QuantizeLinear", version)
+
+    for node in model.graph.node:
+        if node.op_type != "QuantizeLinear":
+            continue
+
+        x_name, y_scale_name, y_zero_point_name = node.input[:3]
+
+        # NOTE:
+        if x_name not in initializer:
+            continue
+
+        nodes_to_remove.append(node)
+
+        # --- quantize x ---
+        x = onnx.numpy_helper.to_array(initializer[x_name])
+        y_scale = onnx.numpy_helper.to_array(initializer[y_scale_name])
+        y_zero_point = onnx.numpy_helper.to_array(initializer[y_zero_point_name])
+
+        axis = get_node_attr_value(node, "axis")
+        if version < 21:
+            # onnx.reference.ops.op_quantize_linear.QuantizeLinear_19
+            y = QuantizeLinear.eval(x, y_scale, y_zero_point, axis=axis)
+        else:
+            # onnx.reference.ops.op_quantize_linear.QuantizeLinear_21
+            block_size = get_node_attr_value(node, "block_size")
+            y = QuantizeLinear.eval(x, y_scale, y_zero_point, axis=axis, block_size=block_size)
+
+        tensor_proto = onnx.numpy_helper.from_array(y, name=node.output[0])
+        initializer[x_name].CopyFrom(tensor_proto)
+
+    # NOTE: QuantizeLinear and DequantizeLinear nodes have common initializers in ports 1 and 2.
+    for x in nodes_to_remove:
+        model.graph.node.remove(x)
+
+    # onnx.checker.check_model(model, full_check=True)
