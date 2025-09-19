@@ -129,8 +129,18 @@ def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     :param model: The nn.Module object.
     :return: A torch.Tensor object containing the constant value.
     """
-    const_name = const_node.layer_attributes.name
-    module_name, const_attr_name = split_const_name(const_name)
+    return get_const_data_by_name(const_node.layer_attributes.name, model)
+
+
+def get_const_data_by_name(name: str, model: nn.Module) -> torch.Tensor:
+    """
+    Retrieves a detached constant tensor by its name.
+
+    :param const_name: The full name of the constant, including module and attribute.
+    :param model: The nn.Module object.
+    :return: A torch.Tensor object containing the constant value.
+    """
+    module_name, const_attr_name = split_const_name(name)
     module = get_module_by_name(module_name, model)
     data = getattr(module, const_attr_name)
     if isinstance(data, torch.nn.Parameter):

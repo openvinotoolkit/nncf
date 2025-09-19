@@ -39,10 +39,12 @@ from nncf.parameters import CompressionFormat as CompressionFormat
 from nncf.parameters import CompressWeightsMode as CompressWeightsMode
 from nncf.parameters import DropType as DropType
 from nncf.parameters import ModelType as ModelType
+from nncf.parameters import PruneMode as PruneMode
 from nncf.parameters import QuantizationMode as QuantizationMode
 from nncf.parameters import SensitivityMetric as SensitivityMetric
 from nncf.parameters import StripFormat as StripFormat
 from nncf.parameters import TargetDevice as TargetDevice
+from nncf.prune.prune_model import prune as prune
 from nncf.quantization import QuantizationPreset as QuantizationPreset
 from nncf.quantization import compress_weights as compress_weights
 from nncf.quantization import quantize as quantize
