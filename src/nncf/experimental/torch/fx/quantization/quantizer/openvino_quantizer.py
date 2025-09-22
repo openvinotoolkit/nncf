@@ -24,14 +24,17 @@ from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.ao.quantization.observer import UniformQuantizationObserverBase
 from torch.ao.quantization.quantizer.quantizer import EdgeOrNode
 from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
-from torchao.quantization.pt2e.quantizer import (
+from torch.ao.quantization.quantizer import (
     QuantizationAnnotation as TorchAOQuantizationAnnotation,
 )
-from torchao.quantization.pt2e.quantizer import (
+from torch.ao.quantization.quantizer import (
     QuantizationSpec as TorchAOQuantizationSpec,
 )
-from torchao.quantization.pt2e.quantizer import (
+from torch.ao.quantization.quantizer import (
     QuantizationSpecBase as TorchAOQuantizationSpecBase,
+)
+from torch.ao.quantization.quantizer import (
+    SharedQuantizationSpec as TorchAOSharedQuantizationSpec,
 )
 
 import nncf
@@ -270,7 +273,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                 if quantizer_id == root_quantizer_id:
                     continue
 
-                qspec = SharedQuantizationSpec(root_edge_or_node)  # type: ignore[assignment]
+                qspec = TorchAOSharedQuantizationSpec(root_edge_or_node)  # type: ignore[assignment]
                 qp = quantization_setup.quantization_points[quantizer_id]
                 edge_or_node, annotation = self._get_edge_or_node_and_annotation(
                     graph, nncf_graph, qp, node_vs_torch_annotation
