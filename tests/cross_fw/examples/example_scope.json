@@ -364,7 +364,6 @@
     },
     "magnitude_pruning_torch_resnet18": {
         "backend": "torch",
-        "device": "cuda",
         "requirements": "examples/pruning/torch/resnet18/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.02,
