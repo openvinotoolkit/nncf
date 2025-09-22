@@ -273,7 +273,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                 if quantizer_id == root_quantizer_id:
                     continue
 
-                qspec = TorchAOSharedQuantizationSpec(root_edge_or_node)  # type: ignore[assignment]
+                qspec = TorchAOSharedQuantizationSpec(root_edge_or_node)
                 qp = quantization_setup.quantization_points[quantizer_id]
                 edge_or_node, annotation = self._get_edge_or_node_and_annotation(
                     graph, nncf_graph, qp, node_vs_torch_annotation
@@ -409,7 +409,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         """
         ip = qp.insertion_point
         if qp.is_weight_quantization_point():
-            OpenVINOQuantizer._get_weight_edge(target_node, nncf_graph)
+            return OpenVINOQuantizer._get_weight_edge(target_node, nncf_graph)
 
         if ip.input_port_id is None:
             return target_node
@@ -456,7 +456,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             nncf.CompressWeightsMode.INT4_ASYM,
             nncf.CompressWeightsMode.INT4_SYM,
         ]:
-            observer = INT4WeightObserver  # type: ignore[type-abstract]
+            observer = INT4WeightObserver
             quant_min = -8 if not is_asym_mode else 0
             quant_max = 7 if not is_asym_mode else 15
             dtype = torch.int8
@@ -467,7 +467,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                 else torch.per_channel_affine
             )
         else:
-            observer = INT8WeightObserver  # type: ignore[type-abstract]
+            observer = INT8WeightObserver
             quant_min = -128 if not is_asym_mode else 0
             quant_max = 127 if not is_asym_mode else 255
             dtype = torch.int8
