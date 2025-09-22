@@ -157,3 +157,45 @@ def _quant_node_constraint(n: torch.fx.Node) -> bool:
     related to quantization
     """
     return n.op == "call_function" and n.target in QUANTIZE_NODE_TARGETS
+
+@api(canonical_alias="nncf.experimental.torch.fx.compress_pt2e")
+def compress_pt2e(
+                model: torch.fx.GraphModule,
+                quantizer: Quantizer,
+                dataset: Optional[nncf.Dataset] = None,
+                awq: bool = False,
+                scale_estimation: bool = False,
+                gptq: bool = False,
+                lora_correction: bool = False,
+                subset_size: int = 128,  # Dataset size to use
+                sensitivity_metric: nncf.SensitivityMetric = nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+                advanced_parameters: nncf.AdvancedCompressionParameters = None,
+                ) -> torch.fx.GraphModule:
+
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_setup"):
+        quantizer = OpenVINOQuantizerAdapter(quantizer)
+        compression_format = nncf.CompressionFormat.DQ # since OVQUantizer has a defined decompression subgraph which we want, this is a minimally invasive way to do it
+    else:
+        #TODO Path has issues with constant foldign and the QDQ subgraph
+        # Group size will explicitly have to be passed for other quantizers again with compress pt2e api.
+        quantizer = TorchAOQuantizerAdapter(quantizer)
+        compression_format = nncf.CompressionFormat.FQ # Insert QDQ nodes instead of Openvino decompression subgraph. The code for this is in torch fx backend 
+
+    quantization_algorithm = WeightsCompressionPT2E(
+        quantizer=quantizer,
+        awq=awq,
+        subset_size=subset_size,
+        scale_estimation=scale_estimation,
+        gptq=gptq,
+        lora_correction=lora_correction,
+        sensitivity_metric=sensitivity_metric,
+        compression_format=compression_format,
+        advanced_parameters=advanced_parameters,
+        )
+
+    # Here the model is annotated
+    transformed_model = quantizer.transform_prior_quantization(model)
+    nncf_graph = NNCFGraphFactory.create(transformed_model)
+    quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=dataset)
+    quantized_model = torch.fx.GraphModule(quantized_model, graph=quantized_model.graph)
+    return quantized_model

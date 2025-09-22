@@ -769,10 +769,51 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
+    def collect_weight_compression_statistics(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        dataset: Dataset,
+        weight_params: list[WeightCompressionParameters],
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Collects statistics for weight compression if data-aware compression or 
+        mixed-precision is enabled.
+
+        :param model: Backend-specific input model.
+        :param graph: NNCFGraph instance.
+        :param dataset: Dataset for statistics collection.
+        :param weight_params: Weight parameters for which to collect statistics.
+        :param statistic_points: Optional pre-collected statistic points.
+        :return: A dictionary of collected statistics, or None if not applicable.
+        """
+        statistics = None
+        if not (self._data_aware_mixed_precision or self._data_aware_compression) and not dataset:
+            return statistics, statistic_points
+        matmul_nodes_to_compress = [
+            wp.node_with_weight
+            for wp in weight_params
+            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+        ]
+        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
+            matmul_nodes_to_compress, graph
+        )
+
+        if statistic_points is None:
+            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
+
+        statistics = self._get_statistics_for_weights_compression(
+            matmul_input_to_output_nodes_map, statistic_points
+        )
+        return statistics, statistic_points
+
     def get_weight_compression_parameters(
         self,
         model: TModel,
         graph: NNCFGraph,
+        nodes_to_compress: list[NNCFNode],
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
@@ -791,8 +832,6 @@ class WeightCompression(Algorithm):
             Compression algorithm configuration, and a mapping of target node names to the
             collected statistics.
         """
-        nodes_to_compress = self.get_nodes_to_compress(graph)
-
         all_weight_params: list[WeightCompressionParameters] = []
         skipped_weight_params: list[WeightCompressionParameters] = []
 
@@ -870,23 +909,8 @@ class WeightCompression(Algorithm):
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
         # Collect statistics for the weights compression
-        statistics = None
-        if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
-            weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-            matmul_nodes_to_compress = [
-                wp.node_with_weight
-                for wp in weight_params
-                if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
-            ]
-            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
-                matmul_nodes_to_compress, graph
-            )
-            if statistic_points is None:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-            statistics = self._get_statistics_for_weights_compression(
-                matmul_input_to_output_nodes_map, statistic_points
-            )
+        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+        statistics, statistic_points = self.collect_weight_compression_statistics(model, graph, dataset, weight_params, statistic_points)
 
         # Set weight compression configuration
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
@@ -901,18 +925,14 @@ class WeightCompression(Algorithm):
 
         return all_weight_params, statistics
 
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+    def apply_wc_algos(
+            self,
+            model: TModel,
+            graph: NNCFGraph,
+            all_weight_params: list[WeightCompressionParameters],
+            statistics: dict[str, Any],
+            dataset: Optional[Dataset] = None,
     ) -> TModel:
-        self.set_backend_entity(model)
-
-        # Get processed weight compression parameters ready for compression
-        all_weight_params, statistics = self.get_weight_compression_parameters(model, graph, statistic_points, dataset)
-
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
@@ -967,7 +987,7 @@ class WeightCompression(Algorithm):
         self._backend_entity.dump_parameters(
             model,
             parameters={
-                "mode": self._mode.value,
+                "mode": self._mode.value if isinstance(self._mode, str) else self._mode,
                 "group_size": self._group_size,
                 "ratio": self._ratio,
                 "all_layers": self._all_layers,
@@ -983,6 +1003,25 @@ class WeightCompression(Algorithm):
             },
             algo_name="weight_compression",
         )
+
+        return transformed_model
+    
+
+    def apply(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
+        self.set_backend_entity(model)
+        nodes_to_compress = self.get_nodes_to_compress(graph)
+         # Get processed weight compression parameters ready for compression
+        all_weight_params, statistics = self.get_weight_compression_parameters(
+            model, graph, nodes_to_compress, statistic_points, dataset
+        )
+        transformed_model = self.apply_wc_algos(model, graph, all_weight_params, statistics, dataset)
+        
         return transformed_model
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
