@@ -369,7 +369,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.02,
         "accuracy_metrics": {
-            "accuracy_diff": 0.03
+            "acc1": 55.004
         }
     }
 }

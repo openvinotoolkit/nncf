@@ -202,7 +202,7 @@ def prepare_tiny_imagenet_200(dataset_dir: Path) -> None:
 
 def main():
     torch.manual_seed(0)
-    device = "cpu"  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using {device} device")
 
     ###############################################################################
