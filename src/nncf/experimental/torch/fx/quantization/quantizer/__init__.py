@@ -10,5 +10,3 @@
 # limitations under the License.
 
 from .openvino_quantizer import OpenVINOQuantizer, QuantizationMode
-
-__all__ = ["OpenVINOQuantizer", "quantize_model", "QuantizationMode"]
