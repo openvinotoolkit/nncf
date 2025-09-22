@@ -14,8 +14,7 @@ import torch.fx
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
-from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
-
+from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 
 class OpenVINOQuantizerAdapter(Quantizer):
     """
