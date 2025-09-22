@@ -15,33 +15,33 @@ from typing import Optional, Tuple
 
 import torch
 
-from nncf.experimental.torch.fx.node_utils import (  # type: ignore[import-untyped]
+from nncf.experimental.torch.fx.node_utils import (
     get_tensor_constant_from_node,
 )
-from nncf.experimental.torch.fx.transformations import (  # type: ignore[import-untyped]
+from nncf.experimental.torch.fx.transformations import (
     constant_update,
     module_insertion,
     node_removal,
 )
-from nncf.quantization.algorithms.weight_compression.config import (  # type: ignore[import-untyped]
+from nncf.quantization.algorithms.weight_compression.config import (
     WeightCompressionParameters,
 )
-from nncf.quantization.algorithms.weight_compression.weight_lowering import (  # type: ignore[import-untyped]
+from nncf.quantization.algorithms.weight_compression.weight_lowering import (
     do_integer_quantization,
 )
-from nncf.tensor.tensor import Tensor as NNCFTensor  # type: ignore[import-untyped]
-from nncf.torch.graph.transformations.commands import (  # type: ignore[import-untyped]
+from nncf.tensor.tensor import Tensor as NNCFTensor
+from nncf.torch.graph.transformations.commands import (
     PTTargetPoint,
     TargetType,
 )
-from nncf.torch.quantization.layers import (  # type: ignore[import-untyped]
+from nncf.torch.quantization.layers import (
     BaseWeightsDecompressor,
     INT4AsymmetricWeightsDecompressor,
     INT4SymmetricWeightsDecompressor,
     INT8AsymmetricWeightsDecompressor,
     INT8SymmetricWeightsDecompressor,
 )
-from torchao.quantization.pt2e import ObserverBase
+from torch.ao.quantization.observer import ObserverBase
 
 
 class WeightObserverBase(ObserverBase, ABC):
