@@ -34,11 +34,10 @@ import nncf.torch.function_hook
 import nncf.torch.function_hook.prune
 import nncf.torch.function_hook.prune.prune_model
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.schedulers import MultiStepPruneScheduler
+from nncf.torch.function_hook.prune.magnitude.schedulers import MultiStepMagnitudePruningScheduler
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
-
 
 BASE_MODEL_NAME = "resnet18"
 IMAGE_SIZE = 64
@@ -203,7 +202,7 @@ def prepare_tiny_imagenet_200(dataset_dir: Path) -> None:
 
 def main():
     torch.manual_seed(0)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cpu"  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using {device} device")
 
     ###############################################################################
@@ -245,7 +244,7 @@ def main():
     optimizer = torch.optim.Adam(pruned_model.parameters(), lr=compression_lr)
 
     # Create prune scheduler with multi steps strategy
-    prune_scheduler = MultiStepPruneScheduler(
+    prune_scheduler = MultiStepMagnitudePruningScheduler(
         pruned_model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.6, 1: 0.7}
     )
 
@@ -268,6 +267,7 @@ def main():
     ov_model = ov.convert_model(pruned_model.cpu(), example_input=example_input.cpu(), input=tuple(example_input.shape))
     ov.save_model(ov_model, ir_path, compress_to_fp16=False)
     print(f"Pruned model path: {ir_path}")
+    return acc1
 
 
 if __name__ == "__main__":

@@ -12,7 +12,6 @@
 import weakref
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional
 
 from torch import nn
 
@@ -23,6 +22,15 @@ from nncf.torch.function_hook.prune.prune_model import prune_update_ratio
 
 
 class _BaseMagnitudePruningScheduler(ABC):
+    """
+    Base class for pruning schedulers.
+
+    :param ref_model: A weak reference to the model being pruned.
+    :param mode: The mode of pruning to be applied.
+    :param epoch: The current epoch number.
+    :param current_ratio: The current pruning ratio applied to the model.
+    """
+
     def __init__(self, model: nn.Module, mode: PruneMode) -> None:
         self.ref_model = weakref.ref(model)
         self.mode = mode
@@ -30,36 +38,48 @@ class _BaseMagnitudePruningScheduler(ABC):
         self.current_ratio = 0.0
 
     def step(self, epoch: int | None = None) -> None:
+        """
+        Updates the pruning schedule for the model based on the current epoch.
+
+        :param epoch: The current epoch number. If None, the method uses the internal epoch counter.
+        """
         if epoch is None:
             epoch = self.epoch
         else:
             self.epoch = epoch
 
-        ratio = self.get_sparsity_ratio(epoch)
-        if ratio is None:
-            return
+        self.current_ratio = self.get_pruning_ratio(epoch)
 
-        self.current_ratio = ratio
-        prune_update_ratio(self.ref_model(), mode=self.mode, ratio=self.current_ratio)
+        model = self.ref_model()
+        if model is None:
+            msg = "The referenced model is no longer available"
+            raise nncf.InternalError(msg)
+        prune_update_ratio(model, mode=self.mode, ratio=self.current_ratio)
 
         self.epoch += 1
 
     @abstractmethod
-    def get_sparsity_ratio(self, epoch: int) -> Optional[float]:
-        pass
+    def get_pruning_ratio(self, epoch: int) -> float:
+        """
+        Calculate the sparsity ratio for a given epoch.
+
+        :param epoch: The current epoch number.
+
+        :return: The pruning ratio for the specified epoch.
+        """
 
 
-class MultiStepPruneScheduler(_BaseMagnitudePruningScheduler):
+class MultiStepMagnitudePruningScheduler(_BaseMagnitudePruningScheduler):
     """
-    A scheduler for controlling the sparsity of a neural network model over multiple steps.
+    A scheduler for controlling the pruning ration over multiple steps.
+
+    Note: If the first key in the steps dictionary is not 0, the initial sparsity ratio will be set to
+          the first value in the steps.
 
     :param model: The neural network model to be pruned.
     :param mode: The pruning mode to be used.
     :param steps: A dictionary mapping epochs to sparsity ratios. The keys should be in ascending order,
                   and the values should be in the range [0, 1).
-
-    :raises nncf.InternalError: If the provided steps are not in ascending order or if any value is
-                                outside the range [0, 1).
     """
 
     def __init__(self, model: nn.Module, *, mode: PruneMode, steps: dict[int, int]) -> None:
@@ -72,14 +92,26 @@ class MultiStepPruneScheduler(_BaseMagnitudePruningScheduler):
             )
             raise nncf.InternalError(msg)
 
-    def get_sparsity_ratio(self, epoch: int) -> float:
+        self.current_ratio = self.steps[sorted(self.steps.keys())[0]]
+
+    def get_pruning_ratio(self, epoch: int) -> float:
         for steps in sorted(self.steps.keys(), reverse=True):
             if epoch >= steps:
                 return self.steps[steps]
-        return None
+        return self.current_ratio
 
 
-class ExponentialPruneScheduler(_BaseMagnitudePruningScheduler):
+class ExponentialMagnitudePruningScheduler(_BaseMagnitudePruningScheduler):
+    """
+    A scheduler for controlling the pruning ration over exponential function.
+
+    :param model: The neural network model to be pruned.
+    :param mode: The pruning mode to be used (e.g., global, layer-wise).
+    :param initial_ratio: The initial pruning ratio (should be in the range [0, 1)).
+    :param target_ratio: The target pruning ratio (should be in the range (0, 1)).
+    :param target_epoch: The epoch at which the target pruning ratio should be reached (should be a positive integer).
+    """
+
     def __init__(
         self, model: nn.Module, *, mode: PruneMode, initial_ratio: float, target_ratio: float, target_epoch: int
     ) -> None:
@@ -87,6 +119,7 @@ class ExponentialPruneScheduler(_BaseMagnitudePruningScheduler):
         self.initial_ratio = initial_ratio
         self.target_ratio = target_ratio
         self.target_epoch = target_epoch
+        self.current_ratio = initial_ratio
 
         if initial_ratio < 0 or initial_ratio >= 1:
             msg = "initial_ratio should be in range [0, 1)."
@@ -98,13 +131,14 @@ class ExponentialPruneScheduler(_BaseMagnitudePruningScheduler):
             msg = "target_epoch should be positive integer."
             raise nncf.InternalError(msg)
 
-    def get_sparsity_ratio(self, epoch: int) -> float:
+    def get_pruning_ratio(self, epoch: int) -> float:
         if epoch == 0:
             return self.initial_ratio
         if epoch >= self.target_epoch:
             return self.target_ratio
+
         d_init = 1 - self.initial_ratio
         d_target = 1 - self.target_ratio
-        d = d_init * (d_target / d_init) ** (epoch / self.target_epoch)
+        d = d_init * float((d_target / d_init) ** (epoch / self.target_epoch))
         ratio = 1 - d
         return min(max(self.initial_ratio, ratio), self.target_epoch)
