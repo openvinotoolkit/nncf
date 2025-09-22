@@ -194,10 +194,9 @@ def compress_pt2e(
         quantizer = OpenVINOQuantizerAdapter(quantizer)
         compression_format = nncf.CompressionFormat.DQ # since OVQUantizer has a defined decompression subgraph which we want, this is a minimally invasive way to do it
     else:
-        #TODO Path has issues with constant foldign and the QDQ subgraph
-        # Group size will explicitly have to be passed for other quantizers again with compress pt2e api.
-        quantizer = TorchAOQuantizerAdapter(quantizer)
-        compression_format = nncf.CompressionFormat.FQ # Insert QDQ nodes instead of Openvino decompression subgraph. The code for this is in torch fx backend 
+        #TODO Support Third party quantizers here.
+        msg = 'Only OpenVINO Quantizer is supported currently.'
+        raise nncf.InternalError(msg)
 
     quantization_algorithm = WeightsCompressionPT2E(
         quantizer=quantizer,
