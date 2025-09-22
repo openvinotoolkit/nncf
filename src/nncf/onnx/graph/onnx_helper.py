@@ -377,20 +377,24 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
 
 def get_node_attr_value(node: onnx.NodeProto, attr_name: str) -> Optional[Any]:
     """
-    TODO
+    Retrieves the value of a specified attribute from a node.
 
-    :param node:
-    :param attr_name:
-    :return:
+    This function searches for an attribute with the given name in the provided
+    node. If the attribute exists, its value is returned. If the attribute is
+    not found, `None` is returned. If multiple attributes with the same name are
+    found, a `ValueError` is raised.
+
+    :param node: The node to retrieve the attribute from.
+    :param attr_name: The name of the attribute to retrieve.
+    :return: The value of the attribute if found; otherwise, `None`.
     """
     matching = [x for x in node.attribute if x.name == attr_name]
-    attr_value = None
+
     if len(matching) > 1:
-        raise ValueError(f"Node has multiple attributes with name {attr_name}")
+        msg = f"Node has multiple attributes with name {attr_name}."
+        raise ValueError(msg)
+
     if len(matching) < 1:
-        # raise ValueError(f"Node has no attribute with name {attr_name}")
         return None
 
-    attr_value = onnx.helper.get_attribute_value(matching[0])
-
-    return attr_value
+    return onnx.helper.get_attribute_value(matching[0])

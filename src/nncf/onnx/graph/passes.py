@@ -83,11 +83,17 @@ def apply_preprocess_passes(model: onnx.ModelProto) -> onnx.ModelProto:
 
 def compress_quantize_weights_transformation(model: onnx.ModelProto):
     """
-    :param model:
+    Transforms the model by folding `QuantizeLinear` nodes with constant inputs
+    into precomputed, quantized initializers.
+
+    This transformation finds `QuantizeLinear` nodes with constant inputs
+    (i.e., inputs present in the model's initializers), precomputes their quantized values,
+    updates the initializer with these results, and removes the corresponding
+    `QuantizeLinear` nodes from the graph.
+
+    :param model: The model to be transformed.
     """
     initializer = {x.name: x for x in model.graph.initializer}
-    # value_info = {i.name: i for i in model.graph.value_info}
-
     nodes_to_remove = []
 
     version = model.opset_import[0].version
@@ -99,13 +105,12 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
 
         x_name, y_scale_name, y_zero_point_name = node.input[:3]
 
-        # NOTE:
         if x_name not in initializer:
             continue
 
         nodes_to_remove.append(node)
 
-        # --- quantize x ---
+        # Quantize
         x = onnx.numpy_helper.to_array(initializer[x_name])
         y_scale = onnx.numpy_helper.to_array(initializer[y_scale_name])
         y_zero_point = onnx.numpy_helper.to_array(initializer[y_zero_point_name])
@@ -119,11 +124,11 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
             block_size = get_node_attr_value(node, "block_size")
             y = QuantizeLinear.eval(x, y_scale, y_zero_point, axis=axis, block_size=block_size)
 
+        # Update an existing initializer. The new name is the name of the `QuantizeLinear` output.
         tensor_proto = onnx.numpy_helper.from_array(y, name=node.output[0])
         initializer[x_name].CopyFrom(tensor_proto)
 
-    # NOTE: QuantizeLinear and DequantizeLinear nodes have common initializers in ports 1 and 2.
+    # `QuantizeLinear` and `DequantizeLinear` nodes share initializers on ports 1 and 2,
+    # so these initializers should not be removed.
     for x in nodes_to_remove:
         model.graph.node.remove(x)
-
-    # onnx.checker.check_model(model, full_check=True)
