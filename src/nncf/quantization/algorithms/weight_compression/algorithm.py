@@ -987,7 +987,7 @@ class WeightCompression(Algorithm):
         self._backend_entity.dump_parameters(
             model,
             parameters={
-                "mode": self._mode.value if isinstance(self._mode, str) else self._mode,
+                "mode": self._mode.value if not isinstance(self._mode, str) else self._mode,
                 "group_size": self._group_size,
                 "ratio": self._ratio,
                 "all_layers": self._all_layers,

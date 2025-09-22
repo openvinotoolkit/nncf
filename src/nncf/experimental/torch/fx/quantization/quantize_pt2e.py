@@ -27,6 +27,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
+from nncf.experimental.quantization.algorithms.weight_compression.algorithm import WeightsCompressionPT2E
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
@@ -37,7 +38,6 @@ from nncf.experimental.torch.fx.transformations import compress_post_quantize_tr
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-
 
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
 def quantize_pt2e(
@@ -171,7 +171,25 @@ def compress_pt2e(
                 sensitivity_metric: nncf.SensitivityMetric = nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
                 advanced_parameters: nncf.AdvancedCompressionParameters = None,
                 ) -> torch.fx.GraphModule:
+    """
+    Applies Weight Compression to the torch.fx.GraphModule provided model
+    using provided torch.ao quantizer.
 
+    :param model: A torch.fx.GraphModule instance to be quantized.
+    :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
+        to convey the desired way of quantization.
+    :param dataset: A representative dataset for the
+        calibration process.
+    :param awq: Determines whether to use or not the modified AWQ algorithm.
+    :param scale_estimation: Determines whether to use or not scale estimation for 4-bit layers.
+    :param gptq: Determines whether to use or not GPTQ algorithm.
+    :param lora_correction: Determines whether to use or not LoRA Correction algorithm.
+    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+        quantization precision.
+    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+        preserve the accuracy of the model, the more sensitive layers receive a higher precision.
+    :param advanced_parameters: Advanced parameters for algorithms in the compression pipeline.
+    """
     if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
         compression_format = nncf.CompressionFormat.DQ # since OVQUantizer has a defined decompression subgraph which we want, this is a minimally invasive way to do it
