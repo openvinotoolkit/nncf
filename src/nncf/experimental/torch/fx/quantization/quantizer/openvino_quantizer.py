@@ -17,8 +17,8 @@ from typing import (
 )
 
 import torch.fx
-from observers import INT4WeightObserver
-from observers import INT8WeightObserver
+from .observers import INT4WeightObserver
+from .observers import INT8WeightObserver
 from torch.ao.quantization.observer import HistogramObserver
 from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.ao.quantization.observer import UniformQuantizationObserverBase
@@ -178,6 +178,106 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         return self._algo.get_weight_compression_parameters(
             model, nncf_graph, nodes_to_compress
         )[0]
+    
+    def _annotate_weight_compression(
+        self,
+        model: torch.fx.GraphModule,
+        graph: torch.fx.Graph,
+        nncf_graph: NNCFGraph,
+        node_vs_torch_annotation: defaultdict[torch.fx.Node, TorchAOQuantizationAnnotation],
+    ) -> defaultdict[torch.fx.Node, TorchAOQuantizationAnnotation]:
+        """
+        Annotates the model graph with weight-only quantization specs.
+
+        Identifies compressible nodes in the NNCF graph and attaches the corresponding
+        TorchAO quantization specifications to their weight edges for later transformation.
+
+        :param model: The FX GraphModule to annotate.
+        :param graph: The underlying FX graph.
+        :param nncf_graph: The corresponding NNCF graph.
+        :param node_vs_torch_annotation: A mapping of FX nodes to quantization annotations.
+        :return: Updated mapping of FX nodes with weight compression annotations.
+        """
+        all_wc_params = self.get_nncf_weight_compression_setup(
+            model, nncf_graph
+        )
+
+        for wc_param in all_wc_params:
+            node_with_weight = wc_param.node_with_weight
+            target_node = nncf_fx.node_utils.get_graph_node_by_name(
+                graph, node_with_weight.node_name
+            )
+            annotation = node_vs_torch_annotation[target_node]
+            edge_or_node = self._get_weight_edge(target_node, nncf_graph)
+            qspec = self._get_torch_ao_qspec_from_nncf_config_for_wc(wc_param=wc_param)
+            self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
+
+        return node_vs_torch_annotation
+
+    def _annotate_post_training_quantization(
+        self,
+        model: torch.fx.GraphModule,
+        graph: torch.fx.Graph,
+        nncf_graph: NNCFGraph,
+        node_vs_torch_annotation: defaultdict[torch.fx.Node, TorchAOQuantizationAnnotation],
+    ) -> defaultdict[torch.fx.Node, TorchAOQuantizationAnnotation]:
+        """
+        Annotates the model graph with post-training quantization configurations.
+
+        :param model: The FX GraphModule to annotate.
+        :param graph: The underlying FX graph.
+        :param nncf_graph: The corresponding NNCF graph.
+        :param node_vs_torch_annotation: A mapping of FX nodes to quantization annotations.
+        :return: Updated mapping of FX nodes with post-training quantization annotations.
+        """
+        quantization_setup = self.get_nncf_quantization_setup(model, nncf_graph)
+
+        for qp in quantization_setup.quantization_points.values():
+            edge_or_node, annotation = self._get_edge_or_node_and_annotation(
+                graph, nncf_graph, qp, node_vs_torch_annotation
+            )
+            qspec: TorchAOQuantizationSpecBase = (
+                self._get_torch_ao_qspec_from_nncf_config_for_ptq(qp)
+            )
+            self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
+
+        for quantizer_ids in quantization_setup.unified_scale_groups.values():
+            root_quantizer_id = self._get_unified_scales_root_quantizer_id(
+                nncf_graph, quantizer_ids, quantization_setup
+            )
+            root_qp = quantization_setup.quantization_points[root_quantizer_id]
+
+            if any(
+                root_qp.qconfig != quantization_setup.quantization_points[q_id].qconfig
+                for q_id in quantizer_ids
+            ):
+                qps = [
+                    quantization_setup.quantization_points[qid] for qid in quantizer_ids
+                ]
+                raise nncf.InternalError(
+                    "Different quantization configs are set to one unified scale group:"
+                    f"{[(qp.insertion_point.__dict__, str(qp.qconfig)) for qp in qps]}"
+                )
+
+            root_target_node = nncf_fx.node_utils.get_graph_node_by_name(
+                graph, root_qp.insertion_point.target_node_name
+            )
+            root_edge_or_node = self._get_edge_or_node(
+                root_target_node, root_qp, nncf_graph
+            )
+
+            for quantizer_id in quantizer_ids:
+                if quantizer_id == root_quantizer_id:
+                    continue
+
+                qspec = SharedQuantizationSpec(root_edge_or_node)  # type: ignore[assignment]
+                qp = quantization_setup.quantization_points[quantizer_id]
+                edge_or_node, annotation = self._get_edge_or_node_and_annotation(
+                    graph, nncf_graph, qp, node_vs_torch_annotation
+                )
+                self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
+
+        return node_vs_torch_annotation
 
     def annotate(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         nncf_graph = nncf_fx.nncf_graph_builder.GraphConverter.create_nncf_graph(model)
