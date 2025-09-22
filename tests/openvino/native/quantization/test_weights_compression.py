@@ -799,9 +799,10 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         "gptq",
     ),
 )
-def test_raise_error_with_unsupported_params_for_e2m1(algo):
+@pytest.mark.parametrize("mode", [CompressWeightsMode.E2M1, CompressWeightsMode.E5M2, CompressWeightsMode.E4M3])
+def test_raise_error_with_unsupported_params_for_fp(algo, mode):
     with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
+        compress_weights(ov.Model([], []), dataset="anything", mode=mode, **{algo: True})
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
@@ -1098,7 +1099,7 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 
 
 @pytest.mark.parametrize(
-    ("mode", "all_layers", "ratio", "ref_ids"),
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids"),
     (
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
@@ -1118,23 +1119,29 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
         (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
     ),
 )
-def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
+@pytest.mark.parametrize(
+    "mode, ov_type",
+    [
+        (CompressWeightsMode.E5M2, ov.Type.f8e5m2),
+        (CompressWeightsMode.E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.E2M1, ov.Type.f4e2m1),
+    ],
+)
+def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type):
     model = SequentialMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
     compressed_model = compress_weights(
         model,
-        mode=CompressWeightsMode.E2M1,
+        mode=mode,
         ratio=ratio,
         group_size=1,
         all_layers=all_layers,
-        sensitivity_metric=mode,
+        sensitivity_metric=sensitivity_metric,
         dataset=dataset,
     )
-    names_e2m1 = {
-        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f4e2m1
-    }
-    ref_e2m1_nodes = {f"weights_{i}" for i in ref_ids}
-    assert ref_e2m1_nodes == names_e2m1
+    names_fp = {op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov_type}
+    ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_fp_nodes == names_fp
 
     names_e8m0 = {
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f8e8m0

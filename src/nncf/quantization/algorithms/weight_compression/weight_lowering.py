@@ -81,7 +81,7 @@ def calculate_float_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tensor:
     """
-    Calculates the scale for nf4 or e2m1 quantization.
+    Calculates the scale for nf4 or e2m1/e5m2/e4m3 quantization.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
@@ -94,15 +94,27 @@ def calculate_float_quantization_params(
         weight = weight.astype(TensorDataType.float32)
 
     scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
-    if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
-        max_val = 6.0 if config.mode == CompressWeightsMode.E2M1 else fns.max(fns.abs(config.get_numpy_codebook()))
+    FP_MAX_VALS = {
+        CompressWeightsMode.E2M1: 6.0,
+        CompressWeightsMode.E5M2: 57_344.0,
+        CompressWeightsMode.E4M3: 448.0,
+    }
+    if config.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3] + list(FP_MAX_VALS.keys()):
+        if config.mode in FP_MAX_VALS:
+            max_val = FP_MAX_VALS[config.mode]
+        else:
+            max_val = fns.max(fns.abs(config.get_numpy_codebook()))
         scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
     eps = fns.finfo(weight).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
-    if config.mode == CompressWeightsMode.E2M1:
+    if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.E5M2, CompressWeightsMode.E4M3]:
+        # FP types are using E8M0 type scale.
+        # It can only contain values [2**(-127), 2**(-126), ..., 2**(126), 2**(127)].
+        # Here, we quantize each element of the scale to the smallest possible value greater than or equal to
+        # the element value to make it possible to convert the float scale value to a FP format without rounding.
         scale = fns.log2(scale)
         scale = fns.ceil(scale)
         scale = fns.clip(scale, -127, 127)
@@ -134,16 +146,16 @@ def do_float_quantization(
     precomputed_scale: Optional[Tensor] = None,
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
-    Computes quantization scale if not provided, and performs corresponding (nf4, e2m1) weight quantization.
+    Computes quantization scale if not provided, and performs corresponding (nf4, e2m1, e5m2, e4m3) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For E2M1 and CODEBOOK currently returns normalized weight without quantization.
-    TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
+    For E2M1, E5M2, E4M3 and CODEBOOK currently returns normalized weight without quantization.
+    TODO(nikita-savelyevv): add support for E2M1, E5M2, E4M3 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor and
+    :return: Returns quantized (for e2m1, e5m2, e4m3 normalized) weight tensor and corresponding scale tensor and
              optional indexes for codebook.
     """
     assert not config.is_integer
@@ -180,7 +192,7 @@ def do_float_quantization(
         )
         return compressed_weight, scale, indexes
     else:
-        # TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
+        # TODO(nikita-savelyevv): add support for E2M1, E5M2, E4M3 once ticket 164851 is resolved
         compressed_weight = norm_weight
     return compressed_weight, scale, None
 
@@ -194,7 +206,7 @@ def float_quantize_dequantize_weight(
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor to float (nf4) dtype and then dequantizes it back to obtain float32 values.
-    E2M1 mode is currently not supported.
+    E2M1, E5M2, E4M3 mode is currently not supported.
 
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
@@ -204,7 +216,7 @@ def float_quantize_dequantize_weight(
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
     assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
-    # TODO(nikita-savelyevv): add support for f4e2m1 once ticket 164851 is resolved
+    # TODO(nikita-savelyevv): add support for f4e2m1, e5m2, e4m3, once ticket 164851 is resolved
 
     # Optimized implementation
     if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight):

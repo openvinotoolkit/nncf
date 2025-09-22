@@ -519,10 +519,12 @@ def compress_weights(
         if mode in [
             CompressWeightsMode.NF4,
             CompressWeightsMode.E2M1,
+            CompressWeightsMode.E5M2,
+            CompressWeightsMode.E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]:
-            msg = "Torch backend does not support NF4, E2M1 and CODEBOOK modes for weight compression."
+            msg = "Torch backend does not support NF4, E2M1, E5M2, E4M3 and CODEBOOK modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
@@ -568,10 +570,12 @@ def compress_weights(
         if mode in [
             CompressWeightsMode.NF4,
             CompressWeightsMode.E2M1,
+            CompressWeightsMode.E5M2,
+            CompressWeightsMode.E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]:
-            msg = "Torch backend does not support NF4, E2M1 and CODEBOOK modes for weight compression."
+            msg = "Torch backend does not support NF4, E2M1, E5M2, E4M3 and CODEBOOK modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
@@ -607,8 +611,12 @@ def compress_weights(
             msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if any((awq, scale_estimation, gptq, lora_correction)) and mode == CompressWeightsMode.E2M1:
-            msg = "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode is E2M1."
+        if any((awq, scale_estimation, gptq, lora_correction)) and mode in [
+            CompressWeightsMode.E2M1,
+            CompressWeightsMode.E5M2,
+            CompressWeightsMode.E4M3,
+        ]:
+            msg = "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode in [E2M1, E5M2, E4M3]."
             raise nncf.ParameterNotSupportedError(msg)
 
         if gptq and lora_correction:
@@ -627,10 +635,12 @@ def compress_weights(
         if mode in [
             CompressWeightsMode.NF4,
             CompressWeightsMode.E2M1,
+            CompressWeightsMode.E5M2,
+            CompressWeightsMode.E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]:
-            msg = "ONNX backend does not support NF4, E2M1 and CODEBOOK modes for weight compression."
+            msg = "ONNX backend does not support NF4, E2M1, E5M2, E4M3 and CODEBOOK modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {

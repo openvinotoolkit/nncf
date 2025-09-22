@@ -60,6 +60,8 @@ class WeightCompressionConfig:
         return self.mode not in [
             CompressWeightsMode.NF4,
             CompressWeightsMode.E2M1,
+            CompressWeightsMode.E5M2,
+            CompressWeightsMode.E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]

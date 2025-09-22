@@ -109,13 +109,13 @@ def do_float_quantization(
     """
     Computes quantization scale if not provided, and performs corresponding nf4 weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
+    TODO(nikita-savelyevv): add support for E2M1, E5M2 and E4M3 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor.
+    :return: Returns quantized (for e2m1, e5m2 and e4m3 normalized) weight tensor and corresponding scale tensor.
     """
     assert config.mode == CompressWeightsMode.NF4
 

@@ -64,6 +64,8 @@ NON_INT8_MODES = [
     CompressWeightsMode.INT4_ASYM,
     CompressWeightsMode.NF4,
     CompressWeightsMode.E2M1,
+    CompressWeightsMode.E5M2,
+    CompressWeightsMode.E4M3,
 ]
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
@@ -286,6 +288,8 @@ class WeightCompression(Algorithm):
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
             E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
+            E5M2 is the same as INT8_SYM mode, but primary precision is E5M2 data type without zero point.
+            E5M3 is the same as INT8_SYM mode, but primary precision is E5M3 data type without zero point.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to backup_mode).
         :param group_size: number of weights (e.g. 128) in the channel dimension
