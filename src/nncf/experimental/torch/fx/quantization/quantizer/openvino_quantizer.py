@@ -48,6 +48,7 @@ from nncf.quantization.algorithms.weight_compression.config import (
     WeightCompressionParameters,
 )
 from nncf.quantization.quantize_model import get_weight_compression_configuration
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 
 QUANT_ANNOTATION_KEY = "quantization_annotation"
 
@@ -91,7 +92,8 @@ class OpenVINOQuantizer(TorchAOQuantizer):
     def __init__(
         self,
         *,
-        mode: QuantizationMode = QuantizationMode.INT8_SYM,
+        mode: Optional[QuantizationMode] = None,
+        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = QuantizerPropagationRule.MERGE_ALL_IN_ONE 
         **kwargs,
     ):
         """
@@ -119,7 +121,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                 model_type = nncf.ModelType.TRANSFORMER
             self._algo = (
                 nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization(
-                    preset=preset, model_type=model_type, **kwargs
+                    mode=mode, quantizer_propagation_rule=quantizer_propagation_rule, **kwargs
                 )
             )
         else:
