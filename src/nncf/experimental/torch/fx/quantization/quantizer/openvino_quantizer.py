@@ -107,14 +107,14 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         self.mode = mode
         if self.mode not in OpenVINOQuantizer.WEIGHTS_ONLY_COMPRESSION_MODES:
             if mode == QuantizationMode.INT8_SYM:
-                preset = nncf.quantization.structs.QuantizationPreset.PERFORMANCE
+                preset = nncf.QuantizationPreset.PERFORMANCE
                 model_type = None
             elif mode == QuantizationMode.INT8_MIXED:
-                preset = quantization.structs.QuantizationPreset.MIXED
+                preset = nncf.QuantizationPreset.MIXED
                 model_type = None
             else:
                 preset = None
-                model_type = nncf.parameters.ModelType.TRANSFORMER
+                model_type = nncf.ModelType.TRANSFORMER
             self._algo = (
                 nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization(
                     preset=preset, model_type=model_type, **kwargs
