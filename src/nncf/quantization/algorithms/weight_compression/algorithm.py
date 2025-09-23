@@ -789,7 +789,7 @@ class WeightCompression(Algorithm):
         :return: A dictionary of collected statistics, or None if not applicable.
         """
         statistics = None
-        if not (self._data_aware_mixed_precision or self._data_aware_compression) and not dataset:
+        if not (self._data_aware_mixed_precision or self._data_aware_compression) or not dataset:
             return statistics, statistic_points
         matmul_nodes_to_compress = [
             wp.node_with_weight
