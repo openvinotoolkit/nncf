@@ -12,6 +12,11 @@
             "fp32_fps": 1732.8,
             "int8_fps": 6013.68,
             "performance_speed_up": 3.470498614958449
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 9.01850414276123,
+            "int8_model_size": 2.9374523162841797,
+            "model_compression_rate": 3.0701789073360906
         }
     },
     "post_training_quantization_openvino_mobilenet_v2_quantize": {
