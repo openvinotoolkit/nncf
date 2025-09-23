@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
@@ -31,6 +32,7 @@ from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.passes import apply_preprocess_passes
 from nncf.onnx.graph.passes import compress_quantize_weights_transformation
+from nncf.onnx.quantization.backend_parameters import BackendParameters
 from nncf.onnx.quantization.backend_parameters import get_external_data_dir
 from nncf.onnx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import BackupMode
@@ -207,8 +209,13 @@ def quantize_with_accuracy_control_impl(
     if advanced_accuracy_restorer_parameters is None:
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
 
+    compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
+
     if advanced_quantization_parameters is None:
-        advanced_quantization_parameters = AdvancedQuantizationParameters()
+        copied_parameters = AdvancedQuantizationParameters()
+    else:
+        copied_parameters = deepcopy(advanced_quantization_parameters)
+    copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
     quantized_model = quantize_impl(
         model=model,
@@ -219,7 +226,7 @@ def quantize_with_accuracy_control_impl(
         fast_bias_correction=fast_bias_correction,
         model_type=model_type,
         ignored_scope=ignored_scope,
-        advanced_parameters=advanced_quantization_parameters,
+        advanced_parameters=copied_parameters,
     )
 
     if advanced_accuracy_restorer_parameters.intermediate_model_dir:
@@ -259,7 +266,7 @@ def quantize_with_accuracy_control_impl(
             fast_bias_correction,
             model_type,
             ignored_scope,
-            advanced_quantization_parameters,
+            copied_parameters,
         )
         tuned_quantized_metric_results = evaluator.collect_metric_results(
             tuned_quantized_model, validation_dataset, model_name="tuned"
@@ -297,7 +304,7 @@ def quantize_with_accuracy_control_impl(
             evaluator,
         )
 
-    if is_weight_compression_needed(advanced_quantization_parameters):
+    if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
     return quantized_model
