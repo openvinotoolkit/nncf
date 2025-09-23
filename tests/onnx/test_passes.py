@@ -48,6 +48,7 @@ def check_operation_count(model: onnx.ModelProto, op_type_to_count: dict[str, in
             count[node.op_type] = count.get(node.op_type, 0) + 1
     assert count == op_type_to_count
 
+
 def test_compress_quantize_weights_transformation():
     model = _build_model()
 
