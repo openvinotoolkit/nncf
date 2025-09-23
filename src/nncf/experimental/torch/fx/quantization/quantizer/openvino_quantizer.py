@@ -93,7 +93,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         self,
         *,
         mode: Optional[QuantizationMode] = None,
-        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = QuantizerPropagationRule.MERGE_ALL_IN_ONE 
+        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
         **kwargs,
     ):
         """
