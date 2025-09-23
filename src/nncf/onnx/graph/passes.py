@@ -96,7 +96,7 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
     initializer = {x.name: x for x in model.graph.initializer}
     nodes_to_remove = []
 
-    version = model.opset_import[0].version
+    version = max(model.opset_import[0].version, 19)
     QuantizeLinear = load_op("", "QuantizeLinear", version)
 
     for node in model.graph.node:
