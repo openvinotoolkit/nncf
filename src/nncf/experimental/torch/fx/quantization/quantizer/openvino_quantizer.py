@@ -105,6 +105,8 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         :param kwargs: Arguments to pass to the NNCF MinMaxQuantization algorithm.
         """
         self.mode = mode
+        self.weight_compression_configuration = None
+
         if self.mode not in OpenVINOQuantizer.WEIGHTS_ONLY_COMPRESSION_MODES:
             if mode == QuantizationMode.INT8_SYM:
                 preset = nncf.QuantizationPreset.PERFORMANCE
@@ -167,8 +169,8 @@ class OpenVINOQuantizer(TorchAOQuantizer):
     def get_nncf_quantization_setup(
         self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph
     ) -> SingleConfigQuantizerSetup:
-        self._min_max_algo._set_backend_entity(model)
-        return self._min_max_algo.find_quantization_setup(model, nncf_graph)
+        self._algo._set_backend_entity(model)
+        return self._algo.find_quantization_setup(model, nncf_graph)
 
     def get_nodes_to_compress(self, model, nncf_graph) -> list[NNCFNode]:
         self._algo.set_backend_entity(model)
