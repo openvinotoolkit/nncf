@@ -39,6 +39,7 @@ from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParamete
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
+
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
 def quantize_pt2e(
     model: torch.fx.GraphModule,
@@ -158,19 +159,20 @@ def _quant_node_constraint(n: torch.fx.Node) -> bool:
     """
     return n.op == "call_function" and n.target in QUANTIZE_NODE_TARGETS
 
+
 @api(canonical_alias="nncf.experimental.torch.fx.compress_pt2e")
 def compress_pt2e(
-                model: torch.fx.GraphModule,
-                quantizer: Quantizer,
-                dataset: Optional[nncf.Dataset] = None,
-                awq: bool = False,
-                scale_estimation: bool = False,
-                gptq: bool = False,
-                lora_correction: bool = False,
-                subset_size: int = 128,  # Dataset size to use
-                sensitivity_metric: nncf.SensitivityMetric = nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
-                advanced_parameters: nncf.AdvancedCompressionParameters = None,
-                ) -> torch.fx.GraphModule:
+    model: torch.fx.GraphModule,
+    quantizer: Quantizer,
+    dataset: Optional[nncf.Dataset] = None,
+    awq: bool = False,
+    scale_estimation: bool = False,
+    gptq: bool = False,
+    lora_correction: bool = False,
+    subset_size: int = 128,  # Dataset size to use
+    sensitivity_metric: nncf.SensitivityMetric = nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+    advanced_parameters: nncf.AdvancedCompressionParameters = None,
+) -> torch.fx.GraphModule:
     """
     Applies Weight Compression to the torch.fx.GraphModule provided model
     using provided torch.ao quantizer.
@@ -192,10 +194,10 @@ def compress_pt2e(
     """
     if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
-        compression_format = nncf.CompressionFormat.DQ # since OVQUantizer has a defined decompression subgraph which we want, this is a minimally invasive way to do it
+        compression_format = nncf.CompressionFormat.DQ
     else:
-        #TODO Support Third party quantizers here.
-        msg = 'Only OpenVINO Quantizer is supported currently.'
+        # TODO Support Third party quantizers here.
+        msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
     quantization_algorithm = WeightsCompressionPT2E(
@@ -208,7 +210,7 @@ def compress_pt2e(
         sensitivity_metric=sensitivity_metric,
         compression_format=compression_format,
         advanced_parameters=advanced_parameters,
-        )
+    )
 
     # Here the model is annotated
     transformed_model = quantizer.transform_prior_quantization(model)
