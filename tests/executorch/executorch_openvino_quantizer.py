@@ -32,8 +32,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.quantization.algorithms.weight_compression.config import (  # type: ignore[import-untyped]
     WeightCompressionParameters,
 )
-from nncf.quantization.quantize_model import get_weight_compression_configuration  # type: ignore[import-untyped]
-
+from nncf.quantization.quantize_model import get_weight_compression_configuration
 from tests.executorch.observers import INT4WeightObserver
 from tests.executorch.observers import INT8WeightObserver
 
@@ -335,7 +334,7 @@ class OpenVINOQuantizer(Quantizer):
 
         :param target_node: FX node representing a weighted operation (e.g., Linear, Conv).
         :param nncf_graph: NNCFGraph used to determine weight port indices.
-        :return: Edge represented by a Tuple of (weight_node, target_node), where weight_node is the 
+        :return: Edge represented by a Tuple of (weight_node, target_node), where weight_node is the
         FX node supplying the weight.
         """
         nncf_node = nncf_graph.get_node_by_name(target_node.name)
