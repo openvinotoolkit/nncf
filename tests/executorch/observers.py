@@ -52,7 +52,7 @@ class WeightObserverBase(ObserverBase, ABC):
         super().__init__(dtype=dtype, is_dynamic=False)
         self._wc_param = wc_param
 
-    def calculate_qparams(  # type: ignore[override]
+    def calculate_qparams(
         self,
         weight: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
