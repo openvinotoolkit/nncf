@@ -199,6 +199,7 @@ def _get_bias_attr(
     """
     bias_attrs = {}
     metatype = get_metatype(model, node)
+    initializer = {x.name: x for x in model.graph.initializer}
 
     if metatype == ONNXMatMulMetatype:
         weight_port_ids = _get_weight_port_ids(node, model, parents_node_mapping)
@@ -214,7 +215,11 @@ def _get_bias_attr(
 
                 bias_attrs["add_node"] = add_node.name
 
-                # `name` should be or output from constant or `initializer`
+                # We shoul make sure that `name` is ouput from `Constant` node or initializer
+                if bias_attrs["name"] not in initializer:
+                    producer = parents_node_mapping[bias_attrs["name"]]
+                    if producer.op_type != "Constant":
+                        bias_attrs = {}
 
         return bias_attrs
 
