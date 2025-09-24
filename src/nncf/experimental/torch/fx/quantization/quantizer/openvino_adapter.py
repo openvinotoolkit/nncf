@@ -16,6 +16,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 
+
 class OpenVINOQuantizerAdapter(Quantizer):
     """
     Implementation of the NNCF Quantizer interface for the OpenVINOQuantizer.
@@ -23,7 +24,7 @@ class OpenVINOQuantizerAdapter(Quantizer):
 
     def __init__(self, quantizer: OpenVINOQuantizer):
         self._quantizer = quantizer
-        if(hasattr(self._quantizer, "weight_compression_configuration")):
+        if hasattr(self._quantizer, "weight_compression_configuration"):
             self._weight_compression_configuration = self._quantizer.weight_compression_configuration
 
     def transform_prior_quantization(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
@@ -32,7 +33,9 @@ class OpenVINOQuantizerAdapter(Quantizer):
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         return self._quantizer.get_nncf_quantization_setup(model, nncf_graph)
 
-    def get_weight_compression_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def get_weight_compression_setup(
+        self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph
+    ) -> SingleConfigQuantizerSetup:
         return self._quantizer.get_nncf_weight_compression_setup(model, nncf_graph)
 
     def get_nodes_to_compress(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph):

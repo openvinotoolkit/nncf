@@ -12,12 +12,13 @@
 import torch
 
 import nncf
+from nncf import SensitivityMetric
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-from nncf import SensitivityMetric
+
 
 class WeightsCompressionPT2E(Algorithm):
     def __init__(
@@ -37,9 +38,7 @@ class WeightsCompressionPT2E(Algorithm):
         wc_config = quantizer._weight_compression_configuration
 
         mode = wc_config.get("mode", None)
-        ratio = wc_config.get(
-            "ratio", 1
-        )
+        ratio = wc_config.get("ratio", 1)
         group_size = wc_config.get("group_size", 128)
         all_layers = wc_config.get("all_layers", False)
         backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
