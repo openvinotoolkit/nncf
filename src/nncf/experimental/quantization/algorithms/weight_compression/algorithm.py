@@ -39,7 +39,7 @@ class WeightsCompressionPT2E(Algorithm):
         mode = wc_config.get("mode", None)
         ratio = wc_config.get(
             "ratio", 1
-        )  # TODO Discuss if ratio should be passed in quantizer or in the compress_pt2e api
+        )
         group_size = wc_config.get("group_size", 128)
         all_layers = wc_config.get("all_layers", False)
         backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
@@ -49,7 +49,6 @@ class WeightsCompressionPT2E(Algorithm):
             mode=mode,
             ratio=ratio,
             group_size=group_size,
-            ignored_scope=nncf.IgnoredScope(),  # only compress "nodes_to_compress"
             all_layers=all_layers,
             sensitivity_metric=self._sensitivity_metric,
             awq=awq,

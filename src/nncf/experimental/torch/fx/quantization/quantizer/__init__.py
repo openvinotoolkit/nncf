@@ -9,4 +9,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.torch.fx import OpenVINOQuantizer
