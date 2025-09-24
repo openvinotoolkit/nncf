@@ -102,7 +102,7 @@ def get_weight_compression_configuration(
     )
 
     return {
-        "mode": mode,
+        "mode": mode if isinstance(mode, nncf.CompressWeightsMode) else nncf.CompressWeightsMode(mode),
         "ratio": ratio or 1,
         "group_size": group_size,
         "all_layers": all_layers or False,
@@ -985,7 +985,7 @@ class WeightCompression(Algorithm):
         self._backend_entity.dump_parameters(
             model,
             parameters={
-                "mode": self._mode.value if not isinstance(self._mode, str) else self._mode,
+                "mode": self._mode.value,
                 "group_size": self._group_size,
                 "ratio": self._ratio,
                 "all_layers": self._all_layers,
