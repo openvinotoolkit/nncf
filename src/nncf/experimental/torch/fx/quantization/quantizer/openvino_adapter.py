@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import torch.fx
 
 from nncf.common.graph.graph import NNCFGraph
@@ -39,5 +41,5 @@ class OpenVINOQuantizerAdapter(Quantizer):
     def get_nodes_to_compress(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph):
         return self._quantizer.get_nodes_to_compress(model, nncf_graph)
 
-    def get_weight_compression_config(self):
+    def get_weight_compression_config(self) -> dict[str, Any]:
         return self._quantizer.weight_compression_configuration

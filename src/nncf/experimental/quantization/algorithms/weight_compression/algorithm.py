@@ -35,7 +35,7 @@ class WeightsCompressionPT2E(Algorithm):
     ) -> torch.fx.GraphModule:
         self._quantizer = quantizer
 
-        wc_config = quantizer._weight_compression_configuration
+        wc_config = self._quantizer.get_weight_compression_config()
 
         mode = wc_config.get("mode", None)
         ratio = wc_config.get("ratio", 1)
@@ -43,7 +43,6 @@ class WeightsCompressionPT2E(Algorithm):
         all_layers = wc_config.get("all_layers", False)
         backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
         self._sensitivity_metric = sensitivity_metric
-
         self._algo = WeightCompression(
             mode=mode,
             ratio=ratio,
