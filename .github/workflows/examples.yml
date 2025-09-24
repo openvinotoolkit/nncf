@@ -79,7 +79,7 @@ jobs:
 
   examples-cuda:
     name: Test examples CUDA [${{ matrix.group }}/1]
-    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4-staging
     timeout-minutes: 40
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_gpu == 'false' }}
     strategy:

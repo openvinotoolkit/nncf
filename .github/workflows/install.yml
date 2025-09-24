@@ -48,7 +48,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4-staging
     timeout-minutes: 20
     env:
       DEBIAN_FRONTEND: noninteractive
