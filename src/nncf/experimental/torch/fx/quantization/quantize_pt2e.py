@@ -170,7 +170,7 @@ def compress_pt2e(
     gptq: bool = False,
     lora_correction: bool = False,
     subset_size: int = 128,  # Dataset size to use
-    sensitivity_metric: nncf.SensitivityMetric = nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+    sensitivity_metric: nncf.SensitivityMetric = None,
     advanced_parameters: nncf.AdvancedCompressionParameters = None,
 ) -> torch.fx.GraphModule:
     """

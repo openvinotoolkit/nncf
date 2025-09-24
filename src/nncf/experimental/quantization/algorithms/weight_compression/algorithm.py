@@ -11,13 +11,13 @@
 
 import torch
 
-import nncf  # type: ignore[import-untyped]
-from nncf.common.graph.graph import NNCFGraph  # type: ignore[import-untyped]
+import nncf
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-
+from nncf import SensitivityMetric
 
 class WeightsCompressionPT2E(Algorithm):
     def __init__(
@@ -28,7 +28,7 @@ class WeightsCompressionPT2E(Algorithm):
         scale_estimation: bool = False,
         gptq: bool = False,
         lora_correction: bool = False,
-        sensitivity_metric: nncf.SensitivityMetric = nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        sensitivity_metric: nncf.SensitivityMetric = None,
         compression_format: nncf.CompressionFormat = nncf.CompressionFormat.DQ,
         advanced_parameters: nncf.AdvancedCompressionParameters = None,
     ) -> torch.fx.GraphModule:
@@ -49,8 +49,9 @@ class WeightsCompressionPT2E(Algorithm):
             mode=mode,
             ratio=ratio,
             group_size=group_size,
+            ignored_scope=nncf.IgnoredScope(),  # only compress "nodes_to_compress"
             all_layers=all_layers,
-            sensitivity_metric=self._sensitivity_metric,
+            sensitivity_metric=self._sensitivity_metric or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
             awq=awq,
             subset_size=subset_size,
             scale_estimation=scale_estimation,
@@ -73,7 +74,7 @@ class WeightsCompressionPT2E(Algorithm):
     ):
         self._algo.set_backend_entity(model)  # Set algo backend
 
-        if self._sensitivity_metric == nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
+        if self._sensitivity_metric is None:
             # Default case. It means that it is not defined by the user in the API
             # Hence, the annotation(Quantization parameters for all layers) from the quantizer will be used.
             all_weight_params = self._quantizer.get_weight_compression_setup(
