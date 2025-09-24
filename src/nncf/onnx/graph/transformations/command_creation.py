@@ -31,7 +31,7 @@ def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ON
     """
     node_name = node.layer_attributes.bias_attrs.get("add_node")
     if node_name:
-        port_id =  node.layer_attributes.bias_attrs["port_id"]
+        port_id = node.layer_attributes.bias_attrs["port_id"]
         target_point = ONNXTargetPoint(TargetType.LAYER, node_name, port_id)
     else:
         bias_port_id = node.metatype.bias_port_id

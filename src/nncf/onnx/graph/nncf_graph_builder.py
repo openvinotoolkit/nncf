@@ -25,8 +25,8 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.onnx.graph.metatypes.groups import POSSIBLE_WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_metatype
@@ -184,10 +184,7 @@ def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> dict[str, A
 
 
 def _get_bias_attr(
-    node: onnx.NodeProto,
-    model: onnx.ModelProto,
-    parents_node_mapping: dict[str, onnx.NodeProto],
-    children_node_mapping
+    node: onnx.NodeProto, model: onnx.ModelProto, parents_node_mapping: dict[str, onnx.NodeProto], children_node_mapping
 ) -> dict[str, str]:
     """
     Returns bias tensor attributes.
