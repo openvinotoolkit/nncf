@@ -1011,7 +1011,7 @@ class WeightCompression(Algorithm):
 
         return transformed_model
     
-    def apply_mixed_precision(self,model, graph, nodes_to_compress, all_weight_params):
+    def apply_mixed_precision(self,model, graph, statistic_points, nodes_to_compress, all_weight_params):
         skipped_weight_params = self.get_skipped_weight_compression_parameters(model, graph, nodes_to_compress)
         is_last_layer_skipped = self.is_last_layer_skipped(skipped_weight_params, nodes_to_compress)
 
@@ -1059,7 +1059,7 @@ class WeightCompression(Algorithm):
         statistics, statistic_points = self.collect_weight_compression_statistics(
             model, graph, dataset, all_weight_params, statistic_points
         )
-        all_weight_params = self.apply_mixed_precision(model, graph, nodes_to_compress, all_weight_params)
+        all_weight_params = self.apply_mixed_precision(model, graph, statistic_points, nodes_to_compress, all_weight_params)
 
         transformed_model = self.apply_wc_algos(model, graph, all_weight_params, statistics, dataset)
 
