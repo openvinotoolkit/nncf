@@ -116,18 +116,14 @@ def fp8_convert(in_shape):
 
 class CodebookEstimation:
     """
-    Scale estimation algorithm implementation.
+    Codebook estimation algorithm implementation.
     """
 
     def __init__(
         self,
     ):
         """
-        :param subset_size: The number of samples for scale estimation.
-        :param initial_steps: The number of the steps for absmax scale rectification.
-        :param scale_steps: The number of the steps for grid search scale rectification
-                            from 1.0 to 1.0 - 0.05 * scale_step.
-        :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
+        Initializes the CodebookEstimation algorithm.
         """
         super().__init__()
 
@@ -148,7 +144,7 @@ class CodebookEstimation:
             self._backend_entity = OVWeightCompressionAlgoBackend(model)
         else:
             msg = (
-                "Cannot return backend-specific Scale Estimation entity because"
+                "Cannot return backend-specific Codebook Estimation entity because"
                 f" {model_backend.value} is not supported!"
             )
             raise nncf.UnsupportedBackendError(msg)
@@ -162,11 +158,10 @@ class CodebookEstimation:
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> dict[str, CompressedWeight]:
         """
-        Estimates better scale for the int4 nodes in the model.
-        Minimizes per-group difference between floating point MatMul and
+        Estimates better codebook.
+        Minimizes difference between floating point MatMul and
         MatMul with compressed weights.
-        The algorithm computes weighted scale for the group of weights in MatMul, which
-        shared the same scale.
+        The algorithm computes codebook and indexes for MatMul compression.
 
         :param model: Model for applying algorithm.
         :param graph: Model graph.
@@ -175,7 +170,7 @@ class CodebookEstimation:
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
         :param backend_entity: Weight compression algorithm backend.
-        :return: Two dictionaries for estimated scales and zero points for each weight name.
+        :return: A dictionary that maps weight names to CompressedWeight with codebook, codebook indexes and scale.
         """
         self._backend_entity = backend_entity
         if self._backend_entity is None:
@@ -186,9 +181,6 @@ class CodebookEstimation:
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
-            
-            # if not 'return_proj' in node_name:
-            #     continue
 
             if config.num_bits != 4:# or node_name not in statistics:
                 res[weight_name] = CompressedWeight()
@@ -212,10 +204,6 @@ class CodebookEstimation:
                 wp.reduction_axes,
                 config,
                 wp
-                # self._subset_size,
-                # self._initial_steps,
-                # self._scale_steps,
-                # self._weight_penalty,
             )
             res[weight_name] = CompressedWeight(indexes, scale, None, codebook)
             config.codebook_values = codebook
@@ -231,10 +219,6 @@ class CodebookEstimation:
         reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
         wp: WeightCompressionParameters
-        # subset_size: int = 32,
-        # initial_steps: int = 5,
-        # scale_steps: int = 10,
-        # weight_penalty: float = -1.0,
     ) -> Tensor:
 
         reduction_axis = reduction_axes[0]
@@ -320,185 +304,10 @@ class CodebookEstimation:
         return Tensor(best_codebook), None, None #Tensor(scale / best_scale), Tensor(indexes)
 
 
-def most_common(lst):
-    """
-    Return the most frequently occuring element in a list.
-    """
-    return max(set(lst), key=lst.count)
-
-
-def euclidean_(point, data):
-    """
-    Return euclidean distances between a point & a dataset
-    """
-    return np.sqrt(np.sum((point - data) ** 2, axis=1))
-
-
 def round(quantiles, values):
     center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
     
     return np.searchsorted(center_of_quantiles, values, side='left', sorter=None)
-
-
-class KMeansHist:
-    def __init__(self, n_clusters=8, max_iter=300):
-        self.n_clusters = n_clusters
-        self.max_iter = max_iter
-
-    @staticmethod
-    def get_init(values, frequencies, n_clusters):
-        step = 1.0 / (n_clusters - 1)
-        denum = np.sum(frequencies)
-        quants = [i * step for i in range(n_clusters)]
-        n_frequencies = frequencies / denum
-        n_frequencies = np.cumsum(n_frequencies)
-
-        res = []
-        for i in range(len(quants)):
-            if i == 0:
-                res.append(values[0])
-            elif i == len(quants) - 1:
-                res.append(values[-1])
-            else:
-                prev = values[np.where(n_frequencies <= quants[i])[0][-1]].item()
-                next_ = values[np.where(n_frequencies <= quants[i + 1])[0][-1]].item()
-                res.append((prev + next_) / 2)
-
-        res = np.array(res)#.reshape(1, -1)
-        return res
-
-    @staticmethod
-    def create_histogramm(data, granularity=0.01):
-        centers = []
-        step = granularity
-        
-        #granularity = granularity * (data.max() - data.min())
-
-        data_range=(data.min().item(), data.max().item())
-        prev = data_range[0]
-
-        while prev < data_range[1]:
-            centers.append(prev + step / 2)
-            prev += step
-
-        centers = np.array(centers)
-        centroid_idxs = round(centers, data)
-
-        res = [[], [], []]
-        for i in range(centers.size):
-            idxs = np.where(centroid_idxs == i)
-            if len(idxs[0]) == 0:
-                continue
-            res[0].append(centers[i])
-            res[1].append(np.sum(data[idxs]))
-            res[2].append(len(idxs[0]))
-
-        res[0] = np.array(res[0])#.reshape(-1, 1)
-        res[1] = np.array(res[1])
-        res[2] = np.array(res[2])
-
-        return res
-
-
-    @staticmethod
-    def create_histogramm_sorted(data_, granularity=0.01):
-        centers = []
-        ranges = []
-        step = granularity
-        
-        #granularity = granularity * (data.max() - data.min())
-
-        data = np.sort(data_)
-        data_range=(data.min().item(), data.max().item())
-        prev = data_range[0]
-
-        
-        while prev < data_range[1]:
-            centers.append(prev + step / 2)
-            prev += step
-            
-            if len(centers) > 1:
-                ranges.append(0.5 * (centers[-2] + centers[-1]))
-            ranges.append(centers[-1])
-
-
-        centers = np.array(centers)
-        ranges = np.array(ranges)
-
-        ranges_idxs = round(data, ranges)
-
-        res = [[], [], []]
-        for i in range(centers.size):
-            res[0].append(centers[i])
-            if i == 0:
-                res[1].append(np.sum(data[:ranges_idxs[1]]))
-                res[2].append(ranges_idxs[1])
-            elif i == centers.size - 1:
-                res[1].append(np.sum(data[ranges_idxs[-2]:]))
-                res[2].append(len(data) - ranges_idxs[-2])
-            else:
-                idx = 2 * i
-                res[1].append(np.sum(data[ranges_idxs[idx - 1]:ranges_idxs[idx + 1]]))
-                res[2].append(ranges_idxs[idx + 1] - ranges_idxs[idx - 1] - 1)
-
-        res[0] = np.array(res[0])#.reshape(-1, 1)
-        res[1] = np.array(res[1])
-        res[2] = np.array(res[2])
-
-        return res
-
-    def fit(self, X_train, init, fixed=[]):
-        if self.max_iter == 1:
-            self.centroids = deepcopy(init)
-            return
-
-        # start = time.time()
-        # self.hist = self.create_histogramm(X_train)
-        # end = time.time()
-        # print("create_histogramm", end - start)
-        
-        start = time.time()
-        self.hist = self.create_histogramm_sorted(X_train)
-        end = time.time()
-        #print("create_histogramm_sorted", end - start)
-        
-        start = time.time()
-
-        init_by_hist = self.get_init(self.hist[0], self.hist[2], self.n_clusters)
-        init_by_hist[0] = init[0]
-        init_by_hist[-1] = init[-1]
-        zero_idx = np.argmin(np.abs(init_by_hist[:]))
-        init_by_hist[zero_idx] = 0.0 #init[0, zero_idx]
-        fixed[1] = zero_idx
-        init = init_by_hist
-
-        self.centroids = deepcopy(init)
-
-        iteration = 0
-        prev_centroids = self.centroids
-        while iteration < self.max_iter:
-            prev_centroids = deepcopy(self.centroids)
-
-            centroid_idxs = round(self.centroids, self.hist[0])
-            for i in range(self.n_clusters):
-                idxs = np.where(centroid_idxs == i)
-                self.centroids[i] = np.sum(self.hist[1][idxs]) / np.sum(self.hist[2][idxs])
-
-            for i, centroid in enumerate(self.centroids):
-                if np.isnan(centroid).any():  # Catch any np.nans, resulting from a centroid having no points
-                    self.centroids[i] = prev_centroids[i]
-            for idx in fixed:
-                self.centroids[idx] = init[idx]
-            iteration += 1
-            if np.all(np.abs(self.centroids - prev_centroids) < 0.00001).any():
-                break
-        end = time.time()
-        #print("rest", end - start)
-        #print(self.centroids)
-
-    def evaluate(self, X):
-        centroid_idxs = round(self.centroids, X)
-        return deepcopy(self.centroids).flatten(), centroid_idxs
 
 
 class KMeansWeighted:
