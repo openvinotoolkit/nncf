@@ -184,6 +184,8 @@ class RunInfo:
     time_compression: Optional[float] = None
     num_compress_nodes: Optional[NumCompressNodes] = None
     stats_from_output = StatsFromOutput()
+    fp32_model_size: Optional[float] = None
+    int8_model_size: Optional[float] = None
 
     @staticmethod
     def format_time(time_elapsed):
@@ -212,6 +214,9 @@ class RunInfo:
             "Metric name": self.metric_name,
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
+            "Model size Mb (FP32)": self.fp32_model_size,
+            "Model size Mb (INT8)": self.int8_model_size,
+            "Compression rate:": self.fp32_model_size / self.int8_model_size,
             **self.num_compress_nodes.get_data(),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
@@ -222,6 +227,15 @@ class RunInfo:
             "Build url": os.environ.get("BUILD_URL", ""),
         }
         return result
+
+
+def get_model_size(path: Path, m_type: str = "Mb") -> float:
+    model_size = path.stat().st_size
+    for t in ["bytes", "Kb", "Mb"]:
+        if m_type == t:
+            break
+        model_size /= 1024
+    return model_size
 
 
 class BaseTestPipeline(ABC):
@@ -534,6 +548,7 @@ class PTQTestPipeline(BaseTestPipeline):
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.compressed_model, str(onnx_path))
+            self.run_info.int8_model_size = get_model_size(onnx_path)
             ov_model = ov.convert_model(onnx_path)
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in OV_BACKENDS:
