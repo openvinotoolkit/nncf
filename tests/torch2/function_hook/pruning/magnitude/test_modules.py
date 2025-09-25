@@ -11,7 +11,7 @@
 
 import torch
 
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruneBinaryMask
+from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.prune.magnitude.modules import apply_magnitude_sparsity_binary_mask
 
 
@@ -26,7 +26,7 @@ def test_apply_magnitude_sparsity_binary_mask():
 
 def test_unstructured_prune_binary_mask_forward():
     shape = (4,)
-    prune_mask = UnstructuredPruneBinaryMask(shape)
+    prune_mask = UnstructuredPruningMask(shape)
     assert prune_mask.binary_mask.shape == shape
     assert prune_mask.binary_mask.dtype == torch.bool
 
@@ -40,12 +40,12 @@ def test_unstructured_prune_binary_mask_forward():
 
 def test_unstructured_prune_binary_mask_get_config():
     shape = (4,)
-    prune_mask = UnstructuredPruneBinaryMask(shape)
+    prune_mask = UnstructuredPruningMask(shape)
     config = prune_mask.get_config()
     assert config["shape"] == shape
 
 
 def test_unstructured_prune_binary_mask_from_config():
     shape = (4,)
-    prune_mask = UnstructuredPruneBinaryMask.from_config({"shape": shape})
+    prune_mask = UnstructuredPruningMask.from_config({"shape": shape})
     assert prune_mask.binary_mask.shape == shape

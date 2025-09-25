@@ -34,7 +34,7 @@ def apply_magnitude_sparsity_binary_mask(input_: torch.Tensor, mask: torch.Tenso
     return input_ * mask
 
 
-class UnstructuredPruneBinaryMask(nn.Module, StatefulModuleInterface):
+class UnstructuredPruningMask(nn.Module, StatefulModuleInterface):
     """
     A module that applies a binary mask for magnitude-based sparsity.
 
@@ -57,5 +57,5 @@ class UnstructuredPruneBinaryMask(nn.Module, StatefulModuleInterface):
         return {"shape": tuple(self.binary_mask.shape)}
 
     @classmethod
-    def from_config(cls, state: dict[str, Any]) -> "UnstructuredPruneBinaryMask":
-        return UnstructuredPruneBinaryMask(shape=state["shape"])
+    def from_config(cls, state: dict[str, Any]) -> "UnstructuredPruningMask":
+        return UnstructuredPruningMask(shape=state["shape"])

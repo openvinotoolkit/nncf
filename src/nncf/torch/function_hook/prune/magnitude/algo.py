@@ -15,7 +15,7 @@ from torch import nn
 import nncf
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.hook_storage import decode_hook_name
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruneBinaryMask
+from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.model_graph_manager import get_const_data_by_name
@@ -47,7 +47,7 @@ def apply_magnitude_pruning(
             continue
         pruned_param_names.add(param_name)
         param_data = get_const_data_by_name(param_name, model)
-        hook_module = UnstructuredPruneBinaryMask(tuple(param_data.shape)).to(device=param_data.device)
+        hook_module = UnstructuredPruningMask(tuple(param_data.shape)).to(device=param_data.device)
         register_post_function_hook(
             model=model,
             op_name=param_name,
@@ -61,19 +61,19 @@ def apply_magnitude_pruning(
     return model
 
 
-def get_pruned_modules(model: nn.Module) -> dict[str, UnstructuredPruneBinaryMask]:
+def get_pruned_modules(model: nn.Module) -> dict[str, UnstructuredPruningMask]:
     """
     Retrieves a mapping of operation names to their corresponding
-    UnstructuredPruneBinaryMask hooks from the given model.
+    UnstructuredPruningMask hooks from the given model.
 
     :param model: The model from which to retrieve the sparsity modules.
     :return: A dictionary mapping tensor names to their corresponding MagnitudeSparsityBinaryMask instances.
     """
     hook_storage = get_hook_storage(model)
-    sparsity_module_map: dict[str, UnstructuredPruneBinaryMask] = dict()
+    sparsity_module_map: dict[str, UnstructuredPruningMask] = dict()
 
     for name, hook in hook_storage.named_hooks():
-        if not isinstance(hook, UnstructuredPruneBinaryMask):
+        if not isinstance(hook, UnstructuredPruningMask):
             continue
 
         hook_type, op_name, port_id = decode_hook_name(name)

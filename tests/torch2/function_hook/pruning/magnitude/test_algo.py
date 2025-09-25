@@ -15,7 +15,7 @@ from torch import nn
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruneBinaryMask
+from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from tests.torch2.function_hook.pruning.magnitude.helpers import ConvModel
 from tests.torch2.function_hook.pruning.magnitude.helpers import MatMulLeft
@@ -44,7 +44,7 @@ def test_prune_model(model_cls: nn.Module, ref: str):
 
     for name, sparsity_module in hook_storage.named_hooks():
         assert name == ref
-        assert isinstance(sparsity_module, UnstructuredPruneBinaryMask)
+        assert isinstance(sparsity_module, UnstructuredPruningMask)
         assert sparsity_module.binary_mask.dtype == torch.bool
 
 
@@ -73,7 +73,7 @@ def test_prune_mode(mode: PruneMode, ref):
     pruned_model = nncf.prune(model, mode=mode, ratio=0.5, examples_inputs=example_inputs)
     hook_storage = get_hook_storage(pruned_model)
     for name, sparsity_module in hook_storage.named_hooks():
-        assert isinstance(sparsity_module, UnstructuredPruneBinaryMask)
+        assert isinstance(sparsity_module, UnstructuredPruningMask)
         c = sparsity_module.binary_mask.view(-1).tolist()
         assert c == ref[name]
 
@@ -104,5 +104,5 @@ def test_multi_device_infer():
 
     hook_storage = get_hook_storage(pruned_model)
     for name, sparsity_module in hook_storage.named_hooks():
-        assert isinstance(sparsity_module, UnstructuredPruneBinaryMask)
+        assert isinstance(sparsity_module, UnstructuredPruningMask)
         print(name, sparsity_module.binary_mask.device)
