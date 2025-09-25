@@ -63,6 +63,53 @@ class ModelBuilder:
         )
         return output
 
+    def add_gemm(
+        self,
+        input: str,
+        shape: tuple[int],
+        output: Optional[str] = None,
+        weight_data: Optional[np.ndarray] = None,
+        bias_data: Optional[np.ndarray] = None,
+        trans_b: int = 0,
+    ) -> str:
+        i = len(self._nodes)
+
+        # weight params
+        w_name = f"W_{i}"
+        if weight_data is None:
+            w_values = np.random.rand(*shape).astype(np.float32)
+        else:
+            w_values = weight_data
+        w_initializer = onnx.helper.make_tensor(
+            name=w_name, data_type=onnx.TensorProto.FLOAT, dims=shape, vals=w_values.tobytes(), raw=True
+        )
+        self._initializers.append(w_initializer)
+
+        # bias params
+        b_name = f"B_{i}"
+        b_shape = shape[0] if trans_b else shape[1]
+        if bias_data is None:
+            b_values = np.random.rand(b_shape).astype(np.float32)
+        else:
+            b_values = bias_data
+        b_initializer = onnx.helper.make_tensor(
+            name=b_name, data_type=onnx.TensorProto.FLOAT, dims=(b_shape,), vals=b_values.tobytes(), raw=True
+        )
+        self._initializers.append(b_initializer)
+
+        output = f"Gemm_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(
+                op_type="Gemm",
+                inputs=[input, w_name, b_name],
+                outputs=[output],
+                name=f"Gemm_{i}",
+                transA=0,
+                transB=trans_b,
+            )
+        )
+        return output
+
     def add_mul(self, input_a: str, input_b: str, output: Optional[str] = None) -> str:
         i = len(self._nodes)
 

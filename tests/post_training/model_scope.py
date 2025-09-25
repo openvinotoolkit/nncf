@@ -119,7 +119,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
         },
-        "backends": FX_BACKENDS + [BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 1,
     },
     {
@@ -130,7 +130,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
-        "backends": FX_BACKENDS + [BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 1,
     },
     # Timm models
@@ -578,8 +578,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=False)
             ),
         },
-        # TODO: (andreyanufr) add torch.fx backend
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.ONNX],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
 ]
 
