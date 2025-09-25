@@ -33,14 +33,11 @@ def apply_magnitude_pruning(
     This function registers hooks to the model's parameters to apply a binary mask
     for unstructured pruning based and update the specified ratio.
 
-    Args:
-        model (nn.Module): The neural network model to be pruned.
-        parameters (list[str]): A list of parameter names to be pruned.
-        mode (PruneMode): The mode of pruning to be applied.
-        ratio (float): The ratio of parameters to prune.
-
-    Returns:
-        nn.Module: The pruned model with hooks registered for the specified parameters.
+    :param model: The neural network model to be pruned.
+    :param parameters: A list of parameter names to be pruned.
+    :param mode: The mode of pruning to be applied.
+    :param ratio: The ratio of parameters to prune.
+    :returns: The pruned model with hooks registered for the specified parameters.
     """
     # Insert hooks
     pruned_param_names = set()
@@ -59,7 +56,7 @@ def apply_magnitude_pruning(
         )
 
     # Set ratio
-    update_ratio(model, mode, ratio)
+    update_pruning_ratio(model, mode, ratio)
 
     return model
 
@@ -67,7 +64,7 @@ def apply_magnitude_pruning(
 def get_pruned_modules(model: nn.Module) -> dict[str, UnstructuredPruneBinaryMask]:
     """
     Retrieves a mapping of operation names to their corresponding
-    MagnitudeSparsityBinaryMask hooks from the given model.
+    UnstructuredPruneBinaryMask hooks from the given model.
 
     :param model: The model from which to retrieve the sparsity modules.
     :return: A dictionary mapping tensor names to their corresponding MagnitudeSparsityBinaryMask instances.
@@ -89,16 +86,16 @@ def get_pruned_modules(model: nn.Module) -> dict[str, UnstructuredPruneBinaryMas
 
 
 @torch.no_grad()
-def update_ratio(
+def update_pruning_ratio(
     model: nn.Module,
     mode: PruneMode,
     ratio: float,
 ) -> None:
     """
-    Updates the pruning ratio for the given model based on the specified pruning mode and sparsity level.
+    Updates masks with new pruning ratio for the given model based on the specified pruning mode.
 
     This function modifies the binary masks of the sparsity modules in the model according to the
-    specified pruning strategy. It calculates he threshold for pruning based on the absolute values of the weights
+    specified pruning strategy. It calculates the threshold for pruning based on the absolute values of the weights
     and updates the binary masks accordingly.
 
     :param model: The neural network model to be pruned.
@@ -108,7 +105,7 @@ def update_ratio(
     pruned_modules_map = get_pruned_modules(model)
 
     if not pruned_modules_map:
-        msg = "No found Sparsity modules in the model"
+        msg = "No Sparsity modules found in the model"
         raise nncf.InternalError(msg)
 
     if mode == PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL:

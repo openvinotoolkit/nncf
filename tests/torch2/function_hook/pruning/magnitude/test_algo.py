@@ -17,12 +17,12 @@ import nncf
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruneBinaryMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
-from tests.torch2.function_hook.prune.magnitude.helpers import ConvModel
-from tests.torch2.function_hook.prune.magnitude.helpers import MatMulLeft
-from tests.torch2.function_hook.prune.magnitude.helpers import MatMulRight
-from tests.torch2.function_hook.prune.magnitude.helpers import MultiDeviceModel
-from tests.torch2.function_hook.prune.magnitude.helpers import SharedParamModel
-from tests.torch2.function_hook.prune.magnitude.helpers import TwoConvModel
+from tests.torch2.function_hook.pruning.magnitude.helpers import ConvModel
+from tests.torch2.function_hook.pruning.magnitude.helpers import MatMulLeft
+from tests.torch2.function_hook.pruning.magnitude.helpers import MatMulRight
+from tests.torch2.function_hook.pruning.magnitude.helpers import MultiDeviceModel
+from tests.torch2.function_hook.pruning.magnitude.helpers import SharedParamModel
+from tests.torch2.function_hook.pruning.magnitude.helpers import TwoConvModel
 
 
 @pytest.mark.parametrize(

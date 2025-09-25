@@ -18,7 +18,7 @@ from torch import nn
 import nncf
 import nncf.errors
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.prune_model import prune_update_ratio
+from nncf.torch.function_hook.prune.magnitude.algo import update_pruning_ratio
 
 
 class _BaseMagnitudePruningScheduler(ABC):
@@ -54,7 +54,7 @@ class _BaseMagnitudePruningScheduler(ABC):
         if model is None:
             msg = "The referenced model is no longer available"
             raise nncf.InternalError(msg)
-        prune_update_ratio(model, mode=self.mode, ratio=self.current_ratio)
+        update_pruning_ratio(model, mode=self.mode, ratio=self.current_ratio)
 
         self.epoch += 1
 

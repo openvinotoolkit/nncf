@@ -11,15 +11,17 @@
 
 from pytest_mock import MockerFixture
 
+import nncf
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.prune.magnitude.schedulers import ExponentialMagnitudePruningScheduler
 from nncf.torch.function_hook.prune.magnitude.schedulers import MultiStepMagnitudePruningScheduler
+from tests.torch2.function_hook.pruning.magnitude.helpers import ConvModel
 
 
 def test_multi_step_scheduler(mocker: MockerFixture):
-    mocker.patch("nncf.torch.function_hook.prune.magnitude.algo.update_ratio", return_value=None)
-
-    model = mocker.MagicMock()
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+    model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs)
     steps = {0: 0.1, 2: 0.5, 4: 0.9}
     scheduler = MultiStepMagnitudePruningScheduler(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps=steps)
 
@@ -34,9 +36,10 @@ def test_multi_step_scheduler(mocker: MockerFixture):
 
 
 def test_exponential_scheduler(mocker: MockerFixture):
-    mocker.patch("nncf.torch.function_hook.prune.magnitude.algo.update_ratio", return_value=None)
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+    model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs)
 
-    model = mocker.MagicMock()
     scheduler = ExponentialMagnitudePruningScheduler(
         model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, initial_ratio=0.1, target_ratio=0.9, target_epoch=4
     )

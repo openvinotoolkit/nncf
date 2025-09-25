@@ -244,21 +244,21 @@ def main():
     optimizer = torch.optim.Adam(pruned_model.parameters(), lr=compression_lr)
 
     # Create prune scheduler with multi steps strategy
-    prune_scheduler = MultiStepMagnitudePruningScheduler(
+    pruning_scheduler = MultiStepMagnitudePruningScheduler(
         pruned_model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.6, 1: 0.7}
     )
 
     for epoch in range(2):
         print(os.linesep + f"Train epoch: {epoch}")
 
-        prune_scheduler.step()
+        pruning_scheduler.step()
 
         train_epoch(train_loader, pruned_model, criterion, optimizer, device=device)
         acc1 = validate(val_loader, pruned_model, device)
         # Show statistics of pruning
         print(
             f"Accuracy@1 of INT8 model after {epoch} epoch with sparsity "
-            f"ratio {prune_scheduler.current_ratio}: {acc1:.3f}"
+            f"ratio {pruning_scheduler.current_ratio}: {acc1:.3f}"
         )
 
     ###############################################################################

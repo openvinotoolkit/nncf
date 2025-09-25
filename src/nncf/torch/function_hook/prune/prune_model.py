@@ -88,24 +88,3 @@ def prune(
         msg = f"Pruning mode {mode} is not implemented for Torch backend"
         raise nncf.InternalError(msg)
     return model
-
-
-def prune_update_ratio(
-    model: nn.Module,
-    mode: PruneMode,
-    ratio: float,
-) -> None:
-    """
-    Updates the pruning ratio for the specified model and pruning mode.
-
-    :param model: The neural network model to be pruned.
-    :param mode: The mode of pruning to be applied.
-    :param ratio: The ratio of weights to prune from the model.
-    """
-    if mode in [PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL]:
-        from nncf.torch.function_hook.prune.magnitude.algo import update_ratio
-
-        update_ratio(model, mode, ratio)
-    else:
-        msg = f"Pruning mode {mode} is not implemented for Torch backend"
-        raise nncf.InternalError(msg)
