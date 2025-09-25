@@ -184,7 +184,10 @@ def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> dict[str, A
 
 
 def _get_bias_attr(
-    node: onnx.NodeProto, model: onnx.ModelProto, parents_node_mapping: dict[str, onnx.NodeProto], children_node_mapping
+    node: onnx.NodeProto,
+    model: onnx.ModelProto,
+    parents_node_mapping: dict[str, onnx.NodeProto],
+    children_node_mapping: dict[str, onnx.NodeProto],
 ) -> dict[str, str]:
     """
     Returns bias tensor attributes.
@@ -192,34 +195,47 @@ def _get_bias_attr(
     :param node: ONNX node.
     :param model: ONNX model.
     :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
+    :param children_node_mapping: mapping from edge name to nodes which consume this edge as an input.
     :return: Bias tensor attributes.
     """
-    bias_attrs = {}
     metatype = get_metatype(model, node)
-    initializer = {x.name: x for x in model.graph.initializer}
 
     if metatype == ONNXMatMulMetatype:
         weight_port_ids = _get_weight_port_ids(node, model, parents_node_mapping)
-        if weight_port_ids:
-            y = node.output[0]  # only 1 output
-            consumers = children_node_mapping[y]
-            if len(consumers) == 1 and consumers[0].op_type == "Add":
-                add_node = consumers[0]
-                for port_id, input_name in enumerate(add_node.input):
-                    if input_name != y:
-                        bias_attrs["name"] = input_name
-                        bias_attrs["port_id"] = port_id
 
-                bias_attrs["add_node"] = add_node.name
+        if not weight_port_ids:
+            # `node` is a MatMul without weights, so return empty attributes
+            return {}
 
-                # We shoul make sure that `name` is ouput from `Constant` node or initializer
-                if bias_attrs["name"] not in initializer:
-                    producer = parents_node_mapping[bias_attrs["name"]]
-                    if producer.op_type != "Constant":
-                        bias_attrs = {}
+        # Retrieve all nodes that consume the output of the MatMul operation.
+        # The MatMul operation has only one output.
+        y = node.output[0]
+        consumers = children_node_mapping[y]
 
-        return bias_attrs
+        if len(consumers) != 1 or consumers[0].op_type != "Add":
+            return {}
 
+        # Here, we are certain that after a `MatMul` operation, there is only
+        # the `Add` operation.
+        add_node = consumers[0]
+
+        # Find the input of `add_node` that is not equal to `y`.
+        tensor_name = None
+        port_id = None
+        for i, name in enumerate(add_node.input):
+            if name != y:
+                tensor_name = name
+                port_id = i
+                break
+
+        # Ensure that `tensor_name` is the output of a `Constant` node or an initializer.
+        initializer = {x.name: x for x in model.graph.initializer}
+        if tensor_name in initializer or parents_node_mapping[tensor_name].op_type == "Constant":
+            return {"node": add_node.name, "name": tensor_name, "port_id": port_id}
+        else:
+            return {}
+
+    bias_attrs = {}
     if _is_node_with_bias(node, model):
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         bias_edge_name = get_tensor_edge_name(model, node, bias_tensor_port_id, parents_node_mapping)
