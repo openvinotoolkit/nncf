@@ -232,7 +232,7 @@ def main():
 
     acc1_init = validate(val_loader, pruned_model, device)
 
-    print(f"Accuracy@1 of pruned model with 70% without fine-tuning: {acc1_init:.3f}")
+    print(f"Accuracy@1 of pruned model with 0.7 pruning ratio without fine-tuning: {acc1_init:.3f}")
 
     ###############################################################################
     # Step 3: Fine tune with multi step sparsity scheduler
@@ -256,10 +256,7 @@ def main():
         train_epoch(train_loader, pruned_model, criterion, optimizer, device=device)
         acc1 = validate(val_loader, pruned_model, device)
         # Show statistics of pruning
-        print(
-            f"Accuracy@1 of INT8 model after {epoch} epoch with sparsity "
-            f"ratio {pruning_scheduler.current_ratio}: {acc1:.3f}"
-        )
+        print(f"Accuracy@1 of pruned model after {epoch} epoch ratio {pruning_scheduler.current_ratio}: {acc1:.3f}")
 
     ###############################################################################
     # Step 4: Export models

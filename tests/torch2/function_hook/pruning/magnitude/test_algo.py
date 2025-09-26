@@ -103,6 +103,13 @@ def test_multi_device_infer():
     pruned_model(example_inputs)
 
     hook_storage = get_hook_storage(pruned_model)
+
+    ref_devices = {
+        "post_hooks.conv1:weight__0.0": "cpu",
+        "post_hooks.conv2:weight__0.0": "cuda",
+    }
+    act_devices = {}
     for name, sparsity_module in hook_storage.named_hooks():
         assert isinstance(sparsity_module, UnstructuredPruningMask)
-        print(name, sparsity_module.binary_mask.device)
+        act_devices[name] = sparsity_module.binary_mask.device.type
+    assert ref_devices == act_devices
