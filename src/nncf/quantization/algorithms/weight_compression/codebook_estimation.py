@@ -295,9 +295,9 @@ class KMeansWeighted:
         return res
 
     @staticmethod
-    def add_weighted_data_and_weights(res, data):
-        res[1].append(fns.multiply(data[0, :], data[1, :]).sum())
-        res[2].append(fns.sum(data[1, :]))
+    def add_weighted_data_and_weights(res, data, importance):
+        res[1].append(fns.sum(fns.multiply(data, importance)))
+        res[2].append(fns.sum(importance))
 
     @staticmethod
     def create_histogramm_sorted(data_, importance, granularity=0.01):
@@ -305,9 +305,12 @@ class KMeansWeighted:
         ranges = []
         step = data_.max().item() * granularity / 3.5
 
-        data = np.array([data_, importance])
+        sorted_idx = fns.argsort(data_)
+        data = data_[sorted_idx]
+        importance = importance[sorted_idx]
         
-        data = data[:, data[0, :].argsort()]
+        #data = np.array([data_, importance])
+        #data = data[:, data[0, :].argsort()]
 
         data_range=(data.min().item(), data.max().item())
         prev = data_range[0]
@@ -325,18 +328,19 @@ class KMeansWeighted:
         centers = np.array(centers)
         ranges = np.array(ranges)
 
-        ranges_idxs = round(data[0], ranges)
+        ranges_idxs = round(data, ranges)
 
         res = [[], [], []]
         for i in range(centers.size):
             res[0].append(centers[i])
             if i == 0:
-                KMeansWeighted.add_weighted_data_and_weights(res, data[:, :ranges_idxs[1]])
+                KMeansWeighted.add_weighted_data_and_weights(res, data[:ranges_idxs[1].item()], importance[:ranges_idxs[1].item()])
             elif i == centers.size - 1:
-                KMeansWeighted.add_weighted_data_and_weights(res, data[:, ranges_idxs[-2]:])
+                KMeansWeighted.add_weighted_data_and_weights(res, data[ranges_idxs[-2].item():], importance[ranges_idxs[-2].item():])
             else:
                 idx = 2 * i
-                KMeansWeighted.add_weighted_data_and_weights(res, data[:, ranges_idxs[idx - 1]:ranges_idxs[idx + 1]])
+                KMeansWeighted.add_weighted_data_and_weights(res, data[:, ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()],
+                                                             importance[:, ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()])
 
         res[0] = np.array(res[0])
         res[1] = np.array(res[1])
@@ -392,8 +396,8 @@ class KMeansWeighted:
 
 
 def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
-    weight = weight.as_numpy_tensor().data
-    importance = importance.as_numpy_tensor().data
+    #weight = weight.as_numpy_tensor().data
+    #importance = importance.as_numpy_tensor().data
 
     ow = deepcopy(weight)
     orig_shape = weight.shape
