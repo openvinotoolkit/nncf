@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import Optional, TypeVar
 import numpy as np
 import time
@@ -142,7 +143,7 @@ class CodebookEstimation:
 
             if debug:
                 qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
-                print("Initial diff:", np.mean(np.abs(weight.data - qw.data)))
+                print("Initial diff:", fns.mean(fns.abs(weight.data - qw.data)))
 
             codebook, scale, indexes = self.calculate_codebook(
                 stats,
@@ -156,7 +157,7 @@ class CodebookEstimation:
   
             if debug:
                 qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
-                print("kmeans diff:", np.mean(np.abs(weight.data - qw.data)))
+                print("kmeans diff:", fns.mean(fns.abs(weight.data - qw.data)))
 
         return res
 
@@ -201,7 +202,7 @@ class CodebookEstimation:
         diff = float('inf')
         
         variants[0] = CB4_QUANTILES
-        variants[1] = np.array([i for i in range(-8, 8)])
+        variants[1] = fns.tensor([i for i in range(-8, 8)])
         best_i = -1
         
         for i_var, var in enumerate(variants):
@@ -223,8 +224,16 @@ class CodebookEstimation:
 
 def round(quantiles, values):
     center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
-    return np.searchsorted(center_of_quantiles, values, side='left', sorter=None)
+    return fns.searchsorted(center_of_quantiles, values, side='left', sorter=None)
 
+@dataclass
+class KMeansAlgoData:
+    centroids: Tensor
+    hist: Tensor
+    weighted_hist: Tensor | None = None
+
+    frequencies: Tensor | None = None
+    weights: Tensor | None = None
 
 class KMeansWeighted:
     def __init__(self, n_clusters=8, max_iter=300):
@@ -235,10 +244,11 @@ class KMeansWeighted:
     @staticmethod
     def get_init(values, frequencies, n_clusters):
         step = 1.0 / (n_clusters - 1)
-        denum = np.sum(frequencies)
+        denum = fns.sum(frequencies)
         quants = [i * step for i in range(n_clusters)]
         n_frequencies = frequencies / denum
-        n_frequencies = np.cumsum(n_frequencies)
+        n_frequencies = fns.cumsum(n_frequencies)
+
 
         res = []
         for i in range(len(quants)):
@@ -247,11 +257,11 @@ class KMeansWeighted:
             elif i == len(quants) - 1:
                 res.append(values[-1])
             else:
-                prev = values[np.where(n_frequencies <= quants[i])[0][-1]].item()
-                next_ = values[np.where(n_frequencies <= quants[i + 1])[0][-1]].item()
+                prev = values[fns.nonzero(n_frequencies <= quants[i])[0][-1]].item()
+                next_ = values[fns.nonzero(n_frequencies <= quants[i + 1])[0][-1]].item()
                 res.append((prev + next_) / 2)
 
-        res = np.array(res)
+        res = fns.tensor(res)
         return res
 
     @staticmethod
@@ -266,28 +276,28 @@ class KMeansWeighted:
             centers.append(prev + step / 2)
             prev += step
 
-        centers = np.array(centers)
+        centers = fns.tensor(centers)
         centroid_idxs = round(centers, data)
 
         res = [[], [], []]
         for i in range(centers.size):
-            idxs = np.where(centroid_idxs == i)
+            idxs = fns.nonzero(centroid_idxs == i)
             if len(idxs[0]) == 0:
                 continue
             res[0].append(centers[i])
-            res[1].append(np.sum(data[idxs]))
+            res[1].append(fns.sum(data[idxs]))
             res[2].append(len(idxs[0]))
 
-        res[0] = np.array(res[0])#.reshape(-1, 1)
-        res[1] = np.array(res[1])
-        res[2] = np.array(res[2])
+        res[0] = fns.tensor(res[0]) # centers of histogram bins
+        res[1] = fns.tensor(res[1]) # sum of values in each bin
+        res[2] = fns.tensor(res[2]) # count of values in each bin
 
         return res
 
     @staticmethod
     def add_weighted_data_and_weights(res, data):
-        res[1].append(np.multiply(data[0, :], data[1, :]).sum())
-        res[2].append(np.sum(data[1, :]))
+        res[1].append(fns.multiply(data[0, :], data[1, :]).sum())
+        res[2].append(fns.sum(data[1, :]))
 
     @staticmethod
     def create_histogramm_sorted(data_, importance, granularity=0.01):

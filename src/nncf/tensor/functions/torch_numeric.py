@@ -186,6 +186,13 @@ def _(
     return torch.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: torch.Tensor
+) -> torch.Tensor:
+    return torch.nonzero(condition, as_tuple=True)
+
+
 @numeric.zeros_like.register
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
@@ -317,6 +324,11 @@ def _(a: torch.Tensor) -> T_NUMBER:
 @numeric.sum.register
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     return torch.sum(a, dim=axis, keepdim=keepdims)
+
+
+@numeric.cumsum.register
+def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
+    return torch.cumsum(a, dim=axis)
 
 
 @numeric.multiply.register

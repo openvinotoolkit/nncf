@@ -58,12 +58,14 @@ from nncf.tensor.functions.numeric import searchsorted as searchsorted
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
 from nncf.tensor.functions.numeric import sum as sum
+from nncf.tensor.functions.numeric import cumsum as cumsum
 from nncf.tensor.functions.numeric import tensor as tensor
 from nncf.tensor.functions.numeric import transpose as transpose
 from nncf.tensor.functions.numeric import unsqueeze as unsqueeze
 from nncf.tensor.functions.numeric import unstack as unstack
 from nncf.tensor.functions.numeric import var as var
 from nncf.tensor.functions.numeric import where as where
+from nncf.tensor.functions.numeric import nonzero as nonzero
 from nncf.tensor.functions.numeric import zeros as zeros
 from nncf.tensor.functions.numeric import zeros_like as zeros_like
 

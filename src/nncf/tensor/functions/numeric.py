@@ -274,6 +274,16 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
 
 
 @tensor_dispatcher
+def nonzero(condition: Tensor) -> Tensor:
+    """
+    Return the indices of the elements that are non-zero.
+
+    :param condition: The input tensor.
+    :return: A tensor containing the indices of the non-zero elements.
+    """
+
+
+@tensor_dispatcher
 def zeros_like(a: Tensor) -> Tensor:
     """
     Return an tensor of zeros with the same shape and type as a given tensor.
@@ -501,6 +511,17 @@ def sum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims:
     :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions
         with size one.
     :return: Returns the sum of all elements in the input tensor in the given axis.
+    """
+
+@tensor_dispatcher
+def cumsum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
+    """
+    Cumulative sum of tensor elements over a given axis.
+
+    :param a: The input tensor.
+    :param axis: Axis or axes along which a sum is performed. The default, axis=None, will sum all of the elements
+        of the input tensor.
+    :return: Returns the cumulative sum of all elements in the input tensor in the given axis.
     """
 
 

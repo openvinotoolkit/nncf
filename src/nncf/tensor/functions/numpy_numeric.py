@@ -173,6 +173,13 @@ def _(
     return np.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: T_NUMPY,
+) -> T_NUMPY_ARRAY:
+    return np.nonzero(condition)
+
+
 @numeric.zeros_like.register
 def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.zeros_like(a)
@@ -292,6 +299,11 @@ def _(a: T_NUMPY) -> T_NUMBER:
 @numeric.sum.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))
+
+
+@numeric.cumsum.register
+def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
+    return np.array(np.cumsum(a, axis=axis))
 
 
 @numeric.multiply.register
