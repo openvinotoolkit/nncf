@@ -610,6 +610,17 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
 
 
 @tensor_dispatcher
+def argmin(a: Tensor, axis: T_AXIS = None) -> Tensor:
+    """
+    Returns the indices of the minimum values along an axis.
+
+    :param a: The tensor for which to find the minimum values.
+    :param axis: Axis or tuple of axes along which to find the minimum values.
+    :return: Indices of the minimum values along an axis.
+    """
+
+
+@tensor_dispatcher
 def diag(a: Tensor, k: int = 0) -> Tensor:
     """
     Returns the indices that would sort an array.

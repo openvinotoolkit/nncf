@@ -17,6 +17,7 @@ from nncf.tensor.functions.numeric import allclose as allclose
 from nncf.tensor.functions.numeric import any as any
 from nncf.tensor.functions.numeric import arange as arange
 from nncf.tensor.functions.numeric import argsort as argsort
+from nncf.tensor.functions.numeric import argmin as argmin
 from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
 from nncf.tensor.functions.numeric import atleast_1d as atleast_1d

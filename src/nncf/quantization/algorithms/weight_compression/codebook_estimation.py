@@ -257,11 +257,11 @@ class KMeansWeighted:
             elif i == len(quants) - 1:
                 res.append(values[-1])
             else:
-                prev = values[fns.nonzero(n_frequencies <= quants[i])[0][-1]].item()
-                next_ = values[fns.nonzero(n_frequencies <= quants[i + 1])[0][-1]].item()
+                prev = values[fns.nonzero(n_frequencies <= quants[i])[0][-1].item()].item()
+                next_ = values[fns.nonzero(n_frequencies <= quants[i + 1])[0][-1].item()].item()
                 res.append((prev + next_) / 2)
 
-        res = fns.tensor(res)
+        res = fns.tensor(res, backend=values.backend)
         return res
 
     @staticmethod
@@ -339,12 +339,12 @@ class KMeansWeighted:
                 KMeansWeighted.add_weighted_data_and_weights(res, data[ranges_idxs[-2].item():], importance[ranges_idxs[-2].item():])
             else:
                 idx = 2 * i
-                KMeansWeighted.add_weighted_data_and_weights(res, data[:, ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()],
-                                                             importance[:, ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()])
+                KMeansWeighted.add_weighted_data_and_weights(res, data[ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()],
+                                                             importance[ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()])
 
-        res[0] = np.array(res[0])
-        res[1] = np.array(res[1])
-        res[2] = np.array(res[2])
+        res[0] = fns.tensor(res[0], backend=data_.backend) # centers of histogram bins
+        res[1] = fns.tensor(res[1], backend=data_.backend)
+        res[2] = fns.tensor(res[2], backend=data_.backend)
 
         return res
 
@@ -358,7 +358,7 @@ class KMeansWeighted:
         init_by_hist = self.get_init(self.hist[0], self.hist[2], self.n_clusters)
         init_by_hist[0] = init[0]
         init_by_hist[-1] = init[-1]
-        zero_idx = np.argmin(np.abs(init_by_hist[:]))
+        zero_idx = fns.argmin(fns.abs(init_by_hist[:]))
         init_by_hist[zero_idx] = 0.0 #init[0, zero_idx]
         fixed[1] = zero_idx
         init = init_by_hist

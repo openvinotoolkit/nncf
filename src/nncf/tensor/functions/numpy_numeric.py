@@ -350,6 +350,11 @@ def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False
     return np.argsort(a, axis=axis, kind="stable" if stable else None)
 
 
+@numeric.argmin.register
+def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY:
+    return np.argmin(a, axis=axis)
+
+
 @numeric.diag.register
 def _(a: T_NUMPY, k: int = 0) -> T_NUMPY_ARRAY:
     return np.diag(a, k=k)
