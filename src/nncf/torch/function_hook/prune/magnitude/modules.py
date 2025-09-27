@@ -16,6 +16,7 @@ from torch import nn
 from torch.overrides import handle_torch_function
 from torch.overrides import has_torch_function_unary
 
+from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
 
 
@@ -34,6 +35,7 @@ def apply_magnitude_sparsity_binary_mask(input_: torch.Tensor, mask: torch.Tenso
     return input_ * mask
 
 
+@COMPRESSION_MODULES.register()
 class UnstructuredPruningMask(nn.Module, StatefulModuleInterface):
     """
     A module that applies a binary mask for magnitude-based sparsity.
