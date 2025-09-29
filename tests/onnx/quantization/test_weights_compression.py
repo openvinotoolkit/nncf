@@ -317,10 +317,6 @@ def test_matmulnbits():
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
 
 
-@pytest.mark.xfail(
-    version.parse(onnx.__version__) >= version.parse("1.18.0"),
-    reason="onnxruntime not support default IR for onnx==1.18.0",
-)
 @pytest.mark.parametrize("trans_b", [0, 1])
 def test_matmulnbits_gemm(trans_b: int):
     # Build the model with a single Gemm operation
