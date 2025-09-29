@@ -62,7 +62,7 @@ def _(a: torch.Tensor) -> TensorBackend:
 
 
 @numeric.bincount.register
-def bincount(a: torch.Tensor, *, weights: Optional[torch.Tensor], minlength: int = 0) -> torch.Tensor:
+def _(a: torch.Tensor, *, weights: Optional[torch.Tensor], minlength: int = 0) -> torch.Tensor:
     return torch.bincount(input=a, weights=weights, minlength=minlength)
 
 
@@ -342,7 +342,7 @@ def _(a: torch.Tensor) -> T_NUMBER:
 
 
 @numeric.cumsum.register
-def cumsum(a: torch.Tensor, axis: Optional[int] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: int) -> torch.Tensor:
     return torch.cumsum(a, dim=axis)
 
 

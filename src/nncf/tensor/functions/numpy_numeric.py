@@ -315,7 +315,7 @@ def _(a: T_NUMPY) -> T_NUMBER:
 
 
 @numeric.cumsum.register
-def cumsum(a: T_NUMPY, axis: Optional[int] = None) -> T_NUMPY:
+def _(a: T_NUMPY, axis: int) -> T_NUMPY:
     return np.cumsum(a, axis=axis)
 
 

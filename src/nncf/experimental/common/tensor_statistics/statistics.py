@@ -90,6 +90,8 @@ class MinMaxTensorStatistic(TensorStatistic):
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
         if cls.MIN_MAX_STAT in config:
+            # Build MinMaxTensorStatistic for aggregators which
+            # outputs both min and max values from a single aggregator instance.
             return cls(**config[cls.MIN_MAX_STAT])
         return cls(min_values=config[cls.MIN_STAT], max_values=config[cls.MAX_STAT])
 

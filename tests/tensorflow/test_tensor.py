@@ -87,6 +87,30 @@ class TestTFNNCFTensorOperators(TemplateTestNNCFTensorOperators):
                 expected_val = expected[i][j]
                 assert abs(x_val - expected_val) < 0.2, f"Value at ({i},{j}) is {x_val}, expected {expected_val}"
 
+    @pytest.mark.skip("linspace is not implemented in TensorFlow")
+    def test_fn_linspace(self, start, stop, num, ref):
+        pass
+
+    @pytest.mark.skip("bincount is not implemented in TensorFlow")
+    def test_fn_bincount(self, val, weights, minlength, ref):
+        pass
+
+    @pytest.mark.skip("floor is not implemented in TensorFlow")
+    def test_fn_floor(self, val, ref):
+        pass
+
+    @pytest.mark.skip("histogram is not implemented in TensorFlow")
+    def test_fn_histogram(self, val, bins, range_, ref):
+        pass
+
+    @pytest.mark.skip("repeat is not implemented in TensorFlow")
+    def test_fn_repeat(self, val, repeats, axis, ref):
+        pass
+
+    @pytest.mark.skip("cumsum is not implemented in TensorFlow")
+    def test_fn_cumsum(self, x, axis, ref):
+        pass
+
     @pytest.mark.skip("Desired slicing is not supported for TensorFlow")
     @pytest.mark.parametrize("is_tensor_indecies", (False, True))
     def test_getitem_for_indecies(self, is_tensor_indecies):

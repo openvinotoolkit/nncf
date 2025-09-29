@@ -50,6 +50,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
@@ -517,7 +518,7 @@ class MinMaxQuantization(Algorithm):
         :return: An histogram TensorCollector for the statistics calculation.
         """
         reducer = self._backend_entity.reducer_map[StatisticsType.RAW]()
-        aggregator = AGGREGATORS_MAP[AggregatorType.HISTOGRAM](num_samples=num_samples)
+        aggregator = HistogramAggregator(num_samples=num_samples)
         collector = TensorCollector(MinMaxTensorStatistic)
         collector.register_statistic_branch(MinMaxTensorStatistic.MIN_MAX_STAT, reducer, aggregator)
         return collector

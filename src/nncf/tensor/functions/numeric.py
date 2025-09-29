@@ -552,7 +552,7 @@ def item(a: Tensor) -> Union[int, float, bool]:
 
 
 @tensor_dispatcher
-def cumsum(a: Tensor, axis: Optional[int] = None) -> Tensor:
+def cumsum(a: Tensor, axis: int) -> Tensor:
     """
     Return the cumulative sum of the elements along a given axis.
 
