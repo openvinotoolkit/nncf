@@ -22,6 +22,7 @@ from typing import Any, Optional, TypeVar, Union
 import nncf
 import nncf.tensor
 import nncf.tensor.functions as fns
+from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
@@ -34,7 +35,6 @@ from nncf.tensor.definitions import TensorDataType
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 AggregationAxes = tuple[int, ...]
-AggregatorsKeys = tuple[int, int, int]
 
 
 class TensorReducerBase(ABC):
@@ -54,7 +54,7 @@ class TensorReducerBase(ABC):
         self._keepdims = True
 
     @property
-    def inplace(self) -> bool:
+    def inplace(self):
         return self._inplace
 
     @property
@@ -66,11 +66,11 @@ class TensorReducerBase(ABC):
         return 0
 
     @property
-    def name(self) -> str:
+    def name(self):
         return self.__class__.__name__ + str(self.__hash__())
 
     @abstractmethod
-    def _reduce_out_of_place(self, x: list[Tensor]) -> list[Any]:
+    def _reduce_out_of_place(self, x: list[TensorType]) -> list[TensorType]:
         """
         Specifies the reduction rule.
 
@@ -85,7 +85,7 @@ class TensorReducerBase(ABC):
         """
         return None
 
-    def __call__(self, x: list[Tensor]) -> Optional[list[Tensor]]:
+    def __call__(self, x: list[Tensor]):
         if any(t.isempty() for t in x):
             return None
 
@@ -136,20 +136,20 @@ class AggregatorBase:
         self._num_samples = num_samples
         self._collected_samples = 0
         self._window_size = window_size
-        self._container: Any = deque(maxlen=window_size)
+        self._container = deque(maxlen=window_size)
 
     @property
-    def num_samples(self) -> Optional[int]:
+    def num_samples(self) -> int:
         return self._num_samples
 
-    def register_reduced_input(self, x: Tensor) -> None:
+    def register_reduced_input(self, x: TensorType):
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return
         self._register_reduced_input_impl(x)
         self._collected_samples += 1
 
     @abstractmethod
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
         """
         Registers incoming tensor in tensor aggregator.
 
@@ -175,9 +175,9 @@ class AggregatorBase:
         :return: Aggregated result.
         """
 
-    def reset(self) -> None:
+    def reset(self):
         self._collected_samples = 0
-        self._container = deque(maxlen=self._window_size)
+        self._container = []
 
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
@@ -198,8 +198,8 @@ class TensorCollector:
 
     def __init__(self, statistic_container: Optional[type[TensorStatistic]] = None) -> None:
         self._reducers: set[TensorReducerBase] = set()
-        self._aggregators: dict[AggregatorsKeys, AggregatorBase] = {}
-        self._stat_container_kwargs_map: dict[str, AggregatorsKeys] = {}
+        self._aggregators: dict[tuple[int, int, int], AggregatorBase] = {}
+        self._stat_container_kwargs_map: dict[str, tuple[int, int, int]] = {}
         self._stat_container = statistic_container
         self.enable()
         self.clear_cache()
@@ -219,17 +219,17 @@ class TensorCollector:
         return self._enabled
 
     @property
-    def reducers(self) -> set[TensorReducerBase]:
+    def reducers(self):
         return self._reducers.copy()
 
     @property
-    def aggregators(self) -> dict[AggregatorsKeys, AggregatorBase]:
+    def aggregators(self):
         return self._aggregators.copy()
 
-    def enable(self) -> None:
+    def enable(self):
         self._enabled = True
 
-    def disable(self) -> None:
+    def disable(self):
         self._enabled = False
 
     def register_statistic_branch(
@@ -296,7 +296,7 @@ class TensorCollector:
         """
         self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
 
-    def _aggregate(self) -> dict[AggregatorsKeys, Any]:
+    def _aggregate(self) -> None:
         result = {}
         for (
             key,
@@ -311,11 +311,11 @@ class TensorCollector:
         Sets cached statistics from given config and disable TensorCollector.
         :param statistics: TensorStatistic.
         """
-        self._cached_statistics: Optional[TensorStatistic] = statistics
+        self._cached_statistics = statistics
         self.reset()
         self.disable()
 
-    def create_statistics_container(self, config: dict[str, Any]) -> Union[TensorStatistic, dict[str, Any]]:
+    def create_statistics_container(self, config: dict[str, Any]) -> TensorStatistic:
         """
         Returns a TensorStatistic instance with aggregated values.
 
@@ -332,7 +332,7 @@ class TensorCollector:
         """
         self._cached_statistics = None
 
-    def get_statistics(self) -> Union[TensorStatistic, dict[str, Any]]:
+    def get_statistics(self) -> TensorStatistic:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.
@@ -348,7 +348,7 @@ class TensorCollector:
             statistics_config[container_key] = aggregated_values[branch_key]
         return self.create_statistics_container(statistics_config)
 
-    def replace_aggregator(self, key: AggregatorsKeys, aggregator: AggregatorBase) -> None:
+    def replace_aggregator(self, key: tuple[int, int, int], aggregator: AggregatorBase) -> None:
         """
         Friend method that replaces aggregator instance on equivalent one.
         Key should be valid for for given aggregator and a statistic branch
@@ -361,7 +361,7 @@ class TensorCollector:
         assert key[2] == hash(aggregator)
         self._aggregators[key] = aggregator
 
-    def reset(self) -> None:
+    def reset(self):
         for aggregator in self._aggregators.values():
             aggregator.reset()
 
@@ -398,7 +398,7 @@ class MergedTensorCollector(TensorCollector):
         :param tensor_collectors: Tensor collectors to merge.
         """
         super().__init__()
-        aggregators: dict[AggregatorsKeys, list[tuple[TensorCollector, AggregatorBase]]] = defaultdict(list)
+        aggregators: dict[tuple[int, int, int], list[tuple[TensorCollector, AggregatorBase]]] = defaultdict(list)
         for tensor_collector in tensor_collectors:
             if not tensor_collector.enabled:
                 continue
@@ -419,7 +419,7 @@ class MergedTensorCollector(TensorCollector):
 
 
 class RawReducer(TensorReducerBase):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__(inplace=False)
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
@@ -433,7 +433,7 @@ class ShapeReducer(TensorReducerBase):
     def __init__(self, inplace: bool = False):
         super().__init__(inplace=inplace)
 
-    def _reduce_out_of_place(self, x: list[Tensor]) -> list[tuple[int, ...]]:
+    def _reduce_out_of_place(self, x: list[TensorType]) -> list[tuple[int, ...]]:
         return [x[0].shape]
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
@@ -564,21 +564,21 @@ class NoopAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int]):
         super().__init__(None, num_samples=num_samples)
 
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
         self._container.append(x)
 
-    def _aggregate_impl(self) -> list[Tensor]:
+    def _aggregate_impl(self):
         return self._container
 
 
 class ShapeAggregator(AggregatorBase):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__(None, num_samples=1)
 
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
         self._container = x
 
-    def _aggregate_impl(self) -> tuple[int, ...]:
+    def _aggregate_impl(self):
         return self._container.shape
 
 
@@ -632,7 +632,7 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
     all samples in a container and aggregate them in one step.
     """
 
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
         self._container.append(x)
 
     def _aggregate_impl(self) -> Tensor:
@@ -679,7 +679,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         self,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        window_size=None,
         quantile: float = 0.01,
     ):
         super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
@@ -687,7 +687,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         self._container = deque(maxlen=window_size)
         self._quantile = quantile
 
-    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
+    def _aggregation_fn(self, stacked_value: Tensor, axis: int, keepdims: bool) -> Tensor:
         low_values, high_values = fns.quantile(stacked_value, q=(self._quantile, 1 - self._quantile), axis=axis)
         outliers_mask = fns.logical_or(stacked_value < low_values, high_values < stacked_value)
         aggregated = self._masked_aggregation_fn(
@@ -741,8 +741,8 @@ class MedianAbsoluteDeviationAggregator(AggregatorBase):
             msg = "Aggregation without 0 dim is not supported yet for MedianAbsoluteDeviationAggregator"
             raise NotImplementedError(msg)
 
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
-        self._container.append(x)
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
+        return self._container.append(x)
 
     def _aggregate_impl(self) -> dict[str, Tensor]:
         stacked_val, shape_after_aggregation = _move_axes_flatten_cat(
@@ -784,8 +784,8 @@ class PercentileAggregator(AggregatorBase):
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
 
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
-        self._container.append(x)
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
+        return self._container.append(x)
 
     def _aggregate_impl(self) -> dict[float, Tensor]:
         stacked_val, shape_after_aggregation = _move_axes_flatten_cat(
@@ -807,7 +807,7 @@ class HAWQAggregator(AggregatorBase):
         super().__init__(num_samples=num_samples)
         self._container = Tensor(0.0)
 
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
         trace = fns.sum(fns.multiply(x, x))
         # NOTE: average trace?? divide by number of diagonal elements
         # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
@@ -840,7 +840,6 @@ def _move_axes_flatten_cat(
 
     # Shape to flatten aggregation axes
     reshape_shape = [-1] + [tensor_shape[dim] for dim in transpose_dims][len(aggregation_axes) :]
-    reshape_shape = tuple(reshape_shape)
 
     reshaped_tensors = []
     for tensor in tensor_list:
