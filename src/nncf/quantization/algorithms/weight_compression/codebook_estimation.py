@@ -196,7 +196,7 @@ class CodebookEstimation:
         indexes = indexes.reshape(orig_shape)
 
         
-        best_codebook = converter(codebook)[0]
+        best_codebook = converter(codebook.as_openvino_tensor())[0]
         
         fp_outs = fns.matmul(weight, X)
         diff = float('inf')
@@ -206,7 +206,7 @@ class CodebookEstimation:
         best_i = -1
         
         for i_var, var in enumerate(variants):
-            var = converter(var)[0]
+            var = converter(var.as_openvino_tensor())[0]
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
             q_outs = fns.matmul(qw, X)
@@ -378,14 +378,16 @@ class KMeansWeighted:
                 idxs = np.where(centroid_idxs == i)
                 self.centroids[i] = np.sum(self.hist[1][idxs]) / np.sum(self.hist[2][idxs])
 
-            for i, centroid in enumerate(self.centroids):
-                if np.isnan(centroid).any():  # Catch any np.nans, resulting from a centroid having no points
-                    self.centroids[i] = prev_centroids[i]
+            # for i, centroid in enumerate(self.centroids):
+            #     if np.isnan(centroid).any():  # Catch any np.nans, resulting from a centroid having no points
+            #         self.centroids[i] = prev_centroids[i]
             for idx in fixed:
                 self.centroids[idx] = init[idx]
             iteration += 1
-            if np.all(np.abs(self.centroids - prev_centroids) < 0.00001).any():
+            if fns.any(fns.all(fns.abs(self.centroids - prev_centroids) < 0.00001)):
                 break
+            # if np.all(np.abs(self.centroids - prev_centroids) < 0.00001).any():
+            #     break
         
         self.variants.append(deepcopy(self.centroids))
 
@@ -411,10 +413,12 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
     kmeans = KMeansWeighted(n_centroids, max_iter=70)
 
     kmeans.fit(weight, importance, n_init, fixed=[0, 7, 15])
-    codebook, indexes = kmeans.evaluate(weight.reshape(-1, 1))
+    codebook, indexes = kmeans.evaluate(weight)#.reshape(-1, 1))
 
-    indexes = np.reshape(indexes, orig_shape)
+    indexes = fns.reshape(indexes, orig_shape)
 
-    print(orig_shape, np.mean(np.abs(ow - codebook[indexes])))
+    #print(orig_shape, np.mean(np.abs(ow - codebook[indexes])))
+    
+    print(orig_shape, fns.mean(fns.abs(ow - codebook[indexes])))
 
     return codebook, indexes, kmeans.variants
