@@ -69,7 +69,7 @@ class SmoothQuant(Algorithm):
 
     @property
     def available_backends(self) -> list[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -90,6 +90,10 @@ class SmoothQuant(Algorithm):
             from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSmoothQuantAlgoBackend
 
             self._backend_entity = FXSmoothQuantAlgoBackend()
+        elif model_backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.smooth_quant.onnx_backend import ONNXSmoothQuantAlgoBackend
+
+            self._backend_entity = ONNXSmoothQuantAlgoBackend()
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)

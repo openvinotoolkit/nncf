@@ -36,10 +36,6 @@ The tests results will be saved in `nncf-tests.xml`.
 --ignore-unknown-dependency
                       ignore dependencies whose outcome is not known
 --data=DATA-DIR       Path to test datasets
---sota-checkpoints-dir=SOTA_CHECKPOINTS_DIR
-                      Path to checkpoints directory for sota accuracy test
---sota-data-dir=SOTA_DATA_DIR
-                      Path to datasets directory for sota accuracy test
 --metrics-dump-path=METRICS_DUMP_PATH
                       Path to directory to store metrics. Directory must be empty or should not exist.Metric keeps in PROJECT_ROOT/test_results/metrics_dump_timestamp if param   not specified
 --ov-data-dir=OV_DATA_DIR
@@ -87,24 +83,4 @@ pytest --junitxml nncf-tests.xml tests/tensorflow/test_weekly.py -s \
   --data {PATH_TO_TFDS_OR_TFRECORDS_DATA_PATH} \
   --models-dir {PATH_TO_PRETRAINED_MODELS_CKPT_PATH} \
   --metrics-dump-path ./weekly_test_dump
-```
-
-### test_sota_checkpoints.py
-
-In this file, you can **test whether the trained models from weekly test match the expected performance**. You can see the configurations are written in `sota_checkpoints_eval.json`, which contains the tasks / datasets / topologies. In topologies, it contains model name as a key and various datas such as config file path, ckpt path, target performance based on metric_type, compression method or etc. OV test will extract the `IR` or `frozen graph` from each model and test the extracted graph's accuracy. You can run the test from OV extracted model or eval from tensorflow model as follow:
-
-```bash
-pytest test_sota_checkpoints.py -s \
-  -m oveval \
-  --sota-checkpoints-dir={SOTA_CKPT_DIR} \
-  --run-openvino-eval \
-  --ov-data-dir={OV_DATA_DIR} \
-  --metrics-dump-path ./ov_test_dump
-```
-
-```bash
-pytest test_sota_checkpoints.py -s \
-  --sota-checkpoints-dir={SOTA_CKPT_DIR} \
-  --sota-data-dir={SOTA_DATA_DIR} \
-  --metrics-dump-path ./eval_test_dump \
 ```

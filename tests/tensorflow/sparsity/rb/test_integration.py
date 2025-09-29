@@ -17,8 +17,6 @@ import tensorflow as tf
 from tensorflow.python.framework.config import disable_op_determinism
 from tensorflow.python.framework.config import enable_op_determinism
 
-from examples.tensorflow.common.callbacks import get_callbacks
-from examples.tensorflow.common.callbacks import get_progress_bar
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -208,15 +206,6 @@ def test_rb_sparse_target_lenet(distributed, deterministic_mode):
         epochs=5,
         callbacks=[
             tf.keras.callbacks.ReduceLROnPlateau(),
-            get_progress_bar(stateful_metrics=["loss"] + [metric.name for metric in metrics]),
-            *get_callbacks(
-                include_tensorboard=True,
-                track_lr=False,
-                profile_batch=0,
-                initial_step=0,
-                log_dir="logdir/",
-                ckpt_dir="logdir/cpt/",
-            ),
             compression_callbacks,
             SparsityRateTestCallback(),
         ],

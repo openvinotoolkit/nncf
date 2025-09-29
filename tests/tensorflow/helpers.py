@@ -15,8 +15,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.init_ops import Constant
 
-from examples.tensorflow.classification.datasets.builder import DatasetBuilder
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
@@ -126,52 +124,6 @@ class TFTensorListComparator(BaseTensorListComparator):
             return tensor
         msg = f"Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}"
         raise Exception(msg)
-
-
-class MockCOCODatasetBuilder(COCODatasetBuilder):
-    @property
-    def num_examples(self):
-        return 5
-
-
-def get_coco_dataset_builders(config, num_devices, **kwargs):
-    builders = []
-
-    if kwargs.get("train", False):
-        builders.append(MockCOCODatasetBuilder(config=config, is_train=True, num_devices=num_devices))
-
-    if kwargs.get("validation", False):
-        builders.append(MockCOCODatasetBuilder(config=config, is_train=False, num_devices=num_devices))
-
-    if kwargs.get("calibration", False):
-        config_ = config.deepcopy()
-        config_.batch_size = builders[0].batch_size
-        builders.append(MockCOCODatasetBuilder(config=config_, is_train=True, num_devices=1))
-
-    if len(builders) == 1:
-        builders = builders[0]
-
-    return builders
-
-
-class MockCIFAR10DatasetBuilder(DatasetBuilder):
-    @property
-    def num_examples(self):
-        return 10
-
-
-def get_cifar10_dataset_builders(config, num_devices, one_hot=True):
-    image_size = config.input_info.sample_size[-2]
-
-    train_builder = MockCIFAR10DatasetBuilder(
-        config, image_size=image_size, num_devices=num_devices, one_hot=one_hot, is_train=True
-    )
-
-    val_builder = MockCIFAR10DatasetBuilder(
-        config, image_size=image_size, num_devices=num_devices, one_hot=one_hot, is_train=False
-    )
-
-    return [train_builder, val_builder]
 
 
 def get_weight_by_name(layer, name):

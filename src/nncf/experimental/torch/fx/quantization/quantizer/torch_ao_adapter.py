@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Union
+from typing import Union
 
 import torch
 import torch.fx
@@ -29,9 +29,11 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.node_utils import get_node_args
+from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
 
@@ -71,7 +73,7 @@ class TorchAOQuantizerAdapter(Quantizer):
         from_node: torch.fx.Node,
         to_nodes: list[torch.fx.Node],
         annotated_model: torch.fx.GraphModule,
-        qconfig: QuantizerConfig,
+        qconfig: TypedQuantizerConfig,
     ) -> list[QuantizationPointBase]:
         """
         Creates quantization points based on the nodes and edges.
@@ -79,16 +81,16 @@ class TorchAOQuantizerAdapter(Quantizer):
         :param from_node: The originating node in the computation graph.
         :param to_nodes: The list of destination nodes of the from_node.
         :param annotated_model: The torch.fx.GraphModule instance.
-        :param qconfig: The torch.ao quantization configuration.
+        :param qconfig: The TorchFX quantization configuration.
         :return: A list of NNCF quantization points.
         """
-        to_n = to_nodes[0]
+        to_node = to_nodes[0]
         if from_node.op == "get_attr":
-            _, metatype = GraphConverter.get_node_type_and_metatype(to_n, annotated_model)
+            _, metatype = GraphConverter.get_node_type_and_metatype(to_node, annotated_model)
             # Check that the constant is placed on the actual weight port, as it is possible for
             # activations to be a constant as well.
-            if TorchAOQuantizerAdapter._get_node_args(to_n).index(from_node) in metatype.weight_port_ids:
-                qip = WeightQuantizationInsertionPoint(to_n.name)
+            if get_node_args(to_node).index(from_node) in metatype.weight_port_ids:
+                qip = WeightQuantizationInsertionPoint(to_node.name)
                 return [SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])]
 
         if len(from_node.users) == len(to_nodes):
@@ -96,24 +98,12 @@ class TorchAOQuantizerAdapter(Quantizer):
             return [SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])]
 
         qps = []
-        for to_n_ in to_nodes:
-            input_port_id = to_n_.args.index(from_node)
-            qip = ActivationQuantizationInsertionPoint(to_n_.name, input_port_id)
-            qp = SingleConfigQuantizationPoint(qip, qconfig, [to_n_.name])
+        for to_node in to_nodes:
+            input_port_id = get_node_args(to_node).index(from_node)
+            qip = ActivationQuantizationInsertionPoint(to_node.name, input_port_id)
+            qp = SingleConfigQuantizationPoint(qip, qconfig, [to_node.name])
             qps.append(qp)
         return qps
-
-    @staticmethod
-    def _get_node_args(node: torch.fx.Node) -> tuple[Any, ...]:
-        """
-        Correctly retrieves arguments of the given node.
-
-        :param node: The given node.
-        :return: The arguments of the given node.
-        """
-        if node.target == torch.ops.aten.cat.default:
-            return node.args[0]
-        return node.args
 
     @staticmethod
     def get_quantizer_config_from_annotated_model(annotated: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
@@ -159,15 +149,28 @@ class TorchAOQuantizerAdapter(Quantizer):
                 msg = f"Unknown qscheme: {qspec.qscheme}"
                 raise nncf.InternalError(msg)
 
-            signed = qspec.dtype is torch.int8
+            dtype = TensorDataType.int8 if qspec.dtype is torch.int8 else TensorDataType.uint8
             mode = (
                 QuantizationMode.SYMMETRIC
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
                 else QuantizationMode.ASYMMETRIC
             )
-            narrow_range = qspec.quant_min % 2 != 0
-            qconfig = QuantizerConfig(
-                mode=mode, signedness_to_force=signed, per_channel=per_channel, narrow_range=narrow_range
+
+            # QuantizationSpec may have quant_min and quant_max attributes set to None.
+            # torch.ao.prepare_pt2e treats such occurrences as a signal
+            # that the full range of values should be used for quant_min and quant_max.
+            # Therefore, the narrow_range parameter is set to False in this case.
+            if qspec.quant_min is None or qspec.quant_max is None:
+                narrow_range = False
+            else:
+                narrow_range = qspec.quant_max - qspec.quant_min == 254
+
+            qconfig = TypedQuantizerConfig(
+                mode=mode,
+                signedness_to_force=False,
+                per_channel=per_channel,
+                narrow_range=narrow_range,
+                dest_dtype=dtype,
             )
 
             joined_edges = defaultdict(list)

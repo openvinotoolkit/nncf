@@ -34,6 +34,10 @@ tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
   metric_value: 0.85502
   num_int4: 94
   num_int8: 124
+tinyllama_data_aware_awq_scale_estimation_backend_ONNX:
+  metric_value: 0.85502
+  num_int4: 230
+  num_int8: 124
 tinyllama_int8_data_free_backend_TORCH:
   metric_value: 0.95624
   num_int4: 0
@@ -102,6 +106,10 @@ tinyllama_scale_estimation_per_channel_backend_FX_TORCH:
     error_message: "Openvino Model Files Not Found!"
     message: "Issue-165013"
   atol: 0.006 # difference across devices: 0.80873 vs 0.81389
+tinyllama_scale_estimation_per_channel_backend_ONNX:
+  metric_value: 0.80878
+  num_int4: 188
+  num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH:
   metric_value: 0.85502
   num_int4: 94
@@ -117,4 +125,16 @@ tinyllama_data_free_awq_backend_OV:
 tinyllama_data_free_awq_backend_TORCH:
   metric_value: 0.85466
   num_int4: 94
+  num_int8: 124
+tinyllama_data_free_awq_backend_FX_TORCH:
+  metric_value: 0.85466
+  num_int4: 94
+  num_int8: 124
+tinyllama_data_free_awq_backend_ONNX:
+  metric_value: 0.8597
+  num_int4: 230
+  num_int8: 124
+tinyllama_data_aware_backend_ONNX:
+  metric_value: 0.85807
+  num_int4: 230
   num_int8: 124

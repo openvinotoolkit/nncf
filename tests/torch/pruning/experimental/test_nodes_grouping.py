@@ -380,7 +380,7 @@ CV_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(25)}, consumers={ConsumerInfo(29)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(30)}, consumers={ConsumerInfo(34)}),
         ],
     ),
     GroupTestDesc(

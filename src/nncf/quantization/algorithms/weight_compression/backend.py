@@ -16,18 +16,27 @@ from typing import Callable, Iterable, Optional, TypeVar
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.parameters import CompressionFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
@@ -148,8 +157,7 @@ class WeightCompressionAlgoBackend(ABC):
         model: TModel,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: dict[str, Tensor] = None,
-        precomputed_zero_points: dict[str, Tensor] = None,
+        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
@@ -160,8 +168,7 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
         :param weight_compression_parameters: An iterable of weight compression parameters.
-        :param precomputed_scales: Precomputed scales for weight compression.
-        :param precomputed_zero_points: Precomputed zero points for weight compression.
+        :param precomputed_compressed_weights: Precomputed scales, zero points, or codebook for weight compression.
         :param lora_correction_algo: An optional algorithm to reduce quantization noise after weight compression by
             using low-rank adapters. This algorithm not only overrides weights with their quantized counterparts but
             also expands the model's execution graph following the Low-Rank Adaptation (LoRA) concept.
@@ -257,6 +264,15 @@ class WeightCompressionAlgoBackend(ABC):
         :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_ignored_patterns() -> GraphPattern:
+        """
+        Return backend-specific ignored patterns.
+
+        :return: backend-specific ignored patterns.
+        """
+
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
@@ -272,7 +288,7 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
         """
 
 
-class MixedPrecisionAlgoBackend(ABC):
+class MixedPrecisionAlgoBackend:
     @staticmethod
     def hawq_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
         reducer = RawReducer()
@@ -282,22 +298,31 @@ class MixedPrecisionAlgoBackend(ABC):
         return collector
 
     @staticmethod
-    @abstractmethod
     def mean_variance_statistic_collector(
         reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        pass
+        reducer = MeanVarianceReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanVarianceTensorStatistic)
+        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
+        return collector
 
     @staticmethod
-    @abstractmethod
     def max_variance_statistic_collector(
         reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        pass
+        reducer = MaxVarianceReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MaxVarianceTensorStatistic)
+        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
+        return collector
 
     @staticmethod
-    @abstractmethod
     def mean_abs_max_statistic_collector(
         reduction_axes: tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        pass
+        reducer = MeanAbsMaxReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanMagnitudeTensorStatistic)
+        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
+        return collector

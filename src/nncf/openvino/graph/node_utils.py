@@ -44,6 +44,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
+from nncf.tensor import TensorDataType
 
 InplaceInsertionFnType = Callable[[ov.Node, int, str], ov.Node]
 
@@ -684,4 +685,28 @@ def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] =
         assert x.data.get_element_type() == dtype
         return opset.constant(x.data, name=name, shared_memory=True)
     const = opset.constant(x.data, dtype=dtype, name=name)
+    return const
+
+
+def create_ov_codebook_subgraph(
+    codebook: Tensor, indexes: Tensor, dtype: ov.Type, name: Optional[str] = None
+) -> op.Constant:
+    """
+    Create an OpenVINO subgraph with gather from the given codebook and indexes tensors.
+
+    :param codebook: Codebook tensor.
+    :param indexes: Indexes tensor.
+    :param dtype: Data type of the indexes.
+    :param name: Optional name of the constant.
+    :return: OpenVINO subgraph.
+    """
+    codebook_const = opset.constant(codebook.data, name=name)
+    if codebook.dtype != TensorDataType.float16:
+        codebook_const = opset.convert(codebook_const, destination_type=ov.Type.f16)
+
+    codebook_indexes = opset.constant(indexes.data, dtype=dtype, name=name + "_nncf_codebook_idxs")
+    if dtype == ov.Type.u4:
+        codebook_indexes = opset.convert(codebook_indexes, destination_type=ov.Type.u8)
+
+    const = opset.gather(codebook_const, codebook_indexes, 0, name=name + "_nncf_codebook")
     return const

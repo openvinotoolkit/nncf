@@ -413,30 +413,24 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 
 Compact scripts demonstrating quantization and corresponding inference speed boost:
 
-| Example Name                                                                                                                                                                                |              Compression Algorithm               |  Backend   |         Domain         |
-|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
+| Example Name                                                                                                                             |              Compression Algorithm               |  Backend   |         Domain         |
+|:-----------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
 | [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
 | [OpenVINO YOLOv8](./examples/post_training_quantization/openvino/yolov8/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
 | [OpenVINO YOLOv8 QwAС](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
 | [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
 | [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |
 | [PyTorch SSD](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                                                        |            Post-Training Quantization            |  PyTorch   |    Object Detection    |
-| [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                        |            Post-Training Quantization            |  TorchFX   |    Image Classification    |
+| [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |
 | [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
 
-### Training-Time Compression Examples
+### Quantization-Aware Training Examples
 
-Examples of full pipelines including compression, training, and inference for classification, detection, and segmentation tasks:
-
-| Example Name                                                                                               |   Compression Algorithm   |  Backend   |        Domain         |
-|:-----------------------------------------------------------------------------------------------------------|:-------------------------:|:----------:|:---------------------:|
-| [PyTorch Image Classification](./examples/torch/classification/README.md)                                  | Training-Time Compression |  PyTorch   | Image Classification  |
-| [PyTorch Object Detection](./examples/torch/object_detection/README.md)                                    | Training-Time Compression |  PyTorch   |   Object Detection    |
-| [PyTorch Semantic Segmentation](./examples/torch/semantic_segmentation/README.md)                          | Training-Time Compression |  PyTorch   | Semantic Segmentation |
-| [TensorFlow Image Classification](./examples/tensorflow/classification/README.md)                          | Training-Time Compression | TensorFlow | Image Classification  |
-| [TensorFlow Object Detection](./examples/tensorflow/object_detection/README.md)                            | Training-Time Compression | TensorFlow |   Object Detection    |
-| [TensorFlow Instance Segmentation](./examples/tensorflow/segmentation/README.md)                           | Training-Time Compression | TensorFlow | Instance Segmentation |
+| Example Name                                                                        |   Compression Algorithm     | Backend |        Domain        |
+|:------------------------------------------------------------------------------------|:---------------------------:|:-------:|:--------------------:|
+| [PyTorch Resnet18](./examples/quantization_aware_training/torch/resnet18/README.md) | Quantization-Aware Training | PyTorch | Image Classification |
+| [PyTorch Anomalib](./examples/quantization_aware_training/torch/anomalib/README.md) | Quantization-Aware Training | PyTorch | Anomaly Detection    |
 
 <a id="third-party-repository-integration"></a>
 
@@ -446,14 +440,13 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 ### Used by
 
-- [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
-
-  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
-  export new models based on available model templates as well as run the exported models with OpenVINO.
-
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 
-  NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
+  NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel. For instance, the command below exports the [Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) model to OpenVINO format with INT4-quantized weights:
+
+  ```bash
+  optimum-cli export openvino -m meta-llama/Llama-3.2-3B-Instruct --weight-format int4 ./Llama-3.2-3B-Instruct-int4
+  ```
 
 - [Ultralytics](https://docs.ultralytics.com/integrations/openvino)
 
@@ -466,6 +459,11 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
   NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+
+- [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
+
+  NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
+  export new models based on available model templates as well as run the exported models with OpenVINO.
 
 <a id="installation-guide"></a>
 
@@ -510,13 +508,13 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 ## Useful links
 
 - [Documentation](./docs)
-- Example scripts (model objects available through links in respective README.md files):
-  - [PyTorch](./examples/torch)
-  - [TensorFlow](./examples/tensorflow)
+- [Examples](./examples)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
+- [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
+- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
 
 ## Telemetry
 

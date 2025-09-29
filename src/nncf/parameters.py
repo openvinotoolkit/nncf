@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
+from typing import Any
 
 from nncf.common.utils.api_marker import api
 
@@ -17,6 +18,10 @@ from nncf.common.utils.api_marker import api
 class StrEnum(str, Enum):
     def __str__(self) -> str:
         return str(self.value)
+
+    @staticmethod
+    def _generate_next_value_(name: str, start: int, count: int, last_values: list[Any]) -> Any:
+        return name.lower()
 
 
 @api(canonical_alias="nncf.TargetDevice")
@@ -85,6 +90,8 @@ class CompressWeightsMode(StrEnum):
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     :param E2M1: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
+    :param CODEBOOK: Codebook (LUT) quantization format.
+    :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
 
     INT8_SYM = "int8_sym"
@@ -92,8 +99,10 @@ class CompressWeightsMode(StrEnum):
     INT4_SYM = "int4_sym"
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
+    CB4_F8E4M3 = "cb4_f8e4m3"
     INT8 = "int8"  # Deprecated mode
     E2M1 = "e2m1"
+    CODEBOOK = "codebook"
 
 
 @api(canonical_alias="nncf.CompressionFormat")

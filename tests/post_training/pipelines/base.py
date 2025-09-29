@@ -57,6 +57,8 @@ class BackendType(Enum):
     CUDA_TORCH = "CUDA_TORCH"
     FX_TORCH = "FX_TORCH"
     CUDA_FX_TORCH = "CUDA_FX_TORCH"
+    OV_QUANTIZER_NNCF = "OV_QUANTIZER_NNCF"
+    OV_QUANTIZER_AO = "OV_QUANTIZER_AO"
     ONNX = "ONNX"
     OV = "OV"
     OPTIMUM = "OPTIMUM"
@@ -65,7 +67,12 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]
+FX_BACKENDS = [
+    BackendType.FX_TORCH,
+    BackendType.CUDA_FX_TORCH,
+    BackendType.OV_QUANTIZER_NNCF,
+    BackendType.OV_QUANTIZER_AO,
+]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
@@ -495,7 +502,7 @@ class PTQTestPipeline(BaseTestPipeline):
             )
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
-            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),), strict=True)
             # Torch export is used to save the model because ov.convert_model does not fully claim support for
             # Converting ExportedProgram
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")

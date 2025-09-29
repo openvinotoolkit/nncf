@@ -267,7 +267,7 @@ class TemplateTestSQAlgorithm:
         assert len(arg.transformations) == 2
 
         mm_metatype = self.get_matmul_metatype()
-        target_matmul = [node for node in graph.topological_sort() if node.metatype == mm_metatype][1]
+        target_matmul = [node for node in graph.topological_sort() if node.metatype in mm_metatype][1]
 
         # Check weights update command
         weight_update_mock.assert_called_once()

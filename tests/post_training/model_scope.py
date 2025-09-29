@@ -24,6 +24,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
+from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
@@ -89,9 +90,8 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
         },
-        "backends": [
-            BackendType.FX_TORCH,
-            BackendType.CUDA_FX_TORCH,
+        "backends": FX_BACKENDS
+        + [
             BackendType.TORCH,
             BackendType.CUDA_TORCH,
             BackendType.OV,
@@ -108,7 +108,7 @@ QUANTIZATION_MODELS = [
             "fast_bias_correction": False,
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV, BackendType.ONNX],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
     {
@@ -119,7 +119,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 1,
     },
     {
@@ -130,7 +130,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 1,
     },
     # Timm models
@@ -423,7 +423,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_stateful",
@@ -447,7 +447,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
             ),
         },
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
@@ -530,7 +530,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
-        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "tinyllama_data_aware_lora_stateful",
@@ -578,8 +578,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 awq_params=AdvancedAWQParameters(prefer_data_aware_scaling=False)
             ),
         },
-        # TODO: (andreyanufr) add torch.fx backend
-        "backends": [BackendType.OV, BackendType.TORCH],
+        "backends": [BackendType.OV, BackendType.TORCH, BackendType.FX_TORCH, BackendType.ONNX],
     },
 ]
 

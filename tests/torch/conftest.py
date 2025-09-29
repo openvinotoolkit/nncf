@@ -69,12 +69,6 @@ def pytest_addoption(parser: Parser):
         help="Enable mixed precision for the nncf weekly test",
     )
     parser.addoption(
-        "--sota-checkpoints-dir", type=Path, default=None, help="Path to checkpoints directory for sota accuracy test"
-    )
-    parser.addoption(
-        "--sota-data-dir", type=Path, default=None, help="Path to datasets directory for sota accuracy test"
-    )
-    parser.addoption(
         "--metrics-dump-path",
         type=Path,
         default=None,
@@ -144,16 +138,6 @@ def weekly_models_path(request: FixtureRequest):
 @pytest.fixture(scope="module")
 def mixed_precision(request: FixtureRequest):
     return request.config.getoption("--mixed-precision")
-
-
-@pytest.fixture(scope="module")
-def sota_checkpoints_dir(request: FixtureRequest):
-    return request.config.getoption("--sota-checkpoints-dir")
-
-
-@pytest.fixture(scope="module")
-def sota_data_dir(request):
-    return request.config.getoption("--sota-data-dir")
 
 
 @pytest.fixture(scope="module")

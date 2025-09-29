@@ -1,14 +1,15 @@
 -c ../../constraints.txt
--r ../../examples/tensorflow/requirements.txt
 PyYAML
-tensorflow-metadata==1.13.0
 pytest
 pytest-cov
 pytest-mock
 pytest-dependency
 pytest-xdist
 pydot
-tensorflow_hub
+tensorflow
+tensorflow-hub==0.16.1
+tensorflow-metadata==1.13.0
+tf_keras==2.15.1
 virtualenv
 
 openvino

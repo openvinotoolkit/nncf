@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import nncf
 from nncf.common.graph import NNCFNode
@@ -22,6 +22,9 @@ from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.parameters import StrEnum
 from nncf.parameters import TargetDevice
+from nncf.tensor.definitions import TensorDataType
+
+IntDtype = Literal[TensorDataType.int8, TensorDataType.uint8]
 
 
 @api()
@@ -421,3 +424,41 @@ class QuantizationPreset(StrEnum):
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
             return {"mode": QuantizationScheme.ASYMMETRIC}
         return {"mode": QuantizationScheme.SYMMETRIC}
+
+
+class TypedQuantizerConfig(QuantizerConfig):
+    """
+    Extended configuration class for quantizers, including destination integer dtype.
+    """
+
+    def __init__(
+        self,
+        num_bits: int = QUANTIZATION_BITS,
+        mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
+        signedness_to_force: Optional[bool] = None,
+        per_channel: bool = QUANTIZATION_PER_CHANNEL,
+        narrow_range: bool = QUANTIZATION_NARROW_RANGE,
+        dest_dtype: IntDtype = TensorDataType.int8,
+    ):
+        """
+        :param num_bits: Bitwidth of the quantization.
+        :param mode: The mode of quantization (symmetric or asymmetric).
+        :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+        :param per_channel: True for per-channel quantization, False for per-tensor.
+        :param narrow_range: True if the range of quantized values should be narrowed as compared to the
+            naive case, False if all 2^`num_bits` quantizations should be used.
+        :param dest_dtype: Target integer data type for quantized values.
+        """
+        super().__init__(num_bits, mode, signedness_to_force, per_channel, narrow_range)
+        self.dest_dtype = dest_dtype
+
+    def __str__(self) -> str:
+        retval = super().__str__()
+        return retval + " DestDtype: {self._dest_dtype}"
+
+    def get_state(self) -> dict[str, Any]:
+        state = super().get_state()
+        state["dest_dtype"] = self.dest_dtype
+        return state

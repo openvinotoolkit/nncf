@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from collections import defaultdict
 
 import pytest
 import torch
@@ -26,7 +26,9 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -38,6 +40,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import UNS
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQActLinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import ConvolutionModel
+from tests.torch2.function_hook.quantization.test_weights_compression import DifferentChannelSizeMatmulModel
 from tests.torch2.function_hook.quantization.test_weights_compression import DTypeModel
 from tests.torch2.function_hook.quantization.test_weights_compression import EmptyModel
 from tests.torch2.function_hook.quantization.test_weights_compression import FunctionalModel
@@ -320,6 +323,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
+    def get_RoPE_model() -> torch.fx.GraphModule:
+        model = RoPEModel()
+        ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
     def get_sequential_matmul_model() -> torch.fx.GraphModule:
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
@@ -339,6 +349,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         dynamic_shapes = [[None, torch.export.Dim("dynamic_shape"), None]]
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
+        return exported_model
+
+    @staticmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> torch.nn.Module:
+        model = DifferentChannelSizeMatmulModel(channel_sizes)
+        ex_input = torch.ones([1, channel_sizes[0], channel_sizes[0]], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
@@ -417,7 +434,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_ignored_scope_name() -> str:
-        return "linear_5"
+        return "linear_4"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
@@ -425,7 +442,19 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         for node in model.graph.nodes:
             if node.op != "call_module":
                 continue
-            num += isinstance(getattr(model, node.target), INT4SymmetricWeightsDecompressor)
+            op = getattr(model, node.target)
+            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+        return num
+
+    @staticmethod
+    def get_num_int4_group_sizes(model: torch.nn.Module) -> dict[int, int]:
+        num = defaultdict(int)
+        for node in model.graph.nodes:
+            if node.op != "call_module":
+                continue
+            op = getattr(model, node.target)
+            if isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor)):
+                num[op.compressed_weight_shape[-1]] += 1
         return num
 
     @pytest.fixture(params=INT4_MODES)

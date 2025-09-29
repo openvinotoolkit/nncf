@@ -16,19 +16,23 @@ import numpy as np
 import onnx
 
 import nncf
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_input_edge
+from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
+from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
+from nncf.onnx.graph.transformations.commands import ONNXMultiplyInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -46,13 +50,16 @@ class ONNXModelTransformer(ModelTransformer):
     SCALE_TENSOR_NAME_PREFIX = "scale_"
     ZERO_POINT_NAME_PREFIX = "zero_point_"
 
-    def __init__(self, model: onnx.ModelProto):
-        inferred_model = onnx.shape_inference.infer_shapes(model)
+    def __init__(self, model: onnx.ModelProto, inplace: bool = False):
+        # TODO(andrey-churkin): We should not call infer_shapes here. If the model contains loaded weights
+        # and is larger than 2GB, this method silently returns an empty model.
+        inferred_model = model if inplace else onnx.shape_inference.infer_shapes(model)
         super().__init__(inferred_model)
         self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
+        self._inplace = inplace
 
+    @staticmethod
     def _get_target_edge(
-        self,
         port_id: int,
         node_name: str,
         transform_type: TargetType,
@@ -91,6 +98,7 @@ class ONNXModelTransformer(ModelTransformer):
         initializer_update_transformations = []
         qdq_node_removing_transformations = []
         model_extraction_transformation = None
+        multiply_insert_transformations = []
         transformations = transformation_layout.transformations
         # No transformation applied
         if not transformations:
@@ -106,15 +114,24 @@ class ONNXModelTransformer(ModelTransformer):
                 qdq_node_removing_transformations.append(transformation)
             elif isinstance(transformation, ONNXInitializerUpdateCommand):
                 initializer_update_transformations.append(transformation)
+            elif isinstance(transformation, ONNXMultiplyInsertionCommand):
+                multiply_insert_transformations.append(transformation)
         # Inplace transformations, using deepcopy of model
-        if quantizer_insert_transformations or initializer_update_transformations or qdq_node_removing_transformations:
-            model = deepcopy(self._model)
+        if (
+            quantizer_insert_transformations
+            or initializer_update_transformations
+            or qdq_node_removing_transformations
+            or multiply_insert_transformations
+        ):
+            model = self._model if self._inplace else deepcopy(self._model)
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
             if qdq_node_removing_transformations:
                 model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
             if initializer_update_transformations:
                 model = self._apply_initializer_update_transformations(model, initializer_update_transformations)
+            if multiply_insert_transformations:
+                model = self._apply_multiply_insertion_transformations(model, multiply_insert_transformations)
         # Transformations that create new model
         if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
@@ -367,10 +384,25 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Copy of original model with updated biases.
         """
         name_to_node_map = get_name_to_node_map(model)
+        output_name_to_node_map = get_parents_node_mapping(model)
+
         for transformation in transformations:
             node = name_to_node_map[transformation.target_point.target_node_name]
-            initializer_name = node.input[transformation.target_point.port_id]
-            set_initializer(initializer_name, model, transformation.new_value)
+            # NOTE: An `input_name` is either the name of an initializer or the name of a `Constant` operation output
+            input_name = node.input[transformation.target_point.port_id]
+
+            constant_node = output_name_to_node_map.get(input_name, None)
+
+            if constant_node is None:
+                set_initializer(input_name, model, transformation.new_value)
+            else:
+                for attr in constant_node.attribute:
+                    if attr.name == "value":
+                        array = transformation.new_value.astype(onnx.helper.tensor_dtype_to_np_dtype(attr.t.data_type))
+                        tensor_proto = onnx.numpy_helper.from_array(array)
+                        attr.t.CopyFrom(tensor_proto)
+                        break
+
         return model
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
@@ -459,6 +491,58 @@ class ONNXModelTransformer(ModelTransformer):
 
         return model
 
+    @staticmethod
+    def _apply_multiply_insertion_transformations(
+        model: onnx.ModelProto, transformations: list[ONNXMultiplyInsertionCommand]
+    ) -> onnx.ModelProto:
+        """
+        Inserts Multiply with provided value for corresponding layer.
+
+        :param transformations: List of the smooth insertion transformations.
+        :returns: Transformed model with Multiply nodes.
+        """
+        node_name_to_node = get_name_to_node_map(model)
+        # TODO(andrey-churkin): Optimize it
+        graph = NNCFGraphFactory.create(model)
+        input_edges_mapping = get_input_edges_mapping(graph)
+
+        for transformation in transformations:
+            port_id = transformation.target_point.port_id
+            target_node_name = transformation.target_point.target_node_name
+            transform_type = transformation.target_point.type
+            output_tensor_name = ONNXModelTransformer._get_target_edge(
+                port_id, target_node_name, transform_type, node_name_to_node, input_edges_mapping
+            )
+
+            # TODO(andrey-churkin): Check type of `transformation.scale_value`
+
+            # Create a new initializer for the scale constant
+            scale_tensor_name = f"{transformation.multiply_node_name}_scale"
+            scale_tensor = onnx.numpy_helper.from_array(
+                transformation.scale_value.astype(np.float32), name=scale_tensor_name
+            )
+            model.graph.initializer.append(scale_tensor)
+
+            # Create a new Multiply node
+            mul_output_name = f"{transformation.multiply_node_name}_output"
+            mul_node = onnx.helper.make_node(
+                "Mul",
+                inputs=[output_tensor_name, scale_tensor_name],
+                outputs=[mul_output_name],
+                name=transformation.multiply_node_name,
+            )
+            target_index = get_node_index(model, target_node_name)
+            insert_index = 0 if target_index is None else target_index + 1
+            model.graph.node.insert(insert_index, mul_node)
+
+            for name in transformation.destination_node_names:
+                node = node_name_to_node[name]
+                for i, input_name in enumerate(node.input):
+                    if input_name == output_tensor_name:
+                        node.input[i] = mul_output_name
+
+        return model
+
 
 def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray) -> None:
     """
@@ -468,6 +552,11 @@ def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np
     :param new_value: New value for the initializer tensor.
     """
     initializer = get_tensor(model, initializer_name)
+
+    required_dtype = onnx.helper.tensor_dtype_to_np_dtype(initializer.data_type)
+    if new_value.dtype != required_dtype:
+        new_value = new_value.astype(required_dtype)
+
     new_tensor = onnx.numpy_helper.from_array(new_value, initializer_name)
     initializer.CopyFrom(new_tensor)
 

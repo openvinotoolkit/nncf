@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
@@ -21,24 +22,34 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer import xnnpack_quantizer
+from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation
 from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
 from torch.ao.quantization.quantizer.quantizer import Quantizer
+from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
 from nncf.common.graph import NNCFGraph
+from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
+from nncf.tensor.definitions import TensorDataType
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
+from tests.torch.test_models.synthetic import ConcatModelWithTwoOutputs
+from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
@@ -59,8 +70,12 @@ def torchvision_model_case(model_id: str, input_shape: tuple[int,]):
     return ModelCase(partial(model, weights=None), model_id, input_shape)
 
 
-def get_dot_filename(model_name):
+def get_dot_filename(model_name: str) -> str:
     return model_name + ".dot"
+
+
+def get_qconf_filename(model_name: str) -> str:
+    return model_name + "_ref_qconfig.json"
 
 
 def get_x86_quantizer(*args, **kwarsg) -> X86InductorQuantizer:
@@ -156,26 +171,102 @@ def test_quantized_model(
     )
 
     # Uncomment to visualize torch fx graph
-    # from tests.torch.fx.helpers import visualize_fx_model
-    # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
+    # from tests.torch2.fx.helpers import visualize_fx_model
+    # visualize_fx_model(quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     path_to_dot = FX_QUANTIZED_DIR_NAME / str(quantizer.__class__.__name__) / get_dot_filename(model_case.model_id)
-    nncf_graph = _normalize_nncf_graph(nncf_graph)
+    nncf_graph = _normalize_nncf_graph(nncf_graph, quantized_model.graph)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
     # Uncomment to visualize reference graphs
     # from torch.ao.quantization.quantize_pt2e import convert_pt2e
     # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+    # from tests.torch2.fx.helpers import visualize_fx_model
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)
     # ao_quantized_model = convert_pt2e(prepared_model)
-    # # visualize_fx_model(ao_quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_ao_int8.svg")
+    # visualize_fx_model(ao_quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_ao_int8.svg")
     # ao_nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
     # ao_nncf_graph.visualize_graph(f"ao_{quantizer.__class__.__name__}_{get_dot_filename(model_case.model_id)}")
 
 
-def _normalize_nncf_graph(nncf_graph: NNCFGraph):
+@pytest.mark.parametrize(
+    ("model_case", "quantizer_params"),
+    [case[:2] for case in TEST_MODELS_QUANIZED],
+    ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
+)
+@pytest.mark.parametrize(
+    "quantizer_builder",
+    [
+        get_xnnpack_quantizer,
+        get_x86_quantizer,
+        get_openvino_quantizer,
+    ],
+    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
+)
+def test_quantizer_setup(
+    quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
+    model_case: ModelCase,
+    quantizer_params,
+    regen_ref_data,
+):
+    fx_model, _ = _build_torch_fx_model(model_case)
+    quantizer = quantizer_builder(**quantizer_params)
+    ref_qconfig_filename = (
+        FX_QUANTIZED_DIR_NAME / quantizer.__class__.__name__ / get_qconf_filename(model_case.model_id)
+    )
+
+    _fuse_conv_bn_(fx_model)
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
+        quantizer = OpenVINOQuantizerAdapter(quantizer)
+    else:
+        quantizer = TorchAOQuantizerAdapter(quantizer)
+
+    # Call transform_prior_quantization before the NNCFGraph creation
+    fx_model = quantizer.transform_prior_quantization(fx_model)
+    nncf_graph = GraphConverter.create_nncf_graph(fx_model)
+    quantizer_setup = quantizer.get_quantization_setup(fx_model, nncf_graph)
+    qsetup_config = quantizer_setup.get_state()
+    _normalize_qsetup_state(qsetup_config)
+    if regen_ref_data:
+        with safe_open(ref_qconfig_filename, "w") as file:
+            json.dump(qsetup_config, file, indent=4)
+
+    with safe_open(ref_qconfig_filename, "r") as file:
+        ref_qsetup_config = json.load(file)
+    # helper to find diff in qconfigs
+    # pip install dictdiffer
+    # from dictdiffer import diff
+    # diff_res = list(diff(ref_qsetup_config, qsetup_config))
+    assert qsetup_config == ref_qsetup_config
+
+
+def _normalize_qsetup_state(setup: dict[str, Any]) -> None:
+    """
+    Normalizes the quantization setup state dictionary in-place to ensure consistent ordering
+    of elements for deterministic behavior.
+
+    :param setup: Quantization setup state to normalize.
+    """
+    for key in ["unified_scale_groups", "shared_input_operation_set_groups"]:
+        sorted_usg = {}
+        for k, v in setup[key].items():
+            sorted_usg[str(k)] = sorted(v)
+        setup[key] = sorted_usg
+    dq_key = "directly_quantized_operator_node_names"
+    sorted_qps = {}
+    for qp in setup["quantization_points"].values():
+        sorted_dq = sorted(qp[dq_key])
+        qconfig = qp["qconfig"].copy()
+        if "dest_dtype" in qconfig:
+            qconfig["dest_dtype"] = "INT8" if qconfig["dest_dtype"] is TensorDataType.int8 else "UINT8"
+        sorted_qps[f"{tuple(sorted_dq)}_{qp['qip_class']}"] = qconfig
+    setup["quantization_points"] = sorted_qps
+
+
+def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
     """
     Normalizes the given NNCFGraph by renaming quantize/dequantize nodes to ensure consistent naming across runs.
     XNNPACKQuantizer and X86InductorQuantizer quantizers insert quantize and dequantize nodes
@@ -186,6 +277,8 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph):
     :return: The normalized version of the given NNCFGraph.
     """
     idx = 0
+    dtypes_map = {}
+
     q_dq_types = ["quantize_per_tensor", "dequantize_per_tensor", "quantize_per_channel", "dequantize_per_channel"]
     norm_nncf_graph = NNCFGraph()
     node_names_map = {}
@@ -196,6 +289,11 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph):
             node_names_map[node.node_name] = new_node_name
             attrs[node.NODE_NAME_ATTR] = new_node_name
             idx += 1
+            if node.node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
+                source_node = get_graph_node_by_name(fx_graph, node.node_name)
+                dtypes_map[new_node_name] = (
+                    TensorDataType.int8 if source_node.args[-1] == torch.int8 else TensorDataType.uint8
+                )
         norm_nncf_graph.add_nncf_node(
             node_name=attrs[node.NODE_NAME_ATTR],
             node_type=attrs[node.NODE_TYPE_ATTR],
@@ -207,13 +305,14 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph):
         from_node_name = node_names_map.get(edge.from_node.node_name, edge.from_node.node_name)
         to_node_name = node_names_map.get(edge.to_node.node_name, edge.to_node.node_name)
         from_node, to_node = [norm_nncf_graph.get_node_by_name(name) for name in (from_node_name, to_node_name)]
+        dtype = dtypes_map.get(to_node.node_name, edge.dtype)
         norm_nncf_graph.add_edge_between_nncf_nodes(
             from_node.node_id,
             to_node.node_id,
             tensor_shape=edge.tensor_shape,
             input_port_id=edge.input_port_id,
             output_port_id=edge.output_port_id,
-            dtype=edge.dtype,
+            dtype=dtype,
             parallel_input_port_ids=edge.parallel_input_port_ids,
         )
     return norm_nncf_graph
@@ -290,3 +389,91 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
     else:
         msg = f"Quantizers was not found for the unified scales pair {unified_scale_node_names}"
         raise RuntimeError(msg)
+
+
+class OneNodeAnnotationQuantizer(TorchAOQuantizer):
+    def __init__(self, node_name: str, annotation: TorchAOQuantizationSpec):
+        self._node_name = node_name
+        self._annotation = annotation
+
+    def annotate(self, model: torch.fx.GraphModule):
+        target_node = get_graph_node_by_name(model.graph, self._node_name)
+        target_node.meta["quantization_annotation"] = self._annotation
+
+        return model
+
+    def validate(self, model):
+        return
+
+
+REF_NONE_Q_MIN_Q_MAX_SETUP = {
+    "quantization_points": {
+        0: {
+            "qip": {"target_node_name": "linear", "input_port_id": None},
+            "qip_class": "ActivationQuantizationInsertionPoint",
+            "qconfig": {
+                "num_bits": 8,
+                "mode": "symmetric",
+                "signedness_to_force": False,
+                "per_channel": False,
+                "narrow_range": False,
+                "dest_dtype": "int8",
+            },
+            "directly_quantized_operator_node_names": ["output"],
+        }
+    },
+    "unified_scale_groups": {},
+    "shared_input_operation_set_groups": {},
+}
+
+
+@pytest.mark.parametrize("dtype", [torch.int8, torch.uint8])
+def test_none_q_min_q_max_quantizer(dtype):
+    qspec = TorchAOQuantizationSpec(dtype=dtype, observer_or_fake_quant_ctr=None, qscheme=torch.per_tensor_symmetric)
+    annotation = QuantizationAnnotation(output_qspec=qspec)
+    quantizer = OneNodeAnnotationQuantizer("linear", annotation)
+
+    adapted_quantizer = TorchAOQuantizerAdapter(quantizer)
+
+    model = get_torch_fx_model(LinearModel(torch.ones(3, 3)), torch.ones(1, 3, 3, 3))
+    setup = adapted_quantizer.get_quantization_setup(model, GraphConverter.create_nncf_graph(model))
+
+    ref = REF_NONE_Q_MIN_Q_MAX_SETUP.copy()
+    ref["quantization_points"][0]["qconfig"]["dest_dtype"] = "int8" if dtype == torch.int8 else "uint8"
+    assert setup.get_state() == ref
+
+
+REF_INP_CONCAT_SETUP = {
+    "quantization_points": {
+        0: {
+            "qip": {"target_node_name": "cat", "input_port_id": 0},
+            "qip_class": "ActivationQuantizationInsertionPoint",
+            "qconfig": {
+                "num_bits": 8,
+                "mode": "symmetric",
+                "signedness_to_force": False,
+                "per_channel": False,
+                "narrow_range": False,
+                "dest_dtype": "int8",
+            },
+            "directly_quantized_operator_node_names": ["cat"],
+        }
+    },
+    "unified_scale_groups": {},
+    "shared_input_operation_set_groups": {},
+}
+
+
+def test_adapter_inp_concat_idx():
+    model = get_torch_fx_model(ConcatModelWithTwoOutputs(), torch.ones(ConcatModelWithTwoOutputs.INPUT_SHAPE))
+    conv2d = get_graph_node_by_name(model.graph, "conv2d")
+
+    qspec = TorchAOQuantizationSpec(
+        dtype=torch.int8, observer_or_fake_quant_ctr=None, qscheme=torch.per_tensor_symmetric
+    )
+    annotation = QuantizationAnnotation(input_qspec_map={conv2d: qspec})
+    quantizer = OneNodeAnnotationQuantizer("cat", annotation)
+
+    adapted_quantizer = TorchAOQuantizerAdapter(quantizer)
+    setup = adapted_quantizer.get_quantization_setup(model, GraphConverter.create_nncf_graph(model))
+    assert setup.get_state() == REF_INP_CONCAT_SETUP
