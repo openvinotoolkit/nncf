@@ -196,17 +196,17 @@ class CodebookEstimation:
         indexes = indexes.reshape(orig_shape)
 
         
-        best_codebook = converter(codebook.as_openvino_tensor())[0]
+        best_codebook = converter(codebook.as_openvino_tensor().data)[0]
         
         fp_outs = fns.matmul(weight, X)
         diff = float('inf')
         
-        variants[0] = CB4_QUANTILES
-        variants[1] = fns.tensor([i for i in range(-8, 8)])
+        variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
+        variants[1] = fns.tensor([i for i in range(-8, 8)], backend=weight.backend, dtype=weight.dtype)
         best_i = -1
         
         for i_var, var in enumerate(variants):
-            var = converter(var.as_openvino_tensor())[0]
+            var = converter(var.as_openvino_tensor().data)[0]
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
             q_outs = fns.matmul(qw, X)
@@ -250,18 +250,17 @@ class KMeansWeighted:
         n_frequencies = fns.cumsum(n_frequencies)
 
 
-        res = []
+        res = fns.zeros((n_clusters,), backend=values.backend, dtype=values.dtype)
         for i in range(len(quants)):
             if i == 0:
-                res.append(values[0])
+                res[i] = values[0]
             elif i == len(quants) - 1:
-                res.append(values[-1])
+                res[i] = values[-1]
             else:
                 prev = values[fns.nonzero(n_frequencies <= quants[i])[0][-1].item()].item()
                 next_ = values[fns.nonzero(n_frequencies <= quants[i + 1])[0][-1].item()].item()
-                res.append((prev + next_) / 2)
+                res[i] = (prev + next_) / 2
 
-        res = fns.tensor(res, backend=values.backend)
         return res
 
     @staticmethod
@@ -296,8 +295,8 @@ class KMeansWeighted:
 
     @staticmethod
     def add_weighted_data_and_weights(res, data, importance):
-        res[1].append(fns.sum(fns.multiply(data, importance)))
-        res[2].append(fns.sum(importance))
+        res[1].append(fns.sum(fns.multiply(data, importance)).item())
+        res[2].append(fns.sum(importance).item())
 
     @staticmethod
     def create_histogramm_sorted(data_, importance, granularity=0.01):
@@ -325,8 +324,8 @@ class KMeansWeighted:
             ranges.append(centers[-1])
 
 
-        centers = np.array(centers)
-        ranges = np.array(ranges)
+        centers = fns.tensor(centers, backend=data_.backend, dtype=data_.dtype)
+        ranges = fns.tensor(ranges, backend=data_.backend, dtype=data_.dtype)
 
         ranges_idxs = round(data, ranges)
 
@@ -342,9 +341,9 @@ class KMeansWeighted:
                 KMeansWeighted.add_weighted_data_and_weights(res, data[ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()],
                                                              importance[ranges_idxs[idx - 1].item():ranges_idxs[idx + 1].item()])
 
-        res[0] = fns.tensor(res[0], backend=data_.backend) # centers of histogram bins
-        res[1] = fns.tensor(res[1], backend=data_.backend)
-        res[2] = fns.tensor(res[2], backend=data_.backend)
+        res[0] = centers #fns.tensor(res[0], backend=data_.backend, dtype=data_.dtype) # centers of histogram bins
+        res[1] = fns.tensor(res[1], backend=data_.backend, dtype=data_.dtype)
+        res[2] = fns.tensor(res[2], backend=data_.backend, dtype=data_.dtype)
 
         return res
 
@@ -375,8 +374,8 @@ class KMeansWeighted:
 
             centroid_idxs = round(self.centroids, self.hist[0])
             for i in range(self.n_clusters):
-                idxs = np.where(centroid_idxs == i)
-                self.centroids[i] = np.sum(self.hist[1][idxs]) / np.sum(self.hist[2][idxs])
+                idxs = fns.nonzero(centroid_idxs == i)
+                self.centroids[i] = fns.sum(self.hist[1][idxs]).item() / fns.sum(self.hist[2][idxs]).item()
 
             # for i, centroid in enumerate(self.centroids):
             #     if np.isnan(centroid).any():  # Catch any np.nans, resulting from a centroid having no points
