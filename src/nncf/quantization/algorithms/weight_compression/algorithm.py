@@ -818,18 +818,18 @@ class WeightCompression(Algorithm):
     ) -> list[WeightCompressionParameters]:
         skipped_weight_params: list[WeightCompressionParameters] = []
         weight_names = set()
-        ignored_names = self.get_ignored_node_names(graph)
+        # ignored_names = self.get_ignored_node_names(graph)
 
-        for i, node in enumerate(nodes_to_compress):
-            is_target_node = should_consider_scope(node.node_name, ignored_names)
+        for param in nodes_to_compress:
+            node = param.node_with_weight
+            # is_target_node = should_consider_scope(node.node_name, ignored_names)
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
-                is_duplicate = weight_name in weight_names
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
                 wc_config = None
-                should_skip = is_duplicate or (not is_target_node) or (not self.is_weight_compression_supported(weight_dtype, self._mode))
+                should_skip = not self.is_weight_compression_supported(weight_dtype, self._mode)
                 if should_skip:
                     skipped_weight_params.append(
                         WeightCompressionParameters(
@@ -837,7 +837,6 @@ class WeightCompression(Algorithm):
                         )
                     )
                 weight_names.add(weight_name)
-
         return skipped_weight_params
 
     def get_weight_compression_parameters(
@@ -864,6 +863,7 @@ class WeightCompression(Algorithm):
             collected statistics.
         """
         all_weight_params: list[WeightCompressionParameters] = []
+        skipped_weight_params: list[WeightCompressionParameters] = []
 
         weight_names = set()
         is_last_layer_skipped = False
@@ -918,18 +918,50 @@ class WeightCompression(Algorithm):
                     all_weight_params.append(weight_params)
                     weight_names.add(weight_name)
                 else:
-                    is_last_layer_skipped = is_last_layer
-
+                    weight_params = WeightCompressionParameters(
+                        weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, None
+                    )
+                    all_weight_params.append(weight_params)
         return all_weight_params
 
     def apply_wc_algos(
         self,
         model: TModel,
         graph: NNCFGraph,
+        skipped_weight_params,
+        ratio_defining_params,
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, Any],
+        statistic_points,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+
+        # Handle group size fallback modes
+        if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
+            all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
+                all_weight_params, ratio_defining_params, skipped_weight_params
+            )
+        if self._group_size_fallback_mode == GroupSizeFallbackMode.ADJUST:
+            ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(ratio_defining_params)
+        else:
+            group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
+        
+        if self._ratio < 1 and len(ratio_defining_params) > 0:
+            primary_precision_weight_params = self._mixed_precision_algo.apply(
+                    model, graph, statistic_points, weight_params=ratio_defining_params
+                )
+        else:
+            primary_precision_weight_params = ratio_defining_params
+        # Set weight compression configuration
+        self._set_weight_compression_config(ratio_defining_params, primary_precision_weight_params, model, graph, group_size_values)
+
+        # Print statistics
+        nncf_logger.info(
+            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+        )
+        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
+        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
@@ -1017,45 +1049,17 @@ class WeightCompression(Algorithm):
         all_weight_params = self.get_weight_compression_parameters(
             model, graph, nodes_to_compress, statistic_points, dataset
         )
-
-        statistics, statistic_points = self.collect_weight_compression_statistics(
-            model, graph, dataset, all_weight_params, statistic_points
-        )
-        skipped_weight_params = self.get_skipped_weight_compression_parameters(model, graph, nodes_to_compress)
+        skipped_weight_params = self.get_skipped_weight_compression_parameters(model, graph, all_weight_params)
         is_last_layer_skipped = self.is_last_layer_skipped(skipped_weight_params, nodes_to_compress)
 
         # Get subset of nodes to define compression ratio
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
-
-        # Handle group size fallback modes
-        if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
-            all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
-                all_weight_params, ratio_defining_params, skipped_weight_params
-            )
-        if self._group_size_fallback_mode == GroupSizeFallbackMode.ADJUST:
-            ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(ratio_defining_params)
-        else:
-            group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
-
         weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-        
-        if self._ratio < 1 and len(ratio_defining_params) > 0:
-            primary_precision_weight_params = self._mixed_precision_algo.apply(
-                    model, graph, statistic_points, weight_params=ratio_defining_params
-                )
-        else:
-            primary_precision_weight_params = ratio_defining_params
-        # Set weight compression configuration
-        self._set_weight_compression_config(ratio_defining_params, primary_precision_weight_params, model, graph, group_size_values)
-
-        # Print statistics
-        nncf_logger.info(
-            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+        statistics, statistic_points = self.collect_weight_compression_statistics(
+            model, graph, dataset, weight_params, statistic_points
         )
-        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
-        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
-
-        transformed_model = self.apply_wc_algos(model, graph, all_weight_params, statistics, dataset)
+        
+        transformed_model = self.apply_wc_algos(model, graph, skipped_weight_params, ratio_defining_params, all_weight_params, statistics, statistic_points, dataset)
 
         return transformed_model
 
