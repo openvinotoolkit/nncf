@@ -85,7 +85,7 @@ class MultiStepMagnitudePruningScheduler(_BaseMagnitudePruningScheduler):
     def __init__(self, model: nn.Module, *, mode: PruneMode, steps: dict[int, int]) -> None:
         super().__init__(model, mode)
         self.steps = steps
-        if list(self.steps.keys()) != sorted(self.steps.keys()) or any(r >= 1 or r < 0 for r in self.steps.values()):
+        if list(self.steps) != sorted(self.steps) or any(r >= 1 or r < 0 for r in self.steps.values()):
             msg = (
                 "Invalid schedule_dict provided to SparsityScheduler."
                 "Keys should be in ascending order and values should be in range [0, 1)."

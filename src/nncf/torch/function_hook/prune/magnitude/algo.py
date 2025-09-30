@@ -40,12 +40,7 @@ def apply_magnitude_pruning(
     :returns: The pruned model with hooks registered for the specified parameters.
     """
     # Insert hooks
-    pruned_param_names = set()
-    for param_name in parameters:
-        if param_name in pruned_param_names:
-            # To avoid adding multiple hooks to a shared parameters
-            continue
-        pruned_param_names.add(param_name)
+    for param_name in set(parameters):
         param_data = get_const_data_by_name(param_name, model)
         hook_module = UnstructuredPruningMask(tuple(param_data.shape)).to(device=param_data.device)
         register_post_function_hook(
@@ -136,7 +131,6 @@ def update_pruning_ratio(
             data = get_const_data_by_name(const_name, model)
 
             # Calculate threshold and binary mask
-            threshold_index = int((data.numel() - 1) * ratio)
             norm_data = torch.abs(data) / data.norm(2)
             new_mask = (norm_data > threshold_val).to(dtype=torch.bool)
 
