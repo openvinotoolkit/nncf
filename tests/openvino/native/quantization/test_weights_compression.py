@@ -790,19 +790,24 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
-@pytest.mark.parametrize(
-    "algo",
-    (
-        "lora_correction",
-        "awq",
-        "scale_estimation",
-        "gptq",
-    ),
-)
-@pytest.mark.parametrize("mode", [CompressWeightsMode.E2M1, CompressWeightsMode.E5M2, CompressWeightsMode.E4M3])
-def test_raise_error_with_unsupported_params_for_fp(algo, mode):
-    with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(ov.Model([], []), dataset="anything", mode=mode, **{algo: True})
+@pytest.mark.parametrize("mode", [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3])
+class TestUnsupportedParamsMXFP:
+    @pytest.mark.parametrize(
+        "algo",
+        (
+            "lora_correction",
+            "awq",
+            "scale_estimation",
+            "gptq",
+        ),
+    )
+    def test_raise_error_with_unsupported_algo_for_mx(self, algo, mode):
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(ov.Model([], []), dataset="anything", mode=mode, **{algo: True})
+
+    def test_raise_error_with_unsupported_group_size_for_fp(self, mode):
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(ov.Model([], []), dataset="anything", mode=mode, group_size=64)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
@@ -1099,47 +1104,59 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 
 
 @pytest.mark.parametrize(
-    ("sensitivity_metric", "all_layers", "ratio", "ref_ids"),
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], None),
+        # One test to check manual group size setup is working as expected
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], 32),
     ),
 )
 @pytest.mark.parametrize(
     "mode, ov_type",
     [
-        (CompressWeightsMode.E5M2, ov.Type.f8e5m2),
-        (CompressWeightsMode.E4M3, ov.Type.f8e4m3),
-        (CompressWeightsMode.E2M1, ov.Type.f4e2m1),
+        (CompressWeightsMode.MXFP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.MXFP4, ov.Type.f4e2m1),
     ],
 )
-def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type):
-    model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
+def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
+    # Use hidden dim % 32 == 0 to make it possible to quantize in MX format
+    model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
+    dataset = Dataset([np.ones([1, 4, 32]), np.arange(128).reshape(1, 4, 32)])
+    kwargs = {}
+    if group_size is not None:
+        kwargs["group_size"] = group_size
     compressed_model = compress_weights(
         model,
         mode=mode,
         ratio=ratio,
-        group_size=1,
         all_layers=all_layers,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        **kwargs,
     )
-    names_fp = {op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov_type}
+    ops = []
+    for op in compressed_model.get_ordered_ops():
+        if op.get_element_type() == ov_type:
+            # Check effective default group size == 32
+            assert tuple(op.shape) == (32, 1, 32)
+            ops.append(op)
+
+    names_fp = {op.get_friendly_name() for op in ops}
     ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
     assert ref_fp_nodes == names_fp
 

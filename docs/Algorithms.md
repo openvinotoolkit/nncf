@@ -11,7 +11,8 @@
   - Symmetric 8 bit compression mode
   - Symmetric and asymmetric 4 bit compression mode
   - NF4 compression mode
-  - E2M1 weights with E8M0 scales compression mode
+  - MXFP4 compression model with E2M1 data type, E8M0 scales and group size == 32
+  - MXFP8_E4M3 compression model with E4M3 data type, E8M0 scales and group size == 32
   - Mixed precision weights compression
   - Grouped weights compression
 

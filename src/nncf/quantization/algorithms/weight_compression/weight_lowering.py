@@ -81,7 +81,7 @@ def calculate_float_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tensor:
     """
-    Calculates the scale for nf4 or e2m1/e5m2/e4m3 quantization.
+    Calculates the scale for nf4 or mxfp4/mxfp8_e3m3 quantization.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
@@ -95,9 +95,8 @@ def calculate_float_quantization_params(
 
     scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
     FP_MAX_VALS = {
-        CompressWeightsMode.E2M1: 6.0,
-        CompressWeightsMode.E5M2: 57_344.0,
-        CompressWeightsMode.E4M3: 448.0,
+        CompressWeightsMode.MXFP4: 6.0,
+        CompressWeightsMode.MXFP8_E4M3: 448.0,
     }
     if config.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3] + list(FP_MAX_VALS.keys()):
         if config.mode in FP_MAX_VALS:
@@ -110,7 +109,7 @@ def calculate_float_quantization_params(
     eps = fns.finfo(weight).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
-    if config.mode in [CompressWeightsMode.E2M1, CompressWeightsMode.E5M2, CompressWeightsMode.E4M3]:
+    if config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
         # FP types are using E8M0 type scale.
         # It can only contain values [2**(-127), 2**(-126), ..., 2**(126), 2**(127)].
         # Here, we quantize each element of the scale to the smallest possible value greater than or equal to
@@ -146,16 +145,17 @@ def do_float_quantization(
     precomputed_scale: Optional[Tensor] = None,
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
-    Computes quantization scale if not provided, and performs corresponding (nf4, e2m1, e5m2, e4m3) weight quantization.
+    Computes quantization scale if not provided,
+    and performs corresponding (nf4, MXFP4 and MXFP8_E3M3) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For E2M1, E5M2, E4M3 and CODEBOOK currently returns normalized weight without quantization.
-    TODO(nikita-savelyevv): add support for E2M1, E5M2, E4M3 once ticket 164851 is resolved
+    For MXFP4, MXFP8_E3M3 and CODEBOOK currently returns normalized weight without quantization.
+    TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E3M3 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for e2m1, e5m2, e4m3 normalized) weight tensor and corresponding scale tensor and
+    :return: Returns quantized (for MXFP4 and MXFP8_E3M3 normalized) weight tensor and corresponding scale tensor and
              optional indexes for codebook.
     """
     assert not config.is_integer
@@ -192,7 +192,7 @@ def do_float_quantization(
         )
         return compressed_weight, scale, indexes
     else:
-        # TODO(nikita-savelyevv): add support for E2M1, E5M2, E4M3 once ticket 164851 is resolved
+        # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E3M3 once ticket 164851 is resolved
         compressed_weight = norm_weight
     return compressed_weight, scale, None
 
@@ -206,7 +206,7 @@ def float_quantize_dequantize_weight(
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor to float (nf4) dtype and then dequantizes it back to obtain float32 values.
-    E2M1, E5M2, E4M3 mode is currently not supported.
+    MXFP4 and MXFP8_E3M3 mode is currently not supported.
 
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
@@ -216,7 +216,7 @@ def float_quantize_dequantize_weight(
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
     assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
-    # TODO(nikita-savelyevv): add support for f4e2m1, e5m2, e4m3, once ticket 164851 is resolved
+    # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E3M3, once ticket 164851 is resolved
 
     # Optimized implementation
     if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight):

@@ -89,12 +89,12 @@ class CompressWeightsMode(StrEnum):
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
-    :param E2M1: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
-        2 bist exponent, 1 bit mantissa.
-    :param E5M2: FP8 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
-        5 bits expotent, 2 bits mantissa.
-    :param E4M3: FP8 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
-        4 bits expotent, 3 bits mantissa.
+    :param MXFP4: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
+        2 bist exponent, 1 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.
+        Group size is constant == 32.
+    :param MXFP8_E4M3: FP8 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
+        4 bist exponent, 3 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.
+        Group size is constant == 32.
     :param CODEBOOK: Codebook (LUT) quantization format.
     :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
@@ -106,9 +106,8 @@ class CompressWeightsMode(StrEnum):
     NF4 = "nf4"
     CB4_F8E4M3 = "cb4_f8e4m3"
     INT8 = "int8"  # Deprecated mode
-    E2M1 = "e2m1"
-    E5M2 = "e5m2"
-    E4M3 = "e4m3"
+    MXFP4 = "mxfp4"
+    MXFP8_E4M3 = "mxfp8_e4m3"
     CODEBOOK = "codebook"
 
 

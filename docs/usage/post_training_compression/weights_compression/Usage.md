@@ -22,8 +22,8 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 ### Supported modes
 
 By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
-OpenVINO backend also supports 4 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, E2M1. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. In case of E2M1 mode - [e2m1](https://arxiv.org/pdf/2310.10537) data type without zero point and has 8bit [E8M0](https://arxiv.org/pdf/2310.10537) scale.
-All 4-bit modes have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale).
+OpenVINO backend also supports 5 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, MXFP4 and MXFP8_E4M3. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. In case of MXFP4 mode - [e2m1](https://arxiv.org/pdf/2310.10537) data type without zero point and has 8bit [E8M0](https://arxiv.org/pdf/2310.10537) scale. In case of MXFP8_E4M3 mode - [e4m3](https://arxiv.org/pdf/2310.10537) data type without zero point and has 8bit [E8M0](https://arxiv.org/pdf/2310.10537) scale.
+All 4-bit modes except MXFP4/MXFP8_E4M3 have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale). MXFP4 and MXFP8_E4M3 could be used only with group size == 32.
 All embeddings, convolutions and last linear layers are always compressed to a backup mode, which is "INT8_ASYM", by default. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to a backup mode. OpenVINO backend supports 3 backup modes: INT8_SYM, INT8_ASYM, and NONE, which retains the original floating-point precision of the model weights. Backup mode is supported only for mixed-precision weight quantization.
 
@@ -191,13 +191,13 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 ```
 
-- `E2M1` mode can be considered for improving accuracy, but currently models quantized to e2m1 should not be faster models
-  quantized to 8-bit asymmetric integer. Here's the example how to compress weights to e2m1 data type with group size = 32 (recommended).
-  Different `group_size` and `ratio` are also supported.
+- `MXFP4` or `MXFP8_E4M3` modes can be considered for improving accuracy, but currently models quantized to mxfp4/mxfp8_e4m3 should not be faster models
+  quantized to 8-bit asymmetric integer. Here's the example how to compress weights to mxfp4 data type with constant group size == 32.
+  Different `ratio` is also supported.
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
-compressed_model = compress_weights(model, mode=CompressWeightsMode.E2M1, group_size=32, all_layers=True)
+compressed_model = compress_weights(model, mode=CompressWeightsMode.MXFP4, group_size=32, all_layers=True)
 ```
 
 #### Caching Statistics
@@ -672,7 +672,7 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
-- NF4, E2M1 support is experimental on GPU and NPU - models quantized to nf4/e2m1 should not be faster models quantized to 8-bit integer.
+- NF4, MXFP4, MXFP8_E4M3 support is experimental on GPU and NPU - models quantized to nf4/mxfp4/mxfp8_e4m3 should not be faster models quantized to 8-bit integer.
 
 ### Additional resources
 
