@@ -928,14 +928,19 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        skipped_weight_params,
-        ratio_defining_params,
         all_weight_params: list[WeightCompressionParameters],
+        nodes_to_compress,
         statistics: dict[str, Any],
         statistic_points,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+        
+        skipped_weight_params = self.get_skipped_weight_compression_parameters(model, graph, all_weight_params)
+        is_last_layer_skipped = self.is_last_layer_skipped(skipped_weight_params, nodes_to_compress)
 
+        # Get subset of nodes to define compression ratio
+        ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
+        
         # Handle group size fallback modes
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
@@ -1049,17 +1054,11 @@ class WeightCompression(Algorithm):
         all_weight_params = self.get_weight_compression_parameters(
             model, graph, nodes_to_compress, statistic_points, dataset
         )
-        skipped_weight_params = self.get_skipped_weight_compression_parameters(model, graph, all_weight_params)
-        is_last_layer_skipped = self.is_last_layer_skipped(skipped_weight_params, nodes_to_compress)
-
-        # Get subset of nodes to define compression ratio
-        ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
-        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
         statistics, statistic_points = self.collect_weight_compression_statistics(
-            model, graph, dataset, weight_params, statistic_points
+            model, graph, dataset, all_weight_params, statistic_points
         )
         
-        transformed_model = self.apply_wc_algos(model, graph, skipped_weight_params, ratio_defining_params, all_weight_params, statistics, statistic_points, dataset)
+        transformed_model = self.apply_wc_algos(model, graph, all_weight_params, nodes_to_compress, statistics, statistic_points, dataset)
 
         return transformed_model
 
