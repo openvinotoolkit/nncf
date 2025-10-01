@@ -27,8 +27,6 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
-from nncf.openvino.quantization.backend_parameters import BackendParameters
-from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import BackupMode
@@ -43,6 +41,7 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
+from nncf.quantization.advanced_parameters import is_weight_compression_needed
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
@@ -211,13 +210,13 @@ def quantize_with_accuracy_control_impl(
     if advanced_accuracy_restorer_parameters is None:
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
 
-    compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
-
     if advanced_quantization_parameters is None:
         copied_parameters = AdvancedQuantizationParameters()
     else:
         copied_parameters = deepcopy(advanced_quantization_parameters)
-    copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
+
+    compress_weights = is_weight_compression_needed(copied_parameters)
+    copied_parameters.compress_weights = False
 
     quantized_model = quantize_impl(
         model=model,

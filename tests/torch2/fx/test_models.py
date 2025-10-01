@@ -33,7 +33,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
 from nncf.experimental.torch.fx.transformations import DEQUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -219,7 +218,8 @@ def test_quantized_model(
     calibration_dataset = nncf.Dataset([example_input], transform_fn)
 
     quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(
-        disable_bias_correction=True, backend_params={FXBackendParameters.COMPRESS_WEIGHTS: compress_weights}
+        disable_bias_correction=True,
+        compress_weights=compress_weights,
     )
     quantization_parameters["subset_size"] = 1
 

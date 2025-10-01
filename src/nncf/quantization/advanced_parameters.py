@@ -256,6 +256,8 @@ class AdvancedQuantizationParameters:
     :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
+    :param compress_weights: Indicates whether to apply weight compression after quantization.
+    :type compress_weights: bool
     """
 
     # General parameters
@@ -270,6 +272,7 @@ class AdvancedQuantizationParameters:
     activations_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None
     weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None
     quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
+    compress_weights: bool = True
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
@@ -285,6 +288,20 @@ class AdvancedQuantizationParameters:
 
     # Backend specific parameters
     backend_params: dict[str, Any] = field(default_factory=dict)
+
+
+def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
+    """
+    Determine whether weight compression is needed based on advanced quantization parameters.
+
+    If `advanced_parameters` or its `backend_params` are not provided, defaults to True.
+
+    :param advanced_parameters: Advanced quantization parameters.
+    :return: True if weight compression is needed, False otherwise.
+    """
+    if advanced_parameters is not None:
+        return advanced_parameters.compress_weights
+    return True
 
 
 @api()
