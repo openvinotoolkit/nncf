@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.pruning`
+======================
+
+.. py:module:: nncf.pruning
+
+
