@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This file includes code from PyTorch project [provide a link to the file]
+# This file includes code from PyTorch project https://github.com/pytorch/pytorch/blob/v2.8.0/torch/ao/quantization/observer.py
 # The original license is: BSD-3-Clause, https://github.com/pytorch/pytorch/blob/main/LICENSE
 
 from abc import ABC
