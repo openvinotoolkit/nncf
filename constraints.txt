@@ -8,8 +8,7 @@ torchvision==0.23.0
 # ONNX
 onnx==1.17.0; python_version < '3.13'
 onnx==1.18.0; python_version >= '3.13'
-onnxruntime==1.19.2; python_version <= '3.9'
-onnxruntime==1.21.1; python_version > '3.9'
+onnxruntime==1.21.1; python_version
 
 # TensorFlow
 tensorflow==2.15.1
