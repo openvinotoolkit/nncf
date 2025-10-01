@@ -21,9 +21,29 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 
 ### Supported modes
 
-By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
-OpenVINO backend also supports 5 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, MXFP4 and MXFP8_E4M3. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. In case of MXFP4 mode - [e2m1](https://arxiv.org/pdf/2310.10537) data type without zero point and has 8bit [E8M0](https://arxiv.org/pdf/2310.10537) scale. In case of MXFP8_E4M3 mode - [e4m3](https://arxiv.org/pdf/2310.10537) data type without zero point and has 8bit [E8M0](https://arxiv.org/pdf/2310.10537) scale.
-All 4-bit modes except MXFP4/MXFP8_E4M3 have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale). MXFP4 and MXFP8_E4M3 could be used only with group size == 32.
+#### INT8 compression
+
+By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode. But "INT8_SYM" mode is available as well.
+
+| Mode      | Element   type | Scale   type | Block   Size | Description                                                                                                                     |
+|-----------|----------------|--------------|--------------|---------------------------------------------------------------------------------------------------------------------------------|
+| INT8_SYM  | INT8           | FP16         | Per-channel  | Stands for 8-bit integer [symmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) of all weights.Weights are quantized symmetrically without zero point.          |
+| INT8_ASYM | INT8           | FP16         | Per-channel  | The same as INT8_SYM mode, but weights are quantized to a primary precision [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. |
+
+#### Mixed precision
+
+OpenVINO backend also supports 5 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, MXFP4 and MXFP8_E4M3.
+
+| Mode       | Element   type       | Scale   type | Block   Size | Description                                                                                                                                                                                                                                                                                                                                                  |
+|------------|----------------------|--------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| INT4_SYM   | INT4                 | FP16         | Any          |         Weights are quantized to a primary precision symmetrically without zero point.<br>        All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,<br>        by default. All others are quantized whether to 4-bit integer or to a backup precision depending on<br>        criteria and the given ratio. |
+| INT4_ASYM  | INT4                 | FP16         | Any          | he same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically<br>        with a typical non-fixed zero point.                                                                                                                                                                                                                    |
+| NF4        | NF4                  | FP16         | Any          | The the same as INT4_SYM mode, but primary precision is [NF4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point.                                                                                                                                                                                                                                                                    |
+| MXFP4      | E2M1                 | E8M0         | 32           | FP4 format from [OCP Microscaling Formats (MX) Specification Version 1.0.](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf). 2 bits exponent, 1 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale. |
+| MXFP8_E4M3 | E4M3                 | E8M0         | 32           | FP8 format from [OCP Microscaling Formats (MX) Specification Version 1.0.](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf). 4 bit exponent, 3 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.|
+| CODEBOOK   | Any                  | FP16         | Any          | Codebook (lookup table (LUT)) quantization format.                                                                                                                                                                                                                                                                                                                          |
+| CB4_F8E4M3 | FP32   (NF4) -> E4M3 | FP16         | Any          | Codebook (lookup table (LUT)) format with 16 fixed fp8 values in E4M3 format.                                                                                                                                                                                                                                                                                               |
+
 All embeddings, convolutions and last linear layers are always compressed to a backup mode, which is "INT8_ASYM", by default. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to a backup mode. OpenVINO backend supports 3 backup modes: INT8_SYM, INT8_ASYM, and NONE, which retains the original floating-point precision of the model weights. Backup mode is supported only for mixed-precision weight quantization.
 
@@ -197,7 +217,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
-compressed_model = compress_weights(model, mode=CompressWeightsMode.MXFP4, group_size=32, all_layers=True)
+compressed_model = compress_weights(model, mode=CompressWeightsMode.MXFP4, all_layers=True)
 ```
 
 #### Caching Statistics

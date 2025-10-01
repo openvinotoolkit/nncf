@@ -90,10 +90,10 @@ class CompressWeightsMode(StrEnum):
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     :param MXFP4: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
-        2 bist exponent, 1 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.
+        2 bits exponent, 1 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.
         Group size is constant == 32.
     :param MXFP8_E4M3: FP8 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
-        4 bist exponent, 3 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.
+        4 bits exponent, 3 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.
         Group size is constant == 32.
     :param CODEBOOK: Codebook (LUT) quantization format.
     :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
