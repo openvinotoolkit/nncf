@@ -332,7 +332,6 @@ class WeightCompression(Algorithm):
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
 
-        self._mixed_precision_algo = self.get_mixed_precision_algorithm(self._sensitivity_metric, self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
 
         self._group_size_fallback_mode = self._advanced_parameters.group_size_fallback_mode
@@ -419,7 +418,7 @@ class WeightCompression(Algorithm):
             raise nncf.UnsupportedBackendError(msg)
 
     def get_mixed_precision_algorithm(self, sensitivity_metric: nncf.SensitivityMetric, ratio: int, subset_size: Optional[int] = None) -> MixedPrecisionCriterion:
-        criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
+        criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity_metric)
         return criterion_cls(ratio, subset_size)
 
     def get_ignored_node_names(self, nncf_graph: NNCFGraph) -> set[str]:
@@ -821,10 +820,9 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_to_compress: list[NNCFNode],
         data_aware_mixed_precision: bool,
         data_aware_compression: bool,
-        mixed_precision_algo: MixedPrecisionCriterion,
+        sensitivity_metric: SensitivityMetric,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
@@ -845,9 +843,12 @@ class WeightCompression(Algorithm):
         """
         all_weight_params: list[WeightCompressionParameters] = []
         skipped_weight_params: list[WeightCompressionParameters] = []
-
+        
+        mixed_precision_algo = self.get_mixed_precision_algorithm(sensitivity_metric, self._ratio, self._subset_size)
+        
         weight_names = set()
         is_last_layer_skipped = False
+        nodes_to_compress = self.get_nodes_to_compress(graph)
         n = len(nodes_to_compress)
         ignored_names = self.get_ignored_node_names(graph)
 
@@ -1027,10 +1028,10 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self.set_backend_entity(model)
-        nodes_to_compress = self.get_nodes_to_compress(graph)
+        
         # Get processed weight compression parameters ready for compression
         all_weight_params, statistics = self.get_weight_compression_parameters(
-            model, graph, nodes_to_compress, self._data_aware_mixed_precision, self._data_aware_compression, self._mixed_precision_algo, statistic_points, dataset
+            model, graph, self._data_aware_mixed_precision, self._data_aware_compression, self._sensitivity_metric, statistic_points, dataset
         )
         transformed_model = self.apply_wc_algos(model, graph, all_weight_params, statistics, dataset)
 
