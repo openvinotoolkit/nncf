@@ -103,7 +103,9 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
         if node.op_type != "QuantizeLinear":
             continue
 
-        x_name, y_scale_name, y_zero_point_name = node.input[:3]
+        x_name, y_scale_name = node.input[:2]
+        # `y_zero_point` is an optional input for the `QuantizeLinear` operation.
+        y_zero_point_name = node.input[2] if len(node.input) > 2 else None
 
         if x_name not in initializer:
             continue
@@ -113,7 +115,10 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
         # Quantize
         x = onnx.numpy_helper.to_array(initializer[x_name])
         y_scale = onnx.numpy_helper.to_array(initializer[y_scale_name])
-        y_zero_point = onnx.numpy_helper.to_array(initializer[y_zero_point_name])
+
+        y_zero_point = None
+        if y_zero_point_name:
+            y_zero_point = onnx.numpy_helper.to_array(initializer[y_zero_point_name])
 
         axis = get_node_attr_value(node, "axis")
         if version < 21:
