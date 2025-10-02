@@ -160,7 +160,7 @@ class WeightCompressionAlgoBackend(ABC):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> TModel:
         """
         Applies weight compression transformations to the model.
@@ -173,7 +173,7 @@ class WeightCompressionAlgoBackend(ABC):
             using low-rank adapters. This algorithm not only overrides weights with their quantized counterparts but
             also expands the model's execution graph following the Low-Rank Adaptation (LoRA) concept.
         :param compression_format: The format in which the model is saved after weight compression.
-        :param compression_format_params: Describes advanced parameters of compression formats.
+        :param advanced_parameters: Describes advanced parameters of compression formats.
         :return: The transformed model.
         """
 
@@ -241,6 +241,7 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def dump_parameters(
         model: TModel, parameters: dict, algo_name: Optional[str] = "quantization", path: Optional[list] = None
     ) -> None:

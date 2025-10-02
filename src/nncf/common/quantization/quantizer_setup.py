@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC
 from collections import Counter
 from copy import deepcopy
 from enum import Enum
@@ -47,7 +46,7 @@ class QIPointStateNames:
     TARGET_NODE_NAME = "target_node_name"
 
 
-class QuantizationInsertionPointBase(ABC):
+class QuantizationInsertionPointBase:
     _state_names = QIPointStateNames
 
     def __init__(self, target_node_name: NNCFNodeName):

@@ -421,8 +421,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> NNCFNetwork:
+        if advanced_parameters is None:
+            advanced_parameters = AdvancedCompressionParameters()
+
         if isinstance(model, GraphModelWrapper):
             model_transformer = PT2ModelTransformer(model)
             model = model.model
