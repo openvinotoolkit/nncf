@@ -241,7 +241,6 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @staticmethod
-    @abstractmethod
     def dump_parameters(
         model: TModel, parameters: dict, algo_name: Optional[str] = "quantization", path: Optional[list] = None
     ) -> None:
@@ -253,6 +252,7 @@ class WeightCompressionAlgoBackend(ABC):
         :param parameters: Incoming dictionary with parameters to save.
         :param path: Optional list of the paths.
         """
+        return
 
     @staticmethod
     @abstractmethod
