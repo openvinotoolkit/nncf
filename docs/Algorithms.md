@@ -11,7 +11,7 @@
   - Symmetric 8 bit compression mode
   - Symmetric and asymmetric 4 bit compression mode
   - NF4 compression mode
-  - Arbitrary look-up table (CODEBOOK) or predefined lookup table based on NF4 (CB4_F8E4M3) 
+  - Arbitrary look-up table (CODEBOOK) or predefined lookup table based on NF4 (CB4_F8E4M3)
   - MX-compliant types - MXFP4 and MXFP8_E4M3
   - Mixed precision weights compression
   - Grouped weights compression

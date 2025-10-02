@@ -459,7 +459,8 @@ def compress_weights(
             with a typical non-fixed zero point.
         NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
         MXFP4 is MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
-        MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale. The size of group is 32.
+        MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale.
+            The size of group is 32.
     :type mode: nncf.CompressWeightsMode
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8_ASYM).
