@@ -142,6 +142,8 @@ ignore = [
     "PERF203", # try-except-in-loop
     "PERF401", # manual-list-comprehension
     "PERF403", # manual-dict-comprehension
+    "B009", # get-attr-with-constant
+    "B010", # set-attr-with-constant
 ]
 select = [
     "CPY001", # copyright check
@@ -167,8 +169,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!src/nncf/**.py" = ["INP", "D"]
-"!src/nncf/torch/function_hook/*.py" = ["B"]
+"!src/nncf/**.py" = ["INP", "D", "B"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
