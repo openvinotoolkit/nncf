@@ -21,26 +21,36 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 
 ### Supported modes
 
-#### INT8 compression
+#### INT8 modes
 
-By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode. But "INT8_SYM" mode is available as well.
+By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_ASYM mode) to all weights. For symmetric quantization without zero point, the INT8_SYM mode is also available. Both modes typically preserve model accuracy while providing decent performance improvements.
 
-| Mode      | Element   type | Scale   type | Block   Size | Description                                                                                                                     |
-|-----------|----------------|--------------|--------------|---------------------------------------------------------------------------------------------------------------------------------|
-| INT8_SYM  | INT8           | FP16         | Per-channel  | Stands for 8-bit integer [symmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) of all weights.Weights are quantized symmetrically without zero point.          |
-| INT8_ASYM | INT8           | FP16         | Per-channel  | The same as INT8_SYM mode, but weights are quantized to a primary precision [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. |
+| Compression Mode | Element type | Scale type | Granularity              | Description                |
+|------------------|--------------|------------|--------------------------|----------------------------|
+| INT8_ASYM        | INT8         | FP16       | Per-channel              | [Asymmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) |
+| INT8_SYM         | INT8         | FP16       | Per-channel              | [Symmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) |
 
-#### Mixed precision
+#### Mixed precision modes
 
-OpenVINO backend also supports 5 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, MXFP4 and MXFP8_E4M3.
+Mixed precision modes offer higher compression rates leading to faster inference, though potentially with greater accuracy loss. These modes utilize two precision types: **primary** and **backup**. The primary precision is determined by the compression mode, while backup precision refers to a higher precision format (default is INT8_ASYM, configurable via the `backup_mode` parameter).
 
-| Mode       | Element   type       | Scale   type | Block   Size | Description                                                                                                                                                                                                                                                                                                                                                  |
-|------------|----------------------|--------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| INT4_SYM   | INT4                 | FP16         | Any          |         Weights are quantized to a primary precision symmetrically without zero point. All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM, by default. All others are quantized whether to 4-bit integer or to a backup precision depending on criteria and the given ratio. |
-| INT4_ASYM  | INT4                 | FP16         | Any          | The same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically with a typical non-fixed zero point. |
-| NF4        | NF4                  | FP16         | Any          | The the same as INT4_SYM mode, but primary precision is [NF4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. |
-| MXFP4      | E2M1                 | E8M0         | 32           | FP4 format from [OCP Microscaling Formats (MX) Specification Version 1.0.](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) 2 bits exponent, 1 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale. |
-| MXFP8_E4M3 | E4M3                 | E8M0         | 32           | FP8 format from [OCP Microscaling Formats (MX) Specification Version 1.0.](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) 4 bit exponent, 3 bit mantissa for the weight and 8 bit exponent, 0 bit mantissa scale.|
+By default, NNCF assigns backup precision to **special** quantization-sensitive layers: embeddings, convolutions, and the last linear layer. To compress these special layers using primary precision instead, set `all_layers=True`.
+
+NNCF can automatically distribute precision assignments based on quantization sensitivity using the `ratio` parameter. For example, with `ratio=0.9`, layers (excluding special ones) accounting for 90% of model weights receive primary precision, while the remaining layers use backup precision. This distribution minimizes overall quality deterioration by prioritizing less sensitive layers for lower precision.
+
+| Compression Mode | Element type | Scale type | Granularity              | Description |
+|------------------|--------------|------------|--------------------------|-------------|
+| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | [Symmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) |
+| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | [Asymmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) |
+| NF4              | FP32         | FP16       | Per-channel / Group-wise | [NormalFloat-4](https://arxiv.org/pdf/2305.14314v1.pdf) lookup table with 16 FP32 values |
+| CODEBOOK         | Any          | FP16       | Per-channel / Group-wise | Arbitrary lookup table (codebook) |
+| CB4_F8E4M3       | E4M3         | FP16       | Per-channel / Group-wise | A fixed lookup table with 16 E4M3 values based on NF4 values |
+| MXFP4            | E2M1         | E8M0       | Group-wise (32)          | [MX-compliant FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+| MXFP8_E4M3       | E4M3         | E8M0       | Group-wise (32)          | [MX-compliant FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+
+**Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
+
+**Note**: ExMy is a notation for floating point formats with one sign bit, x exponent bits, and y mantissa bits. For example, E4M3 refers to an FP8 format with one sign bit, four exponent bits, and three mantissa bits. Formats like E8M0 don't include the mantissa bits.
 
 All embeddings, convolutions and last linear layers are always compressed to a backup mode, which is "INT8_ASYM", by default. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to a backup mode. OpenVINO backend supports 3 backup modes: INT8_SYM, INT8_ASYM, and NONE, which retains the original floating-point precision of the model weights. Backup mode is supported only for mixed-precision weight quantization.
@@ -209,9 +219,7 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 ```
 
-- `MXFP4` or `MXFP8_E4M3` modes can be considered for improving accuracy, but currently models quantized to mxfp4/mxfp8_e4m3 should not be faster models
-  quantized to 8-bit asymmetric integer. Here's the example how to compress weights to mxfp4 data type with constant group size == 32.
-  Different `ratio` are also supported.
+- Here's the example how to compress weights to MXFP4. Different `ratio` are also supported.
 
 ```python
 from nncf import compress_weights, CompressWeightsMode

@@ -148,14 +148,14 @@ def do_float_quantization(
     Computes quantization scale if not provided,
     and performs corresponding (nf4, MXFP4 and MXFP8_E3M3) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For MXFP4, MXFP8_E3M3 and CODEBOOK currently returns normalized weight without quantization.
-    TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E3M3 once ticket 164851 is resolved
+    For MXFP4, MXFP8_E4M3 and CODEBOOK currently returns normalized weight without quantization.
+    TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for MXFP4 and MXFP8_E3M3 normalized) weight tensor and corresponding scale tensor and
+    :return: Returns quantized (for MXFP4 and MXFP8_E4M3 normalized) weight tensor and corresponding scale tensor and
              optional indexes for codebook.
     """
     assert not config.is_integer
@@ -192,7 +192,7 @@ def do_float_quantization(
         )
         return compressed_weight, scale, indexes
     else:
-        # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E3M3 once ticket 164851 is resolved
+        # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
         compressed_weight = norm_weight
     return compressed_weight, scale, None
 
@@ -206,7 +206,7 @@ def float_quantize_dequantize_weight(
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor to float (nf4) dtype and then dequantizes it back to obtain float32 values.
-    MXFP4 and MXFP8_E3M3 mode is currently not supported.
+    MXFP4 and MXFP8_E4M3 mode is currently not supported.
 
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
@@ -216,7 +216,7 @@ def float_quantize_dequantize_weight(
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
     assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
-    # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E3M3, once ticket 164851 is resolved
+    # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3, once ticket 164851 is resolved
 
     # Optimized implementation
     if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight):

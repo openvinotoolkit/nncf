@@ -246,7 +246,7 @@ def check_user_compression_configuration(
         )
         raise nncf.ValidationError(msg)
     if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3] and group_size not in [None, 32]:
-        msg = f"MXFP4 and MXFP8_E4M3 types only support group size == 32, group size == {group_size} is given"
+        msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
         raise nncf.ValidationError(msg)
 
 
@@ -289,8 +289,8 @@ class WeightCompression(Algorithm):
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
-            MXFP4 has E2M1 weight dtype with E8M0 scale, group size 32 and no zero point.
-            MXFP8_E4M3 has E4M3 weight dtype with E8M0 scale, group size 32 and no zero point.
+            MXFP4 is MX-compliant FP4 with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
+            MXFP8_E4M3 is MX-compliant FP8 with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to backup_mode).
         :param group_size: number of weights (e.g. 128) in the channel dimension
