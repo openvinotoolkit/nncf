@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
 
 import torch
 
@@ -15,22 +16,17 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.layers import BaseQuantizer
 
 
+@dataclass
 class QuantizerInfo:
-    def __init__(self, quantizer_module_ref: BaseQuantizer, affected_insertions: list[PTTargetPoint]):
-        self.quantizer_module_ref = quantizer_module_ref
-        self.affected_insertions = affected_insertions
+    quantizer_module_ref: BaseQuantizer
+    affected_insertions: list[PTTargetPoint]
 
 
+@dataclass
 class NonWeightQuantizerInfo(QuantizerInfo):
     pass
 
 
+@dataclass
 class WeightQuantizerInfo(QuantizerInfo):
-    def __init__(
-        self,
-        quantizer_module_ref: BaseQuantizer,
-        quantized_module: torch.nn.Module,
-        affected_insertions: list[PTTargetPoint],
-    ):
-        super().__init__(quantizer_module_ref, affected_insertions)
-        self.quantized_module = quantized_module
+    quantized_module: torch.nn.Module

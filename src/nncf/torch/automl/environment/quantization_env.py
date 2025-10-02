@@ -16,8 +16,9 @@ import os
 import os.path as osp
 from collections import OrderedDict
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -103,26 +104,16 @@ class ModelSizeCalculator:
         return self.get_model_size(per_quantizer_bw) / self.fp_model_size
 
 
+@dataclass
 class QuantizationEnvParams:
-    def __init__(
-        self,
-        compression_ratio: float,
-        eval_subset_ratio: float,
-        skip_constraint: bool,
-        performant_bw: bool,
-        finetune: bool,
-        bits: list[int],
-        dump_init_precision_data: bool = False,
-        log_dir: str = None,
-    ):
-        self.compression_ratio = compression_ratio
-        self.eval_subset_ratio = eval_subset_ratio
-        self.skip_constraint = skip_constraint
-        self.performant_bw = performant_bw
-        self.finetune = finetune
-        self.bits = bits
-        self.dump_init_precision_data = dump_init_precision_data
-        self.log_dir = log_dir
+    compression_ratio: float
+    eval_subset_ratio: float
+    skip_constraint: bool
+    performant_bw: bool
+    finetune: bool
+    bits: list[int]
+    dump_init_precision_data: bool = False
+    log_dir: Optional[str] = None
 
 
 class QuantizationEnv:

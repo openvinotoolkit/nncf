@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
+from dataclasses import dataclass
 from typing import Any, Generator, Optional
 
 import networkx as nx
@@ -166,18 +167,12 @@ class OperationExecutionContext:
         return self.op_address.call_order
 
 
+@dataclass
 class DynamicGraphNodeParameters:
-    def __init__(
-        self,
-        layer_attributes: BaseLayerAttributes,
-        ignored_algorithms: list[str],
-        is_called_inside_nncf_module: bool,
-        calling_module_id: int,
-    ):
-        self.layer_attributes = layer_attributes
-        self.ignored_algorithms = ignored_algorithms
-        self.is_called_inside_nncf_module = is_called_inside_nncf_module
-        self.calling_module_id = calling_module_id
+    layer_attributes: BaseLayerAttributes
+    ignored_algorithms: list[str]
+    is_called_inside_nncf_module: bool
+    calling_module_id: int
 
 
 class DynamicGraphNode:
