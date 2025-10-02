@@ -155,6 +155,7 @@ select = [
     "NPY", # numpy rules
     "UP", # pyupgrade
     "PERF", # perflint
+    "B", # flake8-bugbear
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -167,6 +168,7 @@ extend-select = [
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
 "!src/nncf/**.py" = ["INP", "D"]
+"!src/nncf/torch/function_hook/*.py" = ["B"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\

@@ -247,9 +247,8 @@ def decode_hook_name(hook_name: str) -> tuple[str, str, int]:
         msg = f"Invalid hook name, name should contain 'pre_hooks' or 'post_hooks', got {hook_name}"
         raise ValueError(msg)
     hook_key = splitted[-2]
-    try:
-        op_name, port_id = hook_key.rsplit("__", 1)
-    except ValueError:
+    if "__" not in hook_key:
         msg = f"Invalid hook name, hook_key expect op_name and port_id, got {hook_key}"
         raise ValueError(msg)
+    op_name, port_id = hook_key.rsplit("__", 1)
     return hook_type, op_name.replace(":", "."), int(port_id)

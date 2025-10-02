@@ -119,7 +119,7 @@ def update_pruning_ratio(
     elif mode == PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL:
         # Get threshold value for all normalized weights
         all_weights: list[torch.Tensor] = []
-        for const_name, hook in pruned_modules_map.items():
+        for const_name in pruned_modules_map:
             data = get_const_data_by_name(const_name, model)
             all_weights.append((torch.abs(data) / data.norm(2)).view(-1))
 
