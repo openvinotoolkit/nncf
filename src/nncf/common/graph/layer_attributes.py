@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, Union
@@ -19,7 +20,7 @@ class Dtype(Enum):
     INTEGER = "int"
 
 
-class BaseLayerAttributes:
+class BaseLayerAttributes(ABC):  # noqa: B024
     """
     This class stores base useful for some algorithms attributes
     of modules/layers.
