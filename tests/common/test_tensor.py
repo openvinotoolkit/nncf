@@ -32,6 +32,8 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
             return x.astype(np.float32)
         if dtype is TensorDataType.float16:
             return x.astype(np.float16)
+        if dtype is TensorDataType.int32:
+            return x.astype(np.int32)
         raise NotImplementedError
 
     @staticmethod

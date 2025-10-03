@@ -151,4 +151,5 @@ OV_REDUCERS_MAP = {
     StatisticsType.MEAN: OVMeanReducer,
     StatisticsType.QUANTILE: OVQuantileReducer,
     StatisticsType.ABS_QUANTILE: OVAbsQuantileReducer,
+    StatisticsType.RAW: RawReducer,
 }

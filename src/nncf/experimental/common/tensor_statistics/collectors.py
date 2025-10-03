@@ -9,6 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This file includes code from PyTorch project https://github.com/pytorch/pytorch/blob/v2.8.0/torch/ao/quantization/observer.py
+# The original license is: BSD-3-Clause, https://github.com/pytorch/pytorch/blob/main/LICENSE
+
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
@@ -17,15 +20,18 @@ from copy import deepcopy
 from typing import Any, Optional, TypeVar, Union
 
 import nncf
+import nncf.tensor
 import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
-from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
+from nncf.tensor.definitions import TensorDataType
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 AggregationAxes = tuple[int, ...]
@@ -844,6 +850,341 @@ def _move_axes_flatten_cat(
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
 
 
+class HistogramAggregator(AggregatorBase):
+    """
+    NNCF implementation of the torch.ao.quantization.observer.HistogramObserver.
+    Intended to be combined with a single RawReducer.
+    The aggregator records the running histogram of the input tensor values along with
+    min/max values. Only the reduction_axis==None is supported.
+
+    The min and max are computed as follows:
+
+    1. Create the histogram of the incoming inputs.
+        The histogram is computed continuously, and the ranges per bin change
+        with every new tensor observed.
+    2. Search the distribution in the histogram for optimal min/max values.
+        The search for the min/max values ensures the minimization of the
+        quantization error with respect to the floating point model.
+    """
+
+    histogram: Tensor
+    min_val: Optional[float]
+    max_val: Optional[float]
+
+    def __init__(
+        self,
+        bins: int = 2048,
+        dist_nbits: int = 8,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ) -> None:
+        """
+        :param bins: Number of bins to use for the histogram
+        :param dist_nbits: Target quantization number of bits to calculate the quantization error.
+        :param num_samples: Maximum number of samples to collect. Aggregator
+            skips tensor registration if tensor registration was called num_samples times before.
+            Aggregator never skips registration if num_samples is None.
+        """
+        super().__init__(num_samples=num_samples, window_size=window_size)
+        self.bins = bins
+        self.min_val = None
+        self.max_val = None
+        self.dst_nbins = 2**dist_nbits
+        self.upsample_rate = 16  # used to reduce quantization errors when upscaling histogram
+
+    def _get_norm(self, delta_begin: Tensor, delta_end: Tensor, density: Tensor) -> Tensor:
+        """
+        Compute the L2 norm of the values uniformaly distributed between
+        delta_begin and delta_end.
+
+        norm = density * (integral_{begin, end} x^2)
+             = density * (end^3 - begin^3) / 3
+
+        :param delta_begin: Start of the integral interval.
+        :param delta_end: End of the integral interval.
+        :param density: Density of the elements in the histogram.
+        :return: The norm of the values uniformaly distributed between delta_begin and delta_end.
+        """
+        norm = (delta_end * delta_end * delta_end - delta_begin * delta_begin * delta_begin) / 3
+        return density * norm
+
+    def _compute_quantization_error(self, next_start_bin: int, next_end_bin: int, bin_width: float) -> float:
+        """
+        Computes the L2 norm of quantization error when mapping histogram bins into a reduced set of
+        quantization bins using the specified range [next_start_bin, next_end_bin].
+
+        :param next_start_bin: The index of the first source histogram bin included
+            in the quantization range.
+        :param next_end_bin: The index of the last source histogram bin included
+            in the quantization range.
+        :param bin_width: The width of a single source histogram bin.
+        :return: A scalar float value representing the total quantization error
+            for the given bin range.
+        """
+        dst_bin_width = bin_width * (next_end_bin - next_start_bin + 1) / self.dst_nbins
+        if dst_bin_width == 0.0:
+            return 0.0
+
+        src_bin = fns.arange(0, self.bins, backend=self.histogram.backend, device=self.histogram.device)
+        # distances from the beginning of first dst_bin to the beginning and
+        # end of src_bin
+        src_bin_begin = (src_bin - next_start_bin) * bin_width
+        src_bin_end = src_bin_begin + bin_width
+
+        # which dst_bins the beginning and end of src_bin belong to?
+        dst_bin_of_begin = fns.clip(fns.floor(src_bin_begin / dst_bin_width), 0, self.dst_nbins - 1)
+        dst_bin_of_begin_center = (dst_bin_of_begin + 0.5) * dst_bin_width
+
+        dst_bin_of_end = fns.clip(
+            fns.floor(src_bin_end / dst_bin_width),
+            0,
+            self.dst_nbins - 1,
+        )
+        density = self.histogram / bin_width
+
+        norm = fns.zeros((self.bins,), backend=self.histogram.backend, device=self.histogram.device)
+
+        delta_begin = src_bin_begin - dst_bin_of_begin_center
+        delta_end = dst_bin_width / 2
+        norm += self._get_norm(
+            delta_begin,
+            (fns.zeros((self.bins,), backend=self.histogram.backend, device=self.histogram.device) + 1) * delta_end,
+            density,
+        )
+
+        norm += (dst_bin_of_end - dst_bin_of_begin - 1) * self._get_norm(-dst_bin_width / 2, dst_bin_width / 2, density)
+
+        dst_bin_of_end_center = dst_bin_of_end * dst_bin_width + dst_bin_width / 2
+
+        delta_begin = -dst_bin_width / 2
+        delta_end = src_bin_end - dst_bin_of_end_center
+        norm += self._get_norm(delta_begin, delta_end, density)
+
+        return fns.sum(norm).item()
+
+    def _non_linear_param_search(self) -> tuple[float, float]:
+        """
+        An approximation for L2 error minimization for selecting min/max.
+        By selecting new min/max, we filter out outliers in input distribution.
+        This follows the implementation of NormMinimization::NonlinearQuantizationParamsSearch in
+        caffe2/quantization/server/norm_minimization.cc
+        By selecting new min/max, we filter out outliers in input distribution.
+
+        :return: An approximation for L2 error minimization for selecting min/max.
+        """
+        assert self.histogram.shape[0] == self.bins, "bins mismatch"
+        bin_width = (self.max_val - self.min_val) / self.bins
+
+        # cumulative sum
+        total = fns.sum(self.histogram).item()
+        cSum = fns.cumsum(self.histogram, axis=0)
+
+        stepsize = 1e-5  # granularity
+        alpha = 0.0  # lower bound
+        beta = 1.0  # upper bound
+        start_bin = 0
+        end_bin = self.bins - 1
+        norm_min = float("inf")
+
+        while alpha < beta:
+            # Find the next step
+            next_alpha = alpha + stepsize
+            next_beta = beta - stepsize
+
+            # find the left and right bins between the quantile bounds
+            left = start_bin
+            right = end_bin
+            while left < end_bin and cSum[left] < next_alpha * total:
+                left = left + 1
+            while right > start_bin and cSum[right] > next_beta * total:
+                right = right - 1
+
+            # decide the next move
+            next_start_bin = start_bin
+            next_end_bin = end_bin
+            if (left - start_bin) > (end_bin - right):
+                # move the start bin
+                next_start_bin = left
+                alpha = next_alpha
+            else:
+                # move the end bin
+                next_end_bin = right
+                beta = next_beta
+
+            if next_start_bin == start_bin and next_end_bin == end_bin:
+                continue
+
+            # calculate the quantization error using next_start_bin and next_end_bin
+            norm = self._compute_quantization_error(next_start_bin, next_end_bin, bin_width)
+
+            if norm > norm_min:
+                break
+            norm_min = norm
+            start_bin = next_start_bin
+            end_bin = next_end_bin
+
+        new_min = self.min_val + bin_width * start_bin
+        new_max = self.min_val + bin_width * (end_bin + 1)
+        return new_min, new_max
+
+    def _upscale_histogram(
+        self,
+        histogram: Tensor,
+        orig_min: float,
+        orig_max: float,
+        update_min: float,
+        update_max: float,
+    ) -> Tensor:
+        """
+        Updates the histogram into a more fine-coarsed histogram to reduce bin quantization errors.
+
+        :param histogram: The input histogram tensor of size bins.
+        :param orig_min: The lower boundary of the original histogram range.
+        :param orig_max: The upper boundary of the original histogram range.
+        :param update_min: The lower boundary of the updated histogram range.
+        :param update_max: The upper boundary of the updated histogram range.
+        :return: A histogram tensor of size bins aligned with the updated range [update_min, update_max].
+        """
+        histogram = fns.repeat(histogram, self.upsample_rate) / self.upsample_rate
+        bin_size = (orig_max - orig_min) / (self.bins * self.upsample_rate)
+        mid_points_histogram = (
+            fns.linspace(
+                orig_min,
+                orig_max,
+                self.bins * self.upsample_rate + 1,
+                backend=self.histogram.backend,
+                device=self.histogram.device,
+            )[:-1]
+            + 0.5 * bin_size
+        )
+        boundaries_new_histogram = fns.linspace(
+            update_min, update_max, self.bins + 1, backend=self.histogram.backend, device=self.histogram.device
+        )
+        # this maps the mid-poits of the histogram to the new histogram's space
+        bucket_assignments = fns.searchsorted(boundaries_new_histogram, mid_points_histogram, side="right") - 1
+        # this then maps the histogram mid-points in the new space, weighted by the original histogram's values
+        # this is just the old histogram in the new histogram's space
+
+        # In case due to numerical issues the values land higher/lower than the maximum/minimum
+        bucket_assignments[bucket_assignments >= self.bins] = self.bins - 1
+        bucket_assignments[bucket_assignments < 0] = 0
+
+        update_histogram = fns.bincount(bucket_assignments, weights=histogram, minlength=self.bins)
+        return update_histogram
+
+    def _combine_histograms(
+        self,
+        orig_hist: Tensor,
+        orig_min: float,
+        orig_max: float,
+        update_hist: Tensor,
+        update_min: float,
+        update_max: float,
+    ) -> Tensor:
+        """
+        Combines the original histogram with an updated histogram, aligning both
+        to the target range [update_min, update_max].
+
+        :param orig_hist: The original histogram tensor of size bins.
+        :param orig_min: The lower boundary of the original histogram range.
+        :param orig_max: The upper boundary of the original histogram range.
+        :param update_hist: The histogram tensor of size bins in the updated range.
+        :param update_min: The lower boundary of the updated histogram range.
+        :param update_max: The upper boundary of the updated histogram range.
+        :return: A histogram tensor of size bins representing the combined
+            distribution in the updated range.
+        """
+        # If the new min and max are the same as the current min and max,
+        # we can just add the new histogram to the original histogram
+        if update_min == orig_min and update_max == orig_max:
+            return orig_hist + update_hist
+
+        # If the orig hist only has one value (i.e., the min and max are the same)
+        # we can just add it into new histogram
+        if orig_min == orig_max:
+            bin_value = fns.sum(orig_hist)
+            transformed_orig_hist = (
+                fns.histogram(
+                    fns.tensor(
+                        orig_min,
+                        backend=self.histogram.backend,
+                        device=self.histogram.device,
+                        dtype=TensorDataType.float32,
+                    ),
+                    bins=self.bins,
+                    range=(update_min, update_max),
+                )
+                * bin_value
+            )
+            return transformed_orig_hist + update_hist
+
+        # We assume the update_hist is already in the target range, we will map the orig_max to it
+        assert update_min <= orig_min
+        assert update_max >= orig_max
+
+        # Now we need to turn the old_histogram, into the range of the new histogram
+        transformed_orig_hist = self._upscale_histogram(
+            orig_hist,
+            orig_min,
+            orig_max,
+            update_min,
+            update_max,
+        )
+
+        return update_hist + transformed_orig_hist
+
+    def reset_histogram(self, x: Tensor, min_val: float, max_val: float) -> None:
+        """
+        Resets and initializes the histogram based on the provided tensor and range.
+
+        :param x: The input tensor used to build the histogram.
+        :param min_val: The scalar tensor specifying the lower boundary of the histogram range.
+        :param max_val: The scalar tensor specifying the upper boundary of the histogram range.
+        """
+        self.min_val = min_val
+        self.max_val = max_val
+        self.histogram = fns.histogram(x, self.bins, range=(min_val, max_val))
+
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
+        x_min, x_max = fns.min(x).item(), fns.max(x).item()
+
+        current_min = self.min_val
+        current_max = self.max_val
+
+        is_uninitialized = self.min_val is None or self.max_val is None
+        if is_uninitialized:
+            self.reset_histogram(x, x_min, x_max)
+            return
+
+        update_min, update_max = x_min, x_max
+        new_min = min(current_min, update_min)
+        new_max = max(current_max, update_max)
+
+        update_histogram = fns.histogram(x, self.bins, range=(new_min, new_max))
+
+        self.histogram = self._combine_histograms(
+            self.histogram,
+            current_min,
+            current_max,
+            update_histogram,
+            new_min,
+            new_max,
+        )
+        self.min_val = new_min
+        self.max_val = new_max
+
+    def _aggregate_impl(self) -> dict[str, Tensor]:
+        min_, max_ = self._non_linear_param_search()
+        return {
+            MinMaxTensorStatistic.MIN_STAT: fns.tensor(
+                min_, backend=self.histogram.backend, device=self.histogram.device, dtype=TensorDataType.float32
+            ),
+            MinMaxTensorStatistic.MAX_STAT: fns.tensor(
+                max_, backend=self.histogram.backend, device=self.histogram.device, dtype=TensorDataType.float32
+            ),
+        }
+
+
 REDUCERS_MAP = {
     StatisticsType.MIN: MinReducer,
     StatisticsType.MAX: MaxReducer,
@@ -851,6 +1192,7 @@ REDUCERS_MAP = {
     StatisticsType.MEAN: MeanReducer,
     StatisticsType.QUANTILE: QuantileReducer,
     StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
+    StatisticsType.RAW: RawReducer,
 }
 
 AGGREGATORS_MAP = {
