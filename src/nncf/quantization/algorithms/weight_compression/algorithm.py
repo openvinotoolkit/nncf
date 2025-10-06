@@ -527,9 +527,10 @@ class WeightCompression(Algorithm):
             primary_precision_weight_params = self._mixed_precision_algo.apply(
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
-            for weight_param in primary_precision_weight_params:
-                weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
-
+            for weight_param in ratio_defining_params:
+                if weight_param in primary_precision_weight_params:
+                    continue
+                weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
         # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
         for w_params in ratio_defining_params:
@@ -787,6 +788,18 @@ class WeightCompression(Algorithm):
             return self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points
             ), statistic_points
+    
+    def _get_backup_config(self, weight_dtype: TensorDataType):
+        if self._backup_mode == BackupMode.NONE:
+            return None
+        mode = (
+            CompressWeightsMode.INT8_ASYM
+            if self._backup_mode == BackupMode.INT8_ASYM
+            else CompressWeightsMode.INT8_SYM
+        )
+        if not self.is_weight_compression_supported(weight_dtype, mode):
+            return None
+        return WeightCompressionConfig(mode=mode)
 
     def get_weight_compression_parameters(
         self,
@@ -851,14 +864,7 @@ class WeightCompression(Algorithm):
                             f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                         )
 
-                    if self._backup_mode != BackupMode.NONE:
-                        mode = (
-                            CompressWeightsMode.INT8_ASYM
-                            if self._backup_mode == BackupMode.INT8_ASYM
-                            else CompressWeightsMode.INT8_SYM
-                        )
-                        if self.is_weight_compression_supported(weight_dtype, mode):
-                            wc_config = WeightCompressionConfig(mode=mode)
+                    wc_config = self._get_backup_config(weight_dtype)
 
                     weight_params = WeightCompressionParameters(
                         weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, wc_config
@@ -886,15 +892,8 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
-        # If no mixed precision has to be applied, then set the primary config for all ratio defining params.
-        if self._ratio == 1 or len(ratio_defining_params) == 0:
-            for weight_param in ratio_defining_params:
-                weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
-        
-        # Print statistics
-        nncf_logger.info(
-            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
-        )
+        for weight_param in ratio_defining_params:
+            weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
 
         return all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params
 
