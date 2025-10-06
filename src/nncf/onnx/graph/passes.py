@@ -11,6 +11,7 @@
 
 import onnx
 from onnx.reference.ops import load_op
+from onnxruntime.tools.symbolic_shape_infer import SymbolicShapeInference
 
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
@@ -74,8 +75,8 @@ def apply_preprocess_passes(model: onnx.ModelProto) -> onnx.ModelProto:
     :param model: The ONNX model to be preprocessed.
     :return: A preprocessed ONNX model, ready for quantization.
     """
-    preprocessed_model = onnx.shape_inference.infer_shapes(model)
-    # The `eliminate_nop_cast` pass should be applied after onnx.shape_inference.infer_shapes() call.
+    preprocessed_model = SymbolicShapeInference.infer_shapes(model)
+    # The `eliminate_nop_cast` pass should be applied after `SymbolicShapeInference.infer_shapes()` call.
     # Otherwise, not all no-op Cast nodes will be found.
     preprocessed_model = eliminate_nop_cast(preprocessed_model)
     return preprocessed_model
