@@ -49,7 +49,6 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_reduction_channel_size
-from nncf.quantization.algorithms.weight_compression.mixed_precision import MixedPrecisionCriterion
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.tensor import Tensor
@@ -332,6 +331,8 @@ class WeightCompression(Algorithm):
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
 
+        criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
+        self._mixed_precision_algo = criterion_cls(self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
 
         self._group_size_fallback_mode = self._advanced_parameters.group_size_fallback_mode
@@ -364,18 +365,14 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
 
-        self._data_aware_mixed_precision = self.is_data_aware_mixed_precision(self._sensitivity_metric, self._ratio)
-        self._data_aware_compression = self.is_data_aware_compression(self._awq, self._scale_estimation, self._lora_correction, self._gptq, self._advanced_parameters)
-
-    def is_data_aware_mixed_precision(self, sensitivity_metric: SensitivityMetric, ratio: int) -> bool:
-        return sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and ratio != 1.0
-    
-    def is_data_aware_compression(self, awq: bool, scale_estimation: bool, lora_correction: bool, gptq: bool, advanced_parameters: AdvancedCompressionParameters) -> bool:
-        return (
-            (awq and advanced_parameters.awq_params.prefer_data_aware_scaling)
-            or scale_estimation
-            or lora_correction
-            or gptq
+        self._data_aware_mixed_precision = (
+            self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
+        )
+        self._data_aware_compression = (
+            (self._awq and self._advanced_parameters.awq_params.prefer_data_aware_scaling)
+            or self._scale_estimation
+            or self._lora_correction
+            or self._gptq
         )
 
     @property
@@ -416,10 +413,6 @@ class WeightCompression(Algorithm):
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
-
-    def get_mixed_precision_algorithm(self, sensitivity_metric: nncf.SensitivityMetric, ratio: int, subset_size: Optional[int] = None) -> MixedPrecisionCriterion:
-        criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity_metric)
-        return criterion_cls(ratio, subset_size)
 
     def get_ignored_node_names(self, nncf_graph: NNCFGraph) -> set[str]:
         """
@@ -519,7 +512,6 @@ class WeightCompression(Algorithm):
         graph: NNCFGraph,
         statistics_points: StatisticPointsContainer,
         group_size_values: dict[str, int],
-        mixed_precision_algo: MixedPrecisionCriterion,
     ) -> None:
         """
         Sets the appropriate compression configuration for weights based on some criteria.
@@ -532,7 +524,7 @@ class WeightCompression(Algorithm):
         :param group_size_values: A dictionary mapping weight names to their group size values.
         """
         if self._ratio < 1 and len(ratio_defining_params) > 0:
-            primary_precision_weight_params = mixed_precision_algo.apply(
+            primary_precision_weight_params = self._mixed_precision_algo.apply(
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
         else:
@@ -777,54 +769,10 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
-    def collect_weight_compression_statistics(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        dataset: Dataset,
-        weight_params: list[WeightCompressionParameters],
-        data_aware_compression,
-        data_aware_mixed_precision,
-        mixed_precision_algo,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-    ) -> Optional[dict[str, Any]]:
-        """
-        Collects statistics for weight compression if data-aware compression or
-        mixed-precision is enabled.
-
-        :param model: Backend-specific input model.
-        :param graph: NNCFGraph instance.
-        :param dataset: Dataset for statistics collection.
-        :param weight_params: Weight parameters for which to collect statistics.
-        :param statistic_points: Optional pre-collected statistic points.
-        :return: A dictionary of collected statistics, or None if not applicable.
-        """
-        statistics = None
-        if not (data_aware_compression or data_aware_mixed_precision) or not dataset:
-            return statistics, statistic_points
-        matmul_nodes_to_compress = [
-            wp.node_with_weight
-            for wp in weight_params
-            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
-        ]
-        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
-
-        if statistic_points is None:
-            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys(), data_aware_compression, data_aware_mixed_precision, mixed_precision_algo)
-            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-
-        statistics = self._get_statistics_for_weights_compression(matmul_input_to_output_nodes_map, statistic_points)
-        return statistics, statistic_points
-
     def get_weight_compression_parameters(
         self,
         model: TModel,
         graph: NNCFGraph,
-        data_aware_mixed_precision: bool,
-        data_aware_compression: bool,
-        sensitivity_metric: SensitivityMetric,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
     ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
         """
         Generates a list of weight compression parameters based on the Weight Compression algorithm
@@ -841,14 +789,13 @@ class WeightCompression(Algorithm):
             Compression algorithm configuration, and a mapping of target node names to the
             collected statistics.
         """
+        nodes_to_compress = self.get_nodes_to_compress(graph)
+
         all_weight_params: list[WeightCompressionParameters] = []
         skipped_weight_params: list[WeightCompressionParameters] = []
-        
-        mixed_precision_algo = self.get_mixed_precision_algorithm(sensitivity_metric, self._ratio, self._subset_size)
-        
+
         weight_names = set()
         is_last_layer_skipped = False
-        nodes_to_compress = self.get_nodes_to_compress(graph)
         n = len(nodes_to_compress)
         ignored_names = self.get_ignored_node_names(graph)
 
@@ -920,33 +867,78 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
-        # Collect statistics for the weights compression
-        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-        statistics, statistic_points = self.collect_weight_compression_statistics(
-            model, graph, dataset, weight_params, data_aware_compression, data_aware_mixed_precision, mixed_precision_algo, statistic_points
-        )
-
-        # Set weight compression configuration
-        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values, mixed_precision_algo)
-
         # Print statistics
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
-        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+        return all_weight_params, ratio_defining_params, group_size_values
 
-        return all_weight_params, statistics
+    def _collect_statistics_and_statistic_points(
+        self, model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
+    ):
+        if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
+            return None, statistic_points
+        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+        matmul_nodes_to_compress = [
+            wp.node_with_weight
+            for wp in weight_params
+            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+        ]
+        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
+        if statistic_points is None:
+            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+            statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+            statistics_aggregator.register_statistic_points(statistic_points)
+            statistics_aggregator.collect_statistics(model, graph)
+            statistic_points = statistics_aggregator.statistic_points
+        return self._get_statistics_for_weights_compression(
+            matmul_input_to_output_nodes_map, statistic_points
+        ), statistic_points
 
-    def apply_wc_algos(
+    def apply(
         self,
         model: TModel,
         graph: NNCFGraph,
-        all_weight_params: list[WeightCompressionParameters],
-        statistics: dict[str, Any],
+        statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+        self.set_backend_entity(model)
+
+        # Get processed weight compression parameters ready for compression
+        all_weight_params, ratio_defining_params, group_size_values = self.get_weight_compression_parameters(
+            model, graph
+        )
+        return self.apply_with_parameters(
+            model,
+            graph,
+            dataset,
+            statistic_points,
+            all_weight_params,
+            ratio_defining_params,
+            group_size_values,
+        )
+
+    def apply_with_parameters(
+        self,
+        model,
+        graph,
+        dataset,
+        statistic_points,
+        all_weight_params,
+        ratio_defining_params,
+        group_size_values,
+    ):
+        # Collect statistics for the weights compression
+        statistics, statistic_points = self._collect_statistics_and_statistic_points(
+            model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
+        )
+        # Set weight compression configuration
+        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
+
+        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
+        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
@@ -1017,24 +1009,6 @@ class WeightCompression(Algorithm):
             },
             algo_name="weight_compression",
         )
-
-        return transformed_model
-
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> TModel:
-        self.set_backend_entity(model)
-        
-        # Get processed weight compression parameters ready for compression
-        all_weight_params, statistics = self.get_weight_compression_parameters(
-            model, graph, self._data_aware_mixed_precision, self._data_aware_compression, self._sensitivity_metric, statistic_points, dataset
-        )
-        transformed_model = self.apply_wc_algos(model, graph, all_weight_params, statistics, dataset)
-
         return transformed_model
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
@@ -1100,34 +1074,11 @@ class WeightCompression(Algorithm):
         matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
         return nodes_to_compress, matmul_input_to_output_nodes_map
 
-    def _collect_statistics(
-        self,
-        dataset: Dataset,
-        graph: NNCFGraph,
-        model: TModel,
-        statistic_points: StatisticPointsContainer,
-    ):
-        """
-        Creates statistics aggregator, registers all statistics specified for algorithm, and then collect them.
-
-        :param dataset: Dataset to collect values.
-        :param graph: Model graph.
-        :param model: Model for statistics collection.
-        :param statistic_points: Statistics points.
-        """
-        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-        statistics_aggregator.register_statistic_points(statistic_points)
-        statistics_aggregator.collect_statistics(model, graph)
-        return statistics_aggregator.statistic_points
-
     def get_statistic_points(
         self,
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
-        data_aware_compression: bool,
-        data_aware_mixed_precision: bool,
-        mixed_precision_algo: MixedPrecisionCriterion,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -1139,7 +1090,7 @@ class WeightCompression(Algorithm):
         """
         statistic_container = StatisticPointsContainer()
         # Statistics for data aware algorithms
-        if data_aware_compression:
+        if self._data_aware_compression:
             for node, output_port_id in nodes_and_port_ids:
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
@@ -1156,8 +1107,8 @@ class WeightCompression(Algorithm):
                     )
                 )
         # Statistics for mixed precision algorithm
-        if data_aware_mixed_precision:
-            mixed_precision_statistics = mixed_precision_algo.get_statistic_points(
+        if self._data_aware_mixed_precision:
+            mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
                 model, graph, nodes_and_port_ids
             )
             for points in mixed_precision_statistics.values():
