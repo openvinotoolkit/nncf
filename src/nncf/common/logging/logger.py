@@ -19,7 +19,7 @@ class NNCFLogger(logging.Logger):
     def __init__(self, name: str, level: int = logging.NOTSET):
         super().__init__(name, level)
 
-    @lru_cache(None)
+    @lru_cache(None)  # noqa: B019
     def _log_once(self, level: int, msg: str) -> None:
         self.log(level, msg)
 
