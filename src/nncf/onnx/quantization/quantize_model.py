@@ -32,9 +32,7 @@ from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.passes import apply_preprocess_passes
 from nncf.onnx.graph.passes import compress_quantize_weights_transformation
-from nncf.onnx.quantization.backend_parameters import BackendParameters
 from nncf.onnx.quantization.backend_parameters import get_external_data_dir
-from nncf.onnx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -47,6 +45,7 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.advanced_parameters import is_weight_compression_needed
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
@@ -215,7 +214,7 @@ def quantize_with_accuracy_control_impl(
         copied_parameters = AdvancedQuantizationParameters()
     else:
         copied_parameters = deepcopy(advanced_quantization_parameters)
-    copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
+    copied_parameters.compress_weights = False
 
     quantized_model = quantize_impl(
         model=model,

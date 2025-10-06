@@ -14,7 +14,6 @@ import onnx
 import nncf
 from nncf.onnx.graph.passes import apply_preprocess_passes
 from nncf.onnx.graph.passes import compress_quantize_weights_transformation
-from nncf.onnx.quantization.backend_parameters import BackendParameters
 from tests.onnx.common import ModelBuilder
 from tests.onnx.models import build_matmul_model_with_nop_cast
 
@@ -60,7 +59,7 @@ def test_compress_quantize_weights_transformation():
         model,
         calibration_dataset,
         advanced_parameters=nncf.AdvancedQuantizationParameters(
-            backend_params={BackendParameters.COMPRESS_WEIGHTS: False}
+            compress_weights=False,
         ),
     )
 
