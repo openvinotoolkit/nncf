@@ -527,11 +527,8 @@ class WeightCompression(Algorithm):
             primary_precision_weight_params = self._mixed_precision_algo.apply(
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
-        else:
-            primary_precision_weight_params = ratio_defining_params
-
-        for weight_param in primary_precision_weight_params:
-            weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
+            for weight_param in primary_precision_weight_params:
+                weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
 
         # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
@@ -769,6 +766,28 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
+    def _collect_statistics_and_statistic_points(
+        self, model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
+    ):
+            if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
+                return None, statistic_points
+            weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+            matmul_nodes_to_compress = [
+                wp.node_with_weight
+                for wp in weight_params
+                if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+            ]
+            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
+            if statistic_points is None:
+                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+                statistics_aggregator.register_statistic_points(statistic_points)
+                statistics_aggregator.collect_statistics(model, graph)
+                statistic_points = statistics_aggregator.statistic_points
+            return self._get_statistics_for_weights_compression(
+                matmul_input_to_output_nodes_map, statistic_points
+            ), statistic_points
+
     def get_weight_compression_parameters(
         self,
         model: TModel,
@@ -867,34 +886,18 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
+        # If no mixed precision has to be applied, then set the primary config for all ratio defining params.
+        if self._ratio == 1 or len(ratio_defining_params) == 0:
+            for weight_param in ratio_defining_params:
+                weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
+        
         # Print statistics
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
-        return all_weight_params, ratio_defining_params, group_size_values
+        return all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params
 
-    def _collect_statistics_and_statistic_points(
-        self, model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
-    ):
-        if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
-            return None, statistic_points
-        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-        matmul_nodes_to_compress = [
-            wp.node_with_weight
-            for wp in weight_params
-            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
-        ]
-        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
-        if statistic_points is None:
-            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-            statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-            statistics_aggregator.register_statistic_points(statistic_points)
-            statistics_aggregator.collect_statistics(model, graph)
-            statistic_points = statistics_aggregator.statistic_points
-        return self._get_statistics_for_weights_compression(
-            matmul_input_to_output_nodes_map, statistic_points
-        ), statistic_points
 
     def apply(
         self,
@@ -906,7 +909,7 @@ class WeightCompression(Algorithm):
         self.set_backend_entity(model)
 
         # Get processed weight compression parameters ready for compression
-        all_weight_params, ratio_defining_params, group_size_values = self.get_weight_compression_parameters(
+        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = self.get_weight_compression_parameters(
             model, graph
         )
         return self.apply_with_parameters(
@@ -917,6 +920,7 @@ class WeightCompression(Algorithm):
             all_weight_params,
             ratio_defining_params,
             group_size_values,
+            skipped_weight_params,
         )
 
     def apply_with_parameters(
@@ -928,6 +932,7 @@ class WeightCompression(Algorithm):
         all_weight_params,
         ratio_defining_params,
         group_size_values,
+        skipped_weight_params,
     ):
         # Collect statistics for the weights compression
         statistics, statistic_points = self._collect_statistics_and_statistic_points(
@@ -938,6 +943,11 @@ class WeightCompression(Algorithm):
 
         # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
         all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+
+        # Print statistics
+        nncf_logger.info(
+            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+        )
 
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)

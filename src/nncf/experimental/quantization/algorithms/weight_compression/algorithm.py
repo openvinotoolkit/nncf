@@ -29,7 +29,7 @@ class WeightsCompressionPT2E(Algorithm):
         scale_estimation: bool = False,
         gptq: bool = False,
         lora_correction: bool = False,
-        sensitivity_metric: nncf.SensitivityMetric = None,
+        sensitivity_metric: nncf.SensitivityMetric = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         compression_format: nncf.CompressionFormat = nncf.CompressionFormat.DQ,
         advanced_parameters: nncf.AdvancedCompressionParameters = None,
     ) -> torch.fx.GraphModule:
@@ -37,27 +37,34 @@ class WeightsCompressionPT2E(Algorithm):
 
         wc_config = self._quantizer.get_weight_compression_config()
 
-        mode = wc_config.get("mode", None)
-        ratio = wc_config.get("ratio", 1)
-        group_size = wc_config.get("group_size", 128)
-        all_layers = wc_config.get("all_layers", False)
-        backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
+        self._mode = wc_config.get("mode", None)
+        self._awq = awq
+        self._gptq = gptq
+        self._scale_estimation = scale_estimation
+        self._subset_size = subset_size
+        self._advanced_parameters = advanced_parameters
+        self._lora_correction = lora_correction
+        self._ratio = wc_config.get("ratio", 1)
+        self._group_size = wc_config.get("group_size", 128)
+        self._all_layers = wc_config.get("all_layers", False)
+        self._backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
         self._sensitivity_metric = sensitivity_metric
+        self._compression_format = compression_format
         self._algo = WeightCompression(
-            mode=mode,
-            ratio=ratio,
-            group_size=group_size,
-            ignored_scope=nncf.IgnoredScope(),  # only compress "nodes_to_compress"
-            all_layers=all_layers,
-            sensitivity_metric=self._sensitivity_metric or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
-            awq=awq,
-            subset_size=subset_size,
-            scale_estimation=scale_estimation,
-            gptq=gptq,
-            lora_correction=lora_correction,
-            backup_mode=backup_mode,
-            compression_format=compression_format,
-            advanced_parameters=advanced_parameters,
+            mode=self._mode,
+            ratio=self._ratio,
+            group_size=self._group_size,
+            ignored_scope=nncf.IgnoredScope(),  # This is already defined in the quantizer object
+            all_layers=self._all_layers,
+            sensitivity_metric=self._sensitivity_metric,
+            awq=self._awq,
+            subset_size=self._subset_size,
+            scale_estimation=self._scale_estimation,
+            gptq=self._gptq,
+            lora_correction=self._lora_correction,
+            backup_mode=self._backup_mode,
+            compression_format=self._compression_format,
+            advanced_parameters=self._advanced_parameters,
         )
 
     def available_backends(self) -> list[BackendType]:
@@ -70,30 +77,22 @@ class WeightsCompressionPT2E(Algorithm):
         statistic_points=None,
         dataset=None,
     ):
-        self._algo.set_backend_entity(model)  # Set algo backend
+        self._algo.set_backend_entity(model)
+        
+        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = self._quantizer.get_weight_compression_parameters(
+            model, graph
+        )
 
-        if self._sensitivity_metric is None:
-            # Default case. It means that it is not defined by the user in the API
-            # Hence, the annotation(Quantization parameters for all layers) from the quantizer will be used.
-            all_weight_params = self._quantizer.get_weight_compression_setup(
-                model, graph
-            )  # Get weight compression params FROM QUANTIZER
-            statistics, statistic_points = self._algo.collect_weight_compression_statistics(
-                model, graph, dataset, all_weight_params, statistic_points
-            )
-        else:
-            # Data Aware mixed precision is used. In this case, only nodes_to_compress is obtained from the quantizer
-            nodes_to_compress = self._quantizer.get_nodes_to_compress(
-                model, graph
-            )  # Get nodes to compress FROM QUANTIZER
-            all_weight_params, statistics = self._algo.get_weight_compression_parameters(
-                model, graph, nodes_to_compress, statistic_points, dataset
-            )
-
-        transformed_model = self._algo.apply_wc_algos(
-            model, graph, all_weight_params, statistics, dataset
-        )  # Apply the wc algos FROM ALGO
-        return transformed_model
+        return self._algo.apply_with_parameters(
+            model,
+            graph,
+            dataset,
+            statistic_points,
+            all_weight_params,
+            ratio_defining_params,
+            group_size_values,
+            skipped_weight_params,
+        )
 
     def get_statistic_points(self, model, graph: NNCFGraph) -> StatisticPointsContainer:
         return self._algo.get_statistic_points(model, graph)

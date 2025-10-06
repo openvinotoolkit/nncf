@@ -33,13 +33,10 @@ class OpenVINOQuantizerAdapter(Quantizer):
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         return self._quantizer.get_nncf_quantization_setup(model, nncf_graph)
 
-    def get_weight_compression_setup(
-        self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph
+    def get_weight_compression_parameters(
+        self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph,
     ) -> SingleConfigQuantizerSetup:
-        return self._quantizer.get_nncf_weight_compression_setup(model, nncf_graph)
-
-    def get_nodes_to_compress(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph):
-        return self._quantizer.get_nodes_to_compress(model, nncf_graph)
+        return self._quantizer.get_nncf_weight_compression_parameters(model, nncf_graph)
 
     def get_weight_compression_config(self) -> dict[str, Any]:
         return self._quantizer.weight_compression_configuration
