@@ -20,7 +20,6 @@ from timm.layers.config import set_fused_attn
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import get_model_size
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
 
 # Disable using aten::scaled_dot_product_attention
@@ -51,7 +50,6 @@ class ImageClassificationTimm(ImageClassificationBase):
             torch.onnx.export(
                 timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
             )
-            self.run_info.fp32_model_size = get_model_size(onnx_path)
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
