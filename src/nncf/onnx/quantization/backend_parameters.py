@@ -19,9 +19,6 @@ class BackendParameters:
     """
     :param EXTERNAL_DATA_DIR: An absolute path to the directory where the external data
         files are stored. All external data files must be located in the same folder.
-    :param COMPRESS_WEIGHTS: If `True` compresses constant quantized weights by folding
-        `QuantizeLinear` nodes into pre-quantized initializers. If `False`, this transformation
-        is skipped.
     """
 
     EXTERNAL_DATA_DIR = "external_data_dir"
