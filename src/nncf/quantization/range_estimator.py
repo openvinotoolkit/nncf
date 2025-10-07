@@ -53,8 +53,8 @@ class AggregatorType(Enum):
     :param MEDIAN: The median value of a set of tensors.
     :param MEAN_NO_OUTLIERS: The mean value of a set of tensors with outliers removed.
     :param MEDIAN_NO_OUTLIERS: The median value of a set of tensors with outliers removed.
-    :param HISTOGRAM: Creates a histogram of the incoming set of tensors and
-        searches the distribution in the histogram for optimal minimum and maximum values.
+    :param HISTOGRAM: The minimum and maximum values determined by minimization
+        of a quantization error on a histogram of the input tensor distribution.
     """
 
     MEAN = "mean"
