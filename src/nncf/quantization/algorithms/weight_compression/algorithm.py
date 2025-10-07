@@ -491,6 +491,24 @@ class WeightCompression(Algorithm):
 
         return ratio_defining_params
 
+    def _get_backup_config(self, weight_dtype: TensorDataType) -> WeightCompressionConfig:
+        """
+        Returns the backup weight compression configuration based on the algorithm's backup mode.
+
+        :param weight_dtype: Data type of the weight tensor.
+        :return: A WeightCompressionConfig object for the backup precision, or None if backup is disabled or unsupported.
+        """
+        if self._backup_mode == BackupMode.NONE:
+            return None
+        mode = (
+            CompressWeightsMode.INT8_ASYM
+            if self._backup_mode == BackupMode.INT8_ASYM
+            else CompressWeightsMode.INT8_SYM
+        )
+        if not self.is_weight_compression_supported(weight_dtype, mode):
+            return None
+        return WeightCompressionConfig(mode=mode)
+
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
 
@@ -528,7 +546,8 @@ class WeightCompression(Algorithm):
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
             for weight_param in ratio_defining_params:
-                # This weight should be in lower precision according to mixed precision. Let it be
+                # We already set these in primary precision. Mixed precision algo returns
+                # layers which should be in primary precision. Let it be
                 if weight_param in primary_precision_weight_params:
                     continue
                 # Set all layers other than the ones returned by mixed precision to backup precision
@@ -770,41 +789,46 @@ class WeightCompression(Algorithm):
         return is_supported_dtype and not no_bit_reduction
 
     def _collect_statistics_and_statistic_points(
-        self, model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: StatisticPointsContainer,
+        dataset: Dataset,
+        ratio_defining_params: list[WeightCompressionParameters],
+        all_weight_params: list[WeightCompressionParameters],
     ):
-            if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
-                return None, statistic_points
-            weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-            matmul_nodes_to_compress = [
-                wp.node_with_weight
-                for wp in weight_params
-                if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
-            ]
-            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
-            if statistic_points is None:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-            return self._get_statistics_for_weights_compression(
-                matmul_input_to_output_nodes_map, statistic_points
-            ), statistic_points
-    
-    def _get_backup_config(self, weight_dtype: TensorDataType):
-        if self._backup_mode == BackupMode.NONE:
-            return None
-        mode = (
-            CompressWeightsMode.INT8_ASYM
-            if self._backup_mode == BackupMode.INT8_ASYM
-            else CompressWeightsMode.INT8_SYM
-        )
-        if not self.is_weight_compression_supported(weight_dtype, mode):
-            return None
-        return WeightCompressionConfig(mode=mode)
+        """
+        Collects and computes statistics required for weight compression.
+
+        :param model: Backend-specific model instance.
+        :param graph: Corresponding NNCFGraph of the model.
+        :param statistic_points: Container with pre-collected statistics, if available.
+        :param dataset: Dataset used for collecting statistics when not provided.
+        :param ratio_defining_params: List of parameters defining compression ratios.
+        :param all_weight_params: List of all weight compression parameters.
+        :return: A tuple containing collected statistics for weight compression and the updated statistic_points.
+        """
+        if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
+            return None, statistic_points
+        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+        matmul_nodes_to_compress = [
+            wp.node_with_weight
+            for wp in weight_params
+            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+        ]
+        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
+        if statistic_points is None:
+            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
+        return self._get_statistics_for_weights_compression(
+            matmul_input_to_output_nodes_map, statistic_points
+        ), statistic_points
 
     def get_weight_compression_parameters(
         self,
         model: TModel,
         graph: NNCFGraph,
-    ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
+    ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], dict[str, int], list[WeightCompressionParameters]]:
         """
         Generates a list of weight compression parameters based on the Weight Compression algorithm
         configuration. Determines the appropriate quantization parameters for each node eligible for
@@ -814,11 +838,10 @@ class WeightCompression(Algorithm):
 
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
-        :param statistic_points: Optional pre-collected statistic points.
-        :param dataset: Optional dataset for statistics collection.
-        :return: A tuple consisting of a list of weight compression parameters, based on the Weight
-            Compression algorithm configuration, and a mapping of target node names to the
-            collected statistics.
+        :return: A tuple consisting of a list of all weight compression parameters, based on the Weight
+            Compression algorithm configuration, list of ratio defining parameters(weights that are used 
+            for ratio calculation between primary and backup precisions), A dictionary mapping weight 
+            names to their group size values and list of weight parameters to skip.
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
 
@@ -924,14 +947,14 @@ class WeightCompression(Algorithm):
 
     def apply_with_parameters(
         self,
-        model,
-        graph,
-        dataset,
-        statistic_points,
-        all_weight_params,
-        ratio_defining_params,
-        group_size_values,
-        skipped_weight_params,
+        model: TModel,
+        graph: NNCFGraph,
+        dataset: Dataset,
+        statistic_points: StatisticPointsContainer,
+        all_weight_params: list[WeightCompressionParameters],
+        ratio_defining_params: list[WeightCompressionParameters],
+        group_size_values: dict[str, int],
+        skipped_weight_params: list[WeightCompressionParameters],
     ):
         # Collect statistics for the weights compression
         statistics, statistic_points = self._collect_statistics_and_statistic_points(
