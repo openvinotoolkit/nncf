@@ -783,10 +783,7 @@ class WeightCompression(Algorithm):
             matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
             if statistic_points is None:
                 statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-                statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-                statistics_aggregator.register_statistic_points(statistic_points)
-                statistics_aggregator.collect_statistics(model, graph)
-                statistic_points = statistics_aggregator.statistic_points
+                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             return self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points
             ), statistic_points
@@ -1085,6 +1082,26 @@ class WeightCompression(Algorithm):
         ]
         matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
         return nodes_to_compress, matmul_input_to_output_nodes_map
+    
+    def _collect_statistics(
+        self,
+        dataset: Dataset,
+        graph: NNCFGraph,
+        model: TModel,
+        statistic_points: StatisticPointsContainer,
+    ):
+        """
+        Creates statistics aggregator, registers all statistics specified for algorithm, and then collect them.
+
+        :param dataset: Dataset to collect values.
+        :param graph: Model graph.
+        :param model: Model for statistics collection.
+        :param statistic_points: Statistics points.
+        """
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        statistics_aggregator.register_statistic_points(statistic_points)
+        statistics_aggregator.collect_statistics(model, graph)
+        return statistics_aggregator.statistic_points
 
     def get_statistic_points(
         self,
