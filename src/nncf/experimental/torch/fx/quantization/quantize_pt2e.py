@@ -27,7 +27,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
-from nncf.experimental.quantization.algorithms.weight_compression.algorithm import ExperimentalWeightsCompression
+from nncf.experimental.quantization.algorithms.weight_compression.algorithm import WeightsCompression
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
@@ -200,7 +200,7 @@ def compress_pt2e(
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
-    quantization_algorithm = ExperimentalWeightsCompression(
+    quantization_algorithm = WeightsCompression(
         quantizer=quantizer,
         awq=awq,
         subset_size=subset_size,
