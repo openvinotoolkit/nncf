@@ -34,7 +34,9 @@ class OpenVINOQuantizerAdapter(Quantizer):
         return self._quantizer.get_nncf_quantization_setup(model, nncf_graph)
 
     def get_weight_compression_parameters(
-        self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph,
+        self,
+        model: torch.fx.GraphModule,
+        nncf_graph: NNCFGraph,
     ) -> SingleConfigQuantizerSetup:
         return self._quantizer.get_nncf_weight_compression_parameters(model, nncf_graph)
 

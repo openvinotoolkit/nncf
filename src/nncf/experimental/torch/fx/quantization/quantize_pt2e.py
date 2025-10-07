@@ -22,9 +22,9 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
+from nncf import AdvancedCompressionParameters
 from nncf import Dataset
 from nncf import SensitivityMetric
-from nncf import AdvancedCompressionParameters
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api

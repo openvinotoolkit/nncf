@@ -9,19 +9,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Iterable, Optional
+
 import torch
 
 import nncf
-from nncf import SensitivityMetric
-from nncf import CompressionFormat
 from nncf import AdvancedCompressionParameters
+from nncf import CompressionFormat
 from nncf import Dataset
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf import SensitivityMetric
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.experimental.quantization.quantizer import Quantizer
+from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 
 
@@ -103,9 +105,9 @@ class WeightsCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> torch.fx.GraphModule:
         self._algo.set_backend_entity(model)
-        
-        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = self._quantizer.get_weight_compression_parameters(
-            model, graph
+
+        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = (
+            self._quantizer.get_weight_compression_parameters(model, graph)
         )
 
         return self._algo.apply_with_parameters(
@@ -119,7 +121,12 @@ class WeightsCompression(Algorithm):
             skipped_weight_params,
         )
 
-    def get_statistic_points(self, model: torch.fx.GraphModule, graph: NNCFGraph, nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],) -> StatisticPointsContainer:
+    def get_statistic_points(
+        self,
+        model: torch.fx.GraphModule,
+        graph: NNCFGraph,
+        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
+    ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 

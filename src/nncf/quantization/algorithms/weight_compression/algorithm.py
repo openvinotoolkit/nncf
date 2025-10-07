@@ -496,14 +496,13 @@ class WeightCompression(Algorithm):
         Returns the backup weight compression configuration based on the algorithm's backup mode.
 
         :param weight_dtype: Data type of the weight tensor.
-        :return: A WeightCompressionConfig object for the backup precision, or None if backup is disabled or unsupported.
+        :return: A WeightCompressionConfig object for the backup precision, or None if backup is
+        disabled or unsupported.
         """
         if self._backup_mode == BackupMode.NONE:
             return None
         mode = (
-            CompressWeightsMode.INT8_ASYM
-            if self._backup_mode == BackupMode.INT8_ASYM
-            else CompressWeightsMode.INT8_SYM
+            CompressWeightsMode.INT8_ASYM if self._backup_mode == BackupMode.INT8_ASYM else CompressWeightsMode.INT8_SYM
         )
         if not self.is_weight_compression_supported(weight_dtype, mode):
             return None
@@ -828,7 +827,12 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-    ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], dict[str, int], list[WeightCompressionParameters]]:
+    ) -> tuple[
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+        dict[str, int],
+        list[WeightCompressionParameters],
+    ]:
         """
         Generates a list of weight compression parameters based on the Weight Compression algorithm
         configuration. Determines the appropriate quantization parameters for each node eligible for
@@ -839,8 +843,8 @@ class WeightCompression(Algorithm):
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
         :return: A tuple consisting of a list of all weight compression parameters, based on the Weight
-            Compression algorithm configuration, list of ratio defining parameters(weights that are used 
-            for ratio calculation between primary and backup precisions), A dictionary mapping weight 
+            Compression algorithm configuration, list of ratio defining parameters(weights that are used
+            for ratio calculation between primary and backup precisions), A dictionary mapping weight
             names to their group size values and list of weight parameters to skip.
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
@@ -920,7 +924,6 @@ class WeightCompression(Algorithm):
 
         return all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params
 
-
     def apply(
         self,
         model: TModel,
@@ -931,8 +934,8 @@ class WeightCompression(Algorithm):
         self.set_backend_entity(model)
 
         # Get processed weight compression parameters ready for compression
-        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = self.get_weight_compression_parameters(
-            model, graph
+        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = (
+            self.get_weight_compression_parameters(model, graph)
         )
         return self.apply_with_parameters(
             model,
@@ -1105,7 +1108,7 @@ class WeightCompression(Algorithm):
         ]
         matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
         return nodes_to_compress, matmul_input_to_output_nodes_map
-    
+
     def _collect_statistics(
         self,
         dataset: Dataset,
