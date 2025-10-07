@@ -27,7 +27,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
-from nncf.experimental.quantization.algorithms.weight_compression.algorithm import WeightsCompressionPT2E
+from nncf.experimental.quantization.algorithms.weight_compression.algorithm import ExperimentalWeightsCompression
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
@@ -192,7 +192,7 @@ def compress_pt2e(
         preserve the accuracy of the model, the more sensitive layers receive a higher precision.
     :param advanced_parameters: Advanced parameters for algorithms in the compression pipeline.
     """
-    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_setup"):
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_parameters"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
         compression_format = nncf.CompressionFormat.DQ
     else:
@@ -200,7 +200,7 @@ def compress_pt2e(
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
-    quantization_algorithm = WeightsCompressionPT2E(
+    quantization_algorithm = ExperimentalWeightsCompression(
         quantizer=quantizer,
         awq=awq,
         subset_size=subset_size,

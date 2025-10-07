@@ -20,7 +20,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 
 
-class WeightsCompressionPT2E(Algorithm):
+class ExperimentalWeightsCompression(Algorithm):
     def __init__(
         self,
         quantizer,
