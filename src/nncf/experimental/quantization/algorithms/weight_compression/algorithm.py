@@ -119,5 +119,13 @@ class WeightsCompression(Algorithm):
             skipped_weight_params,
         )
 
-    def get_statistic_points(self, model: torch.fx.GraphModule, graph: NNCFGraph) -> StatisticPointsContainer:
-        return self._algo.get_statistic_points(model, graph)
+    def get_statistic_points(self, model: torch.fx.GraphModule, graph: NNCFGraph, nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],) -> StatisticPointsContainer:
+        """
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
+        """
+        return self._algo.get_statistic_points(model, graph, nodes_and_port_ids)
