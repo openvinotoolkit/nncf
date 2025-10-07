@@ -913,7 +913,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             for storage_key, call_hook_list_info in storage.items():
                 compression_module = getattr(self, module_type_name)[storage_key]
                 target_points = []
-                for target_type, target_node_name, _, _, input_port_id in call_hook_list_info:
+                for target_type, target_node_name, priority, fn, input_port_id in call_hook_list_info:  # noqa: B007
                     target_points.append(PTTargetPoint(target_type, target_node_name, input_port_id=input_port_id))
 
                 if module_type_name == EXTERNAL_QUANTIZERS_STORAGE_NAME:
