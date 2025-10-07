@@ -129,7 +129,7 @@ def _(
 
         try:
             return tf.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
             if axis is not None:
                 if ord == 2:
                     squared = tf.square(a)
@@ -143,7 +143,7 @@ def _(
                     return tf.reduce_min(tf.abs(a), axis=axis, keepdims=keepdims)
 
             msg = f"Unsupported combination of ord={ord} and axis={axis}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
 
 @linalg.cholesky.register
@@ -185,7 +185,7 @@ def _(a: tf.Tensor) -> tf.Tensor:
 def _(a: tf.Tensor, b: tf.Tensor, driver: Optional[str] = None) -> tf.Tensor:
     with tf.device(a.device):
         if driver is not None:
-            warnings.warn("Driver specifying is not supported in TensorFlow lstsq method")
+            warnings.warn("Driver specifying is not supported in TensorFlow lstsq method")  # noqa: B028
         if tf.rank(b) == 1:
             b = tf.expand_dims(b, axis=1)
 

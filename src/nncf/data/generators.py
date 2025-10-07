@@ -49,9 +49,9 @@ def generate_text_data(
     """
     try:
         import torch
-    except ImportError:
+    except ImportError as exc:
         msg = "torch is required in order to generate text data: `pip install torch`."
-        raise nncf.ModuleNotFoundError(msg)
+        raise nncf.ModuleNotFoundError(msg) from exc
 
     try:
         from transformers import GenerationMixin  # type: ignore
@@ -59,9 +59,9 @@ def generate_text_data(
         from transformers.utils import logging  # type: ignore
 
         logging.set_verbosity_error()
-    except ImportError:
+    except ImportError as exc:
         msg = "transformers is required in order to generate text data: `pip install transformers`."
-        raise nncf.ModuleNotFoundError(msg)
+        raise nncf.ModuleNotFoundError(msg) from exc
 
     if not isinstance(model, GenerationMixin):
         msg = "Model should be instance of the `transformers.GenerationMixin`."

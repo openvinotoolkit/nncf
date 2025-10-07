@@ -11,7 +11,7 @@
 from nncf.common.graph import NNCFNodeName
 
 
-class PrunedLayerInfoBase:
+class PrunedLayerInfoBase:  # noqa: B903
     def __init__(self, node_name: NNCFNodeName, node_id: int, is_depthwise: bool):
         self.node_name = node_name
         self.nncf_node_id = node_id

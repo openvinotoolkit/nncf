@@ -26,15 +26,18 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
@@ -154,6 +157,14 @@ class TemplateTestPTQParams:
         assert MeanAggregator in aggrs
         assert aggrs[0].__class__ == aggrs[1].__class__
 
+    def check_is_histogram_statistic_collector(self, tensor_collector: TensorCollector):
+        reducers = [r.__class__ for r in tensor_collector.reducers]
+        assert len(reducers) == 1
+        assert RawReducer in reducers
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 1
+        assert HistogramAggregator in aggrs
+
     @abstractmethod
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         pass
@@ -193,32 +204,71 @@ class TemplateTestPTQParams:
     def get_backend_tensor(self, value):
         pass
 
-    @pytest.mark.parametrize(
-        "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX, None]
-    )
+    RANGE_ESTIMATOR_TEST_PARAMS = [
+        RangeEstimatorParametersSet.MINMAX,
+        RangeEstimatorParametersSet.MEAN_MINMAX,
+        None,
+        RangeEstimatorParametersSet.HISTOGRAM,
+    ]
+
+    @pytest.mark.parametrize("range_estimator_params", RANGE_ESTIMATOR_TEST_PARAMS)
     def test_range_estimator_per_tensor(self, test_params, range_estimator_params):
+        for stat_point_, tensor_collector in self._get_stat_points(
+            test_params, range_estimator_params, "test_range_estimator_per_tensor"
+        ):
+            if stat_point_.target_point.is_weight_target_point():
+                # default tensor_collector for weights
+                self.check_is_min_max_statistic_collector(tensor_collector)
+                continue
+            if range_estimator_params in [None, RangeEstimatorParametersSet.MEAN_MINMAX]:
+                # default tensor_collector for per-tensor
+                self.check_is_mean_min_max_statistic_collector(tensor_collector)
+            elif range_estimator_params == RangeEstimatorParametersSet.MINMAX:
+                self.check_is_min_max_statistic_collector(tensor_collector)
+            elif range_estimator_params == RangeEstimatorParametersSet.HISTOGRAM:
+                self.check_is_histogram_statistic_collector(tensor_collector)
+
+    @pytest.mark.parametrize("range_estimator_params", RANGE_ESTIMATOR_TEST_PARAMS)
+    def test_range_estimator_per_channel(self, test_params, range_estimator_params):
+        for stat_point_, tensor_collector in self._get_stat_points(
+            test_params, range_estimator_params, "test_range_estimator_per_channel"
+        ):
+            if stat_point_.target_point.is_weight_target_point():
+                # default tensor_collector for weights
+                self.check_is_min_max_statistic_collector(tensor_collector)
+                continue
+            if range_estimator_params in [
+                None,
+                RangeEstimatorParametersSet.MINMAX,
+                RangeEstimatorParametersSet.HISTOGRAM,
+            ]:
+                # default tensor_collector for per-tensor
+                self.check_is_min_max_statistic_collector(tensor_collector)
+            elif range_estimator_params == RangeEstimatorParametersSet.MEAN_MINMAX:
+                self.check_is_mean_min_max_statistic_collector(tensor_collector)
+
+    def _get_stat_points(self, test_params, range_estimator_params, test_params_key):
         min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)
         min_max_algo._backend_entity = self.get_algo_backend()
         assert min_max_algo._range_estimator_params[QuantizerGroup.ACTIVATIONS] == range_estimator_params
 
-        params = test_params["test_range_estimator_per_tensor"]
+        params = test_params[test_params_key]
         stat_points = min_max_algo.get_statistic_points(params["model"], params["nncf_graph"])
         assert len(stat_points) == params["stat_points_num"]
-
         for stat_point in stat_points.values():
             for stat_point_ in stat_point:
                 for tensor_collector in stat_point_.algorithm_to_tensor_collectors[min_max_algo._algorithm_key]:
-                    if stat_point_.target_point.is_weight_target_point():
-                        # default tensor_collector for weights
-                        self.check_is_min_max_statistic_collector(tensor_collector)
-                        continue
-                    if range_estimator_params is None:
-                        # default tensor_collector for per-tensor
-                        self.check_is_mean_min_max_statistic_collector(tensor_collector)
-                    if range_estimator_params == RangeEstimatorParametersSet.MINMAX:
-                        self.check_is_min_max_statistic_collector(tensor_collector)
-                    elif range_estimator_params == RangeEstimatorParametersSet.MEAN_MINMAX:
-                        self.check_is_mean_min_max_statistic_collector(tensor_collector)
+                    yield stat_point_, tensor_collector
+
+    def test_unsupported_params(self, test_params):
+        range_estimator_params = deepcopy(RangeEstimatorParametersSet.HISTOGRAM)
+        range_estimator_params.min.aggregator_type = AggregatorType.MAX
+
+        params = test_params["test_range_estimator_per_tensor"]
+        min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)
+        min_max_algo._backend_entity = self.get_algo_backend()
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            min_max_algo.get_statistic_points(params["model"], params["nncf_graph"])
 
     @pytest.mark.parametrize("quantize_outputs", [False, True])
     def test_quantize_outputs(self, test_params, quantize_outputs):

@@ -96,8 +96,8 @@ def load_statistics(dir_path: Path, backend: BackendType) -> dict[str, dict[str,
             statistics_file = dir_path / file_name
             statistics[original_name] = fns.io.load_file(statistics_file, backend=tensor_backend)  # no device support
         return statistics
-    except Exception as e:
-        raise nncf.StatisticsCacheError(str(e))
+    except Exception as exc:
+        raise nncf.StatisticsCacheError(str(exc)) from None
 
 
 def dump_statistics(

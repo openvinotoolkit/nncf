@@ -47,6 +47,26 @@ def backend(a: Tensor) -> TensorBackend:
 
 
 @tensor_dispatcher
+def bincount(a: Tensor, *, weights: Optional[Tensor], minlength: int = 0) -> Tensor:
+    """
+    Count number of occurrences of each value in array of non-negative ints.
+
+    The number of bins (of size 1) is one larger than the largest value in x.
+    If minlength is specified, there will be at least this number of bins in the output array
+    (though it will be longer if necessary, depending on the contents of x).
+    Each bin gives the number of occurrences of its index value in x.
+    If weights is specified the input array is weighted by it, i.e.
+    if a value n is found at position i, out[n] += weight[i] instead of out[n] += 1.
+
+    :param a: Input array.
+    :param weight: Weights, array of the same shape as a.
+    :param minlength: A minimum number of bins for the output array.
+    :return: The result of binning the input array.
+        The length of out is equal to max(np.amax(x)+1, minlength).
+    """
+
+
+@tensor_dispatcher
 def squeeze(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
     """
     Remove axes of length one from a.
@@ -128,6 +148,20 @@ def dtype(a: Tensor) -> TensorDataType:
 
 
 @tensor_dispatcher
+def repeat(a: Tensor, repeats: Union[int, Tensor], *, axis: Optional[int] = None) -> Tensor:
+    """
+    Repeats elements of a tensor along a specified axis.
+
+    :param a: Input tensor.
+    :param repeats: The number of repetitions for each element.
+        repeats is broadcasted to fit the shape of the given axis.
+    :param axis: The axis along which to repeat values.
+        By default, use the flattened input array, and return a flat output array.
+    :return: A tensor with repeated elements.
+    """
+
+
+@tensor_dispatcher
 def reshape(a: Tensor, shape: T_SHAPE) -> Tensor:
     """
     Gives a new shape to a tensor without changing its data.
@@ -198,6 +232,23 @@ def count_nonzero(a: Tensor, axis: T_AXIS = None) -> Tensor:
     :param axis: Axis or tuple of axes along which to count non-zeros.
     :return: Number of non-zero values in the tensor along a given axis.
       Otherwise, the total number of non-zero values in the tensor is returned.
+    """
+
+
+@tensor_dispatcher
+def histogram(
+    a: Tensor,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+) -> Tensor:
+    """
+    Computes a histogram of the values in a tensor.
+
+    :param a:  The input tensor.
+    :param bins: Defines the number of equal-width bins.
+    :param range: Defines the range of the bins. If not provided, range is simply (a.min(), a.max())
+    :return: A 1D Tensor containing the values of the histogram.
     """
 
 
@@ -354,6 +405,16 @@ def median(a: Tensor, axis: T_AXIS = None, keepdims: bool = False) -> Tensor:
 
 
 @tensor_dispatcher
+def floor(a: Tensor) -> Tensor:
+    """
+    Return the floor of the input, element-wise.
+
+    :param a: The input tensor.
+    :return: The floor of the input, element-wise.
+    """
+
+
+@tensor_dispatcher
 def round(a: Tensor, decimals: int = 0) -> Tensor:
     """
     Evenly round to the given number of decimals.
@@ -487,6 +548,19 @@ def item(a: Tensor) -> Union[int, float, bool]:
 
     :param a: Tensor.
     :return: The value of this tensor as a standard Python number
+    """
+
+
+@tensor_dispatcher
+def cumsum(a: Tensor, axis: int) -> Tensor:
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    :param a: The input tensor.
+    :param axis: Axis along which the cumulative sum is computed.
+        The default (None) is to compute the cumsum over the flattened array.
+    :return: A new tensor holding the result. The result has the same size as a,
+        and the same shape as a if axis is not None or a is a 1-d array.
     """
 
 
@@ -726,6 +800,31 @@ def eye(
     :return: A tensor where all elements are equal to zero, except for the k-th diagonal, whose values are equal to one.
     """
     return Tensor(get_numeric_backend_fn("eye", backend)(n, m, dtype=dtype, device=device))
+
+
+def linspace(
+    start: float,
+    stop: float,
+    num: int,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a tensor filled with evenly spaced numbers over a specified interval.
+
+    :param start: The starting value for the set of points.
+    :param end: The ending value for the set of points.
+    :param num: Number of samples to generate. Must be non-negative.
+    :param backend: The backend type for which the tensor is required.
+    :param dtype: The data type of the returned tensor If dtype is not given, infer the data type
+        from the other input arguments.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor with num equally spaced samples in the closed interval [start, stop].
+    """
+    return Tensor(get_numeric_backend_fn("linspace", backend)(start, stop, num, dtype=dtype, device=device))
 
 
 def arange(

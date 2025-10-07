@@ -306,7 +306,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 pq.affected_edges.update(prop_quantizer.affected_edges)
                 if prop_quantizer in pq.downstream_propagating_quantizers:
                     pq.downstream_propagating_quantizers.remove(prop_quantizer)
-                for from_node_key, to_node_key in prop_quantizer.affected_edges:
+                for _, to_node_key in prop_quantizer.affected_edges:
                     to_node = self.nodes[to_node_key]
                     to_node_type = to_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
                     if to_node_type in [

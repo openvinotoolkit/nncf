@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
 from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
@@ -595,7 +594,7 @@ def compress_weights(
             mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
             and dataset is not None
         ):
-            warnings.warn("data-aware methods are not supported in INT8 modes. dataset is set to None")
+            nncf_logger.warning("data-aware methods are not supported in INT8 modes. dataset is set to None")
             dataset = None
 
         compression_weights_impl = fx_compression_weights_impl

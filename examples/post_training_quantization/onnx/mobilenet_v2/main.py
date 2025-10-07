@@ -76,6 +76,16 @@ def run_benchmark(path_to_model: Path, shape: list[int]) -> float:
     return float(match.group(1))
 
 
+def get_model_size(path: Path, m_type: str = "Mb") -> float:
+    model_size = path.stat().st_size
+    for t in ["bytes", "Kb", "Mb"]:
+        if m_type == t:
+            break
+        model_size /= 1024
+    print(f"Model size:          {model_size:.3f} Mb")
+    return model_size
+
+
 ###############################################################################
 # Create an ONNX model and dataset
 
@@ -134,10 +144,12 @@ onnx_quantized_model = nncf.quantize(model, calibration_dataset)
 fp32_model_path = ROOT / "mobilenet_v2_fp32.onnx"
 onnx.save(model, fp32_model_path)
 print(f"[1/7] Save FP32 model: {fp32_model_path}")
+fp32_model_size = get_model_size(fp32_model_path)
 
 int8_model_path = ROOT / "mobilenet_v2_int8.onnx"
 onnx.save(onnx_quantized_model, int8_model_path)
 print(f"[2/7] Save INT8 model: {int8_model_path}")
+int8_model_size = get_model_size(int8_model_path)
 
 print("[3/7] Benchmark FP32 model:")
 fp32_fps = run_benchmark(fp32_model_path, shape=[1, 3, 224, 224])
@@ -154,5 +166,6 @@ print(f"Accuracy @ top1: {int8_top1:.3f}")
 
 print("[7/7] Report:")
 print(f"Accuracy drop: {fp32_top1 - int8_top1:.3f}")
+print(f"Model compression rate: {fp32_model_size / int8_model_size:.3f}")
 # https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
 print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")
