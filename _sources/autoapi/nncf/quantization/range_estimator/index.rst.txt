@@ -31,6 +31,7 @@ Classes
    :param QUANTILE: A specific quantile value in a tensor.
    :param ABS_QUANTILE: A specific quantile value in the absolute tensor.
    :param MEAN: The mean value of a tensor.
+   :param RAW: Tensor values as they are.
 
 
 .. py:class:: AggregatorType
@@ -46,6 +47,8 @@ Classes
    :param MEDIAN: The median value of a set of tensors.
    :param MEAN_NO_OUTLIERS: The mean value of a set of tensors with outliers removed.
    :param MEDIAN_NO_OUTLIERS: The median value of a set of tensors with outliers removed.
+   :param HISTOGRAM: The minimum and maximum values determined by minimization
+       of a quantization error on a histogram of the input tensor distribution.
 
 
 .. py:class:: StatisticsCollectorParameters
