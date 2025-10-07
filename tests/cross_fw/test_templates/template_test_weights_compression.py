@@ -175,6 +175,13 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_not_supported_modes() -> list[CompressWeightsMode]:
+        """
+        Returns a list of not supported weight compression algorithms.
+        """
+
+    @staticmethod
+    @abstractmethod
     def wrap_model(model, data) -> CompressionParams:
         """
         Returns model wrapped with backend specific graph.
@@ -351,6 +358,11 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_num_mx_group_sizes(model: TModel) -> dict[int, int]:
+        "Returns number of int4 nodes for each group size."
+
+    @staticmethod
+    @abstractmethod
     def get_ignored_scope_name() -> str:
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
@@ -505,13 +517,64 @@ class TemplateWeightCompression(ABC):
             "fallback_mode",
             "min_adjusted_group_size",
             "ref_num_group_sizes",
+            "mode",
         ],
         [
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 0.5, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 2}),
+            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}, CompressWeightsMode.INT4_SYM),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.IGNORE,
+                None,
+                {32: 1},
+                CompressWeightsMode.INT4_SYM,
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                16,
+                {16: 3, 32: 1},
+                CompressWeightsMode.INT4_SYM,
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                32,
+                {32: 1},
+                CompressWeightsMode.INT4_SYM,
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                0.5,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                16,
+                {16: 2},
+                CompressWeightsMode.INT4_SYM,
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                32,
+                {32: 1},
+                CompressWeightsMode.MXFP4,
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                32,
+                {32: 1},
+                CompressWeightsMode.MXFP8_E4M3,
+            ),
         ],
     )
     def test_group_size_fallback_modes(
@@ -522,13 +585,17 @@ class TemplateWeightCompression(ABC):
         fallback_mode,
         min_adjusted_group_size,
         ref_num_group_sizes,
+        mode,
     ):
+        if mode in self.get_not_supported_modes():
+            pytest.skip("Skipping test for not supported modes")
+
         model = self.get_different_channel_size_model(model_channel_sizes)
         input_example = self.to_tensor(np.ones([1, model_channel_sizes[0], model_channel_sizes[0]], dtype=np.float32))
         dataset = Dataset([input_example], self.get_transform_func())
         kwargs = dict(
             model=model,
-            mode=CompressWeightsMode.INT4_SYM,
+            mode=mode,
             ratio=ratio,
             all_layers=True,
             group_size=group_size,
@@ -542,7 +609,12 @@ class TemplateWeightCompression(ABC):
 
         model = compress_weights(**kwargs)
 
-        num_group_sizes = self.get_num_int4_group_sizes(model)
+        num_group_sizes = {}
+        if mode == CompressWeightsMode.INT4_SYM:
+            num_group_sizes = self.get_num_int4_group_sizes(model)
+        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+            num_group_sizes = self.get_num_mx_group_sizes(model)
+
         assert ref_num_group_sizes == num_group_sizes, (
             f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
         )

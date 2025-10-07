@@ -432,6 +432,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return ["gptq", "lora_correction"]
 
     @staticmethod
+    def get_not_supported_modes() -> list[CompressWeightsMode]:
+        return [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]
+
+    @staticmethod
     def wrap_model(model: onnx.ModelProto, data: Any) -> onnx.ModelProto:
         return model
 
@@ -603,6 +607,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                 shape = list(reversed(i.dims))
                 num[shape[-1]] += 1
         return num
+
+    @staticmethod
+    def get_num_mx_group_sizes(model: onnx.ModelProto) -> dict[int, int]:
+        return {}
 
     @staticmethod
     def get_ignored_scope_name() -> str:
