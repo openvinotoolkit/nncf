@@ -13,6 +13,10 @@ import torch
 
 import nncf
 from nncf import SensitivityMetric
+from nncf import CompressionFormat
+from nncf import AdvancedCompressionParameters
+from nncf import Dataset
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -37,9 +41,9 @@ class WeightsCompression(Algorithm):
         scale_estimation: bool = False,
         gptq: bool = False,
         lora_correction: bool = False,
-        sensitivity_metric: nncf.SensitivityMetric = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
-        compression_format: nncf.CompressionFormat = nncf.CompressionFormat.DQ,
-        advanced_parameters: nncf.AdvancedCompressionParameters = None,
+        sensitivity_metric: SensitivityMetric = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
+        advanced_parameters: AdvancedCompressionParameters = None,
     ) -> torch.fx.GraphModule:
         """
         :param quantizer: Quantizer to use in WeightCompression algorithm.
@@ -95,9 +99,9 @@ class WeightsCompression(Algorithm):
         self,
         model: torch.fx.GraphModule,
         graph: NNCFGraph,
-        statistic_points=None,
-        dataset=None,
-    ):
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> torch.fx.GraphModule:
         self._algo.set_backend_entity(model)
         
         all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = self._quantizer.get_weight_compression_parameters(
@@ -115,5 +119,5 @@ class WeightsCompression(Algorithm):
             skipped_weight_params,
         )
 
-    def get_statistic_points(self, model, graph: NNCFGraph) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: torch.fx.GraphModule, graph: NNCFGraph) -> StatisticPointsContainer:
         return self._algo.get_statistic_points(model, graph)
