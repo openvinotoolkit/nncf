@@ -29,6 +29,7 @@ class StatisticsType(Enum):
     :param QUANTILE: A specific quantile value in a tensor.
     :param ABS_QUANTILE: A specific quantile value in the absolute tensor.
     :param MEAN: The mean value of a tensor.
+    :param RAW: Tensor values as they are.
     """
 
     MAX = "max"
@@ -52,6 +53,8 @@ class AggregatorType(Enum):
     :param MEDIAN: The median value of a set of tensors.
     :param MEAN_NO_OUTLIERS: The mean value of a set of tensors with outliers removed.
     :param MEDIAN_NO_OUTLIERS: The median value of a set of tensors with outliers removed.
+    :param HISTOGRAM: Creates a histogram of the incoming set of tensors and
+        searches the distribution in the histogram for optimal minimum and maximum values.
     """
 
     MEAN = "mean"
@@ -123,6 +126,8 @@ class RangeEstimatorParametersSet:
     :param MEAN_QUANTILE : The range estimator parameters where the low bound of the range
         is calculated as average (across every sample) of (quantile outlier probability)-quantiles,
         the upper bound of the range as average of (1 - quantile outlier probability)-quantiles of the same values.
+    :param HISTOGRAM: The range estimator parameters, where the lower and upper bounds of the range
+        are calculated as optimal quantization parameters based on the histogram of the given set of tensors.
     """
 
     MINMAX = RangeEstimatorParameters(
