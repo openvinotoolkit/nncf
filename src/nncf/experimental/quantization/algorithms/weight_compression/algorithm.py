@@ -17,13 +17,21 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 
 
 class WeightsCompression(Algorithm):
+    """
+    Post-training Weight Compression algorithm implementation.
+
+    Compresses weights of Linear and Embedding layers to 8-bit integer or
+    to 4-bit integer/float depending on mode, ratio and group size.
+    """
+
     def __init__(
         self,
-        quantizer,
+        quantizer: Quantizer,
         subset_size: int = 128,
         awq: bool = False,
         scale_estimation: bool = False,
@@ -33,6 +41,19 @@ class WeightsCompression(Algorithm):
         compression_format: nncf.CompressionFormat = nncf.CompressionFormat.DQ,
         advanced_parameters: nncf.AdvancedCompressionParameters = None,
     ) -> torch.fx.GraphModule:
+        """
+        :param quantizer: Quantizer to use in WeightCompression algorithm.
+        :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+            quantization precision.
+        :param awq: determines whether to use or not modified AWQ algorithm.
+        :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
+        :param gptq: determines whether to use or not GPTQ algorithm.
+        :param lora_correction: determines whether to use or not LoRA Correction algorithm.
+        :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+            preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+        :param compression_format: Describes the format in which the model is saved after weight compression.
+        :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
+        """
         self._quantizer = quantizer
 
         wc_config = self._quantizer.get_weight_compression_config()

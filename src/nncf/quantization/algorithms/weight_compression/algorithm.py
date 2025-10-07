@@ -528,8 +528,10 @@ class WeightCompression(Algorithm):
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
             for weight_param in ratio_defining_params:
+                # This weight should be in lower precision according to mixed precision. Let it be
                 if weight_param in primary_precision_weight_params:
                     continue
+                # Set all layers other than the ones returned by mixed precision to backup precision
                 weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
         # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
@@ -892,6 +894,7 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
+        # Set these layers to primary config. Later we will set layers to backup precision according to Mixed precision
         for weight_param in ratio_defining_params:
             weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
 
