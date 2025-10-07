@@ -23,6 +23,8 @@ from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
 from nncf import Dataset
+from nncf import SensitivityMetric
+from nncf import AdvancedCompressionParameters
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
@@ -170,8 +172,8 @@ def compress_pt2e(
     gptq: bool = False,
     lora_correction: bool = False,
     subset_size: int = 128,  # Dataset size to use
-    sensitivity_metric: nncf.SensitivityMetric = None,
-    advanced_parameters: nncf.AdvancedCompressionParameters = None,
+    sensitivity_metric: Optional[SensitivityMetric] = None,
+    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.fx.GraphModule:
     """
     Applies Weight Compression to the torch.fx.GraphModule provided model
