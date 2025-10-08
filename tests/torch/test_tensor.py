@@ -23,6 +23,8 @@ def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
         return x.type(torch.float32)
     if dtype is TensorDataType.float16:
         return x.type(torch.float16)
+    if dtype is TensorDataType.int32:
+        return x.type(torch.int32)
     raise NotImplementedError
 
 

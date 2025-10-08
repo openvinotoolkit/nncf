@@ -870,6 +870,111 @@ class TemplateTestNNCFTensorOperators:
         assert res.device == tensor.device
 
     @pytest.mark.parametrize(
+        "val, weights, minlength, ref",
+        (
+            # simple case: no weights, no minlength
+            ([0, 1, 1, 2, 2, 2], None, 0, [1, 2, 3]),
+            # minlength pads result
+            ([0, 1], None, 5, [1, 1, 0, 0, 0]),
+            # with weights
+            ([0, 1, 1], [0.5, 0.2, 0.3], 0, [0.5, 0.5]),
+            # empty input, minlength defines output length
+            ([], None, 3, [0, 0, 0]),
+            # non-contiguous bins: check zero-filling
+            ([0, 2, 5], None, 0, [1, 0, 1, 0, 0, 1]),
+        ),
+    )
+    def test_fn_bincount(self, val, weights, minlength, ref):
+        tensor = Tensor(self.cast_to(self.to_tensor(val), dtype=TensorDataType.int32))
+        weights_tensor = (
+            None if weights is None else Tensor(self.cast_to(self.to_tensor(weights), dtype=TensorDataType.float32))
+        )
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.bincount(tensor, weights=weights_tensor, minlength=minlength)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "val, ref",
+        (
+            (1.9, 1.0),
+            (-1.1, -2.0),
+            ([1.1, 0.9, -0.1], [1.0, 0.0, -1.0]),
+            ([[2.7, -3.2], [0.0, -0.9]], [[2.0, -4.0], [0.0, -1.0]]),
+        ),
+    )
+    def test_fn_floor(self, val, ref):
+        tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.floor(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "val, bins, range_, ref",
+        (
+            # 1D values, 3 bins, explicit range [0,3)
+            ([0.5, 1.5, 2.5], 3, (0.0, 3.0), [1, 1, 1]),
+            # values clustered in first bin
+            ([0.1, 0.2, 0.3], 3, (0.0, 3.0), [3, 0, 0]),
+            # values outside range are ignored
+            ([0.1, 3.5, -1.0, 1.1], 3, (0.0, 3.0), [1, 1, 0]),
+            # 2 bins with explicit range
+            ([0.0, 1.9, 3.0, 4.0], 2, (0.0, 4.0), [2, 2]),
+            # uniform distribution, 4 bins
+            ([0.5, 1.5, 2.5, 3.5], 4, (0.0, 4.0), [1, 1, 1, 1]),
+            # auto-range: [min, max] = [1, 4], 3 bins
+            ([1.0, 2.0, 3.0, 4.0], 3, None, [1, 1, 2]),
+        ),
+    )
+    def test_fn_histogram(self, val, bins, range_, ref):
+        tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.histogram(tensor, bins, range=range_)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "val, repeats, axis, ref",
+        (
+            # scalar repeated
+            (1.0, 3, None, [1.0, 1.0, 1.0]),
+            # 1D input, scalar repeat
+            ([1.0, 2.0], 2, None, [1.0, 1.0, 2.0, 2.0]),
+            # 1D input, per-element repeat
+            ([1.0, 2.0, 3.0], [1, 2, 3], None, [1.0, 2.0, 2.0, 3.0, 3.0, 3.0]),
+            # 2D input, flatten first (axis=None)
+            ([[1, 2], [3, 4]], 2, None, [1, 1, 2, 2, 3, 3, 4, 4]),
+            # 2D input, repeat rows (axis=0)
+            ([[1, 2], [3, 4]], 2, 0, [[1, 2], [1, 2], [3, 4], [3, 4]]),
+            # 2D input, repeat cols (axis=1)
+            ([[1, 2], [3, 4]], 2, 1, [[1, 1, 2, 2], [3, 3, 4, 4]]),
+        ),
+    )
+    def test_fn_repeat(self, val, repeats, axis, ref):
+        tensor = Tensor(self.to_tensor(val))
+        repeats_tensor = repeats
+        if isinstance(repeats, list):
+            repeats_tensor = Tensor(self.to_tensor(repeats))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.repeat(tensor, repeats_tensor, axis=axis)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+        assert res.dtype == tensor.dtype
+
+    @pytest.mark.parametrize(
         "val, decimals, ref",
         (
             (1.1, 0, 1.0),
@@ -983,6 +1088,33 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "x, axis, ref",
+        (
+            # cumsum along axis=0
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                0,
+                [[0.8, 0.2, 0.2], [0.9, 0.9, 0.3]],
+            ),
+            # cumsum along axis=1
+            (
+                [[0.8, 0.2, 0.2], [0.1, 0.7, 0.1]],
+                1,
+                [[0.8, 1.0, 1.2], [0.1, 0.8, 0.9]],
+            ),
+        ),
+    )
+    def test_fn_cumsum(self, x, axis, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.cumsum(tensor, axis)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor.device
 
     @pytest.mark.parametrize(
@@ -2052,6 +2184,22 @@ class TemplateTestNNCFTensorOperators:
             ref_shape = (n, n) if m is None else (n, m)
             assert tensor_a.shape == ref_shape
             assert fns.allclose(tensor_a, ref)
+
+    @pytest.mark.parametrize(
+        "start, stop, num, ref",
+        ((-2, 2, 6, [-2.0000, -1.2000, -0.4000, 0.4000, 1.2000, 2.0000]),),
+    )
+    def test_fn_linspace(self, start, stop, num, ref):
+        dtype = TensorDataType.float32
+        tensor_ref = Tensor(fns.astype(self.to_tensor(ref), dtype))
+        tensor_a = fns.linspace(
+            start=start, stop=stop, num=num, backend=self.backend(), dtype=dtype, device=self.device()
+        )
+        assert isinstance(tensor_a, Tensor)
+        assert tensor_a.device == self.device()
+        assert tensor_a.backend == self.backend()
+        assert tensor_a.dtype == dtype
+        assert fns.all(fns.isclose(tensor_a, tensor_ref))
 
     @pytest.mark.parametrize(
         "start, end, stop, ref",

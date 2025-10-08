@@ -294,7 +294,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 # update DDPG networks, note that this loop must not be
                 # in the loop above to avoid non-numeric value in replay buffer
-                for i, (_, s_t, _, a_t, done) in enumerate(transition_buffer):
+                for _ in range(len(transition_buffer)):
                     if episode >= agent.warmup_iter_number:
                         for _ in range(agent.n_update):
                             agent.update_policy()

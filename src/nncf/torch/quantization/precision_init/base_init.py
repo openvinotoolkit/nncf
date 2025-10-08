@@ -29,7 +29,7 @@ from nncf.torch.structures import NNCFExtraConfigStruct
 from nncf.torch.utils import get_all_modules_by_type
 
 
-class BasePrecisionInitParams:
+class BasePrecisionInitParams:  # noqa: B903
     def __init__(self, user_init_args: NNCFExtraConfigStruct = None):
         self.user_init_args = user_init_args
 

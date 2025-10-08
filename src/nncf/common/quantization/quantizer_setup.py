@@ -47,7 +47,7 @@ class QIPointStateNames:
     TARGET_NODE_NAME = "target_node_name"
 
 
-class QuantizationInsertionPointBase(ABC):
+class QuantizationInsertionPointBase(ABC):  # noqa: B024
     _state_names = QIPointStateNames
 
     def __init__(self, target_node_name: NNCFNodeName):

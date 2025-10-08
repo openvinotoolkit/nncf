@@ -202,9 +202,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def _check_arguments_for_transform_model(
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm],
-        compression_format: CompressionFormat,
-        advanced_parameters: AdvancedCompressionParameters,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm], compression_format: CompressionFormat
     ):
         if lora_correction_algo is not None:
             msg = "LORA correction is not supported for the ONNX backend"
@@ -221,9 +219,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: AdvancedCompressionParameters = None,
     ) -> onnx.ModelProto:
-        self._check_arguments_for_transform_model(lora_correction_algo, compression_format, advanced_parameters)
+        self._check_arguments_for_transform_model(lora_correction_algo, compression_format)
         opset_version = model.opset_import[0].version
 
         for wc_params in weight_compression_parameters:
@@ -231,16 +229,27 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             node = wc_params.node_with_weight
             weight = self.get_weight(node, wc_params.weight_port_id, model, graph)
             precomputed_compressed_weights = precomputed_compressed_weights or {}
-            compressed_weight = compress_weight(
-                Tensor(weight),
-                wc_params.reduction_axes,
-                compression_config,
-                precomputed_compressed_weights.get(wc_params.weight_name),
-            )
+
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
             dequantize_axis = (
                 get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size <= 0 else 0
             )  # axis = 0 when blockwise
+
+            reduction_axes = wc_params.reduction_axes
+            if node.metatype == onnx_metatypes.ONNXGemmMetatype and opset_version < 21 and dequantize_block_size > 0:
+                attr_name = "transB" if wc_params.weight_port_id == 1 else "transA"
+                transpose = node.layer_attributes.node_attrs[attr_name]
+                weight = fns.transpose(weight) if transpose else weight
+                (axis,) = reduction_axes
+                axis = (axis + 1) % 2 if transpose else axis
+                reduction_axes = (axis,)
+
+            compressed_weight = compress_weight(
+                Tensor(weight),
+                reduction_axes,
+                compression_config,
+                precomputed_compressed_weights.get(wc_params.weight_name),
+            )
 
             # NOTE: The `DequantizeLinear` operation supports the `block_size` attribute only starting from opset 21.
             # For opsets earlier than 21, we use the `MatMulNBits` operation from ONNX Runtime contrib operators.
@@ -370,7 +379,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the DequantizeLinear node before the consumer nodes
         insert_index = len(model.graph.node)
 
-        for i, node in enumerate(model.graph.node):
+        for node in model.graph.node:
             for j, input_name in enumerate(node.input):
                 if input_name == weight_name:
                     insert_index = min(insert_index, get_node_index(model, node.name))
@@ -428,16 +437,21 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         original_matmul = self.name_to_node_map[weight_compression_parameters.node_with_weight.node_name]
 
-        activation_input_name = None
-        for input_name in original_matmul.input:
-            if input_name != weight_name:
-                activation_input_name = input_name
-        assert activation_input_name is not None, "Activation input name not found in original matmul node"
+        # Composing operation inputs: A, B, scales, zero_points[optional], g_idx[optional, deprecated], bias
+        bias_name = None
+        if weight_compression_parameters.node_with_weight.layer_attributes.has_bias():
+            bias_name = weight_compression_parameters.node_with_weight.layer_attributes.bias_attrs["name"]
 
-        # Create MatMulNBits
+        activation_input_name = next(name for name in original_matmul.input if name not in [weight_name, bias_name])
+
         inputs = [activation_input_name, quantized_weight_name, scale_name]
         if zero_point is not None:
             inputs.append(zero_point_name)
+        if bias_name:
+            if zero_point is None:
+                inputs.append("")
+            inputs.append("")  # g_idx
+            inputs.append(bias_name)
 
         K, N = orig_weight.shape[0], orig_weight.shape[1]
         matmul_n_bits = helper.make_node(
@@ -459,7 +473,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the MatMulNBits node before the consumer nodes
         insert_index = len(model.graph.node)
 
-        for i, node in enumerate(model.graph.node):
+        for node in model.graph.node:
             for j, input_name in enumerate(node.input):
                 if input_name == original_matmul.name:
                     insert_index = min(insert_index, get_node_index(model, node.name))

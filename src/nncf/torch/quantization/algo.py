@@ -1032,7 +1032,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
                 def is_qp_quantizing_same_op_as_wqp(qp_id_):
                     qp_ = quantizer_setup.quantization_points[qp_id_]
-                    node_matched = target_node.node_name in qp_.directly_quantized_operator_node_names
+                    node_matched = target_node.node_name in qp_.directly_quantized_operator_node_names  # noqa: B023
                     return qp_.is_activation_quantization_point() and node_matched
 
                 for qp_id in filter(is_qp_quantizing_same_op_as_wqp, shared_input_group):
@@ -1181,7 +1181,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if is_weights(primary_ip):
             primary_qid = WeightQuantizerId(primary_ip.target_node_name)
             self._weight_quantizers[primary_qid] = WeightQuantizerInfo(
-                quantizer, target_model.nncf.get_containing_module(primary_ip.target_node_name), insertion_points
+                quantizer, insertion_points, target_model.nncf.get_containing_module(primary_ip.target_node_name)
             )
             module_node = target_model_graph.get_node_by_name(primary_ip.target_node_name)
             layer_attributes = module_node.layer_attributes

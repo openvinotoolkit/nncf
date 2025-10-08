@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal, Optional
 
@@ -335,10 +336,10 @@ class QuantizerGroup(Enum):
     WEIGHTS = "weights"
 
 
+@dataclass
 class QuantizableWeightedLayerNode:
-    def __init__(self, node: NNCFNode, qconfig_list: list[QuantizerConfig]):
-        self.node = node
-        self.qconfig_list = qconfig_list
+    node: NNCFNode
+    qconfig_list: list[QuantizerConfig]
 
 
 class QuantizerId:

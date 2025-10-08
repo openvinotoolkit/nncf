@@ -24,6 +24,13 @@ def _get_cpu_name() -> str:
     return ov.Core().get_property("CPU", ov.properties.device.full_name)
 
 
+def _get_cpu_architecture() -> str:
+    """
+    :return: The architecture of the CPU.
+    """
+    return ov.Core().get_property("CPU", ov.properties.device.architecture)
+
+
 def is_arm_cpu() -> bool:
     """
     Checks whether current CPU is an ARM CPU or not.
@@ -31,7 +38,7 @@ def is_arm_cpu() -> bool:
     """
     global _IS_ARM_CPU
     if _IS_ARM_CPU is None:
-        _IS_ARM_CPU = "arm" in _get_cpu_name().lower()
+        _IS_ARM_CPU = "arm" in _get_cpu_architecture().lower()
     return _IS_ARM_CPU
 
 
