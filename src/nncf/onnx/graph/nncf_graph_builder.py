@@ -12,6 +12,7 @@ from collections import Counter
 from typing import Any, Optional
 
 import onnx
+from onnxruntime.tools.symbolic_shape_infer import SymbolicShapeInference
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -346,6 +347,7 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
+        onnx_model = SymbolicShapeInference.infer_shapes(onnx_model)
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
