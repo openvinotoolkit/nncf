@@ -110,7 +110,7 @@ def calculate_float_quantization_params(
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
     if config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-        # FP types are using E8M0 type scale.
+        # MXFP types are using E8M0 type scale.
         # It can only contain values [2**(-127), 2**(-126), ..., 2**(126), 2**(127)].
         # Here, we quantize each element of the scale to the smallest possible value greater than or equal to
         # the element value to make it possible to convert the float scale value to a FP format without rounding.
