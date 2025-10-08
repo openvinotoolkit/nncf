@@ -81,7 +81,7 @@ def calculate_float_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tensor:
     """
-    Calculates the scale for nf4 or mxfp4/mxfp8_e4m3 quantization.
+    Calculates the scale for nf4 or mxfp4/mxfp8_e4m3/fp8_e4m3 quantization.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
@@ -97,6 +97,7 @@ def calculate_float_quantization_params(
     FP_MAX_VALS = {
         CompressWeightsMode.MXFP4: 6.0,
         CompressWeightsMode.MXFP8_E4M3: 448.0,
+        CompressWeightsMode.FP8_E4M3: 448.0,
     }
     if config.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3] + list(FP_MAX_VALS.keys()):
         if config.mode in FP_MAX_VALS:
@@ -146,17 +147,17 @@ def do_float_quantization(
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided,
-    and performs corresponding (nf4, MXFP4 and MXFP8_E4M3) weight quantization.
+    and performs corresponding (nf4, MXFP4, MXFP8_E4M3, FP8_E4M3) weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For MXFP4, MXFP8_E4M3 and CODEBOOK currently returns normalized weight without quantization.
-    TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
+    For MXFP4, MXFP8_E4M3, FP8_E4M3 and CODEBOOK currently returns normalized weight without quantization.
+    TODO(nikita-savelyevv): add support for MXFP4, MXFP8_E4M3 and FP8_E4M3 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for MXFP4 and MXFP8_E4M3 normalized) weight tensor and corresponding scale tensor and
-             optional indexes for codebook.
+    :return: Returns quantized (for MXFP4, MXFP8_E4M3 and FP8_E4M3 normalized) weight tensor and
+        corresponding scale tensor and optional indexes for codebook.
     """
     assert not config.is_integer
 
@@ -192,7 +193,7 @@ def do_float_quantization(
         )
         return compressed_weight, scale, indexes
     else:
-        # TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
+        # TODO(nikita-savelyevv): add support for MXFP4, MXFP8_E4M3, FP8_E4M3 once ticket 164851 is resolved
         compressed_weight = norm_weight
     return compressed_weight, scale, None
 

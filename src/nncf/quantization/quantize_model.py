@@ -460,6 +460,7 @@ def compress_weights(
         MXFP4 is MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
         MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale.
             The size of group is 32.
+        FP8_E4M3 - is FP8 format with E4M3 values sharing a group-level FP16 scale.
     :type mode: nncf.CompressWeightsMode
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8_ASYM).
@@ -517,14 +518,18 @@ def compress_weights(
         from nncf.torch.nncf_network import NNCFNetwork
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
-        if mode in [
+        not_supported_modes = [
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
+            CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
-        ]:
-            msg = "Torch backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
+        ]
+        if mode in not_supported_modes:
+            msg = (
+                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+            )
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
@@ -567,14 +572,18 @@ def compress_weights(
             compress_weights_impl as fx_compression_weights_impl,
         )
 
-        if mode in [
+        not_supported_modes = [
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
+            CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
-        ]:
-            msg = "Torch backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
+        ]
+        if mode in not_supported_modes:
+            msg = (
+                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+            )
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
@@ -610,14 +619,18 @@ def compress_weights(
             msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if any((awq, scale_estimation, gptq, lora_correction)) and mode in [
-            CompressWeightsMode.MXFP4,
-            CompressWeightsMode.MXFP8_E4M3,
-        ]:
-            msg = (
-                "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode in [MXFP4, MXFP8_E4M3]."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        if any((awq, scale_estimation, gptq, lora_correction)):
+            not_supported_modes = [
+                CompressWeightsMode.MXFP4,
+                CompressWeightsMode.MXFP8_E4M3,
+                CompressWeightsMode.FP8_E4M3,
+            ]
+            if mode in not_supported_modes:
+                msg = (
+                    "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
+                    f" but mode in {[m.value for m in not_supported_modes]}."
+                )
+                raise nncf.ParameterNotSupportedError(msg)
 
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
@@ -632,14 +645,18 @@ def compress_weights(
     elif backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
 
-        if mode in [
+        not_supported_modes = [
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
+            CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
-        ]:
-            msg = "ONNX backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
+        ]
+        if mode in not_supported_modes:
+            msg = (
+                f"ONNX backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+            )
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
