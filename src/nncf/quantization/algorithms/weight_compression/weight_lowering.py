@@ -185,7 +185,7 @@ def do_float_quantization(
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]:
         if original_weight_backend == TensorBackend.ov:
-            # Can convert through OpenVINO and return OpenVINO-native NF4 tensor
+            # Can convert through OpenVINO and return OpenVINO-native nf4/f4e2m1 tensor
             target_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
             compressed_weight = norm_weight.as_openvino_tensor().astype(target_dtype)
         else:

@@ -626,7 +626,7 @@ def _build_float_quantization_model(
         eps = np.finfo(np.float32).eps
         scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
-        if config.mode == CompressWeightsMode.E2M1:
+        if config.mode == CompressWeightsMode.MXFP4:
             scale = scale / opset.constant(6.0, ov.Type.f32)
             scale = opset.log(scale) / opset.log(opset.constant(2.0, ov.Type.f32))
             scale = opset.ceil(scale)
