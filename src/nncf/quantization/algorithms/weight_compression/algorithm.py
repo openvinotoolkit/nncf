@@ -245,9 +245,18 @@ def check_user_compression_configuration(
             f"Supported modes are: {[e.value for e in GroupSizeFallbackMode]}."
         )
         raise nncf.ValidationError(msg)
-    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3] and group_size not in [None, 32]:
-        msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
-        raise nncf.ValidationError(msg)
+    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+        if group_size not in [None, 32]:
+            msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
+            raise nncf.ValidationError(msg)
+
+        if advanced_parameters and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST:
+            msg = (
+                "MXFP4 and MXFP8_E4M3 types do not support the group size"
+                f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
+                " Please use other group size fallback mode."
+            )
+            raise nncf.ValidationError(msg)
 
 
 class WeightCompression(Algorithm):

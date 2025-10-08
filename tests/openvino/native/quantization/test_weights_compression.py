@@ -41,6 +41,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
+from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -808,6 +809,17 @@ class TestUnsupportedParamsMXFP:
     def test_raise_error_with_unsupported_group_size_for_fp(self, mode):
         with pytest.raises(nncf.ValidationError):
             compress_weights(ov.Model([], []), dataset="anything", mode=mode, group_size=64)
+
+    def test_raise_error_with_unsupported_(self, mode):
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(
+                ov.Model([], []),
+                dataset="anything",
+                mode=mode,
+                advanced_parameters=AdvancedCompressionParameters(
+                    group_size_fallback_mode=GroupSizeFallbackMode.ADJUST
+                ),
+            )
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
