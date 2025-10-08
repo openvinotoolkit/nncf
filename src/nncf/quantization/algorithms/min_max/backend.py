@@ -256,6 +256,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: TargetPoint) -> str:
         """
         Returns node's weight name corresponding to port ID.
@@ -266,6 +267,7 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @staticmethod
+    @abstractmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: set[str]) -> bool:
         """
         Return True if weight should be quantized.

@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
+
+TClass = TypeVar("TClass", bound=type)
 
 
 class Registry:
@@ -33,8 +35,8 @@ class Registry:
             raise KeyError(msg)
         self._registry_dict[name] = obj
 
-    def register(self, name: str = None) -> Callable[[Any], Any]:
-        def wrap(obj: Any) -> Any:
+    def register(self, name: str = None) -> Callable[[TClass], TClass]:
+        def wrap(obj: TClass) -> TClass:
             cls_name = name
             if cls_name is None:
                 cls_name = obj.__name__

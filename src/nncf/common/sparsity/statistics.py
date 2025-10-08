@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from dataclasses import dataclass
+
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.helpers import create_table
@@ -90,10 +92,10 @@ class SparsifiedModelStatistics(Statistics):
         return pretty_string
 
 
+@dataclass
 class LayerThreshold:
-    def __init__(self, name: str, threshold: float):
-        self.name = name
-        self.threshold = threshold
+    name: str
+    threshold: float
 
 
 @api()

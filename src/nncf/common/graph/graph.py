@@ -11,6 +11,7 @@
 import pathlib
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -180,14 +181,14 @@ class NNCFGraphEdge:
         return isinstance(other, NNCFGraphEdge) and self.__dict__ == other.__dict__
 
 
+@dataclass
 class NNCFGraphPatternIO:
     """
     Describes the inputs and outputs of a subgraph in NNCFGraph.
     """
 
-    def __init__(self, input_edges: list[NNCFGraphEdge], output_edges: list[NNCFGraphEdge]):
-        self.input_edges = input_edges
-        self.output_edges = output_edges
+    input_edges: list[NNCFGraphEdge]
+    output_edges: list[NNCFGraphEdge]
 
 
 class NNCFGraph:

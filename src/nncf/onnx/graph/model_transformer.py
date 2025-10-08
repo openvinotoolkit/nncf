@@ -450,7 +450,7 @@ class ONNXModelTransformer(ModelTransformer):
         # node. They should be removed together.
         was_processed = {t.target_point.target_node_name: False for t in transformations}
         quantize_dequantize_pairs = []
-        for node_name in was_processed:
+        for node_name in list(was_processed):
             if was_processed[node_name]:
                 continue
             quantize_node_proto = name_to_node_map[node_name]

@@ -11,7 +11,6 @@
 
 import pytest
 import torch
-from torch import nn
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
@@ -33,8 +32,8 @@ from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
-from tests.torch.helpers import create_depthwise_conv
 from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
+from tests.torch.test_models.synthetic import OneDepthwiseConvModel
 from tests.torch2.function_hook.quantization.helper import get_nncf_network
 from tests.torch2.function_hook.quantization.helper import get_single_conv_nncf_graph
 from tests.torch2.function_hook.quantization.helper import get_single_no_weight_matmul_nncf_graph
@@ -57,14 +56,8 @@ class PTLinearTestModel(LinearPTQParamsTestModel, ToNNCFNetworkInterface):
     pass
 
 
-class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
-    def __init__(self) -> None:
-        super().__init__()
-        self.depthwise_conv = create_depthwise_conv(3, 1, 1, 1)
-
-    def forward(self, x):
-        # input_shape = [1, 3, 32, 32]
-        return self.depthwise_conv(x)
+class PTOneDepthwiseConvModel(OneDepthwiseConvModel, ToNNCFNetworkInterface):
+    pass
 
 
 class TestPTQParams(TemplateTestPTQParams):
@@ -108,7 +101,7 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(scope="session")
     def test_params(self):
         linear_model = PTLinearTestModel().get_nncf_network()
-        depthwise_model = OneDepthwiseConvModel().get_nncf_network()
+        depthwise_model = PTOneDepthwiseConvModel().get_nncf_network()
 
         return {
             "test_range_estimator_per_tensor": {

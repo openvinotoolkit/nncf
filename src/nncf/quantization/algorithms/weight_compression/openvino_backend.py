@@ -225,8 +225,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         scale_dtype = ov.Type.f16
         if compression_config.mode == CompressWeightsMode.NF4:
             compression_dtype = ov.Type.nf4
-        elif compression_config.mode == CompressWeightsMode.E2M1:
+        elif compression_config.mode == CompressWeightsMode.MXFP4:
             compression_dtype = ov.Type.f4e2m1
+            scale_dtype = ov.Type.f8e8m0
+        elif compression_config.mode == CompressWeightsMode.MXFP8_E4M3:
+            compression_dtype = ov.Type.f8e4m3
             scale_dtype = ov.Type.f8e8m0
         elif compression_config.mode == CompressWeightsMode.INT4_SYM:
             compression_dtype = ov.Type.i4
@@ -317,7 +320,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]

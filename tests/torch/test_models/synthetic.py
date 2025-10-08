@@ -23,6 +23,7 @@ from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
+from tests.torch.helpers import create_depthwise_conv
 
 
 class ModelWithDummyParameter(nn.Module):
@@ -733,3 +734,13 @@ class ConcatModelWithTwoOutputs(SimpleConcatModel):
         b = self.conv1(x)
         c = torch.cat([a, b], dim=1)
         return self.conv2(c), a
+
+
+class OneDepthwiseConvModel(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.depthwise_conv = create_depthwise_conv(3, 1, 1, 1)
+
+    def forward(self, x):
+        # input_shape = [1, 3, 32, 32]
+        return self.depthwise_conv(x)

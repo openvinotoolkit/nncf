@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 import inspect
-import sys
 import types
 from collections import defaultdict
 from contextlib import contextmanager
@@ -133,7 +132,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         # Collect how many times shared parameter used
         counter_shared_weights: dict[int, int] = defaultdict(int)
-        for name, parameter in chain(self.model.named_parameters(remove_duplicate=False)):
+        for _, parameter in self.model.named_parameters(remove_duplicate=False):
             counter_shared_weights[id(parameter)] += 1
 
         self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}
@@ -467,19 +466,6 @@ class FunctionHookMode(TorchFunctionMode):
         :return: The processed arguments, with hooks applied to any tensor inputs.
         """
         forward_signature = inspect.signature(self.model.forward)
-
-        if sys.version_info < (3, 10):
-            # TODO(AlexanderDokuchaev): remove after drop support 3.9
-            # WA for 171692
-            # Combination of decorator of class method and functools.partial return signature
-            # that contains with "self" parameter only for python < 3.10
-            # Python3.9: (self, x)
-            # Python3.10: (x)
-            params = list(forward_signature.parameters.values())
-            if params and params[0].name == "self":
-                params = params[1:]
-                forward_signature = inspect.Signature(parameters=params)
-
         bound_arguments = forward_signature.bind(*args, **kwargs)
 
         # Hooks available only for named arguments

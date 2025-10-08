@@ -21,5 +21,6 @@
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_tensorflow_mobilenet_v2]": 1500.00,
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_anomalib]": 478.797,
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_resnet18]": 1251.144,
-    "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression_scale_estimation_onnx]": 836.73
+    "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression_scale_estimation_onnx]": 836.73,
+    "tests/cross_fw/examples/test_examples.py::test_examples[magnitude_pruning_torch_resnet18]": 907
 }

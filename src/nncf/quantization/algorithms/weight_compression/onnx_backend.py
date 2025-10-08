@@ -202,9 +202,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def _check_arguments_for_transform_model(
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm],
-        compression_format: CompressionFormat,
-        advanced_parameters: AdvancedCompressionParameters,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm], compression_format: CompressionFormat
     ):
         if lora_correction_algo is not None:
             msg = "LORA correction is not supported for the ONNX backend"
@@ -221,9 +219,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: AdvancedCompressionParameters = None,
     ) -> onnx.ModelProto:
-        self._check_arguments_for_transform_model(lora_correction_algo, compression_format, advanced_parameters)
+        self._check_arguments_for_transform_model(lora_correction_algo, compression_format)
         opset_version = model.opset_import[0].version
 
         for wc_params in weight_compression_parameters:
@@ -381,7 +379,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the DequantizeLinear node before the consumer nodes
         insert_index = len(model.graph.node)
 
-        for i, node in enumerate(model.graph.node):
+        for node in model.graph.node:
             for j, input_name in enumerate(node.input):
                 if input_name == weight_name:
                     insert_index = min(insert_index, get_node_index(model, node.name))
@@ -475,7 +473,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the MatMulNBits node before the consumer nodes
         insert_index = len(model.graph.node)
 
-        for i, node in enumerate(model.graph.node):
+        for node in model.graph.node:
             for j, input_name in enumerate(node.input):
                 if input_name == original_matmul.name:
                     insert_index = min(insert_index, get_node_index(model, node.name))
