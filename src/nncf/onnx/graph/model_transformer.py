@@ -16,16 +16,19 @@ import numpy as np
 import onnx
 
 import nncf
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_input_edge
+from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
+from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -55,8 +58,8 @@ class ONNXModelTransformer(ModelTransformer):
         self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
         self._inplace = inplace
 
+    @staticmethod
     def _get_target_edge(
-        self,
         port_id: int,
         node_name: str,
         transform_type: TargetType,
@@ -381,10 +384,25 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Copy of original model with updated biases.
         """
         name_to_node_map = get_name_to_node_map(model)
+        output_name_to_node_map = get_parents_node_mapping(model)
+
         for transformation in transformations:
             node = name_to_node_map[transformation.target_point.target_node_name]
-            initializer_name = node.input[transformation.target_point.port_id]
-            set_initializer(initializer_name, model, transformation.new_value)
+            # NOTE: An `input_name` is either the name of an initializer or the name of a `Constant` operation output
+            input_name = node.input[transformation.target_point.port_id]
+
+            constant_node = output_name_to_node_map.get(input_name, None)
+
+            if constant_node is None:
+                set_initializer(input_name, model, transformation.new_value)
+            else:
+                for attr in constant_node.attribute:
+                    if attr.name == "value":
+                        array = transformation.new_value.astype(onnx.helper.tensor_dtype_to_np_dtype(attr.t.data_type))
+                        tensor_proto = onnx.numpy_helper.from_array(array)
+                        attr.t.CopyFrom(tensor_proto)
+                        break
+
         return model
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
@@ -432,7 +450,7 @@ class ONNXModelTransformer(ModelTransformer):
         # node. They should be removed together.
         was_processed = {t.target_point.target_node_name: False for t in transformations}
         quantize_dequantize_pairs = []
-        for node_name in was_processed:
+        for node_name in list(was_processed):
             if was_processed[node_name]:
                 continue
             quantize_node_proto = name_to_node_map[node_name]
@@ -484,16 +502,25 @@ class ONNXModelTransformer(ModelTransformer):
         :returns: Transformed model with Multiply nodes.
         """
         node_name_to_node = get_name_to_node_map(model)
+        # TODO(andrey-churkin): Optimize it
+        graph = NNCFGraphFactory.create(model)
+        input_edges_mapping = get_input_edges_mapping(graph)
 
         for transformation in transformations:
+            port_id = transformation.target_point.port_id
             target_node_name = transformation.target_point.target_node_name
-            target_output_port = transformation.target_point.port_id
-            target_node = node_name_to_node[target_node_name]
-            output_tensor_name = target_node.output[target_output_port]
+            transform_type = transformation.target_point.type
+            output_tensor_name = ONNXModelTransformer._get_target_edge(
+                port_id, target_node_name, transform_type, node_name_to_node, input_edges_mapping
+            )
+
+            # TODO(andrey-churkin): Check type of `transformation.scale_value`
 
             # Create a new initializer for the scale constant
             scale_tensor_name = f"{transformation.multiply_node_name}_scale"
-            scale_tensor = onnx.numpy_helper.from_array(transformation.scale_value, name=scale_tensor_name)
+            scale_tensor = onnx.numpy_helper.from_array(
+                transformation.scale_value.astype(np.float32), name=scale_tensor_name
+            )
             model.graph.initializer.append(scale_tensor)
 
             # Create a new Multiply node
@@ -505,7 +532,8 @@ class ONNXModelTransformer(ModelTransformer):
                 name=transformation.multiply_node_name,
             )
             target_index = get_node_index(model, target_node_name)
-            model.graph.node.insert(target_index + 1, mul_node)
+            insert_index = 0 if target_index is None else target_index + 1
+            model.graph.node.insert(insert_index, mul_node)
 
             for name in transformation.destination_node_names:
                 node = node_name_to_node[name]
@@ -524,6 +552,11 @@ def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np
     :param new_value: New value for the initializer tensor.
     """
     initializer = get_tensor(model, initializer_name)
+
+    required_dtype = onnx.helper.tensor_dtype_to_np_dtype(initializer.data_type)
+    if new_value.dtype != required_dtype:
+        new_value = new_value.astype(required_dtype)
+
     new_tensor = onnx.numpy_helper.from_array(new_value, initializer_name)
     initializer.CopyFrom(new_tensor)
 

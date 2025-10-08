@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional
+from typing import Callable, Optional, TypeVar
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -65,6 +65,9 @@ class OperatorMetatype:
         return any(subtype.subtype_check(metatype) for subtype in subtypes)
 
 
+TOpClass = TypeVar("TOpClass", bound=type[OperatorMetatype])
+
+
 class OperatorMetatypeRegistry(Registry):
     """
     Operator Metatypes Registry.
@@ -79,7 +82,7 @@ class OperatorMetatypeRegistry(Registry):
         super().__init__(name)
         self._op_name_to_op_meta_dict: dict[str, type[OperatorMetatype]] = {}
 
-    def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[..., type[OperatorMetatype]]:
+    def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[[TOpClass], TOpClass]:
         """
         Decorator for registering operator metatypes.
 
@@ -90,7 +93,7 @@ class OperatorMetatypeRegistry(Registry):
         name_ = name
         super_register = super()._register
 
-        def wrap(obj: type[OperatorMetatype]) -> type[OperatorMetatype]:
+        def wrap(obj: TOpClass) -> TOpClass:
             """
             Inner function for registering operator metatypes.
 

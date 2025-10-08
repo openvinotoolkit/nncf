@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Iterator, Optional, Union
+from typing import Any, Iterator, Optional, Union
 
 import numpy as np
 import onnx
@@ -373,3 +373,28 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
     packed_weight = packed.transpose(2, 0, 1)
 
     return packed_weight
+
+
+def get_node_attr_value(node: onnx.NodeProto, attr_name: str) -> Optional[Any]:
+    """
+    Retrieves the value of a specified attribute from a node.
+
+    This function searches for an attribute with the given name in the provided
+    node. If the attribute exists, its value is returned. If the attribute is
+    not found, `None` is returned. If multiple attributes with the same name are
+    found, a `ValueError` is raised.
+
+    :param node: The node to retrieve the attribute from.
+    :param attr_name: The name of the attribute to retrieve.
+    :return: The value of the attribute if found; otherwise, `None`.
+    """
+    matching = [x for x in node.attribute if x.name == attr_name]
+
+    if len(matching) > 1:
+        msg = f"Node has multiple attributes with name {attr_name}."
+        raise ValueError(msg)
+
+    if len(matching) < 1:
+        return None
+
+    return onnx.helper.get_attribute_value(matching[0])

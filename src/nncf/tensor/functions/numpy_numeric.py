@@ -62,6 +62,11 @@ def _(a: T_NUMPY) -> TensorBackend:
     return TensorBackend.numpy
 
 
+@numeric.bincount.register
+def _(a: T_NUMPY, *, weights: Optional[T_NUMPY], minlength: int = 0) -> T_NUMPY:
+    return np.bincount(a, weights=weights, minlength=minlength)
+
+
 @numeric.squeeze.register
 def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY:
     return np.squeeze(a, axis=axis)
@@ -95,6 +100,11 @@ def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
 @numeric.dtype.register
 def _(a: T_NUMPY) -> TensorDataType:
     return DTYPE_MAP_REV[np.dtype(a.dtype)]
+
+
+@numeric.repeat.register
+def _(a: T_NUMPY, repeats: Union[int, T_NUMPY_ARRAY], *, axis: Optional[int] = None) -> T_NUMPY:
+    return np.repeat(a, repeats=repeats, axis=axis)
 
 
 @numeric.reshape.register
@@ -131,6 +141,16 @@ def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
 @numeric.count_nonzero.register
 def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
     return np.array(np.count_nonzero(a, axis=axis))
+
+
+@numeric.histogram.register
+def _(
+    a: T_NUMPY,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+) -> T_NUMPY:
+    return np.histogram(a=a, bins=bins, range=range)[0]
 
 
 @numeric.isempty.register
@@ -218,6 +238,11 @@ def _(
     return np.array(np.median(a, axis=axis, keepdims=keepdims))  # type: ignore [arg-type]
 
 
+@numeric.floor.register
+def _(a: T_NUMPY) -> T_NUMPY:
+    return np.floor(a)
+
+
 @numeric.round.register
 def _(a: T_NUMPY, decimals: int = 0) -> T_NUMPY_ARRAY:
     return np.round(a, decimals=decimals)
@@ -287,6 +312,11 @@ def _(a: T_NUMPY, data: Any) -> T_NUMPY:
 @numeric.item.register
 def _(a: T_NUMPY) -> T_NUMBER:
     return a.item()
+
+
+@numeric.cumsum.register
+def _(a: T_NUMPY, axis: int) -> T_NUMPY:
+    return np.cumsum(a, axis=axis)
 
 
 @numeric.sum.register
@@ -418,6 +448,19 @@ def eye(
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
     return np.eye(n, m, dtype=np_dtype)
+
+
+def linspace(
+    start: float,
+    end: float,
+    num: int,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> T_NUMPY_ARRAY:
+    validate_device(device)
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.linspace(start, end, num, dtype=np_dtype)
 
 
 def arange(

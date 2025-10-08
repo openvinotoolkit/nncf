@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
+from enum import auto
 from typing import Any
 
 from nncf.common.utils.api_marker import api
@@ -208,3 +209,9 @@ class QuantizationMode(StrEnum):
 
     FP8_E4M3 = "fp8_e4m3"
     FP8_E5M2 = "fp8_e5m2"
+
+
+@api(canonical_alias="nncf.PruneMode")
+class PruneMode(StrEnum):
+    UNSTRUCTURED_MAGNITUDE_LOCAL = auto()
+    UNSTRUCTURED_MAGNITUDE_GLOBAL = auto()

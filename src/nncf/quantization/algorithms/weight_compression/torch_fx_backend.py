@@ -171,7 +171,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> torch.fx.GraphModule:
         transformation_layout = TransformationLayout()
         for wc_params in weight_compression_parameters:

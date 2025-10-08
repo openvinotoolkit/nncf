@@ -147,7 +147,7 @@ class MovementSparsifier(nn.Module):
     def __init__(
         self,
         target_module_node: NNCFNode,
-        sparse_cfg: SparseConfig = SparseConfig(mode=SparseStructure.FINE),
+        sparse_cfg: Optional[SparseConfig] = None,
         frozen: bool = True,
         compression_lr_multiplier: Optional[float] = None,
         layerwise_loss_lambda: float = 0.5,
@@ -172,6 +172,8 @@ class MovementSparsifier(nn.Module):
         weight_shape: list[int] = get_weight_shape_legacy(target_module_node.layer_attributes)
         assert len(weight_shape) == 2, "Unsupported module with weight shape not in 2D."
         self.weight_ctx = BinaryMask(weight_shape)
+        if sparse_cfg is None:
+            sparse_cfg = SparseConfig(SparseStructure.FINE)
         self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
         self.sparse_structure = sparse_cfg.mode
         self.sparse_cfg = sparse_cfg
