@@ -623,15 +623,13 @@ class WeightCompression(Algorithm):
                 group_size_values[w_params.weight_name] = self._group_size
                 continue
 
-            # Do not adjust group size for the MX data types
-            if w_params.compression_config.mode not in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-                # The maximal power of two that divides reduction_channel_size
-                adjusted_group_size = reduction_channel_size & (~reduction_channel_size + 1)
-                if adjusted_group_size >= self._min_adjusted_group_size:
-                    valid_weight_params.append(w_params)
-                    group_size_values[w_params.weight_name] = adjusted_group_size
-                    adjusted_weight_params.append((w_params, adjusted_group_size))
-                    continue
+            # The maximal power of two that divides reduction_channel_size
+            adjusted_group_size = reduction_channel_size & (~reduction_channel_size + 1)
+            if adjusted_group_size >= self._min_adjusted_group_size:
+                valid_weight_params.append(w_params)
+                group_size_values[w_params.weight_name] = adjusted_group_size
+                adjusted_weight_params.append((w_params, adjusted_group_size))
+                continue
 
             invalid_weight_params.append(w_params)
 

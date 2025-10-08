@@ -523,10 +523,6 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return ["lora_correction", "gptq"]
 
     @staticmethod
-    def get_not_supported_modes() -> list[CompressWeightsMode]:
-        return [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]
-
-    @staticmethod
     def wrap_model(model, data):
         model = wrap_model(model)
         data = torch.tensor(data)
@@ -584,10 +580,6 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             if isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor)):
                 num[op.compressed_weight_shape[-1]] += 1
         return num
-
-    @staticmethod
-    def get_num_mx_group_sizes(model: torch.nn.Module) -> dict[int, int]:
-        return {}
 
     @pytest.fixture(params=INT4_MODES)
     def int4_mode(self, request):

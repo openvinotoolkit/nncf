@@ -1869,10 +1869,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return []
 
     @staticmethod
-    def get_not_supported_modes() -> list[CompressWeightsMode]:
-        return []
-
-    @staticmethod
     def wrap_model(model, data):
         return model
 
@@ -1934,14 +1930,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         num = defaultdict(int)
         for op in model.get_ops():
             if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
-                num[op.get_output_shape(0)[-1]] += 1
-        return num
-
-    @staticmethod
-    def get_num_mx_group_sizes(model: ov.Model) -> dict[int, int]:
-        num = defaultdict(int)
-        for op in model.get_ops():
-            if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.f8e4m3, ov.Type.f4e2m1]:
                 num[op.get_output_shape(0)[-1]] += 1
         return num
 
