@@ -70,8 +70,8 @@ INT4_COMPRESSION_CONFIGS = [
 FP4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.NF4),
     WeightCompressionConfig(CompressWeightsMode.NF4, group_size=2),
-    WeightCompressionConfig(CompressWeightsMode.E2M1),
-    WeightCompressionConfig(CompressWeightsMode.E2M1, group_size=2),
+    WeightCompressionConfig(CompressWeightsMode.MXFP4),
+    WeightCompressionConfig(CompressWeightsMode.MXFP4, group_size=2),
 ]
 
 COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
@@ -376,14 +376,14 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
         or compression_kwargs.get("lora_correction")
     )
 
-    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM, CompressWeightsMode.E2M1]:
+    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM, CompressWeightsMode.MXFP4]:
         if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM] and weight_dtype in [
             TensorDataType.f8e4m3,
             TensorDataType.f8e5m2,
         ]:
             pytest.skip("INT8 compression is not supported for f8 dtypes.")
         if is_data_aware:
-            pytest.skip("Data-aware compression is not supported for INT8 or F4E2M1 modes.")
+            pytest.skip("Data-aware compression is not supported for INT8 or MXFP4 modes.")
     else:
         compression_kwargs["all_layers"] = True
 
