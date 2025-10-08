@@ -70,13 +70,12 @@ INT4_COMPRESSION_CONFIGS = [
 FP4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.NF4),
     WeightCompressionConfig(CompressWeightsMode.NF4, group_size=2),
-    WeightCompressionConfig(CompressWeightsMode.MXFP4),
-    WeightCompressionConfig(CompressWeightsMode.MXFP4, group_size=2),
+    WeightCompressionConfig(CompressWeightsMode.MXFP4, group_size=32),
 ]
 
 COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
 
-WEIGHT_SHAPE = (10000, 4)
+WEIGHT_SHAPE = (10000, 32)
 
 REDUCTION_AXES = (1,)
 
@@ -308,7 +307,9 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
             else:
                 mock.assert_called_once()
 
-    _check_values(results)
+    # It seems like numpy and openvino summate elements in different order during reduce_sum / reduce_mean computation.
+    # This results in small numerical differences.
+    _check_values(results, atol=1e-6)
 
 
 @pytest.mark.xfail(
@@ -510,9 +511,9 @@ def _check_backends_and_dtypes(
             assert decompressed_weight.dtype == TensorDataType.float32
 
 
-def _check_values(results):
+def _check_values(results, atol=0.0):
     def format_list_of_floats(lst):
-        return ", ".join(f"{x:.6f}" for x in lst)
+        return ", ".join(f"{x:.10f}" for x in lst)
 
     # Check that the computed tensors are equal between implementations
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
@@ -521,16 +522,16 @@ def _check_values(results):
         ov_result = results[ComputationBackend.OV][key]
 
         if isinstance(numpy_result, float) and isinstance(ov_result, float):
-            numpy_result = np.array([numpy_result], dtype=np.float32)
-            ov_result = np.array([ov_result], dtype=np.float32)
+            numpy_result = Tensor(np.array([numpy_result], dtype=np.float32))
+            ov_result = Tensor(np.array([ov_result], dtype=np.float32))
 
         # Note: For static-shaped OV models doing asymmetric compression with convertable divisions there maybe
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
         try:
-            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=0, rtol=0)
+            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=0)
         except AssertionError:
-            not_equal_mask = ov_result.data != numpy_result.data
+            not_equal_mask = np.not_equal(ov_result.data, numpy_result.data)
             msg = (
                 f"Results do not align for {key} with "
                 f"{not_equal_mask.sum() / ov_result.data.size * 100:.2f} % misalignment ratio.\n"
