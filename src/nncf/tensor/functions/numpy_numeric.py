@@ -321,11 +321,6 @@ def _(a: T_NUMPY) -> T_NUMBER:
     return a.item()
 
 
-@numeric.cumsum.register
-def _(a: T_NUMPY, axis: int) -> T_NUMPY:
-    return np.cumsum(a, axis=axis)
-
-
 @numeric.sum.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))

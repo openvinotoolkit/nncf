@@ -16,8 +16,8 @@ from nncf.tensor.functions.numeric import all as all
 from nncf.tensor.functions.numeric import allclose as allclose
 from nncf.tensor.functions.numeric import any as any
 from nncf.tensor.functions.numeric import arange as arange
-from nncf.tensor.functions.numeric import argsort as argsort
 from nncf.tensor.functions.numeric import argmin as argmin
+from nncf.tensor.functions.numeric import argsort as argsort
 from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
 from nncf.tensor.functions.numeric import atleast_1d as atleast_1d
@@ -54,6 +54,7 @@ from nncf.tensor.functions.numeric import min as min
 from nncf.tensor.functions.numeric import minimum as minimum
 from nncf.tensor.functions.numeric import moveaxis as moveaxis
 from nncf.tensor.functions.numeric import multiply as multiply
+from nncf.tensor.functions.numeric import nonzero as nonzero
 from nncf.tensor.functions.numeric import ones_like as ones_like
 from nncf.tensor.functions.numeric import percentile as percentile
 from nncf.tensor.functions.numeric import power as power
@@ -65,14 +66,12 @@ from nncf.tensor.functions.numeric import searchsorted as searchsorted
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
 from nncf.tensor.functions.numeric import sum as sum
-from nncf.tensor.functions.numeric import cumsum as cumsum
 from nncf.tensor.functions.numeric import tensor as tensor
 from nncf.tensor.functions.numeric import transpose as transpose
 from nncf.tensor.functions.numeric import unsqueeze as unsqueeze
 from nncf.tensor.functions.numeric import unstack as unstack
 from nncf.tensor.functions.numeric import var as var
 from nncf.tensor.functions.numeric import where as where
-from nncf.tensor.functions.numeric import nonzero as nonzero
 from nncf.tensor.functions.numeric import zeros as zeros
 from nncf.tensor.functions.numeric import zeros_like as zeros_like
 

@@ -562,15 +562,14 @@ def item(a: Tensor) -> Union[int, float, bool]:
 
 
 @tensor_dispatcher
-def cumsum(a: Tensor, axis: int) -> Tensor:
+def cumsum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
     """
-    Return the cumulative sum of the elements along a given axis.
+    Cumulative sum of tensor elements over a given axis.
 
     :param a: The input tensor.
-    :param axis: Axis along which the cumulative sum is computed.
-        The default (None) is to compute the cumsum over the flattened array.
-    :return: A new tensor holding the result. The result has the same size as a,
-        and the same shape as a if axis is not None or a is a 1-d array.
+    :param axis: Axis or axes along which a sum is performed. The default, axis=None, will sum all of the elements
+        of the input tensor.
+    :return: Returns the cumulative sum of all elements in the input tensor in the given axis.
     """
 
 
@@ -585,17 +584,6 @@ def sum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None, keepdims:
     :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions
         with size one.
     :return: Returns the sum of all elements in the input tensor in the given axis.
-    """
-
-@tensor_dispatcher
-def cumsum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
-    """
-    Cumulative sum of tensor elements over a given axis.
-
-    :param a: The input tensor.
-    :param axis: Axis or axes along which a sum is performed. The default, axis=None, will sum all of the elements
-        of the input tensor.
-    :return: Returns the cumulative sum of all elements in the input tensor in the given axis.
     """
 
 

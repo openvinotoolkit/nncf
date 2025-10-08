@@ -209,9 +209,7 @@ def _(
 
 
 @numeric.nonzero.register
-def _(
-    condition: torch.Tensor
-) -> torch.Tensor:
+def _(condition: torch.Tensor) -> torch.Tensor:
     return torch.nonzero(condition, as_tuple=True)
 
 
@@ -346,11 +344,6 @@ def _(a: torch.Tensor, data: Any) -> torch.Tensor:
 @numeric.item.register
 def _(a: torch.Tensor) -> T_NUMBER:
     return a.item()
-
-
-@numeric.cumsum.register
-def _(a: torch.Tensor, axis: int) -> torch.Tensor:
-    return torch.cumsum(a, dim=axis)
 
 
 @numeric.sum.register
