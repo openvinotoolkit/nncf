@@ -735,7 +735,8 @@ with a typical non-fixed zero point.
 <a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization</a></p></li>
 <li><p><strong>NF4</strong> – The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.</p></li>
 <li><p><strong>INT8</strong> – Mode is deprecated and will be removed in future releases. Please use <cite>INT8_ASYM</cite> instead.</p></li>
-<li><p><strong>E2M1</strong> – FP4 format from “OCP Microscaling Formats (MX) Specification” Version 1.0.</p></li>
+<li><p><strong>MXFP4</strong> – MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
+<li><p><strong>MXFP8_E4M3</strong> – MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
 <li><p><strong>CODEBOOK</strong> – Codebook (LUT) quantization format.</p></li>
 <li><p><strong>CB4_F8E4M3</strong> – Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.</p></li>
 </ul>
@@ -894,7 +895,11 @@ criteria and the given ratio.</p>
 </dd>
 </dl>
 <p>NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
-E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.</p>
+MXFP4 is MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
+MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale.</p>
+<blockquote>
+<div><p>The size of group is 32.</p>
+</div></blockquote>
 </p></li>
 <li><p><strong>ratio</strong> (<em>float</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
 and the rest to INT8_ASYM).</p></li>
