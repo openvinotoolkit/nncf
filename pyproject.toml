@@ -144,6 +144,7 @@ ignore = [
     "PERF403", # manual-dict-comprehension
     "B009", # get-attr-with-constant
     "B010", # set-attr-with-constant
+    "B905", # zip-without-explicit-strict
 ]
 select = [
     "CPY001", # copyright check
