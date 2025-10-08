@@ -286,7 +286,7 @@ def get_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
-    Get a model that compresses weights to float (currently nf4 or f4e2m1) destination type using the given
+    Get a model that compresses weights to float (currently nf4 or mxfp4) destination type using the given
     configuration.
 
     :param ov_model_params: OV model parameters.
@@ -572,7 +572,7 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]
 
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}

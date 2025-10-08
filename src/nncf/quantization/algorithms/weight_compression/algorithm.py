@@ -63,7 +63,8 @@ NON_INT8_MODES = [
     CompressWeightsMode.INT4_SYM,
     CompressWeightsMode.INT4_ASYM,
     CompressWeightsMode.NF4,
-    CompressWeightsMode.E2M1,
+    CompressWeightsMode.MXFP4,
+    CompressWeightsMode.MXFP8_E4M3,
 ]
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
@@ -93,13 +94,13 @@ def get_weight_compression_configuration(
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
-    group_size = (
-        -1
-        if group_size is None and mode in INT8_MODES
-        else 128
-        if group_size is None and mode in NON_INT8_MODES
-        else group_size
-    )
+    if group_size is None and mode in INT8_MODES:
+        group_size = -1
+    elif group_size is None and mode in NON_INT8_MODES:
+        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+            group_size = 32
+        else:
+            group_size = 128
 
     return {
         "mode": mode,
@@ -244,6 +245,18 @@ def check_user_compression_configuration(
             f"Supported modes are: {[e.value for e in GroupSizeFallbackMode]}."
         )
         raise nncf.ValidationError(msg)
+    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+        if group_size not in [None, 32]:
+            msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
+            raise nncf.ValidationError(msg)
+
+        if advanced_parameters and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST:
+            msg = (
+                "MXFP4 and MXFP8_E4M3 types do not support the group size"
+                f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
+                " Please use other group size fallback mode."
+            )
+            raise nncf.ValidationError(msg)
 
 
 class WeightCompression(Algorithm):
@@ -285,7 +298,8 @@ class WeightCompression(Algorithm):
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
-            E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
+            MXFP4 is MX-compliant FP4 with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
+            MXFP8_E4M3 is MX-compliant FP8 with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to backup_mode).
         :param group_size: number of weights (e.g. 128) in the channel dimension
