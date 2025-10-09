@@ -39,16 +39,14 @@ class TestOVNNCFTensorOperators:
             if dtype in no_numpy_support_dtypes:
                 ov_const = opset.constant(x, dtype=DTYPE_MAP_OV[dtype])
                 return ov.Tensor(ov_const.data, ov_const.data.shape, DTYPE_MAP_OV[dtype])
-            else:
-                return ov.Tensor(np.array(x, dtype=DTYPE_MAP_NP[dtype]))
-        elif backend == TensorBackend.numpy:
+            return ov.Tensor(np.array(x, dtype=DTYPE_MAP_NP[dtype]))
+        if backend == TensorBackend.numpy:
             if dtype in no_numpy_support_dtypes:
                 msg = f"Can't create NumPY tensor in dtype {dtype}"
                 raise ValueError(msg)
             return np.array(x, dtype=DTYPE_MAP_NP[dtype])
-        else:
-            msg = "Unsupported backend"
-            raise ValueError(msg)
+        msg = "Unsupported backend"
+        raise ValueError(msg)
 
     @staticmethod
     def backend() -> TensorBackend:

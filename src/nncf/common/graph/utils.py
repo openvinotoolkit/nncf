@@ -182,11 +182,10 @@ def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttribu
         # Always quantize per each "out" channel
         return 1 if layer_attributes.transpose else 0
 
-    else:
-        assert isinstance(
-            layer_attributes, (GenericWeightedLayerAttributes, LinearLayerAttributes, GroupNormLayerAttributes)
-        )
-        return 0
+    assert isinstance(
+        layer_attributes, (GenericWeightedLayerAttributes, LinearLayerAttributes, GroupNormLayerAttributes)
+    )
+    return 0
 
 
 def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:

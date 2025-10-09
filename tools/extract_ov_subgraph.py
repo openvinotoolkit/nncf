@@ -143,8 +143,7 @@ def get_nodes(xml_dict: dict, edges: dict):
                 if from_port not in edges[node_id]:
                     # Some edge descriptions may be missing in execution graph
                     continue
-                else:
-                    edge = edges[node_id][from_port]
+                edge = edges[node_id][from_port]
                 for edge_properties_dict in edge.values():
                     for name, value in zip(("precision", "shape", "is_input"), (precision, shape, is_input)):
                         assert name not in edge_properties_dict

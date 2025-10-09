@@ -1329,8 +1329,7 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
                 "are required for asymmetric quantization."
             )
         return
-    else:
-        _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+    _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)

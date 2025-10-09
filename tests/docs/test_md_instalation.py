@@ -33,9 +33,9 @@ def _extract_section(content: str, header: str) -> str:
         if line.strip().startswith("#") and line == header:
             in_section = True
             continue
-        elif in_section and line.strip().startswith("#"):
+        if in_section and line.strip().startswith("#"):
             break
-        elif in_section:
+        if in_section:
             section_lines.append(line)
     return "\n".join(section_lines).strip()
 

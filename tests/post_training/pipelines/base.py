@@ -522,7 +522,7 @@ class PTQTestPipeline(BaseTestPipeline):
             if len(cached_ov_model_files) > 1:
                 msg = "Graph break encountered in torch compile!"
                 raise nncf.InternalError(msg)
-            elif len(cached_ov_model_files) == 0:
+            if len(cached_ov_model_files) == 0:
                 msg = "Openvino Model Files Not Found!"
                 raise FileNotFoundError(msg)
             self.path_compressed_ir = cached_ov_model_files[0]
