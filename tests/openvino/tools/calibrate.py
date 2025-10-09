@@ -945,8 +945,7 @@ class ACDattasetWrapper:
                 filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
                 subset_size += len(filled_inputs)
             return subset_size
-        else:
-            return sequence_subset_size
+        return sequence_subset_size
 
 
 def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_parameters):

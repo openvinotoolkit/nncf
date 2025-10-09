@@ -237,8 +237,7 @@ def float_quantize_dequantize_weight(
     decompressed_weight = do_float_dequantization(compressed_weight, scale)
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale
-    else:
-        return decompressed_weight
+    return decompressed_weight
 
 
 def calculate_integer_quantization_params(
@@ -349,8 +348,7 @@ def compress_weight(
                 None,
                 config.codebook_values,
             )
-        else:
-            return CompressedWeight(compressed_weight, scale)
+        return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_integer_quantization(
         weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
@@ -504,8 +502,7 @@ def integer_quantize_dequantize_weight(
     decompressed_weight = do_integer_dequantization(compressed_weight, scale, zero_point)
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale, zero_point
-    else:
-        return decompressed_weight
+    return decompressed_weight
 
 
 def _calculate_nf4_quantized_weight(norm_weight: Tensor) -> Tensor:
@@ -633,8 +630,7 @@ def _can_run_optimized(inp: Tensor) -> bool:
 
             # Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.
             return not is_arm_cpu() or is_openvino_at_least("2025.2")
-        else:
-            nncf_logger.info_once(
-                "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
-            )
+        nncf_logger.info_once(
+            "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
+        )
     return False

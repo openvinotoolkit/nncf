@@ -48,7 +48,7 @@ def strip(
         from nncf.torch.strip import strip as strip_pt
 
         return strip_pt(model, do_copy, strip_format, example_input)  # type: ignore
-    elif model_backend == BackendType.TENSORFLOW:
+    if model_backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.strip import strip as strip_tf
 
         return strip_tf(model, do_copy, strip_format)  # type: ignore

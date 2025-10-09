@@ -973,17 +973,16 @@ class AWQMatmulModel(OVReferenceModel):
     def get_weights(weights_data, is_int8, name):
         if not is_int8:
             return opset.constant(weights_data, dtype=np.float32, name=name)
-        else:
-            qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
-            qw = opset.convert(qw, destination_type=np.float32)
+        qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
+        qw = opset.convert(qw, destination_type=np.float32)
 
-            zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
-            zp = opset.convert(zp, destination_type=np.float32)
+        zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
+        zp = opset.convert(zp, destination_type=np.float32)
 
-            scale = opset.constant(
-                np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
-            )
-            return (qw - zp) * scale
+        scale = opset.constant(
+            np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+        )
+        return (qw - zp) * scale
 
     def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
         input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")

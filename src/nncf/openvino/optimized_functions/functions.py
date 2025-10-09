@@ -214,8 +214,7 @@ def integer_quantize_dequantize_weight(
         decompressed_weight, compressed_weight, scale, zero_point = results
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale, zero_point
-    else:
-        return decompressed_weight
+    return decompressed_weight
 
 
 def float_quantize_dequantize_weight(
@@ -268,8 +267,7 @@ def float_quantize_dequantize_weight(
         decompressed_weight, compressed_weight, scale = results
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale
-    else:
-        return decompressed_weight
+    return decompressed_weight
 
 
 def get_integer_quantization_error(
