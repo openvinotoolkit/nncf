@@ -1709,8 +1709,8 @@ class UnifiedEmbeddingModel(ONNXReferenceModel):
         reshape_tensor_name = "R"
         reshape_tensor = create_initializer_tensor(
             name=reshape_tensor_name,
-            tensor_array=np.array([1, 3, 5]).astype(np.float32),
-            data_type=onnx.TensorProto.FLOAT,
+            tensor_array=np.array([1, 3, 5], dtype=np.int64),
+            data_type=onnx.TensorProto.INT64,
         )
         reshape_output_name = "Reshape_Y"
         reshape_node = onnx.helper.make_node(
@@ -1726,13 +1726,13 @@ class UnifiedEmbeddingModel(ONNXReferenceModel):
             op_type="Concat",
             inputs=[embedding_output_name, reshape_output_name],
             outputs=[concat_output_name],
-            axis=0,
+            axis=1,
         )
 
         matmul_2_tensor_name = "W_2"
         matmul_2_tensor = create_initializer_tensor(
             name=matmul_2_tensor_name,
-            tensor_array=rng.uniform(0, 1, (1, 5)).astype(np.float32),
+            tensor_array=rng.uniform(0, 1, (1, 5)).astype(np.float32).T,
             data_type=onnx.TensorProto.FLOAT,
         )
         matmul_2_node = onnx.helper.make_node(
