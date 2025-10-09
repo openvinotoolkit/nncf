@@ -9,10 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import os
 from pathlib import Path
 
 import pytest
+from pytest import Config
 
+from nncf import set_log_level
 from tests.cross_fw.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.cross_fw.shared.case_collection import skip_marked_cases_if_options_not_specified
 from tests.cross_fw.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
@@ -20,7 +24,29 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):
+    parser.addoption(
+        "--regen-ref-data",
+        action="store_true",
+        default=False,
+        help="If specified, the reference files will be regenerated using the current state of the repository.",
+    )
+    parser.addoption(
+        "--nncf-debug",
+        action="store_true",
+        default=False,
+        help="Set debug level for nncf logger.",
+    )
     parser.addoption("--data", type=str, default=None, help="Directory path to cached data.")
+
+
+def pytest_configure(config: Config) -> None:
+    regen_dot = config.getoption("--regen-ref-data", False)
+    if regen_dot:
+        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
+
+    nncf_debug = config.getoption("--nncf-debug", False)
+    if nncf_debug:
+        set_log_level(logging.DEBUG)
 
 
 @pytest.fixture(name="data_dir")
