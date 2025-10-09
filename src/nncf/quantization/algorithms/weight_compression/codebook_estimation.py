@@ -13,9 +13,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional, TypeVar
 
-import openvino as ov
-from openvino.runtime import opset13 as opset
-
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
@@ -37,19 +34,6 @@ from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
-
-
-def fp8_convert(in_shape):
-    input = opset.parameter(in_shape, dtype=ov.Type.f32)
-    scale_convert = opset.convert(input, ov.Type.f8e4m3)
-    scale_convert = opset.convert(scale_convert, ov.Type.f32)
-    result = opset.result(scale_convert, name="Result")
-    result.get_output_tensor(0).set_names(set(["Result"]))
-    model = ov.Model([result], [input])
-
-    compiled_model = ov.compile_model(model)
-
-    return compiled_model
 
 
 class CodebookEstimation:
@@ -94,7 +78,6 @@ class CodebookEstimation:
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-        debug=False,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates better codebook.
@@ -134,17 +117,9 @@ class CodebookEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            if debug:
-                qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
-                print("Initial diff:", fns.mean(fns.abs(weight.data - qw.data)))
-
             codebook, scale, indexes = self.calculate_codebook(stats, weight, wp.reduction_axes, config, wp)
             res[weight_name] = CompressedWeight(indexes, scale, None, codebook)
             config.codebook_values = codebook
-
-            if debug:
-                qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
-                print("kmeans diff:", fns.mean(fns.abs(weight.data - qw.data)))
 
         return res
 
@@ -178,20 +153,19 @@ class CodebookEstimation:
 
         codebook, indexes, variants = weights_clusterization_k_means(norm_weight, importance)
 
-        converter = fp8_convert(codebook.shape)
         indexes = indexes.reshape(orig_shape)
 
-        best_codebook = converter(codebook.as_openvino_tensor().data)[0]
+        best_codebook = codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3)
 
         fp_outs = fns.matmul(weight, X)
         diff = float("inf")
 
         variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
-        variants[1] = fns.tensor([i for i in range(-8, 8)], backend=weight.backend, dtype=weight.dtype)
+        variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
         best_i = -1
 
         for i_var, var in enumerate(variants):
-            var = converter(var.as_openvino_tensor().data)[0]
+            var = var.as_openvino_tensor().astype(TensorDataType.f8e4m3)
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
             q_outs = fns.matmul(qw, X)
@@ -207,7 +181,7 @@ class CodebookEstimation:
         return Tensor(best_codebook), None, None
 
 
-def round(quantiles, values):
+def round_to_left(quantiles, values):
     center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
     return fns.searchsorted(center_of_quantiles, values, side="left", sorter=None)
 
@@ -262,7 +236,7 @@ class KMeansWeighted:
             prev += step
 
         centers = fns.tensor(centers)
-        centroid_idxs = round(centers, data)
+        centroid_idxs = round_to_left(centers, data)
 
         res = [[], [], []]
         for i in range(centers.size):
@@ -294,9 +268,6 @@ class KMeansWeighted:
         data = data_[sorted_idx]
         importance = importance[sorted_idx]
 
-        # data = np.array([data_, importance])
-        # data = data[:, data[0, :].argsort()]
-
         data_range = (data.min().item(), data.max().item())
         prev = data_range[0]
 
@@ -311,7 +282,7 @@ class KMeansWeighted:
         centers = fns.tensor(centers, backend=data_.backend, dtype=data_.dtype)
         ranges = fns.tensor(ranges, backend=data_.backend, dtype=data_.dtype)
 
-        ranges_idxs = round(data, ranges)
+        ranges_idxs = round_to_left(data, ranges)
 
         res = [[], [], []]
         for i in range(centers.size):
@@ -365,33 +336,25 @@ class KMeansWeighted:
             if iteration % 5 == 0:
                 self.variants.append(deepcopy(self.centroids))
 
-            centroid_idxs = round(self.centroids, self.hist[0])
+            centroid_idxs = round_to_left(self.centroids, self.hist[0])
             for i in range(self.n_clusters):
                 idxs = fns.nonzero(centroid_idxs == i)
                 self.centroids[i] = fns.sum(self.hist[1][idxs]).item() / fns.sum(self.hist[2][idxs]).item()
 
-            # for i, centroid in enumerate(self.centroids):
-            #     if np.isnan(centroid).any():  # Catch any np.nans, resulting from a centroid having no points
-            #         self.centroids[i] = prev_centroids[i]
             for idx in fixed:
                 self.centroids[idx] = init[idx]
             iteration += 1
             if fns.any(fns.all(fns.abs(self.centroids - prev_centroids) < 0.00001)):
                 break
-            # if np.all(np.abs(self.centroids - prev_centroids) < 0.00001).any():
-            #     break
 
         self.variants.append(deepcopy(self.centroids))
 
     def evaluate(self, X):
-        centroid_idxs = round(self.centroids, X)
+        centroid_idxs = round_to_left(self.centroids, X)
         return deepcopy(self.centroids).flatten(), centroid_idxs
 
 
 def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
-    # weight = weight.as_numpy_tensor().data
-    # importance = importance.as_numpy_tensor().data
-
     ow = deepcopy(weight)
     orig_shape = weight.shape
     weight = weight.flatten()
@@ -407,8 +370,6 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
     codebook, indexes = kmeans.evaluate(weight)  # .reshape(-1, 1))
 
     indexes = fns.reshape(indexes, orig_shape)
-
-    # print(orig_shape, np.mean(np.abs(ow - codebook[indexes])))
 
     print(orig_shape, fns.mean(fns.abs(ow - codebook[indexes])))
 
