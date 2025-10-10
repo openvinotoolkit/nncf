@@ -162,9 +162,8 @@ class CodebookEstimation:
 
         variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
         variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
-        best_i = -1
 
-        for i_var, var in enumerate(variants):
+        for var in variants:
             var = var.as_openvino_tensor().astype(TensorDataType.f8e4m3)
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
@@ -174,9 +173,6 @@ class CodebookEstimation:
             if cur_diff < diff:
                 diff = cur_diff
                 best_codebook = var
-                best_i = i_var
-
-        print("Best codebook:", best_codebook, "diff:", diff, "best_i:", best_i)
 
         return Tensor(best_codebook), None, None
 
@@ -211,15 +207,21 @@ class KMeansWeighted:
         n_frequencies = fns.cumsum(n_frequencies)
 
         res = fns.zeros((n_clusters,), backend=values.backend, dtype=values.dtype)
-        for i in range(len(quants)):
+        for i in range(n_clusters):
             if i == 0:
                 res[i] = values[0]
-            elif i == len(quants) - 1:
+            elif i == n_clusters - 1:
                 res[i] = values[-1]
             else:
-                prev = values[fns.nonzero(n_frequencies <= quants[i])[0][-1].item()].item()
-                next_ = values[fns.nonzero(n_frequencies <= quants[i + 1])[0][-1].item()].item()
-                res[i] = (prev + next_) / 2
+                prev_val = values[fns.nonzero(n_frequencies <= quants[i])[0][-1].item()].item()
+                next_val = values[fns.nonzero(n_frequencies <= quants[i + 1])[0][-1].item()].item()
+                res[i] = (prev_val + next_val) / 2
+
+        # avoid close centroids
+        th = 0.05
+        for i in range(1, n_clusters - 1):
+            if (res[i] - res[i + 1]).abs() / max(res[i].abs(), res[i + 1].abs()) < th:
+                res[i] = (res[i - 1] + res[i + 1]) / 2
 
         return res
 
@@ -235,7 +237,7 @@ class KMeansWeighted:
             centers.append(prev + step / 2)
             prev += step
 
-        centers = fns.tensor(centers)
+        centers = fns.tensor(centers, backend=data.backend)
         centroid_idxs = round_to_left(centers, data)
 
         res = [[], [], []]
@@ -247,9 +249,9 @@ class KMeansWeighted:
             res[1].append(fns.sum(data[idxs]))
             res[2].append(len(idxs[0]))
 
-        res[0] = fns.tensor(res[0])  # centers of histogram bins
-        res[1] = fns.tensor(res[1])  # sum of values in each bin
-        res[2] = fns.tensor(res[2])  # count of values in each bin
+        res[0] = fns.tensor(res[0], backend=data.backend)  # centers of histogram bins
+        res[1] = fns.tensor(res[1], backend=data.backend)  # sum of values in each bin
+        res[2] = fns.tensor(res[2], backend=data.backend)  # count of values in each bin
 
         return res
 
