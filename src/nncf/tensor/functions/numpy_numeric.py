@@ -495,3 +495,8 @@ def tensor(
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
     return np.array(data, dtype=np_dtype)
+
+
+@numeric.tolist.register
+def _(a: T_NUMPY) -> Any:
+    return a.tolist()

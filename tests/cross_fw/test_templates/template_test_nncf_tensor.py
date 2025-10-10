@@ -2390,3 +2390,10 @@ class TemplateTestNNCFTensorOperators:
         assert tensor1.shape == tensor2.shape
         assert tensor2.device == TensorDeviceType.CPU
         assert fns.allclose(tensor1, tensor2)
+
+    def test_tolist(self):
+        inp_list = [[1.0, 2.0], [3.0, 4.0]]
+        tensor = Tensor(self.to_tensor(inp_list))
+        assert tensor.tolist() == inp_list
+        assert tensor[0].tolist() == inp_list[0]
+        assert tensor[0][0].tolist() == inp_list[0][0]
