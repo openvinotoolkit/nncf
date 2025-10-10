@@ -61,9 +61,12 @@ def _build_torch_fx_model(model_case: ModelCase) -> tuple[torch.fx.GraphModule, 
 
 
 def _get_calibration_dataset(example_input: torch.Tensor) -> nncf.Dataset:
+    torch.manual_seed(42)
     def transform_fn(x):
         return x.to("cpu")
-    return nncf.Dataset([example_input], transform_fn)
+    sample_1 = torch.randint_like(example_input, 0,10)
+    sample_2 = torch.randint_like(example_input, 0, 10)
+    return nncf.Dataset([example_input, sample_1, sample_2], transform_fn)
 
 
 def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
