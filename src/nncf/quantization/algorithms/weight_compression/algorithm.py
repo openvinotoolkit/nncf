@@ -528,7 +528,6 @@ class WeightCompression(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         statistics_points: StatisticPointsContainer,
-        group_size_values: dict[str, int],
     ) -> None:
         """
         Sets the appropriate compression configuration for weights based on some criteria.
@@ -830,7 +829,6 @@ class WeightCompression(Algorithm):
     ) -> tuple[
         list[WeightCompressionParameters],
         list[WeightCompressionParameters],
-        dict[str, int],
         list[WeightCompressionParameters],
     ]:
         """
@@ -844,8 +842,7 @@ class WeightCompression(Algorithm):
         :param graph: NNCFGraph instance.
         :return: A tuple consisting of a list of all weight compression parameters, based on the Weight
             Compression algorithm configuration, list of ratio defining parameters(weights that are used
-            for ratio calculation between primary and backup precisions), A dictionary mapping weight
-            names to their group size values and list of weight parameters to skip.
+            for ratio calculation between primary and backup precisions), and list of weight parameters to skip.
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
 
@@ -921,7 +918,7 @@ class WeightCompression(Algorithm):
         for weight_param in ratio_defining_params:
             weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
 
-        return all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params
+        return all_weight_params, ratio_defining_params, skipped_weight_params
 
     def apply(
         self,
@@ -933,7 +930,7 @@ class WeightCompression(Algorithm):
         self.set_backend_entity(model)
 
         # Get processed weight compression parameters ready for compression
-        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = (
+        all_weight_params, ratio_defining_params, skipped_weight_params = (
             self.get_weight_compression_parameters(model, graph)
         )
         return self.apply_with_parameters(
@@ -943,7 +940,6 @@ class WeightCompression(Algorithm):
             statistic_points,
             all_weight_params,
             ratio_defining_params,
-            group_size_values,
             skipped_weight_params,
         )
 
@@ -955,7 +951,6 @@ class WeightCompression(Algorithm):
         statistic_points: StatisticPointsContainer,
         all_weight_params: list[WeightCompressionParameters],
         ratio_defining_params: list[WeightCompressionParameters],
-        group_size_values: dict[str, int],
         skipped_weight_params: list[WeightCompressionParameters],
     ):
         # Collect statistics for the weights compression
@@ -963,7 +958,7 @@ class WeightCompression(Algorithm):
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
         )
         # Set weight compression configuration
-        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
+        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
 
         # Print statistics
         nncf_logger.info(

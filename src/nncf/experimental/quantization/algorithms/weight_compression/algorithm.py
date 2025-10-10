@@ -114,7 +114,7 @@ class WeightsCompression(Algorithm):
     ) -> torch.fx.GraphModule:
         self._algo.set_backend_entity(model)
 
-        all_weight_params, ratio_defining_params, group_size_values, skipped_weight_params = (
+        all_weight_params, ratio_defining_params, skipped_weight_params = (
             self._quantizer.get_weight_compression_parameters(model, graph)
         )
 
@@ -125,7 +125,6 @@ class WeightsCompression(Algorithm):
             statistic_points,
             all_weight_params,
             ratio_defining_params,
-            group_size_values,
             skipped_weight_params,
         )
 
