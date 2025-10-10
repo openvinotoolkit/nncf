@@ -871,7 +871,6 @@ class WeightCompression(Algorithm):
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
-                wc_config = None
                 if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
                     if (
                         self._group_size != -1
@@ -966,13 +965,14 @@ class WeightCompression(Algorithm):
         # Set weight compression configuration
         self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
 
-        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
-        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
-
         # Print statistics
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
+
+        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
+        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
+
 
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)

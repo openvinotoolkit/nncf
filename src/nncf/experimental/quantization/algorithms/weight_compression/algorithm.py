@@ -25,7 +25,10 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-
+from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf import CompressWeightsMode
+from nncf import IgnoredScope
+from nncf import BackupMode
 
 class WeightsCompression(Algorithm):
     """
@@ -37,15 +40,21 @@ class WeightsCompression(Algorithm):
 
     def __init__(
         self,
+        mode: CompressWeightsMode,
         quantizer: Quantizer,
-        subset_size: int = 128,
-        awq: bool = False,
-        scale_estimation: bool = False,
-        gptq: bool = False,
-        lora_correction: bool = False,
-        sensitivity_metric: SensitivityMetric = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
-        compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = None,
+        ratio: float,
+        group_size: int,
+        ignored_scope: IgnoredScope,
+        all_layers: bool,
+        subset_size: int,
+        awq: bool,
+        scale_estimation: bool,
+        gptq: bool,
+        lora_correction: bool,
+        backup_mode: BackupMode,
+        sensitivity_metric: SensitivityMetric,
+        compression_format: CompressionFormat,
+        advanced_parameters: AdvancedCompressionParameters,
     ) -> torch.fx.GraphModule:
         """
         :param quantizer: Quantizer to use in WeightCompression algorithm.
@@ -62,26 +71,25 @@ class WeightsCompression(Algorithm):
         """
         self._quantizer = quantizer
 
-        wc_config = self._quantizer.get_weight_compression_config()
-
-        self._mode = wc_config.get("mode", None)
+        self._mode = mode
         self._awq = awq
         self._gptq = gptq
         self._scale_estimation = scale_estimation
         self._subset_size = subset_size
         self._advanced_parameters = advanced_parameters
         self._lora_correction = lora_correction
-        self._ratio = wc_config.get("ratio", 1)
-        self._group_size = wc_config.get("group_size", 128)
-        self._all_layers = wc_config.get("all_layers", False)
-        self._backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
+        self._ratio = ratio
+        self._group_size = group_size
+        self._all_layers = all_layers
+        self._backup_mode = backup_mode
         self._sensitivity_metric = sensitivity_metric
         self._compression_format = compression_format
+
         self._algo = WeightCompression(
             mode=self._mode,
             ratio=self._ratio,
             group_size=self._group_size,
-            ignored_scope=nncf.IgnoredScope(),  # This is already defined in the quantizer object
+            ignored_scope=ignored_scope,
             all_layers=self._all_layers,
             sensitivity_metric=self._sensitivity_metric,
             awq=self._awq,

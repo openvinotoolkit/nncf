@@ -26,3 +26,4 @@ from .squeezenet import *
 from .sr_small_model import *
 from .unet import *
 from .vgg import *
+from .llama import *

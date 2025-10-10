@@ -37,6 +37,7 @@ from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import T
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
+from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -202,16 +203,44 @@ def compress_pt2e(
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
+    wc_config = quantizer.get_weight_compression_config()
+
+    mode = wc_config.get("mode", None)
+    awq = awq
+    gptq = gptq
+    scale_estimation = scale_estimation
+    subset_size = subset_size
+    advanced_parameters = advanced_parameters
+    lora_correction = lora_correction
+    ratio = wc_config.get("ratio", 1)
+    group_size = wc_config.get("group_size", 128)
+    all_layers = wc_config.get("all_layers", False)
+    backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
+    sensitivity_metric = sensitivity_metric
+    compression_format = compression_format
+    ignored_scope = nncf.IgnoredScope() # This is already defined in the quantizer object
+
+    weight_compression_configuration = get_weight_compression_configuration(
+        mode,
+        dataset,
+        ratio,
+        group_size,
+        all_layers,
+        awq,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        ignored_scope,
+        sensitivity_metric,
+        backup_mode,
+        advanced_parameters,
+    )
+
     quantization_algorithm = WeightsCompression(
         quantizer=quantizer,
-        awq=awq,
         subset_size=subset_size,
-        scale_estimation=scale_estimation,
-        gptq=gptq,
-        lora_correction=lora_correction,
-        sensitivity_metric=sensitivity_metric,
         compression_format=compression_format,
-        advanced_parameters=advanced_parameters,
+        **weight_compression_configuration
     )
 
     # Here the model is annotated
