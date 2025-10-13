@@ -43,13 +43,24 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
+    def __init__(
+        self,
+        reduction_axes: Optional[ReductionAxes] = None,
+        keep_axes: Optional[tuple[int, ...]] = None,
+        inplace: bool = False
+    ):
         """
         :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
+        :param keep_axes:
         :param inplace: Whether should be calculated inplace or out of place.
         """
+        if reduction_axes is not None and keep_axes is not None:
+            msg = ""
+            raise nncf.ValidationError(msg)
+
         self._reduction_axes = reduction_axes
+        self._keep_axes = keep_axes
         self._inplace = inplace
         self._keepdims = True
 
@@ -107,6 +118,13 @@ class TensorReducerBase(ABC):
     def _get_reduction_axes(self, tensor: Tensor) -> ReductionAxes:
         if self._reduction_axes is not None:
             return self._reduction_axes
+
+        if self._keep_axes is not None:
+            axes = range(tensor.ndim)
+            # Ensure that all axes have positive values
+            keep_axes = tuple(axes[i] for i in self._keep_axes)
+            self._reduction_axes = tuple(set(axes) - set(keep_axes))
+
         return tuple(range(len(tensor.shape)))
 
 
