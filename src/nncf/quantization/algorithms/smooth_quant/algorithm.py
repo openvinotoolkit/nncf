@@ -31,10 +31,13 @@ from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 STATISTIC_BRANCH_KEY = "abs_max"
+SHAPE_BRANCH_KEY = "shape"
 ALPHA_MAP = {"convolution": 0.05, "matmul": 0.95}
 
 
@@ -108,16 +111,19 @@ class SmoothQuant(Algorithm):
         self._set_backend_entity(model)
         alpha_map = self._get_alpha_map()
 
-        nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
-        node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
+        nodes = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
+        nodes = self._retrieve_shape(nodes, statistic_points)
+        node_groups = self._group_nodes_by_source(nodes, graph)
 
         transformation_layout = TransformationLayout()
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
             best_scale = None
             best_ratio = 0.0
             empty_statistic = False
+
+            source_node, input_port_id, source_output_port_id, shape = group_id
+
             for node_to_smooth in nodes:
-                source_node, input_port_id, source_output_port_id, _ = group_id
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
@@ -166,9 +172,7 @@ class SmoothQuant(Algorithm):
                 )
                 transformation_layout.register(weight_update_command)
 
-            activations_by_output_id = {e.output_port_id: e for e in graph.get_output_edges(source_node)}
-            activations_shape = activations_by_output_id[source_output_port_id].tensor_shape
-            activation_scale = self._calculate_activation_scale(best_scale, activations_shape, nodes, graph)
+            activation_scale = self._calculate_activation_scale(best_scale, shape, nodes, graph)
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
             scale_insertion_command = self._backend_entity.scale_insertion_command(
@@ -216,15 +220,41 @@ class SmoothQuant(Algorithm):
         :return: Dictionary with the source info as key and grouped nodes as value.
         """
         groups = defaultdict(list)
-        for node_to_smooth, input_act_port in nodes_to_smooth:
+        for node_to_smooth, input_act_port, shape in nodes_to_smooth:
             source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
             edge = nncf_graph.get_edge(source_node, node_to_smooth)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
-            group_id = (source_node, input_act_port, edge.output_port_id, hash(str(edge.tensor_shape)))
+
+             # TODO(andrey-churkin): Why hash(str(edge.tensor_shape))?
+            group_id = (source_node, input_act_port, edge.output_port_id, shape)
             groups[group_id].append(node_to_smooth)
 
         return groups
+
+    def _retrieve_shape(
+        self,
+        nodes: list[tuple[NNCFNode, int]],
+        statistic_points: StatisticPointsContainer
+    ) -> list[tuple[NNCFNode, int, tuple[int, ...]]]:
+        """
+        :param nodes:
+        :param statistic_points:
+        :return:
+        """
+        items = []
+        for node, input_port in nodes:
+            for tensor_collector in statistic_points.get_algo_statistics_for_node(
+                node.node_name,
+                self._backend_entity.get_filter_fn_for_statistics(input_port, self._algorithm_key),
+                self._algorithm_key,
+            ):
+                stats = tensor_collector.get_statistics()
+                shape = tuple(stats[SHAPE_BRANCH_KEY].tolist())
+
+            items.append((node, input_port, shape))
+
+        return items
 
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node_name: str, act_port: int
@@ -267,6 +297,10 @@ class SmoothQuant(Algorithm):
             stat_collector = self._backend_entity.get_abs_max_channel_collector(
                 self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
             )
+
+            # TODO(andrey-churkin): OVShapeReducer
+            stat_collector.register_statistic_branch(SHAPE_BRANCH_KEY, ShapeReducer(), NoopAggregator(num_samples=1, return_first=True))
+
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=target_point,
