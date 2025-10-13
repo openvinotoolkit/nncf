@@ -227,7 +227,7 @@ class ScaleEstimation:
 
         # all weight in group has importance based on corresponding input activations
         importance = fns.ones_like(original_weight)
-        # s = s**2
+
         importance = importance * s
 
         target, zero_mask = get_target_zero_mask(compressed_weights, zp)

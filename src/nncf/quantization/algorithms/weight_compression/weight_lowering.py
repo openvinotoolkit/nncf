@@ -78,7 +78,7 @@ def reshape_weight_for_grouped_quantization(
 
 
 def calculate_float_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, signed: bool = True
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, signed: bool = False
 ) -> Tensor:
     """
     Calculates the scale for nf4 or mxfp4/mxfp8_e4m3 quantization.
