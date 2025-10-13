@@ -867,6 +867,7 @@ class WeightCompression(Algorithm):
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
+                wc_config = None
 
                 if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
                     if (
