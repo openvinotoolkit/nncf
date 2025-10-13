@@ -325,7 +325,7 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
 
 
 @tensor_dispatcher
-def nonzero(condition: Tensor) -> Tensor:
+def nonzero(condition: Tensor) -> tuple[Tensor, ...]:
     """
     Return the indices of the elements that are non-zero.
 
