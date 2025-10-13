@@ -109,11 +109,9 @@ class SmoothQuant(Algorithm):
         alpha_map = self._get_alpha_map()
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
-        model_transformer = ModelTransformerFactory.create(model)
-        transformation_layout = TransformationLayout()
-
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
+        transformation_layout = TransformationLayout()
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
             best_scale = None
             best_ratio = 0.0
@@ -178,6 +176,7 @@ class SmoothQuant(Algorithm):
             )
             transformation_layout.register(scale_insertion_command)
 
+        model_transformer = ModelTransformerFactory.create(model)
         transformed_model = model_transformer.transform(transformation_layout)
         return transformed_model
 
@@ -204,7 +203,7 @@ class SmoothQuant(Algorithm):
         ratio = scales.min() / (scales.max() + eps)
         return scales, ratio
 
-    def _group_nodes_by_source(self, nodes_to_smooth: list[dict], nncf_graph: NNCFGraph) -> dict[tuple, list]:
+    def _group_nodes_by_source(self, nodes_to_smooth: list[tuple[NNCFNode, int]], nncf_graph: NNCFGraph) -> dict[tuple, list]:
         """
         Groups nodes that will be smoothed by source (parent node).
 
@@ -213,9 +212,7 @@ class SmoothQuant(Algorithm):
         :return: Dictionary with the source info as key and grouped nodes as value.
         """
         groups = defaultdict(list)
-        for node_data in nodes_to_smooth:
-            node_to_smooth = node_data["node_to_smooth"]
-            input_act_port = node_data["input_act_port"]
+        for node_to_smooth, input_act_port in nodes_to_smooth:
             source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
             edge = nncf_graph.get_edge(source_node, node_to_smooth)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
@@ -254,15 +251,14 @@ class SmoothQuant(Algorithm):
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
 
-        for node_data in nodes_to_smooth_data:
-            node_to_smooth = node_data["node_to_smooth"]
+        for node_to_smooth, input_act_port in nodes_to_smooth_data:
             target_point = self._backend_entity.target_point(
                 target_type=self._backend_entity.pre_layer_target_type(),
                 target_node_name=node_to_smooth.node_name,
-                port_id=node_data["input_act_port"],
+                port_id=input_act_port,
             )
             input_reduction_axes = self._calculate_input_reduction_axes(
-                graph, node_to_smooth, node_data["input_act_port"]
+                graph, node_to_smooth, input_act_port
             )
             stat_collector = self._backend_entity.get_abs_max_channel_collector(
                 self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
@@ -276,7 +272,7 @@ class SmoothQuant(Algorithm):
             )
         return statistic_container
 
-    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]) -> list[dict]:
+    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]) -> list[tuple[NNCFNode, int]]:
         """
         Collects layers whose activations will be smoothed.
 
@@ -306,12 +302,8 @@ class SmoothQuant(Algorithm):
             if self._backend_entity.is_node_with_shared_weight(node_with_weight, nncf_graph):
                 continue
 
-            nodes_to_smooth_data.append(
-                {
-                    "node_to_smooth": node_with_weight,
-                    "input_act_port": activation_port_id,
-                }
-            )
+            nodes_to_smooth_data.append((node_with_weight, activation_port_id))
+
         return nodes_to_smooth_data
 
     def _calculate_activation_scale(
