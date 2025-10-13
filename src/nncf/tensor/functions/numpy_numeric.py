@@ -327,8 +327,8 @@ def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
 
 
 @numeric.cumsum.register
-def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
-    return np.array(np.cumsum(a, axis=axis))
+def _(a: T_NUMPY, axis: int) -> T_NUMPY:
+    return np.cumsum(a, axis=axis)
 
 
 @numeric.multiply.register
@@ -376,7 +376,7 @@ def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False
 
 
 @numeric.argmin.register
-def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY:
+def _(a: T_NUMPY, axis: None) -> T_NUMPY:
     return np.argmin(a, axis=axis)
 
 

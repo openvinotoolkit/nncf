@@ -352,7 +352,7 @@ def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Ten
 
 
 @numeric.cumsum.register
-def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: int) -> torch.Tensor:
     return torch.cumsum(a, dim=axis)
 
 

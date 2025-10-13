@@ -562,14 +562,15 @@ def item(a: Tensor) -> Union[int, float, bool]:
 
 
 @tensor_dispatcher
-def cumsum(a: Tensor, axis: Optional[Union[int, tuple[int, ...]]] = None) -> Tensor:
+def cumsum(a: Tensor, axis: int) -> Tensor:
     """
-    Cumulative sum of tensor elements over a given axis.
+    Return the cumulative sum of the elements along a given axis.
 
     :param a: The input tensor.
-    :param axis: Axis or axes along which a sum is performed. The default, axis=None, will sum all of the elements
-        of the input tensor.
-    :return: Returns the cumulative sum of all elements in the input tensor in the given axis.
+    :param axis: Axis along which the cumulative sum is computed.
+        The default (None) is to compute the cumsum over the flattened array.
+    :return: A new tensor holding the result. The result has the same size as a,
+        and the same shape as a if axis is not None or a is a 1-d array.
     """
 
 
@@ -672,7 +673,7 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
 
 
 @tensor_dispatcher
-def argmin(a: Tensor, axis: T_AXIS = None) -> Tensor:
+def argmin(a: Tensor, axis: None) -> Tensor:
     """
     Returns the indices of the minimum values along an axis.
 

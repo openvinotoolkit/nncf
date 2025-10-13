@@ -197,6 +197,7 @@ class KMeansWeighted:
         self.n_clusters = n_clusters
         self.max_iter = max_iter
         self.variants = []
+        self.centroids = None
 
     @staticmethod
     def get_init(values, frequencies, n_clusters):
@@ -204,7 +205,7 @@ class KMeansWeighted:
         denum = fns.sum(frequencies)
         quants = [i * step for i in range(n_clusters)]
         n_frequencies = frequencies / denum
-        n_frequencies = fns.cumsum(n_frequencies)
+        n_frequencies = fns.cumsum(n_frequencies, axis=0)
 
         res = fns.zeros((n_clusters,), backend=values.backend, dtype=values.dtype)
         for i in range(n_clusters):
@@ -305,7 +306,7 @@ class KMeansWeighted:
                     importance[ranges_idxs[idx - 1].item() : ranges_idxs[idx + 1].item()],
                 )
 
-        res[0] = centers  # fns.tensor(res[0], backend=data_.backend, dtype=data_.dtype) # centers of histogram bins
+        res[0] = centers
         res[1] = fns.tensor(res[1], backend=data_.backend, dtype=data_.dtype)
         res[2] = fns.tensor(res[2], backend=data_.backend, dtype=data_.dtype)
 
@@ -323,8 +324,8 @@ class KMeansWeighted:
         init_by_hist = self.get_init(self.hist[0], self.hist[2], self.n_clusters)
         init_by_hist[0] = init[0]
         init_by_hist[-1] = init[-1]
-        zero_idx = fns.argmin(fns.abs(init_by_hist[:]))
-        init_by_hist[zero_idx] = 0.0  # init[0, zero_idx]
+        zero_idx = fns.argmin(fns.abs(init_by_hist[:]), axis=0).item()
+        init_by_hist[zero_idx] = 0.0  # to have zero in codebook
         fixed[1] = zero_idx
         init = init_by_hist
 
@@ -357,7 +358,6 @@ class KMeansWeighted:
 
 
 def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
-    ow = deepcopy(weight)
     orig_shape = weight.shape
     weight = weight.flatten()
     importance = importance.flatten()
@@ -369,10 +369,8 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
     kmeans = KMeansWeighted(n_centroids, max_iter=70)
 
     kmeans.fit(weight, importance, n_init, fixed=[0, 7, 15])
-    codebook, indexes = kmeans.evaluate(weight)  # .reshape(-1, 1))
+    codebook, indexes = kmeans.evaluate(weight)
 
     indexes = fns.reshape(indexes, orig_shape)
-
-    print(orig_shape, fns.mean(fns.abs(ow - codebook[indexes])))
 
     return codebook, indexes, kmeans.variants
