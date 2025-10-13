@@ -34,7 +34,6 @@ from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.tensor.definitions import TensorDataType
-from nncf import CompressWeightsMode
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
 
@@ -46,25 +45,6 @@ class TorchAOQuantizerAdapter(Quantizer):
 
     def __init__(self, quantizer: TorchAOQuantizer):
         self._quantizer = quantizer
-
-    def _get_compression_mode_from_qconfig(qp: QuantizationPointBase):
-        if qp.qconfig.num_bits == 4 and qp.qconfig.mode == QuantizationMode.ASYMMETRIC:
-            return CompressWeightsMode.INT4_ASYM
-        elif qp.qconfig.num_bits == 4 and qp.qconfig.mode == QuantizationMode.SYMMETRIC:
-            return CompressWeightsMode.INT4_SYM
-        elif qp.qconfig.num_bits == 8 and qp.qconfig.mode == QuantizationMode.ASYMMETRIC:
-            return CompressWeightsMode.INT8_ASYM
-        elif qp.qconfig.num_bits == 8 and qp.qconfig.mode == QuantizationMode.SYMMETRIC:
-            return CompressWeightsMode.INT8_SYM
-
-    def get_wc_config_node_map(self, model, nncf_graph):
-        quantization_setup = self.get_quantization_setup(model, nncf_graph)
-        qps = quantization_setup.quantization_points
-        print(quantization_setup)
-        for _,qp in qps.items():
-            assert len(qp.directly_quantized_operator_node_names) == 1, "Weights compression does not support shared configs"
-        qps = {qp.directly_quantized_operator_node_names[0]: self._get_compression_mode_from_qconfig(qp) for id,qp in qps.items()}
-        return qps
 
     def transform_prior_quantization(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         return self._quantizer.transform_for_annotation(model)
@@ -136,7 +116,6 @@ class TorchAOQuantizerAdapter(Quantizer):
         :return: A SingleConfigQuantizerSetup containing quantization points derived from the annotated model.
         """
         edge_or_node_to_qspec = _get_edge_or_node_to_qspec(annotated)
-        print(edge_or_node_to_qspec)
         # Node means all output edges should be quantized.
         # Edge means only one edge should be quantized.
         edge_or_node_to_group_id = _get_edge_or_node_to_group_id(edge_or_node_to_qspec)
@@ -171,7 +150,6 @@ class TorchAOQuantizerAdapter(Quantizer):
                 raise nncf.InternalError(msg)
 
             dtype = TensorDataType.int8 if qspec.dtype is torch.int8 else TensorDataType.uint8
-            dtype = TensorDataType.int4 if qspec.qmax in [15, 8] else dtype
             mode = (
                 QuantizationMode.SYMMETRIC
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
