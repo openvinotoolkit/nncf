@@ -123,7 +123,7 @@ class TensorReducerBase(ABC):
             axes = range(tensor.ndim)
             # Ensure that all axes have positive values
             keep_axes = tuple(axes[i] for i in self._keep_axes)
-            self._reduction_axes = tuple(set(axes) - set(keep_axes))
+            return tuple(set(axes) - set(keep_axes))
 
         return tuple(range(len(tensor.shape)))
 
