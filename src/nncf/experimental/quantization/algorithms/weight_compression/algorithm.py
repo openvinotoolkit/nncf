@@ -24,8 +24,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression as OriginalWeightCompression
 from nncf import CompressWeightsMode
 from nncf import IgnoredScope
 from nncf import BackupMode
@@ -85,7 +84,7 @@ class WeightsCompression(Algorithm):
         self._sensitivity_metric = sensitivity_metric
         self._compression_format = compression_format
 
-        self._algo = WeightCompression(
+        self._algo = OriginalWeightCompression(
             mode=self._mode,
             ratio=self._ratio,
             group_size=self._group_size,
