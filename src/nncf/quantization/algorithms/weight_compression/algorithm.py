@@ -87,6 +87,7 @@ def get_weight_compression_configuration(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
+    codebook_estimation: Optional[bool] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     backup_mode: Optional[BackupMode] = None,
@@ -112,6 +113,7 @@ def get_weight_compression_configuration(
         "scale_estimation": scale_estimation or False,
         "gptq": gptq or False,
         "lora_correction": lora_correction or False,
+        "codebook_estimation": codebook_estimation or False,
         "ignored_scope": ignored_scope or IgnoredScope(),
         "sensitivity_metric": (
             (
@@ -138,6 +140,7 @@ def check_user_compression_configuration(
     scale_estimation: Optional[bool],
     gptq: Optional[bool],
     lora_correction: Optional[bool],
+    codebook_estimation: Optional[bool],
     ignored_scope: Optional[IgnoredScope],
     sensitivity_metric: Optional[SensitivityMetric],
     backup_mode: Optional[BackupMode],
@@ -168,6 +171,7 @@ def check_user_compression_configuration(
             "gptq": gptq,
             "lora_correction": lora_correction,
             "backup_mode": backup_mode,
+            "codebook_estimation": codebook_estimation,
         }
         unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
         if unsupported_for_int8:
@@ -281,6 +285,7 @@ class WeightCompression(Algorithm):
         scale_estimation: bool,
         gptq: bool,
         lora_correction: bool,
+        codebook_estimation: bool,
         backup_mode: BackupMode = BackupMode.INT8_ASYM,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
@@ -340,6 +345,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
+        self._codebook_estimation = codebook_estimation
         self._backup_mode = backup_mode
         self._compression_format = compression_format
         self._advanced_parameters = (
@@ -380,7 +386,8 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
 
-        self._codebook_estimation_algo = CodebookEstimation()
+        if self._codebook_estimation:
+            self._codebook_estimation_algo = CodebookEstimation()
 
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
@@ -390,7 +397,7 @@ class WeightCompression(Algorithm):
             or self._scale_estimation
             or self._lora_correction
             or self._gptq
-            or self._codebook_estimation_algo
+            or self._codebook_estimation
         )
 
     @property
@@ -942,7 +949,7 @@ class WeightCompression(Algorithm):
         lora_correction_algo = None
         description = "Applying Weight Compression"
 
-        if self._mode == CompressWeightsMode.CODEBOOK:
+        if self._codebook_estimation:
             precomputed_compressed_weights = self._codebook_estimation_algo.apply(
                 model=model,
                 graph=graph,

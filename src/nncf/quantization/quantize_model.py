@@ -436,6 +436,7 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
+    codebook_estimation: Optional[bool] = None,
     backup_mode: Optional[BackupMode] = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
@@ -580,6 +581,7 @@ def compress_weights(
         options = {
             "gptq": gptq,
             "lora_correction": lora_correction,
+            "codebook_estimation": codebook_estimation,
         }
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
@@ -606,7 +608,7 @@ def compress_weights(
     elif backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((scale_estimation, gptq, lora_correction)) and dataset is None:
+        if any((scale_estimation, gptq, lora_correction, codebook_estimation)) and dataset is None:
             msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -645,6 +647,7 @@ def compress_weights(
         options = {
             "gptq": gptq,
             "lora_correction": lora_correction,
+            "codebook_estimation": codebook_estimation,
         }
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
@@ -670,6 +673,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
+        codebook_estimation,
         ignored_scope,
         sensitivity_metric,
         backup_mode,
@@ -686,6 +690,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
+        codebook_estimation,
         ignored_scope,
         sensitivity_metric,
         backup_mode,
