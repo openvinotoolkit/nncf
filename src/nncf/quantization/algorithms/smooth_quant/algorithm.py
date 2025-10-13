@@ -203,7 +203,11 @@ class SmoothQuant(Algorithm):
         ratio = scales.min() / (scales.max() + eps)
         return scales, ratio
 
-    def _group_nodes_by_source(self, nodes_to_smooth: list[tuple[NNCFNode, int]], nncf_graph: NNCFGraph) -> dict[tuple, list]:
+    def _group_nodes_by_source(
+        self,
+        nodes_to_smooth: list[tuple[NNCFNode, int]],
+        nncf_graph: NNCFGraph
+    ) -> dict[tuple, list]:
         """
         Groups nodes that will be smoothed by source (parent node).
 
@@ -272,7 +276,11 @@ class SmoothQuant(Algorithm):
             )
         return statistic_container
 
-    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]) -> list[tuple[NNCFNode, int]]:
+    def _get_nodes_to_smooth_data(
+        self,
+        nncf_graph: NNCFGraph,
+        node_metatypes: list[OperatorMetatype]
+    ) -> list[tuple[NNCFNode, int]]:
         """
         Collects layers whose activations will be smoothed.
 

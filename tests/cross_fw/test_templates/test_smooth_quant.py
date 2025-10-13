@@ -227,7 +227,7 @@ class TemplateTestSQAlgorithm:
         algo._set_backend_entity(model)
         alpha_map = algo._get_alpha_map()
         smooth_data = algo._get_nodes_to_smooth_data(nncf_graph, alpha_map.keys())
-        smooth_data = {d["node_to_smooth"].node_name: d["input_act_port"] for d in smooth_data}
+        smooth_data = {node.node_name: input_act_port for node, input_act_port in smooth_data}
 
         name_map = self.get_node_name_map(model_cls)
         assert len(name_map) == len(smooth_data)
