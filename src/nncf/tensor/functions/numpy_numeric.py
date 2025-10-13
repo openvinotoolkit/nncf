@@ -196,12 +196,12 @@ def _(
 @numeric.nonzero.register
 def _(
     condition: T_NUMPY,
-) -> T_NUMPY_ARRAY:
+) -> tuple[T_NUMPY_ARRAY, ...]:
     return np.nonzero(condition)
 
 
 @numeric.zeros_like.register
-def _(a: T_NUMPY) -> tuple[T_NUMPY_ARRAY]:
+def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.zeros_like(a)
 
 
