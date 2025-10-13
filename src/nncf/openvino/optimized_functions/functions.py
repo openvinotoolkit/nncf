@@ -108,8 +108,7 @@ def do_float_quantization(
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding float weight quantization.
-    For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For MXFP4 quantization quantizes the weights to 16 levels on [-6, 6] interval.
+    NF4 format uses 16 levels in [-1, 1] range, while MXFP4 uses 16 levels in [-6, 6].
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.

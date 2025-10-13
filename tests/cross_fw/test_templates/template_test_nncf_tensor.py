@@ -116,7 +116,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         if (
             self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
@@ -136,7 +136,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         if (
             self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
@@ -155,7 +155,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         if (
             self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", BINARY_OPERATORS)
@@ -174,7 +174,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         if (
             self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())

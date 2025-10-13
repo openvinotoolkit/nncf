@@ -149,8 +149,7 @@ def do_float_quantization(
     """
     Computes quantization scale if not provided,
     and performs corresponding (nf4, MXFP4 and MXFP8_E4M3) weight quantization.
-    For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    For MXFP4 quantization quantizes the weights to 16 levels on [-6, 6] interval.
+    NF4 format uses 16 levels in [-1, 1] range, while MXFP4 uses 16 levels in [-6, 6].
     For MXFP8_E4M3 and CODEBOOK currently returns normalized weight without quantization.
     For CODEBOOK currently returns normalized weight without quantization.
 
