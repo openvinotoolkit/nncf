@@ -543,12 +543,11 @@ class WeightCompression(Algorithm):
             primary_precision_weight_params = self._mixed_precision_algo.apply(
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
+            # ratio_defining_params are all in primary precision. Update parameters 
+            # which need to be set to backup precision
             for weight_param in ratio_defining_params:
-                # We already set these in primary precision. Mixed precision algo returns
-                # layers which should be in primary precision. Let it be
                 if weight_param in primary_precision_weight_params:
                     continue
-                # Set all layers other than the ones returned by mixed precision to backup precision
                 weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
         # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
@@ -794,7 +793,7 @@ class WeightCompression(Algorithm):
         dataset: Dataset,
         ratio_defining_params: list[WeightCompressionParameters],
         all_weight_params: list[WeightCompressionParameters],
-    ):
+    ) -> tuple[dict[str, WCTensorStatistic], StatisticPointsContainer]:
         """
         Collects and computes statistics required for weight compression.
 
@@ -818,9 +817,10 @@ class WeightCompression(Algorithm):
         if statistic_points is None:
             statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
             statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-        return self._get_statistics_for_weights_compression(
+        statistics = self._get_statistics_for_weights_compression(
             matmul_input_to_output_nodes_map, statistic_points
-        ), statistic_points
+        )
+        return statistics, statistic_points
 
     def get_weight_compression_parameters(
         self,
@@ -834,9 +834,10 @@ class WeightCompression(Algorithm):
         """
         Generates a list of weight compression parameters based on the Weight Compression algorithm
         configuration. Determines the appropriate quantization parameters for each node eligible for
-        weight compression. Also, Generates a mapping of target node names to the collected statistics
-        based on the provided statistic_points. If statistic_points is None, collects required
-        compression statistics on the given dataset.
+        weight compression. Also, returns a list of ratio defining parameters which are a subset of
+        all_weight_parameters. This is based on parameters like all_layers. Lastly, it gives a list
+        of skipped layers based on parameters like ignored scope or depending on the group size value
+        adjustment.
 
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
