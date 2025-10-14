@@ -90,6 +90,20 @@ def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[
     return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}_sensitivity_metric_{sensitivity_metric}"
 
 
+def get_test_cases():
+    test_cases = ()
+    for model in BASE_MODELS:
+        for qparam in QUANTIZER_PARAMS:
+            pt2e_params = PT2E_PARAMS
+            if (qparam.get("mode") in {QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM}) or (
+                qparam.get("ratio") is None
+            ):
+                pt2e_params = [{}]
+            for pt2e_param in pt2e_params:
+                test_cases.append(model, qparam, pt2e_param)
+    return test_cases
+
+
 BASE_MODELS = (
     ModelCase(LlamaDecoderOnly, "LlamaDecoderOnly", [1, 3, 64]),
     ModelCase(partial(ShortTransformer, 64, 128, True), "short_transformer_shared", [5]),
@@ -110,19 +124,7 @@ PT2E_PARAMS = (
 )
 
 
-TEST_MODELS = tuple(
-    (model, qparam, pt2e_param)
-    for model in BASE_MODELS
-    for qparam in QUANTIZER_PARAMS
-    for pt2e_param in (
-        [{}]
-        if (
-            (qparam.get("mode") in {QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM})
-            or (qparam.get("ratio") is None)
-        )
-        else PT2E_PARAMS
-    )
-)
+TEST_MODELS = get_test_cases()
 
 
 TEST_MODEL_IDS = [
