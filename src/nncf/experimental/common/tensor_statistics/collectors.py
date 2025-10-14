@@ -121,10 +121,12 @@ class TensorReducerBase(ABC):
             return self._reduction_axes
 
         if self._keep_axes is not None:
-            axes = range(tensor.ndim)
-            # Ensure that all axes have positive values
-            keep_axes = tuple(axes[i] for i in self._keep_axes)
-            return tuple(set(axes) - set(keep_axes))
+            axes = list(range(tensor.ndim))
+            if len(axes) > 1:
+                # Ensure that all axes have positive values
+                keep_axes = tuple(axes[i] for i in self._keep_axes)
+                return tuple(set(axes) - set(keep_axes))
+            return ()
 
         return tuple(range(len(tensor.shape)))
 
