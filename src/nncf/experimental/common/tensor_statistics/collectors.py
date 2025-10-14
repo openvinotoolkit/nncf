@@ -47,7 +47,7 @@ class TensorReducerBase(ABC):
         self,
         reduction_axes: Optional[ReductionAxes] = None,
         keep_axes: Optional[tuple[int, ...]] = None,
-        inplace: bool = False
+        inplace: bool = False,
     ):
         """
         :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
