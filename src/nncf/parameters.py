@@ -93,6 +93,7 @@ class CompressWeightsMode(StrEnum):
     :param MXFP4: MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
     :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
     :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
+    :param FP4_E2M1: A FP4 format with E2M1 values sharing group-level fp16 scale.
     :param CODEBOOK: Codebook (LUT) quantization format.
     :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
@@ -107,6 +108,7 @@ class CompressWeightsMode(StrEnum):
     MXFP4 = "mxfp4"
     MXFP8_E4M3 = "mxfp8_e4m3"
     FP8_E4M3 = "fp8_e4m3"
+    FP4_E2M1 = "fp4_e2m1"
     CODEBOOK = "codebook"
 
 

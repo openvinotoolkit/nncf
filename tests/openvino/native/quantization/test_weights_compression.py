@@ -216,7 +216,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
 
 
 def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
-    dtype = ov.Type.f4e2m1 if mode == CompressWeightsMode.MXFP4 else ov.Type.f8e4m3
+    dtype = ov.Type.f4e2m1 if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.FP4_E2M1] else ov.Type.f8e4m3
     assert op.get_element_type() == dtype
 
     compressed_weight = get_const_value_as_numpy_tensor(op)
@@ -235,7 +235,7 @@ def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
-    if mode is not CompressWeightsMode.FP8_E4M3:
+    if mode not in [CompressWeightsMode.FP8_E4M3, CompressWeightsMode.FP4_E2M1]:
         scale_node = scale_node.input_value(0).get_node()
     stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
 
@@ -354,6 +354,10 @@ def check_fp8(op: ov.Node):
     return check_fp(op, mode=CompressWeightsMode.FP8_E4M3, group_size=32)
 
 
+def check_fp4(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.FP4_E2M1, group_size=32)
+
+
 def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
     mapping = {node_name: check_int8_node for node_name in list_layers}
     primary_node_name = TEST_MODELS[IntegerModel][0]
@@ -373,6 +377,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
         (CompressWeightsMode.MXFP4, 32, get_mixed_mapping(check_mxfp4, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP8_E4M3, 32, get_mixed_mapping(check_mxfp8, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.FP8_E4M3, 32, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.FP4_E2M1, 32, get_mixed_mapping(check_fp4, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
@@ -1265,6 +1270,7 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
     "mode, ov_type",
     [
         (CompressWeightsMode.FP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.FP4_E2M1, ov.Type.f4e2m1),
     ],
 )
 def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):

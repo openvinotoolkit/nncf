@@ -62,6 +62,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
             CompressWeightsMode.FP8_E4M3,
+            CompressWeightsMode.FP4_E2M1,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]

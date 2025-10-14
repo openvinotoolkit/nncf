@@ -233,6 +233,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             scale_dtype = ov.Type.f8e8m0
         elif compression_config.mode == CompressWeightsMode.FP8_E4M3:
             compression_dtype = ov.Type.f8e4m3
+        elif compression_config.mode == CompressWeightsMode.FP4_E2M1:
+            compression_dtype = ov.Type.f4e2m1
         elif compression_config.mode == CompressWeightsMode.INT4_SYM:
             compression_dtype = ov.Type.i4
         elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
