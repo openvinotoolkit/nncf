@@ -28,14 +28,14 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -211,9 +211,7 @@ class SmoothQuant(Algorithm):
         return scales, ratio
 
     def _group_nodes_by_source(
-        self,
-        nodes_to_smooth: list[tuple[NNCFNode, int]],
-        nncf_graph: NNCFGraph
+        self, nodes_to_smooth: list[tuple[NNCFNode, int]], nncf_graph: NNCFGraph
     ) -> dict[tuple, list]:
         """
         Groups nodes that will be smoothed by source (parent node).
@@ -229,16 +227,14 @@ class SmoothQuant(Algorithm):
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
 
-             # TODO(andrey-churkin): Why hash(str(edge.tensor_shape))?
+            # TODO(andrey-churkin): Why hash(str(edge.tensor_shape))?
             group_id = (source_node, input_act_port, edge.output_port_id, shape)
             groups[group_id].append(node_to_smooth)
 
         return groups
 
     def _retrieve_shape(
-        self,
-        nodes: list[tuple[NNCFNode, int]],
-        statistic_points: StatisticPointsContainer
+        self, nodes: list[tuple[NNCFNode, int]], statistic_points: StatisticPointsContainer
     ) -> list[tuple[NNCFNode, int, tuple[int, ...]]]:
         """
         :param nodes:
@@ -305,15 +301,15 @@ class SmoothQuant(Algorithm):
                 aggregator = MaxAggregator(num_samples=self._subset_size)
                 stat_collector.register_statistic_branch(STATISTIC_BRANCH_KEY, reducer, aggregator)
             else:
-                input_reduction_axes = self._calculate_input_reduction_axes(
-                    graph, node_to_smooth, input_act_port
-                )
+                input_reduction_axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
                 stat_collector = self._backend_entity.get_abs_max_channel_collector(
                     self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
                 )
 
             # TODO(andrey-churkin): OVShapeReducer
-            stat_collector.register_statistic_branch(SHAPE_BRANCH_KEY, ShapeReducer(), NoopAggregator(num_samples=1, return_first=True))
+            stat_collector.register_statistic_branch(
+                SHAPE_BRANCH_KEY, ShapeReducer(), NoopAggregator(num_samples=1, return_first=True)
+            )
 
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -325,9 +321,7 @@ class SmoothQuant(Algorithm):
         return statistic_container
 
     def _get_nodes_to_smooth_data(
-        self,
-        nncf_graph: NNCFGraph,
-        node_metatypes: list[OperatorMetatype]
+        self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]
     ) -> list[tuple[NNCFNode, int]]:
         """
         Collects layers whose activations will be smoothed.
