@@ -322,6 +322,7 @@ class WeightCompression(Algorithm):
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         :param gptq: determines whether to use or not GPTQ algorithm.
         :param lora_correction: determines whether to use or not LoRA Correction algorithm.
+        :param codebook_estimation: determines whether to use or not Codebook Estimation algorithm.
         :param backup_mode: Defines a backup mode for mixed-precision weight compression.
             NONE stands for original floating-point precision of the model weights.
                 In this mode, weights are retained in their original precision without any quantization.

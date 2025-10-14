@@ -491,6 +491,8 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
+    :param codebook_estimation: Indicates whether to use Codebook Estimation algorithm.
+    :type codebook_estimation: bool
     :param backup_mode: Defines a backup mode for mixed-precision weight compression.
         NONE stands for original floating-point precision of the model weights.
             In this mode, weights are retained in their original precision without any quantization.
@@ -528,7 +530,7 @@ def compress_weights(
             msg = "Torch backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {"gptq": gptq, "lora_correction": lora_correction}
+        options = {"gptq": gptq, "lora_correction": lora_correction, "codebook_estimation": codebook_estimation}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
