@@ -19,8 +19,6 @@ from nncf import IgnoredScope
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -169,28 +167,6 @@ class TemplateTestSQAlgorithm:
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         self.check_scales(quantized_model, reference_values, model_cls)
-
-    def test_get_abs_max_channel_collector(self, inplace_statistics: bool):
-        backend = self.get_backend()
-        reduction_axes = (3, 2, 1)
-        samples = 1
-
-        backend_tensor_collector = backend.get_abs_max_channel_collector(
-            num_samples=samples,
-            stats_reduction_axes=reduction_axes,
-            inplace=inplace_statistics,
-            branch_key="test_branch",
-        )
-
-        assert len(backend_tensor_collector.aggregators) == 1
-        for aggregator in backend_tensor_collector.aggregators.values():
-            assert isinstance(aggregator, MaxAggregator)
-
-        assert len(backend_tensor_collector.reducers) == 1
-        for reducer in backend_tensor_collector.reducers:
-            assert isinstance(reducer, AbsMaxReducer)
-            assert reducer.inplace == inplace_statistics
-            assert reducer._reduction_axes == reduction_axes
 
     @pytest.mark.parametrize(
         "model_cls, references",

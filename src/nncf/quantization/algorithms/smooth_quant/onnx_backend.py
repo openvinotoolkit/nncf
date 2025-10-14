@@ -21,9 +21,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.onnx.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -75,16 +72,6 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             activation_port = activation_ports[0]
 
         return activation_port
-
-    @staticmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        collector = TensorCollector()
-        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(num_samples=num_samples)
-        collector.register_statistic_branch(branch_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def _get_weight_tensor_port_id(node: NNCFNode) -> int:

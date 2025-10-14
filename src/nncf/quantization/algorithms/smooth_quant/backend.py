@@ -20,7 +20,8 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
@@ -95,20 +96,6 @@ class SmoothQuantAlgoBackend(ABC):
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
         :return: Map with the activation & weighted ports.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        """
-        Returns TensorCollector with MaxAggregator and AbsMaxReducer.
-
-        :param stats_reduction_axes: Calculated reduction axes.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param branch_key: Specific string for branch key.
-        :return: TensorCollector instance.
         """
 
     @staticmethod
@@ -199,3 +186,21 @@ class SmoothQuantAlgoBackend(ABC):
         :param algorithm_key: Current algorithm key.
         :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
+
+    @staticmethod
+    def get_abs_max_reducer_cls() -> type[AbsMaxReducer]:
+        """
+        Returns the backend-specific `AbsMaxReducer` class.
+
+        :return: The `AbsMaxReducer` class.
+        """
+        return AbsMaxReducer
+
+    @staticmethod
+    def get_shape_reducer_cls() -> type[ShapeReducer]:
+        """
+        Returns the backend-specific `ShapeReducer` class.
+
+        :return: The `ShapeReducer` class.
+        """
+        return ShapeReducer

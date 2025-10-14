@@ -28,10 +28,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
@@ -283,10 +281,11 @@ class SmoothQuant(Algorithm):
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         model_backend = get_backend(model)
         self._set_backend_entity(model)
+
         alpha_map = self._get_alpha_map()
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
 
-        statistic_container = StatisticPointsContainer()
+        container = StatisticPointsContainer()
         for node_to_smooth, input_act_port in nodes_to_smooth_data:
             target_point = self._backend_entity.target_point(
                 target_type=self._backend_entity.pre_layer_target_type(),
@@ -294,31 +293,54 @@ class SmoothQuant(Algorithm):
                 port_id=input_act_port,
             )
 
+            # NOTE: TODO
             if model_backend == BackendType.ONNX:
-                keep_axis = self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port)
-                stat_collector = TensorCollector()
-                reducer = AbsMaxReducer(keep_axes=(keep_axis,))
-                aggregator = MaxAggregator(num_samples=self._subset_size)
-                stat_collector.register_statistic_branch(STATISTIC_BRANCH_KEY, reducer, aggregator)
+                keep_axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port),)
+                collector = self._create_tensor_collector(
+                    self._subset_size,
+                    self._inplace_statistics,
+                    keep_axes=keep_axes,
+                )
             else:
-                input_reduction_axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
-                stat_collector = self._backend_entity.get_abs_max_channel_collector(
-                    self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
+                reduction_axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
+                collector = self._create_tensor_collector(
+                    self._subset_size,
+                    self._inplace_statistics,
+                    reduction_axes=reduction_axes,
                 )
 
-            # TODO(andrey-churkin): OVShapeReducer
-            stat_collector.register_statistic_branch(
-                SHAPE_BRANCH_KEY, ShapeReducer(), NoopAggregator(num_samples=1, return_first=True)
-            )
+            container.add_statistic_point(StatisticPoint(target_point, collector, self._algorithm_key))
 
-            statistic_container.add_statistic_point(
-                StatisticPoint(
-                    target_point=target_point,
-                    tensor_collector=stat_collector,
-                    algorithm=self._algorithm_key,
-                )
-            )
-        return statistic_container
+        return container
+
+    def _create_tensor_collector(
+        self,
+        num_samples: int,
+        inplace: bool,
+        keep_axes: Optional[tuple[int, ...]] = None,
+        reduction_axes: Optional[tuple[int, ...]] = None,
+    ) -> TensorCollector:
+        """
+        :param num_samples:
+        :param inplace:
+        :param keep_axes:
+        :param reduction_axes:
+        :return:
+        """
+        collector = TensorCollector()
+
+        abs_max_reducer_cls = self._backend_entity.get_abs_max_reducer_cls()
+        collector.register_statistic_branch(
+            STATISTIC_BRANCH_KEY,
+            abs_max_reducer_cls(reduction_axes, keep_axes, inplace),
+            MaxAggregator(num_samples=num_samples),
+        )
+        shape_reducer_cls = self._backend_entity.get_shape_reducer_cls()
+        collector.register_statistic_branch(
+            SHAPE_BRANCH_KEY, shape_reducer_cls(inplace), NoopAggregator(num_samples=1, return_first=True)
+        )
+
+        return collector
 
     def _get_nodes_to_smooth_data(
         self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]
