@@ -110,10 +110,11 @@ class TensorReducerBase(ABC):
             isinstance(__o, self.__class__)
             and self._reduction_axes == __o._reduction_axes
             and self._inplace == __o.inplace
+            and self._keep_axes == __o._keep_axes
         )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_axes, self._keep_axes))
 
     def _get_reduction_axes(self, tensor: Tensor) -> ReductionAxes:
         if self._reduction_axes is not None:
