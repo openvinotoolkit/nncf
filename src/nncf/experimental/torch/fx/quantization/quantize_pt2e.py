@@ -172,7 +172,7 @@ def compress_pt2e(
     scale_estimation: bool = False,
     gptq: bool = False,
     lora_correction: bool = False,
-    subset_size: int = 128,  # Dataset size to use
+    subset_size: int = 128,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.fx.GraphModule:
