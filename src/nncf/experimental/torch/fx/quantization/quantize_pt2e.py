@@ -37,9 +37,9 @@ from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import T
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
-from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
@@ -218,7 +218,7 @@ def compress_pt2e(
     backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
     sensitivity_metric = sensitivity_metric
     compression_format = compression_format
-    ignored_scope = nncf.IgnoredScope() # This is already defined in the quantizer object
+    ignored_scope = nncf.IgnoredScope()  # This is already defined in the quantizer object
 
     weight_compression_configuration = get_weight_compression_configuration(
         mode,
@@ -240,7 +240,7 @@ def compress_pt2e(
         quantizer=quantizer,
         subset_size=subset_size,
         compression_format=compression_format,
-        **weight_compression_configuration
+        **weight_compression_configuration,
     )
 
     # Here the model is annotated

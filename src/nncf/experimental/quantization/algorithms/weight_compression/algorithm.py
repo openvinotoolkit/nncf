@@ -13,10 +13,12 @@ from typing import Iterable, Optional
 
 import torch
 
-import nncf
 from nncf import AdvancedCompressionParameters
+from nncf import BackupMode
 from nncf import CompressionFormat
+from nncf import CompressWeightsMode
 from nncf import Dataset
+from nncf import IgnoredScope
 from nncf import SensitivityMetric
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -25,9 +27,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression as OriginalWeightCompression
-from nncf import CompressWeightsMode
-from nncf import IgnoredScope
-from nncf import BackupMode
+
 
 class WeightsCompression(Algorithm):
     """

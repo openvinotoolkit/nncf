@@ -1,40 +1,44 @@
 # Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from dataclasses import dataclass
-from functools import partial
-from typing import Any, Callable, Optional
 
 import dataclasses
 import json
+from dataclasses import dataclass
 from enum import Enum
+from functools import partial
+from typing import Any, Callable, Optional
 
 import pytest
 import torch
 import torch.fx
+from torch.ao.quantization.quantize_pt2e import convert_pt2e
+from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 
 import nncf
+from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.utils.os import safe_open
-from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx import compress_pt2e
-
+from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.llama import LlamaDecoderOnly
+from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.fx.helpers import get_torch_fx_model
 
-from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e, convert_pt2e
-
-from executorch.backends.openvino.quantizer.quantizer import (
-    OpenVINOQuantizer,
-    QuantizationMode,
-)
-from nncf.common.graph.graph import NNCFNode
-
 FX_PT2E_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "compress_pt2e"
-FX_AO_DIR   = TEST_ROOT / "torch2" / "data" / "fx" / "ao_compression_OpenVINOQuantizer"
+FX_AO_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "ao_compression_OpenVINOQuantizer"
 
 
 @dataclass
@@ -62,9 +66,11 @@ def _build_torch_fx_model(model_case: ModelCase) -> tuple[torch.fx.GraphModule, 
 
 def _get_calibration_dataset(example_input: torch.Tensor) -> nncf.Dataset:
     torch.manual_seed(42)
+
     def transform_fn(x):
         return x.to("cpu")
-    sample_1 = torch.randint_like(example_input, 0,10)
+
+    sample_1 = torch.randint_like(example_input, 0, 10)
     sample_2 = torch.randint_like(example_input, 0, 10)
     return nncf.Dataset([example_input, sample_1, sample_2], transform_fn)
 
@@ -78,14 +84,14 @@ def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[
     gs = qparams.get("group_size", "-1")
     ratio = qparams.get("ratio", "1")
     all_layers = qparams.get("all_layers", "False")
-    if(pt2e_param is None):
+    if pt2e_param is None:
         return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}"
     sensitivity_metric = pt2e_param.get("sensitivity_metric", "None")
     return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}_sensitivity_metric_{sensitivity_metric}"
 
 
 BASE_MODELS = (
-    ModelCase(LlamaDecoderOnly, "LlamaDecoderOnly", [1,3,64]),
+    ModelCase(LlamaDecoderOnly, "LlamaDecoderOnly", [1, 3, 64]),
     ModelCase(partial(ShortTransformer, 64, 128, True), "short_transformer_shared", [5]),
 )
 
@@ -109,7 +115,7 @@ TEST_MODELS = tuple(
     for model in BASE_MODELS
     for qparam in QUANTIZER_PARAMS
     for pt2e_param in (
-        [{}] 
+        [{}]
         if (
             (qparam.get("mode") in {QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM})
             or (qparam.get("ratio") is None)
@@ -129,13 +135,11 @@ TEST_MODEL_IDS = [
     TEST_MODELS,
     ids=TEST_MODEL_IDS,
 )
-
 @pytest.mark.parametrize(
     "quantizer_builder",
     [get_openvino_quantizer],
     ids=["OpenVINOQuantizer"],
 )
-
 def test_compress_pt2e(
     quantizer_builder: Callable[..., OpenVINOQuantizer],
     model_case: ModelCase,
@@ -165,7 +169,9 @@ def test_compress_pt2e(
     nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     param_string = _string_from_quantizer_params(quantizer_params, pt2e_params)
-    path_to_dot = (FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)).as_posix()
+    path_to_dot = (
+        FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
+    ).as_posix()
     compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
 
@@ -217,6 +223,7 @@ def _serialize_wc_param(wp) -> dict[str, Any]:
 
     return to_json_serializable(wp)
 
+
 @pytest.mark.parametrize(
     ("model_case", "quantizer_params", "pt2e_params"),
     TEST_MODELS,
@@ -232,7 +239,7 @@ def test_openvino_wc_params(
     model_case: ModelCase,
     quantizer_params,
     pt2e_params,
-    regen_ref_data=False,
+    regen_ref_data,
 ):
     fx_model, _ = _build_torch_fx_model(model_case)
     nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(fx_model)
@@ -244,7 +251,9 @@ def test_openvino_wc_params(
 
     wc_params = _serialize_wc_param(all_weight_params)
 
-    ref_json_path = (FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_wc_param_filename(param_string))
+    ref_json_path = (
+        FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_wc_param_filename(param_string)
+    )
 
     if regen_ref_data:
         with safe_open(ref_json_path, "w") as file:
@@ -254,6 +263,5 @@ def test_openvino_wc_params(
         ref_data = json.load(f)
 
     assert wc_params == ref_data, (
-        f"Weight compression parameters JSON mismatch for {model_case.model_id} ({param_string}).\n"
-        f"Ref: {ref_json_path}"
+        f"Weight compression parameters JSON mismatch for {model_case.model_id} ({param_string}).\nRef: {ref_json_path}"
     )
