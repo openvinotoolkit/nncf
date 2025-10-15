@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from collections import deque
 from dataclasses import dataclass
 from functools import partial
 from itertools import product
@@ -37,7 +38,6 @@ from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
@@ -296,19 +296,26 @@ class TemplateTestReducersAggregators:
 
         assert aggregator._collected_samples == 3
         aggregated = aggregator.aggregate()
+        assert isinstance(aggregated, deque)
         assert len(aggregated) == 3
         for val in aggregated:
             assert fns.allclose(val, self.get_nncf_tensor(input_))
 
-    def test_shape_aggregator(self):
-        aggregator = ShapeAggregator()
+    @pytest.mark.parametrize("num_samples,should_fail", [(1, False), (None, False), (3, True)])
+    def test_noop_aggregator_return_first(self, num_samples, should_fail):
+        if should_fail:
+            with pytest.raises(nncf.InternalError):
+                NoopAggregator(num_samples, return_first=True)
+            return
+        aggregator = NoopAggregator(num_samples, return_first=True)
+
         ref_shape = (1, 3, 5, 7, 9)
-        input_ = np.empty(ref_shape)
-        for _ in range(3):
-            aggregator.register_reduced_input(self.get_nncf_tensor(input_))
+        input_ = np.arange(np.prod(ref_shape)).reshape(ref_shape)
+        aggregator.register_reduced_input(self.get_nncf_tensor(input_))
 
         assert aggregator._collected_samples == 1
-        assert ref_shape == aggregator.aggregate()
+        aggregated = aggregator.aggregate()
+        assert fns.allclose(aggregated, self.get_nncf_tensor(input_))
 
     @pytest.mark.parametrize(
         "offline_aggregators_test_desc",

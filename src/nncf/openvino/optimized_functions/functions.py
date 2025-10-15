@@ -109,13 +109,13 @@ def do_float_quantization(
     """
     Computes quantization scale if not provided, and performs corresponding nf4 weight quantization.
     For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    TODO(nikita-savelyevv): add support for E2M1 once ticket 164851 is resolved
+    TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor.
+    :return: Returns quantized (for MXFP4 and MXFP8_E4M3 normalized) weight tensor and corresponding scale tensor.
     """
     assert config.mode == CompressWeightsMode.NF4
 
@@ -214,8 +214,7 @@ def integer_quantize_dequantize_weight(
         decompressed_weight, compressed_weight, scale, zero_point = results
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale, zero_point
-    else:
-        return decompressed_weight
+    return decompressed_weight
 
 
 def float_quantize_dequantize_weight(
@@ -268,8 +267,7 @@ def float_quantize_dequantize_weight(
         decompressed_weight, compressed_weight, scale = results
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale
-    else:
-        return decompressed_weight
+    return decompressed_weight
 
 
 def get_integer_quantization_error(

@@ -404,11 +404,10 @@ def _(a: tf.Tensor, k: int = 0) -> tf.Tensor:
         rank = tf.rank(a)
         if rank == 1:
             return tf.linalg.diag(a, k=k)
-        elif rank == 2:
+        if rank == 2:
             return tf.linalg.diag_part(a, k=k)
-        else:
-            msg = "Input tensor must be 1D or 2D."
-            raise ValueError(msg)
+        msg = "Input tensor must be 1D or 2D."
+        raise ValueError(msg)
 
 
 @numeric.logical_or.register
@@ -573,3 +572,8 @@ def tensor(
 @numeric.as_numpy_tensor.register
 def _(a: tf.Tensor) -> npt.NDArray[Any]:
     return a.numpy()
+
+
+@numeric.tolist.register
+def _(a: tf.Tensor) -> Any:
+    return a.numpy().tolist()

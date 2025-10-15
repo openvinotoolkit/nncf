@@ -44,29 +44,28 @@ def _(
                     result_shape = [1 if i in axis else dim for i, dim in enumerate(a.shape)]
                     result = tf.reshape(result, result_shape)
                 return result
-            else:
-                perm = list(range(rank))
-                for i in sorted(axis, reverse=True):
-                    perm.pop(i)
-                perm = perm + list(axis)
+            perm = list(range(rank))
+            for i in sorted(axis, reverse=True):
+                perm.pop(i)
+            perm = perm + list(axis)
 
-                a_transposed = tf.transpose(a, perm=perm)
+            a_transposed = tf.transpose(a, perm=perm)
 
-                batch_shape = a_transposed.shape[:-2]
-                matrix_shape = a_transposed.shape[-2:]
-                a_reshaped = tf.reshape(a_transposed, [-1, matrix_shape[0], matrix_shape[1]])
+            batch_shape = a_transposed.shape[:-2]
+            matrix_shape = a_transposed.shape[-2:]
+            a_reshaped = tf.reshape(a_transposed, [-1, matrix_shape[0], matrix_shape[1]])
 
-                s = tf.linalg.svd(a_reshaped, compute_uv=False)
+            s = tf.linalg.svd(a_reshaped, compute_uv=False)
 
-                result = tf.reduce_sum(s, axis=-1)
+            result = tf.reduce_sum(s, axis=-1)
 
-                result = tf.reshape(result, batch_shape)
+            result = tf.reshape(result, batch_shape)
 
-                if keepdims:
-                    for ax in sorted(axis):
-                        result = tf.expand_dims(result, ax)
+            if keepdims:
+                for ax in sorted(axis):
+                    result = tf.expand_dims(result, ax)
 
-                return result
+            return result
 
         if ord == 0:
             return tf.cast(tf.math.count_nonzero(a, axis=axis, keepdims=keepdims), a.dtype)
@@ -135,11 +134,11 @@ def _(
                     squared = tf.square(a)
                     sum_squares = tf.reduce_sum(squared, axis=axis, keepdims=keepdims)
                     return tf.sqrt(sum_squares)
-                elif ord == 1:
+                if ord == 1:
                     return tf.reduce_sum(tf.abs(a), axis=axis, keepdims=keepdims)
-                elif ord == float("inf"):
+                if ord == float("inf"):
                     return tf.reduce_max(tf.abs(a), axis=axis, keepdims=keepdims)
-                elif ord == -float("inf"):
+                if ord == -float("inf"):
                     return tf.reduce_min(tf.abs(a), axis=axis, keepdims=keepdims)
 
             msg = f"Unsupported combination of ord={ord} and axis={axis}"

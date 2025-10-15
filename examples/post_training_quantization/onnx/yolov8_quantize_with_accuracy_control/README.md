@@ -12,7 +12,7 @@ The example includes the following steps:
 
 ## Prerequisites
 
-Before running this example, ensure you have Python 3.9+ installed and set up your environment:
+Before running this example, ensure you have Python 3.10+ installed and set up your environment:
 
 ### 1. Create and activate a virtual environment
 

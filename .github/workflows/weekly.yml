@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - python_version: "3.9"
+          - python_version: "3.10"
             override_requirements: "numpy==1.24.0"
           - python_version: "3.11"
           - python_version: "3.12"
