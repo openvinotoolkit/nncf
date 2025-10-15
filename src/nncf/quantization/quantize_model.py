@@ -461,7 +461,7 @@ def compress_weights(
         MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale.
             The size of group is 32.
         FP8_E4M3 - is FP8 format with E4M3 values sharing a group-level FP16 scale.
-        FP4_E2M1 - is FP4 format with E2M1 values sharing a group-level FP16 scale.
+        FP4 - is FP4 format with E2M1 values sharing a group-level FP16 scale.
     :type mode: nncf.CompressWeightsMode
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8_ASYM).
@@ -524,7 +524,7 @@ def compress_weights(
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
             CompressWeightsMode.FP8_E4M3,
-            CompressWeightsMode.FP4_E2M1,
+            CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]
@@ -579,7 +579,7 @@ def compress_weights(
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
             CompressWeightsMode.FP8_E4M3,
-            CompressWeightsMode.FP4_E2M1,
+            CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]
@@ -627,7 +627,7 @@ def compress_weights(
                 CompressWeightsMode.MXFP4,
                 CompressWeightsMode.MXFP8_E4M3,
                 CompressWeightsMode.FP8_E4M3,
-                CompressWeightsMode.FP4_E2M1,
+                CompressWeightsMode.FP4,
             ]
             if mode in not_supported_modes:
                 msg = (
@@ -654,7 +654,7 @@ def compress_weights(
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
             CompressWeightsMode.FP8_E4M3,
-            CompressWeightsMode.FP4_E2M1,
+            CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]

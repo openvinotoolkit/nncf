@@ -66,7 +66,7 @@ NON_INT8_MODES = [
     CompressWeightsMode.MXFP4,
     CompressWeightsMode.MXFP8_E4M3,
     CompressWeightsMode.FP8_E4M3,
-    CompressWeightsMode.FP4_E2M1,
+    CompressWeightsMode.FP4,
 ]
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
@@ -303,7 +303,7 @@ class WeightCompression(Algorithm):
             MXFP4 is MX-compliant FP4 with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
             MXFP8_E4M3 is MX-compliant FP8 with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
             FP8_E4M3 is FP8 with E4M3 values sharing group-level FP16 scale.
-            FP4_E2M1 is FP4 with E2M1 values sharing group-level FP16 scale.
+            FP4 is FP4 with E2M1 values sharing group-level FP16 scale.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to backup_mode).
         :param group_size: number of weights (e.g. 128) in the channel dimension

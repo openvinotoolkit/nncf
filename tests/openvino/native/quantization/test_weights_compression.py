@@ -1206,7 +1206,7 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
     "mode, ov_type",
     [
         (CompressWeightsMode.FP8_E4M3, ov.Type.f8e4m3),
-        (CompressWeightsMode.FP4_E2M1, ov.Type.f4e2m1),
+        (CompressWeightsMode.FP4, ov.Type.f4e2m1),
     ],
 )
 def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
