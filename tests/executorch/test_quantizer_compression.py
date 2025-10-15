@@ -291,18 +291,17 @@ def test_openvino_quantizer(
 def to_json_serializable(obj: Any) -> dict[Any, Any]:
     if dataclasses.is_dataclass(obj):
         return {k: to_json_serializable(v) for k, v in dataclasses.asdict(obj).items()}
-    elif isinstance(obj, Enum):
+    if isinstance(obj, Enum):
         return obj.value
-    elif isinstance(obj, (list, tuple)):
+    if isinstance(obj, (list, tuple)):
         return [to_json_serializable(x) for x in obj]
-    elif isinstance(obj, torch.Tensor):
+    if isinstance(obj, torch.Tensor):
         return obj.detach().cpu().tolist()
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         return {k: to_json_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, NNCFNode):
+    if isinstance(obj, NNCFNode):
         return obj.node_name
-    else:
-        return obj
+    return obj
 
 
 @pytest.mark.parametrize(
