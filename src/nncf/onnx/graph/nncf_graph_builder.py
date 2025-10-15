@@ -232,8 +232,7 @@ def _get_bias_attr(
         initializer = {x.name: x for x in model.graph.initializer}
         if tensor_name in initializer or parents_node_mapping[tensor_name].op_type == "Constant":
             return {"node": add_node.name, "name": tensor_name, "port_id": port_id}
-        else:
-            return {}
+        return {}
 
     bias_attrs = {}
     if _is_node_with_bias(node, model):
