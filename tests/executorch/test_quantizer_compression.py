@@ -31,6 +31,10 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx import compress_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.test_models.llama import LlamaDecoderOnly
@@ -54,6 +58,10 @@ def get_dot_filename(model_name: str) -> str:
 
 def get_wc_param_filename(model_name: str) -> str:
     return model_name + "_ref_wc_param.json"
+
+
+def get_wc_scales_filename(model_name: str) -> str:
+    return model_name + "_ref_wc_scales.json"
 
 
 def _build_torch_fx_model(model_case: ModelCase) -> tuple[torch.fx.GraphModule, torch.Tensor]:
@@ -86,8 +94,32 @@ def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[
     all_layers = qparams.get("all_layers", "False")
     if pt2e_param is None:
         return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}"
-    sensitivity_metric = pt2e_param.get("sensitivity_metric", "None")
-    return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}_sensitivity_metric_{sensitivity_metric}"
+    awq = pt2e_param.get("awq", "False")
+    scale_estimation = pt2e_param.get("scale_estimation", "False")
+    return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}_awq_{awq}_scale_estimation_{scale_estimation}"
+
+
+def check_multiple_isinstance(object_to_check: Any, objects: list[Any]):
+    for obj in objects:
+        if not isinstance(object_to_check, obj):
+            return False
+    return True
+
+
+def get_scale_values_from_model(model: torch.fx.GraphModule):
+    node_to_scale_mapping = {}
+    decompressor_modules = [
+        INT4AsymmetricWeightsDecompressor,
+        INT4SymmetricWeightsDecompressor,
+        INT8AsymmetricWeightsDecompressor,
+        INT8SymmetricWeightsDecompressor,
+    ]
+    for node in model.graph.nodes:
+        if not check_multiple_isinstance(node.taget, decompressor_modules):
+            continue
+        node_to_scale_mapping[node.name] = model.state_dict()[node.name]
+
+    return node_to_scale_mapping
 
 
 def get_test_cases():
@@ -115,13 +147,7 @@ QUANTIZER_PARAMS = (
     {"mode": QuantizationMode.INT4WO_SYM, "group_size": 32, "ratio": 0.8, "all_layers": True},
 )
 
-PT2E_PARAMS = (
-    {"sensitivity_metric": nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION},
-    {"sensitivity_metric": nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE},
-    {"sensitivity_metric": nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR},
-    {"sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_VARIANCE},
-    {"sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE},
-)
+PT2E_PARAMS = ({"awq": True, "scale_estimation": True},)
 
 
 TEST_MODELS = get_test_cases()
@@ -157,12 +183,7 @@ def test_compress_pt2e(
     # Build quantizer directly from quantizer_params (already includes mode/group_size)
     quantizer = quantizer_builder(**quantizer_params)
 
-    quantized_model = compress_pt2e(
-        fx_model,
-        quantizer=quantizer,
-        dataset=calibration_dataset,
-        **pt2e_params,
-    )
+    quantized_model = compress_pt2e(fx_model, quantizer=quantizer, dataset=calibration_dataset)
 
     with torch.no_grad():
         out = quantized_model(example_input)
@@ -170,11 +191,58 @@ def test_compress_pt2e(
 
     nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
-    param_string = _string_from_quantizer_params(quantizer_params, pt2e_params)
+    param_string = _string_from_quantizer_params(quantizer_params, pt2e_params=None)
     path_to_dot = (
         FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
     ).as_posix()
     compare_nx_graph_with_reference(nx_graph, path_to_dot)
+
+
+@pytest.mark.parametrize(
+    ("model_case", "quantizer_params", "pt2e_params"),
+    TEST_MODELS,
+    ids=TEST_MODEL_IDS,
+)
+@pytest.mark.parametrize(
+    "quantizer_builder",
+    [get_openvino_quantizer],
+    ids=["OpenVINOQuantizer"],
+)
+def test_compress_pt2e_scales(
+    quantizer_builder: Callable[..., OpenVINOQuantizer],
+    model_case: ModelCase,
+    quantizer_params,
+    pt2e_params,
+    regen_ref_data,
+):
+    fx_model, example_input = _build_torch_fx_model(model_case)
+    with torch.no_grad():
+        ref_out = fx_model(example_input)
+
+    calibration_dataset = _get_calibration_dataset(example_input)
+
+    # Build quantizer directly from quantizer_params (already includes mode/group_size)
+    quantizer = quantizer_builder(**quantizer_params)
+
+    quantized_model = compress_pt2e(fx_model, quantizer=quantizer, dataset=calibration_dataset, **pt2e_params)
+
+    with torch.no_grad():
+        out = quantized_model(example_input)
+    assert out.shape == ref_out.shape, "Compressed model output shape mismatch."
+
+    param_string = _string_from_quantizer_params(quantizer_params, pt2e_params)
+    ref_json_path = (
+        FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_wc_scales_filename(param_string)
+    ).as_posix()
+
+    scales_list = get_scale_values_from_model(quantized_model)
+
+    if regen_ref_data:
+        with safe_open(ref_json_path, "w") as file:
+            json.dump(scales_list, file, indent=4)
+
+    with safe_open(ref_json_path, "r") as f:
+        json.load(f)
 
 
 @pytest.mark.parametrize(
