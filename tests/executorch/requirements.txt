@@ -5,6 +5,16 @@ torch
 torchvision
 torchao
 
+# Copied from https://github.com/anzr299/executorch/blob/an/quantizer_nncf_pt2e_support/requirements-dev.txt
+cmake>=3.29, <4.0.0  # For building binary targets in the wheel.
+packaging>=24.2 # Lower bound required by setuptools
+pip>=23  # For building the pip package.
+pyyaml  # Imported by the kernel codegen tools.
+setuptools>=77.0.3  # For building the pip package contents.
+wheel  # For building the pip package archive.
+zstd  # Imported by resolve_buck.py.
+certifi  # Imported by resolve_buck.py.
+
 # Tests and examples
 pytest==8.0.2
 pytest-cov==4.1.0
