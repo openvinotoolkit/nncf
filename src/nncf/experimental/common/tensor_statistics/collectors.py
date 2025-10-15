@@ -52,11 +52,12 @@ class TensorReducerBase(ABC):
         """
         :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
-        :param keep_axes:
+        :param keep_axes: Axes to preserve during the reduction operation. These will be used in
+            `_reduce_out_of_place()` to calculate the reduction axes once the tensor shape is known.
         :param inplace: Whether should be calculated inplace or out of place.
         """
         if reduction_axes is not None and keep_axes is not None:
-            msg = ""
+            msg = "Only one of `reduction_axes` or `keep_axes` should be specified, not both."
             raise nncf.ValidationError(msg)
 
         self._reduction_axes = reduction_axes

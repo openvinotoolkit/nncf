@@ -213,12 +213,13 @@ class SmoothQuant(Algorithm):
         return scales, ratio
 
     def _group_nodes_by_source(
-        self, nodes_to_smooth: list[tuple[NNCFNode, int]], nncf_graph: NNCFGraph
+        self, nodes_to_smooth: list[tuple[NNCFNode, int, tuple[int, ...]]], nncf_graph: NNCFGraph
     ) -> dict[tuple, list]:
         """
         Groups nodes that will be smoothed by source (parent node).
 
-        :param nodes_to_smooth: List of the nodes that will be smoothed.
+        :param nodes_to_smooth: A list of tuples where each tuple consists of a node, an input port, and the
+            shape of the tensor associated with that node and input port.
         :param nncf_graph: NNCFGraph instance.
         :return: Dictionary with the source info as key and grouped nodes as value.
         """
@@ -228,8 +229,6 @@ class SmoothQuant(Algorithm):
             edge = nncf_graph.get_edge(source_node, node_to_smooth)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
-
-            # TODO(andrey-churkin): Why hash(str(edge.tensor_shape))?
             group_id = (source_node, input_act_port, edge.output_port_id, shape)
             groups[group_id].append(node_to_smooth)
 
@@ -239,9 +238,14 @@ class SmoothQuant(Algorithm):
         self, nodes: list[tuple[NNCFNode, int]], statistic_points: StatisticPointsContainer
     ) -> list[tuple[NNCFNode, int, tuple[int, ...]]]:
         """
-        :param nodes:
-        :param statistic_points:
-        :return:
+        Retrieves the shapes of tensors associated with specific nodes and input ports
+        from the given statistic points container.
+
+        :param nodes: A list of tuples, each containing a node and its corresponding input port index.
+        :param statistic_points: Container holding statistics, used to retrieve tensor shapes.
+        :return: A list of tuples where each tuple consists of a node, an input port, and the
+            shape of the tensor associated with that node and input port. If shape information is
+            not available, an empty tuple is returned for the shape.
         """
         items = []
         for node, input_port in nodes:
@@ -297,7 +301,12 @@ class SmoothQuant(Algorithm):
                 port_id=input_act_port,
             )
 
-            # NOTE: TODO
+            # NOTE:The OpenVINO backend performs in-place statistic calculations.
+            # To insert reduction operations into the model graph, the reduction axes must be known before inference.
+            # However, when using `keep_axes`, the reduction axes are determined during statistics collection.
+            # Therefore, `keep_axes` and `inplace` cannot be used together with the OpenVINO backend.
+            # For the ONNX backend, we can't calculate reduction axes before inference because the tensor shape
+            # (actually, only the number of dimensions (ndim) is required) is unknown for some operations.
             if model_backend == BackendType.ONNX:
                 keep_axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port),)
                 collector = self._create_tensor_collector(
@@ -325,12 +334,18 @@ class SmoothQuant(Algorithm):
         reduction_axes: Optional[tuple[int, ...]] = None,
     ) -> TensorCollector:
         """
-        :param num_samples:
-        :param inplace:
-        :param keep_axes:
-        :param reduction_axes:
-        :return:
+        Initializes and returns a configured tensor collector for the `SmoothQuant` algorithm.
+
+        :param num_samples: Maximum number of samples to collect for the aggregator.
+        :param inplace: If True, statistics will be computed in-place.
+        :param keep_axes: Axes to preserve during the reduction operation.
+        :param reduction_axes: Axes over which the reduction operation is applied.
+        :return: A tensor collector configured with the specified reduction and aggregation logic.
         """
+        if reduction_axes is not None and keep_axes is not None:
+            msg = "Only one of `reduction_axes` or `keep_axes` should be specified, not both."
+            raise nncf.ValidationError(msg)
+
         collector = TensorCollector()
 
         abs_max_reducer_cls = self._backend_entity.get_abs_max_reducer_cls()
@@ -354,7 +369,8 @@ class SmoothQuant(Algorithm):
 
         :param nncf_graph: NNCFGraph instance.
         :param node_metatypes: Metatypes for nodes to search for.
-        :return: List with the data for each layer.
+        :return: A list of pairs, where each pair consists of a node and its corresponding
+            input activation port.
         """
         nodes_with_weights = nncf_graph.get_nodes_by_metatypes(node_metatypes)
         nodes_to_smooth_data = []
