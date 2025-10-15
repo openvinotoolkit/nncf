@@ -18,11 +18,6 @@ on:
         default: ''
         type: string
         required: false
-      executorch_override_requirements:
-        description: 'Executorch specific Override requirements'
-        default: ''
-        type: string
-        required: false
 
 jobs:
   common:
@@ -165,8 +160,9 @@ jobs:
         run: |
           cat /etc/*release
           cat /proc/cpuinfo
-        if: ${{ inputs.override_requirements != '' || inputs.executorch_override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }} ${{ inputs.executorch_override_requirements }}"
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
         run: pip install . -r tests/executorch/requirements.txt

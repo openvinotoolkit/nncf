@@ -22,4 +22,3 @@ jobs:
     with:
       python_version: "3.10.14"
       gpu_enabled: true
-      executorch_override_requirements: "torch==2.9.0,torchvision==0.24.0,torchao==0.13.0"
