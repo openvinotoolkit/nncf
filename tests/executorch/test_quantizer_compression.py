@@ -20,8 +20,8 @@ from typing import Any, Callable, Optional
 import pytest
 import torch
 import torch.fx
-from torch.ao.quantization.quantize_pt2e import convert_pt2e
-from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
 
 import nncf
 from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
@@ -42,7 +42,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.fx.helpers import get_torch_fx_model
 
 FX_PT2E_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "compress_pt2e"
-FX_AO_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "ao_compression_OpenVINOQuantizer"
+FX_AO_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "ao_compression"
 
 
 @dataclass
@@ -64,7 +64,7 @@ def get_wc_scales_filename(model_name: str) -> str:
     return model_name + "_ref_wc_scales.json"
 
 
-def _build_torch_fx_model(model_case: ModelCase) -> tuple[torch.fx.GraphModule, torch.Tensor]:
+def build_torch_fx_model(model_case: ModelCase) -> tuple[torch.fx.GraphModule, torch.Tensor]:
     model = model_case.model_builder()
     # ShortTransformer takes token ids; match prior synthetic tests (int32)
     example_input = torch.ones(model_case.input_shape, dtype=torch.int32)
@@ -100,10 +100,12 @@ def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[
 
 
 def check_multiple_isinstance(object_to_check: Any, objects: list[Any]):
+    if not object_to_check:
+        return False
     for obj in objects:
-        if not isinstance(object_to_check, obj):
-            return False
-    return True
+        if isinstance(object_to_check, obj):
+            return True
+    return False
 
 
 def get_scale_values_from_model(model: torch.fx.GraphModule):
@@ -115,24 +117,31 @@ def get_scale_values_from_model(model: torch.fx.GraphModule):
         INT8SymmetricWeightsDecompressor,
     ]
     for node in model.graph.nodes:
-        if not check_multiple_isinstance(node.taget, decompressor_modules):
+        # print(node.name, node.target, node.meta)
+        node_module = getattr(model, node.target) if node.op == "call_module" else None
+        if not check_multiple_isinstance(node_module, decompressor_modules):
             continue
-        node_to_scale_mapping[node.name] = model.state_dict()[node.name]
+        state_dict_scale_name = f"{node.target}._scale"
+        node_to_scale_mapping[node.name] = model.state_dict()[state_dict_scale_name]
 
     return node_to_scale_mapping
 
 
 def get_test_cases():
-    test_cases = ()
+    test_cases = []
     for model in BASE_MODELS:
         for qparam in QUANTIZER_PARAMS:
             pt2e_params = PT2E_PARAMS
-            if (qparam.get("mode") in {QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM}) or (
-                qparam.get("ratio") is None
-            ):
+            if qparam.get("mode") in {QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM}:
                 pt2e_params = [{}]
             for pt2e_param in pt2e_params:
-                test_cases.append(model, qparam, pt2e_param)
+                test_cases.append(
+                    (
+                        model,
+                        qparam,
+                        pt2e_param,
+                    )
+                )
     return test_cases
 
 
@@ -174,7 +183,7 @@ def test_compress_pt2e(
     quantizer_params,
     pt2e_params,
 ):
-    fx_model, example_input = _build_torch_fx_model(model_case)
+    fx_model, example_input = build_torch_fx_model(model_case)
     with torch.no_grad():
         ref_out = fx_model(example_input)
 
@@ -191,7 +200,7 @@ def test_compress_pt2e(
 
     nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(quantized_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
-    param_string = _string_from_quantizer_params(quantizer_params, pt2e_params=None)
+    param_string = _string_from_quantizer_params(quantizer_params)
     path_to_dot = (
         FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
     ).as_posix()
@@ -213,9 +222,9 @@ def test_compress_pt2e_scales(
     model_case: ModelCase,
     quantizer_params,
     pt2e_params,
-    regen_ref_data,
+    regen_ref_data=True,
 ):
-    fx_model, example_input = _build_torch_fx_model(model_case)
+    fx_model, example_input = build_torch_fx_model(model_case)
     with torch.no_grad():
         ref_out = fx_model(example_input)
 
@@ -233,9 +242,10 @@ def test_compress_pt2e_scales(
     param_string = _string_from_quantizer_params(quantizer_params, pt2e_params)
     ref_json_path = (
         FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_wc_scales_filename(param_string)
-    ).as_posix()
+    )
 
     scales_list = get_scale_values_from_model(quantized_model)
+    scales_list = to_json_serializable(scales_list)
 
     if regen_ref_data:
         with safe_open(ref_json_path, "w") as file:
@@ -261,7 +271,7 @@ def test_openvino_quantizer(
     quantizer_builder: Callable[..., OpenVINOQuantizer],
     pt2e_params,
 ):
-    fx_model, example_input = _build_torch_fx_model(model_case)
+    fx_model, example_input = build_torch_fx_model(model_case)
     quantizer = quantizer_builder(**quantizer_params)
 
     prepared = prepare_pt2e(fx_model, quantizer)
@@ -272,26 +282,27 @@ def test_openvino_quantizer(
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     param_string = _string_from_quantizer_params(quantizer_params)
-    path_to_dot = (FX_AO_DIR / model_case.model_id / get_dot_filename(param_string)).as_posix()
+    path_to_dot = (
+        FX_AO_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
+    ).as_posix()
     compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
 
-def _serialize_wc_param(wp) -> dict[str, Any]:
-    def to_json_serializable(obj):
-        if dataclasses.is_dataclass(obj):
-            return {k: to_json_serializable(v) for k, v in dataclasses.asdict(obj).items()}
-        elif isinstance(obj, Enum):
-            return obj.value
-        elif isinstance(obj, (list, tuple)):
-            return [to_json_serializable(x) for x in obj]
-        elif isinstance(obj, dict):
-            return {k: to_json_serializable(v) for k, v in obj.items()}
-        elif isinstance(obj, NNCFNode):
-            return obj.node_name
-        else:
-            return obj
-
-    return to_json_serializable(wp)
+def to_json_serializable(obj: Any) -> dict[Any, Any]:
+    if dataclasses.is_dataclass(obj):
+        return {k: to_json_serializable(v) for k, v in dataclasses.asdict(obj).items()}
+    elif isinstance(obj, Enum):
+        return obj.value
+    elif isinstance(obj, (list, tuple)):
+        return [to_json_serializable(x) for x in obj]
+    elif isinstance(obj, torch.Tensor):
+        return obj.detach().cpu().tolist()
+    elif isinstance(obj, dict):
+        return {k: to_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, NNCFNode):
+        return obj.node_name
+    else:
+        return obj
 
 
 @pytest.mark.parametrize(
@@ -309,9 +320,9 @@ def test_openvino_wc_params(
     model_case: ModelCase,
     quantizer_params,
     pt2e_params,
-    regen_ref_data,
+    regen_ref_data=True,
 ):
-    fx_model, _ = _build_torch_fx_model(model_case)
+    fx_model, _ = build_torch_fx_model(model_case)
     nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(fx_model)
 
     param_string = _string_from_quantizer_params(quantizer_params)
@@ -319,7 +330,7 @@ def test_openvino_wc_params(
 
     all_weight_params, *_ = quantizer.get_nncf_weight_compression_parameters(fx_model, nncf_graph)
 
-    wc_params = _serialize_wc_param(all_weight_params)
+    wc_params = to_json_serializable(all_weight_params)
 
     ref_json_path = (
         FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_wc_param_filename(param_string)
