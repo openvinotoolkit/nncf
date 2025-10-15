@@ -341,7 +341,7 @@ HAWQ_TEST_PARAMS = (
 )
 
 
-@pytest.xfail("Ticket: 175018")
+@pytest.mark.xfail(reason="Ticket: 175018")
 @pytest.mark.parametrize("params", HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config_builder = params.config_builder

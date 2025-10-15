@@ -242,7 +242,7 @@ class HawqDatasetMock:
         return 1
 
 
-@pytest.xfail("Ticket: 175018")
+@pytest.mark.xfail(reason="Ticket: 175018")
 def test_staged_scheduler_with_hawq():
     config = get_squeezenet_quantization_config()
     config["compression"].update(
