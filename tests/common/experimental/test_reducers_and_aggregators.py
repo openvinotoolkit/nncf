@@ -263,10 +263,32 @@ class TemplateTestReducersAggregators:
 
     @pytest.mark.parametrize(
         "axes, reference",
+        [[None, 10.0], [(1, 2), 4.16666], [(2,), 6.33333], [(), 10.0]],
+    )
+    def test_mean_abs_max_reducer_keep_axes(self, axes, reference):
+        reducer = MeanAbsMaxReducer(keep_axes=axes)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
+        result = reducer._reduce_out_of_place([nncf_data])
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
+
+    @pytest.mark.parametrize(
+        "axes, reference",
         [[None, 16.1666], [(0,), 64.0], [(0, 1), 36.1875], [(0, 1, 2), 16.1666]],
     )
     def test_max_variance_reducer(self, axes, reference):
         reducer = MaxVarianceReducer(reduction_axes=axes)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
+        result = reducer._reduce_out_of_place([nncf_data])
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
+
+    @pytest.mark.parametrize(
+        "axes, reference",
+        [[None, 16.1666], [(1, 2), 64.0], [(2,), 36.1875], [(), 16.1666]],
+    )
+    def test_max_variance_reducer_keep_axes(self, axes, reference):
+        reducer = MaxVarianceReducer(keep_axes=axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
