@@ -222,7 +222,7 @@ def test_compress_pt2e_scales(
     model_case: ModelCase,
     quantizer_params,
     pt2e_params,
-    regen_ref_data=True,
+    regen_ref_data,
 ):
     fx_model, example_input = build_torch_fx_model(model_case)
     with torch.no_grad():
@@ -320,7 +320,7 @@ def test_openvino_wc_params(
     model_case: ModelCase,
     quantizer_params,
     pt2e_params,
-    regen_ref_data=True,
+    regen_ref_data,
 ):
     fx_model, _ = build_torch_fx_model(model_case)
     nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(fx_model)
