@@ -1,4 +1,5 @@
 -c ../../constraints.txt
 torch==2.9.0
-torchao
+torchvision==0.24.0
+torchao==0.13.0
 git+https://github.com/anzr299/executorch.git@an/quantizer_nncf_pt2e_support
