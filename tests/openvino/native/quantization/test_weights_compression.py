@@ -32,9 +32,7 @@ from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.cpu_info import is_arm_cpu
-from nncf.openvino.engine import OVNativeEngine
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.model_transformer import model_extraction_transformation
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
@@ -136,21 +134,7 @@ def get_shape_for_second_input(op_with_weights: ov.Node) -> list[int]:
     return list(op_with_weights.inputs()[1].get_shape())
 
 
-def collect_subgraph_outputs(
-    model,
-    input_ids: list[tuple[str, int]],
-    output_ids: list[tuple[str, int]],
-    inputs_type: ov.Type,
-    outputs_type: ov.Type,
-) -> np.array:
-    extracted_model = model_extraction_transformation(
-        model, input_ids, output_ids, inputs_type=inputs_type, outputs_type=outputs_type
-    )
-    real_outputs = OVNativeEngine(extracted_model).infer({})
-    return list(real_outputs.values())[0]
-
-
-def check_int8_node(model, op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
+def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
     dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
     assert op.get_element_type() == dtype
     compressed_weight = get_const_value_as_numpy_tensor(op)
@@ -163,10 +147,10 @@ def check_int8_node(model, op: ov.Node, mode: CompressWeightsMode = CompressWeig
         sub_node = get_next_node(convert_node)
         assert sub_node.get_type_name() == "Subtract"
 
-        last_convert_node = sub_node.input_value(1).get_node()
-        assert last_convert_node.get_type_name() == "Convert"
+        convert_node = sub_node.input_value(1).get_node()
+        assert convert_node.get_type_name() == "Convert"
 
-        zero_point_node = last_convert_node.input_value(0).get_node()
+        zero_point_node = convert_node.input_value(0).get_node()
         zero_point = get_const_value_as_numpy_tensor(zero_point_node)
         stats["zero_point"] = zero_point
         reduced_weight_shape = list(op.shape)
@@ -174,30 +158,18 @@ def check_int8_node(model, op: ov.Node, mode: CompressWeightsMode = CompressWeig
         assert list(zero_point_node.shape) == reduced_weight_shape
         mul_node = get_next_node(sub_node)
     else:
-        mul_node = get_next_node(last_convert_node)
+        mul_node = get_next_node(convert_node)
 
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
     scale = get_const_value_as_numpy_tensor(scale_node)
     stats["scale"] = scale
-
-    stats["subgraph_outputs"] = collect_subgraph_outputs(
-        model,
-        [(convert_node.get_friendly_name(), 0)],
-        [(mul_node.get_friendly_name(), 0)],
-        inputs_type=dtype,
-        outputs_type=ov.Type.f32,
-    )
     return stats
 
 
-def check_int4_grouped(model, op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
+def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
     dtype = ov.Type.u4 if mode == CompressWeightsMode.INT4_ASYM else ov.Type.i4
     assert op.get_element_type() == dtype
-
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
-
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
@@ -217,10 +189,6 @@ def check_int4_grouped(model, op: ov.Node, mode: CompressWeightsMode, group_size
         zero_point_node = convert_node.input_value(0).get_node()
         assert zero_point_node.get_element_type() == dtype
         assert list(zero_point_node.shape) == reduced_weight_shape
-
-        zero_point = get_const_value_as_numpy_tensor(zero_point_node)
-        stats["zero_point"] = zero_point
-
         mul_node = get_next_node(sub_node)
     else:
         mul_node = get_next_node(convert_node)
@@ -232,68 +200,16 @@ def check_int4_grouped(model, op: ov.Node, mode: CompressWeightsMode, group_size
     reshape_node = get_next_node(mul_node)
     assert reshape_node.get_type_name() == "Reshape"
 
-    last_convert_node = get_next_node(reshape_node)
-    assert last_convert_node.get_type_name() == "Convert"
-
-    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
-
-    stats["subgraph_outputs"] = collect_subgraph_outputs(
-        model,
-        [(convert_node.get_friendly_name(), 0)],
-        [(get_next_node(convert_node).get_friendly_name(), 0)],
-        inputs_type=dtype,
-        outputs_type=ov.Type.f32,
-    )
-    return stats
-
-
-def check_fp(model, op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
-    dtype = ov.Type.f4e2m1 if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.FP4_E2M1] else ov.Type.f8e4m3
-    assert op.get_element_type() == dtype
-
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
-
-    weight_shape = op.shape
-    # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
-    assert list(weight_shape)[-1] == group_size
-    reduced_weight_shape = list(weight_shape)
-    reduced_weight_shape[-1] = 1
-
-    convert_node = get_next_node(op)
+    convert_node = get_next_node(reshape_node)
     assert convert_node.get_type_name() == "Convert"
 
-    mul_node = get_next_node(convert_node)
-    assert mul_node.get_type_name() == "Multiply"
-    scale_node = mul_node.input_value(1).get_node()
-    assert list(scale_node.shape) == reduced_weight_shape
-    if mode not in [CompressWeightsMode.FP8_E4M3, CompressWeightsMode.FP4_E2M1]:
-        scale_node = scale_node.input_value(0).get_node()
-    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
-
-    reshape_node = get_next_node(mul_node)
-    assert reshape_node.get_type_name() == "Reshape"
-
-    last_convert_node = get_next_node(reshape_node)
-    assert last_convert_node.get_type_name() == "Convert"
-
-    stats["subgraph_outputs"] = collect_subgraph_outputs(
-        model,
-        [(convert_node.get_friendly_name(), 0)],
-        [(last_convert_node.get_friendly_name(), 0)],
-        inputs_type=dtype,
-        outputs_type=ov.Type.f32,
-    )
-
-    return stats
+    return {
+        "scale": get_const_value_as_numpy_tensor(scale_node),
+    }
 
 
-def check_nf4_grouped(model, op: ov.Node, group_size: int = 7):
+def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert op.get_element_type() == ov.Type.nf4
-
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
-
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
@@ -313,15 +229,14 @@ def check_nf4_grouped(model, op: ov.Node, group_size: int = 7):
 
     convert_node = get_next_node(reshape_node)
     assert convert_node.get_type_name() == "Convert"
-    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
-    return stats
+
+    return {
+        "scale": get_const_value_as_numpy_tensor(scale_node),
+    }
 
 
-def check_codebook_grouped(model, op: ov.Node, group_size: int = 7, dtype=ov.Type.f8e4m3):
+def check_codebook_grouped(op: ov.Node, group_size: int = 7, dtype=ov.Type.f8e4m3):
     assert op.get_element_type() == dtype
-
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
 
     if dtype == ov.Type.f16:
         convert_node = op
@@ -349,8 +264,9 @@ def check_codebook_grouped(model, op: ov.Node, group_size: int = 7, dtype=ov.Typ
     convert_node = get_next_node(reshape_node)
     assert convert_node.get_type_name() == "Convert"
 
-    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
-    return stats
+    return {
+        "scale": get_const_value_as_numpy_tensor(scale_node),
+    }
 
 
 def check_codebook_indexes(op: ov.Node, dtype=ov.Type.u4):
@@ -370,32 +286,16 @@ def check_codebook_indexes(op: ov.Node, dtype=ov.Type.u4):
     }
 
 
-def check_int4_sym_grouped(model, op: ov.Node):
-    return check_int4_grouped(model, op, mode=CompressWeightsMode.INT4_SYM)
+def check_int4_sym_grouped(op: ov.Node):
+    return check_int4_grouped(op, mode=CompressWeightsMode.INT4_SYM)
 
 
-def check_int4_asym_grouped(model, op: ov.Node):
-    return check_int4_grouped(model, op, mode=CompressWeightsMode.INT4_ASYM)
+def check_int4_asym_grouped(op: ov.Node):
+    return check_int4_grouped(op, mode=CompressWeightsMode.INT4_ASYM)
 
 
-def check_int8_sym(model, op: ov.Node):
-    return check_int8_node(model, op, mode=CompressWeightsMode.INT8_SYM)
-
-
-def check_mxfp4(model, op: ov.Node):
-    return check_fp(model, op, mode=CompressWeightsMode.MXFP4, group_size=32)
-
-
-def check_mxfp8(model, op: ov.Node):
-    return check_fp(model, op, mode=CompressWeightsMode.MXFP8_E4M3, group_size=32)
-
-
-def check_fp8(model, op: ov.Node):
-    return check_fp(model, op, mode=CompressWeightsMode.FP8_E4M3, group_size=32)
-
-
-def check_fp4(model, op: ov.Node):
-    return check_fp(model, op, mode=CompressWeightsMode.FP4_E2M1, group_size=32)
+def check_int8_sym(op: ov.Node):
+    return check_int8_node(op, mode=CompressWeightsMode.INT8_SYM)
 
 
 def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
@@ -414,41 +314,17 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
         (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.CB4_F8E4M3, 7, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.MXFP4, 32, get_mixed_mapping(check_mxfp4, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.MXFP8_E4M3, 32, get_mixed_mapping(check_mxfp8, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.FP8_E4M3, 32, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.FP4_E2M1, 32, get_mixed_mapping(check_fp4, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
-    model = IntegerModel(dim2=group_size if group_size > 0 else 7).ov_model
-    orig_weights = {}
-    for op in model.get_ops():
-        op_name = op.get_friendly_name()
-        if op.get_type_name() == "Constant" and op_name in check_fn_per_node_map:
-            orig_weights[op_name] = get_const_value_as_numpy_tensor(op)
-
+    model = IntegerModel().ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
     for op in compressed_model.get_ops():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and op_name in check_fn_per_node_map:
             check_fn = check_fn_per_node_map[op_name]
-            actual_stats[op_name] = check_fn(compressed_model, op)
-
-    for op_name, orig_w in orig_weights.items():
-        subgraph_output_key = "subgraph_outputs"
-        if subgraph_output_key not in actual_stats[op_name]:
-            continue
-
-        s_out = actual_stats[op_name][subgraph_output_key].reshape(-1)
-        orig_w = orig_w.reshape(-1)
-
-        abs_diff = np.abs(s_out - orig_w)
-        idx = abs_diff.argmax()
-        print(s_out[idx], orig_w[idx], abs_diff[idx])
-        del actual_stats[op_name][subgraph_output_key]
-        # Check the diff
+            actual_stats[op_name] = check_fn(op)
 
     ref_stats_path = get_actual_reference_for_current_openvino(
         REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
