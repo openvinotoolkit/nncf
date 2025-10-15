@@ -548,7 +548,7 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
             if layer_config["class_name"] in ["TFOpLambda", "SlicingOpLambda"]:
                 inbound_nodes = reformat_inbound_nodes_for_oplambda(inbound_nodes)
 
-            for layer_instance_idx, _ in enumerate(inbound_nodes):
+            for layer_instance_idx, inbound_nodes in enumerate(inbound_nodes):  # noqa: B020
                 if self._is_layer_shared(layer_name):
                     node_name = get_shared_node_name(layer_name, layer_instance_idx)
                 else:
