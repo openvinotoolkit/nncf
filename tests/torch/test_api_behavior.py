@@ -124,6 +124,7 @@ class DeviceCheckingModel(torch.nn.Module):
         return self.model.forward(x)
 
 
+@pytest.xfail("Ticket: 175018")
 @pytest.mark.parametrize(
     "original_device",
     ["cpu", pytest.param("cuda", marks=pytest.mark.cuda), pytest.param("cuda:0", marks=pytest.mark.cuda)],

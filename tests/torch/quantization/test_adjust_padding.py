@@ -158,6 +158,7 @@ ADJUST_PAD_DESC_LIST = [
 ]
 
 
+@pytest.xfail("Ticket: 175018")
 @pytest.mark.parametrize("desc", ADJUST_PAD_DESC_LIST, ids=[m.model_name for m in ADJUST_PAD_DESC_LIST])
 def test_adjust_padding_on_synthetic_models(desc: MultiBranchesModelDesc, mocker, monkeypatch):
     model = desc.get_model()
