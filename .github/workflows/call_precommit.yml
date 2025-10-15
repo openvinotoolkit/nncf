@@ -170,7 +170,7 @@ jobs:
         run: |
           git clone --branch an/quantizer_nncf_pt2e_support https://github.com/anzr299/executorch.git executorch
           git -C executorch submodule update --init --recursive
-          pip install --no-build-isolation ./executorch
+          pip install ./executorch
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope

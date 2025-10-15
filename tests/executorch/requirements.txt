@@ -8,6 +8,11 @@ torchao
 # Openvino
 openvino==2025.3.0
 
+# ONNX
+onnx==1.17.0; python_version < '3.13'
+onnx==1.18.0; python_version >= '3.13'
+onnxruntime==1.21.1
+
 # Copied from https://github.com/anzr299/executorch/blob/an/quantizer_nncf_pt2e_support/requirements-dev.txt
 cmake>=3.29, <4.0.0  # For building binary targets in the wheel.
 packaging>=24.2 # Lower bound required by setuptools
