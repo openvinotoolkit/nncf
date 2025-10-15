@@ -40,7 +40,6 @@ from nncf.onnx.graph.onnx_helper import get_model_inputs
 from nncf.onnx.graph.onnx_helper import get_output_port_id_for_node_before_output
 from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import is_node_has_shared_weight
-from onnxruntime.tools.symbolic_shape_infer import SymbolicShapeInference
 
 
 class ONNXLayerAttributes(BaseLayerAttributes):
@@ -387,8 +386,7 @@ class GraphConverter:
         :return: NNCFGraph.
         """
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
-        # onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
-        onnx_model = SymbolicShapeInference.infer_shapes(onnx_model)
+        onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
 
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
