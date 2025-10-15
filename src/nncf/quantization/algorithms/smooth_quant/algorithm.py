@@ -102,6 +102,10 @@ class SmoothQuant(Algorithm):
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
 
+        # Only the OpenVINO backend supports in-place statistics, so we should set this variable here.
+        if model_backend != BackendType.OPENVINO:
+            self._inplace_statistics = False
+
     def apply(
         self,
         model: TModel,
