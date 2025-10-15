@@ -15,14 +15,13 @@ from torch import nn
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.prune.rb.modules import RBPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from tests.torch2.function_hook.pruning.helpers import ConvModel
 from tests.torch2.function_hook.pruning.helpers import MatMulLeft
 from tests.torch2.function_hook.pruning.helpers import MatMulRight
 from tests.torch2.function_hook.pruning.helpers import MultiDeviceModel
 from tests.torch2.function_hook.pruning.helpers import SharedParamModel
-from tests.torch2.function_hook.pruning.helpers import TwoConvModel
 
 
 @pytest.mark.parametrize(
@@ -37,45 +36,13 @@ from tests.torch2.function_hook.pruning.helpers import TwoConvModel
 def test_prune_model(model_cls: nn.Module, ref: str):
     model = model_cls()
     example_inputs = model_cls.get_example_inputs()
-    pruned_model = nncf.prune(
-        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
-    )
+    pruned_model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED, examples_inputs=example_inputs)
     hook_storage = get_hook_storage(pruned_model)
 
     for name, sparsity_module in hook_storage.named_hooks():
         assert name == ref
-        assert isinstance(sparsity_module, UnstructuredPruningMask)
-        assert sparsity_module.binary_mask.dtype == torch.bool
-
-
-@pytest.mark.parametrize(
-    "mode, ref",
-    (
-        (
-            PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL,
-            {
-                "post_hooks.conv1:weight__0.0": [False, False, True, True],
-                "post_hooks.conv2:weight__0.0": [False, False, True, True],
-            },
-        ),
-        (
-            PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
-            {
-                "post_hooks.conv1:weight__0.0": [False, True, True, True],
-                "post_hooks.conv2:weight__0.0": [False, False, False, True],
-            },
-        ),
-    ),
-)
-def test_prune_mode(mode: PruneMode, ref):
-    model = TwoConvModel()
-    example_inputs = TwoConvModel.get_example_inputs()
-    pruned_model = nncf.prune(model, mode=mode, ratio=0.5, examples_inputs=example_inputs)
-    hook_storage = get_hook_storage(pruned_model)
-    for name, sparsity_module in hook_storage.named_hooks():
-        assert isinstance(sparsity_module, UnstructuredPruningMask)
-        c = sparsity_module.binary_mask.view(-1).tolist()
-        assert c == ref[name]
+        assert isinstance(sparsity_module, RBPruningMask)
+        assert sparsity_module.mask.dtype == torch.float32
 
 
 def test_infer(use_cuda: bool):
@@ -86,9 +53,7 @@ def test_infer(use_cuda: bool):
         model = model.cuda()
         example_inputs = example_inputs.cuda()
 
-    pruned_model = nncf.prune(
-        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
-    )
+    pruned_model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED, examples_inputs=example_inputs)
     pruned_model(example_inputs)
 
 
@@ -97,9 +62,7 @@ def test_multi_device_infer():
     model = MultiDeviceModel()
     example_inputs = MultiDeviceModel.get_example_inputs()
 
-    pruned_model = nncf.prune(
-        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
-    )
+    pruned_model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED, examples_inputs=example_inputs)
     pruned_model(example_inputs)
 
     hook_storage = get_hook_storage(pruned_model)
@@ -110,6 +73,6 @@ def test_multi_device_infer():
     }
     act_devices = {}
     for name, sparsity_module in hook_storage.named_hooks():
-        assert isinstance(sparsity_module, UnstructuredPruningMask)
-        act_devices[name] = sparsity_module.binary_mask.device.type
+        assert isinstance(sparsity_module, RBPruningMask)
+        act_devices[name] = sparsity_module.mask.device.type
     assert ref_devices == act_devices

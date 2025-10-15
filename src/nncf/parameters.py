@@ -221,3 +221,4 @@ class QuantizationMode(StrEnum):
 class PruneMode(StrEnum):
     UNSTRUCTURED_MAGNITUDE_LOCAL = auto()
     UNSTRUCTURED_MAGNITUDE_GLOBAL = auto()
+    UNSTRUCTURED_REGULARIZATION_BASED = auto()

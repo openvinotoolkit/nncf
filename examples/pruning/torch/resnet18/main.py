@@ -11,6 +11,7 @@
 
 import os
 import warnings
+from argparse import ArgumentParser
 from pathlib import Path
 
 import openvino as ov
@@ -35,6 +36,8 @@ import nncf.torch.function_hook.prune
 import nncf.torch.function_hook.prune.prune_model
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.prune.magnitude.schedulers import MultiStepMagnitudePruningScheduler
+from nncf.torch.function_hook.prune.rb.losses import RBLoss
+from nncf.torch.function_hook.prune.rb.schedulers import MultiStepRBPruningScheduler
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -42,16 +45,26 @@ warnings.filterwarnings("ignore", category=UserWarning)
 BASE_MODEL_NAME = "resnet18"
 IMAGE_SIZE = 64
 BATCH_SIZE = 128
-TRAINING_EPOCHS = 2
 
 
 ROOT = Path(__file__).parent.resolve()
-BEST_CKPT_NAME = "resnet18_int8_best.pt"
 CHECKPOINT_URL = (
     "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth"
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+
+
+def get_argument_parser() -> ArgumentParser:
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["magnitude", "rb"],
+        default="magnitude",
+        help="Pruning mode to use. Choices are: magnitude, rb. Default is magnitude.",
+    )
+    return parser
 
 
 def download_dataset() -> Path:
@@ -66,10 +79,10 @@ def load_checkpoint(model: nn.Module) -> tuple[nn.Module, float]:
 
 
 def get_resnet18_model(device: torch.device) -> nn.Module:
-    num_classes = 200  # 200 is for Tiny ImageNet, default is 1000 for ImageNet
     model = models.resnet18(weights=None)
     # Update the last FC layer for Tiny ImageNet number of classes.
-    model.fc = nn.Linear(in_features=512, out_features=num_classes, bias=True)
+    # 200 is for Tiny ImageNet, default is 1000 for ImageNet
+    model.fc = nn.Linear(in_features=512, out_features=200, bias=True)
     model.to(device)
     return model
 
@@ -78,6 +91,7 @@ def train_epoch(
     train_loader: DataLoader,
     model: nn.Module,
     criterion: nn.Module,
+    rb_loss: RBLoss,
     optimizer: torch.optim.Optimizer,
     device: torch.device,
 ):
@@ -91,50 +105,34 @@ def train_epoch(
         # Compute output.
         output = model(images)
         loss = criterion(output, target)
-
+        if rb_loss is not None:
+            loss += rb_loss()
         # Compute gradient and do opt step.
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
 
-def validate(val_loader: DataLoader, model: nn.Module, device: torch.device) -> float:
-    top1_sum = 0.0
-
+@torch.no_grad()
+def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, device: torch.device) -> float:
     # Switch to evaluate mode.
     model.eval()
 
-    with torch.no_grad():
-        for images, target in track(val_loader, total=len(val_loader), description="Validation:"):
-            images = images.to(device)
-            target = target.to(device)
+    correct = 0
+    total = 0
 
-            # Compute output.
-            output = model(images)
+    for images, target in track(val_loader, total=len(val_loader), description="Validation:"):
+        images = images.to(device)
+        target = target.to(device)
 
-            # Measure accuracy and record loss.
-            [acc1] = accuracy(output, target, topk=(1,))
-            top1_sum += acc1.item()
+        output = model(images)
 
-        num_samples = len(val_loader)
-        top1_avg = top1_sum / num_samples
-    return top1_avg
+        _, preds = output.max(1)
+        correct += preds.eq(target).sum().item()
+        total += target.size(0)
 
-
-def accuracy(output: torch.Tensor, target: torch.tensor, topk: tuple[int, ...] = (1,)):
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
-
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
+    accuracy1 = 100.0 * correct / total
+    return accuracy1
 
 
 def create_data_loaders() -> tuple[DataLoader, DataLoader]:
@@ -151,23 +149,12 @@ def create_data_loaders() -> tuple[DataLoader, DataLoader]:
     train_dataset = datasets.ImageFolder(
         train_dir,
         transforms.Compose(
-            [
-                transforms.Resize(IMAGE_SIZE),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]
+            [transforms.Resize(IMAGE_SIZE), transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize]
         ),
     )
     val_dataset = datasets.ImageFolder(
         val_dir,
-        transforms.Compose(
-            [
-                transforms.Resize(IMAGE_SIZE),
-                transforms.ToTensor(),
-                normalize,
-            ]
-        ),
+        transforms.Compose([transforms.Resize(IMAGE_SIZE), transforms.ToTensor(), normalize]),
     )
 
     train_loader = DataLoader(
@@ -200,7 +187,10 @@ def prepare_tiny_imagenet_200(dataset_dir: Path) -> None:
     val_images_dir.rmdir()
 
 
-def main():
+def main() -> float:
+    args = get_argument_parser().parse_args()
+    pruning_mode = args.mode
+
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using {device} device")
@@ -212,51 +202,64 @@ def main():
     model = get_resnet18_model(device)
     model, acc1_fp32 = load_checkpoint(model)
 
-    print(f"Accuracy@1 of original FP32 model: {acc1_fp32}")
+    print(f"Accuracy@1 of original FP32 model: {acc1_fp32:.2f}")
 
     train_loader, val_loader = create_data_loaders()
     example_input = torch.rand(1, 3, IMAGE_SIZE, IMAGE_SIZE).to(device)
 
     ###############################################################################
     # Step 2: Prune model
-    print(os.linesep + "[Step 2] Prune model")
+    print(os.linesep + "[Step 2]: Prune model and specify training parameters")
 
-    # Unstructured pruning with 70% sparsity ratio
-    pruned_model = nncf.prune(
-        model,
-        mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
-        ratio=0.7,
-        ignored_scope=nncf.IgnoredScope(),
-        examples_inputs=example_input,
-    )
+    if pruning_mode == "magnitude":
+        pruned_model = nncf.prune(
+            model,
+            mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
+            ratio=0.7,
+            ignored_scope=nncf.IgnoredScope(),
+            examples_inputs=example_input,
+        )
+        num_epochs = 2
+        rb_loss = None
+        scheduler = MultiStepMagnitudePruningScheduler(
+            model=model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.5, 1: 0.7}
+        )
+        optimizer = torch.optim.Adam(pruned_model.parameters(), lr=1e-5)
+    else:
+        pruned_model = nncf.prune(
+            model,
+            mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED,
+            ignored_scope=nncf.IgnoredScope(),
+            examples_inputs=example_input,
+        )
+        num_epochs = 30
+        rb_loss = RBLoss(pruned_model, target_ratio=0.7, p=0.1).to(device)
+        scheduler = MultiStepRBPruningScheduler(rb_loss, steps={0: 0.3, 5: 0.5, 10: 0.7})
 
-    acc1_init = validate(val_loader, pruned_model, device)
+        # Set higher lr for mask parameters to achieve the target pruning ratio faster
+        mask_params = [p for n, p in pruned_model.named_parameters() if "mask" in n]
+        model_params = [p for n, p in pruned_model.named_parameters() if "mask" not in n]
+        optimizer = torch.optim.Adam(
+            [
+                {"params": model_params, "lr": 1e-5},
+                {"params": mask_params, "lr": 1e-2, "weight_decay": 0.0},
+            ]
+        )
 
-    print(f"Accuracy@1 of pruned model with 0.7 pruning ratio without fine-tuning: {acc1_init:.3f}")
+    criterion = nn.CrossEntropyLoss().to(device)
 
     ###############################################################################
-    # Step 3: Fine tune with multi step sparsity scheduler
-    print(os.linesep + "[Step 3] Fine tune with multi step sparsity scheduler")
+    # Step 3: Fine tune
+    print(os.linesep + "[Step 3] Fine tune with multi step pruning ratio scheduler")
 
-    # Define loss function (criterion) and optimizer.
-    criterion = nn.CrossEntropyLoss().to(device)
-    compression_lr = 1e-5
-    optimizer = torch.optim.Adam(pruned_model.parameters(), lr=compression_lr)
-
-    # Create prune scheduler with multi steps strategy
-    pruning_scheduler = MultiStepMagnitudePruningScheduler(
-        pruned_model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.6, 1: 0.7}
-    )
-
-    for epoch in range(2):
+    for epoch in range(num_epochs):
         print(os.linesep + f"Train epoch: {epoch}")
+        scheduler.step()
+        train_epoch(train_loader, pruned_model, criterion, rb_loss, optimizer, device=device)
 
-        pruning_scheduler.step()
-
-        train_epoch(train_loader, pruned_model, criterion, optimizer, device=device)
         acc1 = validate(val_loader, pruned_model, device)
-        # Show statistics of pruning
-        print(f"Accuracy@1 of pruned model after {epoch} epoch ratio {pruning_scheduler.current_ratio}: {acc1:.3f}")
+        print(f"Current pruning ratio: {scheduler.current_ratio:.3f}")
+        print(f"Accuracy@1 of pruned model after {epoch} epoch: {acc1:.3f}")
 
     ###############################################################################
     # Step 4: Export models

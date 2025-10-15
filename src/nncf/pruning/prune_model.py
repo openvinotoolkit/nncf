@@ -23,7 +23,7 @@ def prune(
     model: TModel,
     *,
     mode: PruneMode,
-    ratio: float,
+    ratio: Optional[float] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     examples_inputs: Optional[Any] = None,
 ) -> TModel:

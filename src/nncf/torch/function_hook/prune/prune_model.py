@@ -14,11 +14,14 @@ from torch import nn
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
+from nncf.common.logging import nncf_logger
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.prune.magnitude.algo import apply_magnitude_pruning
+from nncf.torch.function_hook.prune.rb.algo import apply_regularization_based_pruning
 from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.model_graph_manager import get_const_node
 
@@ -42,7 +45,7 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
 def prune(
     model: nn.Module,
     mode: PruneMode,
-    ratio: float,
+    ratio: Optional[float] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     examples_inputs: Optional[Any] = None,
 ) -> nn.Module:
@@ -80,10 +83,19 @@ def prune(
             if const_node is not None:
                 parameters_to_sparsity.add(const_node.node_name)
 
+    # Select and apply the pruning algorithm by mode
     if mode in [PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL]:
-        from nncf.torch.function_hook.prune.magnitude.algo import apply_magnitude_pruning
-
+        if ratio is None:
+            msg = f"`ratio` parameter should be specified for {mode} mode in nncf.prune function"
+            raise nncf.InternalError(msg)
         model = apply_magnitude_pruning(model, list(parameters_to_sparsity), mode, ratio)
+    elif mode == PruneMode.UNSTRUCTURED_REGULARIZATION_BASED:
+        if ratio is not None:
+            nncf_logger.warning(
+                f"`ratio` parameter is ignored for {mode} mode in nncf.prune function. "
+                "Target pruning ratio should be set by RBLoss."
+            )
+        model = apply_regularization_based_pruning(model, list(parameters_to_sparsity))
     else:
         msg = f"Pruning mode {mode} is not implemented for Torch backend"
         raise nncf.InternalError(msg)
