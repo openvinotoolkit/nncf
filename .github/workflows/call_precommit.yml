@@ -165,6 +165,10 @@ jobs:
         run: |
           cat /etc/*release
           cat /proc/cpuinfo
+      - name: Preinstall ExecuTorch from branch
+        run: |
+          git clone --branch an/quantizer_nncf_pt2e_support https://github.com/anzr299/executorch.git executorch
+          pip install ./executorch
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' || inputs.executorch_override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }} ${{ inputs.executorch_override_requirements }}"

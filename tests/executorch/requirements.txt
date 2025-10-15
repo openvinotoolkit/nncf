@@ -1,2 +1,1 @@
 -c ../../constraints.txt
-git+https://github.com/anzr299/executorch.git@an/quantizer_nncf_pt2e_support
