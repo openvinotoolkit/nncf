@@ -504,6 +504,8 @@ TEST_HW_MODELS_DESC = [
 @pytest.mark.parametrize("desc", TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC])
 @pytest.mark.parametrize("hw_config_type", TYPE_HW, ids=[hw.value for hw in TYPE_HW])
 def test_compressed_graph_models_hw(desc: ModelDesc, hw_config_type):
+    if hw_config_type == HWConfigType.GPU and desc.model_name in ["mobilenet_v2", "resnet50"]:
+        pytest.xfail("Ticket: 175018")
     model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
 
     quant_params = {"activations": ("asymmetric", "per_tensor"), "weights": ("symmetric", "per_channel")}

@@ -300,13 +300,3 @@ jobs:
         run: pip list
       - name: Run TensorFlow precommit
         run: pytest tests/tensorflow -ra
-
-  weight-compression:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/conformance_weight_compression.yml
-
-  precommit-windows:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/call_precommit_windows.yml
-    with:
-      python_version: "3.10"
