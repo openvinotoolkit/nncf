@@ -41,8 +41,8 @@ from tests.torch.test_models.llama import LlamaDecoderOnly
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.fx.helpers import get_torch_fx_model
 
-FX_PT2E_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "compress_pt2e"
-FX_AO_DIR = TEST_ROOT / "torch2" / "data" / "fx" / "ao_compression"
+FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "compress_pt2e"
+FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "ao_export_compression_OpenVINOQuantizer"
 
 
 @dataclass
@@ -283,7 +283,7 @@ def test_openvino_quantizer(
 
     param_string = _string_from_quantizer_params(quantizer_params)
     path_to_dot = (
-        FX_AO_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
+        FX_AO_DIR / model_case.model_id / get_dot_filename(param_string)
     ).as_posix()
     compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
