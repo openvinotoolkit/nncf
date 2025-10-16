@@ -173,6 +173,7 @@ def compress_pt2e(
     gptq: bool = False,
     lora_correction: bool = False,
     subset_size: int = 128,
+    ratio: int = 1,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.fx.GraphModule:
@@ -191,6 +192,8 @@ def compress_pt2e(
     :param lora_correction: Determines whether to use or not LoRA Correction algorithm.
     :param subset_size: Number of data samples to calculate activation statistics used for assigning different
         quantization precision.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8_ASYM).
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receive a higher precision.
     :param advanced_parameters: Advanced parameters for algorithms in the compression pipeline.
@@ -212,7 +215,7 @@ def compress_pt2e(
     subset_size = subset_size
     advanced_parameters = advanced_parameters
     lora_correction = lora_correction
-    ratio = wc_config.get("ratio", 1)
+    ratio = ratio
     group_size = wc_config.get("group_size", 128)
     all_layers = wc_config.get("all_layers", False)
     backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)

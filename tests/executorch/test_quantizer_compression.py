@@ -90,13 +90,12 @@ def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
 def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[dict[str, Any]] = None) -> str:
     mode = qparams.get("mode")
     gs = qparams.get("group_size", "-1")
-    ratio = qparams.get("ratio", "1")
     all_layers = qparams.get("all_layers", "False")
     if pt2e_param is None:
-        return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}"
+        return f"{mode.value}_gs{gs}_all_layers_{all_layers}"
     awq = pt2e_param.get("awq", "False")
     scale_estimation = pt2e_param.get("scale_estimation", "False")
-    return f"{mode.value}_gs{gs}_ratio{ratio}_all_layers_{all_layers}_awq_{awq}_scale_estimation_{scale_estimation}"
+    return f"{mode.value}_gs{gs}_all_layers_{all_layers}_awq_{awq}_scale_estimation_{scale_estimation}"
 
 
 def check_multiple_isinstance(object_to_check: Any, objects: list[Any]):
@@ -152,8 +151,8 @@ BASE_MODELS = (
 
 QUANTIZER_PARAMS = (
     {"mode": QuantizationMode.INT8WO_ASYM},
-    {"mode": QuantizationMode.INT4WO_SYM, "group_size": 32, "ratio": 0.8},
-    {"mode": QuantizationMode.INT4WO_SYM, "group_size": 32, "ratio": 0.8, "all_layers": True},
+    {"mode": QuantizationMode.INT4WO_SYM, "group_size": 32},
+    {"mode": QuantizationMode.INT4WO_SYM, "group_size": 32, "all_layers": True},
 )
 
 PT2E_PARAMS = ({"awq": True, "scale_estimation": True},)
@@ -165,6 +164,8 @@ TEST_MODELS = get_test_cases()
 TEST_MODEL_IDS = [
     f"{m.model_id}__{_string_from_quantizer_params(qparams, pt2e_param)}" for (m, qparams, pt2e_param) in TEST_MODELS
 ]
+
+INT8_COMPRESSION_MODES = [QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM]
 
 
 @pytest.mark.parametrize(
@@ -191,8 +192,10 @@ def test_compress_pt2e(
 
     # Build quantizer directly from quantizer_params (already includes mode/group_size)
     quantizer = quantizer_builder(**quantizer_params)
+    mode = quantizer_params.get("mode")
+    ratio = 1 if mode in INT8_COMPRESSION_MODES else 0.8
 
-    quantized_model = compress_pt2e(fx_model, quantizer=quantizer, dataset=calibration_dataset)
+    quantized_model = compress_pt2e(fx_model, quantizer=quantizer, ratio=ratio, dataset=calibration_dataset)
 
     with torch.no_grad():
         out = quantized_model(example_input)
@@ -232,8 +235,11 @@ def test_compress_pt2e_scales(
 
     # Build quantizer directly from quantizer_params (already includes mode/group_size)
     quantizer = quantizer_builder(**quantizer_params)
-
-    quantized_model = compress_pt2e(fx_model, quantizer=quantizer, dataset=calibration_dataset, **pt2e_params)
+    mode = quantizer_params.get("mode")
+    ratio = 1 if mode in INT8_COMPRESSION_MODES else 0.8
+    quantized_model = compress_pt2e(
+        fx_model, quantizer=quantizer, ratio=ratio, dataset=calibration_dataset, **pt2e_params
+    )
 
     with torch.no_grad():
         out = quantized_model(example_input)
@@ -282,9 +288,7 @@ def test_openvino_quantizer(
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     param_string = _string_from_quantizer_params(quantizer_params)
-    path_to_dot = (
-        FX_AO_DIR / model_case.model_id / get_dot_filename(param_string)
-    ).as_posix()
+    path_to_dot = (FX_AO_DIR / model_case.model_id / get_dot_filename(param_string)).as_posix()
     compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
 
