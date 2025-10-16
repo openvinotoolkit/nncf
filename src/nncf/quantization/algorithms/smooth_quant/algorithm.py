@@ -256,10 +256,7 @@ class SmoothQuant(Algorithm):
             ):
                 stats = tensor_collector.get_statistics()
                 shape = stats[SHAPE_BRANCH_KEY]
-                if shape is not None:
-                    shape = tuple(shape.tolist())
-                else:
-                    shape = tuple()
+                shape = tuple() if shape is None else tuple(shape.tolist())
 
             items.append((node, input_port, shape))
 
@@ -309,18 +306,12 @@ class SmoothQuant(Algorithm):
             # (actually, only the number of dimensions (ndim) is required) is unknown for some operations.
             if model_backend == BackendType.ONNX:
                 keep_axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port),)
-                collector = self._create_tensor_collector(
-                    self._subset_size,
-                    self._inplace_statistics,
-                    keep_axes=keep_axes,
-                )
+                reduction_axes = None
             else:
+                keep_axes = None
                 reduction_axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
-                collector = self._create_tensor_collector(
-                    self._subset_size,
-                    self._inplace_statistics,
-                    reduction_axes=reduction_axes,
-                )
+
+            collector = self._create_tensor_collector(self._subset_size, keep_axes, reduction_axes)
 
             container.add_statistic_point(StatisticPoint(target_point, collector, self._algorithm_key))
 
@@ -329,7 +320,6 @@ class SmoothQuant(Algorithm):
     def _create_tensor_collector(
         self,
         num_samples: int,
-        inplace: bool,
         keep_axes: Optional[tuple[int, ...]] = None,
         reduction_axes: Optional[tuple[int, ...]] = None,
     ) -> TensorCollector:
@@ -337,7 +327,6 @@ class SmoothQuant(Algorithm):
         Initializes and returns a configured tensor collector for the `SmoothQuant` algorithm.
 
         :param num_samples: Maximum number of samples to collect for the aggregator.
-        :param inplace: If True, statistics will be computed in-place.
         :param keep_axes: Axes to preserve during the reduction operation.
         :param reduction_axes: Axes over which the reduction operation is applied.
         :return: A tensor collector configured with the specified reduction and aggregation logic.
@@ -351,12 +340,14 @@ class SmoothQuant(Algorithm):
         abs_max_reducer_cls = self._backend_entity.get_abs_max_reducer_cls()
         collector.register_statistic_branch(
             STATISTIC_BRANCH_KEY,
-            abs_max_reducer_cls(reduction_axes, keep_axes, inplace),
+            abs_max_reducer_cls(reduction_axes, keep_axes, self._inplace_statistics),
             MaxAggregator(num_samples=num_samples),
         )
         shape_reducer_cls = self._backend_entity.get_shape_reducer_cls()
         collector.register_statistic_branch(
-            SHAPE_BRANCH_KEY, shape_reducer_cls(inplace), NoopAggregator(num_samples=1, return_first=True)
+            SHAPE_BRANCH_KEY,
+            shape_reducer_cls(self._inplace_statistics),
+            NoopAggregator(num_samples=1, return_first=True),
         )
 
         return collector
