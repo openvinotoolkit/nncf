@@ -47,7 +47,7 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
-from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_nf4_quantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_float_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -1394,8 +1394,7 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
                 "are required for asymmetric quantization."
             )
         return
-    else:
-        _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+    _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
@@ -1864,12 +1863,39 @@ def test_nf4_quantization_mid_quant(weight, scale):
     scale = Tensor(scale)
     # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
     norm_weight = _calculate_normalized_weight(weight, scale)
-    nf4_quant = _calculate_nf4_quantized_weight(norm_weight)
+    nf4_quant = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.NF4)
 
     norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
     ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
 
     np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
+
+
+@pytest.mark.parametrize(
+    "input_val,expected_val,description",
+    [
+        (-7.0, -6.0, "Lower than quantile range"),
+        (7.0, 6.0, "Higher than quantile range"),
+        (-5.0, -4.0, "Should pick nearest EVEN index (index 2: -4.0)"),
+        (-3.5, -4.0, "Should pick nearest EVEN index (index 2: -4.0)"),
+        (1.75, 2.0, "Should pick nearest EVEN index (index 12: 2.0)"),
+        (2.5, 2.0, "Should pick nearest EVEN index (index 12: 2.0)"),
+        (-4.0, -4.0, "Exactly on a quantile"),
+        (0.0, 0.0, "Value 0.0 is on quantile boundary"),
+        (-0.0, 0.0, "Value -0.0 is on quantile boundary"),
+        (-0.25, 0.0, "Should round up, 0.0 (even index)"),
+        (0.25, 0.0, "Should round down, 0.0 (even index)"),
+        (-0.49, -0.5, "Closer to -0.5"),
+        (-0.51, -0.5, "Closer to -0.5)"),
+    ],
+)
+def test_mxfp4_quantization_edge_cases(input_val, expected_val, description):
+    norm_weight = Tensor(np.array([input_val], dtype=np.float32))
+    result = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.MXFP4)
+
+    assert result.data[0] == expected_val, (
+        f"{description}: Expected {expected_val}, got {result.data[0]} for input value {input_val}"
+    )
 
 
 @pytest.mark.parametrize(

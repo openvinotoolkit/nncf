@@ -145,6 +145,9 @@ ignore = [
     "B009", # get-attr-with-constant
     "B010", # set-attr-with-constant
     "B905", # zip-without-explicit-strict
+    "RET502", # implicit-return-value
+    "RET503", # implicit-return
+    "RET504", # unnecessary-assign
 ]
 select = [
     "CPY001", # copyright check
@@ -159,6 +162,7 @@ select = [
     "UP", # pyupgrade
     "PERF", # perflint
     "B", # flake8-bugbear
+    "RET", # flake8-return
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify

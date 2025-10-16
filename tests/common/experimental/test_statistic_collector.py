@@ -385,10 +385,10 @@ class TemplateTestStatisticCollector:
         tensor_collector.register_statistic_branch(
             MeanTensorStatistic.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
         )
-        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array([1])))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MeanTensorStatistic)
-        assert statistic.mean_values == statistic.shape == Tensor(np.array(1))
+        assert statistic.mean_values == statistic.shape == Tensor(np.array([1]))
 
     def test_median_mad_stat_building(self):
         class DummyMADPercentileAggregator(DummyTensorAggregator):

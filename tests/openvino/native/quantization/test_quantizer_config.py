@@ -109,5 +109,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
                 const_metatype=OVConstantMetatype,
                 transpose_metatype=OVReadValueMetatype,
                 matmul_layer_weighted_attrs=OVLayerAttributes({}),
-            )
+            ),
+            dict(),
+            self.get_ref_transformer_setup_state,
         )
