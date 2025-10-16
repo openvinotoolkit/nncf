@@ -341,9 +341,14 @@ HAWQ_TEST_PARAMS = (
 )
 
 
-@pytest.mark.xfail(reason="Ticket: 175018")
 @pytest.mark.parametrize("params", HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
+    if str(params) in [
+        "mobilenet_v2_device_CPU",
+        "mobilenet_v2__staged",
+        "mobilenet_v2_device_NPU__mode_strict__ratio_1.02",
+    ]:
+        pytest.xfail("Ticket: 175018")
     config_builder = params.config_builder
     config = config_builder.build()
 
