@@ -83,7 +83,7 @@ def calculate_float_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tensor:
     """
-    Calculates the scale for nf4 or mxfp4/mxfp8_e4m3 quantization.
+    Calculates the scale for nf4 or mxfp8_e4m3/mxfp4/fp8_e4m3/fp4 quantization.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
@@ -99,6 +99,8 @@ def calculate_float_quantization_params(
     FP_MAX_VALS = {
         CompressWeightsMode.MXFP4: 6.0,
         CompressWeightsMode.MXFP8_E4M3: 448.0,
+        CompressWeightsMode.FP4: 6.0,
+        CompressWeightsMode.FP8_E4M3: 448.0,
     }
     if config.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3] + list(FP_MAX_VALS.keys()):
         if config.mode in FP_MAX_VALS:
@@ -148,17 +150,16 @@ def do_float_quantization(
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided,
-    and performs corresponding (nf4, MXFP4 and MXFP8_E4M3) weight quantization.
+    and performs corresponding (nf4, MXFP4, MXFP8_E4M3, FP4, FP8_E4M3) weight quantization.
     NF4 format uses 16 levels in [-1, 1] range, while MXFP4 uses 16 levels in [-6, 6].
-    For MXFP8_E4M3 and CODEBOOK currently returns normalized weight without quantization.
-    For CODEBOOK currently returns normalized weight without quantization.
+    For MXFP8_E4M3, FP8_E4M3, FP4 and  CODEBOOK currently returns normalized weight without quantization.
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for MXFP8_E4M3 and codebook normalized) weight tensor and corresponding scale tensor and
-             optional indexes for codebook.
+    :return: Returns quantized (for MXFP8_E4M3, FP4, FP8_E4M3 and codebook normalized)
+        weight tensor and corresponding scale tensor and optional indexes for codebook.
     """
     assert not config.is_integer
 
@@ -208,7 +209,7 @@ def float_quantize_dequantize_weight(
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor to float dtype and then dequantizes it back to obtain float32 values.
-    MXFP8_E4M3 mode is currently not supported.
+    MXFP8_E4M3, FP8_E4M3 and FP4 modes currently are not supported.
 
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.

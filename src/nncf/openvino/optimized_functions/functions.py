@@ -114,7 +114,8 @@ def do_float_quantization(
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized weight tensor and corresponding scale tensor.
+    :return: Returns quantized (for MXFP8_E4M3, FP4 and FP8_E4M3 normalized)
+        weight tensor and corresponding scale tensor.
     """
     assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]
 

@@ -1145,7 +1145,7 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
         (CompressWeightsMode.MXFP4, ov.Type.f4e2m1),
     ],
 )
-def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
+def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
     # Use hidden dim % 32 == 0 to make it possible to quantize in MX format
     model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
     dataset = Dataset([np.ones([1, 4, 32]), np.arange(128).reshape(1, 4, 32)])
@@ -1177,6 +1177,71 @@ def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
+
+
+@pytest.mark.parametrize(
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], None),
+        # One test to check manual group size setup is working as expected
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], 128),
+    ),
+)
+@pytest.mark.parametrize(
+    "mode, ov_type",
+    [
+        (CompressWeightsMode.FP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.FP4, ov.Type.f4e2m1),
+    ],
+)
+def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
+    model = SequentialMatmulModel(mm_hidden_dim=128).ov_model
+    dataset = Dataset([np.ones([1, 4, 128]), np.arange(512).reshape(1, 4, 128)])
+    kwargs = {}
+    if group_size is not None:
+        kwargs["group_size"] = group_size
+    compressed_model = compress_weights(
+        model,
+        mode=mode,
+        ratio=ratio,
+        all_layers=all_layers,
+        sensitivity_metric=sensitivity_metric,
+        dataset=dataset,
+        **kwargs,
+    )
+    ops = []
+    for op in compressed_model.get_ordered_ops():
+        if op.get_element_type() == ov_type:
+            # Check effective default group size == 128
+            assert tuple(op.shape) == (128, 1, 128)
+            ops.append(op)
+
+    names_fp = {op.get_friendly_name() for op in ops}
+    ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_fp_nodes == names_fp
+
+    names_scales = {
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_element_type() == ov.Type.f16 and "scale" in op.get_friendly_name()
+    }
+    ref_scale_nodes = {f"weights_{i}/scale" for i in range(5)}
+    assert ref_scale_nodes == names_scales
 
 
 @pytest.mark.parametrize(
