@@ -819,8 +819,6 @@ SYNTHETIC_MODEL_DESC_LIST = [
     "synthetic_model_desc", SYNTHETIC_MODEL_DESC_LIST, ids=[m.model_name for m in SYNTHETIC_MODEL_DESC_LIST]
 )
 def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
-    if synthetic_model_desc.model_name == "interpolate":
-        pytest.xfail("Ticket: 175018")
     model = synthetic_model_desc.get_model()
     if isinstance(model, MultiOutputSameTensorModel):
         pytest.xfail("The MultiOutputSameTensorModel is skipped, ticket 110944.")
