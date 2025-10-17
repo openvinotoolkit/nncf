@@ -247,6 +247,8 @@ Functions
    :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
    :param MXFP4: MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
    :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
+   :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
+   :param FP4: A FP4 format with E2M1 values sharing group-level fp16 scale.
    :param CODEBOOK: Codebook (LUT) quantization format.
    :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
 
@@ -376,6 +378,8 @@ Functions
        MXFP4 is MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
        MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale.
            The size of group is 32.
+       FP8_E4M3 - is FP8 format with E4M3 values sharing a group-level FP16 scale.
+       FP4 - is FP4 format with E2M1 values sharing a group-level FP16 scale.
    :type mode: nncf.CompressWeightsMode
    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
        and the rest to INT8_ASYM).

@@ -737,6 +737,8 @@ with a typical non-fixed zero point.
 <li><p><strong>INT8</strong> – Mode is deprecated and will be removed in future releases. Please use <cite>INT8_ASYM</cite> instead.</p></li>
 <li><p><strong>MXFP4</strong> – MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
 <li><p><strong>MXFP8_E4M3</strong> – MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
+<li><p><strong>FP8_E4M3</strong> – A FP8 format with E4M3 values sharing group-level fp16 scale.</p></li>
+<li><p><strong>FP4</strong> – A FP4 format with E2M1 values sharing group-level fp16 scale.</p></li>
 <li><p><strong>CODEBOOK</strong> – Codebook (LUT) quantization format.</p></li>
 <li><p><strong>CB4_F8E4M3</strong> – Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.</p></li>
 </ul>
@@ -900,6 +902,8 @@ MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E
 <blockquote>
 <div><p>The size of group is 32.</p>
 </div></blockquote>
+<p>FP8_E4M3 - is FP8 format with E4M3 values sharing a group-level FP16 scale.
+FP4 - is FP4 format with E2M1 values sharing a group-level FP16 scale.</p>
 </p></li>
 <li><p><strong>ratio</strong> (<em>float</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
 and the rest to INT8_ASYM).</p></li>
