@@ -162,7 +162,8 @@ def test_compile_via_trace():
     torch.testing.assert_close(actual, return_origin + ADD_VALUE)
 
 
-def test_export_onnx(tmp_path: Path):
+@pytest.mark.parametrize("dynamo", [True, False])
+def test_export_onnx(tmp_path: Path, dynamo: bool):
     example_input = helpers.ConvModel.get_example_inputs()
 
     model = helpers.ConvModel()
@@ -173,7 +174,7 @@ def test_export_onnx(tmp_path: Path):
     reference = wrapped(example_input)
 
     onnx_file = tmp_path / "model.onnx"
-    torch.onnx.export(wrapped, (example_input,), onnx_file.as_posix(), dynamo=False)
+    torch.onnx.export(wrapped, (example_input,), onnx_file.as_posix(), input_names=["input"], dynamo=dynamo)
     session = ort.InferenceSession(onnx_file)
 
     actual = session.run(None, {"input": example_input.numpy()})[0]
