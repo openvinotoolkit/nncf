@@ -9,7 +9,7 @@ torchvision==0.24.0
 onnx==1.17.0; python_version < '3.13'
 onnx==1.18.0; python_version >= '3.13'
 onnxruntime==1.21.1
-onnxscript==5.4.0
+onnxscript==0.5.4
 
 # TensorFlow
 tensorflow==2.15.1
