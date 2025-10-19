@@ -40,7 +40,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('max_pool2d', 'slice_13')_ActivationQuantizationInsertionPoint": {
+        "('max_pool2d', 'slice_7')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -72,7 +72,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('conv2d_4',)_ActivationQuantizationInsertionPoint": {
+        "('max_pool2d_1', 'slice_5')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -80,7 +80,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('max_pool2d_1', 'slice_9')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_4',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -112,7 +112,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('max_pool2d_2', 'slice_5')_ActivationQuantizationInsertionPoint": {
+        "('max_pool2d_2', 'slice_3')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -344,7 +344,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_16',)_ActivationQuantizationInsertionPoint": {
+        "('cat_3',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -352,7 +352,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('cat_3',)_ActivationQuantizationInsertionPoint": {
+        "('conv2d_16',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
