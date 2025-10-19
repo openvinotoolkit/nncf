@@ -101,7 +101,7 @@ class TestONNXSQAlgorithm(TemplateTestSQAlgorithm):
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
         dummy_input = torch.rand(model.INPUT_SIZE)
         model_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model.cpu(), dummy_input, model_path, input_names=["input"], opset_version=13)
+        torch.onnx.export(model.cpu(), dummy_input, model_path, input_names=["input"], opset_version=13, dynamo=False)
         onnx_model = onnx.load(model_path)
         onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
         return onnx_model

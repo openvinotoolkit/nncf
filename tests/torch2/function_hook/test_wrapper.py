@@ -173,7 +173,7 @@ def test_export_onnx(tmp_path: Path):
     reference = wrapped(example_input)
 
     onnx_file = tmp_path / "model.onnx"
-    torch.onnx.export(wrapped, (example_input,), onnx_file.as_posix())
+    torch.onnx.export(wrapped, (example_input,), onnx_file.as_posix(), dynamo=False)
     session = ort.InferenceSession(onnx_file)
 
     actual = session.run(None, {"input": example_input.numpy()})[0]
