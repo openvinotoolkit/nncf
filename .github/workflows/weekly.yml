@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'
-
+  pull_request:
 jobs:
   precommit:
     if: github.repository_owner == 'openvinotoolkit'
@@ -13,17 +13,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - python_version: "3.10"
-            override_requirements: "numpy==1.24.0"
-          - python_version: "3.11"
-          - python_version: "3.12"
-          - python_version: "3.13"
+          # - python_version: "3.10"
+          #   override_requirements: "numpy==1.24.0"
+          # - python_version: "3.11"
+          # - python_version: "3.12"
+          # - python_version: "3.13"
+          - python_version: "3.14"
     uses: ./.github/workflows/call_precommit.yml
     with:
       python_version: ${{ matrix.python_version }}
       override_requirements: ${{ matrix.override_requirements || '' }}
       gpu_enabled: false
 
-  macos:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/macos.yml
+  # macos:
+  #   if: github.repository_owner == 'openvinotoolkit'
+  #   uses: ./.github/workflows/macos.yml

@@ -1,24 +1,24 @@
-name: precommit
-permissions: read-all
+# name: precommit
+# permissions: read-all
 
-on:
-  pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - '.ci/*'
-      - 'docs/**/*'
-      - 'examples/**/*'
-      - 'licensing/*'
-      - 'tests/post_training/*'  # post_training tests runs on Jenkins
-      - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
+# on:
+#   pull_request:
+#     paths-ignore:
+#       - '**/*.md'
+#       - '.ci/*'
+#       - 'docs/**/*'
+#       - 'examples/**/*'
+#       - 'licensing/*'
+#       - 'tests/post_training/*'  # post_training tests runs on Jenkins
+#       - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
-concurrency:
-  group: precommit-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+# concurrency:
+#   group: precommit-${{ github.event.pull_request.number }}
+#   cancel-in-progress: true
 
-jobs:
-  pytest:
-    uses: ./.github/workflows/call_precommit.yml
-    with:
-      python_version: "3.10.14"
-      gpu_enabled: true
+# jobs:
+#   pytest:
+#     uses: ./.github/workflows/call_precommit.yml
+#     with:
+#       python_version: "3.10.14"
+#       gpu_enabled: true
