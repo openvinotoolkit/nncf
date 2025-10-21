@@ -474,20 +474,10 @@
         },
         {
             "type": "Interpolate",
-            "attributes": {
-                "mode": "linear"
-            },
             "quantization": {
                 "activations": [
-                    "q8_a",
-                    "q16_a"
+                    "q8_a"
                 ]
-            }
-        },
-        {
-            "type": "Interpolate",
-            "attributes": {
-                "mode": "nearest"
             }
         },
         {
