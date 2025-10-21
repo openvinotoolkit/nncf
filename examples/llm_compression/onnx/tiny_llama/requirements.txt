@@ -3,4 +3,4 @@ openvino==2025.3.0
 optimum-intel[openvino]
 git+https://github.com/onnx/onnx.git@c25eebcf51b781dbfcc75a9c8bdf5dd1781367fe # onnx-1.19.0.dev
 onnxruntime==1.21.1
-torch==2.8.0
+torch==2.9.0
