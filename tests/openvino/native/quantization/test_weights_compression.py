@@ -41,12 +41,13 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
+from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
-from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_nf4_quantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_float_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -790,18 +791,35 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
-@pytest.mark.parametrize(
-    "algo",
-    (
-        "lora_correction",
-        "awq",
-        "scale_estimation",
-        "gptq",
-    ),
-)
-def test_raise_error_with_unsupported_params_for_e2m1(algo):
-    with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
+@pytest.mark.parametrize("mode", [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3])
+class TestUnsupportedParamsMXFP:
+    @pytest.mark.parametrize(
+        "algo",
+        (
+            "lora_correction",
+            "awq",
+            "scale_estimation",
+            "gptq",
+        ),
+    )
+    def test_raise_error_with_unsupported_algo_for_mx(self, algo, mode):
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(ov.Model([], []), dataset="anything", mode=mode, **{algo: True})
+
+    def test_raise_error_with_unsupported_group_size_for_fp(self, mode):
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(ov.Model([], []), dataset="anything", mode=mode, group_size=64)
+
+    def test_raise_error_with_unsupported_(self, mode):
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(
+                ov.Model([], []),
+                dataset="anything",
+                mode=mode,
+                advanced_parameters=AdvancedCompressionParameters(
+                    group_size_fallback_mode=GroupSizeFallbackMode.ADJUST
+                ),
+            )
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
@@ -1098,49 +1116,132 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 
 
 @pytest.mark.parametrize(
-    ("mode", "all_layers", "ratio", "ref_ids"),
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], None),
+        # One test to check manual group size setup is working as expected
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], 32),
     ),
 )
-def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
-    model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
+@pytest.mark.parametrize(
+    "mode, ov_type",
+    [
+        (CompressWeightsMode.MXFP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.MXFP4, ov.Type.f4e2m1),
+    ],
+)
+def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
+    # Use hidden dim % 32 == 0 to make it possible to quantize in MX format
+    model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
+    dataset = Dataset([np.ones([1, 4, 32]), np.arange(128).reshape(1, 4, 32)])
+    kwargs = {}
+    if group_size is not None:
+        kwargs["group_size"] = group_size
     compressed_model = compress_weights(
         model,
-        mode=CompressWeightsMode.E2M1,
+        mode=mode,
         ratio=ratio,
-        group_size=1,
         all_layers=all_layers,
-        sensitivity_metric=mode,
+        sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        **kwargs,
     )
-    names_e2m1 = {
-        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f4e2m1
-    }
-    ref_e2m1_nodes = {f"weights_{i}" for i in ref_ids}
-    assert ref_e2m1_nodes == names_e2m1
+    ops = []
+    for op in compressed_model.get_ordered_ops():
+        if op.get_element_type() == ov_type:
+            # Check effective default group size == 32
+            assert tuple(op.shape) == (32, 1, 32)
+            ops.append(op)
+
+    names_fp = {op.get_friendly_name() for op in ops}
+    ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_fp_nodes == names_fp
 
     names_e8m0 = {
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f8e8m0
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
+
+
+@pytest.mark.parametrize(
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], None),
+        # One test to check manual group size setup is working as expected
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], 128),
+    ),
+)
+@pytest.mark.parametrize(
+    "mode, ov_type",
+    [
+        (CompressWeightsMode.FP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.FP4, ov.Type.f4e2m1),
+    ],
+)
+def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
+    model = SequentialMatmulModel(mm_hidden_dim=128).ov_model
+    dataset = Dataset([np.ones([1, 4, 128]), np.arange(512).reshape(1, 4, 128)])
+    kwargs = {}
+    if group_size is not None:
+        kwargs["group_size"] = group_size
+    compressed_model = compress_weights(
+        model,
+        mode=mode,
+        ratio=ratio,
+        all_layers=all_layers,
+        sensitivity_metric=sensitivity_metric,
+        dataset=dataset,
+        **kwargs,
+    )
+    ops = []
+    for op in compressed_model.get_ordered_ops():
+        if op.get_element_type() == ov_type:
+            # Check effective default group size == 128
+            assert tuple(op.shape) == (128, 1, 128)
+            ops.append(op)
+
+    names_fp = {op.get_friendly_name() for op in ops}
+    ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_fp_nodes == names_fp
+
+    names_scales = {
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_element_type() == ov.Type.f16 and "scale" in op.get_friendly_name()
+    }
+    ref_scale_nodes = {f"weights_{i}/scale" for i in range(5)}
+    assert ref_scale_nodes == names_scales
 
 
 @pytest.mark.parametrize(
@@ -1293,8 +1394,7 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
                 "are required for asymmetric quantization."
             )
         return
-    else:
-        _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+    _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
@@ -1763,12 +1863,39 @@ def test_nf4_quantization_mid_quant(weight, scale):
     scale = Tensor(scale)
     # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
     norm_weight = _calculate_normalized_weight(weight, scale)
-    nf4_quant = _calculate_nf4_quantized_weight(norm_weight)
+    nf4_quant = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.NF4)
 
     norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
     ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
 
     np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
+
+
+@pytest.mark.parametrize(
+    "input_val,expected_val,description",
+    [
+        (-7.0, -6.0, "Lower than quantile range"),
+        (7.0, 6.0, "Higher than quantile range"),
+        (-5.0, -4.0, "Should pick nearest EVEN index (index 2: -4.0)"),
+        (-3.5, -4.0, "Should pick nearest EVEN index (index 2: -4.0)"),
+        (1.75, 2.0, "Should pick nearest EVEN index (index 12: 2.0)"),
+        (2.5, 2.0, "Should pick nearest EVEN index (index 12: 2.0)"),
+        (-4.0, -4.0, "Exactly on a quantile"),
+        (0.0, 0.0, "Value 0.0 is on quantile boundary"),
+        (-0.0, 0.0, "Value -0.0 is on quantile boundary"),
+        (-0.25, 0.0, "Should round up, 0.0 (even index)"),
+        (0.25, 0.0, "Should round down, 0.0 (even index)"),
+        (-0.49, -0.5, "Closer to -0.5"),
+        (-0.51, -0.5, "Closer to -0.5)"),
+    ],
+)
+def test_mxfp4_quantization_edge_cases(input_val, expected_val, description):
+    norm_weight = Tensor(np.array([input_val], dtype=np.float32))
+    result = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.MXFP4)
+
+    assert result.data[0] == expected_val, (
+        f"{description}: Expected {expected_val}, got {result.data[0]} for input value {input_val}"
+    )
 
 
 @pytest.mark.parametrize(

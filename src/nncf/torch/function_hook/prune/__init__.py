@@ -8,13 +8,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from examples.tensorflow.common.models import mobilenet_v2_100_224
-
-
-def HubMobileNetV2(input_shape=None):
-    # Note: this will download the model to a temporary directory, which must either exist and contain
-    # the model, or not exist at all.  On Windows there are sometimes situations when the temporary directory
-    # for the model is not deleted completely, leaving the empty temporary directory, which leads to an error when
-    # the model is next downloaded.
-    return mobilenet_v2_100_224(input_shape)

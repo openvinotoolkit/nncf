@@ -11,7 +11,9 @@
   - Symmetric 8 bit compression mode
   - Symmetric and asymmetric 4 bit compression mode
   - NF4 compression mode
-  - E2M1 weights with E8M0 scales compression mode
+  - Arbitrary look-up table (CODEBOOK) or predefined lookup table based on NF4 (CB4_F8E4M3)
+  - MX-compliant types - MXFP4 and MXFP8_E4M3
+  - FP types - FP8_E4M3 and FP4
   - Mixed precision weights compression
   - Grouped weights compression
 

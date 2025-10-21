@@ -132,7 +132,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         # Collect how many times shared parameter used
         counter_shared_weights: dict[int, int] = defaultdict(int)
-        for name, parameter in chain(self.model.named_parameters(remove_duplicate=False)):
+        for _, parameter in self.model.named_parameters(remove_duplicate=False):
             counter_shared_weights[id(parameter)] += 1
 
         self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}

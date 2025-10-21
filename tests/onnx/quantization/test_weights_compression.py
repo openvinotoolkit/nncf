@@ -317,6 +317,43 @@ def test_matmulnbits():
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
 
 
+@pytest.mark.parametrize("trans_b", [0, 1])
+def test_matmulnbits_gemm(trans_b: int):
+    # Build the model with a single Gemm operation
+    np.random.seed(42)
+
+    w = np.random.rand(1280, 10).astype(np.float32)
+    if trans_b:
+        w = w.T
+    b = np.random.rand(10).astype(np.float32)
+
+    mb = ModelBuilder()
+    x = mb.add_input("input", (1, 1280))
+    x = mb.add_gemm(x, shape=w.shape, weight_data=w, bias_data=b, trans_b=trans_b)
+
+    mb.add_output(x, (1, 10))
+
+    model_opset19 = mb.build(opset_version=19)
+    model_opset21 = mb.build(opset_version=21)
+
+    rtol = 1e-5
+    if version.parse(onnxruntime.__version__) < version.parse("1.21.1"):
+        rtol = 1e-3
+
+    compressed_model_opset21 = compress_weights(model_opset21, mode=CompressWeightsMode.INT4_SYM, group_size=64)
+    compressed_model_opset19 = compress_weights(model_opset19, mode=CompressWeightsMode.INT4_SYM, group_size=64)
+
+    dummy_input = np.random.rand(1, 1280).astype(np.float32)
+
+    sess21 = InferenceSession(compressed_model_opset21.SerializeToString())
+    sess19 = InferenceSession(compressed_model_opset19.SerializeToString())
+
+    output21 = sess21.run(None, {"input": dummy_input})[0]
+    output19 = sess19.run(None, {"input": dummy_input})[0]
+
+    assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
+
+
 class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
@@ -374,7 +411,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             weights_data = weights_data.T
             x = mb.add_matmul(x, shape=weights_data.shape, output=output if i == 4 else None, data=weights_data)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def to_tensor(x: np.ndarray) -> np.ndarray:
@@ -408,7 +445,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         weights = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8).T
         mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def get_scale_estimation_ref():
@@ -544,7 +581,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             )
             x = mb.add_matmul(x, shape=w_data.shape, output=output if i == len(channel_sizes) else None, data=w_data)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def get_num_int4_nodes(model: onnx.ModelProto) -> int:

@@ -22,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -128,8 +129,18 @@ def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     :param model: The nn.Module object.
     :return: A torch.Tensor object containing the constant value.
     """
-    const_name = const_node.layer_attributes.name
-    module_name, const_attr_name = split_const_name(const_name)
+    return get_const_data_by_name(const_node.layer_attributes.name, model)
+
+
+def get_const_data_by_name(name: str, model: nn.Module) -> torch.Tensor:
+    """
+    Retrieves a detached constant tensor by its name.
+
+    :param const_name: The full name of the constant, including module and attribute.
+    :param model: The nn.Module object.
+    :return: A torch.Tensor object containing the constant value.
+    """
+    module_name, const_attr_name = split_const_name(name)
     module = get_module_by_name(module_name, model)
     data = getattr(module, const_attr_name)
     if isinstance(data, torch.nn.Parameter):
@@ -369,6 +380,42 @@ def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_
     if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]:
         return (1,)
     return (0,)
+
+
+def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_port_id: int, ndims: int) -> list[int]:
+    """
+    Returns reduction axes for the given parameters without axes that corresponds to weight channels of a node with the
+    given metatype.
+
+    :param metatype: The metatype of the operator node containing the weight.
+    :param weight_port_id: The index of the input port corresponding to the weight tensor.
+    :param ndims: Number of dimensions in the weight tensor.
+    :return: list of axes to reduce over
+    """
+    if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
+        return [1]
+    if metatype == om.PTLinearMetatype:
+        return [ndims - 1]
+    if metatype == om.PTMatMulMetatype:
+        if weight_port_id == 0:
+            return [ndims - 1]
+        if weight_port_id == 1:
+            return [max(0, ndims - 2)]
+    if metatype == om.PTAddmmMetatype:
+        if weight_port_id == 1:
+            return [ndims - 1]
+        if weight_port_id == 2:
+            return [max(0, ndims - 2)]
+    if metatype in CONVOLUTION_METATYPES:
+        channel_idx = (
+            1
+            if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
+            else 0
+        )
+        return [i for i in range(ndims) if i != channel_idx]
+
+    msg = f"The given metatype {metatype} with weight on {weight_port_id} does not map to a pre-defined reduction axes"
+    raise nncf.InternalError(msg)
 
 
 def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

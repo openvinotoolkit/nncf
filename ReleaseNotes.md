@@ -1,5 +1,44 @@
 # Release Notes
 
+## New in Release 2.18.0
+
+Post-training Quantization:
+
+- Features:
+  - (OpenVINO) Introduced new compression data types CB4_F8E4M3 and CODEBOOK. CB4_F8E4M3 is a fixed codebook with 16 fp8 values based on NF4 data type values. CODEBOOK is an arbitrary user-selectable codebook that can be used to experiment with different data types. Both data types are used for weight compression. The AWQ and scale estimation algorithms are supported for these data types.
+  - (OpenVINO) Added support for compressing FP8 (f8e4m3 and f8e5m2) weights to 4-bit data types, which is particularly beneficial for models like DeepSeek-R1.
+  - Added `group_size_fallback_mode` parameter for advanced weight compression. It controls how nodes that do not support the default group size are handled. By default (`IGNORE`), such nodes are skipped. With `ERROR`, an exception is raised if the channel size is not divisible by the group size, while `ADJUST` attempts to modify the group size so it becomes valid.
+  - (TorchFX) Added support for external quantizers in the `quantize_pt2e` API, including [XNNPACKQuantizer](https://docs.pytorch.org/executorch/stable/backends-xnnpack.html#quantization) and [CoreMLQuantizer](https://docs.pytorch.org/executorch/stable/backends-coreml.html#quantization). Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the XNNPACK and CoreML backends via the nncf `quantize_pt2e` employing smooth quant, bias correction algorithms and a wide range of statistic collectors.
+  - (ONNX) Added support for data-aware weight compression in the ONNX backend, including the AWQ and Scale Estimation algorithms. Provided an [example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/onnx/tiny_llama_scale_estimation) demonstrating the data-aware weight compression pipeline using the `TinyLlama/TinyLlama-1.1B-Chat-v1.0` model in ONNX format.
+- Improvements:
+  - Support of weight compression for models with the Rotary Positional Embedding block.
+  - Support of weight compression for models with stateful self-attention blocks.
+- Tutorials:
+  - [Post-Training Optimization of Qwen-Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-mcp/llm-agent-mcp.ipynb)
+  - [Post-Training Optimization of FLUX.1 Kontext Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flux.1-kontext/flux.1-kontext.ipynb)
+  - [Post-Training Optimization of Qwen3 Embedding Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-embedding/qwen3-embedding.ipynb)
+  - [Post-Training Optimization of GLM-4.1V-9B-Thinking Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm4.1-v-thinking/glm4.1-v-thinking.ipynb)
+
+Compression-aware training:
+
+- Features:
+  - (PyTorch) Enhanced initialization for "QAT with absorbable LoRA" using advanced compression methods (AWQ + Scale Estimation). This improvement replaces the previous basic data-free compression approach, enabling QAT to start with a more accurate model baseline and achieve [superior final accuracy](https://github.com/openvinotoolkit/nncf/pull/3577).
+- Improvements:
+  - (PyTorch) Streamlined "QAT with absorbable LoRA" by removing checkpoint selection based on validation set. This change significantly reduces overall tuning time and maximum allocated memory. While [the results on Wikitext](/examples/llm_compression/torch/distillation_qat_with_lora/README.md#results-on-wikitext) are slightly worse, it provides a more efficient and faster tuning pipeline (e.g. reduced from 32 minutes to 25 minutes for SmoLM-1.7B).
+- Tutorials:
+  - (TorchFX) Added [example](examples/llm_compression/torch_fx/tiny_llama/README.md) for compression of TinnyLama-1.1B.
+  - Updated [example](examples/llm_compression/onnx/tiny_llama/main.py) to meet NPU implementation.
+  - Implemented fast evaluation and improved output in [example](examples/llm_compression/torch/downstream_qat_with_nls/README.md).
+
+Deprecations/Removals:
+
+- Removed examples that used `create_compressed_model` API.
+
+Requirements:
+
+- Updated PyTorch (2.8.0) and Torchvision (0.23.0) versions.
+- Set require `setuptools>=77` to build package.
+
 ## New in Release 2.17.0
 
 Post-training Quantization:

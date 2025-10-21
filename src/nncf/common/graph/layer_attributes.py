@@ -20,7 +20,7 @@ class Dtype(Enum):
     INTEGER = "int"
 
 
-class BaseLayerAttributes(ABC):
+class BaseLayerAttributes(ABC):  # noqa: B024
     """
     This class stores base useful for some algorithms attributes
     of modules/layers.

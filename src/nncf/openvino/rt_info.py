@@ -53,9 +53,8 @@ def dump_parameters(
                 if bool(value):
                     dump_parameters(model, value, algo_name, [key])
                     continue
-                else:
-                    # The default value in case empty ignored_scope parameter passed
-                    value = []
+                # The default value in case empty ignored_scope parameter passed
+                value = []
 
             rt_path = ["nncf", algo_name] + path + [key]
             model.set_rt_info(str(value), rt_path)

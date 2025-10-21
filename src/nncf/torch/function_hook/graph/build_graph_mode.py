@@ -323,7 +323,7 @@ class GraphBuilderMode(FunctionHookMode):
             if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
                 op_kwargs[kw_name] = [None] * len(value)
                 for tensor_idx, tensor in enumerate(value):
-                    op_kwargs[kw_name][tensor_idx] = self.register_op_input(value, node_id, port_id, op_meta)
+                    op_kwargs[kw_name][tensor_idx] = self.register_op_input(tensor, node_id, port_id, op_meta)
                     port_id += 1
             else:
                 op_kwargs[kw_name] = self.register_op_input(value, node_id, port_id, op_meta)

@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from collections import deque
 from dataclasses import dataclass
 from functools import partial
 from itertools import product
@@ -23,6 +24,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
@@ -36,8 +38,9 @@ from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 DEFAULT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
@@ -293,19 +296,26 @@ class TemplateTestReducersAggregators:
 
         assert aggregator._collected_samples == 3
         aggregated = aggregator.aggregate()
+        assert isinstance(aggregated, deque)
         assert len(aggregated) == 3
         for val in aggregated:
             assert fns.allclose(val, self.get_nncf_tensor(input_))
 
-    def test_shape_aggregator(self):
-        aggregator = ShapeAggregator()
+    @pytest.mark.parametrize("num_samples,should_fail", [(1, False), (None, False), (3, True)])
+    def test_noop_aggregator_return_first(self, num_samples, should_fail):
+        if should_fail:
+            with pytest.raises(nncf.InternalError):
+                NoopAggregator(num_samples, return_first=True)
+            return
+        aggregator = NoopAggregator(num_samples, return_first=True)
+
         ref_shape = (1, 3, 5, 7, 9)
-        input_ = np.empty(ref_shape)
-        for _ in range(3):
-            aggregator.register_reduced_input(self.get_nncf_tensor(input_))
+        input_ = np.arange(np.prod(ref_shape)).reshape(ref_shape)
+        aggregator.register_reduced_input(self.get_nncf_tensor(input_))
 
         assert aggregator._collected_samples == 1
-        assert ref_shape == aggregator.aggregate()
+        aggregated = aggregator.aggregate()
+        assert fns.allclose(aggregated, self.get_nncf_tensor(input_))
 
     @pytest.mark.parametrize(
         "offline_aggregators_test_desc",
@@ -606,3 +616,103 @@ class TemplateTestReducersAggregators:
 
         ret_val = aggregator.aggregate()
         assert fns.allclose(ret_val, reference_output)
+
+    @pytest.mark.parametrize(
+        "ref_hist,ref_min,ref_max,ref_aggr_min,ref_aggr_max",
+        [
+            (
+                [
+                    2.0,
+                    0.0,
+                    2.0,
+                    0.0,
+                    3.0,
+                    0.3125,
+                    2.6875,
+                    0.84375,
+                    3.0,
+                    1.7421875,
+                    2.4140625,
+                    2.28125,
+                    3.6262207,
+                    2.2248535,
+                    3.902832,
+                    2.5932617,
+                    2.6818848,
+                    5.0861816,
+                    2.3693848,
+                    5.6500244,
+                    3.7062378,
+                    6.147339,
+                    4.181055,
+                    6.351656,
+                    6.192539,
+                    7.730503,
+                    6.7447014,
+                    8.902025,
+                    8.858276,
+                    12.605558,
+                    9.905666,
+                    5.2585487,
+                    45.258553,
+                    9.905666,
+                    12.605558,
+                    8.858276,
+                    8.902025,
+                    6.7447014,
+                    7.730503,
+                    6.192539,
+                    6.351656,
+                    4.181055,
+                    6.147339,
+                    3.7062378,
+                    5.6500244,
+                    2.3693848,
+                    5.0861816,
+                    2.6818848,
+                    2.5932617,
+                    3.902832,
+                    2.2248535,
+                    3.6262207,
+                    2.28125,
+                    2.4140625,
+                    1.7421875,
+                    3.0,
+                    0.84375,
+                    2.6875,
+                    0.3125,
+                    3.0,
+                    0.0,
+                    2.0,
+                    0.0,
+                    2.0,
+                ],
+                -120,
+                120,
+                -120,
+                116.25,
+            )
+        ],
+    )
+    def test_histogramm_aggregator(self, ref_hist, ref_min, ref_max, ref_aggr_min, ref_aggr_max):
+        observer = HistogramAggregator(bins=64)
+
+        # Check 3 branches:
+        # 1) Initialization of the histogram (iter 0)
+        # 2) Upscaling the historical histogram to the new min/max
+        # and combining the current histogram with the historical one (iter 1-8)
+        # 3) Do not streaching the historical histogram (new_min == past_min and new_max == past_max)
+        # and update the historical histogram by the new one. (iter 9)
+        for s in range(0, 10):
+            inp = min(s, 8) * (np.arange(1, 32) - 16)
+            inp = self.get_nncf_tensor(inp, dtype=Dtype.FLOAT)
+            observer.register_reduced_input(inp)
+
+        assert fns.allclose(observer.histogram, ref_hist)
+        assert np.allclose(observer.min_val, ref_min)
+        assert np.allclose(observer.max_val, ref_max)
+
+        aggr = observer.aggregate()
+        assert all(isinstance(val, Tensor) for val in aggr.values())
+        assert fns.allclose(aggr[MinMaxTensorStatistic.MIN_STAT], ref_aggr_min)
+        assert fns.allclose(aggr[MinMaxTensorStatistic.MAX_STAT], ref_aggr_max)

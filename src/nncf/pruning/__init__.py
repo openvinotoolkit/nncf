@@ -8,14 +8,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from examples.tensorflow.common.models import MobileNetV3Large as mobilenet_v3_large
-from examples.tensorflow.common.models import MobileNetV3Small as mobilenet_v3_small
-
-
-def MobileNetV3Small(input_shape=None):
-    return mobilenet_v3_small(input_shape)
-
-
-def MobileNetV3Large(input_shape=None):
-    return mobilenet_v3_large(input_shape)
