@@ -25,11 +25,11 @@ from tests.post_training.pipelines.image_classification_base import ImageClassif
 
 
 def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export_for_training(model, args, strict=True).module()
+    return torch.export.export_for_training(model, args, strict=True).module(check_guards=False)
 
 
 def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export(model, args, strict=True).module()
+    return torch.export.export(model, args, strict=True).module(check_guards=False)
 
 
 @dataclass
