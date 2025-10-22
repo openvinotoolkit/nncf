@@ -13,9 +13,9 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Optional
 
-import nncf
-import nncf.errors
 from nncf.torch.function_hook.prune.rb.losses import RBLoss
+from nncf.torch.function_hook.prune.scheduler_fns import exponential_ratio_scheduler
+from nncf.torch.function_hook.prune.scheduler_fns import multi_step_ratio_scheduler
 
 
 class _BaseRBScheduler(ABC):
@@ -72,27 +72,16 @@ class MultiStepRBPruningScheduler(_BaseRBScheduler):
           the first value in the steps.
 
     :param rb_loss: A instance of RBLoss.
-    :param steps: A dictionary mapping epochs to sparsity ratios. The keys should be in ascending order,
+    :param steps: A dictionary mapping epochs to pruning ratios. The keys should be in ascending order,
                   and the values should be in the range [0, 1).
     """
 
     def __init__(self, rb_loss: RBLoss, steps: dict[int, int]) -> None:
         super().__init__(rb_loss)
         self.steps = steps
-        if list(self.steps) != sorted(self.steps) or any(r >= 1 or r < 0 for r in self.steps.values()):
-            msg = (
-                "Invalid schedule_dict provided to SparsityScheduler."
-                "Keys should be in ascending order and values should be in range [0, 1)."
-            )
-            raise nncf.InternalError(msg)
-
-        self.rb_loss.current_ratio = self.steps[sorted(self.steps.keys())[0]]
 
     def get_pruning_ratio(self, epoch: int) -> float:
-        for steps in sorted(self.steps.keys(), reverse=True):
-            if epoch >= steps:
-                return self.steps[steps]
-        return self.current_ratio
+        return multi_step_ratio_scheduler(epoch, steps=self.steps)
 
 
 class ExponentialRBPruningScheduler(_BaseRBScheduler):
@@ -112,24 +101,10 @@ class ExponentialRBPruningScheduler(_BaseRBScheduler):
         self.target_epoch = target_epoch
         self.rb_loss.current_ratio = initial_ratio
 
-        if initial_ratio < 0 or initial_ratio >= 1:
-            msg = "initial_ratio should be in range [0, 1)."
-            raise nncf.InternalError(msg)
-        if target_ratio <= 0 or target_ratio >= 1:
-            msg = "target_ratio should be in range (0, 1)."
-            raise nncf.InternalError(msg)
-        if target_epoch < 1:
-            msg = "target_epoch should be positive integer."
-            raise nncf.InternalError(msg)
-
     def get_pruning_ratio(self, epoch: int) -> float:
-        if epoch == 0:
-            return self.initial_ratio
-        if epoch >= self.target_epoch:
-            return self.target_ratio
-
-        d_init = 1 - self.initial_ratio
-        d_target = 1 - self.target_ratio
-        d = d_init * float((d_target / d_init) ** (epoch / self.target_epoch))
-        ratio = 1 - d
-        return min(max(self.initial_ratio, ratio), self.target_epoch)
+        return exponential_ratio_scheduler(
+            epoch,
+            initial_ratio=self.initial_ratio,
+            target_ratio=self.target_ratio,
+            target_epoch=self.target_epoch,
+        )

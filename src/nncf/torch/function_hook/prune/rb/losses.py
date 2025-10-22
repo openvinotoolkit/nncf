@@ -48,7 +48,6 @@ class RBLoss(nn.Module):
         in the model. It aggregates the loss from all sparse layers and normalizes
         it based on the target ratio.
 
-        Loc
         :return: The computed loss value, normalized based on the target ratio.
         """
         num_params: int = 0
@@ -66,6 +65,6 @@ class RBLoss(nn.Module):
             # move tensor to cpu to support multi-device models
             loss = loss + sw_loss.sum().cpu()
 
-        self.current_ratio = 1 - float(loss) / num_params
+        self.current_ratio = 1 - float(loss.detach()) / num_params
 
         return ((loss / num_params - (1 - self.target_ratio)) / self.p).pow(2)

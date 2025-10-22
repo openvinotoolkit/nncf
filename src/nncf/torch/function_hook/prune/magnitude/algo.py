@@ -114,7 +114,7 @@ def update_pruning_ratio(
             new_mask = (abs_data > threshold).to(dtype=torch.bool)
 
             # Set new mask
-            hook.binary_mask = new_mask
+            hook.binary_mask.copy_(new_mask)
 
     elif mode == PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL:
         # Get threshold value for all normalized weights
@@ -135,7 +135,7 @@ def update_pruning_ratio(
             new_mask = (norm_data > threshold_val).to(dtype=torch.bool)
 
             # Set new mask
-            hook.binary_mask = new_mask
+            hook.binary_mask.copy_(new_mask)
     else:
         msg = f"Unsupported pruning mode: {mode}"
         raise nncf.InternalError(msg)

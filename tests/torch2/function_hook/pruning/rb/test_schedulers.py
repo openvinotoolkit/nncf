@@ -9,45 +9,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pytest_mock import MockerFixture
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.schedulers import ExponentialMagnitudePruningScheduler
-from nncf.torch.function_hook.prune.magnitude.schedulers import MultiStepMagnitudePruningScheduler
+from nncf.torch.function_hook.prune.rb.losses import RBLoss
+from nncf.torch.function_hook.prune.rb.schedulers import ExponentialRBPruningScheduler
+from nncf.torch.function_hook.prune.rb.schedulers import MultiStepRBPruningScheduler
 from tests.torch2.function_hook.pruning.helpers import ConvModel
 
 
-def test_multi_step_scheduler(mocker: MockerFixture):
+def test_multi_step_scheduler():
     model = ConvModel()
     example_inputs = ConvModel.get_example_inputs()
-    model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs)
-    steps = {0: 0.1, 2: 0.5, 4: 0.9}
-    scheduler = MultiStepMagnitudePruningScheduler(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps=steps)
-
-    ratio_list = [scheduler.current_ratio]
-    for _ in range(6):
-        scheduler.step()
-        ratio_list.append(scheduler.current_ratio)
-
-    assert ratio_list == [0.1, 0.1, 0.1, 0.5, 0.5, 0.9, 0.9]
-    scheduler.step(0)
-    assert scheduler.current_ratio == 0.1
-
-
-def test_exponential_scheduler(mocker: MockerFixture):
-    model = ConvModel()
-    example_inputs = ConvModel.get_example_inputs()
-    model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs)
-
-    scheduler = ExponentialMagnitudePruningScheduler(
-        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, initial_ratio=0.1, target_ratio=0.9, target_epoch=4
+    model = nncf.prune(
+        model, mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED, ratio=0.5, examples_inputs=example_inputs
     )
-    ratio_list = [scheduler.current_ratio]
-    for _ in range(6):
-        scheduler.step()
-        ratio_list.append(round(scheduler.current_ratio, 3))
+    rb_loss = RBLoss(model, 0.1)
+    scheduler = MultiStepRBPruningScheduler(rb_loss, steps={0: 0.1, 2: 0.5})
 
-    assert ratio_list == [0.1, 0.1, 0.48, 0.7, 0.827, 0.9, 0.9]
+    assert rb_loss.target_ratio == 0.1
     scheduler.step(0)
-    assert scheduler.current_ratio == 0.1
+    assert rb_loss.target_ratio == 0.1
+    scheduler.step(3)
+    assert rb_loss.target_ratio == 0.5
+
+
+def test_exponential_scheduler():
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+    model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs)
+    rb_loss = RBLoss(model, 0.1)
+
+    scheduler = ExponentialRBPruningScheduler(rb_loss, initial_ratio=0.1, target_ratio=0.5, target_epoch=2)
+    assert rb_loss.target_ratio == 0.1
+    scheduler.step(0)
+    assert rb_loss.target_ratio == 0.1
+    scheduler.step(3)
+    assert rb_loss.target_ratio == 0.5
