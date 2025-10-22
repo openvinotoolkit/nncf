@@ -32,12 +32,12 @@ import nncf
 import nncf.parameters
 import nncf.torch
 import nncf.torch.function_hook
-import nncf.torch.function_hook.prune
-import nncf.torch.function_hook.prune.prune_model
+import nncf.torch.function_hook.pruning
+import nncf.torch.function_hook.pruning.prune_model
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.schedulers import MultiStepMagnitudePruningScheduler
-from nncf.torch.function_hook.prune.rb.losses import RBLoss
-from nncf.torch.function_hook.prune.rb.schedulers import MultiStepRBPruningScheduler
+from nncf.torch.function_hook.pruning.magnitude.schedulers import MultiStepMagnitudePruningScheduler
+from nncf.torch.function_hook.pruning.rb.losses import RBLoss
+from nncf.torch.function_hook.pruning.rb.schedulers import MultiStepRBPruningScheduler
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
