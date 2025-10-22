@@ -14,9 +14,9 @@ import torch
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.algo import get_pruned_modules
-from nncf.torch.function_hook.prune.magnitude.schedulers import ExponentialMagnitudePruningScheduler
-from nncf.torch.function_hook.prune.magnitude.schedulers import MultiStepMagnitudePruningScheduler
+from nncf.torch.function_hook.pruning.magnitude.algo import get_pruned_modules
+from nncf.torch.function_hook.pruning.magnitude.schedulers import ExponentialMagnitudePruningScheduler
+from nncf.torch.function_hook.pruning.magnitude.schedulers import MultiStepMagnitudePruningScheduler
 from tests.torch2.function_hook.pruning.helpers import ConvModel
 
 

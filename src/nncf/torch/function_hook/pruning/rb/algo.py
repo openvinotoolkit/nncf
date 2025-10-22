@@ -13,7 +13,7 @@ from torch import nn
 
 import nncf
 from nncf.torch.function_hook.hook_storage import decode_hook_name
-from nncf.torch.function_hook.prune.rb.modules import RBPruningMask
+from nncf.torch.function_hook.pruning.rb.modules import RBPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.model_graph_manager import get_const_data_by_name

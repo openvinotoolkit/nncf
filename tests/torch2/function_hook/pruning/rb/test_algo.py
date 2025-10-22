@@ -15,7 +15,7 @@ from torch import nn
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.rb.modules import RBPruningMask
+from nncf.torch.function_hook.pruning.rb.modules import RBPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from tests.torch2.function_hook.pruning.helpers import ConvModel
 from tests.torch2.function_hook.pruning.helpers import MatMulLeft

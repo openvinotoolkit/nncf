@@ -13,7 +13,7 @@ import torch
 from torch import nn
 
 import nncf
-from nncf.torch.function_hook.prune.rb.algo import get_pruned_modules
+from nncf.torch.function_hook.pruning.rb.algo import get_pruned_modules
 
 
 class RBLoss(nn.Module):

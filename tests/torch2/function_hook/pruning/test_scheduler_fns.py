@@ -12,8 +12,8 @@
 import pytest
 
 import nncf
-from nncf.torch.function_hook.prune.scheduler_fns import exponential_ratio_scheduler
-from nncf.torch.function_hook.prune.scheduler_fns import multi_step_ratio_scheduler
+from nncf.torch.function_hook.pruning.scheduler_fns import exponential_ratio_scheduler
+from nncf.torch.function_hook.pruning.scheduler_fns import multi_step_ratio_scheduler
 
 
 @pytest.mark.parametrize(

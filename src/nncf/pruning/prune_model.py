@@ -40,7 +40,7 @@ def prune(
     """
     backend = get_backend(model)
     if backend == BackendType.TORCH:
-        from nncf.torch.function_hook.prune.prune_model import prune
+        from nncf.torch.function_hook.pruning.prune_model import prune
 
         model = prune(model, mode, ratio, ignored_scope, examples_inputs)
     else:

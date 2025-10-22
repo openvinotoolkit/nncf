@@ -13,8 +13,8 @@ import torch
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.rb.algo import get_pruned_modules
-from nncf.torch.function_hook.prune.rb.losses import RBLoss
+from nncf.torch.function_hook.pruning.rb.algo import get_pruned_modules
+from nncf.torch.function_hook.pruning.rb.losses import RBLoss
 from tests.torch2.function_hook.pruning.helpers import ConvModel
 
 

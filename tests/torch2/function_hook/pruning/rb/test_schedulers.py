@@ -12,9 +12,9 @@
 
 import nncf
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.rb.losses import RBLoss
-from nncf.torch.function_hook.prune.rb.schedulers import ExponentialRBPruningScheduler
-from nncf.torch.function_hook.prune.rb.schedulers import MultiStepRBPruningScheduler
+from nncf.torch.function_hook.pruning.rb.losses import RBLoss
+from nncf.torch.function_hook.pruning.rb.schedulers import ExponentialRBPruningScheduler
+from nncf.torch.function_hook.pruning.rb.schedulers import MultiStepRBPruningScheduler
 from tests.torch2.function_hook.pruning.helpers import ConvModel
 
 

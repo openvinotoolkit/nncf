@@ -11,8 +11,8 @@
 
 import torch
 
-from nncf.torch.function_hook.prune.rb.modules import RBPruningMask
-from nncf.torch.function_hook.prune.rb.modules import apply_rb_binary_mask
+from nncf.torch.function_hook.pruning.rb.modules import RBPruningMask
+from nncf.torch.function_hook.pruning.rb.modules import apply_rb_binary_mask
 
 
 def test_apply_rb_binary_mask():

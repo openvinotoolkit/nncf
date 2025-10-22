@@ -19,9 +19,9 @@ from torch import nn
 import nncf
 import nncf.errors
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.algo import update_pruning_ratio
-from nncf.torch.function_hook.prune.scheduler_fns import exponential_ratio_scheduler
-from nncf.torch.function_hook.prune.scheduler_fns import multi_step_ratio_scheduler
+from nncf.torch.function_hook.pruning.magnitude.algo import update_pruning_ratio
+from nncf.torch.function_hook.pruning.scheduler_fns import exponential_ratio_scheduler
+from nncf.torch.function_hook.pruning.scheduler_fns import multi_step_ratio_scheduler
 
 
 class _BaseMagnitudePruningScheduler(ABC):

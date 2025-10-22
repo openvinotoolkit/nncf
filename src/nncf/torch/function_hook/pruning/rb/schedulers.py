@@ -13,9 +13,9 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Optional
 
-from nncf.torch.function_hook.prune.rb.losses import RBLoss
-from nncf.torch.function_hook.prune.scheduler_fns import exponential_ratio_scheduler
-from nncf.torch.function_hook.prune.scheduler_fns import multi_step_ratio_scheduler
+from nncf.torch.function_hook.pruning.rb.losses import RBLoss
+from nncf.torch.function_hook.pruning.scheduler_fns import exponential_ratio_scheduler
+from nncf.torch.function_hook.pruning.scheduler_fns import multi_step_ratio_scheduler
 
 
 class _BaseRBScheduler(ABC):

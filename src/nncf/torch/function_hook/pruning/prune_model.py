@@ -20,8 +20,8 @@ from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.torch.function_hook.prune.magnitude.algo import apply_magnitude_pruning
-from nncf.torch.function_hook.prune.rb.algo import apply_regularization_based_pruning
+from nncf.torch.function_hook.pruning.magnitude.algo import apply_magnitude_pruning
+from nncf.torch.function_hook.pruning.rb.algo import apply_regularization_based_pruning
 from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.model_graph_manager import get_const_node
 
