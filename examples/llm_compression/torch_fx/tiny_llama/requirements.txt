@@ -3,4 +3,4 @@ datasets==2.14.7
 openvino==2025.3.0
 optimum==1.24.0
 torch==2.9.0
-torchvision==0.23.0
+torchvision==0.24.0

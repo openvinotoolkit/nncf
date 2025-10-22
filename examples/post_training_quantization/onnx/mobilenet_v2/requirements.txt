@@ -1,5 +1,5 @@
 torch==2.9.0
-torchvision==0.23.0
+torchvision==0.24.0
 fastdownload==0.0.7
 onnx==1.17.0
 onnxruntime==1.21.1

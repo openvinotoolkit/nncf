@@ -12,11 +12,16 @@ import time
 from functools import partial
 
 import numpy as np
+import torch
 from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
+
+# WA: to set default value for dynamo parameter to False
+# TODO(AlexanderDokuchaev): remove after update optimum
+torch.onnx.export = partial(torch.onnx.export, dynamo=False)
 
 
 def main():

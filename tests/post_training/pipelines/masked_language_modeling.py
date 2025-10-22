@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import contextmanager
 
 import numpy as np
 import onnx
@@ -27,22 +26,6 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
-@contextmanager
-def override_torch_onnx_export_dynamo_false():
-    # TODO(AlexanderDokuchaev): Remove it after update optimum with never version
-    original_export = torch.onnx.export
-
-    def wrapped_export(*args, **kwargs):
-        kwargs["dynamo"] = False
-        return original_export(*args, **kwargs)
-
-    try:
-        torch.onnx.export = wrapped_export
-        yield
-    finally:
-        torch.onnx.export = original_export
-
-
 class MaskedLanguageModelingHF(PTQTestPipeline):
     """Pipeline for masked language models from Hugging Face repository"""
 
@@ -57,9 +40,8 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
             self.model = self.model_hf.model
 
         if self.backend == BackendType.ONNX:
-            with override_torch_onnx_export_dynamo_false():
-                self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
-                self.model = onnx.load(self.model_hf.model_path)
+            self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
+            self.model = onnx.load(self.model_hf.model_path)
 
         self._dump_model_fp32()
 

@@ -10,6 +10,7 @@
 # limitations under the License.
 import re
 import subprocess
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,11 @@ import nncf
 MODEL_NAME = "yolov8n"
 
 ROOT = Path(__file__).parent.resolve()
+
+
+# WA: to set default value for dynamo parameter to False
+# TODO(AlexanderDokuchaev): remove after update ultralytics
+torch.onnx.export = partial(torch.onnx.export, dynamo=False)
 
 
 def validate(

@@ -43,7 +43,6 @@ from tests.post_training.pipelines.base import StatsFromOutput
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tests.post_training.pipelines.fx_modelling import FXAutoModelForCausalLM
 from tests.post_training.pipelines.fx_modelling import convert_and_export_with_cache
-from tests.post_training.pipelines.masked_language_modeling import override_torch_onnx_export_dynamo_false
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -167,18 +166,17 @@ class LMWeightCompression(BaseTestPipeline):
                 msg = f"is_stateful={is_stateful} is not supported for {self.backend.value} backend."
                 raise RuntimeError(msg)
 
-            with override_torch_onnx_export_dynamo_false():
-                if not (self.fp32_model_dir / self.ONNX_MODEL_NAME).exists():
-                    opset_version = self.params.get("opset", None)
-                    if opset_version:
-                        main_export(self.model_id, self.fp32_model_dir, opset=opset_version)
-                        self.model_hf = ORTModelForCausalLM.from_pretrained(self.fp32_model_dir, trust_remote_code=True)
-                    else:
-                        self.model_hf = ORTModelForCausalLM.from_pretrained(self.model_id, export=True)
-                        self.model_hf.save_pretrained(self.fp32_model_dir)
-
-                else:
+            if not (self.fp32_model_dir / self.ONNX_MODEL_NAME).exists():
+                opset_version = self.params.get("opset", None)
+                if opset_version:
+                    main_export(self.model_id, self.fp32_model_dir, opset=opset_version)
                     self.model_hf = ORTModelForCausalLM.from_pretrained(self.fp32_model_dir, trust_remote_code=True)
+                else:
+                    self.model_hf = ORTModelForCausalLM.from_pretrained(self.model_id, export=True)
+                    self.model_hf.save_pretrained(self.fp32_model_dir)
+
+            else:
+                self.model_hf = ORTModelForCausalLM.from_pretrained(self.fp32_model_dir, trust_remote_code=True)
 
             self.model = onnx.load(self.fp32_model_dir / self.ONNX_MODEL_NAME, load_external_data=False)
 
