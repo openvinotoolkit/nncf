@@ -23,6 +23,7 @@ import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -39,6 +40,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
+from nncf.experimental.common.tensor_statistics.collectors import determine_reduction_axes
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -716,3 +718,23 @@ class TemplateTestReducersAggregators:
         assert all(isinstance(val, Tensor) for val in aggr.values())
         assert fns.allclose(aggr[MinMaxTensorStatistic.MIN_STAT], ref_aggr_min)
         assert fns.allclose(aggr[MinMaxTensorStatistic.MAX_STAT], ref_aggr_max)
+
+
+@pytest.mark.parametrize(
+    "ndim, axes, axes_mode, expected_reduction_axes",
+    [
+        [3, (0, 1), AxesMode.REDUCTION, (0, 1)],
+        [3, None, AxesMode.REDUCTION, (0, 1, 2)],
+        [3, None, AxesMode.KEEP, (0, 1, 2)],
+        [2, (-1,), AxesMode.KEEP, (0,)],
+        [2, (-2,), AxesMode.KEEP, (1,)],
+        [2, (0,), AxesMode.KEEP, (1,)],
+        [2, (1,), AxesMode.KEEP, (0,)],
+        [0, (), AxesMode.KEEP, ()],
+    ],
+)
+def test_determine_reduction_axes(
+    ndim: int, axes: tuple[int, ...], axes_mode: AxesMode, expected_reduction_axes: tuple[int, ...]
+):
+    actual_reduction_axes = determine_reduction_axes(ndim, axes, axes_mode)
+    assert actual_reduction_axes == expected_reduction_axes
