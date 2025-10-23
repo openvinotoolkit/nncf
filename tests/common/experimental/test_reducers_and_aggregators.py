@@ -220,7 +220,7 @@ class TemplateTestReducersAggregators:
         reduction_axes = (1, 2)
         input_ = np.arange(-26, 10).reshape((4, 3, 3))
         for i, reduction_axes_ in enumerate([reduction_axes, None]):
-            reducer = reducers[reducer_name](reduction_axes=reduction_axes_, inplace=False)
+            reducer = reducers[reducer_name](axes=reduction_axes_, inplace=False)
             val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
             assert len(val) == 1
             assert fns.allclose(val[0], self.get_nncf_tensor(ref[i]))
@@ -233,7 +233,7 @@ class TemplateTestReducersAggregators:
         input_ = np.arange(-26, 10).reshape((1, 4, 3, 3))
         input_[0][0][0] = -20000
         input_[0][0][1] = 10000
-        reducer = reducers[reducer_name](reduction_axes=reduction_axes, inplace=False)
+        reducer = reducers[reducer_name](axes=reduction_axes, inplace=False)
         val = reducer([self.get_nncf_tensor(input_, dtype=Dtype.FLOAT)])
         assert val.shape[0] == len(ref)
         for i, ref_ in enumerate(ref):
@@ -244,7 +244,7 @@ class TemplateTestReducersAggregators:
         [[None, 16.1666], [(0,), 14.25], [(0, 1), 15.875], [(0, 1, 2), 16.1666]],
     )
     def test_mean_variance_reducer(self, axes, reference):
-        reducer = MeanVarianceReducer(reduction_axes=axes)
+        reducer = MeanVarianceReducer(axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
@@ -255,18 +255,7 @@ class TemplateTestReducersAggregators:
         [[None, 10.0], [(0,), 4.16666], [(0, 1), 6.33333], [(0, 1, 2), 10.0]],
     )
     def test_mean_abs_max_reducer(self, axes, reference):
-        reducer = MeanAbsMaxReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
-        result = reducer._reduce_out_of_place([nncf_data])
-        assert len(result) == 1
-        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
-
-    @pytest.mark.parametrize(
-        "axes, reference",
-        [[None, 10.0], [(1, 2), 4.16666], [(2,), 6.33333], [(), 10.0]],
-    )
-    def test_mean_abs_max_reducer_keep_axes(self, axes, reference):
-        reducer = MeanAbsMaxReducer(keep_axes=axes)
+        reducer = MeanAbsMaxReducer(axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
@@ -277,18 +266,7 @@ class TemplateTestReducersAggregators:
         [[None, 16.1666], [(0,), 64.0], [(0, 1), 36.1875], [(0, 1, 2), 16.1666]],
     )
     def test_max_variance_reducer(self, axes, reference):
-        reducer = MaxVarianceReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
-        result = reducer._reduce_out_of_place([nncf_data])
-        assert len(result) == 1
-        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
-
-    @pytest.mark.parametrize(
-        "axes, reference",
-        [[None, 16.1666], [(1, 2), 64.0], [(2,), 36.1875], [(), 16.1666]],
-    )
-    def test_max_variance_reducer_keep_axes(self, axes, reference):
-        reducer = MaxVarianceReducer(keep_axes=axes)
+        reducer = MaxVarianceReducer(axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
@@ -588,10 +566,10 @@ class TemplateTestReducersAggregators:
     def test_reducers_name_hash_equal(self, reducer_name, reducers):
         params = {}
         if reducer_name in ["min", "max", "abs_max", "mean"]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif reducer_name in ["quantile", "abs_quantile"]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif reducer_name == "batch_mean":
             params["inplace"] = [False, True]

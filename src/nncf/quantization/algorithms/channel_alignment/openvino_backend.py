@@ -20,6 +20,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -81,7 +82,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         tensor_collector = TensorCollector(MinMaxTensorStatistic)
-        quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
+        quantile_reducer = OVQuantileReducer(reduction_axes, AxesMode.REDUCTION, (q, 1 - q), inplace)
 
         for port_id, container_key in enumerate([MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT]):
             aggregator = MedianAggregator(num_samples=num_samples, aggregation_axes=(0, 1))

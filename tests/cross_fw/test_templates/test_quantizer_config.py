@@ -69,7 +69,7 @@ class TemplateTestQuantizerConfig:
         assert aggrs[0].__class__ == aggrs[1].__class__
 
     def get_reduction_axes(self, reducer: TensorReducerBase) -> ReductionAxes:
-        return reducer._reduction_axes
+        return reducer._axes
 
     @staticmethod
     def _transform_to_inference_graph(nncf_graph: NNCFGraph, min_max_algo: MinMaxQuantization):

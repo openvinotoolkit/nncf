@@ -44,37 +44,37 @@ from nncf.quantization.advanced_parameters import StatisticsType
 
 class OVMinReducer(MinReducer):
     def get_inplace_fn(self):
-        return get_inplace_min_op(self._reduction_axes)
+        return get_inplace_min_op(self._axes)
 
 
 class OVMaxReducer(MaxReducer):
     def get_inplace_fn(self):
-        return get_inplace_max_op(self._reduction_axes, False)
+        return get_inplace_max_op(self._axes, False)
 
 
 class OVAbsMaxReducer(AbsMaxReducer):
     def get_inplace_fn(self):
-        return get_inplace_max_op(self._reduction_axes, True)
+        return get_inplace_max_op(self._axes, True)
 
 
 class OVMeanReducer(MeanReducer):
     def get_inplace_fn(self):
-        return get_inplace_mean_op(self._reduction_axes)
+        return get_inplace_mean_op(self._axes)
 
 
 class OVMeanVarianceReducer(MeanVarianceReducer):
     def get_inplace_fn(self):
-        return get_inplace_mean_var_op(self._reduction_axes)
+        return get_inplace_mean_var_op(self._axes)
 
 
 class OVMaxVarianceReducer(MaxVarianceReducer):
     def get_inplace_fn(self):
-        return get_inplace_max_var_op(self._reduction_axes)
+        return get_inplace_max_var_op(self._axes)
 
 
 class OVMeanAbsMaxReducer(MeanAbsMaxReducer):
     def get_inplace_fn(self):
-        return get_inplace_mean_max_op(self._reduction_axes, True)
+        return get_inplace_mean_max_op(self._axes, True)
 
 
 class OVShapeReducer(ShapeReducer):

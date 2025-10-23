@@ -28,6 +28,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -305,13 +306,13 @@ class SmoothQuant(Algorithm):
             # For the ONNX backend, we can't calculate reduction axes before inference because the tensor shape
             # (actually, only the number of dimensions (ndim) is required) is unknown for some operations.
             if model_backend == BackendType.ONNX:
-                keep_axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port),)
-                reduction_axes = None
+                axes_mode = AxesMode.KEEP
+                axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port),)
             else:
-                keep_axes = None
-                reduction_axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
+                axes_mode = AxesMode.REDUCTION
+                axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
 
-            collector = self._create_tensor_collector(self._subset_size, keep_axes, reduction_axes)
+            collector = self._create_tensor_collector(self._subset_size, axes, axes_mode)
 
             container.add_statistic_point(StatisticPoint(target_point, collector, self._algorithm_key))
 
@@ -320,27 +321,25 @@ class SmoothQuant(Algorithm):
     def _create_tensor_collector(
         self,
         num_samples: int,
-        keep_axes: Optional[tuple[int, ...]] = None,
-        reduction_axes: Optional[tuple[int, ...]] = None,
+        axes: Optional[tuple[int, ...]],
+        axes_mode: AxesMode,
     ) -> TensorCollector:
         """
         Initializes and returns a configured tensor collector for the `SmoothQuant` algorithm.
 
         :param num_samples: Maximum number of samples to collect for the aggregator.
-        :param keep_axes: Axes to preserve during the reduction operation.
-        :param reduction_axes: Axes over which the reduction operation is applied.
+        :param axes: The axes specified for the reduction operation.
+        :param axes_mode: Defines how the specified axes are interpreted:
+            - `AxesMode.REDUCTION`: the given axes will be reduced.
+            - `AxesMode.KEEP`: all axes except the specified ones will be reduced.
         :return: A tensor collector configured with the specified reduction and aggregation logic.
         """
-        if reduction_axes is not None and keep_axes is not None:
-            msg = "Only one of `reduction_axes` or `keep_axes` should be specified, not both."
-            raise nncf.ValidationError(msg)
-
         collector = TensorCollector()
 
         abs_max_reducer_cls = self._backend_entity.get_abs_max_reducer_cls()
         collector.register_statistic_branch(
             STATISTIC_BRANCH_KEY,
-            abs_max_reducer_cls(reduction_axes, keep_axes, self._inplace_statistics),
+            abs_max_reducer_cls(axes, axes_mode, self._inplace_statistics),
             MaxAggregator(num_samples=num_samples),
         )
         shape_reducer_cls = self._backend_entity.get_shape_reducer_cls()

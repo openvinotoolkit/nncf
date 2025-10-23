@@ -81,7 +81,7 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         input_ = np.arange(2 * 4 * 8).reshape(2, 4, 8)
         input_[:, :2] *= 2
 
-        reducer = reducer_cls(reduction_axes=reduction_axes, inplace=inplace)
+        reducer = reducer_cls(axes=reduction_axes, inplace=inplace)
         inplace_fn = reducer.get_inplace_fn()
 
         ov_model_input = opset.parameter(input_.shape)
