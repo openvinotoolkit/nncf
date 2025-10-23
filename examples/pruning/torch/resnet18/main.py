@@ -16,24 +16,16 @@ from pathlib import Path
 
 import openvino as ov
 import torch
-import torch.optim
-import torch.utils.data
-import torch.utils.data.distributed
-import torchvision.datasets as datasets
-import torchvision.models as models
-import torchvision.transforms as transforms
 from fastdownload import FastDownload
 from rich.progress import track
 from torch import nn
 from torch.jit import TracerWarning
 from torch.utils.data import DataLoader
+from torchvision import datasets
+from torchvision import transforms
+from torchvision.models import resnet18
 
 import nncf
-import nncf.parameters
-import nncf.torch
-import nncf.torch.function_hook
-import nncf.torch.function_hook.pruning
-import nncf.torch.function_hook.pruning.prune_model
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.pruning.magnitude.schedulers import MultiStepMagnitudePruningScheduler
 from nncf.torch.function_hook.pruning.rb.losses import RBLoss
@@ -79,7 +71,7 @@ def load_checkpoint(model: nn.Module) -> tuple[nn.Module, float]:
 
 
 def get_resnet18_model(device: torch.device) -> nn.Module:
-    model = models.resnet18(weights=None)
+    model = resnet18(weights=None)
     # Update the last FC layer for Tiny ImageNet number of classes.
     # 200 is for Tiny ImageNet, default is 1000 for ImageNet
     model.fc = nn.Linear(in_features=512, out_features=200, bias=True)
