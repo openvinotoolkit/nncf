@@ -18,7 +18,7 @@ import numpy as np
 import openvino as ov
 from atheris import FuzzedDataProvider
 
-with atheris.instrument_imports():
+with atheris.instrument_imports(include=["nncf"]):
     import nncf
 
 # Disable logging for cleaner fuzzing output
