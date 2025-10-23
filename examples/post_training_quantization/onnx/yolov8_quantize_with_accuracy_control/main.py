@@ -34,6 +34,11 @@ MODEL_NAME = "yolov8n-seg"
 ROOT = Path(__file__).parent.resolve()
 
 
+# WA: to set default value for dynamo parameter to False
+# TODO(AlexanderDokuchaev): remove after update ultralytics
+torch.onnx.export = partial(torch.onnx.export, dynamo=False)
+
+
 def validate(
     model: onnx.ModelProto,
     data_loader: torch.utils.data.DataLoader,

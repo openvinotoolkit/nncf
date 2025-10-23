@@ -580,7 +580,6 @@
     "dropout_36": "PTDropoutMetatype",
     "add_24": "PTAddMetatype",
     "layer_norm_24": "PTLayerNormMetatype",
-    "slice_1": "PTGatherMetatype",
     "select_36": "PTGatherMetatype",
     "linear_48": "PTLinearMetatype",
     "output": "PTOutputNoopMetatype"
