@@ -9,11 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import pytest
 import torch
 from torch import nn
 
 import nncf
+import nncf.torch
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
@@ -113,3 +116,32 @@ def test_multi_device_infer():
         assert isinstance(sparsity_module, UnstructuredPruningMask)
         act_devices[name] = sparsity_module.binary_mask.device.type
     assert ref_devices == act_devices
+
+
+def test_save_load(tmpdir: Path):
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+
+    pruned_model = nncf.prune(
+        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
+    )
+    checkpoint = {
+        "state_dict": pruned_model.state_dict(),
+        "nncf_config": nncf.torch.get_config(pruned_model),
+    }
+    path_to_checkpoint = tmpdir / "checkpoint.pth"
+    torch.save(checkpoint, path_to_checkpoint)
+
+    resuming_checkpoint = torch.load(path_to_checkpoint)
+    nncf_config = resuming_checkpoint["nncf_config"]
+    state_dict = resuming_checkpoint["state_dict"]
+
+    loaded_model = ConvModel()
+    loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config, example_inputs)
+    loaded_pruned_model.load_state_dict(state_dict)
+
+    hook_storage = get_hook_storage(loaded_pruned_model)
+
+    d = {k: v for k, v in hook_storage.named_hooks()}
+    assert len(d) == 1
+    assert isinstance(d["post_hooks.conv:weight__0.0"], UnstructuredPruningMask)
