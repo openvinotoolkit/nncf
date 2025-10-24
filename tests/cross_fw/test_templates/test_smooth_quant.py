@@ -237,7 +237,13 @@ class TemplateTestSQAlgorithm:
         algo._set_backend_entity = lambda model: backend_entity
 
         mocked_transformer = mocker.MagicMock()
+        empty_shapes = [
+            (node, port, ()) for node, port in algo._get_nodes_to_smooth_data(graph, algo._get_alpha_map().keys())
+        ]
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocked_transformer)
+        mocker.patch(
+            "nncf.quantization.algorithms.smooth_quant.algorithm.SmoothQuant._retrieve_shape", return_value=empty_shapes
+        )
         algo.apply(model, graph, algo_statistic_points)
 
         mocked_transformer.transform.assert_called_once()

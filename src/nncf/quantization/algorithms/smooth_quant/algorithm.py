@@ -256,7 +256,7 @@ class SmoothQuant(Algorithm):
             ):
                 stats = tensor_collector.get_statistics()
                 shape = stats[SHAPE_BRANCH_KEY]
-                shape = tuple() if shape is None else tuple(shape.tolist())
+                shape = tuple(shape.tolist())
 
             items.append((node, input_port, shape))
 
