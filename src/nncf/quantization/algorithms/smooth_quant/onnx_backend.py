@@ -21,6 +21,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.onnx.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -229,3 +230,8 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             )
 
         return filter_func
+
+    def get_tensor_collector_axes(self, nncf_graph: NNCFGraph, node_to_smooth: NNCFNode, input_port: int):
+        axes_mode = AxesMode.KEEP
+        axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_port),)
+        return axes_mode, axes

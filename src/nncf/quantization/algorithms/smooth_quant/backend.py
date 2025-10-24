@@ -19,8 +19,10 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import Tensor
 
@@ -204,3 +206,32 @@ class SmoothQuantAlgoBackend(ABC):
         :return: The `ShapeReducer` class.
         """
         return ShapeReducer
+
+    def calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> tuple[int]:
+        """
+        Returns reduction axes for specified input.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to check.
+        :param input_port: Specified input port id.
+        :return: Calculated reduction axes.
+        """
+        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
+        reduction_axes = tuple([])
+        if len(shape) > 1:
+            channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
+            reduction_axes = get_reduction_axes((channel_axis,), shape)
+        return reduction_axes
+
+    def get_tensor_collector_axes(self, nncf_graph: NNCFGraph, node_to_smooth: NNCFNode, input_port: int):
+        """
+        Returns axes and axes mode required for tensor collector.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to smooth.
+        :param input_port: Specified input port id.
+        :return: Axes and axes mode required for tensor collector.
+        """
+        axes_mode = AxesMode.REDUCTION
+        axes = self._calculate_input_reduction_axes(nncf_graph, node_to_smooth, input_port)
+        return axes_mode, axes

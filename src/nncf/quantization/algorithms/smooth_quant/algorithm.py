@@ -21,7 +21,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -285,7 +284,6 @@ class SmoothQuant(Algorithm):
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        model_backend = get_backend(model)
         self._set_backend_entity(model)
 
         alpha_map = self._get_alpha_map()
@@ -305,12 +303,7 @@ class SmoothQuant(Algorithm):
             # Therefore, `keep_axes` and `inplace` cannot be used together with the OpenVINO backend.
             # For the ONNX backend, we can't calculate reduction axes before inference because the tensor shape
             # (actually, only the number of dimensions (ndim) is required) is unknown for some operations.
-            if model_backend == BackendType.ONNX:
-                axes_mode = AxesMode.KEEP
-                axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_act_port),)
-            else:
-                axes_mode = AxesMode.REDUCTION
-                axes = self._calculate_input_reduction_axes(graph, node_to_smooth, input_act_port)
+            axes_mode, axes = self._backend_entity.get_tensor_collector_axes(graph, node_to_smooth, input_act_port)
 
             collector = self._create_tensor_collector(self._subset_size, axes, axes_mode)
 
@@ -435,22 +428,6 @@ class SmoothQuant(Algorithm):
                 weight_scale = scale_value.reshape(reshape_shape)
             return weight_scale
         return scale_value
-
-    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> tuple[int]:
-        """
-        Returns reduction axes for specified input.
-
-        :param nncf_graph: NNCFGraph instance.
-        :param node: NNCFNode to check.
-        :param input_port: Specified input port id.
-        :return: Calculated reduction axes.
-        """
-        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
-        reduction_axes = tuple([])
-        if len(shape) > 1:
-            channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
-            reduction_axes = get_reduction_axes((channel_axis,), shape)
-        return reduction_axes
 
     def _process_weight_statistics(self, node: NNCFNode, weights: Tensor) -> Tensor:
         """
