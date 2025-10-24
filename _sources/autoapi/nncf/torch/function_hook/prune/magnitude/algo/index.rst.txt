@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.torch.function_hook.prune.magnitude.algo`
-=======================================================
-
-.. py:module:: nncf.torch.function_hook.prune.magnitude.algo
-
-

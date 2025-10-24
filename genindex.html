@@ -1773,17 +1773,29 @@
 </li>
           <li><a href="autoapi/nncf/torch/function_hook/nncf_graph/nncf_graph_builder/index.html#module-nncf.torch.function_hook.nncf_graph.nncf_graph_builder">nncf.torch.function_hook.nncf_graph.nncf_graph_builder</a>
 </li>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/index.html#module-nncf.torch.function_hook.prune">nncf.torch.function_hook.prune</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/index.html#module-nncf.torch.function_hook.pruning">nncf.torch.function_hook.pruning</a>
 </li>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/index.html#module-nncf.torch.function_hook.prune.magnitude">nncf.torch.function_hook.prune.magnitude</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/index.html#module-nncf.torch.function_hook.pruning.magnitude">nncf.torch.function_hook.pruning.magnitude</a>
 </li>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/algo/index.html#module-nncf.torch.function_hook.prune.magnitude.algo">nncf.torch.function_hook.prune.magnitude.algo</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/algo/index.html#module-nncf.torch.function_hook.pruning.magnitude.algo">nncf.torch.function_hook.pruning.magnitude.algo</a>
 </li>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/modules/index.html#module-nncf.torch.function_hook.prune.magnitude.modules">nncf.torch.function_hook.prune.magnitude.modules</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/modules/index.html#module-nncf.torch.function_hook.pruning.magnitude.modules">nncf.torch.function_hook.pruning.magnitude.modules</a>
 </li>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/schedulers/index.html#module-nncf.torch.function_hook.prune.magnitude.schedulers">nncf.torch.function_hook.prune.magnitude.schedulers</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/schedulers/index.html#module-nncf.torch.function_hook.pruning.magnitude.schedulers">nncf.torch.function_hook.pruning.magnitude.schedulers</a>
 </li>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/prune_model/index.html#module-nncf.torch.function_hook.prune.prune_model">nncf.torch.function_hook.prune.prune_model</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/prune_model/index.html#module-nncf.torch.function_hook.pruning.prune_model">nncf.torch.function_hook.pruning.prune_model</a>
+</li>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/index.html#module-nncf.torch.function_hook.pruning.rb">nncf.torch.function_hook.pruning.rb</a>
+</li>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/algo/index.html#module-nncf.torch.function_hook.pruning.rb.algo">nncf.torch.function_hook.pruning.rb.algo</a>
+</li>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/losses/index.html#module-nncf.torch.function_hook.pruning.rb.losses">nncf.torch.function_hook.pruning.rb.losses</a>
+</li>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/modules/index.html#module-nncf.torch.function_hook.pruning.rb.modules">nncf.torch.function_hook.pruning.rb.modules</a>
+</li>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/schedulers/index.html#module-nncf.torch.function_hook.pruning.rb.schedulers">nncf.torch.function_hook.pruning.rb.schedulers</a>
+</li>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/scheduler_fns/index.html#module-nncf.torch.function_hook.pruning.scheduler_fns">nncf.torch.function_hook.pruning.scheduler_fns</a>
 </li>
           <li><a href="autoapi/nncf/torch/function_hook/quantization/index.html#module-nncf.torch.function_hook.quantization">nncf.torch.function_hook.quantization</a>
 </li>
@@ -4368,8 +4380,6 @@
           <li><a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/torch_backend/index.html#module-nncf.quantization.algorithms.fast_bias_correction.torch_backend">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend
 
@@ -4391,6 +4401,8 @@
           <li><a href="autoapi/nncf/quantization/algorithms/hyperparameter_tuner/algorithm/index.html#module-nncf.quantization.algorithms.hyperparameter_tuner.algorithm">module</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     nncf.quantization.algorithms.hyperparameter_tuner.param_grid
 
@@ -5883,45 +5895,87 @@
 </li>
         </ul></li>
         <li>
-    nncf.torch.function_hook.prune
+    nncf.torch.function_hook.pruning
 
         <ul>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/index.html#module-nncf.torch.function_hook.prune">module</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/index.html#module-nncf.torch.function_hook.pruning">module</a>
 </li>
         </ul></li>
         <li>
-    nncf.torch.function_hook.prune.magnitude
+    nncf.torch.function_hook.pruning.magnitude
 
         <ul>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/index.html#module-nncf.torch.function_hook.prune.magnitude">module</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/index.html#module-nncf.torch.function_hook.pruning.magnitude">module</a>
 </li>
         </ul></li>
         <li>
-    nncf.torch.function_hook.prune.magnitude.algo
+    nncf.torch.function_hook.pruning.magnitude.algo
 
         <ul>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/algo/index.html#module-nncf.torch.function_hook.prune.magnitude.algo">module</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/algo/index.html#module-nncf.torch.function_hook.pruning.magnitude.algo">module</a>
 </li>
         </ul></li>
         <li>
-    nncf.torch.function_hook.prune.magnitude.modules
+    nncf.torch.function_hook.pruning.magnitude.modules
 
         <ul>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/modules/index.html#module-nncf.torch.function_hook.prune.magnitude.modules">module</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/modules/index.html#module-nncf.torch.function_hook.pruning.magnitude.modules">module</a>
 </li>
         </ul></li>
         <li>
-    nncf.torch.function_hook.prune.magnitude.schedulers
+    nncf.torch.function_hook.pruning.magnitude.schedulers
 
         <ul>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/magnitude/schedulers/index.html#module-nncf.torch.function_hook.prune.magnitude.schedulers">module</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/magnitude/schedulers/index.html#module-nncf.torch.function_hook.pruning.magnitude.schedulers">module</a>
 </li>
         </ul></li>
         <li>
-    nncf.torch.function_hook.prune.prune_model
+    nncf.torch.function_hook.pruning.prune_model
 
         <ul>
-          <li><a href="autoapi/nncf/torch/function_hook/prune/prune_model/index.html#module-nncf.torch.function_hook.prune.prune_model">module</a>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/prune_model/index.html#module-nncf.torch.function_hook.pruning.prune_model">module</a>
+</li>
+        </ul></li>
+        <li>
+    nncf.torch.function_hook.pruning.rb
+
+        <ul>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/index.html#module-nncf.torch.function_hook.pruning.rb">module</a>
+</li>
+        </ul></li>
+        <li>
+    nncf.torch.function_hook.pruning.rb.algo
+
+        <ul>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/algo/index.html#module-nncf.torch.function_hook.pruning.rb.algo">module</a>
+</li>
+        </ul></li>
+        <li>
+    nncf.torch.function_hook.pruning.rb.losses
+
+        <ul>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/losses/index.html#module-nncf.torch.function_hook.pruning.rb.losses">module</a>
+</li>
+        </ul></li>
+        <li>
+    nncf.torch.function_hook.pruning.rb.modules
+
+        <ul>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/modules/index.html#module-nncf.torch.function_hook.pruning.rb.modules">module</a>
+</li>
+        </ul></li>
+        <li>
+    nncf.torch.function_hook.pruning.rb.schedulers
+
+        <ul>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/rb/schedulers/index.html#module-nncf.torch.function_hook.pruning.rb.schedulers">module</a>
+</li>
+        </ul></li>
+        <li>
+    nncf.torch.function_hook.pruning.scheduler_fns
+
+        <ul>
+          <li><a href="autoapi/nncf/torch/function_hook/pruning/scheduler_fns/index.html#module-nncf.torch.function_hook.pruning.scheduler_fns">module</a>
 </li>
         </ul></li>
         <li>

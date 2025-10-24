@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.torch.function_hook.pruning.rb.algo`
+==================================================
+
+.. py:module:: nncf.torch.function_hook.pruning.rb.algo
+
+
