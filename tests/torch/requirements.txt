@@ -11,7 +11,7 @@ virtualenv
 
 # Required for search_building_blocks tests
 accelerate==1.9.0
-transformers==4.52.1
+transformers==4.53.3
 
 # Required for movement_sparsity tests
 datasets==3.0.1
