@@ -19,7 +19,9 @@ from torch import nn
 import nncf
 import nncf.errors
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.algo import update_pruning_ratio
+from nncf.torch.function_hook.pruning.magnitude.algo import update_pruning_ratio
+from nncf.torch.function_hook.pruning.scheduler_fns import exponential_ratio_scheduler
+from nncf.torch.function_hook.pruning.scheduler_fns import multi_step_ratio_scheduler
 
 
 class _BaseMagnitudePruningScheduler(ABC):
@@ -55,8 +57,8 @@ class _BaseMagnitudePruningScheduler(ABC):
         if model is None:
             msg = "The referenced model is no longer available"
             raise nncf.InternalError(msg)
-        update_pruning_ratio(model, mode=self.mode, ratio=self.current_ratio)
 
+        update_pruning_ratio(model, mode=self.mode, ratio=self.current_ratio)
         self.epoch += 1
 
     @abstractmethod
@@ -65,7 +67,6 @@ class _BaseMagnitudePruningScheduler(ABC):
         Calculate the sparsity ratio for a given epoch.
 
         :param epoch: The current epoch number.
-
         :return: The pruning ratio for the specified epoch.
         """
 
@@ -79,27 +80,16 @@ class MultiStepMagnitudePruningScheduler(_BaseMagnitudePruningScheduler):
 
     :param model: The neural network model to be pruned.
     :param mode: The pruning mode to be used.
-    :param steps: A dictionary mapping epochs to sparsity ratios. The keys should be in ascending order,
+    :param steps: A dictionary mapping epochs to pruning ratios. The keys should be in ascending order,
                   and the values should be in the range [0, 1).
     """
 
     def __init__(self, model: nn.Module, *, mode: PruneMode, steps: dict[int, int]) -> None:
         super().__init__(model, mode)
         self.steps = steps
-        if list(self.steps) != sorted(self.steps) or any(r >= 1 or r < 0 for r in self.steps.values()):
-            msg = (
-                "Invalid schedule_dict provided to SparsityScheduler."
-                "Keys should be in ascending order and values should be in range [0, 1)."
-            )
-            raise nncf.InternalError(msg)
-
-        self.current_ratio = self.steps[sorted(self.steps.keys())[0]]
 
     def get_pruning_ratio(self, epoch: int) -> float:
-        for steps in sorted(self.steps.keys(), reverse=True):
-            if epoch >= steps:
-                return self.steps[steps]
-        return self.current_ratio
+        return multi_step_ratio_scheduler(epoch, steps=self.steps)
 
 
 class ExponentialMagnitudePruningScheduler(_BaseMagnitudePruningScheduler):
@@ -122,24 +112,10 @@ class ExponentialMagnitudePruningScheduler(_BaseMagnitudePruningScheduler):
         self.target_epoch = target_epoch
         self.current_ratio = initial_ratio
 
-        if initial_ratio < 0 or initial_ratio >= 1:
-            msg = "initial_ratio should be in range [0, 1)."
-            raise nncf.InternalError(msg)
-        if target_ratio <= 0 or target_ratio >= 1:
-            msg = "target_ratio should be in range (0, 1)."
-            raise nncf.InternalError(msg)
-        if target_epoch < 1:
-            msg = "target_epoch should be positive integer."
-            raise nncf.InternalError(msg)
-
     def get_pruning_ratio(self, epoch: int) -> float:
-        if epoch == 0:
-            return self.initial_ratio
-        if epoch >= self.target_epoch:
-            return self.target_ratio
-
-        d_init = 1 - self.initial_ratio
-        d_target = 1 - self.target_ratio
-        d = d_init * float((d_target / d_init) ** (epoch / self.target_epoch))
-        ratio = 1 - d
-        return min(max(self.initial_ratio, ratio), self.target_epoch)
+        return exponential_ratio_scheduler(
+            epoch,
+            initial_ratio=self.initial_ratio,
+            target_ratio=self.target_ratio,
+            target_epoch=self.target_epoch,
+        )
