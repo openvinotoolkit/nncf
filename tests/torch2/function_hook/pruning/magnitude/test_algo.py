@@ -136,12 +136,16 @@ def test_save_load(tmpdir: Path):
     nncf_config = resuming_checkpoint["nncf_config"]
     state_dict = resuming_checkpoint["state_dict"]
 
+    orig_output = pruned_model(example_inputs)
+
     loaded_model = ConvModel()
     loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config, example_inputs)
     loaded_pruned_model.load_state_dict(state_dict)
-
+    loaded_output = loaded_pruned_model(example_inputs)
     hook_storage = get_hook_storage(loaded_pruned_model)
 
     d = {k: v for k, v in hook_storage.named_hooks()}
     assert len(d) == 1
     assert isinstance(d["post_hooks.conv:weight__0.0"], UnstructuredPruningMask)
+
+    assert torch.allclose(orig_output, loaded_output)
