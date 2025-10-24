@@ -23,6 +23,7 @@ import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -39,6 +40,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
+from nncf.experimental.common.tensor_statistics.collectors import determine_reduction_axes
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -220,7 +222,7 @@ class TemplateTestReducersAggregators:
         reduction_axes = (1, 2)
         input_ = np.arange(-26, 10).reshape((4, 3, 3))
         for i, reduction_axes_ in enumerate([reduction_axes, None]):
-            reducer = reducers[reducer_name](reduction_axes=reduction_axes_, inplace=False)
+            reducer = reducers[reducer_name](axes=reduction_axes_, inplace=False)
             val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
             assert len(val) == 1
             assert fns.allclose(val[0], self.get_nncf_tensor(ref[i]))
@@ -233,7 +235,7 @@ class TemplateTestReducersAggregators:
         input_ = np.arange(-26, 10).reshape((1, 4, 3, 3))
         input_[0][0][0] = -20000
         input_[0][0][1] = 10000
-        reducer = reducers[reducer_name](reduction_axes=reduction_axes, inplace=False)
+        reducer = reducers[reducer_name](axes=reduction_axes, inplace=False)
         val = reducer([self.get_nncf_tensor(input_, dtype=Dtype.FLOAT)])
         assert val.shape[0] == len(ref)
         for i, ref_ in enumerate(ref):
@@ -244,7 +246,7 @@ class TemplateTestReducersAggregators:
         [[None, 16.1666], [(0,), 14.25], [(0, 1), 15.875], [(0, 1, 2), 16.1666]],
     )
     def test_mean_variance_reducer(self, axes, reference):
-        reducer = MeanVarianceReducer(reduction_axes=axes)
+        reducer = MeanVarianceReducer(axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
@@ -255,7 +257,7 @@ class TemplateTestReducersAggregators:
         [[None, 10.0], [(0,), 4.16666], [(0, 1), 6.33333], [(0, 1, 2), 10.0]],
     )
     def test_mean_abs_max_reducer(self, axes, reference):
-        reducer = MeanAbsMaxReducer(reduction_axes=axes)
+        reducer = MeanAbsMaxReducer(axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
@@ -266,7 +268,7 @@ class TemplateTestReducersAggregators:
         [[None, 16.1666], [(0,), 64.0], [(0, 1), 36.1875], [(0, 1, 2), 16.1666]],
     )
     def test_max_variance_reducer(self, axes, reference):
-        reducer = MaxVarianceReducer(reduction_axes=axes)
+        reducer = MaxVarianceReducer(axes)
         nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
@@ -566,10 +568,10 @@ class TemplateTestReducersAggregators:
     def test_reducers_name_hash_equal(self, reducer_name, reducers):
         params = {}
         if reducer_name in ["min", "max", "abs_max", "mean"]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif reducer_name in ["quantile", "abs_quantile"]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif reducer_name == "batch_mean":
             params["inplace"] = [False, True]
@@ -716,3 +718,23 @@ class TemplateTestReducersAggregators:
         assert all(isinstance(val, Tensor) for val in aggr.values())
         assert fns.allclose(aggr[MinMaxTensorStatistic.MIN_STAT], ref_aggr_min)
         assert fns.allclose(aggr[MinMaxTensorStatistic.MAX_STAT], ref_aggr_max)
+
+
+@pytest.mark.parametrize(
+    "ndim, axes, axes_mode, expected_reduction_axes",
+    [
+        [3, (0, 1), AxesMode.REDUCTION, (0, 1)],
+        [3, None, AxesMode.REDUCTION, (0, 1, 2)],
+        [3, None, AxesMode.KEEP, (0, 1, 2)],
+        [2, (-1,), AxesMode.KEEP, (0,)],
+        [2, (-2,), AxesMode.KEEP, (1,)],
+        [2, (0,), AxesMode.KEEP, (1,)],
+        [2, (1,), AxesMode.KEEP, (0,)],
+        [0, (), AxesMode.KEEP, ()],
+    ],
+)
+def test_determine_reduction_axes(
+    ndim: int, axes: tuple[int, ...], axes_mode: AxesMode, expected_reduction_axes: tuple[int, ...]
+):
+    actual_reduction_axes = determine_reduction_axes(ndim, axes, axes_mode)
+    assert actual_reduction_axes == expected_reduction_axes

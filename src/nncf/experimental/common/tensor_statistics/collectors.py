@@ -17,6 +17,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
 from copy import deepcopy
+from enum import Enum
 from typing import Any, Optional, TypeVar, Union
 
 import nncf
@@ -35,6 +36,50 @@ from nncf.tensor.definitions import TensorDataType
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 AggregationAxes = tuple[int, ...]
+Axes = tuple[int, ...]
+
+
+class AxesMode(Enum):
+    """
+    Represents different strategies for handling tensor axes.
+
+    :param REDUCTION: Indicates that the specified axes should be reduced during an operation.
+    :param KEEP: Indicates that the specified axes should be preserved and not reduced during
+        an operation.
+    """
+
+    REDUCTION = "reduction"
+    KEEP = "keep"
+
+
+def determine_reduction_axes(
+    ndim: int, axes: Optional[Axes] = None, axes_mode: AxesMode = AxesMode.REDUCTION
+) -> ReductionAxes:
+    """
+    Determines the set of axes along which a reduction operation should be performed
+    based on the specified axes mode.
+
+    :param ndim: The number of dimensions in the input tensor.
+    :param axes: The axes specified for the reduction operation. If `None`, all axes
+        are considered (i.e., `tuple(range(ndim))`).
+
+    :param axes_mode: Defines how the specified axes are interpreted:
+        - `AxesMode.REDUCTION`: the given axes will be reduced.
+        - `AxesMode.KEEP`: all axes except the specified ones will be reduced.
+    :return: The resolved set of axes along which the reduction operation should be performed.
+    """
+    if axes is None:
+        return tuple(range(ndim))
+
+    if axes_mode == AxesMode.REDUCTION:
+        return axes
+
+    all_axes = tuple(range(ndim))
+    if len(all_axes) > 1:
+        # Ensure that all axes have positive values
+        keep_axes = tuple(all_axes[i] for i in axes)
+        return tuple(set(all_axes) - set(keep_axes))
+    return ()
 
 
 class TensorReducerBase(ABC):
@@ -43,13 +88,21 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
+    def __init__(
+        self,
+        axes: Optional[Axes] = None,
+        axes_mode: AxesMode = AxesMode.REDUCTION,
+        inplace: bool = False,
+    ):
         """
-        :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
-            if empty.
+        :param axes: The axes along which the reduction operation should be applied.
+            If `None`, the operation will be applied to all axes (i.e., `tuple(range(tensor.ndim))`).
+        :param axes_mode: Determines how the specified `axes` are treated during the operation.
+            Use `AxesMode.REDUCTION` to reduce over the given axes, or `AxesMode.KEEP` to preserve them.
         :param inplace: Whether should be calculated inplace or out of place.
         """
-        self._reduction_axes = reduction_axes
+        self._axes = axes
+        self._axes_mode = axes_mode
         self._inplace = inplace
         self._keepdims = True
 
@@ -97,17 +150,13 @@ class TensorReducerBase(ABC):
     def __eq__(self, __o: object) -> bool:
         return (
             isinstance(__o, self.__class__)
-            and self._reduction_axes == __o._reduction_axes
+            and self._axes == __o._axes
+            and self._axes_mode == __o._axes_mode
             and self._inplace == __o.inplace
         )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
-
-    def _get_reduction_axes(self, tensor: Tensor) -> ReductionAxes:
-        if self._reduction_axes is not None:
-            return self._reduction_axes
-        return tuple(range(len(tensor.shape)))
+        return hash((self.__class__.__name__, self.inplace, self._axes, self._axes_mode))
 
 
 class AggregatorBase:
@@ -444,35 +493,35 @@ class ShapeReducer(TensorReducerBase):
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         return [fns.min(x, reduction_axes, keepdims=self._keepdims)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         return [fns.max(x, reduction_axes, keepdims=self._keepdims)]
 
 
 class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = fns.abs(x[0])
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         return [fns.max(x, reduction_axes, keepdims=self._keepdims)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         return [fns.mean(x, reduction_axes, keepdims=self._keepdims)]
 
 
 class MeanVarianceReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         variance = fns.var(x, reduction_axes)
         return [fns.mean(variance)]
 
@@ -480,7 +529,7 @@ class MeanVarianceReducer(TensorReducerBase):
 class MaxVarianceReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         variance = fns.var(x, reduction_axes)
         return [fns.max(variance)]
 
@@ -488,7 +537,7 @@ class MaxVarianceReducer(TensorReducerBase):
 class MeanAbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = fns.abs(x[0])
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         abs_max = fns.max(x, reduction_axes, keepdims=self._keepdims)
         return [fns.mean(abs_max)]
 
@@ -496,40 +545,42 @@ class MeanAbsMaxReducer(TensorReducerBase):
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
-        reduction_axes: Optional[ReductionAxes] = None,
+        axes: Optional[Axes] = None,
+        axes_mode: AxesMode = AxesMode.REDUCTION,
         quantile: Optional[Union[float, tuple[float]]] = None,
         inplace: bool = False,
     ):
-        super().__init__(reduction_axes=reduction_axes, inplace=False)
+        super().__init__(axes, axes_mode, False)
         self._quantile = (0.01, 0.99) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_axes, tuple(self._quantile)))
+        return hash((self.__class__.__name__, self.inplace, self._axes, self._axes_mode, tuple(self._quantile)))
 
 
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = x[0]
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         return fns.quantile(x, self._quantile, reduction_axes, keepdims=self._keepdims)
 
 
 class AbsQuantileReducer(QuantileReducerBase):
     def __init__(
         self,
-        reduction_axes: Optional[ReductionAxes] = None,
-        quantile: Optional[Union[float, list[float]]] = None,
+        axes: Optional[Axes] = None,
+        axes_mode: AxesMode = AxesMode.REDUCTION,
+        quantile: Optional[Union[float, tuple[float]]] = None,
         inplace: bool = False,
     ):
         quantile = (0.99,) if quantile is None else quantile
-        super().__init__(reduction_axes=reduction_axes, quantile=quantile, inplace=False)
+        super().__init__(axes, axes_mode, quantile)
 
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         x = fns.abs(x[0])
-        reduction_axes = self._get_reduction_axes(x)
+        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
         return fns.quantile(x, self._quantile, reduction_axes, keepdims=self._keepdims)
 
 
@@ -553,7 +604,7 @@ class MeanPerChReducer(TensorReducerBase):
         return super().__eq__(__o) and self._channel_axis == __o._channel_axis
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_axes, self._channel_axis))
+        return hash((self.__class__.__name__, self.inplace, self._axes, self._axes_mode, self._channel_axis))
 
 
 ##################################################
