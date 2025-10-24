@@ -219,7 +219,7 @@ class SmoothQuantAlgoBackend(ABC):
         shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
         reduction_axes = tuple([])
         if len(shape) > 1:
-            channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
+            channel_axis = self.get_activation_channel_axis(node, input_port)
             reduction_axes = get_reduction_axes((channel_axis,), shape)
         return reduction_axes
 
@@ -233,5 +233,5 @@ class SmoothQuantAlgoBackend(ABC):
         :return: Axes and axes mode required for tensor collector.
         """
         axes_mode = AxesMode.REDUCTION
-        axes = self._calculate_input_reduction_axes(nncf_graph, node_to_smooth, input_port)
+        axes = self.calculate_input_reduction_axes(nncf_graph, node_to_smooth, input_port)
         return axes_mode, axes

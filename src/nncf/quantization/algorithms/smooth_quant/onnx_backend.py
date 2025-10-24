@@ -233,5 +233,5 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     def get_tensor_collector_axes(self, nncf_graph: NNCFGraph, node_to_smooth: NNCFNode, input_port: int):
         axes_mode = AxesMode.KEEP
-        axes = (self._backend_entity.get_activation_channel_axis(node_to_smooth, input_port),)
+        axes = (self.get_activation_channel_axis(node_to_smooth, input_port),)
         return axes_mode, axes
