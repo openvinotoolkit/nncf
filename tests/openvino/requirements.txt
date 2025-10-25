@@ -9,10 +9,11 @@ pytest-xdist
 torch
 torchvision
 virtualenv
+
 addict>=2.4.0
 timm==0.9.2
 efficientnet_pytorch==0.7.1
 datasets==3.0.1
 transformers==4.53.3
-optimum-intel==1.25.1
-optimum==1.27.0
+optimum-intel==1.26.0
+optimum==2.0.0
