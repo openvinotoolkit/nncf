@@ -17,7 +17,7 @@ def clamp(x, low, high):
     return torch.max(torch.min(x, high), low)
 
 
-def logit(x):
+def logit(x: torch.Tensor) -> torch.Tensor:
     return torch.log(x / (1 - x))
 
 
@@ -38,10 +38,10 @@ class STRound(torch.autograd.Function):
 
 class STThreshold(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input_, threshold: float = 0.5):
+    def forward(ctx: Any, input_: torch.Tensor, threshold: float = 0.5) -> torch.Tensor:
         output = (input_ > threshold).type(input_.dtype)
         return output
 
     @staticmethod
-    def backward(ctx: Any, *grad_outputs: Any) -> Any:
+    def backward(ctx: Any, *grad_outputs: tuple[torch.Tensor, ...]) -> tuple[torch.Tensor, None]:
         return grad_outputs[0], None
