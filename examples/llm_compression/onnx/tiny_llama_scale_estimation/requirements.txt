@@ -1,5 +1,5 @@
 torch==2.8.0
-transformers==4.53.3
+transformers==4.53.0
 openvino==2025.3.0
 optimum-intel[openvino]
 onnx==1.17.0
