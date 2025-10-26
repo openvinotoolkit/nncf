@@ -49,6 +49,7 @@ from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
 from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.quantization.ignored_patterns import create_rope
+from nncf.onnx.quantization.ignored_patterns import create_sam_pe
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -491,7 +492,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):
