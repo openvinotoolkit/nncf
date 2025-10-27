@@ -11,11 +11,10 @@ on:
       pytest_args:
         description: 'Pytest arguments'
         default: ''
-  pull_request:
 
 jobs:
   examples-cpu:
-    name: Weight compression [${{ matrix.group }}/4]
+    name: Weight compression [${{ matrix.group }}/6]
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 60
     strategy:
