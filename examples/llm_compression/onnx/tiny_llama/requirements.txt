@@ -1,6 +1,7 @@
 transformers==4.53.0
 openvino==2025.3.0
-optimum-intel[openvino]
+optimum-intel[openvino]==1.25.0
+optimum==1.27.0
 git+https://github.com/onnx/onnx.git@c25eebcf51b781dbfcc75a9c8bdf5dd1781367fe # onnx-1.19.0.dev
 onnxruntime==1.21.1
 torch==2.8.0
