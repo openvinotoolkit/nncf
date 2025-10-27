@@ -1,6 +1,6 @@
 datasets
 openvino==2025.3.0
-optimum-intel[openvino]>=1.22.0
+optimum-intel[openvino]==1.26.0
 transformers==4.53.0
 onnx==1.17.0
 torch==2.8.0
