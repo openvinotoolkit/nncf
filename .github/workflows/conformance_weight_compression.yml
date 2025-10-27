@@ -11,6 +11,7 @@ on:
       pytest_args:
         description: 'Pytest arguments'
         default: ''
+  pull_request:
 
 jobs:
   examples-cpu:
@@ -20,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4]
+        group: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
@@ -50,7 +51,7 @@ jobs:
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 4 \
+            --splits 6 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
