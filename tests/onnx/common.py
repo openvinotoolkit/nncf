@@ -155,6 +155,15 @@ class ModelBuilder:
         )
         return output
 
+    def add_add(self, input_a: str, input_b: str, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Add_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Add", inputs=[input_a, input_b], outputs=[output], name=f"Add_{i}")
+        )
+        return output
+
     def add_relu(self, input: str, output: Optional[str] = None) -> str:
         i = len(self._nodes)
 

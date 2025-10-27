@@ -67,6 +67,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_input_data(shape: tuple[int], data: list[Tensor], input_name: str, channel_axis: int) -> torch.Tensor:
+        channel_axis = range(len(shape))[channel_axis]
         blob = torch.zeros(shape, dtype=data[0].data.dtype, device=data[0].data.device)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
