@@ -41,6 +41,11 @@ DATA_ROOT = Path(__file__).parent / "data"
 # TODO(AlexanderDokuchaev): Remove it after update optimum
 torch.onnx.export = partial(torch.onnx.export, dynamo=False)
 
+# TODO(AlexanderDokuchaev): Remove it after fix issue in optimum-intel
+from optimum.exporters.tasks import TasksManager  # noqa: E402
+
+TasksManager._TRANSFORMERS_TASKS_TO_MODEL_LOADERS["image-text-to-text"] = "AutoModelForImageTextToText"
+
 
 @pytest.fixture(scope="function", name="use_avx2")
 def fixture_use_avx2():
