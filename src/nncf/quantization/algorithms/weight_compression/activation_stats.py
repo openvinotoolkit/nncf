@@ -27,8 +27,12 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
         s - maximum channel magnitude across samples [HiddenDim]
         X - average channel magnitude across tokens in the sequence [HiddenDim, min(SampleSize, ~subset_size)]
     """
-    X = fns.stack(stats.mean_values)  # [SampleSize, HiddenDim]
-    X_full = fns.transpose(X)  # [HiddenDim, SampleSize]
+    X = fns.stack(stats.mean_values)  # [SampleSize, HiddenDim] for 2-D or [SampleSize, No. of Experts, HiddenDim] for 3-D
+    X_dim = len(X.shape)
+    if(X_dim == 2):
+        X_full = fns.transpose(X)  # [HiddenDim, SampleSize]
+    if(X_dim == 3):
+        X_full = fns.transpose(X, axes=(1,2,0))  # [No. of Experts, HiddenDim, SampleSize]
 
     # prevent high memory and time consumption
     if X_full.shape[1] > subset_size:
@@ -39,5 +43,8 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
         X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]
     else:
         X = X_full
-    s = fns.max(fns.abs(X_full), axis=1)  # [HiddenDim]
+    reduction_axes = 1
+    if(X_dim == 3):
+        reduction_axes = 2
+    s = fns.max(fns.abs(X_full), axis=reduction_axes)  # [HiddenDim] or [No. of Experts, HiddenDim]
     return s, X
