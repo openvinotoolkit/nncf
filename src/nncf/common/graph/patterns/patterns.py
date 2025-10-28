@@ -408,3 +408,4 @@ class IgnoredPatternNames(Enum):
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
     EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")
     ROPE = PatternDesc("rope", model_types=[ModelType.TRANSFORMER])
+    SAM_PE = PatternDesc("sam_pe", model_types=[ModelType.TRANSFORMER])

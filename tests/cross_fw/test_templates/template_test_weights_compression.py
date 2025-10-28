@@ -119,6 +119,11 @@ class TemplateWeightCompression(ABC):
     def get_RoPE_model() -> TModel:
         """Returns a backend model for test_rope_weight_compression."""
 
+    @staticmethod
+    @abstractmethod
+    def get_SAM_PE_model() -> TModel:
+        """Returns a backend model for test_sam_pe_weight_compression."""
+
     @pytest.mark.parametrize(
         ("mode", "ref_act_score", "ref_score"),
         (
@@ -394,6 +399,26 @@ class TemplateWeightCompression(ABC):
             ratio=1.0,
             group_size=-1,
             dataset=dataset,
+        )
+
+        int4_ref_num_compressed = 0
+        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
+        assert int4_num_nodes == int4_ref_num_compressed
+
+    def test_sam_pe_weight_compression(self):
+        model = self.get_SAM_PE_model()
+
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, 2, 3, 2], dtype=np.float32))],
+            self.get_transform_func(),
+        )
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+            all_layers=True,
         )
 
         int4_ref_num_compressed = 0
