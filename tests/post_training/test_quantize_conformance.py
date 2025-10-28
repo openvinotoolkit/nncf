@@ -36,7 +36,7 @@ from tests.post_training.pipelines.base import RunInfo
 DATA_ROOT = Path(__file__).parent / "data"
 
 
-# TODO(AlexanderDokuchaev): Remove it after fix issue in optimum-intel
+# TODO(AlexanderDokuchaev): WA for https://github.com/huggingface/optimum-intel/issues/1498
 from optimum.exporters.tasks import TasksManager  # noqa: E402
 
 TasksManager._TRANSFORMERS_TASKS_TO_MODEL_LOADERS["image-text-to-text"] = "AutoModelForImageTextToText"

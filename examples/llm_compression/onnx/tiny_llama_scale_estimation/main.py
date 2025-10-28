@@ -34,7 +34,7 @@ OUTPUT_DIR = ROOT / "tinyllama_compressed"
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 warnings.filterwarnings("ignore", category=OnnxExporterWarning)
 
-# TODO(AlexanderDokuchaev): Remove it after fix issue in optimum-intel
+# TODO(AlexanderDokuchaev): WA for https://github.com/huggingface/optimum-intel/issues/1498
 from optimum.exporters.tasks import TasksManager  # noqa: E402
 
 TasksManager._TRANSFORMERS_TASKS_TO_MODEL_LOADERS["image-text-to-text"] = "AutoModelForImageTextToText"
