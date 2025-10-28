@@ -44,7 +44,7 @@ learning frameworks.
 | Compression algorithm                                                                                    | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
 | :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
 | [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
-| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Not supported |
+| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Supported |
 | [Activation Sparsity](./src/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)          | Not supported | Experimental | Not supported| Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
