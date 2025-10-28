@@ -424,6 +424,9 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 | [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |
 | [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
+| [ONNX YOLOv8 QwAС](./examples/post_training_quantization/onnx/yolov8_quantize_with_accuracy_control/README.md)                           | Post-Training Quantization with Accuracy Control |    ONNX    |    Object Detection    |
+| [ONNX TinyLlama WC](./examples/llm_compression/onnx/tiny_llama/README.md)                                                                |                Weight Compression                |    ONNX    |           LLM          |
+| [ONNX TinyLlama WC with SE](./examples/llm_compression/onnx/tiny_llama_scale_estimation/README.md)                                       |     Weight Compression with Scale Estimation     |    ONNX    |           LLM          |
 
 ### Quantization-Aware Training Examples
 

@@ -17,7 +17,7 @@
 
 The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights for Linear, Convolution and Embedding layers.
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch, ONNX and Torch FX are also supported.
 
 ### Supported modes
 
@@ -696,7 +696,7 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 
 ### Limitations
 
-- The algorithm is supported for OpenVINO, PyTorch and Torch FX models.
+- The algorithm is supported for OpenVINO, PyTorch, ONNX and Torch FX models.
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
