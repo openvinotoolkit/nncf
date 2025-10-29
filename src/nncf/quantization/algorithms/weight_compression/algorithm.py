@@ -738,7 +738,7 @@ class WeightCompression(Algorithm):
         gs_to_num_weights = defaultdict(list)
 
         for wp in ratio_defining_params:
-            if wp.compression_config.mode == self._mode:
+            if wp.compression_config is not None and wp.compression_config.mode == self._mode:
                 gs_to_num_weights[wp.compression_config.group_size].append(wp.num_weights)
 
         if len(gs_to_num_weights) <= 1:
