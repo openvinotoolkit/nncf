@@ -175,13 +175,11 @@ class FastBiasCorrection(Algorithm):
 
             output_channel_axis = node.metatype.output_channel_axis
             input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
-            if bias_value.ndim > 1:
-                # Make index positive
-                output_channel_axis = range(bias_value.ndim)[output_channel_axis]
-                input_channel_axis = range(bias_value.ndim)[input_channel_axis]
+
             input_blob = self._backend_entity.create_input_data(
                 input_shape, input_fp, sub_input_name, input_channel_axis
             )
+
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,

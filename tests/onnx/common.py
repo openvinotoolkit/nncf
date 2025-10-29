@@ -155,6 +155,36 @@ class ModelBuilder:
         )
         return output
 
+    def add_add(self, input_a: str, input_b: str, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Add_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Add", inputs=[input_a, input_b], outputs=[output], name=f"Add_{i}")
+        )
+        return output
+
+    def add_mul_const(
+        self, input: str, shape: tuple[int], output: Optional[str] = None, data: Optional[np.ndarray] = None
+    ) -> str:
+        i = len(self._nodes)
+
+        w_name = f"W_{i}"
+        if data is None:
+            w_values = np.random.rand(*shape).astype(np.float32)
+        else:
+            w_values = data
+        w_initializer = onnx.helper.make_tensor(
+            name=w_name, data_type=onnx.TensorProto.FLOAT, dims=shape, vals=w_values.tobytes(), raw=True
+        )
+        self._initializers.append(w_initializer)
+
+        output = f"Mul_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Mul", inputs=[input, w_name], outputs=[output], name=f"Mul_{i}")
+        )
+        return output
+
     def add_relu(self, input: str, output: Optional[str] = None) -> str:
         i = len(self._nodes)
 

@@ -72,6 +72,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def create_input_data(
         shape: tuple[int], data: list[Tensor], input_name: str, channel_axis: int
     ) -> dict[str, np.ndarray]:
+        channel_axis = range(len(shape))[channel_axis]
         blob = np.zeros(shape, dtype=data[0].data.dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))

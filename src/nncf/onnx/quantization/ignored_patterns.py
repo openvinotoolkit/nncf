@@ -179,3 +179,29 @@ def create_rope() -> GraphPattern:
     pattern.add_edge(concat_node, cos_node)
     pattern.add_edge(concat_node, sin_node)
     return pattern
+
+
+@ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SAM_PE)
+def create_sam_pe() -> GraphPattern:
+    """
+    Positional Embedding from Segment Anything Model (SAM).
+    """
+    pattern = GraphPattern()
+
+    matmul_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.ONNXMatMulMetatype}
+    )
+    mul_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+    )
+    cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.ONNXCosMetatype})
+    sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.ONNXSinMetatype})
+    concat = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.ONNXConcatMetatype})
+
+    pattern.add_edge(matmul_node, mul_node)
+    pattern.add_edge(mul_node, cos_node)
+    pattern.add_edge(mul_node, sin_node)
+    pattern.add_edge(cos_node, concat)
+    pattern.add_edge(sin_node, concat)
+
+    return pattern

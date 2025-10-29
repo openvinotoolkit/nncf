@@ -44,7 +44,7 @@ learning frameworks.
 | Compression algorithm                                                                                    | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
 | :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
 | [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
-| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Not supported |
+| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Supported |
 | [Activation Sparsity](./src/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)          | Not supported | Experimental | Not supported| Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
@@ -409,9 +409,9 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)                                                                                                                                                                                                                   |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)                                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 
-### Post-Training Quantization Examples
+### Post-Training Quantization and Weight Compression Examples
 
-Compact scripts demonstrating quantization and corresponding inference speed boost:
+Compact scripts demonstrating quantization/weight compression and corresponding inference speed boost:
 
 | Example Name                                                                                                                             |              Compression Algorithm               |  Backend   |         Domain         |
 |:-----------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
@@ -424,6 +424,12 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 | [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |
 | [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
+| [ONNX YOLOv8 QwAС](./examples/post_training_quantization/onnx/yolov8_quantize_with_accuracy_control/README.md)                           | Post-Training Quantization with Accuracy Control |    ONNX    |    Object Detection    |
+| [ONNX TinyLlama WC](./examples/llm_compression/onnx/tiny_llama/README.md)                                                                |                Weight Compression                |    ONNX    |           LLM          |
+| [TorchFX TinyLlama WC](./examples/llm_compression/torch_fx/tiny_llama/README.md)                                                         |                Weight Compression                |  TorchFX   |           LLM          |
+| [OpenVINO TinyLlama WC](./examples/llm_compression/openvino/tiny_llama/README.md)                                                        |                Weight Compression                |  OpenVINO  |           LLM          |
+| [OpenVINO TinyLlama WC with HS](./examples/llm_compression/openvino/tiny_llama_find_hyperparams/README.md)                               |  Weight Compression with Hyperparameters Search  |  OpenVINO  |           LLM          |
+| [ONNX TinyLlama WC with SE](./examples/llm_compression/onnx/tiny_llama_scale_estimation/README.md)                                       |     Weight Compression with Scale Estimation     |    ONNX    |           LLM          |
 
 ### Quantization-Aware Training Examples
 
