@@ -476,13 +476,16 @@ class TemplateWeightCompression(ABC):
             - an info message is logged when the group size is adjusted to a valid value
         """
 
-        model = self.get_different_channel_size_model([8, 8, 8, 16, 16, 16, 16, 32, 32])
+        model = self.get_different_channel_size_model([8, 8, 8, 8, 8, 8, 8, 16, 32])
+        input_example = self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))
+        dataset = Dataset([input_example], self.get_transform_func())
         kwargs = dict(
             model=model,
             mode=CompressWeightsMode.INT4_ASYM,
             ratio=0.9,
             group_size=group_size,
             all_layers=True,
+            dataset=dataset,
         )
         if fallback_mode is not None or min_adjusted_group_size is not None:
             kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
@@ -512,7 +515,7 @@ class TemplateWeightCompression(ABC):
             )
             assert any(info_msg in msg for msg in info_messages)
             if expected_outcome == "info_adjusted_group_size":
-                for table_str in ["Statistics of the group size distribution", "16 │ 33% (3 / 5) ", "32 │ 67% (2 / 5)"]:
+                for table_str in ["Statistics of the group size distribution", "50% (7 / 8)", "50% (1 / 8)"]:
                     assert any(table_str in msg for msg in info_messages)
 
     @pytest.mark.parametrize(
