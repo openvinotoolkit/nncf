@@ -257,14 +257,12 @@ class ScaleEstimation:
         # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
         min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
         
-        def reshape_scale_diffs(min_max_scale_diffs, is_moe):
-            if is_moe:
-                min_max_scale_diffs = fns.unsqueeze(min_max_scale_diffs, axis=2)
-            else:
-                min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
-            return min_max_scale_diffs
+        def maybe_reshape_scale_diffs(scale_diffs, is_moe):
+            if not is_moe:
+                min_max_scale_diffs = fns.transpose(scale_diffs, (1, 0))
+            return scale_diffs
 
-        min_max_scale_diffs = reshape_scale_diffs(min_max_scale_diffs, is_moe)
+        min_max_scale_diffs = maybe_reshape_scale_diffs(min_max_scale_diffs, is_moe)
 
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
@@ -297,7 +295,7 @@ class ScaleEstimation:
 
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
             # ideal_scale_diffs = fns.transpose(ideal_scale_diffs, transpose_min_max_scale_diffs_dims)
-            ideal_scale_diffs = reshape_scale_diffs(ideal_scale_diffs, is_moe)
+            ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_moe)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
@@ -308,8 +306,7 @@ class ScaleEstimation:
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
-            if not is_moe:
-                mask = fns.unsqueeze(mask, axis=2)
+            mask = fns.unsqueeze(mask, axis=2)
 
             if result_scale is None:
                 near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
@@ -366,7 +363,7 @@ class ScaleEstimation:
             q_outs = fns.matmul(fns.transpose(q_weights_, weight_transpose_for_matmul_with_act), X)
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
             # ideal_scale_diffs = fns.transpose(ideal_scale_diffs, transpose_min_max_scale_diffs_dims)
-            ideal_scale_diffs = reshape_scale_diffs(ideal_scale_diffs, is_moe)
+            ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_moe)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
@@ -374,8 +371,7 @@ class ScaleEstimation:
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
-            if not is_moe:
-                mask = fns.unsqueeze(mask, axis=2)
+            mask = fns.unsqueeze(mask, axis=2)
 
             if result_scale is None:
                 near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
