@@ -208,6 +208,9 @@ def quantize_with_accuracy_control_impl(
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
     """
+    if validation_dataset.reset_engine_state is False:
+        msg = "Running validation on a dataset with `reset_engine_state` set to False is not supported."
+        raise ValueError(msg)
     if advanced_accuracy_restorer_parameters is None:
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
 

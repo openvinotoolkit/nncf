@@ -38,9 +38,19 @@ class Dataset:
         will be passed into the model as-is.
     """
 
-    def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):
+    def __init__(
+        self,
+        data_source: Iterable[Any],
+        transform_func: Optional[Callable[..., Any]] = None,
+        reset_engine_state: Optional[bool] = None,
+    ):
         self._data_source = data_source
         self._transform_func = transform_func
+        self._reset_engine_state = reset_engine_state
+
+    @property
+    def reset_engine_state(self) -> Optional[bool]:
+        return self._reset_engine_state
 
     def get_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
         """

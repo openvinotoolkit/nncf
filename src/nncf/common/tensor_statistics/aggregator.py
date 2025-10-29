@@ -61,6 +61,15 @@ class StatisticsAggregator(ABC):
             return min(dataset_length, self.stat_subset_size)
         return dataset_length or self.stat_subset_size
 
+    def _create_engine(self, model: TModel) -> Any:
+        """
+        Creates inference engine for the given model and dataset.
+
+        :param model: Backend-specific model instance.
+        :return: Inference engine instance.
+        """
+        return factory.EngineFactory.create(model)
+
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
         Collects statistics for registered StatisticPoints.
@@ -75,7 +84,7 @@ class StatisticsAggregator(ABC):
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs: TModel = model_transformer.transform(transformation_layout)
-        engine = factory.EngineFactory.create(model_with_outputs)
+        engine = self._create_engine(model_with_outputs)
         iterations_number = self._get_iterations_number()
         processed_samples = 0
         for input_data in track(
