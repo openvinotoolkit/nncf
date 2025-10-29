@@ -62,7 +62,7 @@ def validate_ov_model(
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
-    return stats, validator.seen, validator.nt_per_class.sum()
+    return stats, validator.seen, validator.metrics.nt_per_class.sum()
 
 
 def run_benchmark(model_path: Path, config) -> float:
