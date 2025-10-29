@@ -44,7 +44,7 @@ def validate_ov_model(
     validator.jdict = []
     validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
     validator.batch_i = 1
-    validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
+    validator.confusion_matrix = ConfusionMatrix(names=validator.names)
     compiled_model = ov.compile_model(ov_model, device_name="CPU")
     num_outputs = len(compiled_model.outputs)
     for batch_i, batch in enumerate(track(data_loader, description="Validating")):
