@@ -599,16 +599,12 @@ class WeightCompression(Algorithm):
                 if w_params.node_with_weight.node_name not in nodes_to_exclude
             ]
 
-            log_lines = [
-                f"{node_name} (weight shape: {weight_shape})" for node_name, weight_shape in nodes_to_exclude.items()
-            ]
-            log_message = (
+            nncf_logger.warning(
                 f"Group-wise quantization with group size {self._group_size} can't be applied to some nodes. "
                 "They will be ignored and kept with original precision.\n"
                 "Consider changing group size value or setting group size fallback parameter to ADJUST, which enables "
                 "automatic adjustment to smaller group size values."
             )
-            nncf_logger.warning(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
 
         return all_weight_params, ratio_defining_params, skipped_weight_params
 
@@ -648,25 +644,17 @@ class WeightCompression(Algorithm):
 
         if adjusted_weight_params:
             # Adjusted group size value for some nodes
-            log_lines = [
-                f"{w.node_with_weight.node_name} (weight shape: {w.weight_shape}, adjusted group size: {adjusted_gs})"
-                for w, adjusted_gs in adjusted_weight_params
-            ]
             nncf_logger.info(
                 f"Some nodes can't be quantized with the specified group size of {self._group_size}. "
-                "Adjusted group size values will be used:\n\t" + "\n\t".join(log_lines)
+                "Adjusted group size values will be used."
             )
 
         if invalid_weight_params:
             # Valid adjusted group size wasn't found
-            log_lines = [
-                f"{w.node_with_weight.node_name} (weight shape: {w.weight_shape})" for w in invalid_weight_params
-            ]
-            log_message = (
+            nncf_logger.info(
                 "A valid adjusted group size value can't be found for some nodes. They will be quantized using the "
                 f"{self._backup_mode.value} backup mode."
             )
-            nncf_logger.info(f"{log_message} Nodes:\n\t" + "\n\t".join(log_lines))
 
         return valid_weight_params, group_size_values
 
@@ -734,6 +722,48 @@ class WeightCompression(Algorithm):
         table = create_table(header, rows)
         pretty_string = f"Statistics of the bitwidth distribution:\n{table}"
         return pretty_string
+
+    def _get_group_size_distribution_str(
+        self,
+        ratio_defining_params: list[WeightCompressionParameters],
+    ) -> Optional[str]:
+        """
+        Generates a table showing how many ratio-defining weights were quantized
+        with each group size. Returns None if there will be less than two rows in the resulting table.
+
+        :param ratio_defining_params: Parameters used for calculating the quantization ratio.
+        :return: A formatted string containing the table.
+        """
+        # Map: group_size -> list of num_weights
+        gs_to_num_weights = defaultdict(list)
+
+        for wp in ratio_defining_params:
+            if wp.compression_config.mode == self._mode:
+                gs_to_num_weights[wp.compression_config.group_size].append(wp.num_weights)
+
+        if len(gs_to_num_weights) <= 1:
+            return None
+
+        # Aggregate totals
+        total_weights = sum(sum(v) for v in gs_to_num_weights.values())
+        total_layers = sum(len(v) for v in gs_to_num_weights.values())
+
+        # Sort by group size (ascending)
+        gs_to_num_weights = OrderedDict(sorted(gs_to_num_weights.items()))
+
+        # Create table
+        header = ["Group size", f"% {self._mode} parameters (layers)"]
+        rows = []
+        for gs, per_layer_weights in gs_to_num_weights.items():
+            rows.append(
+                [
+                    gs,
+                    self._proportion_str(per_layer_weights, total_weights, total_layers),
+                ]
+            )
+
+        table = create_table(header, rows)
+        return f"Statistics of the group size distribution:\n{table}"
 
     def _get_ignored_scope_weight_statistics(self, model: TModel, graph: NNCFGraph) -> list[int]:
         """
@@ -913,6 +943,9 @@ class WeightCompression(Algorithm):
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
+        group_size_distribution_str = self._get_group_size_distribution_str(ratio_defining_params)
+        if group_size_distribution_str is not None:
+            nncf_logger.info(self._get_group_size_distribution_str(ratio_defining_params))
 
         # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
         all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))

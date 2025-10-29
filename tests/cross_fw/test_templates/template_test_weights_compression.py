@@ -451,7 +451,6 @@ class TemplateWeightCompression(ABC):
         for node_name, scales in spy_instance._scale_per_target_node.items():
             assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
 
-    @pytest.mark.parametrize("algorithm", (None, "awq", "scale_estimation", "gptq", "lora_correction"))
     @pytest.mark.parametrize(
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
         [
@@ -459,12 +458,11 @@ class TemplateWeightCompression(ABC):
             (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_ignored"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_adjust"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
-            (32, None, None, "warn_ignored"),
+            (32, None, None, "exception"),
         ],
     )
     def test_error_message_for_invalid_group_size(
         self,
-        algorithm,
         group_size,
         fallback_mode,
         min_adjusted_group_size,
@@ -477,22 +475,14 @@ class TemplateWeightCompression(ABC):
             - an info message is logged when an adjustable group size value cannot be found
             - an info message is logged when the group size is adjusted to a valid value
         """
-        if algorithm in self.get_not_supported_algorithms():
-            pytest.skip("Skipping test for not supported algorithms")
 
-        model = self.get_awq_model()
-        hidden_dim = 8
-        input_example = self.to_tensor(np.ones([1, 4, hidden_dim], dtype=np.float32))
-        dataset = Dataset([input_example], self.get_transform_func())
-        algorithm_dict = {algorithm: True} if algorithm else {}
+        model = self.get_different_channel_size_model([8, 8, 8, 16, 16, 16, 16, 32, 32])
         kwargs = dict(
             model=model,
             mode=CompressWeightsMode.INT4_ASYM,
-            ratio=1.0,
+            ratio=0.9,
             group_size=group_size,
             all_layers=True,
-            **algorithm_dict,
-            dataset=dataset,
         )
         if fallback_mode is not None or min_adjusted_group_size is not None:
             kwargs["advanced_parameters"] = nncf.AdvancedCompressionParameters(
@@ -516,11 +506,14 @@ class TemplateWeightCompression(ABC):
                 compress_weights(**kwargs)
             info_messages = [args[0] for args, _ in mock_info.call_args_list]
             info_msg = (
-                "Adjusted group size values will be used:"
+                "Adjusted group size values will be used"
                 if expected_outcome == "info_adjusted_group_size"
                 else "A valid adjusted group size value can't be found for some nodes."
             )
             assert any(info_msg in msg for msg in info_messages)
+            if expected_outcome == "info_adjusted_group_size":
+                for table_str in ["Statistics of the group size distribution", "16 │ 33% (3 / 5) ", "32 │ 67% (2 / 5)"]:
+                    assert any(table_str in msg for msg in info_messages)
 
     @pytest.mark.parametrize(
         [
@@ -532,7 +525,6 @@ class TemplateWeightCompression(ABC):
             "ref_num_group_sizes",
         ],
         [
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
