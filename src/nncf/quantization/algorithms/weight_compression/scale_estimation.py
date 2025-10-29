@@ -259,7 +259,7 @@ class ScaleEstimation:
         
         def maybe_reshape_scale_diffs(scale_diffs, is_moe):
             if not is_moe:
-                min_max_scale_diffs = fns.transpose(scale_diffs, (1, 0))
+                scale_diffs = fns.transpose(scale_diffs, (1, 0))
             return scale_diffs
 
         min_max_scale_diffs = maybe_reshape_scale_diffs(min_max_scale_diffs, is_moe)

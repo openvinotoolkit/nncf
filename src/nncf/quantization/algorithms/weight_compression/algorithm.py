@@ -1110,8 +1110,17 @@ class WeightCompression(Algorithm):
                 # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
                 # size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
+                node_wight_weight_edge = graph.get_output_edges_by_port_id(node, output_port_id)[0]
+                node_wight_weight = node_wight_weight_edge.to_node
+                weight_name, weight_port_id = self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)[0]
+                weight_dim = len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph))
+
+                reduction_axes = tuple(range(n_dims - 1))
+                if(weight_dim == 3):
+                    reduction_axes = (1,)
+
                 stat_collector = self._backend_entity.mean_statistic_collector(
-                    reduction_axes=tuple(range(n_dims - 1)), subset_size=self._subset_size
+                    reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
                 statistic_container.add_statistic_point(
                     StatisticPoint(
