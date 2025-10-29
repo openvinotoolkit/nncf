@@ -26,4 +26,5 @@ fastdownload==0.0.7
 
 sentence-transformers>=2.2.2
 optimum-intel==1.26.0
+optimum-onnx==0.0.3
 optimum==2.0.0
