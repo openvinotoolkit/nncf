@@ -58,8 +58,8 @@ from nncf.tensor.definitions import TensorDataType
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
-INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
-NON_INT8_MODES = [mode for mode in CompressWeightsMode if mode not in INT8_MODES + [CompressWeightsMode.INT8]]
+INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8]
+NON_INT8_MODES = [mode for mode in CompressWeightsMode if mode not in INT8_MODES]
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
     TensorDataType.bfloat16,
