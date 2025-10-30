@@ -515,7 +515,7 @@ class TemplateWeightCompression(ABC):
             )
             assert any(info_msg in msg for msg in info_messages)
             if expected_outcome == "info_adjusted_group_size":
-                for table_str in ["Statistics of the group size distribution", "50% (7 / 8)", "50% (1 / 8)"]:
+                for table_str in ["int4_asym group size 8    │ 25% (7 / 9)", "int4_asym group size 16   │ 25% (1 / 9)"]:
                     assert any(table_str in msg for msg in info_messages)
 
     @pytest.mark.parametrize(

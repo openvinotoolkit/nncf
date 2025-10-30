@@ -59,15 +59,7 @@ TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
 INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
-NON_INT8_MODES = [
-    CompressWeightsMode.INT4_SYM,
-    CompressWeightsMode.INT4_ASYM,
-    CompressWeightsMode.NF4,
-    CompressWeightsMode.MXFP4,
-    CompressWeightsMode.MXFP8_E4M3,
-    CompressWeightsMode.FP8_E4M3,
-    CompressWeightsMode.FP4,
-]
+NON_INT8_MODES = [mode for mode in CompressWeightsMode if mode not in INT8_MODES + [CompressWeightsMode.INT8]]
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
     TensorDataType.bfloat16,
@@ -679,6 +671,7 @@ class WeightCompression(Algorithm):
     ) -> str:
         """
         Generates a table that shows the ratio of weights quantized to different number of bits.
+        Additionally, splits modes into sub-rows by `group_size` (e.g., "int4_asym group size 64").
 
         :param all_params: Information about each weight node.
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
@@ -689,31 +682,47 @@ class WeightCompression(Algorithm):
         dtype_vs_num_weights_map = {}
         ratio_defining_weight_names = set(wp.weight_name for wp in ratio_defining_params)
         for data in all_params:
-            dtype = data.compression_config.mode if data.compression_config is not None else "float"
-            n_total, n_ratio_defining = dtype_vs_num_weights_map.get(dtype, ([], []))
+            if data.compression_config is None:
+                label, n_bits = "float", 32
+            else:
+                n_bits = data.compression_config.num_bits
+                gs = data.compression_config.group_size
+                gs_label = f"group size {gs}" if gs != -1 else "per channel"
+                label = f"{data.compression_config.mode} {gs_label}"
+            dtype_key = (label, n_bits)
+
+            n_total, n_ratio_defining = dtype_vs_num_weights_map.get(dtype_key, ([], []))
             if data.weight_name in ratio_defining_weight_names:
                 n_ratio_defining.append(data.num_weights)
             n_total.append(data.num_weights)
-            dtype_vs_num_weights_map[dtype] = (n_total, n_ratio_defining)
+            dtype_vs_num_weights_map[dtype_key] = (n_total, n_ratio_defining)
 
         n_skipped_float = [ws.num_weights for ws in skipped_weight_params if ws.weight_dtype.is_float()]
         if n_skipped_float:
-            n_total, n_ratio_defining = dtype_vs_num_weights_map.get("float", ([], []))
-            dtype_vs_num_weights_map["float"] = (n_total + n_skipped_float, n_ratio_defining)
+            n_total, n_ratio_defining = dtype_vs_num_weights_map.get(("float", 32), ([], []))
+            dtype_vs_num_weights_map[("float", 32)] = (n_total + n_skipped_float, n_ratio_defining)
 
         num_total_skipped_weights = sum(ws.num_weights for ws in skipped_weight_params)
         num_ratio_defining_weights = sum(ws.num_weights for ws in ratio_defining_params)
         num_ratio_defining_params = len(ratio_defining_params)
         num_total_weights = sum(ws.num_weights for ws in all_params) + num_total_skipped_weights
         num_params = len(all_params) + len(n_skipped_float)
-        dtype_vs_num_weights_map = OrderedDict(sorted(dtype_vs_num_weights_map.items(), reverse=True))
-        # Table creation
+
+        def _sort_dtype(dtype_label: str, dtype_bits: int):
+            if " group size " in dtype_label:
+                base, gs_str = dtype_label.rsplit(" group size ", 1)
+                return -dtype_bits, base, int(gs_str)
+            return -dtype_bits, dtype_label, -1
+
+        dtype_vs_num_weights_map = OrderedDict(
+            sorted(dtype_vs_num_weights_map.items(), key=lambda kv: _sort_dtype(*kv[0]))
+        )
         header = ["Weight compression mode", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
         rows = []
-        for bitwidth, (n_total, n_ratio_defining) in dtype_vs_num_weights_map.items():
+        for (label, _), (n_total, n_ratio_defining) in dtype_vs_num_weights_map.items():
             rows.append(
                 [
-                    bitwidth,
+                    label,
                     self._proportion_str(n_total, num_total_weights, num_params),
                     self._proportion_str(n_ratio_defining, num_ratio_defining_weights, num_ratio_defining_params),
                 ]
@@ -722,48 +731,6 @@ class WeightCompression(Algorithm):
         table = create_table(header, rows)
         pretty_string = f"Statistics of the bitwidth distribution:\n{table}"
         return pretty_string
-
-    def _get_group_size_distribution_str(
-        self,
-        ratio_defining_params: list[WeightCompressionParameters],
-    ) -> Optional[str]:
-        """
-        Generates a table showing how many ratio-defining weights were quantized
-        with each group size. Returns None if there will be less than two rows in the resulting table.
-
-        :param ratio_defining_params: Parameters used for calculating the quantization ratio.
-        :return: A formatted string containing the table.
-        """
-        # Map: group_size -> list of num_weights
-        gs_to_num_weights = defaultdict(list)
-
-        for wp in ratio_defining_params:
-            if wp.compression_config is not None and wp.compression_config.mode == self._mode:
-                gs_to_num_weights[wp.compression_config.group_size].append(wp.num_weights)
-
-        if len(gs_to_num_weights) <= 1:
-            return None
-
-        # Aggregate totals
-        total_weights = sum(sum(v) for v in gs_to_num_weights.values())
-        total_layers = sum(len(v) for v in gs_to_num_weights.values())
-
-        # Sort by group size (ascending)
-        gs_to_num_weights = OrderedDict(sorted(gs_to_num_weights.items()))
-
-        # Create table
-        header = ["Group size", f"% {self._mode} parameters (layers)"]
-        rows = []
-        for gs, per_layer_weights in gs_to_num_weights.items():
-            rows.append(
-                [
-                    gs,
-                    self._proportion_str(per_layer_weights, total_weights, total_layers),
-                ]
-            )
-
-        table = create_table(header, rows)
-        return f"Statistics of the group size distribution:\n{table}"
 
     def _get_ignored_scope_weight_statistics(self, model: TModel, graph: NNCFGraph) -> list[int]:
         """
@@ -943,9 +910,6 @@ class WeightCompression(Algorithm):
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
-        group_size_distribution_str = self._get_group_size_distribution_str(ratio_defining_params)
-        if group_size_distribution_str is not None:
-            nncf_logger.info(self._get_group_size_distribution_str(ratio_defining_params))
 
         # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
         all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
