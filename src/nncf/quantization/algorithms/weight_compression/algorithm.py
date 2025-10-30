@@ -93,6 +93,8 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
+        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
+            group_size = -1
         else:
             group_size = 128
 
