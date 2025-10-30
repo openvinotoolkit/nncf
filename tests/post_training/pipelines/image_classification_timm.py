@@ -53,7 +53,6 @@ class ImageClassificationTimm(ImageClassificationBase):
                 onnx_path,
                 export_params=True,
                 opset_version=13,
-                dynamo=False,
                 **additional_kwargs,
             )
             self.model = onnx.load(onnx_path)
