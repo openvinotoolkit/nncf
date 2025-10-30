@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import nncf
 from nncf.common.check_features import is_torch_tracing_by_patching
@@ -114,7 +114,7 @@ class ModelTransformerFactory:
 
 class EngineFactory:
     @staticmethod
-    def create(model: TModel, backend_params: Optional[dict] = None) -> Engine:
+    def create(model: TModel) -> Engine:
         """
         Factory method to create backend-specific Engine instance based on the input model.
 
@@ -133,8 +133,7 @@ class EngineFactory:
 
             from nncf.openvino.engine import OVNativeEngine
 
-            backend_params = backend_params or {}
-            return OVNativeEngine(cast(Model, model), **backend_params)
+            return OVNativeEngine(cast(Model, model))
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from torch.nn import Module
 

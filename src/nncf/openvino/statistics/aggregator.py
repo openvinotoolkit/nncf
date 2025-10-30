@@ -10,12 +10,10 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import TypeVar
 
 import numpy as np
 import openvino as ov
 
-from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -33,14 +31,9 @@ from nncf.openvino.graph.transformations.commands import OVOutputInsertionComman
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.tensor import Tensor
 
-TModel = TypeVar("TModel")
-
 
 class OVStatisticsAggregator(StatisticsAggregator):
     BACKEND: BackendType = BackendType.OPENVINO
-
-    def _create_engine(self, model: TModel) -> factory.Engine:
-        return factory.EngineFactory.create(model, backend_params={"reset_state": self.dataset.reset_engine_state})
 
     def collect_statistics(self, model: ov.Model, graph: NNCFGraph) -> None:
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}

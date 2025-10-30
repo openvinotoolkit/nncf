@@ -9,17 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import openvino as ov
 from openvino import Type
 from openvino.properties.hint import inference_precision
 
+import nncf
 from nncf.common.engine import Engine
 from nncf.openvino.graph.model_utils import model_has_state
-
-RESET_STATE_KEY = "reset_state"
 
 
 class OVCompiledModelEngine(Engine):
@@ -31,12 +30,9 @@ class OVCompiledModelEngine(Engine):
     to infer the compiled model.
     """
 
-    def __init__(self, compiled_model: ov.CompiledModel, reset_state: bool):
+    def __init__(self, compiled_model: ov.CompiledModel, stateful: bool):
         self.infer_request = compiled_model.create_infer_request()
-        if reset_state and not hasattr(self.infer_request, "reset_state"):
-            msg = "The model is not stateful, but reset_state=True was passed."
-            raise ValueError(msg)
-        self.reset_state = reset_state
+        self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
 
     def infer(
         self, input_data: Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]]
@@ -48,10 +44,10 @@ class OVCompiledModelEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        if isinstance(input_data, dict) and input_data.get(RESET_STATE_KEY, False):
-            self.infer_request.reset_state()
+        if isinstance(input_data, dict) and nncf.Dataset.RESET_STATE_KEY in input_data:
             input_data = input_data.copy()
-            del input_data[RESET_STATE_KEY]
+            if input_data.pop(nncf.Dataset.RESET_STATE_KEY):
+                self.infer_request.reset_state()
         elif self.reset_state:
             self.infer_request.reset_state()
 
@@ -73,7 +69,7 @@ class OVNativeEngine(Engine):
     to infer the model.
     """
 
-    def __init__(self, model: ov.Model, use_fp32_precision: bool = True, reset_state: Optional[bool] = None):
+    def __init__(self, model: ov.Model, use_fp32_precision: bool = True):
         """
         :param model: Model.
         :param use_fp32_precision: A flag that determines whether to force the engine to use FP32
@@ -84,13 +80,8 @@ class OVNativeEngine(Engine):
             config = {inference_precision: Type.f32}
         ie = ov.Core()
         stateful = model_has_state(model)
-        if reset_state and not stateful:
-            msg = "The model is not stateful, but reset_state=True was passed."
-            raise ValueError(msg)
-        if reset_state is None:
-            reset_state = stateful
         compiled_model = ie.compile_model(model, device_name="CPU", config=config)
-        self.engine = OVCompiledModelEngine(compiled_model, reset_state)
+        self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(
         self, input_data: Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]]

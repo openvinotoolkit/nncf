@@ -166,9 +166,7 @@ def apply_algorithm_if_bodies(
         else_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, False)
         if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model_with_additional_outputs, if_node)
         then_dataset, else_dataset = _make_dataset_for_if_bodies(
-            factory.EngineFactory.create(
-                parent_model_with_additional_outputs, backend_params={"reset_state": parent_dataset.reset_engine_state}
-            ),
+            factory.EngineFactory.create(parent_model_with_additional_outputs),
             parent_dataset,
             if_cond_input_name,
             then_model_input_names,
