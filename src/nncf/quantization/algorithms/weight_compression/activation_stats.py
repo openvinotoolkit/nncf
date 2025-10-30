@@ -35,12 +35,18 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
         X_full = fns.transpose(X, axes=(1,2,0))  # [No. of Experts, HiddenDim, SampleSize]
 
     # prevent high memory and time consumption
-    if X_full.shape[1] > subset_size:
+    subset_axis = 1 if X_dim == 2 else 2  # axis for subset_size dimension
+    if X_full.shape[subset_axis] > subset_size:
         # activations were reduced across all but the last dimension
         lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
-        step = X_full.shape[1] // subset_size
-        idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-        X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]
+        step = X_full.shape[subset_axis] // subset_size
+        sorted_idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
+        idxs = [idx for idx in sorted_idxs if idx < X_full.shape[subset_axis]][:subset_size]
+        
+        if X_dim == 2:
+            X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]
+        else:
+            X = X_full[:, :, idxs]  # [No. of Experts, HiddenDim, ~SubsetSize]
     else:
         X = X_full
     reduction_axes = 1
