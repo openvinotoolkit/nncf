@@ -1102,7 +1102,7 @@ class WeightCompression(Algorithm):
                 continue
             node_wight_weight = node_wight_weight_edge[node_order].to_node
             break
-        _, weight_port_ids = self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)
+        weight_port_ids = [pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)]
         weight_dim = [len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph)) for weight_port_id in weight_port_ids]
         return weight_dim
 
