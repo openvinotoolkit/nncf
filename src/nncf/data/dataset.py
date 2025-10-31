@@ -38,6 +38,10 @@ class Dataset:
         will be passed into the model as-is.
     """
 
+    # RESET_STATE_KEY is a special input key used by OpenVINO backend to control resetting of internal model state
+    # between model inferences. This key can be added to a dataset sample input dictionary with either
+    # `True` or `False` value. With `True` value, the model state will be reset before inference on the corresponding
+    # sample, and with `False` the state will not be reset.
     RESET_STATE_KEY = "reset_state"
 
     def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):

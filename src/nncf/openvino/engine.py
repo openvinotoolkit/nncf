@@ -45,9 +45,14 @@ class OVCompiledModelEngine(Engine):
         :return output_data: Model's output.
         """
         if isinstance(input_data, dict) and nncf.Dataset.RESET_STATE_KEY in input_data:
+            # In this case state resetting is controlled by the input data flag
             input_data = input_data.copy()
             if input_data.pop(nncf.Dataset.RESET_STATE_KEY):
-                self.infer_request.reset_state()
+                if self.reset_state:
+                    self.infer_request.reset_state()
+                else:
+                    msg = "Cannot reset state of a stateless model."
+                    raise RuntimeError(msg)
         elif self.reset_state:
             self.infer_request.reset_state()
 
