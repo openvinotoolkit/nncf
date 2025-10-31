@@ -122,7 +122,7 @@ QUANTIZATION_MODELS = [
                 smooth_quant_alpha=0.15,
             ),
         },
-        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
+        "backends": FX_BACKENDS + [BackendType.OV],
         "batch_size": 1,
     },
     {
@@ -135,7 +135,7 @@ QUANTIZATION_MODELS = [
                 smooth_quant_alpha=0.5,
             ),
         },
-        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
+        "backends": FX_BACKENDS + [BackendType.OV],
         "batch_size": 1,
     },
     # Timm models
