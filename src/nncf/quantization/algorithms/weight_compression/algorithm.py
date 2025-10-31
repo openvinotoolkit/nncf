@@ -1086,6 +1086,25 @@ class WeightCompression(Algorithm):
         statistics_aggregator.collect_statistics(model, graph)
         return statistics_aggregator.statistic_points
 
+    def _get_weight_dim_from_act_node(self, graph: NNCFGraph, act_node: NNCFNode, output_port_id: int) -> int:
+        """
+        Returns the dimension of weight to be compressed from a given activation node and its output_port_id.
+
+        :param graph: Model graph.
+        :return: act_node: Activation node which is connected to the node with weight.
+        :param output_port_id: Activation output port id which connects to node with weight.
+        """
+        node_wight_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)     
+        for node_order, edge in enumerate(node_wight_weight_edge):
+            is_node_with_weights = self._backend_entity.is_node_with_weights(edge.to_node, graph)
+            if not is_node_with_weights:
+                continue
+            node_wight_weight = node_wight_weight_edge[node_order].to_node
+            break
+        _, weight_port_id = self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)[0]
+        weight_dim = len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph))
+        return weight_dim
+
     def get_statistic_points(
         self,
         model: TModel,
@@ -1107,16 +1126,13 @@ class WeightCompression(Algorithm):
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
+                weight_dim = self._get_weight_dim_from_act_node(graph, node, output_port_id)
                 # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
                 # size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
-                node_wight_weight_edge = graph.get_output_edges_by_port_id(node, output_port_id)[0]
-                node_wight_weight = node_wight_weight_edge.to_node
-                weight_name, weight_port_id = self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)[0]
-                weight_dim = len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph))
-
                 reduction_axes = tuple(range(n_dims - 1))
                 if(weight_dim == 3):
+                    # For 3D weights, hidden dimension is the second dimension. Reduce by all other dimensions
                     reduction_axes = (1,)
 
                 stat_collector = self._backend_entity.mean_statistic_collector(
