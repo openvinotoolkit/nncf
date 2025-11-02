@@ -82,9 +82,7 @@ def test_nncf_in_place_strip(param: ParamInPlaceStrip):
 
     with torch.no_grad():
         compressed_output = compressed_model(example_input)
-        strip_compressed_model = nncf.strip(
-            compressed_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
-        )
+        strip_compressed_model = nncf.strip(compressed_model, do_copy=False, strip_format=StripFormat.IN_PLACE)
         stripped_output = strip_compressed_model(example_input)
 
         assert strip_compressed_model.linear.weight.dtype == param.torch_dtype
@@ -113,7 +111,7 @@ def test_nncf_in_place_strip_keeps_other_hooks():
     ref = ["post_hooks.linear:weight__0.0", "post_hooks.linear:weight__0.1"]
     assert ret == ref
 
-    model = nncf.strip(model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input)
+    model = nncf.strip(model, do_copy=False, strip_format=StripFormat.IN_PLACE)
     ret = list(hook_storage.named_hooks(remove_duplicate=False))
     ref = [("post_hooks.linear:weight__0.1", hook1)]
     assert ret == ref

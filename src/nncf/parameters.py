@@ -150,8 +150,7 @@ class StripFormat(StrEnum):
     :param DQ: Replaces FakeQuantize operations with a dequantization subgraph and stores compressed weights
         in low-bit precision using fake quantize parameters. This is the default format for deploying models
         with compressed weights.
-    :param IN_PLACE: Directly applies fake quantizers to the weights, replacing the original weights with their
-        fake quantized versions.
+    :param IN_PLACE: Directly applies NNCF operations to the weights, replacing the original weights.
     """
 
     NATIVE = "native"
