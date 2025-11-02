@@ -139,7 +139,7 @@ def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel) -> T
             if isinstance(hook_module, AsymmetricQuantizer):
                 decompressor, q_weight = asym_fq_to_decompressor(hook_module, weight_param)
             else:
-                decompressor, q_weight = sym_fq_to_decompressor(hook_module, weight_param)
+                decompressor, q_weight = sym_fq_to_decompressor(hook_module, weight_param)  # type: ignore[assignment]
             packed_tensor = decompressor.pack_weight(q_weight)
 
         weight_param.requires_grad = False
