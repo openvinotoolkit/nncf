@@ -32,7 +32,9 @@ def test_strip():
 
     with torch.no_grad():
         pruned_weight = pruning_module(pruned_model.conv.weight)
-    striped_model = nncf.strip(pruned_model, strip_format=nncf.StripFormat.IN_PLACE)
+
+    striped_model = nncf.strip(pruned_model, strip_format=nncf.StripFormat.IN_PLACE, do_copy=False)
+    hook_storage = get_hook_storage(striped_model)
 
     assert not list(hook_storage.named_hooks())
     assert torch.equal(striped_model.conv.weight, pruned_weight)

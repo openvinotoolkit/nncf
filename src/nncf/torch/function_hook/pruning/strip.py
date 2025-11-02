@@ -35,11 +35,12 @@ def apply_pruning_in_place(model: TModel) -> TModel:
     """
     hook_storage = get_hook_storage(model)
     hooks_to_delete = []
-    for name, hook in hook_storage.named_hooks():
-        if not isinstance(hook, (RBPruningMask, UnstructuredPruningMask)):
+    for hook_name, hook_module in hook_storage.named_hooks():
+        if not isinstance(hook_module, (RBPruningMask, UnstructuredPruningMask)):
             continue
-        hook.eval()
-        hook_type, op_name, port_id = decode_hook_name(name)
+
+        hook_module.eval()
+        hook_type, op_name, port_id = decode_hook_name(hook_name)
         if hook_type != "post_hooks" or port_id != 0:
             msg = f"Unexpected place of SparsityBinaryMask: {hook_type=}, {op_name=}, {port_id=}"
             raise nncf.InternalError(msg)
@@ -49,11 +50,10 @@ def apply_pruning_in_place(model: TModel) -> TModel:
         weight_param = getattr(module, weight_attr_name)
 
         weight_param.requires_grad = False
-        weight_param.data = hook(weight_param)
+        weight_param.data = hook_module(weight_param)
 
-        hooks_to_delete.append(name)
+        hooks_to_delete.append(hook_name)
 
     for hook_name in hooks_to_delete:
         hook_storage.delete_hook(hook_name)
-
     return model
