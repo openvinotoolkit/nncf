@@ -77,17 +77,8 @@ class LinearModel(OVReferenceModel):
         return model
 
 
-@SYNTHETIC_MODELS.register()
 class SimpleMoEModel(OVReferenceModel):
     def _create_ov_model(self, num_experts=4, hidden_dim=8, out_dim=16, seq_len=4):
-        """
-        Creates a model with MoE operation for 3D weight tensors.
-
-        :param num_experts: Number of experts
-        :param hidden_dim: Hidden dimension size
-        :param out_dim: Output dimension size
-        :param seq_len: Length of sequence
-        """
         input_shape = [num_experts, seq_len, hidden_dim]
         input_1 = opset.parameter(input_shape, name="Input")
 
