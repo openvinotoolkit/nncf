@@ -167,7 +167,6 @@ def apply_compression_in_place(model: TModel) -> TModel:
         hook_module.eval()
 
         _, op_name, _ = decode_hook_name(hook_name)
-        op_name = op_name
         module_name, weight_attr_name = split_const_name(op_name)
         module = get_module_by_name(module_name, model)
         weight_param = getattr(module, weight_attr_name)
