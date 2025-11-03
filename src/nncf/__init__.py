@@ -45,6 +45,7 @@ from nncf.parameters import SensitivityMetric as SensitivityMetric
 from nncf.parameters import StripFormat as StripFormat
 from nncf.parameters import TargetDevice as TargetDevice
 from nncf.pruning.prune_model import prune as prune
+from nncf.pruning.prune_model import pruning_statistic as pruning_statistic
 from nncf.quantization import QuantizationPreset as QuantizationPreset
 from nncf.quantization import compress_weights as compress_weights
 from nncf.quantization import quantize as quantize
