@@ -1095,15 +1095,20 @@ class WeightCompression(Algorithm):
         :param output_port_id: Activation output port id which connects to node with weight.
         :return: List of dimensions of all the weights that feed the node with weight.
         """
-        node_wight_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)     
+        node_wight_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)
         for node_order, edge in enumerate(node_wight_weight_edge):
             is_node_with_weights = self._backend_entity.is_node_with_weights(edge.to_node, graph)
             if not is_node_with_weights:
                 continue
             node_wight_weight = node_wight_weight_edge[node_order].to_node
             break
-        weight_port_ids = [pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)]
-        weight_dim = [len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph)) for weight_port_id in weight_port_ids]
+        weight_port_ids = [
+            pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)
+        ]
+        weight_dim = [
+            len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph))
+            for weight_port_id in weight_port_ids
+        ]
         return weight_dim
 
     def get_statistic_points(
@@ -1128,8 +1133,8 @@ class WeightCompression(Algorithm):
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
                 weight_dims = self._get_weight_dim_from_act_node(graph, node, output_port_id)
-                # by Default, Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
-                # size dimension.
+                # by Default, Reduce activations across all but the last dimension. The last dimension is
+                # assumed to be the hidden size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
                 reduction_axes = tuple(range(n_dims - 1))
 
