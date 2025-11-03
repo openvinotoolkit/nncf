@@ -196,11 +196,14 @@ class ScaleEstimation:
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
+        is_moe = len(weight.shape) == 3
 
         was_transposed = False
-        if reduction_axis == 0:
-            weight = fns.transpose(weight)
-            reduction_axis = 1
+        if reduction_axis == 0 or (reduction_axes == 1 and is_moe):
+            # MoE: [num_experts, out_features, hidden_dimension] → [num_experts, hidden_dimension, out_features]
+            # Standard: [out_features, in_features] → [in_features, out_features]
+            weight = fns.transpose(weight, axes=(0, 2, 1)) if is_moe else fns.transpose(weight)
+            reduction_axis = 2 if is_moe else 1
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
@@ -210,18 +213,24 @@ class ScaleEstimation:
         original_weight = fns.zeros_like(weight) + weight
         if not config.is_integer:
             q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
-                original_weight, cur_config, reduction_axis, return_compressed_weight=True
+                original_weight,
+                cur_config,
+                reduction_axis,
+                return_compressed_weight=True,
             )
             zp = None
         else:
             q_weights, compressed_weights, scale, zp = integer_quantize_dequantize_weight(
-                original_weight, cur_config, reduction_axis, return_compressed_weight=True
+                original_weight,
+                cur_config,
+                reduction_axis,
+                return_compressed_weight=True,
             )
             if zp is not None:
                 zp = zp.astype(scale.dtype)
-        is_moe = len(s.shape) == 2
+
         squeeze_axes = 0
-        if(is_moe):
+        if is_moe:
             squeeze_axes = -1
         s = fns.unsqueeze(s, squeeze_axes)
         s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
@@ -240,7 +249,7 @@ class ScaleEstimation:
         importance = importance / (denum + eps)
 
         act_hidden_dim_axis = 0
-        if(is_moe):
+        if is_moe:
             act_hidden_dim_axis = 1
 
         X, _ = reshape_weight_for_grouped_quantization(X, act_hidden_dim_axis, group_size)
@@ -248,15 +257,15 @@ class ScaleEstimation:
         result_scale = None
 
         weight_transpose_for_matmul_with_act = (1, 0, 2)
-        if(is_moe):
-            weight_transpose_for_matmul_with_act = (0,1,3,2)
+        if is_moe:
+            weight_transpose_for_matmul_with_act = (0, 1, 3, 2)
 
         fp_outs = fns.matmul(fns.transpose(original_weight, weight_transpose_for_matmul_with_act), X)
         q_outs = fns.matmul(fns.transpose(q_weights, weight_transpose_for_matmul_with_act), X)
 
         # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
         min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-        
+
         def maybe_reshape_scale_diffs(scale_diffs, is_moe):
             if not is_moe:
                 scale_diffs = fns.transpose(scale_diffs, (1, 0))
@@ -386,13 +395,17 @@ class ScaleEstimation:
 
         if was_transposed:
             if config.group_size == -1:
-                result_scale = fns.transpose(result_scale)
+                result_scale = fns.transpose(result_scale, axes=(1, 0)) if is_moe else fns.transpose(result_scale)
                 if zp is not None:
-                    zp = fns.transpose(zp)
+                    zp = fns.transpose(zp, axes=(1, 0)) if is_moe else fns.transpose(zp)
             else:
-                result_scale = fns.transpose(result_scale, axes=(1, 2, 0))
+                result_scale = (
+                    fns.transpose(result_scale, axes=(3, 1, 2, 0))
+                    if is_moe
+                    else fns.transpose(result_scale, axes=(2, 1, 0))
+                )
                 if zp is not None:
-                    zp = fns.transpose(zp, axes=(1, 2, 0))
+                    zp = fns.transpose(zp, axes=(3, 1, 2, 0)) if is_moe else fns.transpose(zp, axes=(2, 1, 0))
 
         return result_scale, zp
 

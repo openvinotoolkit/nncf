@@ -85,7 +85,10 @@ class SpyWeightCompressionStatisticsContext:
             return results
 
         self.mocker.patch.object(
-            StatisticPointsContainer, "get_algo_statistics_for_node", autospec=True, side_effect=side_effect
+            StatisticPointsContainer,
+            "get_algo_statistics_for_node",
+            autospec=True,
+            side_effect=side_effect,
         )
         self.statistic_point_spy = self.mocker.spy(WeightCompression, "get_statistic_points")
         return self
@@ -123,9 +126,21 @@ class TemplateWeightCompression(ABC):
         ("mode", "ref_act_score", "ref_score"),
         (
             (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, HESSIAN_TRACE, 0),
-            (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
-            (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
-            (SensitivityMetric.MAX_ACTIVATION_VARIANCE, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
+            (
+                SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+                MEAN_MAX,
+                MEAN_MAX * MAX_BASELINE_SCORE,
+            ),
+            (
+                SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+                MEAN_VAR,
+                MEAN_VAR * MAX_BASELINE_SCORE,
+            ),
+            (
+                SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+                MAX_VAR,
+                MAX_VAR * MAX_BASELINE_SCORE,
+            ),
         ),
     )
     def test_data_based_criterion(self, mode, ref_score, ref_act_score, mocker):
@@ -228,18 +243,38 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_moe_model_for_test_scale_estimation() -> TModel:
+        """
+        Returns a backend MoE model for test_scale_estimation with 3D weights.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_moe_scale_estimation_ref() -> TTensor:
+        """
+        Returns the reference output of calculate_quantization_params for MoE model.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_scale_estimation_ref() -> TTensor:
         """
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    def test_scale_estimation(self, mocker):
+    @pytest.mark.parametrize("is_moe", [False, True])
+    def test_scale_estimation(self, mocker, is_moe):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
-        model = self.get_model_for_test_scale_estimation()
+
+        if is_moe:
+            model = self.get_moe_model_for_test_scale_estimation()
+            input = np.arange(0, 4 * 4 * 8, dtype=np.float32).reshape(4, 4, 8)
+        else:
+            model = self.get_model_for_test_scale_estimation()
+            input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
 
         # prepare dataset with one input tensor
-        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
         dataset = Dataset([input], self.get_transform_func())
 
@@ -253,8 +288,15 @@ class TemplateWeightCompression(ABC):
                 all_layers=True,
                 dataset=dataset,
             )
-        reference = self.get_scale_estimation_ref()
-        assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
+
+        computed_scale = calc_q_params_spy.spy_return[0]
+
+        if is_moe:
+            reference = self.get_moe_scale_estimation_ref()
+        else:
+            reference = self.get_scale_estimation_ref()
+
+        assert fns.allclose(Tensor(reference), computed_scale), computed_scale
 
     @staticmethod
     @abstractmethod
@@ -322,9 +364,19 @@ class TemplateWeightCompression(ABC):
         n_awq_target = n_layers - 1  # first MatMul is always int8
         model = self.get_awq_act_model(with_multiply, n_layers)
 
-        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))],
+            self.get_transform_func(),
+        )
         with SpyWeightCompressionStatisticsContext(mocker):
-            model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+            model = compress_weights(
+                model,
+                mode=int4_mode,
+                ratio=1.0,
+                group_size=2,
+                dataset=dataset,
+                awq=True,
+            )
 
         awq_num = self.get_num_multiply_from_awq(model)
         assert awq_num == n_awq_target
@@ -508,10 +560,38 @@ class TemplateWeightCompression(ABC):
         ],
         [
             ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
-            ([8, 8, 16, 16, 16, 32], 0.5, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 2}),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.IGNORE,
+                None,
+                {32: 1},
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                16,
+                {16: 3, 32: 1},
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                1.0,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                32,
+                {32: 1},
+            ),
+            (
+                [8, 8, 16, 16, 16, 32],
+                0.5,
+                32,
+                nncf.GroupSizeFallbackMode.ADJUST,
+                16,
+                {16: 2},
+            ),
         ],
     )
     def test_group_size_fallback_modes(

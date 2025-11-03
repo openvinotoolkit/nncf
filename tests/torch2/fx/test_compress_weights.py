@@ -46,6 +46,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Emp
 from tests.torch2.function_hook.quantization.test_weights_compression import FunctionalModel
 from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
+from tests.torch2.function_hook.quantization.test_weights_compression import MoELinear
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
 from tests.torch2.fx.helpers import get_torch_fx_model
 
@@ -71,7 +72,9 @@ def get_model_size(model):
 
 
 def get_compressed_modules_weights(
-    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: dict[str, int]
+    compressed_model: torch.fx.GraphModule,
+    dtype: torch.dtype,
+    compressed_node_weight_port: dict[str, int],
 ):
     n_target_modules = 0
     n_compressed_weights = 0
@@ -282,7 +285,10 @@ def test_raise_error_for_statistics_caching():
     dummy_input = torch.Tensor()
     exported_model = get_torch_fx_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(exported_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
+        compress_weights(
+            exported_model,
+            advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"),
+        )
 
 
 def test_get_dtype_attribute_of_parameter():
@@ -340,6 +346,17 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     def get_model_for_test_scale_estimation():
         model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        num_experts = 4
+        hidden_dim = 8
+        out_dim = 16
+        seq_len = 4
+        model = MoELinear(num_experts, hidden_dim, out_dim)
+        ex_input = torch.ones([num_experts, seq_len, hidden_dim], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
@@ -417,6 +434,101 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         )
 
     @staticmethod
+    def get_moe_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [
+                    [
+                        [
+                            7.5732,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.2602,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.3083,
+                            7.8467,
+                            7.2233,
+                            7.2715,
+                            7.4205,
+                            7.4667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.8205,
+                            14.9032,
+                            14.9858,
+                            15.0685,
+                            15.1512,
+                            14.3400,
+                            14.4173,
+                            14.4945,
+                            14.5718,
+                            14.6491,
+                            14.7264,
+                            14.8037,
+                            14.8810,
+                            14.9583,
+                            15.0355,
+                            15.1128,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            22.8946,
+                            22.9687,
+                            23.0427,
+                            23.1167,
+                            23.1908,
+                            23.2648,
+                            23.3388,
+                            23.4129,
+                            23.4869,
+                            23.5609,
+                            23.6349,
+                            23.7090,
+                            23.9987,
+                            23.8570,
+                            22.8730,
+                            22.9435,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            30.3375,
+                            30.4065,
+                            30.4756,
+                            30.5447,
+                            30.6138,
+                            30.6828,
+                            30.7519,
+                            30.8210,
+                            30.8901,
+                            30.9592,
+                            31.0282,
+                            31.0973,
+                            31.1664,
+                            31.7765,
+                            31.8468,
+                            31.9171,
+                        ]
+                    ]
+                ],
+            ]
+        )
+
+    @staticmethod
     def get_orig_weight(model: torch.fx.GraphModule) -> Tensor:
         return Tensor(model.linear.weight.data.detach())
 
@@ -443,7 +555,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
             if node.op != "call_module":
                 continue
             op = getattr(model, node.target)
-            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+            num += isinstance(
+                op,
+                (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor),
+            )
         return num
 
     @staticmethod
@@ -453,7 +568,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
             if node.op != "call_module":
                 continue
             op = getattr(model, node.target)
-            if isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor)):
+            if isinstance(
+                op,
+                (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor),
+            ):
                 num[op.compressed_weight_shape[-1]] += 1
         return num
 
@@ -473,6 +591,19 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         return {
             "linear_2": Tensor(
-                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
+                torch.tensor(
+                    [
+                        [
+                            1.226455,
+                            1.205499,
+                            1.141340,
+                            1.097436,
+                            1.064355,
+                            1.037971,
+                            1.016118,
+                            0.997526,
+                        ]
+                    ]
+                )
             )
         }
