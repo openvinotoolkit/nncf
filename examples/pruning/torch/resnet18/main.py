@@ -262,7 +262,7 @@ def main() -> float:
 
     ###############################################################################
     # Step 5: Export models
-    print(os.linesep + "[Step 4]: Export models")
+    print(os.linesep + "[Step 5]: Export models")
     ir_path = ROOT / f"{BASE_MODEL_NAME}_pruned.xml"
     ov_model = ov.convert_model(pruned_model.cpu(), example_input=example_input.cpu(), input=tuple(example_input.shape))
     ov.save_model(ov_model, ir_path, compress_to_fp16=False)

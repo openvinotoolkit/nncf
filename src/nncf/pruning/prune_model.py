@@ -57,8 +57,8 @@ class TensorPruningStatistic:
     Statistics about pruning for a single tensor.
 
     :param tensor_name: Name of the tensor.
-    :param num_elements: Total number of elements in the tensor.
-    :param pruned_elements: Number of pruned elements in the tensor.
+    :param shape: Shape of the tensor.
+    :param pruned_ratio: Ratio of pruned elements in the tensor.
     """
 
     tensor_name: str
