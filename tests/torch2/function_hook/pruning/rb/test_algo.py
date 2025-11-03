@@ -140,4 +140,3 @@ def test_statistic():
     txt = str(stat)
     assert "conv.weight" in txt
     assert "Total" in txt
-    print(stat)
