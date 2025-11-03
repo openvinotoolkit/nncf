@@ -16,14 +16,13 @@ from typing import Callable
 from unittest.mock import patch
 
 import numpy as np
-import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
-from openvino import opset13 as opset
 
 import nncf
 import nncf.openvino.optimized_functions as opt_fns
+import openvino as ov
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
@@ -56,6 +55,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import resh
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from openvino import opset13 as opset
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import dump_to_json
 from tests.cross_fw.shared.json import load_json
@@ -75,6 +75,7 @@ from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import SequentialMatmulModel
+from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
 
@@ -1938,6 +1939,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return MatMul().ov_model
 
     @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        return SimpleMoEModel().ov_model
+
+    @staticmethod
     def get_awq_model() -> ov.Model:
         return AWQMatmulModel().ov_model
 
@@ -1995,6 +2000,101 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                 [[7.237173]],
                 [[7.722581]],
                 [[8.255914]],
+            ]
+        )
+
+    @staticmethod
+    def get_moe_scale_estimation_ref():
+        return np.array(
+            [
+                [
+                    [
+                        [
+                            7.573249,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.260152,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.3082952,
+                            7.846745,
+                            7.223278,
+                            7.271495,
+                            7.420518,
+                            7.4666667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.820505,
+                            14.903171,
+                            14.985837,
+                            15.068501,
+                            15.151169,
+                            14.339979,
+                            14.417264,
+                            14.494548,
+                            14.571833,
+                            14.649117,
+                            14.726402,
+                            14.803687,
+                            14.880971,
+                            14.958257,
+                            15.035541,
+                            15.112826,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            22.894644,
+                            22.968674,
+                            23.042706,
+                            23.116734,
+                            23.190762,
+                            23.264793,
+                            23.338821,
+                            23.412853,
+                            23.486881,
+                            23.560913,
+                            23.634943,
+                            23.708973,
+                            23.99867,
+                            23.85703,
+                            22.873016,
+                            22.943499,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            30.337456,
+                            30.406534,
+                            30.475613,
+                            30.54469,
+                            30.613766,
+                            30.682842,
+                            30.751925,
+                            30.821001,
+                            30.890078,
+                            30.959156,
+                            31.028233,
+                            31.09731,
+                            31.16639,
+                            31.776451,
+                            31.846794,
+                            31.917133,
+                        ]
+                    ]
+                ],
             ]
         )
 

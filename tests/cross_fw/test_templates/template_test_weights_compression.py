@@ -281,7 +281,7 @@ class TemplateWeightCompression(ABC):
         else:
             reference = self.get_scale_estimation_ref()
 
-        assert fns.allclose(Tensor(reference), computed_scale), computed_scale
+        assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
     @abstractmethod

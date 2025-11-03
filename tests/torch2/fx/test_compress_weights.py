@@ -46,7 +46,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Emp
 from tests.torch2.function_hook.quantization.test_weights_compression import FunctionalModel
 from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
-from tests.torch2.function_hook.quantization.test_weights_compression import MoELinear
+from tests.torch2.function_hook.quantization.test_weights_compression import SimpleMoEModel
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
 from tests.torch2.fx.helpers import get_torch_fx_model
 
@@ -350,7 +350,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         hidden_dim = 8
         out_dim = 16
         seq_len = 4
-        model = MoELinear(num_experts, hidden_dim, out_dim)
+        model = SimpleMoEModel(num_experts, hidden_dim, out_dim)
         ex_input = torch.ones([num_experts, seq_len, hidden_dim], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model

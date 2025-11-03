@@ -119,7 +119,7 @@ class LinearModel(torch.nn.Module):
         return self.linear(input)
 
 
-class MoELinear(nn.Module):
+class SimpleMoEModel(nn.Module):
     def __init__(self, num_experts=4, hidden_dim=8, out_dim=16):
         super().__init__()
         self.expert_weights = nn.Parameter(
@@ -507,7 +507,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         num_experts = 4
         hidden_dim = 8
         out_dim = 16
-        model = MoELinear(num_experts, hidden_dim, out_dim)
+        model = SimpleMoEModel(num_experts, hidden_dim, out_dim)
         return model
 
     @staticmethod

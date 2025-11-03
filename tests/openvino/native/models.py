@@ -15,12 +15,12 @@ from functools import partial
 from typing import Callable, Optional
 
 import numpy as np
-import openvino as ov
-from openvino import opset13 as opset
 from torchvision.models import mobilenet_v2
 from torchvision.models import mobilenet_v3_small
 
+import openvino as ov
 from nncf.common.utils.registry import Registry
+from openvino import opset13 as opset
 from tests.torch.test_models.inceptionv3 import inception_v3
 from tests.torch.test_models.resnet import ResNet18
 from tests.torch.test_models.swin import SwinTransformerBlock
@@ -74,6 +74,32 @@ class LinearModel(OVReferenceModel):
         r2 = opset.result(add, name="Result_Add")
         r2.get_output_tensor(0).set_names(set(["Result_Add"]))
         model = ov.Model([r1, r2], [input_1])
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class SimpleMoEModel(OVReferenceModel):
+    def _create_ov_model(self, num_experts=4, hidden_dim=8, out_dim=16, seq_len=4):
+        """
+        Creates a model with MoE operation for 3D weight tensors.
+
+        :param num_experts: Number of experts
+        :param hidden_dim: Hidden dimension size
+        :param out_dim: Output dimension size
+        :param seq_len: Length of sequence
+        """
+        input_shape = [num_experts, seq_len, hidden_dim]
+        input_1 = opset.parameter(input_shape, name="Input")
+
+        weight_data = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weight_data = weight_data.reshape(num_experts, hidden_dim, out_dim)
+
+        matmul = opset.matmul(input_1, weight_data, transpose_a=False, transpose_b=False, name="MoE_MatMul")
+
+        result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([result], [input_1])
         return model
 
 
