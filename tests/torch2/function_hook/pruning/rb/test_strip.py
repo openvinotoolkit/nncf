@@ -21,9 +21,10 @@ from tests.torch2.function_hook.pruning.helpers import ConvModel
 
 def test_strip():
     model = ConvModel()
-    model.eval()
     example_inputs = ConvModel.get_example_inputs()
     pruned_model = nncf.prune(model, mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED, examples_inputs=example_inputs)
+    pruned_model.eval()
+
     hook_storage = get_hook_storage(pruned_model)
     pruning_module = hook_storage.post_hooks["conv:weight__0"]["0"]
 

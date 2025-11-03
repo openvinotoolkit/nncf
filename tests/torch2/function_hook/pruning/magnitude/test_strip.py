@@ -25,6 +25,8 @@ def test_strip():
     pruned_model = nncf.prune(
         model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
     )
+    pruned_model.eval()
+
     hook_storage = get_hook_storage(pruned_model)
     pruning_module = hook_storage.post_hooks["conv:weight__0"]["0"]
 
