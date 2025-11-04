@@ -222,18 +222,12 @@ class ScaleEstimation:
         original_weight = fns.zeros_like(weight) + weight
         if not config.is_integer:
             q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
-                original_weight,
-                cur_config,
-                reduction_axis,
-                return_compressed_weight=True,
+                original_weight, cur_config, reduction_axis, return_compressed_weight=True
             )
             zp = None
         else:
             q_weights, compressed_weights, scale, zp = integer_quantize_dequantize_weight(
-                original_weight,
-                cur_config,
-                reduction_axis,
-                return_compressed_weight=True,
+                original_weight, cur_config, reduction_axis, return_compressed_weight=True
             )
             if zp is not None:
                 zp = zp.astype(scale.dtype)
