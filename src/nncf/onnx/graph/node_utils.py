@@ -138,12 +138,7 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
         # 0 - (M, K), 1 - (K, N)
         weight_channel_axis = -1 - port_id if transpose else -2 + port_id
     if node.metatype == om.ONNXMatMulMetatype:
-        if port_id == 0:
-            # W(port:0) * X(port:1): [C_OUT, C_IN] * [C_IN, ...]
-            return -1
-        if port_id == 1:
-            # X(port:0) * W(port:1): [..., C_IN] * [C_IN, C_OUT]
-            return -2
+        weight_channel_axis = -1 - port_id if port_id == 0 else -2 + port_id
     return weight_channel_axis
 
 
