@@ -1095,18 +1095,18 @@ class WeightCompression(Algorithm):
         :param output_port_id: Activation output port id which connects to node with weight.
         :return: List of dimensions of all the weights that feed the node with weight.
         """
-        node_wight_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)
-        for node_order, edge in enumerate(node_wight_weight_edge):
+        node_with_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)
+        for node_order, edge in enumerate(node_with_weight_edge):
             is_node_with_weights = self._backend_entity.is_node_with_weights(edge.to_node, graph)
             if not is_node_with_weights:
                 continue
-            node_wight_weight = node_wight_weight_edge[node_order].to_node
+            node_with_weight = node_with_weight_edge[node_order].to_node
             break
         weight_port_ids = [
-            pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_wight_weight, graph)
+            pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
         ]
         weight_dim = [
-            len(self._backend_entity.get_weight_shape(node_wight_weight, weight_port_id, graph))
+            len(self._backend_entity.get_weight_shape(node_with_weight, weight_port_id, graph))
             for weight_port_id in weight_port_ids
         ]
         return weight_dim
