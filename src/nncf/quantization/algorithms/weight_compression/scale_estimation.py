@@ -198,13 +198,21 @@ class ScaleEstimation:
         eps = fns.finfo(weight).eps
         is_moe = len(weight.shape) == 3
 
+        axes = {
+            'weight_transpose': (0, 2, 1) if is_moe else None,
+            'matmul_transpose': (0, 1, 3, 2) if is_moe else (1, 0, 2),
+            'squeeze': -1 if is_moe else 0,
+            'act_hidden_dim': 1 if is_moe else 0,
+            'scale_diffs_transpose': None if is_moe else (1, 0),
+        }
+
         was_transposed = False
         if reduction_axis == 0 or (reduction_axis == 2 and is_moe):
             # Weights
             # MoE: [num_experts, out_features, hidden_dimension] -> [num_experts, hidden_dimension, out_features]
             # Default: [out_features, in_features] -> [in_features, out_features]
-            weight = fns.transpose(weight, axes=(0, 2, 1)) if is_moe else fns.transpose(weight)
-            reduction_axis = 1
+            weight = fns.transpose(weight, axes=axes['weight_transpose'])
+            reduction_axis = 2
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
@@ -230,10 +238,7 @@ class ScaleEstimation:
             if zp is not None:
                 zp = zp.astype(scale.dtype)
 
-        squeeze_axes = 0
-        if is_moe:
-            squeeze_axes = -1
-        s = fns.unsqueeze(s, squeeze_axes)
+        s = fns.unsqueeze(s, axes['squeeze'])
         s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
 
         original_weight, _ = reshape_weight_for_grouped_quantization(original_weight, reduction_axis, group_size)
@@ -249,20 +254,12 @@ class ScaleEstimation:
         denum = fns.sum(importance, axis=2, keepdims=True)
         importance = importance / (denum + eps)
 
-        act_hidden_dim_axis = 0
-        if is_moe:
-            act_hidden_dim_axis = 1
-
-        X, _ = reshape_weight_for_grouped_quantization(X, act_hidden_dim_axis, group_size)
+        X, _ = reshape_weight_for_grouped_quantization(X, axes['act_hidden_dim'], group_size)
         best_diffs = None
         result_scale = None
 
-        weight_transpose_for_matmul_with_act = (1, 0, 2)
-        if is_moe:
-            weight_transpose_for_matmul_with_act = (0, 1, 3, 2)
-
-        fp_outs = fns.matmul(fns.transpose(original_weight, weight_transpose_for_matmul_with_act), X)
-        q_outs = fns.matmul(fns.transpose(q_weights, weight_transpose_for_matmul_with_act), X)
+        fp_outs = fns.matmul(fns.transpose(original_weight, axes['matmul_transpose']), X)
+        q_outs = fns.matmul(fns.transpose(q_weights, axes['matmul_transpose']), X)
 
         # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
         min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
@@ -301,10 +298,9 @@ class ScaleEstimation:
                 )
 
             q_weights_ = fns.zeros_like(original_weight) + out
-            q_outs = fns.matmul(fns.transpose(q_weights_, weight_transpose_for_matmul_with_act), X)
+            q_outs = fns.matmul(fns.transpose(q_weights_, axes['matmul_transpose']), X)
 
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            # ideal_scale_diffs = fns.transpose(ideal_scale_diffs, transpose_min_max_scale_diffs_dims)
             ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_moe)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
@@ -370,9 +366,8 @@ class ScaleEstimation:
                 )
             q_weights_ = fns.zeros_like(original_weight) + out
 
-            q_outs = fns.matmul(fns.transpose(q_weights_, weight_transpose_for_matmul_with_act), X)
+            q_outs = fns.matmul(fns.transpose(q_weights_, axes['matmul_transpose']), X)
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            # ideal_scale_diffs = fns.transpose(ideal_scale_diffs, transpose_min_max_scale_diffs_dims)
             ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_moe)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
@@ -396,17 +391,13 @@ class ScaleEstimation:
 
         if was_transposed:
             if config.group_size == -1:
-                result_scale = fns.transpose(result_scale, axes=(1, 0)) if is_moe else fns.transpose(result_scale)
-                if zp is not None:
-                    zp = fns.transpose(zp, axes=(1, 0)) if is_moe else fns.transpose(zp)
+                transpose_axes = None if is_moe else (0, 2, 1)
             else:
-                result_scale = (
-                    fns.transpose(result_scale, axes=(3, 1, 2, 0))
-                    if is_moe
-                    else fns.transpose(result_scale, axes=(2, 1, 0))
-                )
-                if zp is not None:
-                    zp = fns.transpose(zp, axes=(3, 1, 2, 0)) if is_moe else fns.transpose(zp, axes=(2, 1, 0))
+                transpose_axes = (0, 2, 3, 1) if is_moe else (1, 2, 0)
+            
+            result_scale = fns.transpose(result_scale, axes=transpose_axes)
+            if zp is not None:
+                zp = fns.transpose(zp, axes=transpose_axes)
 
         return result_scale, zp
 
