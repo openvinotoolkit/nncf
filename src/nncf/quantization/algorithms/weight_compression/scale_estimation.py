@@ -212,7 +212,7 @@ class ScaleEstimation:
             # MoE: [num_experts, out_features, hidden_dimension] -> [num_experts, hidden_dimension, out_features]
             # Default: [out_features, in_features] -> [in_features, out_features]
             weight = fns.transpose(weight, axes=axes['weight_transpose'])
-            reduction_axis = 2
+            reduction_axis = 1
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
