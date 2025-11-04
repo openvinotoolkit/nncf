@@ -689,8 +689,8 @@ class WeightCompression(Algorithm):
             else:
                 n_bits = data.compression_config.num_bits
                 gs = data.compression_config.group_size
-                gs_label = f"group size {gs}" if gs != -1 else "per channel"
-                label = f"{data.compression_config.mode} {gs_label}"
+                gs_label = f"group size {gs}" if gs != -1 else "per-channel"
+                label = f"{data.compression_config.mode}, {gs_label}"
             dtype_key = (label, n_bits)
 
             n_total, n_ratio_defining = dtype_vs_num_weights_map.get(dtype_key, ([], []))
@@ -711,8 +711,8 @@ class WeightCompression(Algorithm):
         num_params = len(all_params) + len(n_skipped_float)
 
         def _sort_dtype(dtype_label: str, dtype_bits: int):
-            if " group size " in dtype_label:
-                base, gs_str = dtype_label.rsplit(" group size ", 1)
+            if ", group size " in dtype_label:
+                base, gs_str = dtype_label.rsplit(", group size ", 1)
                 return -dtype_bits, base, int(gs_str)
             return -dtype_bits, dtype_label, -1
 
