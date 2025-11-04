@@ -196,18 +196,18 @@ class ScaleEstimation:
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
-        is_moe = len(weight.shape) == 3
+        is_3d_weight = len(weight.shape) == 3
 
         axes = {
-            'weight_transpose': (0, 2, 1) if is_moe else None,
-            'matmul_transpose': (0, 1, 3, 2) if is_moe else (1, 0, 2),
-            'squeeze': -1 if is_moe else 0,
-            'act_hidden_dim': 1 if is_moe else 0,
-            'scale_diffs_transpose': None if is_moe else (1, 0),
+            'weight_transpose': (0, 2, 1) if is_3d_weight else None,
+            'matmul_transpose': (0, 1, 3, 2) if is_3d_weight else (1, 0, 2),
+            'squeeze': -1 if is_3d_weight else 0,
+            'act_hidden_dim': 1 if is_3d_weight else 0,
+            'scale_diffs_transpose': None if is_3d_weight else (1, 0),
         }
 
         was_transposed = False
-        if reduction_axis == 0 or (reduction_axis == 2 and is_moe):
+        if reduction_axis == 0 or (reduction_axis == 2 and is_3d_weight):
             # Weights
             # MoE: [num_experts, out_features, hidden_dimension] -> [num_experts, hidden_dimension, out_features]
             # Default: [out_features, in_features] -> [in_features, out_features]
@@ -258,12 +258,12 @@ class ScaleEstimation:
         # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
         min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
 
-        def maybe_reshape_scale_diffs(scale_diffs, is_moe):
-            if not is_moe:
+        def maybe_reshape_scale_diffs(scale_diffs, is_3d_weight):
+            if not is_3d_weight:
                 scale_diffs = fns.transpose(scale_diffs, (1, 0))
             return scale_diffs
 
-        min_max_scale_diffs = maybe_reshape_scale_diffs(min_max_scale_diffs, is_moe)
+        min_max_scale_diffs = maybe_reshape_scale_diffs(min_max_scale_diffs, is_3d_weight)
 
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
@@ -295,7 +295,7 @@ class ScaleEstimation:
             q_outs = fns.matmul(fns.transpose(q_weights_, axes['matmul_transpose']), X)
 
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_moe)
+            ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_3d_weight)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
@@ -362,7 +362,7 @@ class ScaleEstimation:
 
             q_outs = fns.matmul(fns.transpose(q_weights_, axes['matmul_transpose']), X)
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_moe)
+            ideal_scale_diffs = maybe_reshape_scale_diffs(ideal_scale_diffs, is_3d_weight)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
@@ -385,9 +385,9 @@ class ScaleEstimation:
 
         if was_transposed:
             if config.group_size == -1:
-                transpose_axes = (0, 2, 1) if is_moe else None
+                transpose_axes = (0, 2, 1) if is_3d_weight else None
             else:
-                transpose_axes = (0, 3, 1, 2) if is_moe else (1, 2, 0)
+                transpose_axes = (0, 3, 1, 2) if is_3d_weight else (1, 2, 0)
             
             result_scale = fns.transpose(result_scale, axes=transpose_axes)
             if zp is not None:
