@@ -199,11 +199,12 @@ class ScaleEstimation:
         is_moe = len(weight.shape) == 3
 
         was_transposed = False
-        if reduction_axis == 0 or (reduction_axes == 1 and is_moe):
-            # MoE: [num_experts, out_features, hidden_dimension] → [num_experts, hidden_dimension, out_features]
-            # Standard: [out_features, in_features] → [in_features, out_features]
+        if reduction_axis == 0 or (reduction_axis == 2 and is_moe):
+            # Weights
+            # MoE: [num_experts, out_features, hidden_dimension] -> [num_experts, hidden_dimension, out_features]
+            # Default: [out_features, in_features] -> [in_features, out_features]
             weight = fns.transpose(weight, axes=(0, 2, 1)) if is_moe else fns.transpose(weight)
-            reduction_axis = 2 if is_moe else 1
+            reduction_axis = 1
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
