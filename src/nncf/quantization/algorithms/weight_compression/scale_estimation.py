@@ -391,9 +391,9 @@ class ScaleEstimation:
 
         if was_transposed:
             if config.group_size == -1:
-                transpose_axes = None if is_moe else (0, 2, 1)
+                transpose_axes = (0, 2, 1) if is_moe else None
             else:
-                transpose_axes = (0, 2, 3, 1) if is_moe else (1, 2, 0)
+                transpose_axes = (0, 3, 1, 2) if is_moe else (1, 2, 0)
             
             result_scale = fns.transpose(result_scale, axes=transpose_axes)
             if zp is not None:

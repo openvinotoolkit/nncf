@@ -529,8 +529,6 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.fx.GraphModule, input: torch.Tensor) -> Tensor:
-        for node in compressed_model.graph.nodes:
-            print(node.name)
         model_graph = compressed_model.graph
         weight_node = get_graph_node_by_name(model_graph, "linear_weight_updated_constant0")
         decompression_node = get_graph_node_by_name(model_graph, "asymmetric_weights_decompressor_linear_weight_0")
