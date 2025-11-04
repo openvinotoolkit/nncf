@@ -398,7 +398,7 @@ class AdvancedCompressionParameters:
     :type lora_adapter_rank: int
     :param group_size_fallback_mode: Specifies how to handle nodes that do not support the given group size.
     :type group_size_fallback_mode: GroupSizeFallbackMode
-    :param min_adjusted_group_size: Minimum group size for adjustable group size searching. Defaults to 16. The reason
+    :param min_adjusted_group_size: Minimum group size for adjustable group size searching. Defaults to 32. The reason
         behind this argument is to avoid too small group size values, which may lead to performance issues.
     :type min_adjusted_group_size: int
     :param awq_params: Advanced parameters for AWQ algorithm.
@@ -418,8 +418,8 @@ class AdvancedCompressionParameters:
 
     statistics_path: Optional[str] = None
     lora_adapter_rank: int = 256
-    group_size_fallback_mode: GroupSizeFallbackMode = GroupSizeFallbackMode.IGNORE
-    min_adjusted_group_size: int = 16
+    group_size_fallback_mode: GroupSizeFallbackMode = GroupSizeFallbackMode.ERROR
+    min_adjusted_group_size: int = 32
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
     scale_estimation_params: AdvancedScaleEstimationParameters = field(
         default_factory=AdvancedScaleEstimationParameters
