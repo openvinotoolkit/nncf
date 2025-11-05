@@ -342,6 +342,8 @@ class KMeansWeighted:
             centroid_idxs = round_to_left(self.centroids, self.hist[0])
             for i in range(self.n_clusters):
                 idxs = fns.nonzero(centroid_idxs == i)
+                if len(idxs[0]) == 0:
+                    continue
                 self.centroids[i] = fns.sum(self.hist[1][idxs]).item() / fns.sum(self.hist[2][idxs]).item()
 
             for idx in fixed:
