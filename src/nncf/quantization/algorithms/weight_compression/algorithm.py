@@ -1133,7 +1133,7 @@ class WeightCompression(Algorithm):
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
                 weight_dims = self._get_weight_dim_from_act_node(graph, node, output_port_id)
-                # by Default, Reduce activations across all but the last dimension. The last dimension is
+                # by default, reduce activations across all but the last dimension. The last dimension is
                 # assumed to be the hidden size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
                 reduction_axes = tuple(range(n_dims - 1))

@@ -30,29 +30,31 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
     X = fns.stack(
         stats.mean_values
     )  # [SampleSize, HiddenDim] for 2-D or [SampleSize, No. of Experts, HiddenDim] for 3-D
-    n_dim = len(X.shape)
-    if n_dim == 2:
-        X_full = fns.transpose(X)  # [HiddenDim, SampleSize]
-    if n_dim == 3:
-        X_full = fns.transpose(X, axes=(1, 2, 0))  # [No. of Experts, HiddenDim, SampleSize]
 
-    # prevent high memory and time consumption
-    subset_axis = 1 if n_dim == 2 else 2  # axis for subset_size dimension
-    if X_full.shape[subset_axis] > subset_size:
-        # activations were reduced across all but the last dimension
+    # Move SampleSize to the last axis: [HiddenDim, SampleSize] or [No. of Experts, HiddenDim, SampleSize]
+    # General approach: move axis 0 to the end
+    axes = list(range(1, len(X.shape))) + [0]
+    X_full = fns.transpose(X, axes=axes)
+
+    # The sample dimension is always the last axis after transpose
+    sample_axis = -1
+
+    # Prevent high memory and time consumption by sampling
+    if X_full.shape[sample_axis] > subset_size:
+        # Activations were reduced across all but the last dimension
         lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
-        step = X_full.shape[subset_axis] // subset_size
+        step = X_full.shape[sample_axis] // subset_size
         sorted_idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-        idxs = [idx for idx in sorted_idxs if idx < X_full.shape[subset_axis]][:subset_size]
+        idxs = [idx for idx in sorted_idxs if idx < X_full.shape[sample_axis]][:subset_size]
 
-        if n_dim == 2:
-            X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]
-        else:
-            X = X_full[:, :, idxs]  # [No. of Experts, HiddenDim, ~SubsetSize]
+        # Create index slices for all dimensions except the last one
+        # This works for both 2D and 3D (and theoretically any dimensionality)
+        index_slices = [slice(None)] * (len(X_full.shape) - 1) + [idxs]
+        X = X_full[tuple(index_slices)]
     else:
         X = X_full
-    reduction_axes = 1
-    if n_dim == 3:
-        reduction_axes = 2
-    s = fns.max(fns.abs(X_full), axis=reduction_axes)  # [HiddenDim] or [No. of Experts, HiddenDim]
+
+    # Compute max magnitude along the sample axis (last axis)
+    # Result: [HiddenDim] or [No. of Experts, HiddenDim]
+    s = fns.max(fns.abs(X_full), axis=sample_axis)
     return s, X
