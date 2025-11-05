@@ -1,7 +1,9 @@
-datasets
 whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.3.0.0#subdirectory=tools/who_what_benchmark
-numpy>=1.23.5,<2
+numpy==1.26.4
 openvino==2025.3.0
-optimum-intel>=1.22.0
-transformers>=4.48.0
+optimum-intel==1.26.0
+optimum-onnx==0.0.3
+optimum==2.0.0
+transformers==4.53.0
 onnx==1.17.0
+torch==2.9.0

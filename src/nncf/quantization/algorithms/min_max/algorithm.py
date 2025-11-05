@@ -570,14 +570,12 @@ class MinMaxQuantization(Algorithm):
                 else:
                     quantile = 1 - params.quantile_outlier_prob
                 reducer = self._backend_entity.reducer_map[statistic_type](
-                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                    axes=reduction_axes, inplace=inplace, quantile=[quantile]
                 )
             else:
                 if use_abs_max and statistic_type == StatisticsType.MAX:
                     statistic_type = StatisticsType.ABS_MAX
-                reducer = self._backend_entity.reducer_map[statistic_type](
-                    reduction_axes=reduction_axes, inplace=inplace
-                )
+                reducer = self._backend_entity.reducer_map[statistic_type](axes=reduction_axes, inplace=inplace)
 
             kwargs = {
                 "num_samples": num_samples,

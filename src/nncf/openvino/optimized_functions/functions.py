@@ -107,17 +107,17 @@ def do_float_quantization(
     precomputed_scale: Optional[Tensor] = None,
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
-    Computes quantization scale if not provided, and performs corresponding nf4 weight quantization.
-    For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
-    TODO(nikita-savelyevv): add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
+    Computes quantization scale if not provided, and performs corresponding float weight quantization.
+    NF4 format uses 16 levels in [-1, 1] range, while MXFP4 uses 16 levels in [-6, 6].
 
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for MXFP4 and MXFP8_E4M3 normalized) weight tensor and corresponding scale tensor.
+    :return: Returns quantized (for MXFP8_E4M3, FP4 and FP8_E4M3 normalized)
+        weight tensor and corresponding scale tensor.
     """
-    assert config.mode == CompressWeightsMode.NF4
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]
 
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
@@ -129,7 +129,8 @@ def do_float_quantization(
     if weight.backend == TensorBackend.ov:
         # Return ov tensors in target precision to seamlessly insert them into openvino model later
         ov_model_params.return_ov_tensors = True
-        ov_model_params.output_dtypes.update({"compressed_weight": TensorDataType.nf4})
+        weight_dtype = TensorDataType.f4e2m1 if config.mode == CompressWeightsMode.MXFP4 else TensorDataType.nf4
+        ov_model_params.output_dtypes.update({"compressed_weight": weight_dtype})
 
     model = get_float_quantization_model(
         ov_model_params,
@@ -234,7 +235,7 @@ def float_quantize_dequantize_weight(
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
-    assert config.mode == CompressWeightsMode.NF4
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:

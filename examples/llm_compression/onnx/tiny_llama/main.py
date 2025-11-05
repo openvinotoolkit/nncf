@@ -27,6 +27,11 @@ ROOT = Path(__file__).parent.resolve()
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 OUTPUT_DIR = ROOT / "tinyllama_compressed"
 
+# TODO(AlexanderDokuchaev): WA for https://github.com/huggingface/optimum-intel/issues/1498
+from optimum.exporters.tasks import TasksManager  # noqa: E402
+
+TasksManager._TRANSFORMERS_TASKS_TO_MODEL_LOADERS["image-text-to-text"] = "AutoModelForImageTextToText"
+
 
 def main():
     # Export the pretrained model in ONNX format. The OUTPUT_DIR directory

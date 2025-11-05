@@ -213,7 +213,7 @@ class track(Generic[ProgressType]):
             )
         )
 
-        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0)  # type: ignore[arg-type]
+        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0) or self.total == 0  # type: ignore[arg-type]
 
         progress_cls = Progress if weights is None else WeightedProgress
         self.progress = progress_cls(

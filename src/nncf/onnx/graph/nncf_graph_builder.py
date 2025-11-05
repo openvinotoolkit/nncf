@@ -26,6 +26,7 @@ from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.onnx.graph.metatypes.groups import POSSIBLE_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_metatype
@@ -186,6 +187,7 @@ def _get_bias_attr(
     node: onnx.NodeProto,
     model: onnx.ModelProto,
     parents_node_mapping: dict[str, onnx.NodeProto],
+    children_node_mapping: dict[str, onnx.NodeProto],
 ) -> dict[str, str]:
     """
     Returns bias tensor attributes.
@@ -193,10 +195,46 @@ def _get_bias_attr(
     :param node: ONNX node.
     :param model: ONNX model.
     :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
+    :param children_node_mapping: mapping from edge name to nodes which consume this edge as an input.
     :return: Bias tensor attributes.
     """
-    bias_attrs = {}
     metatype = get_metatype(model, node)
+
+    if metatype == ONNXMatMulMetatype:
+        weight_port_ids = _get_weight_port_ids(node, model, parents_node_mapping)
+
+        if not weight_port_ids:
+            # `node` is a MatMul without weights, so return empty attributes
+            return {}
+
+        # Retrieve all nodes that consume the output of the MatMul operation.
+        # The MatMul operation has only one output.
+        y = node.output[0]
+        consumers = children_node_mapping[y]
+
+        if len(consumers) != 1 or consumers[0].op_type != "Add":
+            return {}
+
+        # Here, we are certain that after a `MatMul` operation, there is only
+        # the `Add` operation.
+        add_node = consumers[0]
+
+        # Find the input of `add_node` that is not equal to `y`.
+        tensor_name = None
+        port_id = None
+        for i, name in enumerate(add_node.input):
+            if name != y:
+                tensor_name = name
+                port_id = i
+                break
+
+        # Ensure that `tensor_name` is the output of a `Constant` node or an initializer.
+        initializer = {x.name: x for x in model.graph.initializer}
+        if tensor_name in initializer or parents_node_mapping[tensor_name].op_type == "Constant":
+            return {"node": add_node.name, "name": tensor_name, "port_id": port_id}
+        return {}
+
+    bias_attrs = {}
     if _is_node_with_bias(node, model):
         bias_tensor_port_id = get_bias_tensor_port_id(metatype)
         bias_edge_name = get_tensor_edge_name(model, node, bias_tensor_port_id, parents_node_mapping)
@@ -348,6 +386,7 @@ class GraphConverter:
         """
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
+
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
         parents_node_mapping = get_parents_node_mapping(onnx_model)
@@ -358,7 +397,8 @@ class GraphConverter:
             is_shared = None
             weight_attrs = {}
             node_attrs = _get_node_attrs(node, onnx_model)
-            bias_attrs = _get_bias_attr(node, onnx_model, parents_node_mapping)
+            bias_attrs = _get_bias_attr(node, onnx_model, parents_node_mapping, children_node_mapping)
+
             if weight_port_ids:  # If node has weight
                 weight_edge_names = []
                 for weight_port_id in weight_port_ids:

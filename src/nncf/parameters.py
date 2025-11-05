@@ -92,6 +92,8 @@ class CompressWeightsMode(StrEnum):
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     :param MXFP4: MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
     :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
+    :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
+    :param FP4: A FP4 format with E2M1 values sharing group-level fp16 scale.
     :param CODEBOOK: Codebook (LUT) quantization format.
     :param CB4_F8E4M3: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
@@ -105,6 +107,8 @@ class CompressWeightsMode(StrEnum):
     INT8 = "int8"  # Deprecated mode
     MXFP4 = "mxfp4"
     MXFP8_E4M3 = "mxfp8_e4m3"
+    FP8_E4M3 = "fp8_e4m3"
+    FP4 = "fp4"
     CODEBOOK = "codebook"
 
 
@@ -217,3 +221,4 @@ class QuantizationMode(StrEnum):
 class PruneMode(StrEnum):
     UNSTRUCTURED_MAGNITUDE_LOCAL = auto()
     UNSTRUCTURED_MAGNITUDE_GLOBAL = auto()
+    UNSTRUCTURED_REGULARIZATION_BASED = auto()

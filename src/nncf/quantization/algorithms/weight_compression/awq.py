@@ -365,15 +365,7 @@ class AWQ(Algorithm):
             if target_node.node_name in awq_data:
                 continue
 
-            nncf_node = graph.get_node_by_key(match[0])
-
-            if self._backend_entity.is_node_with_weights(nncf_node, graph):  # pattern MatMul->Multiply->MatMul
-                merge_node_names = []
-                for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
-                    merge_node_names.append(weight_op_friendly_name)
-                merge_node = all_weight_params[name_mapping[merge_node_names[-1]]].node_with_weight
-            else:  # pattern Act->MatMul or Act->Multiply->MatMul
-                merge_node = nncf_node
+            merge_node = graph.get_node_by_key(match[0])
 
             awq_data[target_node.node_name] = AWQCompressionInfo(weight_params, target_node, merge_node)
         return awq_data

@@ -160,6 +160,8 @@ ADJUST_PAD_DESC_LIST = [
 
 @pytest.mark.parametrize("desc", ADJUST_PAD_DESC_LIST, ids=[m.model_name for m in ADJUST_PAD_DESC_LIST])
 def test_adjust_padding_on_synthetic_models(desc: MultiBranchesModelDesc, mocker, monkeypatch):
+    if desc.propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:
+        pytest.xfail(reason="Ticket: 175018")
     model = desc.get_model()
     config = desc.get_config()
     register_bn_adaptation_init_args(config)

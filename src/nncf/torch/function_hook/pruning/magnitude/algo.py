@@ -15,7 +15,7 @@ from torch import nn
 import nncf
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.hook_storage import decode_hook_name
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.model_graph_manager import get_const_data_by_name
@@ -114,7 +114,7 @@ def update_pruning_ratio(
             new_mask = (abs_data > threshold).to(dtype=torch.bool)
 
             # Set new mask
-            hook.binary_mask = new_mask
+            hook.binary_mask.copy_(new_mask)
 
     elif mode == PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL:
         # Get threshold value for all normalized weights
@@ -135,7 +135,7 @@ def update_pruning_ratio(
             new_mask = (norm_data > threshold_val).to(dtype=torch.bool)
 
             # Set new mask
-            hook.binary_mask = new_mask
+            hook.binary_mask.copy_(new_mask)
     else:
         msg = f"Unsupported pruning mode: {mode}"
         raise nncf.InternalError(msg)

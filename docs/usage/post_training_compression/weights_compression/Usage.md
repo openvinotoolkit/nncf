@@ -17,7 +17,7 @@
 
 The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights for Linear, Convolution and Embedding layers.
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch, ONNX and Torch FX are also supported.
 
 ### Supported modes
 
@@ -47,6 +47,8 @@ NNCF can automatically distribute precision assignments based on quantization se
 | CB4_F8E4M3       | E4M3         | FP16       | Per-channel / Group-wise | A fixed lookup table with 16 E4M3 values based on NF4 values |
 | MXFP4            | E2M1         | E8M0       | Group-wise (32)          | [MX-compliant FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 | MXFP8_E4M3       | E4M3         | E8M0       | Group-wise (32)          | [MX-compliant FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+|   FP8_E4M3       | E4M3         | FP16       | Per-channel / Group-wise | [FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+|   FP4       | E2M1         | FP16       | Per-channel / Group-wise | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 
 **Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
 
@@ -694,7 +696,7 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 
 ### Limitations
 
-- The algorithm is supported for OpenVINO, PyTorch and Torch FX models.
+- The algorithm is supported for OpenVINO, PyTorch, ONNX and Torch FX models.
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.

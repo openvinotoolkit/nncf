@@ -7,12 +7,13 @@
   - Signed and unsigned
   - Per tensor/per channel
   - Each backend support export to the OpenVINO format
-- [Weights compression](./usage/post_training_compression/weights_compression/Usage.md) (OpenVINO, PyTorch, TorchFX)
+- [Weights compression](./usage/post_training_compression/weights_compression/Usage.md) (OpenVINO, PyTorch, TorchFX, ONNX)
   - Symmetric 8 bit compression mode
   - Symmetric and asymmetric 4 bit compression mode
   - NF4 compression mode
   - Arbitrary look-up table (CODEBOOK) or predefined lookup table based on NF4 (CB4_F8E4M3)
   - MX-compliant types - MXFP4 and MXFP8_E4M3
+  - FP types - FP8_E4M3 and FP4
   - Mixed precision weights compression
   - Grouped weights compression
 

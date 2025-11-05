@@ -34,6 +34,31 @@ class ModelBuilder:
         self._outputs = []
         self._graph_name = "onnx-graph"
 
+    def add_shape(self, data: str, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Shape_{i}_output" if output is None else output
+        self._nodes.append(onnx.helper.make_node(op_type="Shape", inputs=[data], outputs=[output], name=f"Shape_{i}"))
+        return output
+
+    def add_gather(self, data: str, indices: str, axis: int = 0, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Gather_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(
+                op_type="Gather", inputs=[data, indices], outputs=[output], axis=axis, name=f"Gather_{i}"
+            )
+        )
+        return output
+
+    def add_reshape(self, data: str, shape: str, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Reshape_{i}_output" if output is None else output
+        self._nodes.append(onnx.helper.make_node("Reshape", inputs=[data, shape], outputs=[output]))
+        return output
+
     def add_input(self, name: str, shape: tuple[int]) -> str:
         self._inputs.append(onnx.helper.make_tensor_value_info(name, onnx.TensorProto.FLOAT, shape))
         return name
@@ -62,6 +87,17 @@ class ModelBuilder:
             onnx.helper.make_node(op_type="MatMul", inputs=[input, w_name], outputs=[output], name=f"MatMul_{i}")
         )
         return output
+
+    def add_initializer(self, data: np.ndarray) -> str:
+        i = len(self._nodes)
+
+        name = f"Initializer_{i}"
+        tensor_dtype = onnx.helper.np_dtype_to_tensor_dtype(data.dtype)
+        initializer = onnx.helper.make_tensor(
+            name=name, data_type=tensor_dtype, dims=data.shape, vals=data.tobytes(), raw=True
+        )
+        self._initializers.append(initializer)
+        return name
 
     def add_gemm(
         self,
@@ -119,6 +155,36 @@ class ModelBuilder:
         )
         return output
 
+    def add_add(self, input_a: str, input_b: str, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Add_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Add", inputs=[input_a, input_b], outputs=[output], name=f"Add_{i}")
+        )
+        return output
+
+    def add_mul_const(
+        self, input: str, shape: tuple[int], output: Optional[str] = None, data: Optional[np.ndarray] = None
+    ) -> str:
+        i = len(self._nodes)
+
+        w_name = f"W_{i}"
+        if data is None:
+            w_values = np.random.rand(*shape).astype(np.float32)
+        else:
+            w_values = data
+        w_initializer = onnx.helper.make_tensor(
+            name=w_name, data_type=onnx.TensorProto.FLOAT, dims=shape, vals=w_values.tobytes(), raw=True
+        )
+        self._initializers.append(w_initializer)
+
+        output = f"Mul_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Mul", inputs=[input, w_name], outputs=[output], name=f"Mul_{i}")
+        )
+        return output
+
     def add_relu(self, input: str, output: Optional[str] = None) -> str:
         i = len(self._nodes)
 
@@ -133,10 +199,33 @@ class ModelBuilder:
         self._nodes.append(onnx.helper.make_node(op_type="Selu", inputs=[input], outputs=[output], name=f"Selu_{i}"))
         return output
 
+    def add_constant(self, data: np.ndarray, output: Optional[str] = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Constant_{i}_output" if output is None else output
+
+        tensor_dtype = onnx.helper.np_dtype_to_tensor_dtype(data.dtype)
+
+        self._nodes.append(
+            onnx.helper.make_node(
+                "Constant",
+                inputs=[],
+                outputs=[output],
+                value=onnx.helper.make_tensor(
+                    name=f"Constant_{i}",
+                    data_type=tensor_dtype,
+                    dims=data.shape,
+                    vals=data.flatten(),
+                ),
+            )
+        )
+
+        return output
+
     def add_unsqueeze(self, input: str, axes: tuple[int, ...], output: Optional[str] = None) -> str:
         i = len(self._nodes)
 
-        axes_name = "Unsqueeze_{i}_axes"
+        axes_name = f"Unsqueeze_{i}_axes"
         axes_data = np.array(axes, dtype=np.int64)
         axes_initializer = onnx.helper.make_tensor(
             name=axes_name,

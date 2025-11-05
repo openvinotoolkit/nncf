@@ -57,6 +57,7 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.quantization.ignored_patterns import create_rope
+from nncf.torch.quantization.ignored_patterns import create_sam_pe
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -180,6 +181,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.NF4,
                 CompressWeightsMode.MXFP4,
                 CompressWeightsMode.MXFP8_E4M3,
+                CompressWeightsMode.FP8_E4M3,
+                CompressWeightsMode.FP4,
             ]:
                 msg = f"{compression_config.mode.value} is not supported."
                 raise nncf.ParameterNotSupportedError(msg)
@@ -255,7 +258,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompressionAlgoBackend):

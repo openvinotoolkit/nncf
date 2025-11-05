@@ -43,6 +43,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.optimized_functions import clear_ov_model_cache
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.quantization.ignored_patterns import create_rope
+from nncf.openvino.quantization.ignored_patterns import create_sam_pe
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
@@ -231,6 +232,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         elif compression_config.mode == CompressWeightsMode.MXFP8_E4M3:
             compression_dtype = ov.Type.f8e4m3
             scale_dtype = ov.Type.f8e8m0
+        elif compression_config.mode == CompressWeightsMode.FP8_E4M3:
+            compression_dtype = ov.Type.f8e4m3
+        elif compression_config.mode == CompressWeightsMode.FP4:
+            compression_dtype = ov.Type.f4e2m1
         elif compression_config.mode == CompressWeightsMode.INT4_SYM:
             compression_dtype = ov.Type.i4
         elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
@@ -390,7 +395,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):

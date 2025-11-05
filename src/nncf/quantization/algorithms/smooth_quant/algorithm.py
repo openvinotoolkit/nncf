@@ -21,13 +21,16 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -35,6 +38,7 @@ from nncf.tensor import functions as fns
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 STATISTIC_BRANCH_KEY = "abs_max"
+SHAPE_BRANCH_KEY = "shape"
 ALPHA_MAP = {"convolution": 0.05, "matmul": 0.95}
 
 
@@ -98,6 +102,10 @@ class SmoothQuant(Algorithm):
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
 
+        # Only the OpenVINO backend supports in-place statistics, so we should set this variable here.
+        if model_backend != BackendType.OPENVINO:
+            self._inplace_statistics = False
+
     def apply(
         self,
         model: TModel,
@@ -108,18 +116,19 @@ class SmoothQuant(Algorithm):
         self._set_backend_entity(model)
         alpha_map = self._get_alpha_map()
 
-        nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
-        model_transformer = ModelTransformerFactory.create(model)
+        nodes = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
+        nodes = self._retrieve_shape(nodes, statistic_points)
+        node_groups = self._group_nodes_by_source(nodes, graph)
+
         transformation_layout = TransformationLayout()
-
-        node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
-
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
             best_scale = None
             best_ratio = 0.0
             empty_statistic = False
+
+            source_node, input_port_id, source_output_port_id, shape = group_id
+
             for node_to_smooth in nodes:
-                source_node, input_port_id, source_output_port_id, _ = group_id
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
@@ -168,9 +177,7 @@ class SmoothQuant(Algorithm):
                 )
                 transformation_layout.register(weight_update_command)
 
-            activations_by_output_id = {e.output_port_id: e for e in graph.get_output_edges(source_node)}
-            activations_shape = activations_by_output_id[source_output_port_id].tensor_shape
-            activation_scale = self._calculate_activation_scale(best_scale, activations_shape, nodes, graph)
+            activation_scale = self._calculate_activation_scale(best_scale, shape, nodes, graph)
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
             scale_insertion_command = self._backend_entity.scale_insertion_command(
@@ -178,6 +185,7 @@ class SmoothQuant(Algorithm):
             )
             transformation_layout.register(scale_insertion_command)
 
+        model_transformer = ModelTransformerFactory.create(model)
         transformed_model = model_transformer.transform(transformation_layout)
         return transformed_model
 
@@ -204,26 +212,55 @@ class SmoothQuant(Algorithm):
         ratio = scales.min() / (scales.max() + eps)
         return scales, ratio
 
-    def _group_nodes_by_source(self, nodes_to_smooth: list[dict], nncf_graph: NNCFGraph) -> dict[tuple, list]:
+    def _group_nodes_by_source(
+        self, nodes_to_smooth: list[tuple[NNCFNode, int, tuple[int, ...]]], nncf_graph: NNCFGraph
+    ) -> dict[tuple, list]:
         """
         Groups nodes that will be smoothed by source (parent node).
 
-        :param nodes_to_smooth: List of the nodes that will be smoothed.
+        :param nodes_to_smooth: A list of tuples where each tuple consists of a node, an input port, and the
+            shape of the tensor associated with that node and input port.
         :param nncf_graph: NNCFGraph instance.
         :return: Dictionary with the source info as key and grouped nodes as value.
         """
         groups = defaultdict(list)
-        for node_data in nodes_to_smooth:
-            node_to_smooth = node_data["node_to_smooth"]
-            input_act_port = node_data["input_act_port"]
+        for node_to_smooth, input_act_port, shape in nodes_to_smooth:
             source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
             edge = nncf_graph.get_edge(source_node, node_to_smooth)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
-            group_id = (source_node, input_act_port, edge.output_port_id, hash(str(edge.tensor_shape)))
+            group_id = (source_node, input_act_port, edge.output_port_id, shape)
             groups[group_id].append(node_to_smooth)
 
         return groups
+
+    def _retrieve_shape(
+        self, nodes: list[tuple[NNCFNode, int]], statistic_points: StatisticPointsContainer
+    ) -> list[tuple[NNCFNode, int, tuple[int, ...]]]:
+        """
+        Retrieves the shapes of tensors associated with specific nodes and input ports
+        from the given statistic points container.
+
+        :param nodes: A list of tuples, each containing a node and its corresponding input port index.
+        :param statistic_points: Container holding statistics, used to retrieve tensor shapes.
+        :return: A list of tuples where each tuple consists of a node, an input port, and the
+            shape of the tensor associated with that node and input port. If shape information is
+            not available, an empty tuple is returned for the shape.
+        """
+        items = []
+        for node, input_port in nodes:
+            for tensor_collector in statistic_points.get_algo_statistics_for_node(
+                node.node_name,
+                self._backend_entity.get_filter_fn_for_statistics(input_port, self._algorithm_key),
+                self._algorithm_key,
+            ):
+                stats = tensor_collector.get_statistics()
+                shape = stats[SHAPE_BRANCH_KEY]
+                shape = tuple(shape.tolist())
+
+            items.append((node, input_port, shape))
+
+        return items
 
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node_name: str, act_port: int
@@ -247,42 +284,76 @@ class SmoothQuant(Algorithm):
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        statistic_container = StatisticPointsContainer()
-
         self._set_backend_entity(model)
-        alpha_map = self._get_alpha_map()
 
+        alpha_map = self._get_alpha_map()
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
 
-        for node_data in nodes_to_smooth_data:
-            node_to_smooth = node_data["node_to_smooth"]
+        container = StatisticPointsContainer()
+        for node_to_smooth, input_act_port in nodes_to_smooth_data:
             target_point = self._backend_entity.target_point(
                 target_type=self._backend_entity.pre_layer_target_type(),
                 target_node_name=node_to_smooth.node_name,
-                port_id=node_data["input_act_port"],
+                port_id=input_act_port,
             )
-            input_reduction_axes = self._calculate_input_reduction_axes(
-                graph, node_to_smooth, node_data["input_act_port"]
-            )
-            stat_collector = self._backend_entity.get_abs_max_channel_collector(
-                self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
-            )
-            statistic_container.add_statistic_point(
-                StatisticPoint(
-                    target_point=target_point,
-                    tensor_collector=stat_collector,
-                    algorithm=self._algorithm_key,
-                )
-            )
-        return statistic_container
 
-    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]) -> list[dict]:
+            # NOTE:The OpenVINO backend performs in-place statistic calculations.
+            # To insert reduction operations into the model graph, the reduction axes must be known before inference.
+            # However, when using `keep_axes`, the reduction axes are determined during statistics collection.
+            # Therefore, `keep_axes` and `inplace` cannot be used together with the OpenVINO backend.
+            # For the ONNX backend, we can't calculate reduction axes before inference because the tensor shape
+            # (actually, only the number of dimensions (ndim) is required) is unknown for some operations.
+            axes_mode, axes = self._backend_entity.get_tensor_collector_axes(graph, node_to_smooth, input_act_port)
+
+            collector = self._create_tensor_collector(self._subset_size, axes, axes_mode)
+
+            container.add_statistic_point(StatisticPoint(target_point, collector, self._algorithm_key))
+
+        return container
+
+    def _create_tensor_collector(
+        self,
+        num_samples: int,
+        axes: Optional[tuple[int, ...]],
+        axes_mode: AxesMode,
+    ) -> TensorCollector:
+        """
+        Initializes and returns a configured tensor collector for the `SmoothQuant` algorithm.
+
+        :param num_samples: Maximum number of samples to collect for the aggregator.
+        :param axes: The axes specified for the reduction operation.
+        :param axes_mode: Defines how the specified axes are interpreted:
+            - `AxesMode.REDUCTION`: the given axes will be reduced.
+            - `AxesMode.KEEP`: all axes except the specified ones will be reduced.
+        :return: A tensor collector configured with the specified reduction and aggregation logic.
+        """
+        collector = TensorCollector()
+
+        abs_max_reducer_cls = self._backend_entity.get_abs_max_reducer_cls()
+        collector.register_statistic_branch(
+            STATISTIC_BRANCH_KEY,
+            abs_max_reducer_cls(axes, axes_mode, self._inplace_statistics),
+            MaxAggregator(num_samples=num_samples),
+        )
+        shape_reducer_cls = self._backend_entity.get_shape_reducer_cls()
+        collector.register_statistic_branch(
+            SHAPE_BRANCH_KEY,
+            shape_reducer_cls(self._inplace_statistics),
+            NoopAggregator(num_samples=1, return_first=True),
+        )
+
+        return collector
+
+    def _get_nodes_to_smooth_data(
+        self, nncf_graph: NNCFGraph, node_metatypes: list[OperatorMetatype]
+    ) -> list[tuple[NNCFNode, int]]:
         """
         Collects layers whose activations will be smoothed.
 
         :param nncf_graph: NNCFGraph instance.
         :param node_metatypes: Metatypes for nodes to search for.
-        :return: List with the data for each layer.
+        :return: A list of pairs, where each pair consists of a node and its corresponding
+            input activation port.
         """
         nodes_with_weights = nncf_graph.get_nodes_by_metatypes(node_metatypes)
         nodes_to_smooth_data = []
@@ -306,12 +377,8 @@ class SmoothQuant(Algorithm):
             if self._backend_entity.is_node_with_shared_weight(node_with_weight, nncf_graph):
                 continue
 
-            nodes_to_smooth_data.append(
-                {
-                    "node_to_smooth": node_with_weight,
-                    "input_act_port": activation_port_id,
-                }
-            )
+            nodes_to_smooth_data.append((node_with_weight, activation_port_id))
+
         return nodes_to_smooth_data
 
     def _calculate_activation_scale(
@@ -361,22 +428,6 @@ class SmoothQuant(Algorithm):
                 weight_scale = scale_value.reshape(reshape_shape)
             return weight_scale
         return scale_value
-
-    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> tuple[int]:
-        """
-        Returns reduction axes for specified input.
-
-        :param nncf_graph: NNCFGraph instance.
-        :param node: NNCFNode to check.
-        :param input_port: Specified input port id.
-        :return: Calculated reduction axes.
-        """
-        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
-        reduction_axes = tuple([])
-        if len(shape) > 1:
-            channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
-            reduction_axes = get_reduction_axes((channel_axis,), shape)
-        return reduction_axes
 
     def _process_weight_statistics(self, node: NNCFNode, weights: Tensor) -> Tensor:
         """
