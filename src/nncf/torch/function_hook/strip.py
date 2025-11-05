@@ -163,7 +163,7 @@ def apply_compression_in_place(model: TModel) -> TModel:
 
     hooks_to_delete = []
     for hook_name, hook_module in hook_storage.named_hooks():
-        if not isinstance(hook_name, (SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor)):
+        if not isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor)):
             continue
         hook_module.eval()
 
