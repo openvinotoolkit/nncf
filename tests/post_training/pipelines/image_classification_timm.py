@@ -11,6 +11,7 @@
 
 import numpy as np
 import onnx
+import onnxoptimizer
 import openvino as ov
 import timm
 import torch
@@ -45,17 +46,22 @@ class ImageClassificationTimm(ImageClassificationBase):
             onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             additional_kwargs = {}
             if self.batch_size > 1:
-                additional_kwargs["input_names"] = ["image"]
-                additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
+                batch = torch.export.Dim("batch")
+                additional_kwargs["dynamic_shapes"] = ({0: batch},)
+
             torch.onnx.export(
                 timm_model,
                 self.dummy_tensor,
                 onnx_path,
                 export_params=True,
                 opset_version=13,
+                dynamo=True,
                 **additional_kwargs,
             )
-            self.model = onnx.load(onnx_path)
+
+            model = onnx.load(onnx_path)
+            passes = ["fuse_bn_into_conv"]
+            self.model = onnxoptimizer.optimize(model, passes)
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
