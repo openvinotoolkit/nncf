@@ -16,13 +16,14 @@ from typing import Callable
 from unittest.mock import patch
 
 import numpy as np
+import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
+from openvino import opset13 as opset
 
 import nncf
 import nncf.openvino.optimized_functions as opt_fns
-import openvino as ov
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
@@ -55,7 +56,6 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import resh
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from openvino import opset13 as opset
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import dump_to_json
 from tests.cross_fw.shared.json import load_json

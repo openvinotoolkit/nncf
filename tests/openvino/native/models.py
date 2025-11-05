@@ -15,12 +15,12 @@ from functools import partial
 from typing import Callable, Optional
 
 import numpy as np
+import openvino as ov
+from openvino import opset13 as opset
 from torchvision.models import mobilenet_v2
 from torchvision.models import mobilenet_v3_small
 
-import openvino as ov
 from nncf.common.utils.registry import Registry
-from openvino import opset13 as opset
 from tests.torch.test_models.inceptionv3 import inception_v3
 from tests.torch.test_models.resnet import ResNet18
 from tests.torch.test_models.swin import SwinTransformerBlock
