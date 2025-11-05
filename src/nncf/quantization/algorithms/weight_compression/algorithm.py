@@ -1166,7 +1166,7 @@ class WeightCompression(Algorithm):
                     node_with_weight, weight_port_ids[0], graph
                 )
                 reduction_axes = (
-                    (weight_reduction_axis,) if any(weight_dim == 3 for weight_dim in weight_dims) else reduction_axes
+                    weight_reduction_axis if any(weight_dim == 3 for weight_dim in weight_dims) else reduction_axes
                 )
 
                 stat_collector = self._backend_entity.mean_statistic_collector(
