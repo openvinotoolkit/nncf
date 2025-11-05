@@ -20,12 +20,12 @@ from typing import Any, Callable, Optional
 import pytest
 import torch
 import torch.fx
+from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
 from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
 
 import nncf
-from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
-from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.utils.os import safe_open
