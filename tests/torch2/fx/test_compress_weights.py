@@ -46,8 +46,8 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Emp
 from tests.torch2.function_hook.quantization.test_weights_compression import FunctionalModel
 from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
-from tests.torch2.function_hook.quantization.test_weights_compression import SimpleMoEModel
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
+from tests.torch2.function_hook.quantization.test_weights_compression import SimpleMoEModel
 from tests.torch2.fx.helpers import get_torch_fx_model
 
 DATA_BASED_SENSITIVITY_METRICS = (

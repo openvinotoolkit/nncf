@@ -488,7 +488,6 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             ]
         ).T
 
-    
     @staticmethod
     def get_moe_scale_estimation_ref():
         return np.array(
