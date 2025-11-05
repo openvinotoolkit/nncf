@@ -28,6 +28,7 @@ from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import asym_fq_to_decompressor
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
@@ -162,7 +163,7 @@ def apply_compression_in_place(model: TModel) -> TModel:
 
     hooks_to_delete = []
     for hook_name, hook_module in hook_storage.named_hooks():
-        if not isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer)):
+        if not isinstance(hook_name, (SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor)):
             continue
         hook_module.eval()
 
@@ -172,7 +173,10 @@ def apply_compression_in_place(model: TModel) -> TModel:
         weight_param = getattr(module, weight_attr_name)
 
         with torch.no_grad():
-            fq_weight = hook_module.quantize(weight_param)
+            if isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer)):
+                fq_weight = hook_module.quantize(weight_param)
+            else:
+                fq_weight = hook_module(weight_param)
 
         weight_param.requires_grad = False
         weight_param.data = fq_weight
