@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
@@ -92,16 +93,24 @@ def test_get_current_executed_op_name():
     assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
 
 
-@pytest.fixture(params=["tensor", "list", "torch_return_type"])
-def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]:
+NamedTuple = namedtuple("NamedTuple", ["output1", "output2"])
+
+
+@pytest.fixture(params=["tensor", "list", "torch_return_type", "named_tuple"])
+def example_outputs(
+    request: FixtureRequest,
+) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple]:
     return {
         "tensor": torch.tensor(1),
         "list": [torch.tensor(1), torch.tensor([2])],
         "torch_return_type": torch.return_types.max((torch.tensor(1), torch.tensor([2]))),
+        "named_tuple": NamedTuple(torch.tensor(1), torch.tensor([2])),
     }.get(request.param)
 
 
-def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]):
+def test_execute_post_hooks(
+    example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple],
+):
     op_name = "/relu/0"
     hook_storage = HookStorage()
     hook_port_0 = CallCount()
@@ -112,12 +121,35 @@ def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tens
     op_meta = OpMeta("/relu/0", torch.relu)
     ret_val = ctx.execute_post_hooks(example_outputs, op_meta)
     assert type(example_outputs) is type(ret_val)
+    assert example_outputs == ret_val
 
     assert hook_port_0.call_count == 1
     if isinstance(example_outputs, torch.Tensor):
         assert hook_port_1.call_count == 0
     else:
         assert hook_port_1.call_count == 1
+
+
+def test_process_model_output(
+    example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple],
+):
+    hook_storage = HookStorage()
+    hook_output = CallCount()
+    hook_output_0 = CallCount()
+    hook_output_1 = CallCount()
+    hook_storage.register_pre_function_hook("output", 0, hook_output)
+    hook_storage.register_pre_function_hook("output_0", 0, hook_output_0)
+    hook_storage.register_pre_function_hook("output_1", 0, hook_output_1)
+
+    ctx = FunctionHookMode(nn.Identity(), hook_storage)
+    ret_val = ctx.process_model_outputs(example_outputs)
+    assert type(example_outputs) is type(ret_val)
+    assert example_outputs == ret_val
+    if isinstance(example_outputs, torch.Tensor):
+        assert hook_output.call_count == 1
+    else:
+        assert hook_output_0.call_count == 1
+        assert hook_output_1.call_count == 1
 
 
 class ConcatModel(nn.Module):
