@@ -1086,14 +1086,15 @@ class WeightCompression(Algorithm):
         statistics_aggregator.collect_statistics(model, graph)
         return statistics_aggregator.statistic_points
 
-    def _get_weight_dim_from_act_node(self, graph: NNCFGraph, act_node: NNCFNode, output_port_id: int) -> list[int]:
+    def _get_node_with_weight_from_act_node(
+        self, act_node: NNCFNode, output_port_id: int, graph: NNCFGraph
+    ) -> NNCFNode:
         """
-        Returns the dimension of weight to be compressed from a given activation node and its output_port_id.
+        Returns the node with weight connected to a given activation node on its output_port_id.
 
+        :param node_with_weight: Node which is connected to weight.
         :param graph: Model graph.
-        :param act_node: Activation node which is connected to the node with weight.
-        :param output_port_id: Activation output port id which connects to node with weight.
-        :return: List of dimensions of all the weights that feed the node with weight.
+        :return: List of port ids of all the weights that feed the node with weight.
         """
         node_with_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)
         for node_order, edge in enumerate(node_with_weight_edge):
@@ -1102,14 +1103,33 @@ class WeightCompression(Algorithm):
                 continue
             node_with_weight = node_with_weight_edge[node_order].to_node
             break
-        weight_port_ids = [
-            pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
-        ]
-        weight_dim = [
+        return node_with_weight
+
+    def _get_weight_port_ids_from_node_with_weight(self, node_with_weight: NNCFNode, graph: NNCFGraph) -> list[int]:
+        """
+        Returns the port ids of weight nodes connected to a given node_with_weight.
+
+        :param node_with_weight: Node which is connected to weight.
+        :param graph: Model graph.
+        :return: List of port ids of all the weights that feed the node with weight.
+        """
+        return [pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)]
+
+    def _get_weight_dims_from_node_with_weight(
+        self, node_with_weight: NNCFNode, weight_port_ids: list[int], graph: NNCFGraph
+    ) -> list[int]:
+        """
+        Returns the dimension of weight to be compressed from a given node_with_weight and its weight_port_id.
+
+        :param node_with_weight: Node which is connected to weight.
+        :param weight_port_id: Weight port id which connects to node with weight.
+        :param graph: Model graph.
+        :return: List of dimensions of all the weights that feed the node with weight.
+        """
+        return [
             len(self._backend_entity.get_weight_shape(node_with_weight, weight_port_id, graph))
             for weight_port_id in weight_port_ids
         ]
-        return weight_dim
 
     def get_statistic_points(
         self,
@@ -1132,14 +1152,22 @@ class WeightCompression(Algorithm):
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
-                weight_dims = self._get_weight_dim_from_act_node(graph, node, output_port_id)
+                node_with_weight = self._get_node_with_weight_from_act_node(node, output_port_id, graph)
+                weight_port_ids = self._get_weight_port_ids_from_node_with_weight(node_with_weight, graph)
+                weight_dims = self._get_weight_dims_from_node_with_weight(node_with_weight, weight_port_ids, graph)
+
                 # by default, reduce activations across all but the last dimension. The last dimension is
                 # assumed to be the hidden size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
                 reduction_axes = tuple(range(n_dims - 1))
 
                 # For 3D weights, hidden dimension is the second dimension. Reduce by all other dimensions
-                reduction_axes = (1,) if any(weight_dim == 3 for weight_dim in weight_dims) else reduction_axes
+                weight_reduction_axis = self._backend_entity.get_reduction_axes(
+                    node_with_weight, weight_port_ids[0], graph
+                )
+                reduction_axes = (
+                    (weight_reduction_axis,) if any(weight_dim == 3 for weight_dim in weight_dims) else reduction_axes
+                )
 
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
