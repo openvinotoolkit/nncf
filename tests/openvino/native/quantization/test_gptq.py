@@ -350,7 +350,10 @@ def test_calculate_scale_linear():
 
     nodes = graph.get_all_nodes()
     wrapped_inputs = [Tensor(inp) for inp in inputs]
-    H = gptq._calculate_hessian(nodes[1], wrapped_inputs)
+    input_channel_axis = gptq._backend_entity.get_activation_channel_axis(
+        nodes[1], gptq._backend_entity.get_activation_port_id(nodes[1], graph), wrapped_inputs[0].shape
+    )
+    H = gptq._calculate_hessian(nodes[1], wrapped_inputs, input_channel_axis)
 
     ref_H = ref_gptq.H.numpy()
     assert np.all(np.isclose(ref_H, H.data))
@@ -365,7 +368,7 @@ def test_calculate_scale_linear():
     )
     wc_params.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=16)
 
-    scale, _ = gptq._quantize_weights(ov_model, graph, wc_params, H, wrapped_inputs)
+    scale, _ = gptq._quantize_weights(ov_model, graph, wc_params, H, wrapped_inputs, input_channel_axis)
     ref_scale = ref_scale.numpy()
     scale = scale.reshape(ref_scale.shape)
     assert np.all(np.isclose(ref_scale, scale.data))

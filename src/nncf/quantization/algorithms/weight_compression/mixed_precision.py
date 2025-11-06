@@ -281,7 +281,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         self._set_backend_entity(model)
 
         statistic_container = StatisticPointsContainer()
-        for act_node, output_port_id in nodes_and_port_ids:
+        for act_node, output_port_id, _ in nodes_and_port_ids:
             n_dims = len(graph.get_output_edges_by_port_id(act_node, output_port_id)[0].tensor_shape)
             if n_dims < 2:
                 msg = (

@@ -101,7 +101,7 @@ class GraphConverter:
             in_node_id = graph.get_node_by_name(op.get_friendly_name()).node_id
             for output_port_id, out in enumerate(op.outputs()):
                 node_vs_target_inputs = defaultdict(list)
-                for inp in out.get_target_inputs():
+                for inp in sorted(out.get_target_inputs(), key=lambda inp: inp.get_node().get_friendly_name()):
                     node_vs_target_inputs[inp.get_node()].append(inp)
 
                 for out_node, inputs in node_vs_target_inputs.items():
