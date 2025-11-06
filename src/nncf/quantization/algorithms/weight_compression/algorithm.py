@@ -1099,10 +1099,9 @@ class WeightCompression(Algorithm):
         node_with_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)
         for node_order, edge in enumerate(node_with_weight_edge):
             is_node_with_weights = self._backend_entity.is_node_with_weights(edge.to_node, graph)
-            if not is_node_with_weights:
-                continue
-            node_with_weight = node_with_weight_edge[node_order].to_node
-            break
+            if is_node_with_weights:
+                node_with_weight = node_with_weight_edge[node_order].to_node
+                break
         return node_with_weight
 
     def _get_weight_port_ids_from_node_with_weight(self, node_with_weight: NNCFNode, graph: NNCFGraph) -> list[int]:
