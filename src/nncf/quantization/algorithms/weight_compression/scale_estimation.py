@@ -204,7 +204,7 @@ class ScaleEstimation:
             # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
             # 2D: [hidden_dimension, out_features] -> [out_features, hidden_dimension]
             weight = fns.moveaxis(weight, -1, -2)
-            reduction_axis = list(range(len(weight.shape)))[-1]
+            reduction_axis = weight.ndim - 1
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
