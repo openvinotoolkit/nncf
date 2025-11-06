@@ -521,6 +521,7 @@ class TemplateWeightCompression(ABC):
                     "int4_asym, group size 16  │ 25% (1 / 9)                 │ 25% (1 / 9)",
                 ]
                 for row in table_rows:
+                    # On Windows "|" is printed instead of "│"
                     assert any(row in msg.replace("|", "│") for msg in info_messages), "\n".join(info_messages)
 
     @pytest.mark.parametrize(
