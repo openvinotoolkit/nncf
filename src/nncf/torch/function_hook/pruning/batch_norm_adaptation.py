@@ -48,11 +48,13 @@ def batch_norm_adaptation(
         ):
             if num_iterations is not None and idx >= num_iterations:
                 break
+
             if isinstance(input_data, dict):
                 model(**input_data)
-            if isinstance(input_data, tuple):
+            elif isinstance(input_data, tuple):
                 model(*input_data)
-            model(input_data)
+            else:
+                model(input_data)
 
     return model
 

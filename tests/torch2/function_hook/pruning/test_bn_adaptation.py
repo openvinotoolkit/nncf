@@ -29,7 +29,7 @@ class ModelBN(nn.Module):
         self.bn1 = nn.BatchNorm2d(3)
         self.seq = nn.Sequential(nn.Linear(3, 3))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         x = self.conv(x)
         x = self.bn1(x)
         x = torch.flatten(x, 1)
@@ -60,15 +60,13 @@ def test_set_batchnorm_train_only():
 
 
 @pytest.mark.parametrize("num,ref", ((None, 5), (2, 2)))
-def test_batch_norm_adaptation(mocker: MockerFixture, num: Optional[int], ref: int, use_cuda: bool):
-    device = "cuda" if use_cuda else "cpu"
-    model = ModelBN().to(device)
+def test_batch_norm_adaptation(mocker: MockerFixture, num: Optional[int], ref: int):
+    model = ModelBN()
 
     dataloader = torch.utils.data.DataLoader([(torch.randn((3, 3, 3)), 1)] * 10, batch_size=2)
 
     def transform_fn(batch: tuple[Tensor, int]):
         inputs, _ = batch
-        inputs = inputs.to(device=device)
         return inputs
 
     nncf_dataset = nncf.Dataset(dataloader, transform_fn)
@@ -86,3 +84,24 @@ def test_batch_norm_adaptation(mocker: MockerFixture, num: Optional[int], ref: i
         else:
             if isinstance(org_state[x], torch.Tensor):
                 assert torch.equal(org_state[x], new_state[x]), f"State {x} changed"
+
+
+@pytest.mark.parametrize("in_type", ["dict", "tuple", "tensor"])
+def test_batch_norm_adaptation_inputs(mocker: MockerFixture, in_type: str):
+    model = ModelBN()
+
+    dataloader = torch.utils.data.DataLoader([(torch.randn((3, 3, 3)), 1)] * 10, batch_size=2)
+
+    def transform_fn(batch: tuple[Tensor, int]):
+        if in_type == "dict":
+            return {"x": batch[0]}
+        if in_type == "tuple":
+            return (batch[0],)
+        if in_type == "tensor":
+            return batch[0]
+
+    nncf_dataset = nncf.Dataset(dataloader, transform_fn)
+    spy_func = mocker.spy(ModelBN, "forward")
+
+    model = nncf.batch_norm_adaptation(model, calibration_dataset=nncf_dataset, num_iterations=2)
+    assert spy_func.call_count == 2
