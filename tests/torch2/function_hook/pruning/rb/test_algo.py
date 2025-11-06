@@ -135,8 +135,9 @@ def test_statistic():
     assert pytest.approx(stat.pruned_tensors[0].pruned_ratio, abs=1e-1) == 0.3
     assert stat.pruned_tensors[0].tensor_name == "conv.weight"
     assert stat.pruned_tensors[0].shape == (3, 3, 3, 3)
-    assert pytest.approx(stat.pruning_ratio, abs=1e-1) == 0.3
+    assert pytest.approx(stat.pruning_ratio, abs=1e-2) == 0.33
+    assert pytest.approx(stat.global_pruning_ratio, abs=1e-2) == 0.32
 
     txt = str(stat)
     assert "conv.weight" in txt
-    assert "Total" in txt
+    assert "All parameters" in txt

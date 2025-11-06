@@ -72,17 +72,24 @@ class ModelPruningStatistic:
     Aggregated pruning statistics for a model.
 
     :param pruning_ratio: Overall pruning ratio for pruned parameters in the model.
+    :param global_pruning_ratio: Overall pruning ratio for all parameters in the model.
     :param pruned_tensors: List of pruning statistics for each tensor.
     """
 
     pruning_ratio: float
+    global_pruning_ratio: float
     pruned_tensors: list[TensorPruningStatistic]
 
     def __str__(self) -> str:
-        total = ["Total", None, self.pruning_ratio]
+        total = [
+            [None, None, None, None],
+            ["Masked parameters", None, self.pruning_ratio],
+            ["All parameters", None, self.global_pruning_ratio],
+        ]
+
         sorted_stat_per_tensor = sorted(self.pruned_tensors, key=lambda s: s.tensor_name)
         rows_per_tensor = [[s.tensor_name, s.shape, s.pruned_ratio] for s in sorted_stat_per_tensor]
-        text = create_table(header=["Parameter's name", "Shape", "Pruning ratio"], rows=rows_per_tensor + [total])
+        text = create_table(header=["Parameter's name", "Shape", "Pruning ratio"], rows=rows_per_tensor + total)
         return text
 
 

@@ -30,6 +30,7 @@ def pruning_statistic(model: nn.Module) -> ModelPruningStatistic:
     :param model: The pruned model.
     :return: Pruning statistics.
     """
+    total_params = sum(p.numel() for p in model.parameters())
     num_elements = 0
     pruned_elements = 0
     stat_per_tensors: list[TensorPruningStatistic] = []
@@ -40,6 +41,8 @@ def pruning_statistic(model: nn.Module) -> ModelPruningStatistic:
             mask = hook_module.binary_mask
         elif isinstance(hook_module, RBPruningMask):
             mask = binary_mask(hook_module.mask)
+            # Exclude RBPruningMask’s internal mask parameters from the total parameter count
+            total_params -= mask.numel()
         else:
             continue
 
@@ -55,9 +58,11 @@ def pruning_statistic(model: nn.Module) -> ModelPruningStatistic:
 
         stat_per_tensors.append(TensorPruningStatistic(tensor_name, shape, pruned_ratio))
 
-    ratio = pruned_elements / num_elements if num_elements != 0 else 0.0
+    masked_ratio = pruned_elements / num_elements if num_elements != 0 else 0.0
+    global_ratio = pruned_elements / total_params if total_params != 0 else 0.0
 
     return ModelPruningStatistic(
-        pruning_ratio=ratio,
+        pruning_ratio=masked_ratio,
+        global_pruning_ratio=global_ratio,
         pruned_tensors=stat_per_tensors,
     )
