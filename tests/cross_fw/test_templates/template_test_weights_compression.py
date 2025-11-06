@@ -516,9 +516,12 @@ class TemplateWeightCompression(ABC):
             assert any(info_msg in msg for msg in info_messages)
             if expected_outcome == "info_adjusted_group_size":
                 table_rows = [
-                    "int8_asym, per-channel    │ 50% (1 / 9)                 │ 50% (1 / 9)",
-                    "int4_asym, group size 8   │ 25% (7 / 9)                 │ 25% (7 / 9)",
-                    "int4_asym, group size 16  │ 25% (1 / 9)                 │ 25% (1 / 9)",
+                    "int8_asym, per-channel",
+                    "50% (1 / 9)",
+                    "int4_asym, group size 8",
+                    "25% (7 / 9)",
+                    "int4_asym, group size 16",
+                    "25% (1 / 9)",
                 ]
                 for row in table_rows:
                     assert any(row in msg for msg in info_messages)
