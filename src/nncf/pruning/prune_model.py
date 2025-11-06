@@ -15,6 +15,7 @@ import nncf
 from nncf.api.compression import TModel
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.data.dataset import Dataset
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
 
@@ -47,3 +48,27 @@ def prune(
         msg = f"Pruning is not supported for the {backend} backend."
         raise nncf.InternalError(msg)
     return model
+
+
+def batch_norm_adaptation(
+    model: TModel, *, calibration_dataset: Dataset, num_iterations: Optional[int] = None
+) -> TModel:
+    """
+    Adapt the batch normalization layers of the given model using the provided dataset.
+
+    This function runs a specified number of iterations through the model
+    to update the running statistics of the batch normalization layers.
+
+    :param model: The model to adapt.
+    :param calibration_dataset: The dataset to use for the adaptation.
+    :param num_iterations: The number of iterations to use for adaptation.
+        If set to None, the adaptation will run for the entire dataset.
+    """
+    backend = get_backend(model)
+    if backend == BackendType.TORCH:
+        from nncf.torch.function_hook.pruning.batch_norm_adaptation import batch_norm_adaptation
+
+        return batch_norm_adaptation(model, calibration_dataset=calibration_dataset, num_iterations=num_iterations)
+
+    msg = f"Pruning is not supported for the {backend} backend."
+    raise nncf.InternalError(msg)

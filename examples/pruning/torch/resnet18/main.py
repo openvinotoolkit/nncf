@@ -52,7 +52,7 @@ def get_argument_parser() -> ArgumentParser:
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["magnitude", "rb"],
+        choices=["magnitude", "bn_adaptation", "rb"],
         default="magnitude",
         help="Pruning mode to use. Choices are: magnitude, rb. Default is magnitude.",
     )
@@ -201,14 +201,20 @@ def main() -> float:
 
     ###############################################################################
     # Step 2: Prune model
-    print(os.linesep + "[Step 2]: Prune model and specify training parameters")
+    print(os.linesep + "[Step 2] Prune model and specify training parameters")
 
-    if pruning_mode == "magnitude":
+    if pruning_mode == "bn_adaptation":
+        pruned_model = nncf.prune(
+            model,
+            mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
+            ratio=0.6,
+            examples_inputs=example_input,
+        )
+    elif pruning_mode == "magnitude":
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
             ratio=0.7,
-            ignored_scope=nncf.IgnoredScope(),
             examples_inputs=example_input,
         )
         num_epochs = 2
@@ -217,11 +223,11 @@ def main() -> float:
             model=model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.5, 1: 0.7}
         )
         optimizer = torch.optim.Adam(pruned_model.parameters(), lr=1e-5)
+        criterion = nn.CrossEntropyLoss().to(device)
     else:
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED,
-            ignored_scope=nncf.IgnoredScope(),
             examples_inputs=example_input,
         )
         num_epochs = 30
@@ -237,24 +243,44 @@ def main() -> float:
                 {"params": mask_params, "lr": 1e-2, "weight_decay": 0.0},
             ]
         )
-
-    criterion = nn.CrossEntropyLoss().to(device)
+        criterion = nn.CrossEntropyLoss().to(device)
 
     ###############################################################################
     # Step 3: Fine tune
     print(os.linesep + "[Step 3] Fine tune with multi step pruning ratio scheduler")
 
-    for epoch in range(num_epochs):
-        print(os.linesep + f"Train epoch: {epoch}")
-        scheduler.step()
-        train_epoch(train_loader, pruned_model, criterion, rb_loss, optimizer, device=device)
+    if pruning_mode == "bn_adaptation":
+        print("Adapting BatchNorm statistics...")
+        acc1_before = validate(val_loader, pruned_model, device)
+        print(f"Accuracy@1 of pruned model before BatchNorm adaptation: {acc1_before:.3f}")
+
+        def transform_fn(batch: tuple[torch.Tensor, int]) -> torch.Tensor:
+            inputs, _ = batch
+            return inputs.to(device=device)
+
+        calibration_dataset = nncf.Dataset(train_loader, transform_func=transform_fn)
+
+        nncf.batch_norm_adaptation(
+            pruned_model,
+            calibration_dataset=calibration_dataset,
+            num_iterations=200,
+        )
 
         acc1 = validate(val_loader, pruned_model, device)
-        print(f"Current pruning ratio: {scheduler.current_ratio:.3f}")
-        print(f"Accuracy@1 of pruned model after {epoch} epoch: {acc1:.3f}")
+        print(f"Accuracy@1 of pruned model after BatchNorm adaptation: {acc1:.3f}")
+    else:
+        for epoch in range(num_epochs):
+            print(os.linesep + f"Train epoch: {epoch}")
+            scheduler.step()
+            train_epoch(train_loader, pruned_model, criterion, rb_loss, optimizer, device=device)
+
+            acc1 = validate(val_loader, pruned_model, device)
+            print(f"Current pruning ratio: {scheduler.current_ratio:.3f}")
+            print(f"Accuracy@1 of pruned model after {epoch} epoch: {acc1:.3f}")
 
     ###############################################################################
     # Step 4: Export models
+    print(os.linesep + "[Step 4] Export models")
     ir_path = ROOT / f"{BASE_MODEL_NAME}_pruned.xml"
     ov_model = ov.convert_model(pruned_model.cpu(), example_input=example_input.cpu(), input=tuple(example_input.shape))
     ov.save_model(ov_model, ir_path, compress_to_fp16=False)

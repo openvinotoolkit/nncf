@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 from torch import nn
 
@@ -24,6 +24,8 @@ from nncf.torch.function_hook.pruning.magnitude.algo import apply_magnitude_prun
 from nncf.torch.function_hook.pruning.rb.algo import apply_regularization_based_pruning
 from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.model_graph_manager import get_const_node
+
+TModel = TypeVar("TModel", bound=nn.Module)
 
 OPERATORS_WITH_WEIGHTS_METATYPES = [
     om.PTConv1dMetatype,
@@ -43,12 +45,12 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
 
 
 def prune(
-    model: nn.Module,
+    model: TModel,
     mode: PruneMode,
     ratio: Optional[float] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     examples_inputs: Optional[Any] = None,
-) -> nn.Module:
+) -> TModel:
     if examples_inputs is None:
         msg = "`sparsity` function requires `examples_inputs` argument to be specified for Torch backend"
         raise nncf.InternalError(msg)
