@@ -521,7 +521,7 @@ class TemplateWeightCompression(ABC):
                     "int4_asym,groupsize16│25%(1/9)│25%(1/9)",
                 ]
                 for row in table_rows:
-                    assert any(row in msg.replace(" ", "") for msg in info_messages)
+                    assert any(row in msg.replace(" ", "") for msg in info_messages), "\n".join(info_messages)
 
     @pytest.mark.parametrize(
         [
