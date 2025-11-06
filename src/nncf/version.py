@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "2.19.0.dev0+1489448a3dirty"
+__version__ = "2.19.0"
 
 
 BKC_TORCH_SPEC = "==2.9.*"
