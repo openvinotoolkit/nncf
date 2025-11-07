@@ -23,7 +23,7 @@ TModel = TypeVar("TModel", bound=nn.Module)
 
 @torch.no_grad()
 def batch_norm_adaptation(
-    model: TModel, *, calibration_dataset: Dataset, num_iterations: Optional[int] = None
+    model: TModel, calibration_dataset: Dataset, *, num_iterations: Optional[int] = None
 ) -> TModel:
     """
     Adapt the batch normalization layers of the given model using the provided dataset.
