@@ -83,7 +83,7 @@ class ModelPruningStatistic:
     def __str__(self) -> str:
         total = [
             [None, None, None, None],
-            ["Masked parameters", None, self.pruning_ratio],
+            ["Prunable parameters", None, self.pruning_ratio],
             ["All parameters", None, self.global_pruning_ratio],
         ]
 
