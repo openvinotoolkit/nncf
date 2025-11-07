@@ -254,7 +254,15 @@ def main() -> float:
         print(f"Accuracy@1 of pruned model after {epoch} epoch: {acc1:.3f}")
 
     ###############################################################################
-    # Step 4: Export models
+    # Step 4: Print per tensor pruning statistics
+    print(os.linesep + "[Step 4]: Pruning statistics")
+
+    pruning_stat = nncf.pruning_statistic(pruned_model)
+    print(pruning_stat)
+
+    ###############################################################################
+    # Step 5: Export models
+    print(os.linesep + "[Step 5]: Export models")
     ir_path = ROOT / f"{BASE_MODEL_NAME}_pruned.xml"
     ov_model = ov.convert_model(pruned_model.cpu(), example_input=example_input.cpu(), input=tuple(example_input.shape))
     ov.save_model(ov_model, ir_path, compress_to_fp16=False)
