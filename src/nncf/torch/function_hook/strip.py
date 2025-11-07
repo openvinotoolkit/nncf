@@ -20,6 +20,7 @@ from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.parameters import StripFormat
 from nncf.torch.function_hook.hook_storage import decode_hook_name
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.pruning.strip import apply_pruning_in_place
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
@@ -36,7 +37,7 @@ from nncf.torch.quantization.strip import sym_fq_to_decompressor
 TModel = TypeVar("TModel", bound=nn.Module)
 
 
-def strip_quantized_model(model: TModel, example_input: Any, strip_format: StripFormat = StripFormat.NATIVE) -> TModel:
+def strip_model(model: TModel, example_input: Any = None, strip_format: StripFormat = StripFormat.NATIVE) -> TModel:
     """
     Removes auxiliary layers and operations added during the quantization process,
     resulting in a clean quantized model ready for deployment. The functionality of the model object is still preserved
@@ -47,14 +48,17 @@ def strip_quantized_model(model: TModel, example_input: Any, strip_format: Strip
     :param strip_format: Describes the format in which model is saved after strip.
     :return: The modified NNCF network.
     """
-    graph = build_nncf_graph(model, example_input)
-
     if strip_format == StripFormat.NATIVE:
+        if example_input is None:
+            msg = "The example_input parameter is required to strip the model."
+            raise nncf.InternalError(msg)
+        graph = build_nncf_graph(model, example_input)
         model = replace_quantizer_to_torch_native_module(model, graph)
     elif strip_format == StripFormat.DQ:
-        model = replace_quantizer_to_compressed_weight_with_decompressor(model, graph)
+        model = replace_quantizer_to_compressed_weight_with_decompressor(model)
     elif strip_format == StripFormat.IN_PLACE:
-        model = apply_compression_in_place(model, graph)
+        model = apply_pruning_in_place(model)
+        model = apply_compression_in_place(model)
     else:
         msg = f"Unsupported strip format: {strip_format}"
         raise nncf.ParameterNotSupportedError(msg)
@@ -105,57 +109,48 @@ def replace_quantizer_to_torch_native_module(model: TModel, graph: NNCFGraph) ->
     return model
 
 
-def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel, graph: NNCFGraph) -> TModel:
+def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel) -> TModel:
     """
     Performs transformation from fake quantize format (FQ) to dequantization one (DQ):
         (weights + FQ) -> (compressed_weights + DQ)
 
     :param model: Compressed model
-    :param graph: The model graph.
     :return: The modified NNCF network.
     """
     hook_storage = get_hook_storage(model)
 
-    for name, module in hook_storage.named_hooks():
-        if not isinstance(module, (SymmetricQuantizer, AsymmetricQuantizer)):
+    for hook_name, hook_module in hook_storage.named_hooks():
+        if not isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer)):
             continue
         msg = ""
-        if module._qspec.half_range or module._qspec.narrow_range:
+        if hook_module._qspec.half_range or hook_module._qspec.narrow_range:
             msg += "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False.\n"
-        if module.num_bits not in [4, 8]:
-            msg += f"Unsupported number of bits {module.num_bits} for the quantizer {module}.\n"
+        if hook_module.num_bits not in [4, 8]:
+            msg += f"Unsupported number of bits {hook_module.num_bits} for the quantizer {hook_module}.\n"
         if msg:
             raise nncf.ValidationError(msg)
 
-        _, op_name, _ = decode_hook_name(name)
-        weight_node = graph.get_node_by_name(op_name)
+        _, op_name, _ = decode_hook_name(hook_name)
 
-        if weight_node is None:
-            msg = "FQ is not assigned to weight. Strip to DQ format is not supported for FQ on activation."
-            raise nncf.UnsupportedModelError(msg)
-
-        if not isinstance(weight_node.layer_attributes, ConstantLayerAttributes):
-            msg = f"Unexpected layer attributes type {type(weight_node.layer_attributes)}"
-            raise nncf.InternalError(msg)
-
-        weight = get_const_data(weight_node, model)
-
-        convert_fn = asym_fq_to_decompressor if isinstance(module, AsymmetricQuantizer) else sym_fq_to_decompressor
-        decompressor, q_weight = convert_fn(module, weight)  # type: ignore[operator]
-        packed_tensor = decompressor.pack_weight(q_weight)
-
-        module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+        module_name, weight_attr_name = split_const_name(op_name)
         module = get_module_by_name(module_name, model)
         weight_param = getattr(module, weight_attr_name)
+
+        with torch.no_grad():
+            if isinstance(hook_module, AsymmetricQuantizer):
+                decompressor, q_weight = asym_fq_to_decompressor(hook_module, weight_param)
+            else:
+                decompressor, q_weight = sym_fq_to_decompressor(hook_module, weight_param)  # type: ignore[assignment]
+            packed_tensor = decompressor.pack_weight(q_weight)
 
         weight_param.requires_grad = False
         weight_param.data = packed_tensor
 
-        hook_storage.set_submodule(name, decompressor)
+        hook_storage.set_submodule(hook_name, decompressor)
     return model
 
 
-def apply_compression_in_place(model: TModel, graph: NNCFGraph) -> TModel:
+def apply_compression_in_place(model: TModel) -> TModel:
     """
     Applies fake quantizers in-place to the weights:
         (weights + FQ) -> (fake quantized weights)
@@ -167,31 +162,26 @@ def apply_compression_in_place(model: TModel, graph: NNCFGraph) -> TModel:
     hook_storage = get_hook_storage(model)
 
     hooks_to_delete = []
-    for name, hook in hook_storage.named_hooks():
-        if not isinstance(hook, (SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor)):
+    for hook_name, hook_module in hook_storage.named_hooks():
+        if not isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor)):
             continue
-        _, op_name, _ = decode_hook_name(name)
-        weight_node = graph.get_node_by_name(op_name)
+        hook_module.eval()
 
-        if weight_node is None:
-            msg = "FQ is not assigned to weight. In-place strip is not supported for FQ on activation."
-            raise nncf.UnsupportedModelError(msg)
-
-        if not isinstance(weight_node.layer_attributes, ConstantLayerAttributes):
-            msg = f"Unexpected layer attributes type {type(weight_node.layer_attributes)}"
-            raise nncf.InternalError(msg)
-
-        weight = get_const_data(weight_node, model)
-        fq_weight = hook(weight) if isinstance(hook, BaseWeightsDecompressor) else hook.quantize(weight)
-
-        module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+        _, op_name, _ = decode_hook_name(hook_name)
+        module_name, weight_attr_name = split_const_name(op_name)
         module = get_module_by_name(module_name, model)
         weight_param = getattr(module, weight_attr_name)
+
+        with torch.no_grad():
+            if isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer)):
+                fq_weight = hook_module.quantize(weight_param)
+            else:
+                fq_weight = hook_module(weight_param)
 
         weight_param.requires_grad = False
         weight_param.data = fq_weight
 
-        hooks_to_delete.append(name)
+        hooks_to_delete.append(hook_name)
 
     for hook_name in hooks_to_delete:
         hook_storage.delete_hook(hook_name)
