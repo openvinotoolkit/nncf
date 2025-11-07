@@ -850,8 +850,7 @@ The functionality of the model object is still preserved as a compressed model.<
 <li><p><strong>DQ</strong> – Replaces FakeQuantize operations with a dequantization subgraph and stores compressed weights
 in low-bit precision using fake quantize parameters. This is the default format for deploying models
 with compressed weights.</p></li>
-<li><p><strong>IN_PLACE</strong> – Directly applies fake quantizers to the weights, replacing the original weights with their
-fake quantized versions.</p></li>
+<li><p><strong>IN_PLACE</strong> – Directly applies NNCF operations to the weights, replacing the original weights.</p></li>
 </ul>
 </dd>
 </dl>
