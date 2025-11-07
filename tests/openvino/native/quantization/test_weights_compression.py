@@ -65,6 +65,7 @@ from tests.cross_fw.test_templates.template_test_weights_compression import Temp
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
+from tests.openvino.native.models import AWQModel
 from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
@@ -1944,6 +1945,14 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
 
 
 @pytest.mark.parametrize(
+    "model_cls",
+    [
+        (LMLinearModel),
+        (AWQModel),
+    ],
+    ids=["lm_linear", "awq_model"],
+)
+@pytest.mark.parametrize(
     ("transpose_a", "transpose_b", "raises_error"),
     [
         (False, True, False),
@@ -1967,9 +1976,9 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
     ],
     ids=["se", "lora", "gptq_se_awq"],
 )
-def test_compression_with_transpose(transpose_a, transpose_b, raises_error, kwargs):
+def test_compression_with_transpose(model_cls, transpose_a, transpose_b, raises_error, kwargs):
     dataset_size = 4
-    model = LMLinearModel(transpose_a=transpose_a, transpose_b=transpose_b).ov_model
+    model = model_cls(transpose_a=transpose_a, transpose_b=transpose_b).ov_model
     input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
     dataset = Dataset(input_data)
 

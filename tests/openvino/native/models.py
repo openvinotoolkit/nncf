@@ -1084,6 +1084,42 @@ class AWQActMatmulModel(OVReferenceModel):
         return model
 
 
+class AWQModel(OVReferenceModel):
+    OUTPUT_DIM = 32
+    HIDDEN_DIM = 16
+    INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
+
+    def _create_ov_model(
+        self,
+        transpose_b: bool = True,
+        transpose_a: bool = False,
+        input_shape: Optional[list[int]] = None,
+        is_int8=False,
+    ):
+        self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
+        hdim_axis = -2 if transpose_a else -1
+        self._hidden_dim = self._input_shape[hdim_axis]
+        input_1 = opset.parameter(self._input_shape, name="Input")
+        weight_shape = self.get_weight_shape(transpose_b)
+        data = self._rng.random(weight_shape).astype(np.float32)
+
+        weights = AWQMatmulModel.get_weights(data, is_int8=is_int8, name="weights_1")
+
+        matmul = opset.matmul(input_1, weights, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
+
+        result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_1])
+        return model
+
+    @property
+    def hidden_dim(self):
+        return self._hidden_dim
+
+    def get_weight_shape(self, transpose_b: bool = True):
+        return [self.OUTPUT_DIM, self.hidden_dim] if transpose_b else [self.hidden_dim, self.OUTPUT_DIM]
+
+
 class AWQModel_fp16_overlow(OVReferenceModel):
     """
     Model for testing AWQ algorithm with fp16 overflow fix.
