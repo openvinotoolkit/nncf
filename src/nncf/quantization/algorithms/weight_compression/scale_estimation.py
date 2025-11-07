@@ -396,7 +396,6 @@ class ScaleEstimation:
             # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
             input_channel_axis = input_channel_axis % len(act.shape)
             reduction_shape = tuple(i for i in range(len(act.shape)) if i != input_channel_axis)
-            reduction_shape = tuple(range(act.ndim - 1))
             mean_values.append(fns.mean(act, axis=reduction_shape))
         wc_statistics = WCTensorStatistic(mean_values, shapes)
         return wc_statistics
