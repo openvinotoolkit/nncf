@@ -20,7 +20,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -170,28 +170,6 @@ class TemplateTestSQAlgorithm:
 
         self.check_scales(quantized_model, reference_values, model_cls)
 
-    def test_get_abs_max_channel_collector(self, inplace_statistics: bool):
-        backend = self.get_backend()
-        reduction_axes = (3, 2, 1)
-        samples = 1
-
-        backend_tensor_collector = backend.get_abs_max_channel_collector(
-            num_samples=samples,
-            stats_reduction_axes=reduction_axes,
-            inplace=inplace_statistics,
-            branch_key="test_branch",
-        )
-
-        assert len(backend_tensor_collector.aggregators) == 1
-        for aggregator in backend_tensor_collector.aggregators.values():
-            assert isinstance(aggregator, MaxAggregator)
-
-        assert len(backend_tensor_collector.reducers) == 1
-        for reducer in backend_tensor_collector.reducers:
-            assert isinstance(reducer, AbsMaxReducer)
-            assert reducer.inplace == inplace_statistics
-            assert reducer._reduction_axes == reduction_axes
-
     @pytest.mark.parametrize(
         "model_cls, references",
         (
@@ -227,7 +205,7 @@ class TemplateTestSQAlgorithm:
         algo._set_backend_entity(model)
         alpha_map = algo._get_alpha_map()
         smooth_data = algo._get_nodes_to_smooth_data(nncf_graph, alpha_map.keys())
-        smooth_data = {d["node_to_smooth"].node_name: d["input_act_port"] for d in smooth_data}
+        smooth_data = {node.node_name: input_act_port for node, input_act_port in smooth_data}
 
         name_map = self.get_node_name_map(model_cls)
         assert len(name_map) == len(smooth_data)
@@ -259,7 +237,13 @@ class TemplateTestSQAlgorithm:
         algo._set_backend_entity = lambda model: backend_entity
 
         mocked_transformer = mocker.MagicMock()
+        empty_shapes = [
+            (node, port, ()) for node, port in algo._get_nodes_to_smooth_data(graph, algo._get_alpha_map().keys())
+        ]
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocked_transformer)
+        mocker.patch(
+            "nncf.quantization.algorithms.smooth_quant.algorithm.SmoothQuant._retrieve_shape", return_value=empty_shapes
+        )
         algo.apply(model, graph, algo_statistic_points)
 
         mocked_transformer.transform.assert_called_once()
@@ -316,3 +300,8 @@ class TemplateTestSQAlgorithm:
                 pytest.xfail("Expected exception")
 
         assert activation_channel_axis == reference_value
+
+    def test_reducers_cls(self):
+        backend = self.get_backend()
+        assert backend.get_abs_max_reducer_cls() is AbsMaxReducer
+        assert backend.get_shape_reducer_cls() is ShapeReducer

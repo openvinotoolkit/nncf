@@ -163,7 +163,7 @@ class TestONNXExport:
             ),
             ParamDesc(
                 nncf_weight_ratio=0.1,
-                ov_weight_ratio=0.12,
+                ov_weight_ratio=0.08,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     intermediate_size=4,
                     num_labels=1,

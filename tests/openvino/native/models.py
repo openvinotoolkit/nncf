@@ -1269,6 +1269,26 @@ class RoPEModel(OVReferenceModel):
         return model
 
 
+class SAMPEModel(OVReferenceModel):
+    """
+    Positional Embedding from Segment Anything Model (SAM).
+    """
+
+    def _create_ov_model(self):
+        inp = opset.parameter([-1, -1, -1, 2], name="inp")
+        matmul_data = self._rng.random((128, 2)).astype(np.float32)
+
+        matmul = opset.matmul(inp, matmul_data, transpose_a=False, transpose_b=True, name="MatMul")
+        scaled_matmul = opset.multiply(matmul, opset.constant(2 * np.pi, dtype=np.float32), name="Scaled_MatMul")
+        sin = opset.sin(scaled_matmul, name="sin")
+        cos = opset.cos(scaled_matmul, name="cos")
+        concat = opset.concat([sin, cos], axis=-1, name="concat")
+        concat_result = opset.result(concat, name="concat_result")
+
+        model = ov.Model([concat_result], [inp])
+        return model
+
+
 class MatMul(OVReferenceModel):
     def _create_ov_model(self):
         input_node = opset.parameter([1, 4, 8], name="Input")

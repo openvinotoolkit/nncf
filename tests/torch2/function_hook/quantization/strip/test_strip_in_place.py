@@ -23,6 +23,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from tests.torch.helpers import LinearModel
 from tests.torch2.function_hook.quantization.strip.test_strip_dequantize import check_compression_modules
 
@@ -45,6 +46,16 @@ class ParamInPlaceStrip:
             args["group_size"] = -1
         return args
 
+    @property
+    def compression_class(self) -> Any:
+        return BaseWeightsDecompressor if self.compression_format == CompressionFormat.DQ else BaseQuantizer
+
+    @property
+    def compression_dtype(self) -> Any:
+        if self.compression_format == CompressionFormat.DQ:
+            return torch.int8 if self.mode == CompressWeightsMode.INT8_SYM else torch.uint8
+        return self.torch_dtype
+
 
 @pytest.mark.parametrize(
     "param",
@@ -57,7 +68,7 @@ class ParamInPlaceStrip:
                 CompressWeightsMode.INT8_ASYM,
                 CompressWeightsMode.INT8_SYM,
             ],
-            [CompressionFormat.FQ_LORA, CompressionFormat.FQ],
+            [CompressionFormat.FQ_LORA, CompressionFormat.FQ, CompressionFormat.DQ],
             [torch.float32, torch.float16, torch.bfloat16],
         )
     ],
@@ -77,8 +88,8 @@ def test_nncf_in_place_strip(param: ParamInPlaceStrip):
         **param.extra_arguments,
     )
 
-    check_compression_modules(compressed_model, expected_class=BaseQuantizer)
-    assert compressed_model.linear.weight.dtype == param.torch_dtype
+    check_compression_modules(compressed_model, expected_class=param.compression_class)
+    assert compressed_model.linear.weight.dtype == param.compression_dtype
 
     with torch.no_grad():
         compressed_output = compressed_model(example_input)

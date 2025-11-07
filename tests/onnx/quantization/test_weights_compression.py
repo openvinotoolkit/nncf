@@ -396,6 +396,24 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
+    def get_SAM_PE_model() -> onnx.ModelProto:
+        """
+        Builds a model to be used in the TemplateWeightCompression.test_sam_pe_weight_compression() test.
+        """
+        mb = ModelBuilder()
+
+        x = mb.add_input("input", (-1, -1, -1, 2))
+        x = mb.add_matmul(x, shape=(2, 128))
+        x = mb.add_mul_const(x, shape=(1,), data=np.array([2 * np.pi], np.float32))
+        x1 = mb.add_sin(x)
+        x2 = mb.add_cos(x)
+        x = mb.add_concat([x1, x2], axis=-1)
+
+        mb.add_output(x, (-1, -1, -1, 256))
+
+        return mb.build()
+
+    @staticmethod
     def get_sequential_matmul_model() -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_mixed_precision() test.

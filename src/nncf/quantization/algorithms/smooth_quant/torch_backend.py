@@ -20,9 +20,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.function_hook.commands import PT2ConstUpdateCommand
@@ -77,16 +74,6 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         # Metatypes of linear and convolution operators guarantee
         # all nodes with the metatypes have 0 activation port id.
         return 0
-
-    @staticmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        collector = TensorCollector()
-        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(num_samples=num_samples)
-        collector.register_statistic_branch(branch_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:

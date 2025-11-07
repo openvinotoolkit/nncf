@@ -277,7 +277,7 @@ def get_mean_percentile_statistic_collector(
     """
     tensor_collector = TensorCollector(_get_wrapped_percentile_tensor_statistic(target_shape=scale_shape))
     quantiles_to_collect = np.true_divide(percentiles_to_collect, 100)
-    reducer = QuantileReducer(reduction_axes=reduction_axes, quantile=quantiles_to_collect)
+    reducer = QuantileReducer(axes=reduction_axes, quantile=quantiles_to_collect)
     for output_port_id, p in enumerate(percentiles_to_collect):
         aggregator = MeanAggregator(
             aggregation_axes=aggregation_axes,

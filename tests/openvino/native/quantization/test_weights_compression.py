@@ -74,6 +74,7 @@ from tests.openvino.native.models import MatMul
 from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import RoPEModel
+from tests.openvino.native.models import SAMPEModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
@@ -1929,6 +1930,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_RoPE_model() -> ov.Model:
         return RoPEModel().ov_model
+
+    @staticmethod
+    def get_SAM_PE_model() -> ov.Model:
+        return SAMPEModel().ov_model
 
     @staticmethod
     def get_sequential_matmul_model() -> ov.Model:

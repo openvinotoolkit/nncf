@@ -11,8 +11,8 @@
 
 import torch
 
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
-from nncf.torch.function_hook.prune.magnitude.modules import apply_magnitude_sparsity_binary_mask
+from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.magnitude.modules import apply_magnitude_sparsity_binary_mask
 
 
 def test_apply_magnitude_sparsity_binary_mask():

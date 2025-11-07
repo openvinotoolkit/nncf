@@ -73,7 +73,7 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         collector = TensorCollector(MinMaxTensorStatistic)
         reduction_axes = get_reduction_axes([batch_axis], shape)
         aggregation_axes = (0, 1)
-        kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
+        kwargs = {"axes": reduction_axes, "inplace": inplace}
         reducer = reducer(**kwargs)
         aggregator = aggregator(
             aggregation_axes=aggregation_axes,

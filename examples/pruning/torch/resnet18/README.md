@@ -32,4 +32,6 @@ It's pretty simple. The example does not require additional preparation. It will
 
 ```bash
 python main.py
+# Or to run Regularization-Based pruning
+python main.py --mode rb
 ```

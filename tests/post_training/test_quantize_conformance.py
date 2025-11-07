@@ -15,13 +15,11 @@ import time
 import traceback
 from collections import OrderedDict
 from collections import defaultdict
-from functools import partial
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
 import pytest
-import torch
 import yaml
 from packaging import version
 
@@ -38,8 +36,10 @@ from tests.post_training.pipelines.base import RunInfo
 DATA_ROOT = Path(__file__).parent / "data"
 
 
-# TODO(AlexanderDokuchaev): Remove it after update optimum
-torch.onnx.export = partial(torch.onnx.export, dynamo=False)
+# TODO(AlexanderDokuchaev): WA for https://github.com/huggingface/optimum-intel/issues/1498
+from optimum.exporters.tasks import TasksManager  # noqa: E402
+
+TasksManager._TRANSFORMERS_TASKS_TO_MODEL_LOADERS["image-text-to-text"] = "AutoModelForImageTextToText"
 
 
 @pytest.fixture(scope="function", name="use_avx2")
