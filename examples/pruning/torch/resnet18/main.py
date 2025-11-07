@@ -82,13 +82,12 @@ def get_resnet18_model(device: torch.device) -> nn.Module:
 def train_epoch(
     train_loader: DataLoader,
     model: nn.Module,
-    criterion: nn.Module,
     rb_loss: RBLoss,
     optimizer: torch.optim.Optimizer,
     device: torch.device,
 ):
-    # Switch to train mode.
     model.train()
+    criterion = nn.CrossEntropyLoss().to(device)
 
     for images, target in track(train_loader, total=len(train_loader), description="Fine tuning:"):
         images = images.to(device)
@@ -107,7 +106,6 @@ def train_epoch(
 
 @torch.no_grad()
 def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, device: torch.device) -> float:
-    # Switch to evaluate mode.
     model.eval()
 
     correct = 0
@@ -223,7 +221,6 @@ def main() -> float:
             model=model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.5, 1: 0.7}
         )
         optimizer = torch.optim.Adam(pruned_model.parameters(), lr=1e-5)
-        criterion = nn.CrossEntropyLoss().to(device)
     else:
         pruned_model = nncf.prune(
             model,
@@ -243,14 +240,12 @@ def main() -> float:
                 {"params": mask_params, "lr": 1e-2, "weight_decay": 0.0},
             ]
         )
-        criterion = nn.CrossEntropyLoss().to(device)
 
     ###############################################################################
     # Step 3: Fine tune
     print(os.linesep + "[Step 3] Fine tune with multi step pruning ratio scheduler")
 
     if pruning_mode == "bn_adaptation":
-        print("Adapting BatchNorm statistics...")
         acc1_before = validate(val_loader, pruned_model, device)
         print(f"Accuracy@1 of pruned model before BatchNorm adaptation: {acc1_before:.3f}")
 
@@ -272,7 +267,7 @@ def main() -> float:
         for epoch in range(num_epochs):
             print(os.linesep + f"Train epoch: {epoch}")
             scheduler.step()
-            train_epoch(train_loader, pruned_model, criterion, rb_loss, optimizer, device=device)
+            train_epoch(train_loader, pruned_model, rb_loss, optimizer, device=device)
 
             acc1 = validate(val_loader, pruned_model, device)
             print(f"Current pruning ratio: {scheduler.current_ratio:.3f}")
@@ -281,6 +276,7 @@ def main() -> float:
     ###############################################################################
     # Step 4: Export models
     print(os.linesep + "[Step 4] Export models")
+
     ir_path = ROOT / f"{BASE_MODEL_NAME}_pruned.xml"
     ov_model = ov.convert_model(pruned_model.cpu(), example_input=example_input.cpu(), input=tuple(example_input.shape))
     ov.save_model(ov_model, ir_path, compress_to_fp16=False)

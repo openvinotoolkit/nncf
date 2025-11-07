@@ -37,6 +37,6 @@ python main.py
 # To run Magnitude-Based pruning with batch norm adaptation
 python main.py --mode bn_adaptation
 
-# To to run Regularization-Based pruning
+# To run Regularization-Based pruning
 python main.py --mode rb
 ```

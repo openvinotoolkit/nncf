@@ -60,11 +60,13 @@ def batch_norm_adaptation(
 
 
 @contextmanager
-def set_batchnorm_train_only(model: torch.nn.Module) -> Generator[None, None, None]:
+def set_batchnorm_train_only(model: nn.Module) -> Generator[None, None, None]:
     """
     Context manager that sets only BatchNorm modules to train mode,
     while keeping all other modules in eval mode.
     Restores the original training states afterward.
+
+    :param model: The model.
     """
     # Store the original training states
     original_states = {}
@@ -75,7 +77,7 @@ def set_batchnorm_train_only(model: torch.nn.Module) -> Generator[None, None, No
         # Set all modules to eval, then only BN to train
         model.eval()
         for module in model.modules():
-            if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+            if isinstance(module, nn.modules.batchnorm._BatchNorm):
                 module.train()
         yield
     finally:
