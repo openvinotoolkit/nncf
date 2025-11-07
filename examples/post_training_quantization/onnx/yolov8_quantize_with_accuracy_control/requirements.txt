@@ -1,5 +1,6 @@
 ultralytics==8.3.221
 onnx==1.17.0
 onnxruntime==1.21.1
-openvino==2025.3.0
+openvino==2025.4.0.*
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
 torch==2.9.0
