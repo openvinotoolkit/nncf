@@ -22,6 +22,7 @@ class ConvModel(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.conv = nn.Conv2d(3, 3, 3)
+        self.conv.weight.data = torch.arange(1, 82, dtype=torch.float32).view(3, 3, 3, 3)
 
     def forward(self, x: torch.Tensor):
         x = self.conv(x)

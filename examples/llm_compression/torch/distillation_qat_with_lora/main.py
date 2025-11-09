@@ -228,9 +228,8 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVMode
     :return: A wrapper of OpenVINO model ready for evaluation.
     """
     model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
-    example_input = model_to_eval.dummy_inputs
     model_to_eval = load_checkpoint(model_to_eval, ckpt_file)
-    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ, example_input=example_input)
+    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ)
     export_from_model(model_to_eval, ir_dir, device="cpu")
     return OVModelForCausalLM.from_pretrained(
         model_id=ir_dir,
