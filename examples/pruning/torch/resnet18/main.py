@@ -12,6 +12,7 @@
 import os
 import warnings
 from argparse import ArgumentParser
+from argparse import RawTextHelpFormatter
 from pathlib import Path
 
 import openvino as ov
@@ -48,13 +49,18 @@ DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def get_argument_parser() -> ArgumentParser:
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["magnitude", "bn_adaptation", "rb"],
-        default="magnitude",
-        help="Pruning mode to use. Choices are: magnitude, rb. Default is magnitude.",
+        choices=["mag", "mag_bn", "rb"],
+        default="mag",
+        help=(
+            "Pruning mode to use. Choices are:\n"
+            " - mag: Magnitude-based pruning with fine-tuning (default).\n"
+            " - mag_bn: Magnitude-based pruning with BatchNorm adaptation without fine-tuning.\n"
+            " - rb: Regularization-based pruning with fine-tuning.\n"
+        ),
     )
     return parser
 
@@ -201,14 +207,14 @@ def main() -> float:
     # Step 2: Prune model
     print(os.linesep + "[Step 2] Prune model and specify training parameters")
 
-    if pruning_mode == "bn_adaptation":
+    if pruning_mode == "mag_bn":
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
             ratio=0.6,
             examples_inputs=example_input,
         )
-    elif pruning_mode == "magnitude":
+    elif pruning_mode == "mag":
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
@@ -221,7 +227,7 @@ def main() -> float:
             model=model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.5, 1: 0.7}
         )
         optimizer = torch.optim.Adam(pruned_model.parameters(), lr=1e-5)
-    else:
+    elif pruning_mode == "rb":
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED,
@@ -240,12 +246,15 @@ def main() -> float:
                 {"params": mask_params, "lr": 1e-2, "weight_decay": 0.0},
             ]
         )
+    else:
+        msg = f"Unsupported pruning mode: {pruning_mode}, please choose from ['mag', 'mag_bn', 'rb']"
+        raise ValueError(msg)
 
     ###############################################################################
     # Step 3: Fine tune
     print(os.linesep + "[Step 3] Fine tune with multi step pruning ratio scheduler")
 
-    if pruning_mode == "bn_adaptation":
+    if pruning_mode == "mag_bn":
         acc1_before = validate(val_loader, pruned_model, device)
         print(f"Accuracy@1 of pruned model before BatchNorm adaptation: {acc1_before:.3f}")
 
@@ -255,7 +264,7 @@ def main() -> float:
 
         calibration_dataset = nncf.Dataset(train_loader, transform_func=transform_fn)
 
-        nncf.batch_norm_adaptation(
+        pruned_model = nncf.batch_norm_adaptation(
             pruned_model,
             calibration_dataset=calibration_dataset,
             num_iterations=200,

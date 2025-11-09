@@ -35,7 +35,7 @@ It's pretty simple. The example does not require additional preparation. It will
 python main.py
 
 # To run Magnitude-Based pruning with batch norm adaptation
-python main.py --mode bn_adaptation
+python main.py --mode mag_bn
 
 # To run Regularization-Based pruning
 python main.py --mode rb
