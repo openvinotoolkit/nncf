@@ -136,7 +136,6 @@ mock_modules = [
     "onnx",
     "onnxruntime",
     "openvino",
-    "tensorflow",
     "keras",
     # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
     "nncf.tensor.functions.numpy_numeric",

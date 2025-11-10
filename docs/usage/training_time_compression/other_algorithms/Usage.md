@@ -153,40 +153,6 @@ sparsity algorithm has learnt masking of 30% weights out of 51% of target rate. 
 `FULLY_COMPRESSED` compression stage when it finished scheduling and tuning hyper parameters of the compression
 algorithm, for example when rb-sparsity method sets final target sparsity rate for the loss.
 
-### Saving and loading compressed models in TensorFlow
-
-```python
-# save part
-compression_ctrl, compress_model = create_compressed_model(model, nncf_config)
-checkpoint = tf.train.Checkpoint(model=compress_model,
-                                 compression_state=TFCompressionState(compression_ctrl),
-                                 ...)
-
-# save checkpoint in a preferable way
-    # using checkpoint manager
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, path_to_checkpoint)
-    checkpoint_manager.save()
-    # or via the corresponding callback
-    callbacks = []
-    callbacks.append(CheckpointManagerCallback(checkpoint, ckpt_dir))
-    ...
-    compress_model.fit(..., callbacks=callbacks)
-
-# load part
-checkpoint = tf.train.Checkpoint(compression_state=TFCompressionStateLoader())
-checkpoint.restore(path_to_checkpoint)
-compression_state = checkpoint.compression_state.state
-
-compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
-
-checkpoint = tf.train.Checkpoint(model=compress_model,
-                                 ...)
-checkpoint.restore(path_to_checkpoint)
-```
-
-Since the compression state is a dictionary of Python JSON-serializable objects, we convert it to JSON
-string within `tf.train.Checkpoint`. There are 2 helper classes: `TFCompressionState` - for saving compression state and
-`TFCompressionStateLoader` - for loading.
 
 ### Saving and loading compressed models in PyTorch
 
@@ -303,7 +269,7 @@ In the example above, the NNCF-compressed models that contain instances of `MyMo
 
 ### Accuracy-Aware model training
 
-NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](/docs/accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md). Both training loops could be run with either PyTorch or TensorFlow backend with the same user interface(except for the TF case where the Keras API is used for training).
+NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](/docs/accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md).
 
 The following function is required to create the accuracy-aware training loop. One has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above).
 
