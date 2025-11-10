@@ -13,10 +13,8 @@ from tests.cross_fw.install.common import load_nncf_modules
 
 EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.onnx.*",
-    "nncf\\.tensorflow.*",
     "nncf\\.torch.*",
     "nncf\\.experimental\\.onnx.*",
-    "nncf\\.experimental\\.tensorflow.*",
     "nncf\\.experimental\\.torch.*",
     "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?onnx_[^\\.]*",
     "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?torch_[^\\.]*",

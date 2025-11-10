@@ -58,9 +58,7 @@ else:
 
 EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.openvino.*",
-    "nncf\\.tensorflow.*",
     "nncf\\.onnx.*",
-    "nncf\\.experimental\\.tensorflow.*",
     "nncf\\.experimental\\.openvino.*",
     "nncf\\.experimental\\.onnx.*",
     "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?openvino_[^\\.]*",

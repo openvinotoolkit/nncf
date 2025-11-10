@@ -11,9 +11,6 @@ onnx==1.18.0; python_version >= '3.13'
 onnxruntime==1.21.1
 onnxscript==0.5.6
 
-# TensorFlow
-tensorflow==2.15.1
-
 # Tests and examples
 pytest==8.0.2
 pytest-cov==4.1.0

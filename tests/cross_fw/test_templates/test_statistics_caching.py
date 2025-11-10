@@ -103,7 +103,4 @@ class TemplateTestStatisticsCaching:
         aggregator.statistic_points = statistics_points
         aggregator.dump_statistics(tmp_path / test_file)
         assert (tmp_path / test_file).exists(), "Statistics file was not created"
-        # spoil backend
-        aggregator.BACKEND = BackendType.TENSORFLOW
-        with pytest.raises(nncf.StatisticsCacheError):
-            aggregator.load_statistics_from_dir(tmp_path / test_file)
+

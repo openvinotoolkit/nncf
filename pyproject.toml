@@ -99,7 +99,6 @@ disable_error_code = ["empty-body", "no-any-return"]
 [tool.ruff]
 line-length = 120
 exclude = [
-    "src/nncf/tensorflow/__init__.py",
     "src/nncf/torch/function_hook/handle_inner_functions.py"
 ]
 

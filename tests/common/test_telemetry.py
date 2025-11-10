@@ -217,7 +217,6 @@ def test_skip_if_raised():
     "backend_type, reference_category",
     [
         (BackendType.OPENVINO, NNCF_OV_CATEGORY),
-        (BackendType.TENSORFLOW, NNCF_TF_CATEGORY),
         (BackendType.ONNX, NNCF_ONNX_CATEGORY),
         (BackendType.TORCH, NNCF_PT_CATEGORY),
         (BackendType.TORCH_FX, NNCF_PT_FX_CATEGORY),
