@@ -54,7 +54,6 @@ class ImageClassificationTimm(ImageClassificationBase):
                 onnx_path,
                 export_params=True,
                 opset_version=13,
-                dynamo=True,
                 **additional_kwargs,
             )
 
