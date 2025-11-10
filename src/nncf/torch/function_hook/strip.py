@@ -154,7 +154,7 @@ def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel) -> T
 def apply_compression_in_place(model: TModel) -> TModel:
     """
     Applies NNCF module in-place to the weights:
-        (weights + NNCF module) -> (pruned weights)
+        (weights + NNCF module) -> (in-place compressed weights)
 
     :param model: Compressed model
     :return: The modified NNCF network.
