@@ -23,29 +23,6 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: AlexanderDokuchaev/md-dead-link-check@d5a37e0b14e5918605d22b34562532762ccb2e47 # v1.2.0
 
-  tensorflow:
-    runs-on: ubuntu-latest-8-cores
-    if: github.repository_owner == 'openvinotoolkit'
-    timeout-minutes: 100
-    defaults:
-      run:
-        shell: bash
-    env:
-      DEBIAN_FRONTEND: noninteractive
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          lfs: true
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with:
-          python-version: 3.10.14
-      - name: Install NNCF and test requirements
-        run: pip install . -r tests/tensorflow/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run TensorFlow precommit
-        run: pytest tests/tensorflow -ra
-
   weight-compression:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/conformance_weight_compression.yml
