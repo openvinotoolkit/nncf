@@ -178,32 +178,6 @@ quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
 ```
 
 </details>
-<details><summary><b>TensorFlow</b></summary>
-
-```python
-import nncf
-import tensorflow as tf
-import tensorflow_datasets as tfds
-
-# Instantiate your uncompressed model
-model = tf.keras.applications.MobileNetV2()
-
-# Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = tfds.load("/path", split="validation",
-                        shuffle_files=False, as_supervised=True)
-
-# Step 1: Initialize transformation function
-def transform_fn(data_item):
-    images, _ = data_item
-    return images
-
-# Step 2: Initialize NNCF Dataset
-calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
-# Step 3: Run the quantization pipeline
-quantized_model = nncf.quantize(model, calibration_dataset)
-```
-
-</details>
 
 <details><summary><b>ONNX</b></summary>
 
@@ -333,38 +307,6 @@ torch.save(compressed_model.state_dict(), "compressed_model.pth")
 
 </details>
 
-<details><summary><b>Tensorflow</b></summary>
-
-```python
-import tensorflow as tf
-
-from nncf import NNCFConfig
-from nncf.tensorflow import create_compressed_model, register_default_init_args
-
-# Instantiate your uncompressed model
-from tensorflow.keras.applications import ResNet50
-model = ResNet50()
-
-# Load a configuration file to specify compression
-nncf_config = NNCFConfig.from_json("resnet50_imagenet_rb_sparsity.json")
-
-# Provide dataset for compression algorithm initialization
-representative_dataset = tf.data.Dataset.list_files("/path/*.jpeg")
-nncf_config = register_default_init_args(nncf_config, representative_dataset, batch_size=1)
-
-# Apply the specified compression algorithms to the model
-compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
-
-# Now use compressed_model as a usual Keras model
-# to fine-tune compression parameters along with the model weights
-
-# ... the rest of the usual TensorFlow-powered training pipeline
-
-# Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning
-compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
-```
-
-</details>
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](./docs/usage/training_time_compression/other_algorithms/Usage.md).
 

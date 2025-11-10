@@ -93,7 +93,7 @@ function: [PyTorch](/examples/post_training_quantization/torch/mobilenet_v2/READ
 
 In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](/examples/quantization_aware_training/torch/resnet18/README.md).
 
-## Using `pytorch.Dataloader` or `tf.data.Dataset` as data source for calibration dataset
+## Using `pytorch.Dataloader` as data source for calibration dataset
 
 ```batch_size``` is a parameter of a dataloader that refers to the number of samples or data points propagated through the neural network in a single pass.
 

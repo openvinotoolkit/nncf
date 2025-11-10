@@ -11,7 +11,7 @@
 
 import pytest
 
-TESTED_BACKENDS = ["torch", "tf", "onnx", "openvino"]
+TESTED_BACKENDS = ["torch", "onnx", "openvino"]
 
 
 def pytest_addoption(parser):
