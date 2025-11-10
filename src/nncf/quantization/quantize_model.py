@@ -698,8 +698,8 @@ def compress_weights(
         advanced_parameters,
     )
 
-    return compression_weights_impl(  # type: ignore[no-any-return]
-        model=model,
+    return compression_weights_impl(
+        model=model,  # type: ignore
         dataset=dataset,
         subset_size=subset_size,
         compression_format=compression_format,

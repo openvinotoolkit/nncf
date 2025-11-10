@@ -23,7 +23,7 @@ from nncf.tensor.functions import io as io
 from nncf.tensor.functions.numpy_numeric import validate_device
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic[Any]]
 
 
 def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> dict[str, T_NUMPY_ARRAY]:

@@ -153,7 +153,6 @@ sparsity algorithm has learnt masking of 30% weights out of 51% of target rate. 
 `FULLY_COMPRESSED` compression stage when it finished scheduling and tuning hyper parameters of the compression
 algorithm, for example when rb-sparsity method sets final target sparsity rate for the loss.
 
-
 ### Saving and loading compressed models in PyTorch
 
 Deprecated API

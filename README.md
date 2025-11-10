@@ -306,7 +306,6 @@ torch.save(compressed_model.state_dict(), "compressed_model.pth")
 
 </details>
 
-
 For a more detailed description of NNCF usage in your training code, see [this tutorial](./docs/usage/training_time_compression/other_algorithms/Usage.md).
 
 <a id="demos-tutorials-and-samples"></a>
