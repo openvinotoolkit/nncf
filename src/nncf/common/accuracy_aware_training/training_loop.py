@@ -346,7 +346,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     ) -> CompressionAlgorithmController:
         def _adaptive_compression_controllers() -> dict[str, CompressionAlgorithmController]:
             def remove_registry_prefix(algo_name: str) -> str:
-                for prefix in ("pt_"):
+                for prefix == "pt_":
                     if algo_name.startswith(prefix):
                         return algo_name[len(prefix) :]
                 msg = (

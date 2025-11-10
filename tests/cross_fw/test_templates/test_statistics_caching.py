@@ -11,14 +11,10 @@
 from abc import abstractmethod
 from pathlib import Path
 
-import pytest
-
-import nncf
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
@@ -103,4 +99,3 @@ class TemplateTestStatisticsCaching:
         aggregator.statistic_points = statistics_points
         aggregator.dump_statistics(tmp_path / test_file)
         assert (tmp_path / test_file).exists(), "Statistics file was not created"
-
