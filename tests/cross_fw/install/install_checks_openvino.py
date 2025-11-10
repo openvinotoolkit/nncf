@@ -18,7 +18,6 @@ EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.experimental\\.torch.*",
     "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?onnx_[^\\.]*",
     "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?torch_[^\\.]*",
-    "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?tf_[^\\.]*",
 )
 
 load_nncf_modules(EXCLUDED_MODULES_PATTERNS)
