@@ -11,7 +11,6 @@
 
 import numpy as np
 import onnx
-import onnxoptimizer
 import openvino as ov
 import timm
 import torch
@@ -59,9 +58,7 @@ class ImageClassificationTimm(ImageClassificationBase):
                 **additional_kwargs,
             )
 
-            model = onnx.load(onnx_path)
-            passes = ["fuse_bn_into_conv"]
-            self.model = onnxoptimizer.optimize(model, passes)
+            self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
