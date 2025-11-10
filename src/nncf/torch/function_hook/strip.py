@@ -171,7 +171,7 @@ def apply_compression_in_place(model: TModel) -> TModel:
         hook_module.eval()
         hook_type, op_name, port_id = decode_hook_name(hook_name)
         if hook_type != "post_hooks" or port_id != 0:
-            msg = f"Unexpected place of SparsityBinaryMask: {hook_type=}, {op_name=}, {port_id=}"
+            msg = f"Unexpected place of Compression Module: {hook_type=}, {op_name=}, {port_id=}"
             raise nncf.InternalError(msg)
 
         module_name, weight_attr_name = split_const_name(op_name)
