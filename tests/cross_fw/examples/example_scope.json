@@ -115,26 +115,6 @@
             "performance_speed_up": 1.9319552110249787
         }
     },
-    "post_training_quantization_tensorflow_mobilenet_v2": {
-        "backend": "tf",
-        "requirements": "examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt",
-        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "accuracy_metrics": {
-            "fp32_top1": 0.987770676612854,
-            "int8_top1": 0.9691720008850098,
-            "accuracy_drop": 0.01859867572784424
-        },
-        "performance_metrics": {
-            "fp32_fps": 1703.04,
-            "int8_fps": 5796.3,
-            "performance_speed_up": 3.403501972942503
-        },
-        "model_size_metrics": {
-            "fp32_model_size": 8.596238136291504,
-            "int8_model_size": 2.69466495513916,
-            "model_compression_rate": 3.1900953474371994
-        }
-    },
     "post_training_quantization_torch_mobilenet_v2": {
         "backend": "torch",
         "requirements": "examples/post_training_quantization/torch/mobilenet_v2/requirements.txt",
@@ -344,27 +324,6 @@
         "accuracy_tolerance": 0.02,
         "accuracy_metrics": {
             "accuracy_diff": 0.03
-        }
-    },
-    "quantization_aware_training_tensorflow_mobilenet_v2": {
-        "backend": "tf",
-        "requirements": "examples/quantization_aware_training/tensorflow/mobilenet_v2/requirements.txt",
-        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "accuracy_tolerance": 0.01,
-        "accuracy_metrics": {
-            "fp32_top1": 0.987770676612854,
-            "int8_top1": 0.9737579822540283,
-            "accuracy_drop": 0.014012694358825684
-        },
-        "performance_metrics": {
-            "fp32_fps": 1703.04,
-            "int8_fps": 5796.3,
-            "performance_speed_up": 3.403501972942503
-        },
-        "model_size_metrics": {
-            "fp32_model_size": 8.596238136291504,
-            "int8_model_size": 2.69466495513916,
-            "model_compression_rate": 3.1900953474371994
         }
     },
     "magnitude_pruning_torch_resnet18": {
