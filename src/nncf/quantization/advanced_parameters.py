@@ -69,7 +69,6 @@ class FP8Type(StrEnum):
 
     :param E4M3: Mode with 4-bit exponent and 3-bit mantissa.
     :param E5M2: Mode with 5-bit exponent and 2-bit mantissa.
-
     """
 
     E4M3 = "f8e4m3"
@@ -222,9 +221,8 @@ class AdvancedQuantizationParameters:
     :type disable_bias_correction: bool
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is None.
-        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
-        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
-        otherwise sets to False.
+        "None" means that if torch.DataLoader was passed as a data source for the calibration dataset,
+        then in case batch_size of the data source > 1 batchwise_statistics sets to True, otherwise sets to False.
     :type batchwise_statistics: Optional[bool]
     :param quantizer_propagation_rule: An instance of the `QuantizerPropagationRule` enum that
         specifies how quantizers should be propagated and merged across branching nodes in the

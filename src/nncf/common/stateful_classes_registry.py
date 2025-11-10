@@ -86,7 +86,7 @@ class StatefulClassesRegistry:
 
 class CommonStatefulClassesRegistry:
     """
-    Common for TF and PT registry for the stateful classes.
+    Common for PT registry for the stateful classes.
     """
 
     @staticmethod
@@ -100,7 +100,6 @@ class CommonStatefulClassesRegistry:
 
         def decorator(cls: TObj) -> TObj:
             PT_STATEFUL_CLASSES.register(name)(cls)
-            TF_STATEFUL_CLASSES.register(name)(cls)
             return cls
 
         return decorator
@@ -127,4 +126,3 @@ class CommonStatefulClassesRegistry:
 
 
 PT_STATEFUL_CLASSES = StatefulClassesRegistry()
-TF_STATEFUL_CLASSES = StatefulClassesRegistry()

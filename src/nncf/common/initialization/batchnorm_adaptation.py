@@ -85,14 +85,10 @@ class BatchnormAdaptationAlgorithm:
         """
         backend = get_backend(model)
         impl_cls: type[BatchnormAdaptationAlgorithmImpl]
-        if backend is BackendType.TORCH:
-            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
 
-            impl_cls = PTBatchnormAdaptationAlgorithmImpl
-        else:
-            assert backend is BackendType.TENSORFLOW
-            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
+        from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
 
-            impl_cls = TFBatchnormAdaptationAlgorithmImpl
+        impl_cls = PTBatchnormAdaptationAlgorithmImpl
+
         impl = impl_cls(self._data_loader, self._num_bn_adaptation_steps, self._device)
         impl.run(model)

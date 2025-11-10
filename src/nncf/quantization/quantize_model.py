@@ -214,22 +214,6 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
 
-    if backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow.quantization.quantize_model import quantize_impl
-
-        return quantize_impl(  # type: ignore[no-any-return]
-            model=model,
-            calibration_dataset=calibration_dataset,
-            mode=mode,
-            preset=preset,
-            target_device=target_device,
-            subset_size=subset_size,
-            fast_bias_correction=fast_bias_correction,
-            model_type=model_type,
-            ignored_scope=ignored_scope,
-            advanced_parameters=advanced_parameters,
-        )
-
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 

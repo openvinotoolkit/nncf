@@ -47,33 +47,27 @@ class TargetType(IntEnum):
     in order to create a compressed model.
 
     `LAYER` - a location corresponding directly to an existing layer in the model
-    `BEFORE_LAYER` - a location before the associated model layer,
-                     implemented by inserting an additional layer in the TF model
-    `AFTER_LAYER` - a location after the associated model layer,
-                    implemented by inserting an additional layer in the TF model
-    `PRE_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
+    `PRE_LAYER_OPERATION` - a location before the associated PT-module
                             execution, for which the local attributes of said
-                            PT-module or TF-layer are accessible
-    `POST_LAYER_OPERATION` - a location after the associated PT-module or TF-layer
+                            PT-module are accessible
+    `POST_LAYER_OPERATION` - a location after the associated PT-module
                              execution, for which the local attributes of said
-                             PT-module or TF-layer are accessible
+                             PT-module are accessible
     `OPERATION_WITH_WEIGHTS` - same as PRE_LAYER_OPERATION, but targets weights
                                of the layer/module specifically
     `OPERATOR_PRE_HOOK` - a location before a function call in PT without access to
-                          specific module attributes - N/A in TF
+                          specific module attributes
     `OPERATOR_POST_HOOK` - a location after a function call in PT without access to
-                           specific module attributes - N/A in TF
+                           specific module attributes
 
-    Notes: Adding operations to a PT-module or TF-layer implemented by wrapping
-    the original PT-module or TF-layer and registering operations that are executed
-    before/after calling the original PT-module or TF-layer according to the
+    Notes: Adding operations to a PT-module implemented by wrapping
+    the original PT-module and registering operations that are executed
+    before/after calling the original PT-module according to the
     registration location:`PRE_LAYER_OPERATION`, `POST_LAYER_OPERATION` and
     `OPERATION_WITH_WEIGHTS`.
     """
 
     LAYER = 0
-    BEFORE_LAYER = 1
-    AFTER_LAYER = 2
     PRE_LAYER_OPERATION = 3
     POST_LAYER_OPERATION = 4
     OPERATION_WITH_WEIGHTS = 5

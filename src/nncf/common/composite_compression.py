@@ -326,15 +326,12 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         """
         self.prepare_for_export()
         backend = get_backend(self.model)
-        if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter
 
-            exporter = TFExporter(self.model, input_names, output_names, model_args)  # type: ignore
-        else:
-            assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter
+        assert backend is BackendType.TORCH
+        from nncf.torch.exporter import PTExporter
 
-            exporter = PTExporter(self.model, input_names, output_names, model_args)  # type: ignore
+        exporter = PTExporter(self.model, input_names, output_names, model_args)  # type: ignore
+
         if save_format is not None:
             exporter.export_model(save_path, save_format)
         else:
