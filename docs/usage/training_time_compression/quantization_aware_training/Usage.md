@@ -11,14 +11,10 @@ Please refer to this [document](/docs/usage/training_time_compression/other_algo
 
 Quantize the model using the [Post Training Quantization](../../post_training_compression/post_training_quantization/Usage.md) method.
 
-<details open><summary><b>PyTorch</b></summary>
-
 ```python
 model = TorchModel() # instance of torch.nn.Module
 quantized_model = nncf.quantize(model, ...)
 ```
-
-</details>
 
 ### Step 2: Run the training pipeline
 
