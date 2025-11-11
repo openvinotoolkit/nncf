@@ -1,6 +1,8 @@
-whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.3.0.0#subdirectory=tools/who_what_benchmark
+whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@releases/2025/4#subdirectory=tools/who_what_benchmark
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/ --pre
 numpy==1.26.4
-openvino==2025.3.0
+openvino==2025.4.0.*
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
 optimum-intel==1.26.0
 optimum-onnx==0.0.3
 optimum==2.0.0
