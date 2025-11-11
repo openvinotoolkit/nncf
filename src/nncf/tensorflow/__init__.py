@@ -57,5 +57,5 @@ from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
 from nncf.tensorflow.utils.state import ConfigState
 
 warning_deprecated(
-    "The TensorFlow backend is deprecated and will be removed in the next release."
+    "The TensorFlow backend is deprecated and will be removed in a future release."
 )
