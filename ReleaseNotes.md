@@ -5,15 +5,16 @@
 Post-training Quantization:
 
 - Breaking changes:
-  - ...
+- (OpenVINO) `nncf.CompressWeightsMode.E2M1` `mode` option is renamed to `nncf.CompressWeightsMode.MXFP4`.
 - General:
   - ...
 - Features:
-  - ...
+  - The histogram aggregator was introduced, improving metrics for a number of classification models with PTQ.
+  - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
 - Fixes:
   - ...
 - Improvements:
-  - ...
+  - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
 - Deprecations/Removals:
   - ...
 - Tutorials:
