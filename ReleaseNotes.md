@@ -17,7 +17,8 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Deployment of a Post-Training Optimized Qwen3 Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/notebooks/qwen-3/smolagents/qwen3_agent.ipynb)
+  - [Post-Training Optimization of ACE Step Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ace-step-music-generation/ace-step-music-generation.ipynb)
 - Known issues:
   - ...
 
