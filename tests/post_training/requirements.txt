@@ -7,6 +7,7 @@ torch
 torchvision
 onnx
 onnxruntime
+onnxscript
 openvino
 pytest
 pytest-forked
@@ -26,4 +27,3 @@ accelerate==1.9.0
 transformers==4.53.0
 whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.4.1.0#subdirectory=tools/who_what_benchmark
 datasets==3.6.0
-onnxscript==0.5.4
