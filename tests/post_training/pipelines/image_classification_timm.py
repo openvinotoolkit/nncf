@@ -45,9 +45,8 @@ class ImageClassificationTimm(ImageClassificationBase):
             onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             additional_kwargs = {}
             if self.batch_size > 1:
-                batch = torch.export.Dim("batch")
-                additional_kwargs["dynamic_shapes"] = ({0: batch},)
-
+                additional_kwargs["input_names"] = ["image"]
+                additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
             torch.onnx.export(
                 timm_model,
                 self.dummy_tensor,
@@ -56,7 +55,6 @@ class ImageClassificationTimm(ImageClassificationBase):
                 opset_version=13,
                 **additional_kwargs,
             )
-
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
