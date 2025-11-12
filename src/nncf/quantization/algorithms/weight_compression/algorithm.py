@@ -14,7 +14,7 @@ import operator
 from collections import OrderedDict
 from collections import defaultdict
 from functools import reduce
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -899,7 +899,9 @@ class WeightCompression(Algorithm):
                 matmul_nodes_to_compress, graph
             )
             if statistic_points is None:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistic_points = self.get_statistic_points(
+                    model, graph, matmul_input_to_output_nodes_map, weight_params
+                )
                 statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             statistics = self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points
@@ -1085,74 +1087,36 @@ class WeightCompression(Algorithm):
         statistics_aggregator.collect_statistics(model, graph)
         return statistics_aggregator.statistic_points
 
-    def _get_node_with_weight_from_act_node(
-        self, act_node: NNCFNode, output_port_id: int, graph: NNCFGraph
-    ) -> NNCFNode:
-        """
-        Returns the node with weight connected to a given activation node on its output_port_id.
-
-        :param node_with_weight: Node which is connected to weight.
-        :param graph: Model graph.
-        :return: List of port ids of all the weights that feed the node with weight.
-        """
-        node_with_weight_edge = graph.get_output_edges_by_port_id(act_node, output_port_id)
-        for node_order, edge in enumerate(node_with_weight_edge):
-            is_node_with_weights = self._backend_entity.is_node_with_weights(edge.to_node, graph)
-            if is_node_with_weights:
-                node_with_weight = node_with_weight_edge[node_order].to_node
-                break
-        return node_with_weight
-
-    def _get_weight_port_ids_from_node_with_weight(self, node_with_weight: NNCFNode, graph: NNCFGraph) -> list[int]:
-        """
-        Returns the port ids of weight nodes connected to a given node_with_weight.
-
-        :param node_with_weight: Node which is connected to weight.
-        :param graph: Model graph.
-        :return: List of port ids of all the weights that feed the node with weight.
-        """
-        return [pid for _, pid in self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)]
-
-    def _get_weight_dims_from_node_with_weight(
-        self, node_with_weight: NNCFNode, weight_port_ids: list[int], graph: NNCFGraph
-    ) -> list[int]:
-        """
-        Returns the dimension of weight to be compressed from a given node_with_weight and its weight_port_id.
-
-        :param node_with_weight: Node which is connected to weight.
-        :param weight_port_id: Weight port id which connects to node with weight.
-        :param graph: Model graph.
-        :return: List of dimensions of all the weights that feed the node with weight.
-        """
-        return [
-            len(self._backend_entity.get_weight_shape(node_with_weight, weight_port_id, graph))
-            for weight_port_id in weight_port_ids
-        ]
-
     def get_statistic_points(
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
+        matmul_input_to_output_nodes_map: dict[tuple[NNCFNode, int], list[NNCFNode]],
+        weight_params: list[WeightCompressionParameters],
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
         :param model: Model for statistics collection.
         :param graph: Model graph.
-        :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
+        :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
+            nodes which accept this activation as an input.
+        :param weight_params: List of weight parameters to collect statistics for.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
         statistic_container = StatisticPointsContainer()
+        params_dict = {wp.node_with_weight: wp for wp in weight_params}
+
         # Statistics for data aware algorithms
         if self._data_aware_compression:
-            for node, output_port_id in nodes_and_port_ids:
+            for (node, output_port_id), node_with_weights in matmul_input_to_output_nodes_map.items():
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
-                node_with_weight = self._get_node_with_weight_from_act_node(node, output_port_id, graph)
-                weight_port_ids = self._get_weight_port_ids_from_node_with_weight(node_with_weight, graph)
-                weight_dims = self._get_weight_dims_from_node_with_weight(node_with_weight, weight_port_ids, graph)
+                weight_dims = []
+                for node_with_weight in node_with_weights:
+                    weight_param = params_dict.get(node_with_weight)
+                    weight_dims.append(len(weight_param.weight_shape))
 
                 # by default, reduce activations across all but the last dimension. The last dimension is
                 # assumed to be the hidden size dimension.
@@ -1160,12 +1124,7 @@ class WeightCompression(Algorithm):
                 reduction_axes = tuple(range(n_dims - 1))
 
                 # For 3D weights, hidden dimension is the second dimension. Reduce by all other dimensions
-                weight_reduction_axis = self._backend_entity.get_reduction_axes(
-                    node_with_weight, weight_port_ids[0], graph
-                )
-                reduction_axes = (
-                    weight_reduction_axis if any(weight_dim == 3 for weight_dim in weight_dims) else reduction_axes
-                )
+                reduction_axes = (1,) if any(weight_dim == 3 for weight_dim in weight_dims) else reduction_axes
 
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
@@ -1178,7 +1137,7 @@ class WeightCompression(Algorithm):
         # Statistics for mixed precision algorithm
         if self._data_aware_mixed_precision:
             mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
-                model, graph, nodes_and_port_ids
+                model, graph, matmul_input_to_output_nodes_map.keys()
             )
             for points in mixed_precision_statistics.values():
                 for point in points:
