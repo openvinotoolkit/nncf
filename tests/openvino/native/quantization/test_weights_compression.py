@@ -169,7 +169,7 @@ def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode
     return stats
 
 
-def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
+def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
     dtype = ov.Type.u4 if mode == CompressWeightsMode.INT4_ASYM else ov.Type.i4
     assert op.get_element_type() == dtype
 
@@ -217,7 +217,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     return stats
 
 
-def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
+def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
     dtype = ov.Type.f4e2m1 if mode == CompressWeightsMode.MXFP4 else ov.Type.f8e4m3
     assert op.get_element_type() == dtype
 
@@ -250,7 +250,7 @@ def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
     return stats
 
 
-def check_nf4_grouped(op: ov.Node, group_size: int = 7):
+def check_nf4_grouped(op: ov.Node, group_size: int = 3):
     assert op.get_element_type() == ov.Type.nf4
 
     compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
@@ -279,7 +279,7 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     return stats
 
 
-def check_codebook_grouped(op: ov.Node, group_size: int = 7, dtype=ov.Type.f8e4m3):
+def check_codebook_grouped(op: ov.Node, group_size: int = 3, dtype=ov.Type.f8e4m3):
     assert op.get_element_type() == dtype
 
     compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
@@ -368,17 +368,17 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
     (
         (CompressWeightsMode.INT8_ASYM, -1, {node_name: check_int8_node for node_name in TEST_MODELS[IntegerModel]}),
         (CompressWeightsMode.INT8_SYM, -1, {node_name: check_int8_sym for node_name in TEST_MODELS[IntegerModel]}),
-        (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.CB4_F8E4M3, 7, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_SYM, 3, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_ASYM, 3, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.NF4, 3, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.CB4_F8E4M3, 3, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP4, 32, get_mixed_mapping(check_mxfp4, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP8_E4M3, 32, get_mixed_mapping(check_mxfp8, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.FP8_E4M3, 32, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
-    model = IntegerModel(dim2=group_size if group_size > 0 else 7).ov_model
+    model = IntegerModel(dim2=group_size if group_size > 0 else 3).ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
     for op in compressed_model.get_ops():
