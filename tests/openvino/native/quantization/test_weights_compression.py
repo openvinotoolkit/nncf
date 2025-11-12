@@ -378,7 +378,10 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
-    model = IntegerModel(dim2=group_size if group_size > 0 else 3).ov_model
+    model = IntegerModel(
+        dim2=group_size if group_size > 0 else 3,
+        dim3=1 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3) else 6,
+    ).ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
     for op in compressed_model.get_ops():
