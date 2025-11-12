@@ -282,9 +282,6 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 3):
 def check_codebook_grouped(op: ov.Node, group_size: int = 3, dtype=ov.Type.f8e4m3):
     assert op.get_element_type() == dtype
 
-    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
-    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
-
     if dtype == ov.Type.f16:
         convert_node = op
     else:
@@ -311,8 +308,7 @@ def check_codebook_grouped(op: ov.Node, group_size: int = 3, dtype=ov.Type.f8e4m
     convert_node = get_next_node(reshape_node)
     assert convert_node.get_type_name() == "Convert"
 
-    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
-    return stats
+    return {"scale": get_const_value_as_numpy_tensor(scale_node)}
 
 
 def check_codebook_indexes(op: ov.Node, dtype=ov.Type.u4):
@@ -423,12 +419,13 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     ],
 )
 def test_codebook_compression_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
-    model = IntegerModel().ov_model
+    group_size = 3
+    model = IntegerModel(dim2=group_size).ov_model
 
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.CODEBOOK,
-        group_size=7,
+        group_size=group_size,
         advanced_parameters=nncf.AdvancedCompressionParameters(codebook=codebook),
     )
     actual_stats = {}
@@ -436,7 +433,7 @@ def test_codebook_compression_for_different_dtypes(codebook, codebook_dtype, ind
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant":
             if op_name == "matmul_2_data":
-                actual_stats[op_name] = check_codebook_grouped(op, group_size=7, dtype=codebook_dtype)
+                actual_stats[op_name] = check_codebook_grouped(op, group_size=group_size, dtype=codebook_dtype)
             elif op_name == "matmul_2_data_nncf_codebook_idxs":
                 actual_stats[op_name] = check_codebook_indexes(op, dtype=index_dtype)
 
