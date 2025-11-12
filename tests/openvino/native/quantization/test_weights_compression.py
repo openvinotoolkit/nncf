@@ -34,6 +34,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
+from nncf.openvino.optimized_functions import astype
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
@@ -172,8 +173,8 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     dtype = ov.Type.u4 if mode == CompressWeightsMode.INT4_ASYM else ov.Type.i4
     assert op.get_element_type() == dtype
 
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
 
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
@@ -195,8 +196,8 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
         assert zero_point_node.get_element_type() == dtype
         assert list(zero_point_node.shape) == reduced_weight_shape
 
-        zero_point = get_const_value_as_numpy_tensor(zero_point_node)
-        stats["zero_point"] = zero_point
+        zp = astype(Tensor(zero_point_node.get_tensor_view()), TensorDataType.float16)
+        stats["zero_point"] = zp.as_numpy_tensor().data
 
         mul_node = get_next_node(sub_node)
     else:
@@ -220,8 +221,8 @@ def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
     dtype = ov.Type.f4e2m1 if mode == CompressWeightsMode.MXFP4 else ov.Type.f8e4m3
     assert op.get_element_type() == dtype
 
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
 
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
@@ -252,8 +253,8 @@ def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 32):
 def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert op.get_element_type() == ov.Type.nf4
 
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
 
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
@@ -281,8 +282,8 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
 def check_codebook_grouped(op: ov.Node, group_size: int = 7, dtype=ov.Type.f8e4m3):
     assert op.get_element_type() == dtype
 
-    compressed_weight = get_const_value_as_numpy_tensor(op)
-    stats = {"compressed_weight": compressed_weight}
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
 
     if dtype == ov.Type.f16:
         convert_node = op
