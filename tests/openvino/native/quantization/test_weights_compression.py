@@ -377,6 +377,7 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     model = IntegerModel(
         dim2=group_size if group_size > 0 else 3,
         dim3=1 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3) else 6,
+        positive_w=False,
     ).ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
@@ -420,7 +421,7 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
 )
 def test_codebook_compression_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
     group_size = 3
-    model = IntegerModel(dim2=group_size).ov_model
+    model = IntegerModel(dim2=group_size, positive_w=False).ov_model
 
     compressed_model = compress_weights(
         model,
@@ -453,7 +454,9 @@ def test_gather_in_4_bit_if_all_layers_with_data(metric):
     dim1 = 2  # sequence length dimension
     dim2 = 7
     max_input_value = 6
-    model = IntegerModel(dim1=dim1, dim2=dim2, max_input_value=max_input_value, add_batch_dimension=True).ov_model
+    model = IntegerModel(
+        dim1=dim1, dim2=dim2, max_input_value=max_input_value, add_batch_dimension=True, positive_w=False
+    ).ov_model
 
     input_shape = (dim1, dim2, dim1)
     n_inputs = input_shape[0] * input_shape[1] * input_shape[2]
@@ -482,7 +485,7 @@ def test_gather_in_4_bit_if_all_layers_with_data(metric):
 
 
 def test_gather_can_be_8_bit_if_all_layers_without_data():
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=True).ov_model
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.INT4_SYM,
@@ -538,7 +541,7 @@ def test_conv_in_8_bit_if_mode_4bit(all_layers):
 
 
 def test_gather_can_be_4_bit_if_all_layers_without_data():
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=False).ov_model
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.INT4_SYM,
@@ -556,7 +559,7 @@ def test_gather_can_be_4_bit_if_all_layers_without_data():
 
 @pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
 def test_gather_in_8_bit_if_not_all_layers(metric):
-    model = IntegerModel(add_batch_dimension=True).ov_model
+    model = IntegerModel(add_batch_dimension=True, positive_w=False).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     compressed_model = compress_weights(
         model,
@@ -783,7 +786,7 @@ CALCULATE_SCALE_DESCS = [
     ),
 )
 def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=False).ov_model
     compressed_model = compress_weights(model, ignored_scope=ignored_scope)
     ref_compressed_weights = TEST_MODELS[IntegerModel]
     act_num = 0
@@ -900,14 +903,14 @@ def test_raise_error_with_unsupported_params_for_empty_dataset(mode, algo):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=False).ov_model
     with pytest.raises(nncf.ValidationError):
         compress_weights(model, mode=mode, sensitivity_metric=metric, group_size=-1, ratio=0.8)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
-    model = IntegerModel(add_batch_dimension=True).ov_model
+    model = IntegerModel(add_batch_dimension=True, positive_w=False).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
     scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
