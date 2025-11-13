@@ -549,7 +549,6 @@ class WeightCompression(Algorithm):
         :param model: The model.
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
-        :param group_size_values: A dictionary mapping weight names to their group size values.
         """
         if self._ratio < 1 and len(ratio_defining_params) > 0:
             primary_precision_weight_params = self._mixed_precision_algo.apply(
@@ -887,8 +886,8 @@ class WeightCompression(Algorithm):
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
-                wc_config = None
 
+                wc_config = None
                 if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
                     if (
                         self._group_size != -1
@@ -1213,7 +1212,7 @@ class WeightCompression(Algorithm):
 
         :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
             nodes which accept this activation as an input.
-        :param statistic_points: Statistic points.
+        :param statistic_points: Statistic points object.
         :return: Collected statistics.
         """
         # For each node we store statistics in a WCTensorStatistics data-class. It contains the following fields:
