@@ -534,7 +534,7 @@ class WeightCompression(Algorithm):
             codebook_values=codebook_values,
         )
 
-    def _set_weight_compression_config(
+    def _apply_mixed_precision(
         self,
         ratio_defining_params: list[WeightCompressionParameters],
         model: TModel,
@@ -560,6 +560,17 @@ class WeightCompression(Algorithm):
                 if weight_param in primary_precision_weight_params:
                     continue
                 weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
+
+    def _validate_group_size(
+        self,
+        ratio_defining_params: list[WeightCompressionParameters],
+    ) -> None:
+        """
+        Validate the group sizes for all the Nodes.
+
+        :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
+            backup precisions.
+        """
         # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
         for w_params in ratio_defining_params:
@@ -956,8 +967,9 @@ class WeightCompression(Algorithm):
         statistics, statistic_points = self._collect_statistics_and_statistic_points(
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
         )
-        # Set weight compression configuration
-        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
+        # Apply Mixed precision algorithm to ratio defining parameters
+        self._apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
+        self._validate_group_size(ratio_defining_params)
 
         # Print statistics
         nncf_logger.info(
