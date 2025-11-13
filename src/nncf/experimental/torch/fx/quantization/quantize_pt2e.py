@@ -167,6 +167,7 @@ def _quant_node_constraint(n: torch.fx.Node) -> bool:
 def compress_pt2e(
     model: torch.fx.GraphModule,
     quantizer: Quantizer,
+    *,
     dataset: Optional[nncf.Dataset] = None,
     awq: bool = False,
     scale_estimation: bool = False,
