@@ -978,6 +978,7 @@ class WeightCompression(Algorithm):
 
         # Filter all_weight_params by excluding nodes that should remain in their original floating-point precision
         all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
+
         return self.apply_with_parameters(
             model,
             graph,
