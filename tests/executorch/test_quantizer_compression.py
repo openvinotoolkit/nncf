@@ -43,6 +43,7 @@ from tests.torch2.fx.helpers import get_torch_fx_model
 
 FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "compress_pt2e"
 FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "ao_export_compression_OpenVINOQuantizer"
+INT8_COMPRESSION_MODES = [QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM]
 
 
 @dataclass
@@ -142,9 +143,14 @@ def get_test_cases() -> list[ModelCase, tuple[dict[str, Any], ...], dict[str, An
 
 
 def get_test_model_ids_from_test_cases(
-    test_models: list[ModelCase, tuple[dict[str, Any], ...], Optional[dict[str, Any]]],
+    test_models: list[tuple[ModelCase, tuple[dict[str, Any], ...], Optional[dict[str, Any]]]],
 ) -> list[str]:
-    return [f"{m.model_id}__{_string_from_quantizer_params(qparams)}" for (m, qparams) in test_models]
+    model_ids = []
+    for item in test_models:
+        m, qparams, *other_params = item
+        pt2e_params = other_params[0] if other_params else None
+        model_ids.append(f"{m.model_id}__{_string_from_quantizer_params(qparams, pt2e_params)}")
+    return model_ids
 
 
 BASE_MODELS = (
@@ -168,8 +174,6 @@ TEST_MODEL_IDS = get_test_model_ids_from_test_cases(TEST_MODELS)
 TEST_MODELS_NO_PT2E = [(m, qparams) for m, qparams, _ in TEST_MODELS]
 
 TEST_MODEL_IDS_NO_PT2E = get_test_model_ids_from_test_cases(TEST_MODELS_NO_PT2E)
-
-INT8_COMPRESSION_MODES = [QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM]
 
 
 @pytest.mark.parametrize(

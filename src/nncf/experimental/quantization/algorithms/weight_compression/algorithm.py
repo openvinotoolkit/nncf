@@ -22,6 +22,7 @@ from nncf import IgnoredScope
 from nncf import SensitivityMetric
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.quantizer import Quantizer
@@ -141,15 +142,26 @@ class WeightsCompression(Algorithm):
         all_weight_params, ratio_defining_params, skipped_weight_params = (
             self._quantizer.get_weight_compression_parameters(model, graph)
         )
+        # Collect statistics for the weights compression
+        statistics, statistic_points = self._algo._collect_statistics_and_statistic_points(
+            model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
+        )
+        # Set weight compression configuration
+        self._algo._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
 
+        # Print statistics
+        nncf_logger.info(
+            self._algo._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+        )
+
+        # Filter all_weight_params by excluding nodes that should remain in their original floating-point precision
+        all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
         return self._algo.apply_with_parameters(
             model,
             graph,
             dataset,
-            statistic_points,
+            statistics,
             all_weight_params,
-            ratio_defining_params,
-            skipped_weight_params,
         )
 
     def get_statistic_points(

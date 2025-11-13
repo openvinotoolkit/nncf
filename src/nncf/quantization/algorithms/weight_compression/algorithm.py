@@ -556,7 +556,6 @@ class WeightCompression(Algorithm):
             )
             # At this point ratio_defining_params are all in primary precision. Below we update parameters
             # which need to be set to the backup precision.
-            primary_precision_weight_params = set(primary_precision_weight_params)
             for weight_param in ratio_defining_params:
                 if weight_param in primary_precision_weight_params:
                     continue
@@ -953,42 +952,6 @@ class WeightCompression(Algorithm):
         all_weight_params, ratio_defining_params, skipped_weight_params = self.get_weight_compression_parameters(
             model, graph
         )
-        return self.apply_with_parameters(
-            model,
-            graph,
-            dataset,
-            statistic_points,
-            all_weight_params,
-            ratio_defining_params,
-            skipped_weight_params,
-        )
-
-    def apply_with_parameters(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        dataset: Dataset,
-        statistic_points: Optional[StatisticPointsContainer],
-        all_weight_params: list[WeightCompressionParameters],
-        ratio_defining_params: list[WeightCompressionParameters],
-        skipped_weight_params: list[WeightCompressionParameters],
-    ) -> TModel:
-        """
-        Applies the Weight Compression algorithm using precomputed parameters and optional
-        algorithms (AWQ, GPTQ, scale estimation, LoRA correction). The method collects
-        statistics, configures the weight compression parameters for mixed precision algorithm,
-        and performs the model transformation with appropriate decompression operations
-
-        :param model: Backend-specific model to be compressed.
-        :param graph: NNCFGraph instance.
-        :param dataset: Dataset to collect statistics.
-        :param statistic_points: Statistics points object.
-        :param all_weight_params: List of all weight parameters.
-        :param ratio_defining_params: Subset of all_weight_params that determine mixed-precision ratios.
-        :param skipped_weight_params: List of parameters corresponding to weights intentionally skipped
-            from compression (e.g., due to ignored scopes or group size adjustments).
-        :return: Transformed model with compressed weights and inserted backend-specific decompressor.
-        """
         # Collect statistics for the weights compression
         statistics, statistic_points = self._collect_statistics_and_statistic_points(
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
@@ -1003,7 +966,35 @@ class WeightCompression(Algorithm):
 
         # Filter all_weight_params by excluding nodes that should remain in their original floating-point precision
         all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
+        return self.apply_with_parameters(
+            model,
+            graph,
+            dataset,
+            statistics,
+            all_weight_params,
+        )
 
+    def apply_with_parameters(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        dataset: Dataset,
+        statistics: Optional[dict[str, WCTensorStatistic]],
+        all_weight_params: list[WeightCompressionParameters],
+    ) -> TModel:
+        """
+        Applies the Weight Compression algorithm using precomputed parameters and optional
+        algorithms (AWQ, GPTQ, scale estimation, LoRA correction). The method collects
+        statistics, configures the weight compression parameters for mixed precision algorithm,
+        and performs the model transformation with appropriate decompression operations
+
+        :param model: Backend-specific model to be compressed.
+        :param graph: NNCFGraph instance.
+        :param dataset: Dataset to collect statistics.
+        :param statistics: Input activation statistics for each node.
+        :param all_weight_params: List of all weight parameters.
+        :return: Transformed model with compressed weights and inserted backend-specific decompressor.
+        """
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
