@@ -1110,12 +1110,14 @@ class WeightCompression(Algorithm):
                 )
                 all_weight_dims = []
                 for node_with_weight in node_with_weights:
-                    _, weight_port_ids = self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
+                    _, weight_port_ids = zip(
+                        *self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
+                    )
                     weight_dims = [
                         len(self._backend_entity.get_weight_shape(node_with_weight, weight_port_id, graph))
                         for weight_port_id in weight_port_ids
                     ]
-                    all_weight_dims.append(weight_dim for weight_dim in weight_dims)
+                    all_weight_dims.extend(weight_dims)
 
                 # by default, reduce activations across all but the last dimension. The last dimension is
                 # assumed to be the hidden size dimension.
