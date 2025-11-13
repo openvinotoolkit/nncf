@@ -218,7 +218,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
 
 
 def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
-    dtype = ov.Type.f4e2m1 if mode == CompressWeightsMode.MXFP4 else ov.Type.f8e4m3
+    dtype = ov.Type.f4e2m1 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.FP4) else ov.Type.f8e4m3
     assert op.get_element_type() == dtype
 
     compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
@@ -237,7 +237,7 @@ def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
-    if mode is not CompressWeightsMode.FP8_E4M3:
+    if mode in (CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.MXFP4):
         scale_node = scale_node.input_value(0).get_node()
     stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
 
@@ -349,7 +349,11 @@ def check_mxfp8(op: ov.Node):
 
 
 def check_fp8(op: ov.Node):
-    return check_fp(op, mode=CompressWeightsMode.FP8_E4M3, group_size=32)
+    return check_fp(op, mode=CompressWeightsMode.FP8_E4M3, group_size=3)
+
+
+def check_fp4(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.FP4, group_size=3)
 
 
 def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
@@ -370,7 +374,8 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
         (CompressWeightsMode.CB4_F8E4M3, 3, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP4, 32, get_mixed_mapping(check_mxfp4, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP8_E4M3, 32, get_mixed_mapping(check_mxfp8, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.FP8_E4M3, 32, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.FP8_E4M3, 3, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.FP4, 3, get_mixed_mapping(check_fp4, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
