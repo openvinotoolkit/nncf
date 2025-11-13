@@ -49,11 +49,11 @@ Compression-aware training:
 
 Deprecations/Removals:
 
-- ...
+- (TensorFlow) The TensorFlow backend is now marked as deprecated.
 
 Requirements:
 
-- ...
+- Updated PyTorch (2.9.0) and Torchvision (0.24.0) versions.
 
 ## New in Release 2.18.0
 
