@@ -130,9 +130,7 @@ def get_test_cases():
     test_cases = []
     for model in BASE_MODELS:
         for qparam in QUANTIZER_PARAMS:
-            pt2e_params = PT2E_PARAMS
-            if qparam.get("mode") in {QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM}:
-                pt2e_params = [{}]
+            pt2e_params = [{}] if qparam.get("mode") in INT8_COMPRESSION_MODES else PT2E_PARAMS
             for pt2e_param in pt2e_params:
                 test_cases.append(
                     (
@@ -145,8 +143,8 @@ def get_test_cases():
 
 
 BASE_MODELS = (
-    ModelCase(LlamaDecoderOnly, "LlamaDecoderOnly", [1, 3, 64]),
-    ModelCase(partial(ShortTransformer, 64, 128, True), "short_transformer_shared", [5]),
+    ModelCase(LlamaDecoderOnly, "LlamaDecoderOnly", (1, 3, 64)),
+    ModelCase(partial(ShortTransformer, 64, 128, True), "short_transformer_shared", (5,)),
 )
 
 QUANTIZER_PARAMS = (

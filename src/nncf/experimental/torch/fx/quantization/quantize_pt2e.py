@@ -178,14 +178,12 @@ def compress_pt2e(
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.fx.GraphModule:
     """
-    Applies Weight Compression to the torch.fx.GraphModule provided model
-    using provided torch.ao quantizer.
+    Applies Weight Compression to the torch.fx.GraphModule model using provided torch.ao quantizer.
 
     :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
         to convey the desired way of quantization.
-    :param dataset: A representative dataset for the
-        calibration process.
+    :param dataset: A representative dataset for the calibration process.
     :param awq: Determines whether to use or not the modified AWQ algorithm.
     :param scale_estimation: Determines whether to use or not scale estimation for 4-bit layers.
     :param gptq: Determines whether to use or not GPTQ algorithm.
