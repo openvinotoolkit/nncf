@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Modification Notes: This file was taken as is from transformers:
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py
 
 import math
 from typing import Optional
