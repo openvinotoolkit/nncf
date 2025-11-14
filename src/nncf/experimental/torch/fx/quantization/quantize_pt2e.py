@@ -23,6 +23,7 @@ from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
 from nncf import AdvancedCompressionParameters
+from nncf import CompressWeightsMode
 from nncf import Dataset
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
@@ -207,7 +208,8 @@ def compress_pt2e(
 
     wc_config = quantizer.get_weight_compression_config()
 
-    mode = wc_config.get("mode", None)
+    mode = wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
+    mode = CompressWeightsMode(mode)
     awq = awq
     gptq = gptq
     scale_estimation = scale_estimation

@@ -99,7 +99,7 @@ def get_weight_compression_configuration(
             group_size = 128
 
     return {
-        "mode": mode if isinstance(mode, nncf.CompressWeightsMode) else nncf.CompressWeightsMode(mode),
+        "mode": mode,
         "ratio": ratio or 1,
         "group_size": group_size,
         "all_layers": all_layers or False,
