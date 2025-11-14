@@ -19,9 +19,9 @@ from nncf.errors import InvalidGroupSizeError
 from nncf.errors import UnsupportedModelError
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_MXFP4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_F4E2M1_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_NF4_QUANTILES
-from nncf.quantization.algorithms.weight_compression.constants import MXFP4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.constants import F4E2M1_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import NF4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
@@ -168,7 +168,11 @@ def do_float_quantization(
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
     # Optimized implementation
-    if config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4] and _can_run_optimized(weight):
+    if config.mode in [
+        CompressWeightsMode.NF4,
+        CompressWeightsMode.MXFP4,
+        CompressWeightsMode.FP4,
+    ] and _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import do_float_quantization as do_float_quantization_ov
 
         return do_float_quantization_ov(weight, config, reduction_axes, precomputed_scale)
@@ -183,7 +187,7 @@ def do_float_quantization(
     if scale is None:
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
-    if config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]:
+    if config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]:
         if original_weight_backend == TensorBackend.ov:
             # Can convert through OpenVINO and return OpenVINO-native nf4/f4e2m1 tensor
             target_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
@@ -209,7 +213,7 @@ def float_quantize_dequantize_weight(
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor to float dtype and then dequantizes it back to obtain float32 values.
-    MXFP8_E4M3, FP8_E4M3 and FP4 modes currently are not supported.
+    MXFP8_E4M3 and FP8_E4M3 modes currently are not supported.
 
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
@@ -221,12 +225,17 @@ def float_quantize_dequantize_weight(
     assert config.mode in [
         CompressWeightsMode.NF4,
         CompressWeightsMode.MXFP4,
+        CompressWeightsMode.FP4,
         CompressWeightsMode.CODEBOOK,
         CompressWeightsMode.CB4_F8E4M3,
     ]
 
     # Optimized implementation
-    if config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4] and _can_run_optimized(weight):
+    if config.mode in [
+        CompressWeightsMode.NF4,
+        CompressWeightsMode.MXFP4,
+        CompressWeightsMode.FP4,
+    ] and _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import (
             float_quantize_dequantize_weight as float_quantize_dequantize_weight_ov,
         )
@@ -520,14 +529,14 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, mode: CompressWeights
     :param norm_weight: Normalized weight tensor to quantize.
     :return: Tensor with floating-point values, where each of them corresponds to 1 out of 16 quants.
     """
-    assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]
-    quantiles_np = NF4_QUANTILES if mode == CompressWeightsMode.NF4 else MXFP4_QUANTILES
-    quantile_centers_np = CENTER_OF_NF4_QUANTILES if mode == CompressWeightsMode.NF4 else CENTER_OF_MXFP4_QUANTILES
+    assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
+    quantiles_np = NF4_QUANTILES if mode == CompressWeightsMode.NF4 else F4E2M1_QUANTILES
+    quantile_centers_np = CENTER_OF_NF4_QUANTILES if mode == CompressWeightsMode.NF4 else CENTER_OF_F4E2M1_QUANTILES
     quantile_centers = fns.from_numpy(quantile_centers_np, backend=norm_weight.backend)
     indexes = fns.searchsorted(quantile_centers, norm_weight)
     quantiles = fns.from_numpy(quantiles_np, backend=indexes.backend)
 
-    if mode == CompressWeightsMode.MXFP4:
+    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]:
         # If in-between two quantiles, round to the nearest even quantile.
         shifted_indexes = fns.clip(indexes + 1, 0, quantiles.size - 1)
         dist_left = fns.abs(norm_weight - quantiles[indexes])
