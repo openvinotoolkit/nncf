@@ -870,7 +870,7 @@ class WeightCompression(Algorithm):
                         msg = f"""NNCF does not support 3D weights with current version of Openvino {ov_version} 
                                 due to a known issue in statistics collection Ticket - 176465
                                 Node with weight: {node.node_name}"""
-                        nncf.UnsupportedModelError(msg)
+                        raise nncf.UnsupportedModelError(msg)
 
                     if self._backup_mode != BackupMode.NONE:
                         mode = (
