@@ -865,8 +865,11 @@ class WeightCompression(Algorithm):
                         model_backend == BackendType.OPENVINO
                         and len(weight_shape) == 3
                         and ov_version
-                        and ov_version <= "2025.4"
+                        and ov_version <= "2026"
+                        and node.metatype in self._backend_entity.matmul_metatypes
                     ):
+                        # MoE operations are usually matmuls, so the check for matmul metatype is done
+                        # This is to avoid raising the error for non-MoE cases with 3D weights.
                         msg = f"""NNCF does not support 3D weights with current version of Openvino {ov_version} 
                                 due to a known issue in statistics collection Ticket - 176465
                                 Node with weight: {node.node_name}"""
