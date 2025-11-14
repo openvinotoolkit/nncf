@@ -2103,6 +2103,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             ]
         )
 
+    @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
+    def test_scale_estimation(self, mocker, is_moe):
+        super().test_scale_estimation(mocker, is_moe)
+
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
         for op in model.get_ordered_ops():
