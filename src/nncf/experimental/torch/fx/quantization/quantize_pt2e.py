@@ -224,10 +224,10 @@ def compress_pt2e(
         scale_estimation,
         gptq,
         lora_correction,
+        nncf.IgnoredScope(),  # This is already defined in the quantizer object
         sensitivity_metric,
         backup_mode,
         advanced_parameters,
-        ignored_scope=nncf.IgnoredScope(),  # This is already defined in the quantizer object
     )
 
     quantization_algorithm = WeightsCompression(
