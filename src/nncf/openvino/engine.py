@@ -16,7 +16,6 @@ import openvino as ov
 from openvino import Type
 from openvino.properties.hint import inference_precision
 
-import nncf
 from nncf.common.engine import Engine
 from nncf.openvino.graph.model_utils import model_has_state
 
@@ -35,7 +34,11 @@ class OVCompiledModelEngine(Engine):
         self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
 
     def infer(
-        self, input_data: Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]]
+        self,
+        input_data: Union[
+            Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]],
+            tuple[Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]], int],
+        ],
     ) -> dict[str, np.ndarray]:
         """
         Runs model on the provided input via OpenVINO Runtime.
@@ -44,10 +47,11 @@ class OVCompiledModelEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        if isinstance(input_data, dict) and nncf.Dataset.RESET_STATE_KEY in input_data:
-            # In this case state resetting is controlled by the input data flag
-            input_data = input_data.copy()
-            if input_data.pop(nncf.Dataset.RESET_STATE_KEY):
+        if isinstance(input_data, tuple) and len(input_data) == 2 and isinstance(input_data[1], int):
+            # A dataset with sequence ids is provided
+            input_data, seq_id = input_data
+            if seq_id == 0:
+                # Reset state only at the beginning of a new sequence
                 if self.reset_state:
                     self.infer_request.reset_state()
                 else:

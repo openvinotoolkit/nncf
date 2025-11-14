@@ -10,4 +10,5 @@
 # limitations under the License.
 
 from nncf.data.dataset import Dataset as Dataset
+from nncf.data.dataset import DatasetWithSeqId as DatasetWithSeqId
 from nncf.data.generators import generate_text_data as generate_text_data

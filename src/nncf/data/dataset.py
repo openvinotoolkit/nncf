@@ -38,12 +38,6 @@ class Dataset:
         will be passed into the model as-is.
     """
 
-    # RESET_STATE_KEY is a special input key used by OpenVINO backend to control resetting of internal model state
-    # between model inferences. This key can be added to a dataset sample input dictionary with either
-    # `True` or `False` value. With `True` value, the model state will be reset before inference on the corresponding
-    # sample, and with `False` the state will not be reset.
-    RESET_STATE_KEY = "reset_state"
-
     def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):
         self._data_source = data_source
         self._transform_func = transform_func
@@ -92,6 +86,41 @@ class Dataset:
         if hasattr(self._data_source, "_batch_size"):  # TF dataloader
             return cast(int, self._data_source._batch_size)
         return None
+
+
+@api(canonical_alias="nncf.DatasetWithSeqId")
+class DatasetWithSeqId(Dataset):
+    def __init__(
+        self,
+        data_source: Iterable[Any],
+        sequence_ids: Iterable[int],
+        transform_func: Optional[Callable[..., Any]] = None,
+    ):
+        """
+        A dataset wrapper that associates each data item with a sequence ID. Sequence IDs are used to reset state
+        of stateful models between different sequences during inference.
+        :param data_source: The iterable object serving as the source of data items.
+        :param sequence_ids: The iterable of sequence IDs corresponding to each data item in the data source. Must
+            have the same length as the data source and contain only integers.
+        :param transform_func: The function that is used to extract the model's input
+            from the data item. The data item here is the data item that is returned from
+            the data source per iteration. This function should be passed when
+            the data item cannot be directly used as model's input. If this is not specified, then the data item
+            will be passed into the model as-is.
+        """
+        if any(not isinstance(it, int) for it in sequence_ids):
+            msg = "All sequence IDs must be integers."
+            raise ValueError(msg)
+        if transform_func is not None:
+            transform_func = lambda x, seq_id: (transform_func(x), seq_id)
+        super().__init__(data_source, transform_func)
+        self._sequence_ids = sequence_ids
+
+    def get_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
+        return DataProvider(zip(self._data_source, self._sequence_ids), None, indices)
+
+    def get_inference_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
+        return DataProvider(zip(self._data_source, self._sequence_ids), self._transform_func, indices)
 
 
 class DataProvider:
