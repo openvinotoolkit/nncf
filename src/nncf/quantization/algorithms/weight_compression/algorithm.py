@@ -556,6 +556,9 @@ class WeightCompression(Algorithm):
             )
             # At this point ratio_defining_params are all in primary precision. Below we update parameters
             # which need to be set to the backup precision.
+            primary_precision_weight_params = list(
+                {param.node_with_weight: param for param in primary_precision_weight_params}.values()
+            )
             for weight_param in ratio_defining_params:
                 if weight_param in primary_precision_weight_params:
                     continue
