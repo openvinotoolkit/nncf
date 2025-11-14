@@ -786,6 +786,14 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
+    def _maybe_get_ov_version(self) -> Optional[str]:
+        try:
+            import openvino as ov
+
+            return ov.__version__
+        except Exception:
+            return None
+
     def get_weight_compression_parameters(
         self,
         model: TModel,
@@ -850,6 +858,19 @@ class WeightCompression(Algorithm):
                             f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
                             f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                         )
+
+                    model_backend = get_backend(model)
+                    ov_version = self._maybe_get_ov_version()
+                    if (
+                        model_backend == BackendType.OPENVINO
+                        and len(weight_shape) == 3
+                        and ov_version
+                        and ov_version <= "2025.4"
+                    ):
+                        msg = f"""NNCF does not support 3D weights with current version of Openvino {ov_version} 
+                                due to a known issue in statistics collection Ticket - 176465
+                                Node with weight: {node.node_name}"""
+                        nncf.UnsupportedModelError(msg)
 
                     if self._backup_mode != BackupMode.NONE:
                         mode = (
