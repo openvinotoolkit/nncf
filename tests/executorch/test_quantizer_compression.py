@@ -99,26 +99,17 @@ def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[
     return f"{mode.value}_gs{gs}_all_layers_{all_layers}_awq_{awq}_scale_estimation_{scale_estimation}"
 
 
-def check_multiple_isinstance(object_to_check: Any, objects: list[Any]) -> bool:
-    if not object_to_check:
-        return False
-    for obj in objects:
-        if isinstance(object_to_check, obj):
-            return True
-    return False
-
-
 def get_scale_values_from_model(model: torch.fx.GraphModule) -> dict[str, torch.Tensor]:
     node_to_scale_mapping = {}
-    decompressor_modules = [
+    decompressor_modules = (
         INT4AsymmetricWeightsDecompressor,
         INT4SymmetricWeightsDecompressor,
         INT8AsymmetricWeightsDecompressor,
         INT8SymmetricWeightsDecompressor,
-    ]
+    )
     for node in model.graph.nodes:
         node_module = getattr(model, node.target) if node.op == "call_module" else None
-        if not check_multiple_isinstance(node_module, decompressor_modules):
+        if not isinstance(node_module, decompressor_modules):
             continue
         state_dict_scale_name = f"{node.target}._scale"
         node_to_scale_mapping[node.name] = model.state_dict()[state_dict_scale_name]
