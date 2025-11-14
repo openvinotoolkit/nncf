@@ -31,7 +31,6 @@ BIAS = False
 class LlamaRMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
-        Copied from src/transformers/models/llama/modeling_llama.py
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
@@ -48,7 +47,6 @@ class LlamaRMSNorm(nn.Module):
 
 def _rotate_half(x):
     """
-    Copied from src/transformers/models/llama/modeling_llama.py
     Rotates half the hidden dims of the input.
     """
     x1 = x[..., : x.shape[-1] // 2]
@@ -59,7 +57,6 @@ def _rotate_half(x):
 class Rotary(nn.Module):
     """
     Precompute cos/sin for RoPE and apply to q,k.
-    Copied from src/transformers/models/llama/modeling_llama.py
     Initialize the cos and sin value once in init method
     """
 
@@ -83,10 +80,6 @@ class Rotary(nn.Module):
 
 
 class LlamaMLP(nn.Module):
-    """
-    Copied from src/transformers/models/llama/modeling_llama.py
-    """
-
     def __init__(self, dim: int, mult: int = 2):
         super().__init__()
         # mult is used as a scaling factor of sorts. This is to define the hidden/intermediate layer size
