@@ -171,7 +171,9 @@ TEST_MODELS = get_test_cases()
 
 TEST_MODEL_IDS = get_test_model_ids_from_test_cases(TEST_MODELS)
 
-TEST_MODELS_NO_PT2E = [(m, qparams) for m, qparams, _ in TEST_MODELS]
+TEST_MODELS_NO_PT2E = list(
+    {(m.model_id, tuple(qparams.items())): (m, qparams) for m, qparams, _ in TEST_MODELS}.values()
+)
 
 TEST_MODEL_IDS_NO_PT2E = get_test_model_ids_from_test_cases(TEST_MODELS_NO_PT2E)
 
