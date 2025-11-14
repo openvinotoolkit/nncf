@@ -143,16 +143,16 @@ class WeightsCompression(Algorithm):
             self._quantizer.get_weight_compression_parameters(model, graph)
         )
         # Collect statistics for the weights compression
-        statistics, statistic_points = self._algo._collect_statistics_and_statistic_points(
+        statistics, statistic_points = self._algo.collect_statistics_and_statistic_points(
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
         )
         # Apply Mixed precision algorithm to ratio defining parameters
-        self._algo._apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
-        self._algo._validate_group_size(ratio_defining_params)
+        self._algo.apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
+        self._algo.validate_group_size(ratio_defining_params)
 
         # Print statistics
         nncf_logger.info(
-            self._algo._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+            self._algo.get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
         # Filter all_weight_params by excluding nodes that should remain in their original floating-point precision

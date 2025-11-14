@@ -534,7 +534,7 @@ class WeightCompression(Algorithm):
             codebook_values=codebook_values,
         )
 
-    def _apply_mixed_precision(
+    def apply_mixed_precision(
         self,
         ratio_defining_params: list[WeightCompressionParameters],
         model: TModel,
@@ -564,7 +564,7 @@ class WeightCompression(Algorithm):
                     continue
                 weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
 
-    def _validate_group_size(
+    def validate_group_size(
         self,
         ratio_defining_params: list[WeightCompressionParameters],
     ) -> None:
@@ -694,7 +694,7 @@ class WeightCompression(Algorithm):
         percentage = sum(num_weights_list) / max(total_num_weights, 1) * 100
         return f"{percentage:.0f}% ({len(num_weights_list)} / {total_num_params})"
 
-    def _get_bitwidth_distribution_str(
+    def get_bitwidth_distribution_str(
         self,
         all_params: list[WeightCompressionParameters],
         ratio_defining_params: list[WeightCompressionParameters],
@@ -815,7 +815,7 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
-    def _collect_statistics_and_statistic_points(
+    def collect_statistics_and_statistic_points(
         self,
         model: TModel,
         graph: NNCFGraph,
@@ -967,16 +967,16 @@ class WeightCompression(Algorithm):
             model, graph
         )
         # Collect statistics for the weights compression
-        statistics, statistic_points = self._collect_statistics_and_statistic_points(
+        statistics, statistic_points = self.collect_statistics_and_statistic_points(
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
         )
         # Apply Mixed precision algorithm to ratio defining parameters
-        self._apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
-        self._validate_group_size(ratio_defining_params)
+        self.apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
+        self.validate_group_size(ratio_defining_params)
 
         # Print statistics
         nncf_logger.info(
-            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+            self.get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
         )
 
         # Filter all_weight_params by excluding nodes that should remain in their original floating-point precision
