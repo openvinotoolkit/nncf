@@ -210,19 +210,9 @@ def compress_pt2e(
 
     mode = wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
     mode = CompressWeightsMode(mode)
-    awq = awq
-    gptq = gptq
-    scale_estimation = scale_estimation
-    subset_size = subset_size
-    advanced_parameters = advanced_parameters
-    lora_correction = lora_correction
-    ratio = ratio
     group_size = wc_config.get("group_size", 128)
     all_layers = wc_config.get("all_layers", False)
     backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
-    sensitivity_metric = sensitivity_metric
-    compression_format = compression_format
-    ignored_scope = nncf.IgnoredScope()  # This is already defined in the quantizer object
 
     weight_compression_configuration = get_weight_compression_configuration(
         mode,
@@ -234,10 +224,10 @@ def compress_pt2e(
         scale_estimation,
         gptq,
         lora_correction,
-        ignored_scope,
         sensitivity_metric,
         backup_mode,
         advanced_parameters,
+        ignored_scope=nncf.IgnoredScope(),  # This is already defined in the quantizer object
     )
 
     quantization_algorithm = WeightsCompression(
