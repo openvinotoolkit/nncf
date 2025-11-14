@@ -556,13 +556,12 @@ class WeightCompression(Algorithm):
             )
             # At this point ratio_defining_params are all in primary precision. Below we update parameters
             # which need to be set to the backup precision.
-            primary_precision_weight_params = list(
-                {param.node_with_weight: param for param in primary_precision_weight_params}.values()
+            primary_precision_node_names = set(
+                param.node_with_weight.node_name for param in primary_precision_weight_params
             )
             for weight_param in ratio_defining_params:
-                if weight_param in primary_precision_weight_params:
-                    continue
-                weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
+                if weight_param.node_with_weight.node_name not in primary_precision_node_names:
+                    weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
 
     def validate_group_size(
         self,

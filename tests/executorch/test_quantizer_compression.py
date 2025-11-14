@@ -126,33 +126,6 @@ def get_scale_values_from_model(model: torch.fx.GraphModule) -> dict[str, torch.
     return node_to_scale_mapping
 
 
-def get_test_cases() -> list[ModelCase, tuple[dict[str, Any], ...], dict[str, Any]]:
-    test_cases = []
-    for model in BASE_MODELS:
-        for qparam in QUANTIZER_PARAMS:
-            pt2e_params = [{}] if qparam.get("mode") in INT8_COMPRESSION_MODES else PT2E_PARAMS
-            for pt2e_param in pt2e_params:
-                test_cases.append(
-                    (
-                        model,
-                        qparam,
-                        pt2e_param,
-                    )
-                )
-    return test_cases
-
-
-def get_test_model_ids_from_test_cases(
-    test_models: list[tuple[ModelCase, tuple[dict[str, Any], ...], Optional[dict[str, Any]]]],
-) -> list[str]:
-    model_ids = []
-    for item in test_models:
-        m, qparams, *other_params = item
-        pt2e_params = other_params[0] if other_params else None
-        model_ids.append(f"{m.model_id}__{_string_from_quantizer_params(qparams, pt2e_params)}")
-    return model_ids
-
-
 BASE_MODELS = (
     ModelCase(LlamaDecoderOnly, "LlamaDecoderOnly", (1, 3, 64)),
     ModelCase(partial(ShortTransformer, 64, 128, True), "short_transformer_shared", (5,)),
@@ -167,15 +140,19 @@ QUANTIZER_PARAMS = (
 PT2E_PARAMS = ({"awq": True, "scale_estimation": True},)
 
 
-TEST_MODELS = get_test_cases()
+TEST_MODELS_NO_PT2E = [(model, qparam) for model in BASE_MODELS for qparam in QUANTIZER_PARAMS]
+TEST_MODEL_IDS_NO_PT2E = [
+    f"{m.model_id}__{_string_from_quantizer_params(qparams)}" for m, qparams in TEST_MODELS_NO_PT2E
+]
 
-TEST_MODEL_IDS = get_test_model_ids_from_test_cases(TEST_MODELS)
-
-TEST_MODELS_NO_PT2E = list(
-    {(m.model_id, tuple(qparams.items())): (m, qparams) for m, qparams, _ in TEST_MODELS}.values()
-)
-
-TEST_MODEL_IDS_NO_PT2E = get_test_model_ids_from_test_cases(TEST_MODELS_NO_PT2E)
+TEST_MODELS = [
+    (model, qparam, pt2e_param if qparam.get("mode") not in INT8_COMPRESSION_MODES else {})
+    for model, qparam in TEST_MODELS_NO_PT2E
+    for pt2e_param in PT2E_PARAMS
+]
+TEST_MODEL_IDS = [
+    f"{m.model_id}__{_string_from_quantizer_params(qparams, pt2e_param)}" for m, qparams, pt2e_param in TEST_MODELS
+]
 
 
 @pytest.mark.parametrize(
@@ -191,7 +168,7 @@ TEST_MODEL_IDS_NO_PT2E = get_test_model_ids_from_test_cases(TEST_MODELS_NO_PT2E)
 def test_compress_pt2e(
     quantizer_builder: Callable[..., OpenVINOQuantizer],
     model_case: ModelCase,
-    quantizer_params: tuple[dict[str, Any], ...],
+    quantizer_params: dict[str, Any],
 ):
     fx_model, example_input = build_torch_fx_model(model_case)
     with torch.no_grad():
@@ -232,7 +209,7 @@ def test_compress_pt2e(
 def test_compress_pt2e_scales(
     quantizer_builder: Callable[..., OpenVINOQuantizer],
     model_case: ModelCase,
-    quantizer_params: tuple[dict[str, Any], ...],
+    quantizer_params: dict[str, Any],
     pt2e_params: dict[str, Any],
     regen_ref_data: bool,
 ):
@@ -282,7 +259,7 @@ def test_compress_pt2e_scales(
 )
 def test_openvino_quantizer(
     model_case: ModelCase,
-    quantizer_params: tuple[dict[str, Any], ...],
+    quantizer_params: dict[str, Any],
     quantizer_builder: Callable[..., OpenVINOQuantizer],
 ):
     fx_model, example_input = build_torch_fx_model(model_case)
@@ -329,7 +306,7 @@ def to_json_serializable(obj: Any) -> dict[Any, Any]:
 def test_openvino_wc_params(
     quantizer_builder: Callable[..., OpenVINOQuantizer],
     model_case: ModelCase,
-    quantizer_params: tuple[dict[str, Any], ...],
+    quantizer_params: dict[str, Any],
     regen_ref_data: bool,
 ):
     fx_model, _ = build_torch_fx_model(model_case)
