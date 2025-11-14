@@ -146,8 +146,9 @@ class WeightsCompression(Algorithm):
         statistics, statistic_points = self._algo._collect_statistics_and_statistic_points(
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
         )
-        # Set weight compression configuration
-        self._algo._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
+        # Apply Mixed precision algorithm to ratio defining parameters
+        self._algo._apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
+        self._algo._validate_group_size(ratio_defining_params)
 
         # Print statistics
         nncf_logger.info(
