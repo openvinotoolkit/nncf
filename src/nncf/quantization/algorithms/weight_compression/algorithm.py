@@ -16,6 +16,8 @@ from collections import defaultdict
 from functools import reduce
 from typing import Any, Optional, TypeVar
 
+from packaging import version
+
 import nncf
 from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -786,11 +788,11 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
-    def _maybe_get_ov_version(self) -> Optional[str]:
+    def _maybe_get_ov_major_version(self) -> Optional[str]:
         try:
             import openvino as ov
 
-            return ov.__version__
+            return ov.__version__.split(".")[0]
         except Exception:
             return None
 
@@ -860,12 +862,12 @@ class WeightCompression(Algorithm):
                         )
 
                     model_backend = get_backend(model)
-                    ov_version = self._maybe_get_ov_version()
+                    ov_version = self._maybe_get_ov_major_version()
                     if (
                         model_backend == BackendType.OPENVINO
                         and len(weight_shape) == 3
                         and ov_version
-                        and ov_version <= "2026"
+                        and version.parse(ov_version) <= version.parse("2026")
                         and node.metatype in self._backend_entity.matmul_metatypes
                     ):
                         # MoE operations are usually matmuls, so the check for matmul metatype is done
