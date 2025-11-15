@@ -12,8 +12,13 @@ Post-training Quantization:
   - The histogram aggregator was introduced, improving metrics for a number of classification models with PTQ.
   - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
   - Now weight compression biwidth distribution table also displays group size value for each of the compression data type.
+  - (ONNX) Support for the SmoothQuant algorithm has been added to the ONNX backend for INT8 quantization.
+  - (ONNX) A new transformation has been added to optimize models by folding `QuantizeLinear` nodes with constant inputs into precomputed, quantized initializers. This behavior is controlled by the `COMPRESS_WEIGHTS` backend parameter, which is now enabled (`True`) by default.
+  - (ONNX) Support has been added for applying the Fast Bias/Bias Correction algorithm to `MatMul` + `Add` subgraphs where one of the inputs to the `Add` operation is a constant. Previously, these cases were skipped because the `MatMul` operation was not recognized as having a bias, preventing the algorithm from being applied.
 - Fixes:
   - Added an ignored pattern for position embedding layer in Segment Anything model.
+  - (ONNX) Fixed incorrect input handling for the `MatMulNBits` operation that previously caused graph breaks.
+  - (ONNX) Resolved an issue with INT4 weight compression in the `Gemm` operation when `transB=1`.
 - Improvements:
   - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
   - Reduced peak memory footprint for Bias Correction algorithm.
