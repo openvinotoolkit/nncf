@@ -59,6 +59,7 @@ Deprecations/Removals:
 Requirements:
 
 - Updated PyTorch (2.9.0) and Torchvision (0.24.0) versions.
+- Drop support python 3.9.
 
 ## New in Release 2.18.0
 
