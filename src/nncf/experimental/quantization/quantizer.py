@@ -56,8 +56,9 @@ class Quantizer(ABC):
         list[WeightCompressionParameters],
     ]:
         """
-        Obtain the weight compression parameters from the quantizer which can be used to determine
+        Obtains the weight compression parameters from the quantizer which can be used to determine
         weights to compress, weights to skip, weights to consider for mixed precision assignment.
+
         :param model: Backend-specific model.
         :param nncf_graph: NNCFGraph instance.
         :return: Tuple of (all_weight_params, ratio_defining_params, skipped_weight_params) where:

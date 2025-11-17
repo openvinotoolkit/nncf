@@ -68,31 +68,26 @@ class WeightsCompression(Algorithm):
         wc_config = quantizer.get_weight_compression_config()
 
         mode = wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
-        mode = CompressWeightsMode(mode)
-        group_size = wc_config.get("group_size", None)
-        all_layers = wc_config.get("all_layers", None)
-        backup_mode = wc_config.get("backup_mode", None)
-        ignored_scope = None
 
         self._algo = OriginalWeightCompression(
-            mode=mode,
+            mode=CompressWeightsMode(mode),
             ratio=ratio,
-            group_size=group_size,
-            ignored_scope=ignored_scope,
-            all_layers=all_layers,
+            group_size=wc_config.get("group_size", None),
+            ignored_scope=None,
+            all_layers=wc_config.get("all_layers", None),
             sensitivity_metric=sensitivity_metric,
             awq=awq,
             subset_size=subset_size,
             scale_estimation=scale_estimation,
             gptq=gptq,
             lora_correction=lora_correction,
-            backup_mode=backup_mode,
+            backup_mode=wc_config.get("backup_mode", None),
             compression_format=compression_format,
             advanced_parameters=advanced_parameters,
         )
 
     def available_backends(self) -> list[BackendType]:
-        return self._algo.available_backends()
+        return [BackendType.TORCH_FX]
 
     def apply(
         self,

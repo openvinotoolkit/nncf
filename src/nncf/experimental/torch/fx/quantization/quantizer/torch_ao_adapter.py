@@ -199,11 +199,13 @@ class TorchAOQuantizerAdapter(Quantizer):
         list[WeightCompressionParameters],
         list[WeightCompressionParameters],
     ]:
-        raise NotImplementedError
+        msg = "Please use OpenVINO Quantizer from executorch. Other quantizers are not supported yet"
+        raise NotImplementedError(msg)
 
     @staticmethod
     def get_weight_compression_config(self) -> dict[str, Any]:
-        raise NotImplementedError
+        msg = "Please use OpenVINO Quantizer from executorch. Other quantizers are not supported yet"
+        raise NotImplementedError(msg)
 
 
 def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: dict[EdgeOrNode, QuantizationSpec]):
