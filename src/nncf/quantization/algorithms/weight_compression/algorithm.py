@@ -1000,8 +1000,8 @@ class WeightCompression(Algorithm):
     ) -> TModel:
         """
         Applies the Weight Compression algorithm using precomputed parameters and optional
-        algorithms (AWQ, GPTQ, scale estimation, LoRA correction). The method collects
-        statistics, configures the weight compression parameters for mixed precision algorithm,
+        advanced algorithms (AWQ, GPTQ, scale estimation, LoRA correction). The method collects
+        statistics, optimizes compression parameters using advanced algorithms,
         and performs the model transformation with appropriate decompression operations
 
         :param model: Backend-specific model to be compressed.
