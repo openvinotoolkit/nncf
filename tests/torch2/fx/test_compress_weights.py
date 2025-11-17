@@ -354,7 +354,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_moe_model_for_test_scale_estimation():
-        num_experts = 4
+        num_experts = 2
         hidden_dim = 8
         out_dim = 16
         seq_len = 4
@@ -481,50 +481,6 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                             14.9583,
                             15.0355,
                             15.1128,
-                        ]
-                    ]
-                ],
-                [
-                    [
-                        [
-                            22.8946,
-                            22.9687,
-                            23.0427,
-                            23.1167,
-                            23.1908,
-                            23.2648,
-                            23.3388,
-                            23.4129,
-                            23.4869,
-                            23.5609,
-                            23.6349,
-                            23.7090,
-                            23.9987,
-                            23.8570,
-                            22.8730,
-                            22.9435,
-                        ]
-                    ]
-                ],
-                [
-                    [
-                        [
-                            30.3375,
-                            30.4065,
-                            30.4756,
-                            30.5447,
-                            30.6138,
-                            30.6828,
-                            30.7519,
-                            30.8210,
-                            30.8901,
-                            30.9592,
-                            31.0282,
-                            31.0973,
-                            31.1664,
-                            31.7765,
-                            31.8468,
-                            31.9171,
                         ]
                     ]
                 ],

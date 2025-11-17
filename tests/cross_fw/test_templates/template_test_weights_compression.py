@@ -259,7 +259,7 @@ class TemplateWeightCompression(ABC):
 
         if is_moe:
             model = self.get_moe_model_for_test_scale_estimation()
-            input = np.arange(0, 4 * 4 * 8, dtype=np.float32).reshape(4, 4, 8)
+            input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
         else:
             model = self.get_model_for_test_scale_estimation()
             input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)

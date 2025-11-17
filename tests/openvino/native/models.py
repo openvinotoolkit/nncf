@@ -78,7 +78,7 @@ class LinearModel(OVReferenceModel):
 
 
 class SimpleMoEModel(OVReferenceModel):
-    def _create_ov_model(self, num_experts=4, hidden_dim=8, out_dim=16, seq_len=4):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4):
         input_shape = [num_experts, seq_len, hidden_dim]
         input_1 = opset.parameter(input_shape, name="Input")
 

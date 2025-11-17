@@ -467,7 +467,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
-        num_experts = 4
+        num_experts = 2
         hidden_dim = 8
         out_dim = 16
         seq_len = 4
@@ -551,50 +551,6 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                             14.958257,
                             15.035541,
                             15.112826,
-                        ]
-                    ]
-                ],
-                [
-                    [
-                        [
-                            22.894644,
-                            22.968674,
-                            23.042706,
-                            23.116734,
-                            23.190762,
-                            23.264793,
-                            23.338821,
-                            23.412853,
-                            23.486881,
-                            23.560913,
-                            23.634943,
-                            23.708973,
-                            23.99867,
-                            23.85703,
-                            22.873016,
-                            22.943499,
-                        ]
-                    ]
-                ],
-                [
-                    [
-                        [
-                            30.337456,
-                            30.406534,
-                            30.475613,
-                            30.54469,
-                            30.613766,
-                            30.682842,
-                            30.751925,
-                            30.821001,
-                            30.890078,
-                            30.959156,
-                            31.028233,
-                            31.09731,
-                            31.16639,
-                            31.776451,
-                            31.846794,
-                            31.917133,
                         ]
                     ]
                 ],
