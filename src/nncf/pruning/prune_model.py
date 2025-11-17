@@ -23,8 +23,8 @@ from nncf.scopes import IgnoredScope
 
 def prune(
     model: TModel,
-    *,
     mode: PruneMode,
+    *,
     ratio: Optional[float] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     examples_inputs: Optional[Any] = None,

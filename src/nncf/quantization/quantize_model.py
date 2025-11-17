@@ -129,6 +129,7 @@ def _update_advanced_quantization_parameters(
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
+    *,
     mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
@@ -298,6 +299,7 @@ def quantize_with_accuracy_control(
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+    *,
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -423,6 +425,7 @@ def quantize_with_accuracy_control(
 )
 def compress_weights(
     model: TModel,
+    *,
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
@@ -430,7 +433,6 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
-    *,
     subset_size: int = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
