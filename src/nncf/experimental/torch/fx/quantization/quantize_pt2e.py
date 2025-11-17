@@ -204,6 +204,12 @@ def compress_pt2e(
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
+    sensitivity_metric = (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR if dataset is None else SensitivityMetric.MAX_ACTIVATION_VARIANCE)
+        if sensitivity_metric is None
+        else sensitivity_metric
+    )
+
     quantization_algorithm = WeightsCompression(
         quantizer=quantizer,
         subset_size=subset_size,
@@ -213,15 +219,7 @@ def compress_pt2e(
         scale_estimation=scale_estimation,
         gptq=gptq,
         lora_correction=lora_correction,
-        sensitivity_metric=(
-            (
-                SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
-                if dataset is None
-                else SensitivityMetric.MAX_ACTIVATION_VARIANCE
-            )
-            if sensitivity_metric is None
-            else sensitivity_metric
-        ),
+        sensitivity_metric=sensitivity_metric,
         advanced_parameters=advanced_parameters,
     )
 
