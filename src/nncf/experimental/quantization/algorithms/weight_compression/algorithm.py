@@ -96,35 +96,21 @@ class WeightsCompression(Algorithm):
         """
         self._quantizer = quantizer
 
-        self._mode = mode
-        self._awq = awq
-        self._gptq = gptq
-        self._scale_estimation = scale_estimation
-        self._subset_size = subset_size
-        self._advanced_parameters = advanced_parameters
-        self._lora_correction = lora_correction
-        self._ratio = ratio
-        self._group_size = group_size
-        self._all_layers = all_layers
-        self._backup_mode = backup_mode
-        self._sensitivity_metric = sensitivity_metric
-        self._compression_format = compression_format
-
         self._algo = OriginalWeightCompression(
-            mode=self._mode,
-            ratio=self._ratio,
-            group_size=self._group_size,
+            mode=mode,
+            ratio=ratio,
+            group_size=group_size,
             ignored_scope=ignored_scope,
-            all_layers=self._all_layers,
-            sensitivity_metric=self._sensitivity_metric,
-            awq=self._awq,
-            subset_size=self._subset_size,
-            scale_estimation=self._scale_estimation,
-            gptq=self._gptq,
-            lora_correction=self._lora_correction,
-            backup_mode=self._backup_mode,
-            compression_format=self._compression_format,
-            advanced_parameters=self._advanced_parameters,
+            all_layers=all_layers,
+            sensitivity_metric=sensitivity_metric,
+            awq=awq,
+            subset_size=subset_size,
+            scale_estimation=scale_estimation,
+            gptq=gptq,
+            lora_correction=lora_correction,
+            backup_mode=backup_mode,
+            compression_format=compression_format,
+            advanced_parameters=advanced_parameters,
         )
 
     def available_backends(self) -> list[BackendType]:
