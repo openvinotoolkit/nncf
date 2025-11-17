@@ -206,28 +206,22 @@ def compress_pt2e(
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
-    wc_config = quantizer.get_weight_compression_config()
-
-    mode = wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
-    mode = CompressWeightsMode(mode)
-    group_size = wc_config.get("group_size", 128)
-    all_layers = wc_config.get("all_layers", False)
-    backup_mode = wc_config.get("backup_mode", nncf.BackupMode.INT8_ASYM)
-
+    # Kwargs defined as None or default value are obtained from the quantizer inside
+    # Experimental Weights Compression Algorithm later.
     weight_compression_configuration = get_weight_compression_configuration(
-        mode,
-        dataset,
-        ratio,
-        group_size,
-        all_layers,
-        awq,
-        scale_estimation,
-        gptq,
-        lora_correction,
-        nncf.IgnoredScope(),  # This is already defined in the quantizer object
-        sensitivity_metric,
-        backup_mode,
-        advanced_parameters,
+        mode=CompressWeightsMode.INT8_ASYM,
+        dataset=dataset,
+        ratio=ratio,
+        group_size=None,
+        all_layers=None,
+        awq=awq,
+        scale_estimation=scale_estimation,
+        gptq=gptq,
+        lora_correction=lora_correction,
+        sensitivity_metric=sensitivity_metric,
+        backup_mode=None,
+        advanced_parameters=advanced_parameters,
+        ignored_scope=None,  # This is already defined in the quantizer object
     )
 
     quantization_algorithm = WeightsCompression(

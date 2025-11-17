@@ -14,11 +14,9 @@ from typing import Iterable, Optional
 import torch
 
 from nncf import AdvancedCompressionParameters
-from nncf import BackupMode
 from nncf import CompressionFormat
 from nncf import CompressWeightsMode
 from nncf import Dataset
-from nncf import IgnoredScope
 from nncf import SensitivityMetric
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -40,61 +38,41 @@ class WeightsCompression(Algorithm):
 
     def __init__(
         self,
-        mode: CompressWeightsMode,
         quantizer: Quantizer,
         ratio: float,
-        group_size: int,
-        ignored_scope: IgnoredScope,
-        all_layers: bool,
         subset_size: int,
         awq: bool,
         scale_estimation: bool,
         gptq: bool,
         lora_correction: bool,
-        backup_mode: BackupMode,
         sensitivity_metric: SensitivityMetric,
         compression_format: CompressionFormat,
         advanced_parameters: AdvancedCompressionParameters,
     ) -> torch.fx.GraphModule:
         """
-        :param mode: Defines a mode for weight compression.
-            INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
-                Weights are quantized symmetrically without zero point.
-            INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
-                with a typical non-fixed zero point.
-            INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
-                Weights are quantized to a primary precision symmetrically without zero point.
-                All embeddings and the last layer are always compressed to a backup_mode, which is INT8_ASYM,
-                by default. All others are quantized whether to 4-bit integer or to a backup_mode depending on
-                criteria and the given ratio.
-            INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
-                with a typical non-fixed zero point.
         :param quantizer: Quantizer to use in WeightCompression algorithm.
-        :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to INT4
-            and the rest to backup_mode).
-        :param group_size: number of weights (e.g. 128) in the channel dimension
-            that share quantization parameters (scale). The value -1 means no grouping.
-        :param ignored_scope: An ignored scope that defined the list of model control
-            flow graph nodes to be ignored during quantization.
-        :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
-            precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
+        :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers specified as
+            `ratio_defining_params` by the quantizer are quantized to INT4
         :param subset_size: Number of data samples to calculate activation statistics used for assigning different
             quantization precision.
         :param awq: determines whether to use or not modified AWQ algorithm.
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         :param gptq: determines whether to use or not GPTQ algorithm.
         :param lora_correction: determines whether to use or not LoRA Correction algorithm.
-        :param backup_mode: Defines a backup mode for mixed-precision weight compression.
-            NONE stands for original floating-point precision of the model weights.
-                In this mode, weights are retained in their original precision without any quantization.
-            INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
-            INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         :param compression_format: Describes the format in which the model is saved after weight compression.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         self._quantizer = quantizer
+        wc_config = quantizer.get_weight_compression_config()
+
+        mode = wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
+        mode = CompressWeightsMode(mode)
+        group_size = wc_config.get("group_size", None)
+        all_layers = wc_config.get("all_layers", None)
+        backup_mode = wc_config.get("backup_mode", None)
+        ignored_scope = None
 
         self._algo = OriginalWeightCompression(
             mode=mode,
