@@ -23,7 +23,6 @@ from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
 from nncf import AdvancedCompressionParameters
-from nncf import CompressWeightsMode
 from nncf import Dataset
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
@@ -40,7 +39,6 @@ from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotati
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
-from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
@@ -206,29 +204,18 @@ def compress_pt2e(
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 
-    # Kwargs defined as None or default value are obtained from the quantizer inside
-    # Experimental Weights Compression Algorithm later.
-    weight_compression_configuration = get_weight_compression_configuration(
-        mode=CompressWeightsMode.INT8_ASYM,
+    quantization_algorithm = WeightsCompression(
+        quantizer=quantizer,
+        subset_size=subset_size,
+        compression_format=compression_format,
         dataset=dataset,
         ratio=ratio,
-        group_size=None,
-        all_layers=None,
         awq=awq,
         scale_estimation=scale_estimation,
         gptq=gptq,
         lora_correction=lora_correction,
         sensitivity_metric=sensitivity_metric,
-        backup_mode=None,
         advanced_parameters=advanced_parameters,
-        ignored_scope=None,  # This is already defined in the quantizer object
-    )
-
-    quantization_algorithm = WeightsCompression(
-        quantizer=quantizer,
-        subset_size=subset_size,
-        compression_format=compression_format,
-        **weight_compression_configuration,
     )
 
     # Here the model is annotated
