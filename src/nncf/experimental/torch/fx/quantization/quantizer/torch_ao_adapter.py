@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Union
+from typing import Any, Union
 
 import torch
 import torch.fx
@@ -33,6 +33,7 @@ from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_node_args
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
@@ -212,3 +213,19 @@ def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: di
         msg = f"Shared qspecs referenced to each other more than the limit: {MAX_DEPTH}"
         raise RuntimeError(msg)
     return qspec
+
+
+def get_weight_compression_parameters(
+    self,
+    model: torch.fx.GraphModule,
+    nncf_graph: NNCFGraph,
+) -> tuple[
+    list[WeightCompressionParameters],
+    list[WeightCompressionParameters],
+    list[WeightCompressionParameters],
+]:
+    raise NotImplementedError
+
+
+def get_weight_compression_config(self) -> dict[str, Any]:
+    raise NotImplementedError
