@@ -208,7 +208,6 @@ def compress_pt2e(
         quantizer=quantizer,
         subset_size=subset_size,
         compression_format=compression_format,
-        dataset=dataset,
         ratio=ratio,
         awq=awq,
         scale_estimation=scale_estimation,
