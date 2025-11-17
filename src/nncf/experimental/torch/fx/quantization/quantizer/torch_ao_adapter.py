@@ -189,6 +189,22 @@ class TorchAOQuantizerAdapter(Quantizer):
 
         return q_setup
 
+    @staticmethod
+    def get_weight_compression_parameters(
+        self,
+        model: torch.fx.GraphModule,
+        nncf_graph: NNCFGraph,
+    ) -> tuple[
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+    ]:
+        raise NotImplementedError
+
+    @staticmethod
+    def get_weight_compression_config(self) -> dict[str, Any]:
+        raise NotImplementedError
+
 
 def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: dict[EdgeOrNode, QuantizationSpec]):
     """
@@ -213,19 +229,3 @@ def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: di
         msg = f"Shared qspecs referenced to each other more than the limit: {MAX_DEPTH}"
         raise RuntimeError(msg)
     return qspec
-
-
-def get_weight_compression_parameters(
-    self,
-    model: torch.fx.GraphModule,
-    nncf_graph: NNCFGraph,
-) -> tuple[
-    list[WeightCompressionParameters],
-    list[WeightCompressionParameters],
-    list[WeightCompressionParameters],
-]:
-    raise NotImplementedError
-
-
-def get_weight_compression_config(self) -> dict[str, Any]:
-    raise NotImplementedError
