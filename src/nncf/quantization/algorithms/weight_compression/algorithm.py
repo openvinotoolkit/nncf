@@ -542,7 +542,8 @@ class WeightCompression(Algorithm):
         statistics_points: StatisticPointsContainer,
     ) -> None:
         """
-        Sets the appropriate compression configuration for weights based on some criteria.
+        Applies mixed precision compression by selecting weights for primary precision based on the
+        configured ratio, and assigning backup precision to the remaining weights.
 
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
@@ -568,7 +569,7 @@ class WeightCompression(Algorithm):
         ratio_defining_params: list[WeightCompressionParameters],
     ) -> None:
         """
-        Validate the group sizes for all the Nodes.
+        Validates that the configured group size is divisible by the reduction channel size for all weights.
 
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
