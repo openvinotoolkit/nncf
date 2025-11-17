@@ -145,46 +145,7 @@ TEST_MODEL_IDS = [
     f"{m.model_id}__{_string_from_quantizer_params(qparams, pt2e_param)}" for m, qparams, pt2e_param in TEST_MODELS
 ]
 
-
-@pytest.mark.parametrize(
-    ("model_case", "quantizer_params"),
-    TEST_MODELS_NO_PT2E,
-    ids=TEST_MODEL_IDS_NO_PT2E,
-)
-@pytest.mark.parametrize(
-    "quantizer_builder",
-    [get_openvino_quantizer],
-    ids=["OpenVINOQuantizer"],
-)
-def test_compress_pt2e(
-    quantizer_builder: Callable[..., OpenVINOQuantizer],
-    model_case: ModelCase,
-    quantizer_params: dict[str, Any],
-):
-    fx_model, example_input = build_torch_fx_model(model_case)
-    with torch.no_grad():
-        ref_out = fx_model(example_input)
-
-    calibration_dataset = _get_calibration_dataset(example_input)
-
-    # Build quantizer directly from quantizer_params (already includes mode/group_size)
-    quantizer = quantizer_builder(**quantizer_params)
-    mode = quantizer_params.get("mode")
-    ratio = 1 if mode in INT8_COMPRESSION_MODES else 0.8
-
-    quantized_model = compress_pt2e(fx_model, quantizer=quantizer, ratio=ratio, dataset=calibration_dataset)
-
-    with torch.no_grad():
-        out = quantized_model(example_input)
-    assert out.shape == ref_out.shape, "Compressed model output shape mismatch."
-
-    nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(quantized_model)
-    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
-    param_string = _string_from_quantizer_params(quantizer_params)
-    path_to_dot = (
-        FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
-    ).as_posix()
-    compare_nx_graph_with_reference(nx_graph, path_to_dot)
+_completed_graph_tests = set()
 
 
 @pytest.mark.parametrize(
@@ -221,6 +182,17 @@ def test_compress_pt2e_scales(
     with torch.no_grad():
         out = quantized_model(example_input)
     assert out.shape == ref_out.shape, "Compressed model output shape mismatch."
+
+    graph_test_key = (model_case.model_id, tuple(quantizer_params.items()))
+    if graph_test_key not in _completed_graph_tests:
+        _completed_graph_tests.add(graph_test_key)
+        nncf_graph: NNCFGraph = GraphConverter.create_nncf_graph(quantized_model)
+        nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+        param_string = _string_from_quantizer_params(quantizer_params)
+        path_to_dot = (
+            FX_PT2E_DIR / quantizer.__class__.__name__ / model_case.model_id / get_dot_filename(param_string)
+        ).as_posix()
+        compare_nx_graph_with_reference(nx_graph, path_to_dot)
 
     param_string = _string_from_quantizer_params(quantizer_params, pt2e_params)
     ref_json_path = (
