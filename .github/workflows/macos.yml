@@ -8,7 +8,7 @@ on:
       pull_request_number:
         description: 'The pull request number'
         default: ''
-
+  pull_request:
 jobs:
   precommit-common:
     runs-on: macos-14
