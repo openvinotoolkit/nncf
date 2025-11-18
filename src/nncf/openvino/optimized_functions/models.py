@@ -704,7 +704,7 @@ def _build_integer_quantize_dequantize_weight_model(
             compressed_weight = ov_results[0]
             scale = ov_parameters[1]
 
-    decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
+    decompressed_weight = opset.multiply(convert_op(compressed_weight, ov.Type.f32), scale)
 
     ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
 
