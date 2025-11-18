@@ -499,7 +499,7 @@ def _check_backends_and_dtypes(
 
 
 def _check_values(results, atol=0.0):
-    def format_list_of_floats(lst, n_first=100):
+    def format_list_of_floats(lst, n_first=32):
         return ", ".join(f"{x:.10f}" for x in lst[:n_first])
 
     # Check that the computed tensors are equal between implementations
@@ -522,19 +522,18 @@ def _check_values(results, atol=0.0):
             msg = (
                 f"Results do not align for {key} with "
                 f"{not_equal_mask.sum() / ov_result.data.size * 100:.2f} % misalignment ratio.\n"
-                f"OV result (first 100 values):    {format_list_of_floats(ov_result.data[not_equal_mask])}\n"
-                f"NumPy result (first 100 values): {format_list_of_floats(numpy_result.data[not_equal_mask])}\n"
+                f"OV result (first 32 values):    {format_list_of_floats(ov_result.data[not_equal_mask])}\n"
+                f"NumPy result (first 32 values): {format_list_of_floats(numpy_result.data[not_equal_mask])}\n"
             )
             if "input" in results[ComputationBackend.OV] and "input" in results[ComputationBackend.NumPy]:
                 numpy_input = results[ComputationBackend.NumPy]["input"].data
                 ov_input = results[ComputationBackend.OV]["input"].data
                 np.testing.assert_allclose(numpy_input, ov_input, atol=0, rtol=0)
                 if "weight" in key:
-                    msg += (
-                        f"Input values (first 100 values)    : {format_list_of_floats(numpy_input[not_equal_mask])}\n"
-                    )
+                    msg += f"Input values (first 32 values)    : {format_list_of_floats(numpy_input[not_equal_mask])}\n"
                 misaligned_groups_mask = np.any(not_equal_mask, axis=-1)
                 misaligned_groups = numpy_input[misaligned_groups_mask, ...]
                 misaligned_groups = np.reshape(misaligned_groups, (-1, misaligned_groups.shape[-1]))
-                msg += f"First 10 misaligned groups: {[it for it in misaligned_groups][:10]}\n"
+                msg += "First 10 misaligned groups:\n"
+                msg += "\n".join(format_list_of_floats(it, misaligned_groups.shape[1]) for it in misaligned_groups[:10])
             raise AssertionError(msg)
