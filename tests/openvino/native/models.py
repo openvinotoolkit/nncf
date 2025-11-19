@@ -1003,7 +1003,7 @@ class AWQMatmulModel(OVReferenceModel):
         )
         return (qw - zp) * scale
 
-    def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
+    def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False, non_mergable_pattern: bool = False):
         input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
 
         weights_data1 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
@@ -1012,13 +1012,16 @@ class AWQMatmulModel(OVReferenceModel):
 
         weights_data2 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights2 = self.get_weights(weights_data2, is_int8, name="weights_2")
-        node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
+        if non_mergable_pattern:
+            relu = opset.relu(node1)
+            node3 = opset.matmul(relu, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
+        else:
+            node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
+            node_multiply = opset.multiply(node1, node2, name="Multiply")
 
-        node_multiply = opset.multiply(node1, node2, name="Multiply")
-
-        weights_data3 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
-        weights3 = self.get_weights(weights_data3, is_int8, name="weights_3")
-        node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
+            weights_data3 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+            weights3 = self.get_weights(weights_data3, is_int8, name="weights_3")
+            node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
 
         weights_data4 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights4 = self.get_weights(weights_data4, is_int8, name="weights_4")
@@ -1026,13 +1029,18 @@ class AWQMatmulModel(OVReferenceModel):
 
         weights_data5 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights5 = self.get_weights(weights_data5, is_int8, name="weights_5")
-        node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
 
-        node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
+        if non_mergable_pattern:
+            relu = opset.relu(node4)
+            node6 = opset.matmul(relu, weights5, transpose_a=False, transpose_b=True, name="MatMul_6")
+        else:
+            node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
 
-        weights_data6 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
-        weights6 = self.get_weights(weights_data6, is_int8, name="weights_6")
-        node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
+            node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
+
+            weights_data6 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+            weights6 = self.get_weights(weights_data6, is_int8, name="weights_6")
+            node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
 
         result = opset.result(node6, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))

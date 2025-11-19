@@ -194,11 +194,20 @@ class AWQ(Algorithm):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
-                a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
                 a_scale = fns.transpose(a_scale).astype(weight_dtype)
-                next_nodes = graph.get_next_nodes(merge_node)
+                out_edges = graph.get_output_edges(merge_node)
+                next_nodes = [edge.to_node for edge in out_edges]
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
+
+                # Unsqueeze activation scale to match the size of the activation
+                # Output edges always have the same shape
+                tensor_shape = out_edges[0].tensor_shape
+                a_scale_shape = a_scale.shape
+                if len(tensor_shape) > len(a_scale_shape):
+                    a_scale_shape = (1,) * (len(tensor_shape) - len(a_scale_shape)) + tuple(a_scale_shape)
+                    a_scale = fns.reshape(a_scale, a_scale_shape)
+
                 scale_insertion_command = self._backend_entity.scale_insertion_command(
                     merge_node, next_nodes, source_node_output_port, a_scale.data
                 )

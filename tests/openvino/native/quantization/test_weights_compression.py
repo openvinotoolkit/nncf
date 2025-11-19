@@ -2083,8 +2083,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SimpleMoEModel().ov_model
 
     @staticmethod
-    def get_awq_model() -> ov.Model:
-        return AWQMatmulModel().ov_model
+    def get_awq_model(non_mergable_pattern: bool) -> ov.Model:
+        return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern).ov_model
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> ov.Model:
@@ -2249,12 +2249,19 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         return {
             "MatMul_3": Tensor(
                 np.array(
                     [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
                     dtype=np.float32,
+                ).T
+            ),
+            "MatMul_2": Tensor(
+                np.array(
+                    [[[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]]],
+                    dtype=np.float32,
                 )
-            )
+            ),
         }

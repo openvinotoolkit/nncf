@@ -364,7 +364,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_awq_model() -> TModel:
+    def get_awq_model(non_mergable_pattern: bool) -> TModel:
         "Returns a backend model for test_awq_with_ignored_scope."
 
     @staticmethod
@@ -388,7 +388,7 @@ class TemplateWeightCompression(ABC):
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
     def test_awq_with_ignored_scope(self, mocker):
-        model = self.get_awq_model()
+        model = self.get_awq_model(non_mergable_pattern=False)
         sz = 8
         n_samples = 10
 
@@ -455,12 +455,14 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    def test_awq_scale_reference(self, monkeypatch, mocker):
+    @pytest.mark.parametrize("non_mergable_pattern", [True, False])
+    def test_awq_scale_reference(self, monkeypatch, mocker, non_mergable_pattern, test_awq_scale_ref):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
-        model = self.get_awq_model()
+        model = self.get_awq_model(non_mergable_pattern)
 
         input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
         input = self.to_tensor(input)
@@ -477,7 +479,9 @@ class TemplateWeightCompression(ABC):
             )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
+            ref = test_awq_scale_ref[node_name]
+            assert fns.allclose(scales, ref)
+            assert scales.shape == ref.shape
 
     @pytest.mark.parametrize(
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],

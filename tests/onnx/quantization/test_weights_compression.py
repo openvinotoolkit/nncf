@@ -624,7 +624,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_awq_model() -> onnx.ModelProto:
+    def get_awq_model(non_mergable_pattern: bool) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_awq_with_ignored_scope()
@@ -641,11 +641,17 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         w_data = w_data.T
 
         num_blocks = 2
+
         for i in range(num_blocks):
-            a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-            b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-            x = mb.add_mul(a, b)
-            x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+            if non_mergable_pattern:
+                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                b = mb.add_relu(a)
+                x = mb.add_matmul(b, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+            else:
+                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                x = mb.add_mul(a, b)
+                x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
 
         return mb.build()
 
@@ -692,14 +698,32 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         return {
             "MatMul_3": Tensor(
                 np.array(
                     [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
                     dtype=np.float32,
-                ).T
-            )
+                )
+            ),
+            "MatMul_2": Tensor(
+                np.array(
+                    [
+                        [
+                            [1.9909902],
+                            [1.8632966],
+                            [1.5759803],
+                            [1.3974594],
+                            [1.2722752],
+                            [1.1779976],
+                            [1.1035581],
+                            [1.042768],
+                        ]
+                    ],
+                    dtype=np.float32,
+                ),
+            ),
         }
 
     @staticmethod
