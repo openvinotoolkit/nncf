@@ -286,8 +286,7 @@ def get_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
-    Get a model that compresses weights to float (currently nf4 or mxfp4) destination type using the given
-    configuration.
+    Get a model that compresses weights to float destination type using the given configuration.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -319,7 +318,7 @@ def get_float_quantize_dequantize_weight_model(
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
     """
-    Get a model that performs float (currently only nf4) compression and decompression of the given weight.
+    Get a model that performs float compression and decompression of the given weight.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -572,7 +571,7 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4]
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
 
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
@@ -626,8 +625,15 @@ def _build_float_quantization_model(
         eps = np.finfo(np.float32).eps
         scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
+        # Equals 1.0 for NF4
+        FP_MAX_VALS = {
+            CompressWeightsMode.MXFP4: 6.0,
+            CompressWeightsMode.FP4: 6.0,
+        }
+        if config.mode in FP_MAX_VALS:
+            scale = divide_op(scale, opset.constant(FP_MAX_VALS[config.mode], ov.Type.f32))
+
         if config.mode == CompressWeightsMode.MXFP4:
-            scale = scale / opset.constant(6.0, ov.Type.f32)
             scale = opset.log(scale) / opset.log(opset.constant(2.0, ov.Type.f32))
             scale = opset.ceil(scale)
             scale = opset.clamp(scale, -127.0, 127.0)
