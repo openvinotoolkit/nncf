@@ -75,10 +75,15 @@ class GraphConverter:
         :param model: Target GraphModule instance.
         :return: Correct FX metatype of the given node if it is exist or the original node metatype otherwise.
         """
-        if metatype in [om.PTEmbeddingMetatype]:
-            weight_node = node.args[0]
+        PT_METATYPE_TO_FX_METATYPE_MAPPING = {
+            om.PTEmbeddingMetatype: om.PTAtenEmbeddingMetatype,
+            om.PTEmbeddingBagMetatype: om.PTAtenEmbeddingBagMetatype,
+        }
+        if metatype in PT_METATYPE_TO_FX_METATYPE_MAPPING:
+            fx_metatype = PT_METATYPE_TO_FX_METATYPE_MAPPING[metatype]
+            weight_node = node.args[fx_metatype.weight_port_ids[0]]
             if weight_node.op == "get_attr":
-                return om.PTAtenEmbeddingMetatype
+                return fx_metatype
 
         return metatype
 
@@ -137,6 +142,7 @@ class GraphConverter:
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter.get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
+
             is_shared_node = source_node.op in ("get_attr",) and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )

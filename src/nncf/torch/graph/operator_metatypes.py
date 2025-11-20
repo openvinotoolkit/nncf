@@ -1006,6 +1006,14 @@ class PTEmbeddingBagMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
+@FX_OPERATOR_METATYPES.register()
+class PTAtenEmbeddingBagMetatype(OperatorMetatype):
+    name = "EmbeddingBagOp"
+    module_to_function_names = {NamespaceTarget.ATEN: ["embedding_bag"]}
+    hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
+    weight_port_ids = [0]
+
+
 @PT_OPERATOR_METATYPES.register()
 class PTSoftmaxMetatype(PTOperatorMetatype):
     name = "SoftmaxOp"
@@ -1263,6 +1271,7 @@ QUANTIZE_NODE_TYPES = [
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTEmbeddingMetatype,
     PTEmbeddingBagMetatype,
+    PTAtenEmbeddingBagMetatype,
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
 ]
