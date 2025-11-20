@@ -196,11 +196,15 @@ class ScaleEstimation:
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
+        is_3d_weight = len(weight.shape) == 3
 
         was_transposed = False
-        if reduction_axis == 0:
-            weight = fns.transpose(weight)
-            reduction_axis = 1
+        if reduction_axis == 0 or (reduction_axis == 1 and is_3d_weight):
+            # Weights
+            # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
+            # 2D: [hidden_dimension, out_features] -> [out_features, hidden_dimension]
+            weight = fns.moveaxis(weight, -1, -2)
+            reduction_axis = weight.ndim - 1
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
@@ -220,7 +224,7 @@ class ScaleEstimation:
             if zp is not None:
                 zp = zp.astype(scale.dtype)
 
-        s = fns.unsqueeze(s, 0)
+        s = fns.unsqueeze(s, -2)
         s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
 
         original_weight, _ = reshape_weight_for_grouped_quantization(original_weight, reduction_axis, group_size)
@@ -233,18 +237,20 @@ class ScaleEstimation:
         importance = fns.where(zero_mask, 0.0, importance)
 
         # normalize importances for every group of weights to make sum of them equal to 1.0
-        denum = fns.sum(importance, axis=2, keepdims=True)
+        denum = fns.sum(importance, axis=-1, keepdims=True)
         importance = importance / (denum + eps)
 
-        X, _ = reshape_weight_for_grouped_quantization(X, 0, group_size)
+        X, _ = reshape_weight_for_grouped_quantization(X, -2, group_size)
         best_diffs = None
         result_scale = None
-        fp_outs = fns.matmul(fns.transpose(original_weight, (1, 0, 2)), X)
-        q_outs = fns.matmul(fns.transpose(q_weights, (1, 0, 2)), X)
+        fp_outs = fns.matmul(fns.moveaxis(original_weight, -2, -3), X)
+        q_outs = fns.matmul(fns.moveaxis(q_weights, -2, -3), X)
 
         # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
+        # For 3D weights, it is [Batch Size, C_OUT, N_GROUPS]
         min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-        min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
+        min_max_scale_diffs = fns.moveaxis(min_max_scale_diffs, -1, -2)
+
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
 
@@ -272,10 +278,10 @@ class ScaleEstimation:
                 )
 
             q_weights_ = fns.zeros_like(original_weight) + out
-            q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
+            q_outs = fns.matmul(fns.moveaxis(q_weights_, -2, -3), X)
 
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+            ideal_scale_diffs = fns.moveaxis(ideal_scale_diffs, -1, -2)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
@@ -286,7 +292,7 @@ class ScaleEstimation:
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
-            mask = fns.unsqueeze(mask, axis=2)
+            mask = fns.unsqueeze(mask, axis=-1)
 
             if result_scale is None:
                 near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
@@ -340,9 +346,9 @@ class ScaleEstimation:
                 )
             q_weights_ = fns.zeros_like(original_weight) + out
 
-            q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
+            q_outs = fns.matmul(fns.moveaxis(q_weights_, -2, -3), X)
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+            ideal_scale_diffs = fns.moveaxis(ideal_scale_diffs, -1, -2)
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
@@ -350,7 +356,7 @@ class ScaleEstimation:
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
-            mask = fns.unsqueeze(mask, axis=2)
+            mask = fns.unsqueeze(mask, axis=-1)
 
             if result_scale is None:
                 near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
@@ -359,19 +365,19 @@ class ScaleEstimation:
             result_scale = near_to_ideal_scale
 
         if config.group_size == -1:
-            result_scale = fns.squeeze(result_scale, axis=1)
+            result_scale = fns.squeeze(result_scale, axis=-2)
         if zp is not None and config.group_size == -1:
-            zp = fns.squeeze(zp, axis=1)
+            zp = fns.squeeze(zp, axis=-2)
 
         if was_transposed:
             if config.group_size == -1:
-                result_scale = fns.transpose(result_scale)
+                result_scale = fns.moveaxis(result_scale, -1, -2)
                 if zp is not None:
-                    zp = fns.transpose(zp)
+                    zp = fns.moveaxis(zp, -1, -2)
             else:
-                result_scale = fns.transpose(result_scale, axes=(1, 2, 0))
+                result_scale = fns.moveaxis(result_scale, (-1, -2, -3), (-2, -3, -1))
                 if zp is not None:
-                    zp = fns.transpose(zp, axes=(1, 2, 0))
+                    zp = fns.moveaxis(zp, (-1, -2, -3), (-2, -3, -1))
 
         return result_scale, zp
 
@@ -421,5 +427,5 @@ def estimate_scales(weight: Tensor, target: Tensor, zero_mask: Tensor, importanc
     """
     ideal_scale = fns.abs(weight) / (fns.abs(target) + zero_mask)
     weighted_scale = ideal_scale * importance
-    near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
+    near_to_ideal_scale = fns.sum(weighted_scale, axis=-1, keepdims=True)
     return near_to_ideal_scale

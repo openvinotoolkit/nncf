@@ -39,7 +39,7 @@ def register_statistics_for_algorithm(
     :param matmul_input_to_output_nodes_map: A dictionary mapping from a tuple of (activation node, port ID)
     to a list of MatMul nodes that accept the activation as input.
     """
-    statistic_points = compression_algo.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+    statistic_points = compression_algo.get_statistic_points(model, graph, matmul_input_to_output_nodes_map)
     aggregator.register_statistic_points(statistic_points)
 
 

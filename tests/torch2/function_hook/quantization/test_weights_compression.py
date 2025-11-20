@@ -120,6 +120,20 @@ class LinearModel(torch.nn.Module):
         return self.linear(input)
 
 
+class SimpleMoEModel(nn.Module):
+    def __init__(self, num_experts=2, hidden_dim=8, out_dim=16):
+        super().__init__()
+        self.expert_weights = nn.Parameter(
+            torch.arange(0, num_experts * hidden_dim * out_dim, dtype=torch.float32).reshape(
+                num_experts, hidden_dim, out_dim
+            )
+        )
+
+    def forward(self, x):
+        output = torch.bmm(x, self.expert_weights)
+        return output
+
+
 class AWQActLinearModel(nn.Module):
     def __init__(self, with_multiply=False, n_layers=8):
         super().__init__()
@@ -494,6 +508,14 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
 
     @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        model = SimpleMoEModel(num_experts, hidden_dim, out_dim)
+        return model
+
+    @staticmethod
     def get_awq_model() -> torch.nn.Module:
         return AWQLinearModel()
 
@@ -556,6 +578,57 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                 [[7.237174]],
                 [[7.722580]],
                 [[8.255914]],
+            ]
+        )
+
+    @staticmethod
+    def get_moe_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [
+                    [
+                        [
+                            7.5732,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.2602,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.3083,
+                            7.8467,
+                            7.2233,
+                            7.2715,
+                            7.4205,
+                            7.4667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.8205,
+                            14.9032,
+                            14.9858,
+                            15.0685,
+                            15.1512,
+                            14.3400,
+                            14.4173,
+                            14.4945,
+                            14.5718,
+                            14.6491,
+                            14.7264,
+                            14.8037,
+                            14.8810,
+                            14.9583,
+                            15.0355,
+                            15.1128,
+                        ]
+                    ]
+                ],
             ]
         )
 
