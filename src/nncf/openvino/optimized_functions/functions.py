@@ -116,7 +116,7 @@ def do_float_quantization(
     :param precomputed_scale: Optional precomputed scale.
     :return: Returns quantized weight tensor and corresponding scale tensor.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
+    assert config.mode not in [CompressWeightsMode.CB4_F8E4M3, CompressWeightsMode.CODEBOOK]
 
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
@@ -128,8 +128,7 @@ def do_float_quantization(
     if weight.backend == TensorBackend.ov:
         # Return ov tensors in target precision to seamlessly insert them into openvino model later
         ov_model_params.return_ov_tensors = True
-        weight_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
-        ov_model_params.output_dtypes.update({"compressed_weight": weight_dtype})
+        ov_model_params.output_dtypes.update({"compressed_weight": config.compression_dtype})
 
     model = get_float_quantization_model(
         ov_model_params,
@@ -234,7 +233,7 @@ def float_quantize_dequantize_weight(
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
+    assert config.mode not in [CompressWeightsMode.CB4_F8E4M3, CompressWeightsMode.CODEBOOK]
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:

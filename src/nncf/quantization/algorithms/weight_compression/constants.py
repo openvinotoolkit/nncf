@@ -11,6 +11,8 @@
 
 import numpy as np
 
+from nncf.tensor import TensorDataType
+
 NF4_QUANTILES = np.array(
     [
         -1.0,
@@ -101,3 +103,10 @@ CENTER_OF_NF4_QUANTILES = np.array(
 
 
 CENTER_OF_F4E2M1_QUANTILES = (F4E2M1_QUANTILES[1:] + F4E2M1_QUANTILES[:-1]) / 2
+
+
+FP_MAX_VALUES = {
+    TensorDataType.nf4: 1.0,
+    TensorDataType.f4e2m1: 6.0,
+    TensorDataType.f8e4m3: 448.0,
+}

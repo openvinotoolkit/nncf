@@ -46,7 +46,17 @@ class WeightCompressionConfig:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
-        return 8 if self.mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] else 4
+        return (
+            8
+            if self.mode
+            in [
+                CompressWeightsMode.INT8_SYM,
+                CompressWeightsMode.INT8_ASYM,
+                CompressWeightsMode.FP8_E4M3,
+                CompressWeightsMode.MXFP8_E4M3,
+            ]
+            else 4
+        )
 
     @property
     def is_asym_mode(self):
@@ -73,6 +83,31 @@ class WeightCompressionConfig:
         :return: True if compression type is codebook, else False.
         """
         return self.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
+
+    @property
+    def compression_dtype(self) -> TensorDataType:
+        """
+        :return: data type that is used to store compressed weights.
+        """
+        if self.is_codebook:
+            n_quants = self.codebook_values.size
+            if n_quants <= 16:
+                return TensorDataType.uint4
+            if n_quants <= 256:
+                return TensorDataType.uint8
+            return TensorDataType.uint16
+        dtype_per_mode = {
+            CompressWeightsMode.INT4_SYM: TensorDataType.int4,
+            CompressWeightsMode.INT4_ASYM: TensorDataType.uint4,
+            CompressWeightsMode.INT8_ASYM: TensorDataType.uint8,
+            CompressWeightsMode.INT8_SYM: TensorDataType.int8,
+            CompressWeightsMode.NF4: TensorDataType.nf4,
+            CompressWeightsMode.FP4: TensorDataType.f4e2m1,
+            CompressWeightsMode.MXFP4: TensorDataType.f4e2m1,
+            CompressWeightsMode.FP8_E4M3: TensorDataType.f8e4m3,
+            CompressWeightsMode.MXFP8_E4M3: TensorDataType.f8e4m3,
+        }
+        return dtype_per_mode[self.mode]
 
     def get_numpy_codebook(self):
         return self.codebook_values.as_numpy_tensor()
