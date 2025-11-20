@@ -38,7 +38,7 @@ class Dataset:
         will be passed into the model as-is.
     """
 
-    def __init__(self, data_source: Iterable[Any], *, transform_func: Optional[Callable[..., Any]] = None):
+    def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):
         self._data_source = data_source
         self._transform_func = transform_func
 
