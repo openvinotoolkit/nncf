@@ -14,7 +14,9 @@ import operator
 from collections import OrderedDict
 from collections import defaultdict
 from functools import reduce
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Optional, TypeVar
+
+from packaging import version
 
 import nncf
 from nncf import Dataset
@@ -786,6 +788,14 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
+    def _maybe_get_ov_major_version(self) -> Optional[str]:
+        try:
+            import openvino as ov
+
+            return ov.__version__.split(".")[0]
+        except Exception:
+            return None
+
     def get_weight_compression_parameters(
         self,
         model: TModel,
@@ -851,6 +861,22 @@ class WeightCompression(Algorithm):
                             f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                         )
 
+                    model_backend = get_backend(model)
+                    ov_version = self._maybe_get_ov_major_version()
+                    if (
+                        model_backend == BackendType.OPENVINO
+                        and len(weight_shape) == 3
+                        and ov_version
+                        and version.parse(ov_version) <= version.parse("2026")
+                        and node.metatype in self._backend_entity.matmul_metatypes
+                    ):
+                        # MoE operations are usually matmuls, so the check for matmul metatype is done
+                        # This is to avoid raising the error for non-MoE cases with 3D weights.
+                        msg = f"""NNCF does not support 3D weights with current version of Openvino {ov_version} 
+                                due to a known issue in statistics collection Ticket - 176465
+                                Node with weight: {node.node_name}"""
+                        raise nncf.UnsupportedModelError(msg)
+
                     if self._backup_mode != BackupMode.NONE:
                         mode = (
                             CompressWeightsMode.INT8_ASYM
@@ -899,7 +925,7 @@ class WeightCompression(Algorithm):
                 matmul_nodes_to_compress, graph
             )
             if statistic_points is None:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map)
                 statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             statistics = self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points
@@ -1089,28 +1115,46 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
+        matmul_input_to_output_nodes_map: dict[tuple[NNCFNode, int], list[NNCFNode]],
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
         :param model: Model for statistics collection.
         :param graph: Model graph.
-        :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
+        :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
+            nodes which accept this activation as an input.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
         statistic_container = StatisticPointsContainer()
+
         # Statistics for data aware algorithms
         if self._data_aware_compression:
-            for node, output_port_id in nodes_and_port_ids:
+            for (node, output_port_id), node_with_weights in matmul_input_to_output_nodes_map.items():
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
-                # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
-                # size dimension.
+                all_weight_dims = []
+                for node_with_weight in node_with_weights:
+                    _, weight_port_ids = zip(
+                        *self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
+                    )
+                    weight_dims = [
+                        len(self._backend_entity.get_weight_shape(node_with_weight, weight_port_id, graph))
+                        for weight_port_id in weight_port_ids
+                    ]
+                    all_weight_dims.extend(weight_dims)
+
+                # by default, reduce activations across all but the last dimension. The last dimension is
+                # assumed to be the hidden size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
+                reduction_axes = tuple(range(n_dims - 1))
+
+                # For 3D weights, hidden dimension is the second dimension. Reduce by all other dimensions
+                reduction_axes = (1,) if any(weight_dim == 3 for weight_dim in all_weight_dims) else reduction_axes
+
                 stat_collector = self._backend_entity.mean_statistic_collector(
-                    reduction_axes=tuple(range(n_dims - 1)), subset_size=self._subset_size
+                    reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
                 statistic_container.add_statistic_point(
                     StatisticPoint(
@@ -1120,7 +1164,7 @@ class WeightCompression(Algorithm):
         # Statistics for mixed precision algorithm
         if self._data_aware_mixed_precision:
             mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
-                model, graph, nodes_and_port_ids
+                model, graph, matmul_input_to_output_nodes_map.keys()
             )
             for points in mixed_precision_statistics.values():
                 for point in points:

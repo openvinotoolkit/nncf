@@ -76,6 +76,7 @@ from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import SAMPEModel
 from tests.openvino.native.models import SequentialMatmulModel
+from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
 
@@ -2078,6 +2079,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return MatMul().ov_model
 
     @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        return SimpleMoEModel().ov_model
+
+    @staticmethod
     def get_awq_model() -> ov.Model:
         return AWQMatmulModel().ov_model
 
@@ -2137,6 +2142,61 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                 [[8.255914]],
             ]
         )
+
+    @staticmethod
+    def get_moe_scale_estimation_ref():
+        return np.array(
+            [
+                [
+                    [
+                        [
+                            7.573249,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.260152,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.3082952,
+                            7.846745,
+                            7.223278,
+                            7.271495,
+                            7.420518,
+                            7.4666667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.820505,
+                            14.903171,
+                            14.985837,
+                            15.068501,
+                            15.151169,
+                            14.339979,
+                            14.417264,
+                            14.494548,
+                            14.571833,
+                            14.649117,
+                            14.726402,
+                            14.803687,
+                            14.880971,
+                            14.958257,
+                            15.035541,
+                            15.112826,
+                        ]
+                    ]
+                ],
+            ]
+        )
+
+    @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
+    def test_scale_estimation(self, mocker, is_moe):
+        super().test_scale_estimation(mocker, is_moe)
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:

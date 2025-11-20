@@ -77,6 +77,23 @@ class LinearModel(OVReferenceModel):
         return model
 
 
+class SimpleMoEModel(OVReferenceModel):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4):
+        input_shape = [num_experts, seq_len, hidden_dim]
+        input_1 = opset.parameter(input_shape, name="Input")
+
+        weight_data = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weight_data = weight_data.reshape(num_experts, hidden_dim, out_dim)
+
+        matmul = opset.matmul(input_1, weight_data, transpose_a=False, transpose_b=False, name="MoE_MatMul")
+
+        result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([result], [input_1])
+        return model
+
+
 @SYNTHETIC_MODELS.register()
 class ConvModel(OVReferenceModel):
     def _create_ov_model(self):
