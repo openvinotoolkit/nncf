@@ -31,7 +31,6 @@ from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
-from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.optimized_functions import astype
@@ -1409,7 +1408,39 @@ TEST_FLOAT_COMPRESSED_REFS = {
         "neg": [-8.0, -8.0, -6.0, -4.0, -4.0, -3.0, -2.0, -1.0, -0.0],
         "pos": [-0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 6.0, 8.0, 8.0],
         "neg-pos": [-8.0, -8.0, -6.0, -4.0, -4.0, -3.0, -2.0, -1.0, -0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 6.0, 8.0],
-    }
+    },
+    CompressWeightsMode.FP4: {
+        "neg": [
+            -8.0,
+            -8.0,
+            -5.333333492279053,
+            -5.333333492279053,
+            -4.0,
+            -2.6666667461395264,
+            -2.0,
+            -1.3333333730697632,
+            -0.0,
+        ],
+        "pos": [-0.0, 1.3333333730697632, 2.0, 2.6666667461395264, 4.0, 5.333333492279053, 5.333333492279053, 8.0, 8.0],
+        "neg-pos": [
+            -8.0,
+            -8.0,
+            -5.333333492279053,
+            -5.333333492279053,
+            -4.0,
+            -2.6666667461395264,
+            -2.0,
+            -1.3333333730697632,
+            -0.0,
+            1.3333333730697632,
+            2.0,
+            2.6666667461395264,
+            4.0,
+            5.333333492279053,
+            5.333333492279053,
+            8.0,
+        ],
+    },
 }
 
 
@@ -1940,10 +1971,6 @@ def test_compression_with_transposed_activations(kwargs):
         )
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     hidden_dim = (MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // LMLinearModel.OUTPUT_DIM) + 1
