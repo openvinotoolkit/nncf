@@ -57,7 +57,6 @@ def batch_norm_adaptation(
 ) -> TModel:
     """
     Adapt the batch normalization layers of the given model using the provided dataset.
-    d
     This function runs a specified number of iterations through the model
     to update the running statistics of the batch normalization layers.
 
