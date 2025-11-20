@@ -37,6 +37,7 @@ DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.int32: np.dtype(np.int32),
     TensorDataType.int64: np.dtype(np.int64),
     TensorDataType.uint8: np.dtype(np.uint8),
+    TensorDataType.uint16: np.dtype(np.uint16),
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}

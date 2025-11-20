@@ -35,6 +35,7 @@ DTYPE_MAP = {
     TensorDataType.int32: torch.int32,
     TensorDataType.int64: torch.int64,
     TensorDataType.uint8: torch.uint8,
+    TensorDataType.uint16: torch.uint16,
 }
 
 DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}

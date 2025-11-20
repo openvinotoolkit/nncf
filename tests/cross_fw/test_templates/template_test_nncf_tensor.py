@@ -2138,6 +2138,7 @@ class TemplateTestNNCFTensorOperators:
                 in [
                     TensorDataType.int4,
                     TensorDataType.uint4,
+                    TensorDataType.uint16,
                     TensorDataType.nf4,
                     TensorDataType.f4e2m1,
                     TensorDataType.f8e8m0,

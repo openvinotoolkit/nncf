@@ -1442,6 +1442,38 @@ TEST_FLOAT_COMPRESSED_REFS = {
             8.0,
         ],
     },
+    CompressWeightsMode.FP8_E4M3: {
+        "neg": [
+            -8.0,
+            -6.857143402099609,
+            -5.714285850524902,
+            -5.142857551574707,
+            -4.0,
+            -2.857142925262451,
+            -2.0,
+            -1.0,
+            0.0,
+        ],
+        "pos": [0.0, 1.0, 2.0, 2.857142925262451, 4.0, 5.142857551574707, 5.714285850524902, 6.857143402099609, 8.0],
+        "neg-pos": [
+            -8.0,
+            -6.857143402099609,
+            -5.714285850524902,
+            -5.142857551574707,
+            -4.0,
+            -2.857142925262451,
+            -2.0,
+            -1.0,
+            0.0,
+            1.0,
+            2.0,
+            2.857142925262451,
+            4.0,
+            5.142857551574707,
+            5.714285850524902,
+            6.857143402099609,
+        ],
+    },
 }
 
 
@@ -2000,7 +2032,7 @@ def test_nf4_quantization_mid_quant(weight, scale):
     scale = Tensor(scale)
     # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
     norm_weight = _calculate_normalized_weight(weight, scale)
-    nf4_quant = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.NF4)
+    nf4_quant = _calculate_float_quantized_weight(norm_weight, TensorDataType.nf4)
 
     norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
     ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
@@ -2028,7 +2060,7 @@ def test_nf4_quantization_mid_quant(weight, scale):
 )
 def test_mxfp4_quantization_edge_cases(input_val, expected_val, description):
     norm_weight = Tensor(np.array([input_val], dtype=np.float32))
-    result = _calculate_float_quantized_weight(norm_weight, CompressWeightsMode.MXFP4)
+    result = _calculate_float_quantized_weight(norm_weight, TensorDataType.f4e2m1)
 
     assert result.data[0] == expected_val, (
         f"{description}: Expected {expected_val}, got {result.data[0]} for input value {input_val}"
