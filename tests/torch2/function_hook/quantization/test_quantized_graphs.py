@@ -25,6 +25,7 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import EmbeddingModel
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
+from tests.cross_fw.test_templates.helpers import UnbindScaledDotProductAttentionModel
 from tests.torch import test_models
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 from tests.torch.test_compressed_graph import ModelDesc
@@ -42,6 +43,14 @@ TEST_MODELS_DESC = [
             "scaled_dot_product_attention_model",
             ScaledDotProductAttentionModel,
             {"query": [1, 8, 16], "key": [1, 8, 16], "value": [1, 8, 16]},
+        ),
+        {},
+    ),
+    (
+        ModelDesc(
+            "unbind_scaled_dot_product_attention_model",
+            UnbindScaledDotProductAttentionModel,
+            {"x": [3, 1, 8, 16]},
         ),
         {},
     ),
