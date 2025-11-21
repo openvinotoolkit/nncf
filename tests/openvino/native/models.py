@@ -77,6 +77,23 @@ class LinearModel(OVReferenceModel):
         return model
 
 
+class SimpleMoEModel(OVReferenceModel):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4):
+        input_shape = [num_experts, seq_len, hidden_dim]
+        input_1 = opset.parameter(input_shape, name="Input")
+
+        weight_data = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weight_data = weight_data.reshape(num_experts, hidden_dim, out_dim)
+
+        matmul = opset.matmul(input_1, weight_data, transpose_a=False, transpose_b=False, name="MoE_MatMul")
+
+        result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([result], [input_1])
+        return model
+
+
 @SYNTHETIC_MODELS.register()
 class ConvModel(OVReferenceModel):
     def _create_ov_model(self):
@@ -597,16 +614,18 @@ class SplitConcatModel(OVReferenceModel):
 
 @SYNTHETIC_MODELS.register()
 class IntegerModel(OVReferenceModel):
-    def _create_ov_model(self, dim1=1, dim2=7, dim3=6, max_input_value=2, add_batch_dimension=False):
+    def _create_ov_model(self, dim1=1, dim2=7, dim3=6, max_input_value=2, add_batch_dimension=False, positive_w=True):
+        def get_rand_w(shape):
+            value = self._rng.random(shape)
+            return value if positive_w else value * 2 - 1
+
         input_1 = opset.parameter([dim1, dim2, dim1], name="Input")
         convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
 
         gather_1 = opset.gather(convert_1, 0, axis=0, batch_dims=0)
         gather_1.set_friendly_name("Gather_1")
 
-        gather_2_data = opset.constant(
-            self._rng.random((max_input_value + 1, dim3)), dtype=np.float32, name="gather_2_data"
-        )
+        gather_2_data = opset.constant(get_rand_w((max_input_value + 1, dim3)), dtype=np.float32, name="gather_2_data")
         gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
@@ -615,7 +634,7 @@ class IntegerModel(OVReferenceModel):
             gather_3 = opset.unsqueeze(gather_3, 0)
         gather_3.set_friendly_name("Gather_3")
 
-        matmul_1_data = opset.constant(self._rng.random((dim3, dim3)), dtype=np.float32, name="matmul_1_data")
+        matmul_1_data = opset.constant(get_rand_w((dim3, dim3)), dtype=np.float32, name="matmul_1_data")
         matmul_1 = opset.matmul(gather_3, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
 
         gather_4 = opset.gather(input_1, 0, axis=2, batch_dims=0)
@@ -623,7 +642,7 @@ class IntegerModel(OVReferenceModel):
             gather_4 = opset.unsqueeze(gather_4, 0)
         gather_4.set_friendly_name("Gather_4")
 
-        matmul_2_data = opset.constant(self._rng.random((dim3, dim2)), dtype=np.float32, name="matmul_2_data")
+        matmul_2_data = opset.constant(get_rand_w((dim3, dim2)), dtype=np.float32, name="matmul_2_data")
         matmul_2 = opset.matmul(gather_4, matmul_2_data, transpose_a=False, transpose_b=True, name="MatMul_2")
         add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
 
