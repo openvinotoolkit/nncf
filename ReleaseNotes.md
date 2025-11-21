@@ -6,8 +6,6 @@ Post-training Quantization:
 
 - Breaking changes:
 - (OpenVINO) `nncf.CompressWeightsMode.E2M1` `mode` option is renamed to `nncf.CompressWeightsMode.MXFP4`.
-- General:
-  - ...
 - Features:
   - The histogram aggregator was introduced, improving metrics for a number of classification models with PTQ.
   - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
@@ -23,35 +21,17 @@ Post-training Quantization:
   - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
   - Reduced peak memory footprint for Bias Correction algorithm.
   - (OpenVINO) Reduced time (by up to 3x) and memory (by up to 1.5x) it takes to compress models to `MXFP4` data type.
-- Deprecations/Removals:
-  - ...
 - Tutorials:
   - [Deployment of a Post-Training Optimized Qwen3 Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/notebooks/qwen-3/smolagents/qwen3_agent.ipynb)
   - [Post-Training Optimization of ACE Step Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ace-step-music-generation/ace-step-music-generation.ipynb)
   - [Post-Training Optimization of Qwen3-VL Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-vl/qwen3-vl.ipynb)
-- Known issues:
-  - ...
 - Other:
   - Refined the handling of layers that don't have channel size divisible by group size during weight compression. Now the default behavior in such case is that an error will be raised and in the error message users are suggested to provide a different group size value or use `GroupSizeFallbackMode.ADJUST` to automatically adjust group size for problematic layers.
 
 Compression-aware training:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
-- Features:
-  - ...
-- Fixes:
-  - ...
 - Improvements:
   - Optimized `nncf.strip` for `StripFormat.IN_PLACE` and no longer requires `example_input`.
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
 
 Deprecations/Removals:
 
