@@ -1282,6 +1282,38 @@ class MatMulActivationModel(ONNXReferenceModel):
 
 
 @ALL_SYNTHETIC_MODELS.register()
+class AttentionModel(ONNXReferenceModel):
+    #         Q   K   V
+    #          \  |  /
+    #         Attention
+    #             |
+    #            OUT
+    def __init__(self):
+        queries, keys, values, outputs = "Q", "K", "V", "OUT"
+        shape = [1, 8, 16]
+
+        Q = onnx.helper.make_tensor_value_info(queries, onnx.TensorProto.FLOAT, shape)
+        K = onnx.helper.make_tensor_value_info(keys, onnx.TensorProto.FLOAT, shape)
+        V = onnx.helper.make_tensor_value_info(values, onnx.TensorProto.FLOAT, shape)
+        OUT = onnx.helper.make_tensor_value_info(outputs, onnx.TensorProto.FLOAT, shape)
+
+        attention_node = onnx.helper.make_node(
+            name="Attention",
+            op_type="Attention",
+            inputs=["Q", "K", "V"],
+            outputs=["OUT"],
+        )
+
+        graph_def = onnx.helper.make_graph(nodes=[attention_node], name="Net", inputs=[Q, K, V], outputs=[OUT])
+
+        op = onnx.OperatorSetIdProto()
+        op.version = 23  # Attention node is only supported in opsets 23+
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [shape, shape, shape], "attention_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
 class GEMMTransposeWeightModel(ONNXReferenceModel):
     #         X       W(Transposed)
     #         |       |
