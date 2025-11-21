@@ -43,10 +43,13 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
     if X_full.shape[sample_axis] > subset_size:
         # dimension of the activation which are unique is chosen here to order indexes by.
         num_dims = len(stats.shape_values[0])
-        dim_sets = [set(shape[i] for shape in stats.shape_values) for i in range(num_dims)]
+        dim_sets = [
+            set(shape[i].data if isinstance(shape[i], Tensor) else shape[i] for shape in stats.shape_values)
+            for i in range(num_dims)
+        ]
         varying_dims = [i for i in range(num_dims) if len(dim_sets[i]) > 1]
 
-        lens = [reduce(mul, varying_dims, 1) for _ in stats.shape_values]
+        lens = [reduce(mul, [shape[i] for i in varying_dims], 1) for shape in stats.shape_values]
         step = X_full.shape[sample_axis] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
         X = X_full[..., idxs]
