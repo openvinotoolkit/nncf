@@ -71,7 +71,7 @@ def batch_norm_adaptation(
 
         return batch_norm_adaptation(model, calibration_dataset=calibration_dataset, num_iterations=num_iterations)
 
-    msg = f"Pruning is not supported for the {backend} backend."
+    msg = f"Batch norm adaptation is not supported for the {backend} backend."
     raise nncf.InternalError(msg)
 
 
