@@ -676,6 +676,14 @@ class ONNXErfMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXAttentionMetatype(ONNXOpMetatype):
+    name = "AttentionOp"
+    op_names = ["Attention"]
+    hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
+    target_input_ports = [0, 1]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXCosMetatype(ONNXOpMetatype):
     name = "CosOp"
     op_names = ["Cos"]

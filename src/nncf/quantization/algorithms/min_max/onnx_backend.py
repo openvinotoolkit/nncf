@@ -90,7 +90,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scaled_dot_product_attention_metatypes(self) -> list[OperatorMetatype]:
-        return []
+        return [om.ONNXAttentionMetatype]
 
     @property
     def scales_unification_map(self) -> dict[OperatorMetatype, OperatorMetatype]:
