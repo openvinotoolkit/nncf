@@ -236,9 +236,10 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
 
             for pred_node in pred_nodes:
                 input_edge = nncf_graph.get_edge(pred_node, nncf_node)
-                allowed_pre_hook_insertion_points.append(
-                    PreHookInsertionPoint(nncf_node.node_name, input_edge.input_port_id)
-                )
+                input_port_ids = [input_edge.input_port_id] + input_edge.parallel_input_port_ids
+                node_name = nncf_node.node_name
+                for input_port_id in input_port_ids:
+                    allowed_pre_hook_insertion_points.append(PreHookInsertionPoint(node_name, input_port_id))
         return allowed_pre_hook_insertion_points
 
     @staticmethod
