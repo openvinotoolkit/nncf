@@ -877,7 +877,7 @@ class WeightCompression(Algorithm):
                     ):
                         # MoE operations are usually matmuls, so the check for matmul metatype is done
                         # This is to avoid raising the error for non-MoE cases with 3D weights.
-                        msg = f"""NNCF algorithms do not support 3D weights with current version of 
+                        msg = f"""NNCF compression algorithms do not support 3D weights with current version of 
                                 Openvino {ov_version} due to a known issue in statistics collection Ticket - 176465. 
                                 Node with weight: {node.node_name}."""
                         raise nncf.UnsupportedModelError(msg)
