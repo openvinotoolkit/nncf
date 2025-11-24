@@ -61,6 +61,7 @@ from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.node_utils import get_activation_channel_axis as get_activation_channel_axis_util
 from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.ignored_patterns import create_sam_pe
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -488,7 +489,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
-        return node.metatype.output_channel_axis
+        return get_activation_channel_axis_util(node, port_id)
 
 
 class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
