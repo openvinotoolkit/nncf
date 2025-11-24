@@ -723,6 +723,12 @@ class PTThresholdMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold"]}
 
 
+@PT_OPERATOR_METATYPES.register()
+class PTARangeMetatype(PTOperatorMetatype):
+    name = "ARangeOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["arange"]}
+
+
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
