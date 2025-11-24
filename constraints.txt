@@ -2,14 +2,14 @@
 openvino==2025.3.0
 
 # Pytorch
-torch==2.8.0
-torchvision==0.23.0
+torch==2.9.0
+torchvision==0.24.0
 
 # ONNX
 onnx==1.17.0; python_version < '3.13'
 onnx==1.18.0; python_version >= '3.13'
-onnxruntime==1.19.2; python_version <= '3.9'
-onnxruntime==1.21.1; python_version > '3.9'
+onnxruntime==1.21.1
+onnxscript==0.5.6
 
 # TensorFlow
 tensorflow==2.15.1

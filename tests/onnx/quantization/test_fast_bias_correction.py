@@ -14,11 +14,15 @@ import numpy as np
 import onnx
 import torch
 
+from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
+from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
+from tests.onnx.common import ModelBuilder
 
 
 def get_data_from_node(model: onnx.ModelProto, node_name: str):
@@ -40,7 +44,9 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def backend_specific_model(model, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
+        torch.onnx.export(
+            model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"], dynamo=False
+        )
         onnx_model = onnx.load(onnx_path)
         return onnx_model
 
@@ -69,3 +75,47 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
             return
         msg = "Not found node with bias"
         raise ValueError(msg)
+
+
+def _build_matmul_add_model() -> onnx.ModelProto:
+    mb = ModelBuilder()
+
+    x = mb.add_input("X", (2, 3))
+
+    x = mb.add_matmul(x, (3, 3))
+    x = mb.add_add(x, mb.add_initializer(np.array([1, 1, 1], dtype=np.float32)))
+
+    x = mb.add_matmul(x, (3, 3))
+    x = mb.add_add(x, mb.add_initializer(np.array([2, 2, 2], dtype=np.float32)))
+
+    mb.add_output(x, (2, 3))
+
+    return mb.build(opset_version=19, ir_version=9)
+
+
+def test_update_bias_in_matmul_add():
+    """
+    Tests the ability to retrieve and update the value of the bias constant in a MatMul->Add subgraph,
+    where the second input to the Add operation is a constant.
+    """
+    model = _build_matmul_add_model()
+    graph = NNCFGraphFactory.create(model)
+
+    nodes = [node for node in graph.get_all_nodes() if is_node_with_bias(node)]
+    assert [x.node_name for x in nodes] == ["MatMul_0", "MatMul_2"]
+
+    for matmul, data in zip(nodes, [[1, 1, 1], [2, 2, 2]]):
+        bias = get_bias_value(matmul, model)
+        bias_ref = np.array(data, dtype=np.float32)
+        assert np.all(np.isclose(bias, bias_ref, atol=0.0001)), f"{bias} != {bias_ref}"
+
+    layout = TransformationLayout()
+    for matmul, data in zip(nodes, [[2, 2, 2], [1, 1, 1]]):
+        new_bias = np.array(data, dtype=np.float32)
+        layout.register(ONNXCommandCreator.create_command_to_update_bias(matmul, new_bias, graph))
+    model = ModelTransformerFactory.create(model).transform(layout)
+
+    for matmul, data in zip(nodes, [[2, 2, 2], [1, 1, 1]]):
+        bias = get_bias_value(matmul, model)
+        bias_ref = np.array(data, dtype=np.float32)
+        assert np.all(np.isclose(bias, bias_ref, atol=0.0001)), f"{bias} != {bias_ref}"

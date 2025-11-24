@@ -50,6 +50,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
@@ -432,7 +433,23 @@ class MinMaxQuantization(Algorithm):
         user_params = self._range_estimator_params[quantizer_group]
         if user_params is None:
             return deepcopy(params)
-
+        if (
+            user_params.min.aggregator_type is AggregatorType.HISTOGRAM
+            or user_params.max.aggregator_type is AggregatorType.HISTOGRAM
+        ):
+            if user_params != RangeEstimatorParametersSet.HISTOGRAM:
+                msg = (
+                    f"Given parameters set {user_params} is not supported by NNCF."
+                    " Please use the RangeEstimatorParametersSet.HISTOGRAM to enable the histogram aggregation."
+                )
+                raise nncf.ParameterNotSupportedError(msg)
+            if quantizer_config.per_channel:
+                msg = (
+                    f"Rollback to RangeEstimatorParametersSet.MINMAX for the target point: '{target_point}' as"
+                    " HistogramAggregator does not support per-channel activations."
+                )
+                nncf_logger.warning(msg)
+                user_params = RangeEstimatorParametersSet.MINMAX
         min_changes = changes_asdict(user_params.min)
         min_statistic_collector = dataclasses.replace(params.min, **min_changes)
 
@@ -493,6 +510,19 @@ class MinMaxQuantization(Algorithm):
             num_samples=num_samples,
         )
 
+    def _get_histogram_statistic_collector(self, num_samples: int) -> TensorCollector:
+        """
+        Return the histogram statistic collector.
+
+        :param num_samples: Maximum number of samples to collect.
+        :return: An histogram TensorCollector for the statistics calculation.
+        """
+        reducer = self._backend_entity.reducer_map[StatisticsType.RAW]()
+        aggregator = HistogramAggregator(num_samples=num_samples)
+        collector = TensorCollector(MinMaxTensorStatistic)
+        collector.register_statistic_branch(MinMaxTensorStatistic.MIN_MAX_STAT, reducer, aggregator)
+        return collector
+
     def _get_statistic_collector(
         self,
         range_estimator_params: RangeEstimatorParameters,
@@ -513,6 +543,9 @@ class MinMaxQuantization(Algorithm):
         :param num_samples: Maximum number of samples to collect.
         :return: TensorCollector for the statistics calculation.
         """
+        if range_estimator_params == RangeEstimatorParametersSet.HISTOGRAM:
+            return self._get_histogram_statistic_collector(num_samples)
+
         if not self._backend_entity.supports_inplace_statistics:
             inplace = False
 
@@ -537,14 +570,12 @@ class MinMaxQuantization(Algorithm):
                 else:
                     quantile = 1 - params.quantile_outlier_prob
                 reducer = self._backend_entity.reducer_map[statistic_type](
-                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                    axes=reduction_axes, inplace=inplace, quantile=[quantile]
                 )
             else:
                 if use_abs_max and statistic_type == StatisticsType.MAX:
                     statistic_type = StatisticsType.ABS_MAX
-                reducer = self._backend_entity.reducer_map[statistic_type](
-                    reduction_axes=reduction_axes, inplace=inplace
-                )
+                reducer = self._backend_entity.reducer_map[statistic_type](axes=reduction_axes, inplace=inplace)
 
             kwargs = {
                 "num_samples": num_samples,

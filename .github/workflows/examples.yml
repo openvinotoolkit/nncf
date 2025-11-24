@@ -26,18 +26,18 @@ concurrency:
 
 jobs:
   examples-cpu:
-    name: Test examples CPU [${{ matrix.group }}/4]
+    name: Test examples CPU [${{ matrix.group }}/6]
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 80
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4]
+        group: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -64,7 +64,7 @@ jobs:
             --junit-xml=pytest-results.xml \
             --durations-path=tests/cross_fw/examples/.test_durations \
             --splitting-algorithm=least_duration \
-            --splits 4 \
+            --splits 6 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
@@ -107,7 +107,7 @@ jobs:
           export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -149,18 +149,20 @@ jobs:
 
   examples-win-cpu:
     timeout-minutes: 80
-    name: Test examples CPU Windows [${{ matrix.group }}/4]
+    name: Test examples CPU Windows [${{ matrix.group }}/6]
     runs-on: windows-2025-16-core
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4]
+        group: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
+    env:
+      PYTHONIOENCODING: utf-8
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -189,7 +191,7 @@ jobs:
             --junit-xml=pytest-results.xml \
             --durations-path=tests/cross_fw/examples/.test_durations \
             --splitting-algorithm=least_duration \
-            --splits 4 \
+            --splits 6 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
           ret=$?

@@ -8,7 +8,7 @@ description = "Neural Networks Compression Framework"
 readme = "docs/PyPiPublishing.md"
 license = "Apache-2.0"
 authors = [{ name = "Intel" }, { email = "maksim.proshin@intel.com" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 keywords = [
     "bert",
@@ -142,6 +142,12 @@ ignore = [
     "PERF203", # try-except-in-loop
     "PERF401", # manual-list-comprehension
     "PERF403", # manual-dict-comprehension
+    "B009", # get-attr-with-constant
+    "B010", # set-attr-with-constant
+    "B905", # zip-without-explicit-strict
+    "RET502", # implicit-return-value
+    "RET503", # implicit-return
+    "RET504", # unnecessary-assign
 ]
 select = [
     "CPY001", # copyright check
@@ -155,6 +161,8 @@ select = [
     "NPY", # numpy rules
     "UP", # pyupgrade
     "PERF", # perflint
+    "B", # flake8-bugbear
+    "RET", # flake8-return
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -166,7 +174,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!src/nncf/**.py" = ["INP", "D"]
+"!src/nncf/**.py" = ["INP", "D", "B"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\

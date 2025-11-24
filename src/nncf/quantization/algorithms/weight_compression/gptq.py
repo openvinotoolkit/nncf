@@ -113,7 +113,11 @@ class GPTQ:
         target_node_iterator = self._layerwise_engine.create_iterator_through_target_nodes(
             model, graph, target_nodes, dataset, statistic_points
         )
-        for node, inputs in track(target_node_iterator, total=len(target_nodes), description="Applying GPTQ"):
+
+        description = "Applying GPTQ"
+        if self._scale_estimation:
+            description += " with Scale Estimation"
+        for node, inputs in track(target_node_iterator, total=len(target_nodes), description=description):
             wc_params = target_nodes_wc_params_map[node]
             if wc_params.compression_config.mode in [
                 CompressWeightsMode.INT8_ASYM,

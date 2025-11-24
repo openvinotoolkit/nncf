@@ -304,7 +304,7 @@ def test_strip_quantization(mode, overflow_fix, tmp_path):
 
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
-    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
+    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx", dynamo=False)
 
 
 @pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))

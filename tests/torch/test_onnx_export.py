@@ -183,6 +183,7 @@ def test_preserves_onnx_node_name_format(tmp_path, compression_section):
             export_params=True,
             opset_version=13,
             do_constant_folding=False,
+            dynamo=False,
         )
         original_model_proto = onnx.load_model(str(without_nncf_path))
         patch_torch_operators()

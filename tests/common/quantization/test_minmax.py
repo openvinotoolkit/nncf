@@ -221,7 +221,7 @@ def test_min_max_caching():
     def find_qsetup_mock(self, *args):
         nonlocal find_called
         find_called += 1
-        return None
+        return
 
     def fill_qsetup_mock(self, *args):
         """

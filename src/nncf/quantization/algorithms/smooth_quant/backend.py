@@ -19,8 +19,11 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
@@ -95,20 +98,6 @@ class SmoothQuantAlgoBackend(ABC):
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
         :return: Map with the activation & weighted ports.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        """
-        Returns TensorCollector with MaxAggregator and AbsMaxReducer.
-
-        :param stats_reduction_axes: Calculated reduction axes.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param branch_key: Specific string for branch key.
-        :return: TensorCollector instance.
         """
 
     @staticmethod
@@ -199,3 +188,50 @@ class SmoothQuantAlgoBackend(ABC):
         :param algorithm_key: Current algorithm key.
         :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
+
+    @staticmethod
+    def get_abs_max_reducer_cls() -> type[AbsMaxReducer]:
+        """
+        Returns the backend-specific `AbsMaxReducer` class.
+
+        :return: The `AbsMaxReducer` class.
+        """
+        return AbsMaxReducer
+
+    @staticmethod
+    def get_shape_reducer_cls() -> type[ShapeReducer]:
+        """
+        Returns the backend-specific `ShapeReducer` class.
+
+        :return: The `ShapeReducer` class.
+        """
+        return ShapeReducer
+
+    def calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> tuple[int]:
+        """
+        Returns reduction axes for specified input.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to check.
+        :param input_port: Specified input port id.
+        :return: Calculated reduction axes.
+        """
+        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
+        reduction_axes = tuple([])
+        if len(shape) > 1:
+            channel_axis = self.get_activation_channel_axis(node, input_port)
+            reduction_axes = get_reduction_axes((channel_axis,), shape)
+        return reduction_axes
+
+    def get_tensor_collector_axes(self, nncf_graph: NNCFGraph, node_to_smooth: NNCFNode, input_port: int):
+        """
+        Returns axes and axes mode required for tensor collector.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to smooth.
+        :param input_port: Specified input port id.
+        :return: Axes and axes mode required for tensor collector.
+        """
+        axes_mode = AxesMode.REDUCTION
+        axes = self.calculate_input_reduction_axes(nncf_graph, node_to_smooth, input_port)
+        return axes_mode, axes

@@ -143,7 +143,6 @@ class ONNXMatMulMetatype(ONNXOpWithWeightsMetatype):
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
     weight_channel_axis = -1  # For port_id=1
-    bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
 

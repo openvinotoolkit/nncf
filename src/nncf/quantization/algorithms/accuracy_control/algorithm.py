@@ -303,6 +303,8 @@ class QuantizationAccuracyRestorer:
 
         nncf_logger.info("Changing the scope of quantizer nodes was started")
         for iteration in range(self.max_num_iterations):
+            report.num_iterations = iteration
+
             if current_model is not None:
                 previous_model = current_model
 
@@ -387,7 +389,6 @@ class QuantizationAccuracyRestorer:
                 current_approximate_values_for_each_item,
             )
 
-        report.num_iterations = iteration
         QuantizationAccuracyRestorer._print_report(report, self.max_num_iterations)
 
         return current_model

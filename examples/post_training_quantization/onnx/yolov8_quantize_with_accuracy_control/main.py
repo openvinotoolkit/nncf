@@ -44,7 +44,7 @@ def validate(
     validator.jdict = []
     validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
     validator.batch_i = 1
-    validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
+    validator.confusion_matrix = ConfusionMatrix(names=validator.names)
 
     input_name = model.graph.input[0].name
     serialized_model = model.SerializeToString()
@@ -72,7 +72,7 @@ def validate(
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
 
-    return stats, validator.seen, validator.nt_per_class.sum()
+    return stats, validator.seen, validator.metrics.nt_per_class.sum()
 
 
 def print_statistics(stats: dict[str, float], total_images: int, total_objects: int) -> None:
@@ -103,7 +103,7 @@ def print_statistics(stats: dict[str, float], total_images: int, total_objects: 
 
 
 def prepare_validation(model: YOLO, args: Any) -> tuple[SegmentationValidator, torch.utils.data.DataLoader]:
-    validator: SegmentationValidator = model.task_map[model.task]["validator"](args=args)
+    validator = SegmentationValidator(args=args)
     validator.data = check_det_dataset(args.data)
     validator.stride = 32
     validator.is_coco = True
@@ -112,7 +112,8 @@ def prepare_validation(model: YOLO, args: Any) -> tuple[SegmentationValidator, t
     validator.metrics.names = validator.names
     validator.nc = model.model.model[-1].nc
     validator.process = ops.process_mask
-    validator.plot_masks = []
+    validator.device = torch.device("cpu")
+    validator.end2end = False
 
     coco_data_path = DATASETS_DIR / "coco128-seg"
     data_loader = validator.get_dataloader(coco_data_path.as_posix(), 1)
@@ -148,7 +149,7 @@ def quantize_ac(
         validator.jdict = []
         validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
         validator.batch_i = 1
-        validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
+        validator.confusion_matrix = ConfusionMatrix(names=validator.names)
 
         rt_session_options = {"providers": ["CPUExecutionProvider"]}
         serialized_model = val_model.SerializeToString()
@@ -215,7 +216,7 @@ def run_example():
     model = YOLO(ROOT / f"{MODEL_NAME}.pt")
     args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128-seg.yaml"
-
+    args.plots = False
     validator, data_loader = prepare_validation(model, args)
 
     fp32_model, fp32_model_path = prepare_onnx_model(model, MODEL_NAME)

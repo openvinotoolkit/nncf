@@ -45,6 +45,7 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     assert node_with_bias.layer_attributes.has_bias()
+    # TODO(andrey-churkin): Support Add + Constant case
     bias_name = node_with_bias.layer_attributes.bias_attrs["name"]
     return get_tensor_value(model, bias_name)
 
@@ -137,6 +138,8 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
         transpose = node.layer_attributes.node_attrs[trans_attr]
         # 0 - (M, K), 1 - (K, N)
         weight_channel_axis = -1 - port_id if transpose else -2 + port_id
+    if node.metatype == om.ONNXMatMulMetatype:
+        weight_channel_axis = -1 - port_id if port_id == 0 else -2 + port_id
     return weight_channel_axis
 
 

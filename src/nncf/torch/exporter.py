@@ -188,6 +188,7 @@ class PTExporter(Exporter):
             output_names=output_names,
             opset_version=opset_version,
             training=torch.onnx.TrainingMode.EVAL,
+            dynamo=False,
         )
         try:
             fn()

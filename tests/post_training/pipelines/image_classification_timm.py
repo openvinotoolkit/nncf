@@ -48,7 +48,13 @@ class ImageClassificationTimm(ImageClassificationBase):
                 additional_kwargs["input_names"] = ["image"]
                 additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
             torch.onnx.export(
-                timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
+                timm_model,
+                self.dummy_tensor,
+                onnx_path,
+                export_params=True,
+                opset_version=13,
+                dynamo=False,
+                **additional_kwargs,
             )
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name

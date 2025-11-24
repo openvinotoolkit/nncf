@@ -136,7 +136,7 @@ class ConstantFolder(torch.fx.Interpreter):
                     return
 
                 seen_uses.add(inp)
-                last_non_output_use[node].append(inp)
+                last_non_output_use[node].append(inp)  # noqa: B023
 
             # In-place is fine since we don't mutate
             pytree.tree_map_only_(torch.fx.Node, add_use, (node.args, node.kwargs))

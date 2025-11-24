@@ -317,10 +317,6 @@ def test_matmulnbits():
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
 
 
-@pytest.mark.xfail(
-    version.parse(onnx.__version__) >= version.parse("1.18.0"),
-    reason="onnxruntime not support default IR for onnx==1.18.0",
-)
 @pytest.mark.parametrize("trans_b", [0, 1])
 def test_matmulnbits_gemm(trans_b: int):
     # Build the model with a single Gemm operation
@@ -400,6 +396,24 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
+    def get_SAM_PE_model() -> onnx.ModelProto:
+        """
+        Builds a model to be used in the TemplateWeightCompression.test_sam_pe_weight_compression() test.
+        """
+        mb = ModelBuilder()
+
+        x = mb.add_input("input", (-1, -1, -1, 2))
+        x = mb.add_matmul(x, shape=(2, 128))
+        x = mb.add_mul_const(x, shape=(1,), data=np.array([2 * np.pi], np.float32))
+        x1 = mb.add_sin(x)
+        x2 = mb.add_cos(x)
+        x = mb.add_concat([x1, x2], axis=-1)
+
+        mb.add_output(x, (-1, -1, -1, 256))
+
+        return mb.build()
+
+    @staticmethod
     def get_sequential_matmul_model() -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_mixed_precision() test.
@@ -452,6 +466,24 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
+    def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        seq_len = 4
+
+        mb = ModelBuilder()
+        x = mb.add_input("input", (num_experts, seq_len, hidden_dim))
+        output = mb.add_output("output", (num_experts, seq_len, out_dim))
+
+        weights = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weights = weights.reshape(num_experts, hidden_dim, out_dim)
+
+        mb.add_matmul(x, shape=(num_experts, hidden_dim, out_dim), output=output, data=weights)
+
+        return mb.build(opset_version=21)
+
+    @staticmethod
     def get_scale_estimation_ref():
         return np.array(
             [
@@ -473,6 +505,57 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                 [[8.255914]],
             ]
         ).T
+
+    @staticmethod
+    def get_moe_scale_estimation_ref():
+        return np.array(
+            [
+                [
+                    [
+                        [
+                            7.573249,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.260152,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.3082952,
+                            7.846745,
+                            7.223278,
+                            7.271495,
+                            7.420518,
+                            7.4666667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.820505,
+                            14.903171,
+                            14.985837,
+                            15.068501,
+                            15.151169,
+                            14.339979,
+                            14.417264,
+                            14.494548,
+                            14.571833,
+                            14.649117,
+                            14.726402,
+                            14.803687,
+                            14.880971,
+                            14.958257,
+                            15.035541,
+                            15.112826,
+                        ]
+                    ]
+                ],
+            ]
+        )
 
     @staticmethod
     def get_orig_weight(model: onnx.ModelProto) -> Tensor:

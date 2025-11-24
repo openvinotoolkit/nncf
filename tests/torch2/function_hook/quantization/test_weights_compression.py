@@ -41,6 +41,7 @@ from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.helpers import RoPEModel
+from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -50,7 +51,13 @@ ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 INT8_MODES = (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 SUPPORTED_MODES = INT8_MODES + INT4_MODES
-UNSUPPORTED_MODES = (CompressWeightsMode.NF4, CompressWeightsMode.E2M1)
+UNSUPPORTED_MODES = (
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.MXFP4,
+    CompressWeightsMode.MXFP8_E4M3,
+    CompressWeightsMode.FP8_E4M3,
+    CompressWeightsMode.FP4,
+)
 
 
 class SequentialMatmulModel(nn.Module):
@@ -111,6 +118,20 @@ class LinearModel(torch.nn.Module):
 
     def forward(self, input):
         return self.linear(input)
+
+
+class SimpleMoEModel(nn.Module):
+    def __init__(self, num_experts=2, hidden_dim=8, out_dim=16):
+        super().__init__()
+        self.expert_weights = nn.Parameter(
+            torch.arange(0, num_experts * hidden_dim * out_dim, dtype=torch.float32).reshape(
+                num_experts, hidden_dim, out_dim
+            )
+        )
+
+    def forward(self, x):
+        output = torch.bmm(x, self.expert_weights)
+        return output
 
 
 class AWQActLinearModel(nn.Module):
@@ -475,12 +496,24 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return RoPEModel()
 
     @staticmethod
+    def get_SAM_PE_model() -> torch.nn.Module:
+        return SAMPEModel()
+
+    @staticmethod
     def get_sequential_matmul_model() -> torch.nn.Module:
         return SequentialMatmulModel()
 
     @staticmethod
     def get_model_for_test_scale_estimation():
         return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+
+    @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        model = SimpleMoEModel(num_experts, hidden_dim, out_dim)
+        return model
 
     @staticmethod
     def get_awq_model() -> torch.nn.Module:
@@ -545,6 +578,57 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                 [[7.237174]],
                 [[7.722580]],
                 [[8.255914]],
+            ]
+        )
+
+    @staticmethod
+    def get_moe_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [
+                    [
+                        [
+                            7.5732,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.2602,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.3083,
+                            7.8467,
+                            7.2233,
+                            7.2715,
+                            7.4205,
+                            7.4667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.8205,
+                            14.9032,
+                            14.9858,
+                            15.0685,
+                            15.1512,
+                            14.3400,
+                            14.4173,
+                            14.4945,
+                            14.5718,
+                            14.6491,
+                            14.7264,
+                            14.8037,
+                            14.8810,
+                            14.9583,
+                            15.0355,
+                            15.1128,
+                        ]
+                    ]
+                ],
             ]
         )
 

@@ -29,6 +29,7 @@ from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
+from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -47,6 +48,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Fun
 from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
+from tests.torch2.function_hook.quantization.test_weights_compression import SimpleMoEModel
 from tests.torch2.fx.helpers import get_torch_fx_model
 
 DATA_BASED_SENSITIVITY_METRICS = (
@@ -330,6 +332,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
+    def get_SAM_PE_model() -> torch.fx.GraphModule:
+        model = SAMPEModel()
+        ex_input = torch.ones(SAMPEModel.INPUT_SIZE, dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
     def get_sequential_matmul_model() -> torch.fx.GraphModule:
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
@@ -340,6 +349,17 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     def get_model_for_test_scale_estimation():
         model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        seq_len = 4
+        model = SimpleMoEModel(num_experts, hidden_dim, out_dim)
+        ex_input = torch.ones([num_experts, seq_len, hidden_dim], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
@@ -417,13 +437,62 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         )
 
     @staticmethod
+    def get_moe_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [
+                    [
+                        [
+                            7.5732,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.2602,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.4667,
+                            7.3083,
+                            7.8467,
+                            7.2233,
+                            7.2715,
+                            7.4205,
+                            7.4667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.8205,
+                            14.9032,
+                            14.9858,
+                            15.0685,
+                            15.1512,
+                            14.3400,
+                            14.4173,
+                            14.4945,
+                            14.5718,
+                            14.6491,
+                            14.7264,
+                            14.8037,
+                            14.8810,
+                            14.9583,
+                            15.0355,
+                            15.1128,
+                        ]
+                    ]
+                ],
+            ]
+        )
+
+    @staticmethod
     def get_orig_weight(model: torch.fx.GraphModule) -> Tensor:
         return Tensor(model.linear.weight.data.detach())
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.fx.GraphModule, input: torch.Tensor) -> Tensor:
-        for node in compressed_model.graph.nodes:
-            print(node.name)
         model_graph = compressed_model.graph
         weight_node = get_graph_node_by_name(model_graph, "linear_weight_updated_constant0")
         decompression_node = get_graph_node_by_name(model_graph, "asymmetric_weights_decompressor_linear_weight_0")

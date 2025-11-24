@@ -28,7 +28,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
@@ -277,7 +277,7 @@ def get_mean_percentile_statistic_collector(
     """
     tensor_collector = TensorCollector(_get_wrapped_percentile_tensor_statistic(target_shape=scale_shape))
     quantiles_to_collect = np.true_divide(percentiles_to_collect, 100)
-    reducer = QuantileReducer(reduction_axes=reduction_axes, quantile=quantiles_to_collect)
+    reducer = QuantileReducer(axes=reduction_axes, quantile=quantiles_to_collect)
     for output_port_id, p in enumerate(percentiles_to_collect):
         aggregator = MeanAggregator(
             aggregation_axes=aggregation_axes,
@@ -306,18 +306,18 @@ def get_mean_statistic_collector(
         reducer = BatchMeanReducer()
     else:
         reducer = MeanPerChReducer(channel_axis=channel_axis)
-    raw_reducer = RawReducer()
+    shape_reducer = ShapeReducer()
 
     kwargs = {
         "num_samples": num_samples,
         "window_size": window_size,
     }
     aggregate_mean = MeanAggregator(**kwargs)
-    aggregate_shape = ShapeAggregator()
+    aggregate_noop = NoopAggregator(num_samples=1, return_first=True)
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, shape_reducer, aggregate_noop)
     return collector
 
 

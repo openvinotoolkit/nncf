@@ -341,7 +341,7 @@ def test_torch_onnx_export(tmp_path):
     compression_ctrl.prepare_for_export()
 
     dummy_input = torch.randn(1, 1, 4, 4)
-    torch.onnx.export(compression_model, dummy_input, onnx_checkpoint_path, verbose=False)
+    torch.onnx.export(compression_model, dummy_input, onnx_checkpoint_path, verbose=False, dynamo=False)
     onnx_model_proto = onnx.load_model(onnx_checkpoint_path)
 
     num_fq = 0

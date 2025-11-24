@@ -49,6 +49,7 @@ from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
 from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.quantization.ignored_patterns import create_rope
+from nncf.onnx.quantization.ignored_patterns import create_sam_pe
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -143,6 +144,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
+        # Everything remains the same, except when 3D weights, reduce by batch dimension also.
+        if len(const_shape) == 3:
+            channel_axes = (0,) + channel_axes
         return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
@@ -202,9 +206,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def _check_arguments_for_transform_model(
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm],
-        compression_format: CompressionFormat,
-        advanced_parameters: AdvancedCompressionParameters,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm], compression_format: CompressionFormat
     ):
         if lora_correction_algo is not None:
             msg = "LORA correction is not supported for the ONNX backend"
@@ -221,9 +223,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: AdvancedCompressionParameters = None,
     ) -> onnx.ModelProto:
-        self._check_arguments_for_transform_model(lora_correction_algo, compression_format, advanced_parameters)
+        self._check_arguments_for_transform_model(lora_correction_algo, compression_format)
         opset_version = model.opset_import[0].version
 
         for wc_params in weight_compression_parameters:
@@ -381,7 +383,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the DequantizeLinear node before the consumer nodes
         insert_index = len(model.graph.node)
 
-        for i, node in enumerate(model.graph.node):
+        for node in model.graph.node:
             for j, input_name in enumerate(node.input):
                 if input_name == weight_name:
                     insert_index = min(insert_index, get_node_index(model, node.name))
@@ -475,7 +477,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the MatMulNBits node before the consumer nodes
         insert_index = len(model.graph.node)
 
-        for i, node in enumerate(model.graph.node):
+        for node in model.graph.node:
             for j, input_name in enumerate(node.input):
                 if input_name == original_matmul.name:
                     insert_index = min(insert_index, get_node_index(model, node.name))
@@ -493,7 +495,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):
