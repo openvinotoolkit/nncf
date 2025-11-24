@@ -240,20 +240,25 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_moe_scale_estimation_ref() -> TTensor:
+    def get_moe_scale_estimation_ref(sampling_activation_stats_flow: bool) -> TTensor:
         """
+        :param sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
+            activation statistics
         Returns the reference output of calculate_quantization_params for MoE model.
         """
 
     @staticmethod
     @abstractmethod
-    def get_scale_estimation_ref() -> TTensor:
+    def get_scale_estimation_ref(sampling_activation_stats_flow: bool) -> TTensor:
         """
+        :param sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
+            activation statistics
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
     @pytest.mark.parametrize("is_moe", [False, True])
-    def test_scale_estimation(self, mocker, is_moe):
+    @pytest.mark.parametrize("sampling_activation_stats_flow", [False, True])
+    def test_scale_estimation(self, mocker, is_moe, sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
@@ -264,9 +269,15 @@ class TemplateWeightCompression(ABC):
             model = self.get_model_for_test_scale_estimation()
             input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
 
-        # prepare dataset with one input tensor
+        # prepare dataset of size subset_size with input tensors
+        subset_size = 2 if sampling_activation_stats_flow else 1
+        # make sure that subset size for SE < subset size for statistics collection.
+        # This is to test the Optimized statistics processing flow which samples only a few data
+        # points in nncf/quantization/algorithms/weight_compression/activation_stats.py
+        se_subset_size = subset_size // 2 if sampling_activation_stats_flow else subset_size
         input = self.to_tensor(input)
-        dataset = Dataset([input], self.get_transform_func())
+
+        dataset = Dataset([input + i for i in range(subset_size)], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -277,15 +288,18 @@ class TemplateWeightCompression(ABC):
                 scale_estimation=True,
                 all_layers=True,
                 dataset=dataset,
+                subset_size=subset_size,
+                advanced_parameters=nncf.AdvancedCompressionParameters(
+                    scale_estimation_params=nncf.AdvancedScaleEstimationParameters(subset_size=se_subset_size)
+                ),
             )
 
         computed_scale = calc_q_params_spy.spy_return[0]
 
         if is_moe:
-            reference = self.get_moe_scale_estimation_ref()
+            reference = self.get_moe_scale_estimation_ref(sampling_activation_stats_flow)
         else:
-            reference = self.get_scale_estimation_ref()
-
+            reference = self.get_scale_estimation_ref(sampling_activation_stats_flow)
         assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
