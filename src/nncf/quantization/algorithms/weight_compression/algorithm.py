@@ -870,16 +870,14 @@ class WeightCompression(Algorithm):
                         and version.parse(ov_version) <= version.parse("2026")
                         and node.metatype in self._backend_entity.matmul_metatypes
                         and (
-                            self._awq
-                            or self._scale_estimation
-                            or self._gptq
-                            or self._lora_correction
+                            self._data_aware_compression
+                            or self._awq
                             or self._sensitivity_metric == SensitivityMetric.HESSIAN_INPUT_ACTIVATION
                         )
                     ):
                         # MoE operations are usually matmuls, so the check for matmul metatype is done
                         # This is to avoid raising the error for non-MoE cases with 3D weights.
-                        msg = f"""NNCF data-aware compression does not support 3D weights with current version of 
+                        msg = f"""NNCF algorithms do not support 3D weights with current version of 
                                 Openvino {ov_version} due to a known issue in statistics collection Ticket - 176465. 
                                 Node with weight: {node.node_name}."""
                         raise nncf.UnsupportedModelError(msg)
