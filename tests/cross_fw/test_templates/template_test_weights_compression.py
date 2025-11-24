@@ -300,6 +300,7 @@ class TemplateWeightCompression(ABC):
             reference = self.get_moe_scale_estimation_ref(check_sampling_activation_stats_flow)
         else:
             reference = self.get_scale_estimation_ref(check_sampling_activation_stats_flow)
+        print(computed_scale)
         assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
