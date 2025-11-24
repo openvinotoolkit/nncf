@@ -196,12 +196,19 @@ class GraphConverter:
                 source_node.meta["val"], (tuple, list)
             ):
                 tensor = source_node.meta["val"][0]
-            elif isinstance(
-                source_node.meta["val"],
-                (
-                    tuple,
-                    list,
-                ),
+            elif (
+                source_nncf_node.metatype
+                in [
+                    om.PTSplitMetatype,
+                    om.PTMaxMetatype,
+                    om.PTMinMetatype,
+                    om.PTMedianMetatype,
+                    om.PTAdaptiveMaxPool1dMetatype,
+                    om.PTAdaptiveMaxPool2dMetatype,
+                    om.PTAdaptiveMaxPool3dMetatype,
+                    om.PTAtenEmbeddingBagMetatype,
+                ]
+                and len(source_node.users) > 1
             ):
                 tensor = source_node.meta["val"][output_idx]
                 # Assume every outputs corresponds to an unique output_port_id
