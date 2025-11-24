@@ -414,7 +414,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return get_torch_fx_model(model, data)
 
     @staticmethod
-    def get_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             torch.tensor(
                 [
@@ -456,10 +456,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     [[8.252252]],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
-    def get_moe_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             torch.tensor(
                 [
@@ -557,7 +557,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     ],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: torch.fx.GraphModule) -> Tensor:

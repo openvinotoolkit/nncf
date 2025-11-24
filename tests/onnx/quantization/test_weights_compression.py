@@ -484,7 +484,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             np.array(
                 [
@@ -505,7 +505,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                     [[7.722580]],
                     [[8.255914]],
                 ]
-            ),
+            ).T,
             np.array(
                 [
                     [[0.473642]],
@@ -525,11 +525,11 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                     [[7.718919]],
                     [[8.252252]],
                 ]
-            ),
-        )[sampling_activation_stats_flow]
+            ).T,
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
-    def get_moe_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             np.array(
                 [
@@ -627,7 +627,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                     ],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: onnx.ModelProto) -> Tensor:

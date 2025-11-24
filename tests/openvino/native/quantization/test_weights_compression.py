@@ -2121,7 +2121,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             np.array(
                 [
@@ -2163,10 +2163,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                     [[8.252252]],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
-    def get_moe_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             np.array(
                 [
@@ -2264,11 +2264,12 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                     ],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
-    def test_scale_estimation(self, mocker, is_moe):
-        super().test_scale_estimation(mocker, is_moe)
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
+    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
+        super().test_scale_estimation(mocker, is_moe, check_sampling_activation_stats_flow)
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:

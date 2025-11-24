@@ -559,7 +559,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return wrapped_model
 
     @staticmethod
-    def get_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             torch.tensor(
                 [
@@ -601,10 +601,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                     [[8.252252]],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
-    def get_moe_scale_estimation_ref(sampling_activation_stats_flow):
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
         return (
             torch.tensor(
                 [
@@ -702,7 +702,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                     ],
                 ]
             ),
-        )[sampling_activation_stats_flow]
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: torch.nn.Module) -> Tensor:
