@@ -1,6 +1,7 @@
 name: precommit
 permissions: read-all
 
+# small change
 on:
   pull_request:
     paths-ignore:
