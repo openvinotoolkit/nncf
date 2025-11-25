@@ -30,7 +30,6 @@ TModel = TypeVar("TModel")
 class BackendType(Enum):
     TORCH = "Torch"
     TORCH_FX = "TorchFX"
-    TENSORFLOW = "Tensorflow"
     ONNX = "ONNX"
     OPENVINO = "OpenVINO"
 
@@ -74,19 +73,6 @@ def is_torch_fx_model(model: Any) -> bool:
     import torch.fx
 
     return isinstance(model, torch.fx.GraphModule)
-
-
-@result_verifier
-def is_tensorflow_model(model: Any) -> bool:
-    """
-    Returns True if the model is an instance of tensorflow.Module, otherwise False.
-
-    :param model: A target model.
-    :return: True if the model is an instance of tensorflow.Module, otherwise False.
-    """
-    import tensorflow  # type: ignore
-
-    return isinstance(model, tensorflow.Module)
 
 
 @result_verifier
@@ -138,7 +124,6 @@ def get_backend(model: Any) -> BackendType:
     verify_map = {
         is_torch_fx_model: BackendType.TORCH_FX,
         is_torch_model: BackendType.TORCH,
-        is_tensorflow_model: BackendType.TENSORFLOW,
         is_onnx_model: BackendType.ONNX,
         is_openvino_model: BackendType.OPENVINO,
     }
@@ -168,13 +153,6 @@ def copy_model(model: TModel) -> TModel:
 
         ov_model = cast(OVModel, model)
         return cast(TModel, ov_model.clone())
-    if model_backend == BackendType.TENSORFLOW:
-        # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
-        from nncf.tensorflow.graph.model_transformer import TFModelTransformer
-        from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-
-        model = TFModelTransformer(model).transform(TFTransformationLayout())
-        return model
     return deepcopy(model)
 
 

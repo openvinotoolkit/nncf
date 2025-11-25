@@ -4,7 +4,6 @@ Links to sections:
 
 - [Common](#common)
 - [PyTorch](#pytorch)
-- [TensorFlow](#tensorflow)
 - [ONNX](#onnx)
 
 ## Common
@@ -164,10 +163,6 @@ init_dataloader = MyInitializingDataLoader(my_dataloader)
 nncf_config = register_default_init_args(nncf_config, init_dataloader)
 # and then call `create_compressed_model` with that config file as usual.
 ```
-
-## TensorFlow
-
-*To be filled*
 
 ## ONNX
 

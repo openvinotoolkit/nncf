@@ -70,16 +70,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
                 self.dump_checkpoints,
                 self.lr_updates_needed,
             )
-        if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
 
-            return TFAccuracyAwareTrainingRunner(
-                self.accuracy_aware_training_params,
-                self.uncompressed_model_accuracy,
-                self.verbose,
-                self.dump_checkpoints,
-                self.lr_updates_needed,
-            )
         msg = "Got an unsupported value of nncf_backend"
         raise nncf.UnsupportedBackendError(msg)
 
@@ -129,17 +120,6 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
                 self.minimal_compression_rate,
                 self.maximal_compression_rate,
             )
-        if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
 
-            return TFAdaptiveCompressionLevelTrainingRunner(
-                self.accuracy_aware_training_params,
-                self.uncompressed_model_accuracy,
-                self.verbose,
-                self.dump_checkpoints,
-                self.lr_updates_needed,
-                self.minimal_compression_rate,
-                self.maximal_compression_rate,
-            )
         msg = "Got an unsupported value of nncf_backend"
         raise nncf.UnsupportedBackendError(msg)

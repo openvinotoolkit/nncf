@@ -121,7 +121,7 @@ def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightType
 )
 def test_numbers_of_quantized_weights(mode, reference_counter):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     counter = calculate_numbers_of_quantized_weights(model)
     assert counter == reference_counter
 
@@ -133,7 +133,7 @@ def test_numbers_of_quantized_weights(mode, reference_counter):
 def test_correct_dequantizelinear_int8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -164,7 +164,7 @@ def test_correct_dequantizelinear_int8(mode_weight_type):
 def test_correct_dequantizelinear_uint8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -204,7 +204,7 @@ def test_correct_dequantizelinear_uint8(mode_weight_type):
 def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -240,7 +240,7 @@ def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
 def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -281,7 +281,7 @@ def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
 )
 def test_compression_with_inference(mode):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     onnx.checker.check_model(model)
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())

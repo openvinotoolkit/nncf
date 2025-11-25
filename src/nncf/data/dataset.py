@@ -83,8 +83,6 @@ class Dataset:
         """
         if hasattr(self._data_source, "batch_size"):  # Torch dataloader
             return cast(int, self._data_source.batch_size)
-        if hasattr(self._data_source, "_batch_size"):  # TF dataloader
-            return cast(int, self._data_source._batch_size)
         return None
 
 
