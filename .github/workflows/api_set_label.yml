@@ -2,10 +2,7 @@ name: Set API label
 permissions: read-all
 
 on:
-  workflow_run:
-    workflows: ["API changes check"]
-    types:
-      - completed
+  workflow_dispatch:
 
 jobs:
   update_labels:

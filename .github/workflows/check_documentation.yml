@@ -2,7 +2,7 @@ name: Check Documentation
 permissions: read-all
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   check_docs:
