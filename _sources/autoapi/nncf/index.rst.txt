@@ -61,7 +61,7 @@ Functions
 
 
 
-.. py:function:: strip(model, do_copy = True, strip_format = StripFormat.NATIVE, example_input = None)
+.. py:function:: strip(model, *, do_copy = True, strip_format = StripFormat.NATIVE, example_input = None)
 
    Removes auxiliary layers and operations added during the compression process, resulting in a clean
    model ready for deployment. The functionality of the model object is still preserved as a compressed model.
@@ -356,7 +356,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode = CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, compression_format = CompressionFormat.DQ, advanced_parameters = None)
+.. py:function:: compress_weights(model, *, mode = CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, compression_format = CompressionFormat.DQ, advanced_parameters = None)
 
    Compress model weights.
 
@@ -423,7 +423,7 @@ Functions
    :return: The non-trainable model with compressed weights.
 
 
-.. py:function:: quantize(model, calibration_dataset, mode = None, preset = None, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_parameters = None)
+.. py:function:: quantize(model, calibration_dataset, *, mode = None, preset = None, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_parameters = None)
 
    Applies post-training quantization to the provided model.
 
@@ -462,7 +462,7 @@ Functions
    :rtype: TModel
 
 
-.. py:function:: quantize_with_accuracy_control(model, calibration_dataset, validation_dataset, validation_fn, max_drop = 0.01, drop_type = DropType.ABSOLUTE, preset = None, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_quantization_parameters = None, advanced_accuracy_restorer_parameters = None)
+.. py:function:: quantize_with_accuracy_control(model, calibration_dataset, validation_dataset, validation_fn, *, max_drop = 0.01, drop_type = DropType.ABSOLUTE, preset = None, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_quantization_parameters = None, advanced_accuracy_restorer_parameters = None)
 
    Applies post-training quantization algorithm with accuracy control to provided model.
 
