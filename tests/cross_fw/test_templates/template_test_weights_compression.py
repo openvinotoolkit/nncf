@@ -233,18 +233,38 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_moe_model_for_test_scale_estimation() -> TModel:
+        """
+        Returns a backend MoE model for test_scale_estimation with 3D weights.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_moe_scale_estimation_ref() -> TTensor:
+        """
+        Returns the reference output of calculate_quantization_params for MoE model.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_scale_estimation_ref() -> TTensor:
         """
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    def test_scale_estimation(self, mocker):
+    @pytest.mark.parametrize("is_moe", [False, True])
+    def test_scale_estimation(self, mocker, is_moe):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
-        model = self.get_model_for_test_scale_estimation()
+
+        if is_moe:
+            model = self.get_moe_model_for_test_scale_estimation()
+            input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
+        else:
+            model = self.get_model_for_test_scale_estimation()
+            input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
 
         # prepare dataset with one input tensor
-        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
         dataset = Dataset([input], self.get_transform_func())
 
@@ -258,8 +278,15 @@ class TemplateWeightCompression(ABC):
                 all_layers=True,
                 dataset=dataset,
             )
-        reference = self.get_scale_estimation_ref()
-        assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
+
+        computed_scale = calc_q_params_spy.spy_return[0]
+
+        if is_moe:
+            reference = self.get_moe_scale_estimation_ref()
+        else:
+            reference = self.get_scale_estimation_ref()
+
+        assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
     @abstractmethod
@@ -328,6 +355,7 @@ class TemplateWeightCompression(ABC):
         model = self.get_awq_act_model(with_multiply, n_layers)
 
         dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+
         with SpyWeightCompressionStatisticsContext(mocker):
             model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -521,7 +549,8 @@ class TemplateWeightCompression(ABC):
                     "int4_asym, group size 16  │ 25% (1 / 9)                 │ 25% (1 / 9)",
                 ]
                 for row in table_rows:
-                    assert any(row in msg for msg in info_messages)
+                    # On Windows "|" is printed instead of "│"
+                    assert any(row in msg.replace("|", "│") for msg in info_messages), "\n".join(info_messages)
 
     @pytest.mark.parametrize(
         [

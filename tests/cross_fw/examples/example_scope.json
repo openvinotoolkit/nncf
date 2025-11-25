@@ -293,7 +293,8 @@
             "fp32_model_size": 21.37990665435791,
             "int8_model_size": 5.677968978881836,
             "model_compression_rate": 3.7654144877995197
-        }
+        },
+        "xfail": "https://github.com/open-edge-platform/anomalib/issues/3121"
     },
     "fp8_llm_quantization": {
         "backend": "openvino",
