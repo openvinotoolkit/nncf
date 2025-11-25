@@ -44,6 +44,7 @@ from nncf.parameters import QuantizationMode as QuantizationMode
 from nncf.parameters import SensitivityMetric as SensitivityMetric
 from nncf.parameters import StripFormat as StripFormat
 from nncf.parameters import TargetDevice as TargetDevice
+from nncf.pruning.prune_model import batch_norm_adaptation as batch_norm_adaptation
 from nncf.pruning.prune_model import prune as prune
 from nncf.pruning.prune_model import pruning_statistic as pruning_statistic
 from nncf.quantization import QuantizationPreset as QuantizationPreset
