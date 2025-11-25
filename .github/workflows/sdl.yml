@@ -3,11 +3,6 @@ permissions: read-all
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - develop
-      - release_v*
-  pull_request:
 
 jobs:
   bandit:

@@ -2,9 +2,7 @@ name: API changes check
 permissions: read-all
 
 on:
-  pull_request:
-    branches:
-      - develop
+  workflow_dispatch:
 
 env:
   API_DOC_HTML_ROOT_RELATIVE_PATH: autoapi
