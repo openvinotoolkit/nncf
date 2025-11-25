@@ -3,7 +3,7 @@
     "embeddingbag_weight": "PTConstNoopMetatype",
     "x": "PTInputNoopMetatype",
     "embedding": "PTAtenEmbeddingMetatype",
-    "arange": "PTARangeMetatype",
+    "arange": "UnknownMetatype",
     "reshape": "PTReshapeMetatype",
     "embedding_bag": "PTAtenEmbeddingBagMetatype",
     "getitem": "PTGatherMetatype",
