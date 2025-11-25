@@ -851,7 +851,7 @@ class WeightCompression(Algorithm):
             statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
         statistics = self._get_statistics_for_weights_compression(matmul_input_to_output_nodes_map, statistic_points)
         return statistics, statistic_points
-     
+
     def _maybe_get_ov_major_version(self) -> Optional[str]:
         try:
             import openvino as ov
