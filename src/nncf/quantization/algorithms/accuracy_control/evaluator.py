@@ -171,8 +171,6 @@ class Evaluator:
             # - np.array([1.0], dtype=np.float32)
             # - torch.tensor(1.0, dtype=torch.float32)
             # - torch.tensor([1.0], dtype=torch.float32)
-            # - tf.constant(1.0, dtype=tf.float32
-            # - tf.constant([1.0], dtype=tf.float32)
             values_for_each_item = [float(x) for x in values_for_each_item]
 
         return float(metric), values_for_each_item
