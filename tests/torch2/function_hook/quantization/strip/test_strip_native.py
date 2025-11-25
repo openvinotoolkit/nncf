@@ -32,9 +32,19 @@ def test_nncf_strip_api(strip_type: str, do_copy: bool):
     quantized_model = nncf.quantize(model, nncf.Dataset([torch.ones(model.INPUT_SIZE)]), subset_size=1)
 
     if strip_type == "nncf":
-        strip_model = nncf.strip(quantized_model, do_copy, nncf.StripFormat.NATIVE, example_input)
+        strip_model = nncf.strip(
+            quantized_model,
+            do_copy=do_copy,
+            strip_format=nncf.StripFormat.NATIVE,
+            example_input=example_input,
+        )
     elif strip_type == "torch":
-        strip_model = nncf.torch.strip(quantized_model, do_copy, nncf.StripFormat.NATIVE, example_input)
+        strip_model = nncf.torch.strip(
+            quantized_model,
+            do_copy=do_copy,
+            strip_format=nncf.StripFormat.NATIVE,
+            example_input=example_input,
+        )
 
     if do_copy:
         assert id(strip_model) != id(quantized_model)

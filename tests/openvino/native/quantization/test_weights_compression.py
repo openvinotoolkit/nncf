@@ -611,7 +611,7 @@ def test_shared_gather(mode):
         "matmul_1_data": ov.Type.i4 if mode == CompressWeightsMode.INT4_SYM else ov.Type.u4,
     }
     model = GatherAndMatmulShareData().ov_model
-    compressed_model = compress_weights(model, mode, group_size=3)
+    compressed_model = compress_weights(model, mode=mode, group_size=3)
     for op in compressed_model.get_ordered_ops():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:
@@ -626,7 +626,7 @@ def test_shared_gather_all_layers(all_layers):
         "matmul_1_data": ov.Type.u4,
     }
     model = GatherAndMatmulShareData().ov_model
-    compressed_model = compress_weights(model, CompressWeightsMode.INT4_ASYM, group_size=-1, all_layers=all_layers)
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, group_size=-1, all_layers=all_layers)
     for op in compressed_model.get_ordered_ops():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:

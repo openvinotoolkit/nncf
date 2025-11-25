@@ -28,6 +28,7 @@ TModel = TypeVar("TModel")
 @tracked_function(category=MODEL_BASED_CATEGORY, extractors=[FunctionCallTelemetryExtractor("nncf.strip")])
 def strip(
     model: TModel,
+    *,
     do_copy: bool = True,
     strip_format: StripFormat = StripFormat.NATIVE,
     example_input: Optional[Any] = None,

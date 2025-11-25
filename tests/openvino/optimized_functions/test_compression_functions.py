@@ -389,7 +389,7 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
                 if is_data_aware:
                     compression_kwargs["dataset"] = create_dataset(model)
 
-                nncf.compress_weights(model, config.mode, group_size=config.group_size, **compression_kwargs)
+                nncf.compress_weights(model, mode=config.mode, group_size=config.group_size, **compression_kwargs)
 
                 if cb == ComputationBackend.NumPy:
                     mock.assert_not_called()
