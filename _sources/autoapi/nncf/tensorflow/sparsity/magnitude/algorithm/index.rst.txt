@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.tensorflow.sparsity.magnitude.algorithm`
-======================================================
-
-.. py:module:: nncf.tensorflow.sparsity.magnitude.algorithm
-
-

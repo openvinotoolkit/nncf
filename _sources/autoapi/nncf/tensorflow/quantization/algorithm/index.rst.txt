@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.tensorflow.quantization.algorithm`
-================================================
-
-.. py:module:: nncf.tensorflow.quantization.algorithm
-
-

@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.tensor.functions.tf_numeric`
-==========================================
-
-.. py:module:: nncf.tensor.functions.tf_numeric
-
-
