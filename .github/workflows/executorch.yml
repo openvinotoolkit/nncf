@@ -13,6 +13,10 @@ on:
        - 'tests/torch2/fx/*'
        - 'src/nncf/experimental/torch/fx/*'
        - 'src/nncf/quantization/algorithms/algorithm.py'
+
+concurrency:
+  cancel-in-progress: true
+
 jobs:
   executorch:
     timeout-minutes: 40
@@ -45,6 +49,8 @@ jobs:
       - name: Install NNCF and test requirements
         run: |
           pip install . -r tests/executorch/requirements.txt
+          # Pytorch nightly install from requirements causes errors
+          pip install --pre torch torchvision torchao --index-url https://download.pytorch.org/whl/nightly/cpu
           # Executorch
           # Editable install due to https://github.com/pytorch/executorch/issues/6475
           pip install --no-build-isolation -e git+https://github.com/anzr299/executorch.git@an/quantizer_nncf_pt2e_support#egg=executorch
