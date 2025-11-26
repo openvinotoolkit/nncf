@@ -141,9 +141,6 @@ test-torch-cpu:
 test-torch-cuda:
 	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub and not legacy" --junitxml ${JUNITXML_PATH}
 
-test-executorch:
-	pytest ${COVERAGE_ARGS} tests/executorch --junitxml ${JUNITXML_PATH}
-
 test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m "nightly or legacy" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
