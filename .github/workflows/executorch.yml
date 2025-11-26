@@ -52,4 +52,4 @@ jobs:
         run: pip list
       - name: Run PyTorch precommit test scope
         run: |
-          	pytest -ra tests/executorch
+          pytest -ra tests/executorch
