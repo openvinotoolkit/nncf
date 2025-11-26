@@ -121,7 +121,7 @@ def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightType
 )
 def test_numbers_of_quantized_weights(mode, reference_counter):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     counter = calculate_numbers_of_quantized_weights(model)
     assert counter == reference_counter
 
@@ -133,7 +133,7 @@ def test_numbers_of_quantized_weights(mode, reference_counter):
 def test_correct_dequantizelinear_int8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -164,7 +164,7 @@ def test_correct_dequantizelinear_int8(mode_weight_type):
 def test_correct_dequantizelinear_uint8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -204,7 +204,7 @@ def test_correct_dequantizelinear_uint8(mode_weight_type):
 def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -240,7 +240,7 @@ def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
 def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -281,7 +281,7 @@ def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
 )
 def test_compression_with_inference(mode):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     onnx.checker.check_model(model)
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())
@@ -466,6 +466,24 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
+    def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        seq_len = 4
+
+        mb = ModelBuilder()
+        x = mb.add_input("input", (num_experts, seq_len, hidden_dim))
+        output = mb.add_output("output", (num_experts, seq_len, out_dim))
+
+        weights = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weights = weights.reshape(num_experts, hidden_dim, out_dim)
+
+        mb.add_matmul(x, shape=(num_experts, hidden_dim, out_dim), output=output, data=weights)
+
+        return mb.build(opset_version=21)
+
+    @staticmethod
     def get_scale_estimation_ref():
         return np.array(
             [
@@ -487,6 +505,57 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                 [[8.255914]],
             ]
         ).T
+
+    @staticmethod
+    def get_moe_scale_estimation_ref():
+        return np.array(
+            [
+                [
+                    [
+                        [
+                            7.573249,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.260152,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.4666667,
+                            7.3082952,
+                            7.846745,
+                            7.223278,
+                            7.271495,
+                            7.420518,
+                            7.4666667,
+                        ]
+                    ]
+                ],
+                [
+                    [
+                        [
+                            14.820505,
+                            14.903171,
+                            14.985837,
+                            15.068501,
+                            15.151169,
+                            14.339979,
+                            14.417264,
+                            14.494548,
+                            14.571833,
+                            14.649117,
+                            14.726402,
+                            14.803687,
+                            14.880971,
+                            14.958257,
+                            15.035541,
+                            15.112826,
+                        ]
+                    ]
+                ],
+            ]
+        )
 
     @staticmethod
     def get_orig_weight(model: onnx.ModelProto) -> Tensor:

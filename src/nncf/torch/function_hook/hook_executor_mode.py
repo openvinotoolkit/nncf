@@ -452,7 +452,10 @@ class FunctionHookMode(TorchFunctionMode):
                 for idx, value in enumerate(output):
                     output[idx] = self.process_post_function_hooks_for_value(value, op_meta, idx)
                 if cls_tuple is not None:
-                    output = cls_tuple(output)
+                    if hasattr(cls_tuple, "_fields"):  # likely a namedtuple
+                        output = cls_tuple(*output)
+                    else:
+                        output = cls_tuple(output)
             else:
                 output = self.process_post_function_hooks_for_value(output, op_meta, 0)
         return output
@@ -505,7 +508,10 @@ class FunctionHookMode(TorchFunctionMode):
                 if isinstance(val, Tensor):
                     outputs[idx] = self.execute_hooks_for_model_output(f"output_{idx}", val)
         if cls_tuple is not None:
-            outputs = cls_tuple(outputs)
+            if hasattr(cls_tuple, "_fields"):  # likely a namedtuple
+                outputs = cls_tuple(*outputs)
+            else:
+                outputs = cls_tuple(outputs)
         return outputs
 
     def execute_hooks_for_model_output(self, name: str, value: Any) -> Any:

@@ -316,9 +316,9 @@ def test_nncf_strip_api(strip_type, do_copy):
     quantized_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     if strip_type == "nncf":
-        strip_model = nncf.strip(quantized_model, do_copy)
+        strip_model = nncf.strip(quantized_model, do_copy=do_copy)
     elif strip_type == "torch":
-        strip_model = nncf.torch.strip(quantized_model, do_copy)
+        strip_model = nncf.torch.strip(quantized_model, do_copy=do_copy)
     elif strip_type == "nncf_interfere":
         strip_model = quantized_model.nncf.strip(do_copy)
 

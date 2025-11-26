@@ -1,1 +1,0 @@
-../../../2.11/sparsity/magnitude_sparsity/vgg16.pb

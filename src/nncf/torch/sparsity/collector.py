@@ -26,7 +26,7 @@ class PTSparseModelStatisticsCollector(BaseSparseModelStatisticsCollector):
         self, model: NNCFNetwork, sparse_modules_info: list[SparseModuleInfo], supports_sparse_bias: bool = False
     ):
         """
-        Initializes statistics collector of the sparse tf.keras.Model.
+        Initializes statistics collector of the sparse torch.nn.Module.
 
         :param model: Sparse model.
         :param sparse_modules_info: List of `SparseModuleInfo`.

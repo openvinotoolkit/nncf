@@ -69,7 +69,6 @@ class FP8Type(StrEnum):
 
     :param E4M3: Mode with 4-bit exponent and 3-bit mantissa.
     :param E5M2: Mode with 5-bit exponent and 2-bit mantissa.
-
     """
 
     E4M3 = "f8e4m3"
@@ -222,9 +221,8 @@ class AdvancedQuantizationParameters:
     :type disable_bias_correction: bool
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is None.
-        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
-        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
-        otherwise sets to False.
+        "None" means that if torch.DataLoader was passed as a data source for the calibration dataset,
+        then in case batch_size of the data source > 1 batchwise_statistics sets to True, otherwise sets to False.
     :type batchwise_statistics: Optional[bool]
     :param quantizer_propagation_rule: An instance of the `QuantizerPropagationRule` enum that
         specifies how quantizers should be propagated and merged across branching nodes in the
@@ -398,7 +396,7 @@ class AdvancedCompressionParameters:
     :type lora_adapter_rank: int
     :param group_size_fallback_mode: Specifies how to handle nodes that do not support the given group size.
     :type group_size_fallback_mode: GroupSizeFallbackMode
-    :param min_adjusted_group_size: Minimum group size for adjustable group size searching. Defaults to 16. The reason
+    :param min_adjusted_group_size: Minimum group size for adjustable group size searching. Defaults to 32. The reason
         behind this argument is to avoid too small group size values, which may lead to performance issues.
     :type min_adjusted_group_size: int
     :param awq_params: Advanced parameters for AWQ algorithm.
@@ -418,8 +416,8 @@ class AdvancedCompressionParameters:
 
     statistics_path: Optional[str] = None
     lora_adapter_rank: int = 256
-    group_size_fallback_mode: GroupSizeFallbackMode = GroupSizeFallbackMode.IGNORE
-    min_adjusted_group_size: int = 16
+    group_size_fallback_mode: GroupSizeFallbackMode = GroupSizeFallbackMode.ERROR
+    min_adjusted_group_size: int = 32
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
     scale_estimation_params: AdvancedScaleEstimationParameters = field(
         default_factory=AdvancedScaleEstimationParameters

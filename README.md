@@ -16,7 +16,7 @@
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
-![Backends](https://img.shields.io/badge/backends-openvino_|_pytorch_|_onnx_|_tensorflow-orange)
+![Backends](https://img.shields.io/badge/backends-openvino_|_pytorch_|_onnx_-orange)
 ![OS](https://img.shields.io/badge/OS-Linux_|_Windows_|_MacOS-blue)
 
 </div>
@@ -25,14 +25,14 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training an
 optimizing inference of neural networks in [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
-[TorchFX](https://pytorch.org/docs/stable/fx.html), [TensorFlow](https://www.tensorflow.org/),
+[TorchFX](https://pytorch.org/docs/stable/fx.html),
 [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
 NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different
 use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](./docs/ModelZoo.md).
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
-architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
+architecture is unified to make it easy to add different compression algorithms for both PyTorch deep
 learning frameworks.
 
 <a id="key-features"></a>
@@ -41,30 +41,29 @@ learning frameworks.
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                                                    | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
-| :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
-| [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
-| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Experimental | Not supported | Supported |
-| [Activation Sparsity](./src/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)          | Not supported | Experimental | Not supported| Not supported| Not supported |
+| Compression algorithm                                                                                    | OpenVINO      | PyTorch      | TorchFX       | ONNX          |
+| :------------------------------------------------------------------------------------------------------- | :-----------: | :----------: | :-----------: | :-----------: |
+| [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported     | Supported    | Experimental  | Supported     |
+| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported     | Supported    | Experimental  | Supported     |
+| [Activation Sparsity](./src/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)          | Not supported | Experimental | Not supported | Not supported |
 
 ### Training-Time Compression Algorithms
 
-| Compression algorithm                                                                                      | PyTorch      | TensorFlow    |
-| :--------------------------------------------------------------------------------------------------------- | :----------: | :-----------: |
-| [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md) | Supported    | Supported     |
-| [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    | Not Supported     |
-| [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
-| [Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md)                            | Supported    | Supported     |
-| [Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md)                       | Supported    | Supported     |
-| [Movement pruning](./src/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                    | Experimental | Not supported |
+| Compression algorithm                                                                                                                         | PyTorch      |
+| :-------------------------------------------------------------------------------------------------------------------------------------------- | :----------: |
+| [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported    |
+| [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    |
+| [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
+| [Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md)                                                               | Supported    |
+| [Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md)                                                          | Supported    |
+| [Movement pruning](./src/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                                                       | Experimental |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
-  > **NOTE**: Limited support for TensorFlow models. Only models created using Sequential or Keras Functional API are supported.
 - Common interface for compression methods.
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
 - Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
-- Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
+- Exporting PyTorch compressed models to ONNX\* checkpoints compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
 - Support for [Accuracy-Aware model training](./docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 <a id="documentation"></a>
@@ -85,7 +84,7 @@ NNCF API documentation can be found [here](https://openvinotoolkit.github.io/nnc
 
 The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorithm you only need your model and a small (~300 samples) calibration dataset.
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run PTQ with, while PyTorch, TensorFlow, and ONNX are also supported.
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run PTQ with, while PyTorch and ONNX are also supported.
 
 <details open><summary><b>OpenVINO</b></summary>
 
@@ -178,32 +177,6 @@ quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
 ```
 
 </details>
-<details><summary><b>TensorFlow</b></summary>
-
-```python
-import nncf
-import tensorflow as tf
-import tensorflow_datasets as tfds
-
-# Instantiate your uncompressed model
-model = tf.keras.applications.MobileNetV2()
-
-# Provide validation part of the dataset to collect statistics needed for the compression algorithm
-val_dataset = tfds.load("/path", split="validation",
-                        shuffle_files=False, as_supervised=True)
-
-# Step 1: Initialize transformation function
-def transform_fn(data_item):
-    images, _ = data_item
-    return images
-
-# Step 2: Initialize NNCF Dataset
-calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
-# Step 3: Run the quantization pipeline
-quantized_model = nncf.quantize(model, calibration_dataset)
-```
-
-</details>
 
 <details><summary><b>ONNX</b></summary>
 
@@ -234,7 +207,7 @@ quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 
 </details>
 
-[//]: # (NNCF provides full  [samples]&#40;#post-training-quantization-samples&#41;, which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, and OpenVINO.)
+[//]: # (NNCF provides full  [samples]&#40;#post-training-quantization-samples&#41;, which demonstrate Post-Training Quantization usage for PyTorch, ONNX, and OpenVINO.)
 
 ### Training-Time Quantization
 
@@ -333,39 +306,6 @@ torch.save(compressed_model.state_dict(), "compressed_model.pth")
 
 </details>
 
-<details><summary><b>Tensorflow</b></summary>
-
-```python
-import tensorflow as tf
-
-from nncf import NNCFConfig
-from nncf.tensorflow import create_compressed_model, register_default_init_args
-
-# Instantiate your uncompressed model
-from tensorflow.keras.applications import ResNet50
-model = ResNet50()
-
-# Load a configuration file to specify compression
-nncf_config = NNCFConfig.from_json("resnet50_imagenet_rb_sparsity.json")
-
-# Provide dataset for compression algorithm initialization
-representative_dataset = tf.data.Dataset.list_files("/path/*.jpeg")
-nncf_config = register_default_init_args(nncf_config, representative_dataset, batch_size=1)
-
-# Apply the specified compression algorithms to the model
-compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
-
-# Now use compressed_model as a usual Keras model
-# to fine-tune compression parameters along with the model weights
-
-# ... the rest of the usual TensorFlow-powered training pipeline
-
-# Export to Frozen Graph, TensorFlow SavedModel or .h5  when done fine-tuning
-compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
-```
-
-</details>
-
 For a more detailed description of NNCF usage in your training code, see [this tutorial](./docs/usage/training_time_compression/other_algorithms/Usage.md).
 
 <a id="demos-tutorials-and-samples"></a>
@@ -385,8 +325,6 @@ Ready-to-run Jupyter* notebook tutorials and demos are available to explain and 
 | [PyTorch Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-post-training-quantization-nncf)                                                                                                                                                                                                      |                               Post-Training Quantization                                |  PyTorch   |        Image Classification         |
 | [YOLOv11 Quantization with Accuracy Control](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov11-quantization-with-accuracy-control)                                                                                                                                                                                               |                    Post-Training Quantization with Accuracy Control                     |  OpenVINO  | Speech-to-Text,<br>Object Detection |
 | [PyTorch Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-quantization-aware-training)                                                                                                                                                                                                   |                                Training-Time Compression                                |  PyTorch   |        Image Classification         |
-| [TensorFlow Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/tensorflow-quantization-aware-training)                                                                                                                                                                                                       |                                Training-Time Compression                                | Tensorflow |        Image Classification         |
-| [Joint Pruning, Quantization and Distillation for BERT](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/sparsity-optimization)                                                                                                                                                                                             |                      Joint Pruning, Quantization and Distillation                       |  OpenVINO  |                 NLP                 |
 
 A list of notebooks demonstrating OpenVINO conversion and inference together with NNCF compression for models from various domains:
 
@@ -396,11 +334,9 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [EfficientSAM](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/efficient-sam)                                                                                                                                                                                                                                         |            Post-Training Quantization             | OpenVINO  |                          Image Segmentation                          |
 | [Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/segment-anything)                                                                                                                                                                                                                            |            Post-Training Quantization             | OpenVINO  |                          Image Segmentation                          |
 | [OneFormer](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/oneformer-segmentation)                                                                                                                                                                                                                                   |            Post-Training Quantization             | OpenVINO  |                          Image Segmentation                          |
-| [InstructPix2Pix](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/instruct-pix2pix-image-editing)                                                                                                                                                                                                                     |            Post-Training Quantization             | OpenVINO  |                            Image-to-Image                            |
 | [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/clip-zero-shot-image-classification)                                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [BLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/blip-visual-language-processing)                                                                                                                                                                                                                               |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/latent-consistency-models-image-generation)                                                                                                                                                                                                |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
-| [ControlNet QR Code Monster](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/qrcode-monster)                                                                                                                                                                                                                          |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
 | [SDXL-turbo](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/sdxl-turbo)                                                                                                                                                                                                                                              |            Post-Training Quantization             | OpenVINO  |                   Text-to-Image,<br>Image-to-Image                   |
 | [Distil-Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/distil-whisper-asr)                                                                                                                                                                                                                                  |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/whisper-subtitles-generation)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-subtitles-generation/whisper-convert.ipynb) |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
@@ -417,14 +353,13 @@ Compact scripts demonstrating quantization/weight compression and corresponding 
 |:-----------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
 | [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
 | [OpenVINO YOLOv8](./examples/post_training_quantization/openvino/yolov8/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
-| [OpenVINO YOLOv8 QwAС](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
+| [OpenVINO YOLOv8 QwAC](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
 | [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
 | [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |
 | [PyTorch SSD](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                                                        |            Post-Training Quantization            |  PyTorch   |    Object Detection    |
 | [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |
-| [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
-| [ONNX YOLOv8 QwAС](./examples/post_training_quantization/onnx/yolov8_quantize_with_accuracy_control/README.md)                           | Post-Training Quantization with Accuracy Control |    ONNX    |    Object Detection    |
+| [ONNX YOLOv8 QwAC](./examples/post_training_quantization/onnx/yolov8_quantize_with_accuracy_control/README.md)                           | Post-Training Quantization with Accuracy Control |    ONNX    |    Object Detection    |
 | [ONNX TinyLlama WC](./examples/llm_compression/onnx/tiny_llama/README.md)                                                                |                Weight Compression                |    ONNX    |           LLM          |
 | [TorchFX TinyLlama WC](./examples/llm_compression/torch_fx/tiny_llama/README.md)                                                         |                Weight Compression                |  TorchFX   |           LLM          |
 | [OpenVINO TinyLlama WC](./examples/llm_compression/openvino/tiny_llama/README.md)                                                        |                Weight Compression                |  OpenVINO  |           LLM          |

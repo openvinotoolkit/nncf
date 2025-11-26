@@ -312,7 +312,7 @@ def quantize_with_accuracy_control_impl(
 
 def compress_weights_impl(
     model: onnx.ModelProto,
-    dataset: Dataset,
+    dataset: Optional[Dataset],
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,

@@ -1,1 +1,0 @@
-../../../2.11/pruning/filter_pruning/resnet50.pb

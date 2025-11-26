@@ -216,10 +216,6 @@ MODEL_GETTERS = [
 ]
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize(
     "model_getter,input_shapes,ref_cache_size",
     [
@@ -333,10 +329,6 @@ def test_dynamic_shapes(model_getter, input_shapes, ref_cache_size, dynamic_shap
     assert len(OV_MODEL_CACHE._cache) == ref_cache_size[dynamic_shapes]
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("model_getter", MODEL_GETTERS)
 @pytest.mark.parametrize("recompile", [True, False])
 def test_recompile(model_getter, recompile):
@@ -446,10 +438,6 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
     )
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize(
     "weight,convertable_division,ref_compressed_weight",
     [

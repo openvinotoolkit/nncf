@@ -80,34 +80,6 @@ test-examples-openvino:
 		--backend openvino                  \
 		--junitxml ${JUNITXML_PATH}
 
-###############################################################################
-# TensorFlow backend
-install-tensorflow-test:
-	pip install -U pip
-	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@e7df86da686d2e1600282422e54f66c2fecea160#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install -r tests/tensorflow/requirements.txt
-	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r tests/cross_fw/examples/requirements.txt
-
-install-tensorflow-dev: install-tensorflow-test install-pre-commit
-	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
-
-test-tensorflow:
-	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/tensorflow -m "not nightly"   \
-		--junitxml ${JUNITXML_PATH}         \
-		$(DATA_ARG)
-
-test-tensorflow-nightly:
-	pytest ${COVERAGE_ARGS} tests/tensorflow -m 'nightly'  \
-		--junitxml ${JUNITXML_PATH}         \
-		$(DATA_ARG)
-
-test-install-tensorflow:
-	pytest tests/cross_fw/install -s --backend tf --junitxml ${JUNITXML_PATH}
-
-test-examples-tensorflow:
-	pytest tests/cross_fw/examples -s --backend tf --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # PyTorch backend

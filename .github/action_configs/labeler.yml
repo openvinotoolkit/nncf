@@ -17,16 +17,6 @@ NNCF PT:
       - 'tests/torch/**/*!(.md)'
       - 'nncf/quantization/**/torch_backend.py'
 
-NNCF TF:
-- any:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'examples/tensorflow/**/*!(.md)'
-      - 'examples/post_training_quantization/tensorflow/**/*!(.md)'
-      - 'nncf/tensorflow/**/*!(.md)'
-      - 'tests/tensorflow/**/*!(.md)'
-      - 'nncf/quantization/**/tf_backend.py'
-
 NNCF ONNX:
 - any:
   - changed-files:

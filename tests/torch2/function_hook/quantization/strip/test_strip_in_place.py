@@ -23,6 +23,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from tests.torch.helpers import LinearModel
 from tests.torch2.function_hook.quantization.strip.test_strip_dequantize import check_compression_modules
 
@@ -45,6 +46,16 @@ class ParamInPlaceStrip:
             args["group_size"] = -1
         return args
 
+    @property
+    def compression_class(self) -> Any:
+        return BaseWeightsDecompressor if self.compression_format == CompressionFormat.DQ else BaseQuantizer
+
+    @property
+    def compression_dtype(self) -> Any:
+        if self.compression_format == CompressionFormat.DQ:
+            return torch.int8 if self.mode == CompressWeightsMode.INT8_SYM else torch.uint8
+        return self.torch_dtype
+
 
 @pytest.mark.parametrize(
     "param",
@@ -57,7 +68,7 @@ class ParamInPlaceStrip:
                 CompressWeightsMode.INT8_ASYM,
                 CompressWeightsMode.INT8_SYM,
             ],
-            [CompressionFormat.FQ_LORA, CompressionFormat.FQ],
+            [CompressionFormat.FQ_LORA, CompressionFormat.FQ, CompressionFormat.DQ],
             [torch.float32, torch.float16, torch.bfloat16],
         )
     ],
@@ -77,14 +88,12 @@ def test_nncf_in_place_strip(param: ParamInPlaceStrip):
         **param.extra_arguments,
     )
 
-    check_compression_modules(compressed_model, expected_class=BaseQuantizer)
-    assert compressed_model.linear.weight.dtype == param.torch_dtype
+    check_compression_modules(compressed_model, expected_class=param.compression_class)
+    assert compressed_model.linear.weight.dtype == param.compression_dtype
 
     with torch.no_grad():
         compressed_output = compressed_model(example_input)
-        strip_compressed_model = nncf.strip(
-            compressed_model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input
-        )
+        strip_compressed_model = nncf.strip(compressed_model, do_copy=False, strip_format=StripFormat.IN_PLACE)
         stripped_output = strip_compressed_model(example_input)
 
         assert strip_compressed_model.linear.weight.dtype == param.torch_dtype
@@ -113,7 +122,7 @@ def test_nncf_in_place_strip_keeps_other_hooks():
     ref = ["post_hooks.linear:weight__0.0", "post_hooks.linear:weight__0.1"]
     assert ret == ref
 
-    model = nncf.strip(model, do_copy=False, strip_format=StripFormat.IN_PLACE, example_input=example_input)
+    model = nncf.strip(model, do_copy=False, strip_format=StripFormat.IN_PLACE)
     ret = list(hook_storage.named_hooks(remove_duplicate=False))
     ref = [("post_hooks.linear:weight__0.1", hook1)]
     assert ret == ref
