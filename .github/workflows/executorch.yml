@@ -41,6 +41,8 @@ jobs:
           cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: |
+          # Torchao installation requires pytorch to be installed first.
+          pip install git+https://github.com/pytorch/pytorch.git@bcb893acb06c3d74cbfc59a25ba3e842320036c2 
           pip install . -r tests/executorch/requirements.txt
           # Executorch
           # Editable install due to https://github.com/pytorch/executorch/issues/6475
