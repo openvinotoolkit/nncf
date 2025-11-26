@@ -14,9 +14,6 @@ on:
        - 'src/nncf/experimental/torch/fx/*'
        - 'src/nncf/quantization/algorithms/algorithm.py'
 
-concurrency:
-  cancel-in-progress: true
-
 jobs:
   executorch:
     timeout-minutes: 40
@@ -26,8 +23,6 @@ jobs:
         shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
-    with:
-      python_version: "3.10.14"
     steps:
       - name: Install dependencies
         run : |

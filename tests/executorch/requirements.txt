@@ -16,7 +16,6 @@ onnxruntime==1.21.1
 # Copied from https://github.com/pytorch/executorch/blob/main/requirements-dev.txt
 cmake>=3.29, <4.0.0  # For building binary targets in the wheel.
 packaging>=24.2 # Lower bound required by setuptools
-pip>=23  # For building the pip package.
 pyyaml  # Imported by the kernel codegen tools.
 setuptools>=77.0.3  # For building the pip package contents.
 wheel  # For building the pip package archive.
