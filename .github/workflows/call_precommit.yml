@@ -174,9 +174,7 @@ jobs:
         run: pip list
       - name: Run PyTorch precommit test scope
         run: |
-          make test-executorch
-        env:
-          NUM_WORKERS: 4
+          	pytest -ra tests/executorch
 
   pytorch-cuda:
     timeout-minutes: 40

@@ -47,7 +47,7 @@ class WeightsCompression(Algorithm):
         lora_correction: bool,
         sensitivity_metric: SensitivityMetric,
         compression_format: CompressionFormat,
-        advanced_parameters: AdvancedCompressionParameters,
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> torch.fx.GraphModule:
         """
         :param quantizer: Quantizer to use in WeightCompression algorithm.
