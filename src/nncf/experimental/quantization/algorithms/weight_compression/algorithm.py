@@ -26,6 +26,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression as OriginalWeightCompression
+from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 
 
 class WeightsCompression(Algorithm):
@@ -65,25 +66,29 @@ class WeightsCompression(Algorithm):
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         self._quantizer = quantizer
-        wc_config = quantizer.get_weight_compression_config()
+        quantizer_wc_config = quantizer.get_weight_compression_config()
 
-        mode = wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
-
-        self._algo = OriginalWeightCompression(
+        mode = quantizer_wc_config.get("mode", CompressWeightsMode.INT8_ASYM)
+        weight_compression_configuration = get_weight_compression_configuration(
             mode=CompressWeightsMode(mode),
+            dataset=None,  # Dataset here only affects sensitivity metric. Sensitivity metric arg is guaranteed.
             ratio=ratio,
-            group_size=wc_config.get("group_size", None),
+            group_size=quantizer_wc_config.get("group_size", None),
             ignored_scope=None,
-            all_layers=wc_config.get("all_layers", None),
+            all_layers=quantizer_wc_config.get("all_layers", None),
             sensitivity_metric=sensitivity_metric,
             awq=awq,
-            subset_size=subset_size,
             scale_estimation=scale_estimation,
             gptq=gptq,
             lora_correction=lora_correction,
-            backup_mode=wc_config.get("backup_mode", None),
-            compression_format=compression_format,
+            backup_mode=quantizer_wc_config.get("backup_mode", None),
             advanced_parameters=advanced_parameters,
+        )
+
+        self._algo = OriginalWeightCompression(
+            **weight_compression_configuration,
+            compression_format=compression_format,
+            subset_size=subset_size,
         )
 
     def available_backends(self) -> list[BackendType]:
