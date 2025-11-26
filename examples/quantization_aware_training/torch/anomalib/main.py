@@ -20,7 +20,7 @@ from urllib.request import urlretrieve
 
 import torch
 from anomalib.data import MVTecAD
-from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO
+from anomalib.data.utils import DownloadInfo
 from anomalib.data.utils import download
 from anomalib.deploy import ExportType
 from anomalib.engine import Engine
@@ -38,6 +38,14 @@ FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
 INT8_RESULTS_ROOT = ROOT / "results" / "int8"
 CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_v2.ckpt"
 USE_PRETRAINED = True
+
+# Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
+DOWNLOAD_INFO = DownloadInfo(
+    name="mvtecad",
+    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f283/"
+    "download/420938113-1629960298/mvtec_anomaly_detection.tar.xz",
+    hashsum="cf4313b13603bec67abb49ca959488f7eedce2a9f7795ec54446c649ac98cd3d",
+)
 
 
 def download_and_extract(root: Path, info: download.DownloadInfo) -> None:

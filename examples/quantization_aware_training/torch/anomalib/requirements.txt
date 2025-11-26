@@ -6,3 +6,4 @@ matplotlib==3.10.7
 numpy==2.2.6
 safetensors==0.6.2
 onnx==1.17.0
+timm==1.0.22
