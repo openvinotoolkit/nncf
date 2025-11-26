@@ -7,7 +7,7 @@ Post-training Quantization:
 - Breaking changes:
   - (OpenVINO) `nncf.CompressWeightsMode.E2M1` `mode` option is renamed to `nncf.CompressWeightsMode.MXFP4`.
 - Features:
-  - The histogram aggregator was introduced, improving accuracy metrics for a number of classification models with PTQ.
+  - The Histogram Aggregator was introduced, improving accuracy metrics for a number of classification models after PTQ.
   - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
   - Now weight compression biwidth distribution table also displays group size value for each of the compression data type.
   - (ONNX) Support for the SmoothQuant algorithm has been added to the ONNX backend for INT8 quantization.
@@ -17,7 +17,7 @@ Post-training Quantization:
   - Added an ignored pattern for position embedding layer in Segment Anything model.
   - (ONNX) Fixed incorrect input handling for the `MatMulNBits` operation that previously caused graph breaks.
   - (ONNX) Resolved an issue with INT4 weight compression in the `Gemm` operation when `transB=1`.
-  - Fixed a typo in the `_get_smooth_quant_param_grid()` method.
+  - Fixed a typo in the `_get_smooth_quant_param_grid()` method reported in #3613.
 - Improvements:
   - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
   - Reduced peak memory footprint for Bias Correction algorithm.
@@ -36,12 +36,13 @@ Compression-aware training:
 
 Deprecations/Removals:
 
-- (TensorFlow) The TensorFlow backend is now marked as deprecated.
+- (TensorFlow) The TensorFlow backend is now deprecated and will be removed in future releases. It is recommended to use PyTorch analogous models for training-aware optimization methods and OpenVINO IR, PyTorch, and ONNX models for post-training optimization methods from NNCF.
+- The following experimental NNCF methods are deprecated and will be removed in future releases: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, Movement Sparsity.
 
 Requirements:
 
 - Updated PyTorch (2.9.0) and Torchvision (0.24.0) versions.
-- Drop support python 3.9.
+- Dropped support for Python 3.9.
 
 ## New in Release 2.18.0
 
