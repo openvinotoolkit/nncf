@@ -32,7 +32,7 @@ Post-training Quantization:
 Compression-aware training:
 
 - Improvements:
-  - Optimized `nncf.strip` for `StripFormat.IN_PLACE` and no longer requires `example_input`.
+  - Optimized `nncf.strip()` for `StripFormat.IN_PLACE` and `example_input` is no longer required.
 
 Deprecations/Removals:
 
