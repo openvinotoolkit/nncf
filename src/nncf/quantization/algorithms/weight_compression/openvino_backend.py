@@ -177,6 +177,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         activation_dtype = input_node.get_element_type()
         should_add_convert_node = activation_dtype != ov.Type.f16
         mm_node = self.name_to_node_mapping[wc_params.node_with_weight.node_name]
+        
+        # Get the original MatMul's transpose attributes
+        node_attributes = mm_node.get_attributes()
+        transpose_a = node_attributes.get("transpose_a", False)
+        transpose_b = node_attributes.get("transpose_b", True)  # Default to True for backward compatibility
 
         if int8_lora:
             const_node_name = wc_params.node_with_weight.node_name
@@ -203,7 +208,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             A_W = opset.constant(lora_A.data)
             B_W = opset.constant(lora_B.data)
 
-        A_MM = opset.matmul(input_node, A_W, transpose_a=False, transpose_b=True)
+        # LoRA adapters: input @ A^T @ B^T
+        # Always keep transpose_b=True to ensure the adapter aligns with the MatMul output shape
+        A_MM = opset.matmul(input_node, A_W, transpose_a=transpose_a, transpose_b=True)
         B_MM = opset.matmul(A_MM, B_W, transpose_a=False, transpose_b=True)
 
         node_output_port = mm_node.output(0)
