@@ -7,7 +7,7 @@ Post-training Quantization:
 - Breaking changes:
   - (OpenVINO) `nncf.CompressWeightsMode.E2M1` `mode` option is renamed to `nncf.CompressWeightsMode.MXFP4`.
 - Features:
-  - The Histogram Aggregator was introduced: it records the running histogram of tensor values and computes the quantization range to minimize the L2 norm of histogram bin quantization error. The Histogram Aggregator improved accuracy metrics for a number of PTQ classification models. It can be activated using `RangeEstimatorParametersSet.HISTOGRAM` through the `AdvancedQuantizationParameters`.
+  - The Histogram Aggregator was introduced: it records the running histogram of tensor values and computes the quantization range to minimize the L2 norm of histogram bin quantization error. The Histogram Aggregator improved accuracy metrics for a number of PTQ classification models. It can be activated using `RangeEstimatorParametersSet.HISTOGRAM` through the `AdvancedQuantizationParameters` in `nncf.quantize()`.
   - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
   - Now weight compression bitwidth distribution table also displays group size value for each of the compression data type.
   - (ONNX) Support for the SmoothQuant algorithm has been added to the ONNX backend for INT8 quantization.
