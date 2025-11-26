@@ -17,7 +17,7 @@ Post-training Quantization:
   - Added an ignored pattern for position embedding layer in Segment Anything model.
   - (ONNX) Fixed incorrect input handling for the `MatMulNBits` operation that previously caused graph breaks.
   - (ONNX) Resolved an issue with INT4 weight compression in the `Gemm` operation when `transB=1`.
-  - Fixed a typo in the `_get_smooth_quant_param_grid()` method reported in #3613.
+  - Fixed a typo in the `_get_smooth_quant_param_grid()` method reported in [#3613](https://github.com/openvinotoolkit/nncf/issues/3613).
 - Improvements:
   - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
   - Reduced peak memory footprint for Bias Correction algorithm.
