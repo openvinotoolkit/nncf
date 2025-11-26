@@ -1,7 +1,3 @@
-# Pytorch
-torchvision @ git+https://github.com/pytorch/vision.git@e3b5d3a8bf5e8636462fd8bce9897bccc690b2a0 
-torchao @ git+https://github.com/pytorch/ao.git@be4203e80d55e95553eb236e1082b5e079ee35f9
-
 # Openvino
 openvino==2025.3.0
 
