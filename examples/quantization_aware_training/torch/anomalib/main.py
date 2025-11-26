@@ -36,7 +36,7 @@ CHECKPOINT_PATH = HOME_PATH / ".cache" / "nncf" / "models" / "anomalib"
 ROOT = Path(__file__).parent.resolve()
 FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
 INT8_RESULTS_ROOT = ROOT / "results" / "int8"
-CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_v2.ckpt"
+CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_2.ckpt"
 USE_PRETRAINED = True
 
 # Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
