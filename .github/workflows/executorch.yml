@@ -26,6 +26,8 @@ jobs:
         shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
+    with:
+      python_version: "3.10.14"
     steps:
       - name: Install dependencies
         run : |
@@ -42,15 +44,9 @@ jobs:
         run: |
           cat /etc/*release
           cat /proc/cpuinfo
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
       - name: Install NNCF and test requirements
         run: |
           pip install . -r tests/executorch/requirements.txt
-          # Pytorch nightly install from requirements causes errors
-          pip install --pre torch torchvision torchao --index-url https://download.pytorch.org/whl/nightly/cpu
           # Executorch
           # Editable install due to https://github.com/pytorch/executorch/issues/6475
           pip install --no-build-isolation -e git+https://github.com/anzr299/executorch.git@an/quantizer_nncf_pt2e_support#egg=executorch
