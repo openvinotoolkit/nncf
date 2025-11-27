@@ -43,7 +43,7 @@ During compression algorithm application, the `NNCFNetwork` serves internally as
 
 ### Model control flow graph tracing
 
-Unlike other frameworks such as TensorFlow, PyTorch does not have an easily accessible graph representation of a model, and thus no way to identify specific points in the control flow graph.
+Unlike other frameworks such as PyTorch does not have an easily accessible graph representation of a model, and thus no way to identify specific points in the control flow graph.
 For this reason NNCF performs tracing of the PyTorch operators, implemented via wrapping the corresponding function and module calls.
 Through this process of tracing, NNCF builds an internal representation of the model graph, which is then supplied as the point of reference for specification and insertion of hooks at proper places in the network.
 

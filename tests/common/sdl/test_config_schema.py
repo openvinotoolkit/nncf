@@ -25,10 +25,6 @@ GOOD_CONFIG_SOURCES = [
     PROJECT_ROOT / Path("examples/torch/object_detection/configs"),
     TEST_ROOT / Path("torch/data/configs"),
     TEST_ROOT / Path("torch/data/schema_validation_good_configs"),
-    PROJECT_ROOT / Path("examples/tensorflow/classification/configs"),
-    PROJECT_ROOT / Path("examples/tensorflow/segmentation/configs"),
-    PROJECT_ROOT / Path("examples/tensorflow/object_detection/configs"),
-    TEST_ROOT / Path("tensorflow/data/configs"),
     TEST_ROOT / Path("common/data/schema_validation_good_configs"),
 ]
 
