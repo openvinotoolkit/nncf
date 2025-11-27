@@ -857,30 +857,6 @@ class PTRELU6Metatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTAMaxMetatype(PTOperatorMetatype):
-    name = "AMaxOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["amax"], NamespaceTarget.ATEN: ["amax"]}
-
-
-@PT_OPERATOR_METATYPES.register()
-class PTArgMaxMetatype(PTOperatorMetatype):
-    name = "ArgMaxOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["argmax"], NamespaceTarget.ATEN: ["argmax"]}
-
-
-@PT_OPERATOR_METATYPES.register()
-class PTArgMinMetatype(PTOperatorMetatype):
-    name = "ArgMinOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["argmin"], NamespaceTarget.ATEN: ["argmin"]}
-
-
-@PT_OPERATOR_METATYPES.register()
-class PTAMinMetatype(PTOperatorMetatype):
-    name = "AMinOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["amin"], NamespaceTarget.ATEN: ["amin"]}
-
-
-@PT_OPERATOR_METATYPES.register()
 class PTMaxMetatype(PTOperatorMetatype):
     name = "MaxOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["max"]}
