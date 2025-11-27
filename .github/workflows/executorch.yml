@@ -43,12 +43,9 @@ jobs:
         run: |
           # Torchao installation requires pytorch to be installed first.
           pip install . -r tests/executorch/requirements.txt
-          pip install git+https://github.com/pytorch/pytorch.git@bcb893acb06c3d74cbfc59a25ba3e842320036c2 
-          pip install git+https://github.com/pytorch/vision.git@e3b5d3a8bf5e8636462fd8bce9897bccc690b2a0
-          pip install git+https://github.com/pytorch/ao.git@be4203e80d55e95553eb236e1082b5e079ee35f9
           # Executorch
           # Editable install due to https://github.com/pytorch/executorch/issues/6475
-          pip install --no-build-isolation -e git+https://github.com/anzr299/executorch.git@an/quantizer_nncf_pt2e_support#egg=executorch
+          pip install --no-build-isolation -e git+https://github.com/anzr299/executorch.git@an/openvino/nncf_compress_pt2e#egg=executorch
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope
