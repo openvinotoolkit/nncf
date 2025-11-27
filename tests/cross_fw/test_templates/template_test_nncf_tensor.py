@@ -21,7 +21,7 @@ import pytest
 
 import nncf
 import nncf.tensor.functions as fns
-from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
+from nncf.common.tensor_statistics import statistical_functions as s_fns
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType

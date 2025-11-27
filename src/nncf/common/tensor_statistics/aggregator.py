@@ -23,11 +23,11 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.tensor_statistics.statistics_serializer import dump_statistics
 from nncf.common.tensor_statistics.statistics_serializer import load_statistics
 from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import Dataset
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensor import Tensor
 
 TensorType = TypeVar("TensorType")

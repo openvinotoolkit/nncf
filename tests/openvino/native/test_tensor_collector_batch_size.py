@@ -12,10 +12,10 @@
 import numpy as np
 import pytest
 
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.common.tensor_statistics.collectors import RawReducer
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
+from tests.common.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):

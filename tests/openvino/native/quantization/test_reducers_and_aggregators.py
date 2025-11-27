@@ -31,7 +31,7 @@ from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.tensor import Tensor
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
+from tests.common.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 
 class TestReducersAggregators(TemplateTestReducersAggregators):

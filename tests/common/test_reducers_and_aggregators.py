@@ -22,26 +22,26 @@ import pytest
 import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
-from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
-from nncf.experimental.common.tensor_statistics.collectors import AxesMode
-from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
-from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanNoOutliersAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MedianNoOutliersAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import determine_reduction_axes
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.collectors import AggregationAxes
+from nncf.common.tensor_statistics.collectors import AxesMode
+from nncf.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.common.tensor_statistics.collectors import HistogramAggregator
+from nncf.common.tensor_statistics.collectors import MaxAggregator
+from nncf.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MeanNoOutliersAggregator
+from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
+from nncf.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
+from nncf.common.tensor_statistics.collectors import MedianAggregator
+from nncf.common.tensor_statistics.collectors import MedianNoOutliersAggregator
+from nncf.common.tensor_statistics.collectors import MinAggregator
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import PercentileAggregator
+from nncf.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import determine_reduction_axes
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
