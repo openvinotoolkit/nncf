@@ -1,6 +1,6 @@
 [
     {
-        "weight_name": "wte_weight_1",
+        "weight_name": "wte_weight",
         "node_with_weight": "embedding",
         "weight_port_id": 0,
         "weight_dtype": "float32",
