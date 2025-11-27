@@ -95,29 +95,30 @@ def test_stateful_model_inference_with_controlled_resetting():
 
     model = StatefulModel(True).ov_model
     inp = model.get_parameters()[0]
-    input_data = [{"input_data": np.ones(inp.shape)} for _ in range(10)]
-    # sequence lengths are [2, 4, 4]
-    dataset = nncf.DatasetWithSeqId(input_data, [0, 1, 0, 1, 2, 3, 0, 1, 2, 3])
+    input_data = [{"input_data": np.ones(inp.shape), nncf.Dataset.RESET_STATE_KEY: False} for _ in range(10)]
+    reset_ind = [2, 5, 7]
+    for ind in reset_ind:
+        input_data[ind][nncf.Dataset.RESET_STATE_KEY] = True
 
     engine = OVNativeEngine(model)
     reset_order = []
     wrap_reset_state(engine.engine.infer_request)
 
-    for inp_data in dataset.get_inference_data():
+    for inp_data in input_data:
         engine.infer(inp_data)
         reset_order.append("infer")
 
     assert reset_order == [
-        "reset",
         "infer",
         "infer",
         "reset",
         "infer",
         "infer",
         "infer",
-        "infer",
         "reset",
         "infer",
+        "infer",
+        "reset",
         "infer",
         "infer",
         "infer",
