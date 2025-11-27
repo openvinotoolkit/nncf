@@ -758,7 +758,7 @@ def _compare_detailed_plot(
         for act_type in activation_types:
             plot_data = summary_data[act_type]
             
-            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(14, 14))
+            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(14, 16))
             fig.suptitle(f'Activation Comparison Summary - {act_type}', fontsize=14)
             
             x = range(len(layer_names))
@@ -769,25 +769,25 @@ def _compare_detailed_plot(
             ax1.set_ylabel('Mean ± Std')
             ax1.set_title(f'{data1_label} Activations')
             ax1.set_xticks(x)
-            ax1.set_xticklabels(layer_names, rotation=45, ha='right', fontsize=8)
+            ax1.set_xticklabels([str(i) for i in x], fontsize=9)
             ax1.grid(True, alpha=0.3)
             
-            # Plot 2: data2 mean and std (fix: removed redundant fmt='o')
+            # Plot 2: data2 mean and std
             ax2.errorbar(x, plot_data[data2_label]['mean'], plot_data[data2_label]['std'],
                         linestyle='none', marker='^', ecolor='green', capsize=5, **kwargs)
             ax2.set_ylabel('Mean ± Std')
             ax2.set_title(f'{data2_label} Activations')
             ax2.set_xticks(x)
-            ax2.set_xticklabels(layer_names, rotation=45, ha='right', fontsize=8)
+            ax2.set_xticklabels([str(i) for i in x], fontsize=9)
             ax2.grid(True, alpha=0.3)
             
-            # Plot 3: difference mean and std (fix: removed redundant fmt='o')
+            # Plot 3: difference mean and std
             ax3.errorbar(x, plot_data['diff']['mean'], plot_data['diff']['std'],
                         linestyle='none', marker='^', ecolor='red', capsize=5, **kwargs)
             ax3.set_ylabel('Mean ± Std')
             ax3.set_title(f'{data1_label} - {data2_label} Difference')
             ax3.set_xticks(x)
-            ax3.set_xticklabels(layer_names, rotation=45, ha='right', fontsize=8)
+            ax3.set_xticklabels([str(i) for i in x], fontsize=9)
             ax3.grid(True, alpha=0.3)
             ax3.axhline(y=0, color='k', linestyle='--', alpha=0.3)
             
@@ -795,12 +795,22 @@ def _compare_detailed_plot(
             ax4.plot(x, plot_data['diff']['relative'], color='green', marker='o', **kwargs)
             ax4.set_ylabel('Relative Difference')
             ax4.set_title(f'{data1_label} - {data2_label} Relative Difference')
-            ax4.set_xlabel('Layer')
+            ax4.set_xlabel('Layer Index')
             ax4.set_xticks(x)
-            ax4.set_xticklabels(layer_names, rotation=45, ha='right', fontsize=8)
+            ax4.set_xticklabels([str(i) for i in x], fontsize=9)
             ax4.grid(True, alpha=0.3)
             
-            plt.tight_layout()
+            # Create legend with layer name mappings at the bottom
+            legend_text = "Layer Mapping:\n" + ", ".join([f"{i}: {name}" for i, name in enumerate(layer_names)])
+            fig.text(0.5, 0.02, legend_text, ha='center', va='top', fontsize=12,
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
+                    wrap=True)
+            
+            # Adjust layout to make room for legend
+            try:
+                plt.tight_layout(rect=[0, 0.08, 1, 0.97])
+            except Exception:
+                plt.tight_layout()
             
             summary_figures[act_type] = fig
 
