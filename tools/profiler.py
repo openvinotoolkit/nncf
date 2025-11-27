@@ -688,8 +688,8 @@ def _compare_detailed_plot(
     else:
         activation_types = [activation_type]
     
-    all_figures = []
-    summary_figures = []
+    all_figures = {}
+    summary_figures = {}
     layer_names = list(data1.keys())
     
     # Prepare data for summary plots (one per activation type)
@@ -703,6 +703,7 @@ def _compare_detailed_plot(
     
     # Loop over layers first, then activation types
     for layer_name in layer_names:
+        all_figures[layer_name] = {}
         for act_type in activation_types:
             # Get activation arrays
             data1_arrays = data1[layer_name][act_type]
@@ -733,8 +734,8 @@ def _compare_detailed_plot(
                        verticalalignment='top', fontsize=9,
                        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
                 
-                all_figures.append(fig)
-                
+                all_figures[layer_name][act_type] = fig
+
                 # Close figure if not displaying to save memory
                 if not display_figures:
                     plt.close(fig)
@@ -801,7 +802,7 @@ def _compare_detailed_plot(
             
             plt.tight_layout()
             
-            summary_figures.append(fig)
+            summary_figures[act_type] = fig
 
             # Close figure if not displaying to save memory
             if not display_figures:
