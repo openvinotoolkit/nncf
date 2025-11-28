@@ -53,7 +53,6 @@ For more information about NNCF, see:
 | [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
 | [Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Sparsity.md)                                                               | Supported    |
 | [Filter pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Pruning.md)                                                          | Supported    |
-| [Movement pruning](https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                                                       | Experimental |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
 - Common interface for compression methods.
