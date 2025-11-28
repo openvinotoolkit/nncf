@@ -145,6 +145,7 @@ MODEL_GETTERS = [
             weight_shape=(10, 2, 2),
             original_reduction_axes=(1,),
             reduction_axes=(2,),
+            reduction="max_mean",
         ),
     ),
     ModelGetter(
