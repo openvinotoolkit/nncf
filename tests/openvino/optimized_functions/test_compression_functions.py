@@ -303,7 +303,7 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
     # reduce_sum / reduce_mean computation. This results in small numerical differences.
     # For "frobenius", there is a bit larger error, possibly because np.linalg.norm relies on BLAS/LAPACK
     # implementations.
-    _check_values(results, atol=1e-6, rtol=1e-4 if reduction == "frobenius" else 0)
+    _check_values(results, atol=1e-6 if reduction == "max_mean" else 0, rtol=1e-4 if reduction == "frobenius" else 0)
 
 
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
