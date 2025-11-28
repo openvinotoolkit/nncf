@@ -159,13 +159,13 @@ class Tensor:
     def __neg__(self) -> Tensor:
         return Tensor(-self.data)
 
-    def __invert__(self):
+    def __invert__(self) -> Tensor:
         return Tensor(~self.data)
 
-    def __rshift__(self, other: T_NUMBER):
+    def __rshift__(self, other: T_NUMBER) -> Tensor:
         return Tensor(self.data >> unwrap_tensor_data(other))
 
-    def __lshift__(self, other: T_NUMBER):
+    def __lshift__(self, other: T_NUMBER) -> Tensor:
         return Tensor(self.data << unwrap_tensor_data(other))
 
     # Comparison operators

@@ -24,6 +24,7 @@ from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_
 from nncf.quantization.algorithms.weight_compression.constants import F4E2M1_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import FP_MAX_VALUES
 from nncf.quantization.algorithms.weight_compression.constants import NF4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.fp8_conversion import fp32_to_fp8e4m3
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
@@ -520,8 +521,6 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, compression_dtype: Te
     assert compression_dtype in [TensorDataType.f8e4m3, TensorDataType.f4e2m1, TensorDataType.nf4]
 
     if compression_dtype == TensorDataType.f8e4m3:
-        from nncf.quantization.algorithms.weight_compression.fp8_conversion import fp32_to_fp8e4m3
-
         return fp32_to_fp8e4m3(norm_weight)
 
     is_nf4 = compression_dtype == TensorDataType.nf4

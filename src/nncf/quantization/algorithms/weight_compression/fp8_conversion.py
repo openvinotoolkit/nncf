@@ -9,9 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.tensor import Tensor, TensorDataType
-from nncf.tensor import functions as fns
 import numpy as np
+
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 
 # fmt: off
 F8E4M3_LUT = np.array(
@@ -86,7 +88,7 @@ def _f16_to_f8e4m3_bits_numpy(x: Tensor) -> Tensor:
     round_half = to_u16_const(0x01FF)
     round_norm = to_u16_const(0x007F)
     round_even = to_u16_const(0x0080)
-    round_odd  = to_u16_const(0x0180)
+    round_odd = to_u16_const(0x0180)
 
     # min exponent for which subnormals are representable
     f8_e_subnormal_min = -10
@@ -115,14 +117,12 @@ def _f16_to_f8e4m3_bits_numpy(x: Tensor) -> Tensor:
 
     # Rounding for normalized part (exp >= 0)
     # if (fractional & round_half) == round_odd or (fractional & round_norm) != 0:
-    cond_round_norm = (
-        ((fractional_norm & round_half) == round_odd) |
-        ((fractional_norm & round_norm) != 0)
-    ) & exp_ge0
+    cond_round_norm = (((fractional_norm & round_half) == round_odd) | ((fractional_norm & round_norm) != 0)) & exp_ge0
 
     # fractional += round_even where cond_round_norm
-    frac_tmp = fractional_norm.astype(TensorDataType.uint32) + \
-        fns.where(cond_round_norm, round_even, u16_zero).astype(TensorDataType.uint32)
+    frac_tmp = fractional_norm.astype(TensorDataType.uint32) + fns.where(cond_round_norm, round_even, u16_zero).astype(
+        TensorDataType.uint32
+    )
     fractional_norm = (frac_tmp & 0xFFFF).astype(TensorDataType.uint16)
 
     # if (fractional & f8_e_mask) != 0: f8_biased_exp += 1
@@ -144,7 +144,9 @@ def _f16_to_f8e4m3_bits_numpy(x: Tensor) -> Tensor:
 
     # --- Normalized f8 ---
     # exp_field = (f8_biased_exp & (f8e4m3_e_mask >> f8e4m3_m_size)) << f8e4m3_m_size
-    exp_field = ((f8_biased_exp_after & (f8e4m3_e_mask >> f8e4m3_m_size)) << f8e4m3_m_size).astype(TensorDataType.uint16)
+    exp_field = ((f8_biased_exp_after & (f8e4m3_e_mask >> f8e4m3_m_size)) << f8e4m3_m_size).astype(
+        TensorDataType.uint16
+    )
     mant_norm = (fractional_norm >> byte_shift).astype(TensorDataType.uint16)
 
     f8_bits_norm = f8_bits | exp_field | mant_norm
@@ -189,13 +191,12 @@ def _f16_to_f8e4m3_bits_numpy(x: Tensor) -> Tensor:
     #     or (fractional & round_norm) != 0
     #     or sticky != 0):
     cond_round_sub = (
-        (((frac_shifted & round_half) == round_odd) & (~sticky)) |
-        ((frac_shifted & round_norm) != 0) |
-        sticky
+        (((frac_shifted & round_half) == round_odd) & (~sticky)) | ((frac_shifted & round_norm) != 0) | sticky
     ) & subnormal_mask
 
-    frac_tmp_sub = frac_shifted.astype(TensorDataType.uint32) + \
-        fns.where(cond_round_sub, round_even, u16_zero).astype(TensorDataType.uint32)
+    frac_tmp_sub = frac_shifted.astype(TensorDataType.uint32) + fns.where(cond_round_sub, round_even, u16_zero).astype(
+        TensorDataType.uint32
+    )
     fractional_sub_final = (frac_tmp_sub & 0xFFFF).astype(TensorDataType.uint16)
 
     mant_sub = (fractional_sub_final >> byte_shift).astype(TensorDataType.uint16)
@@ -205,8 +206,6 @@ def _f16_to_f8e4m3_bits_numpy(x: Tensor) -> Tensor:
     # Already handled by initialization + not touching zero_mask entries.
 
     return (f8_bits & to_u16_const(0x00FF)).astype(TensorDataType.uint8)
-
-
 
 
 def fp32_to_fp8e4m3(x: Tensor) -> Tensor:
