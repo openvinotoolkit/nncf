@@ -303,7 +303,7 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
     # reduce_sum / reduce_mean computation. This results in small numerical differences.
     # For "frobenius", there is a bit larger error, possibly because np.linalg.norm relies on BLAS/LAPACK
     # implementations.
-    _check_values(results, atol=1e-3 if reduction == "frobenius" else 1e-6)
+    _check_values(results, atol=1e-6, rtol=1e-4 if reduction == "frobenius" else 0)
 
 
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
@@ -503,7 +503,7 @@ def _check_backends_and_dtypes(
             assert decompressed_weight.dtype == TensorDataType.float32
 
 
-def _check_values(results, atol=0.0):
+def _check_values(results, atol=0.0, rtol=0.0):
     def format_list_of_floats(lst, n_first=32):
         return ", ".join(f"{x:.10f}" for x in lst[:n_first])
 
@@ -521,7 +521,7 @@ def _check_values(results, atol=0.0):
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
         try:
-            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=0)
+            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=rtol)
         except AssertionError:
             not_equal_mask = np.not_equal(ov_result.data, numpy_result.data)
             msg = (
