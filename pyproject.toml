@@ -168,7 +168,6 @@ extend-select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"src/nncf/experimental/torch/nas/bootstrapNAS/__init__.py" = ["F401"]
 "src/nncf/torch/__init__.py" = ["F401", "E402"]
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
