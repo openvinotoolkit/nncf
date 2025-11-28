@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.tensor import Tensor, TensorDataType
+from nncf.tensor import functions as fns
 import numpy as np
 
 # fmt: off
@@ -36,76 +38,95 @@ F8E4M3_LUT = np.array(
 # fmt: on
 
 
-def f16_to_f8e4m3_bits_numpy(x: np.ndarray) -> np.ndarray:
+def _f16_to_f8e4m3_bits_numpy(x: Tensor) -> Tensor:
     """
-    Convert an array of f16 values (or their uint16 bit patterns) to
-    f8e4m3 bit patterns (uint8) using a fully vectorized NumPy
-    port of _f16_to_f8e4m3_bits_scalar.
+    Convert a Tensor of f16 values to f8e4m3 bit patterns (uint8).
+    Adopted from OpenVINO C++ implementation
+    https://github.com/openvinotoolkit/openvino/blame/master/src/core/src/type/float8_e4m3.cpp
+
+    :param x: Input tensor with float16 values.
+    :return: Tensor with uint8 values representing f8e4m3 bit patterns.
     """
+
+    def to_u16_const(val: int) -> Tensor:
+        return fns.from_numpy(np.uint16(val), backend=x.backend)
+
+    def to_u32_const(val: int) -> Tensor:
+        return fns.from_numpy(np.uint32(val), backend=x.backend)
+
+    x = x.view(TensorDataType.uint16)
+
+    u16_zero = to_u16_const(0)
+    u32_zero = to_u32_const(0)
+
     # f16 layout
-    f16_s_mask = np.uint16(0x8000)
-    f16_e_mask = np.uint16(0x7C00)
+    f16_s_mask = to_u16_const(0x8000)
+    f16_e_mask = to_u16_const(0x7C00)
     f16_e_bias = 15
     f16_e_size = 5
-    f16_m_mask = np.uint16(0x03FF)
+    f16_m_mask = to_u16_const(0x03FF)
     f16_m_size = 10
 
     # f8 e4m3 layout
     f8e4m3_e_size = 4
-    f8e4m3_e_mask = np.uint16(0x78)
+    f8e4m3_e_mask = to_u16_const(0x78)
     f8e4m3_e_bias = 7
     f8e4m3_e_max = 0x0F
     f8e4m3_m_size = 3
-    f8e4m3_m_mask = np.uint16(0x07)
+    f8e4m3_m_mask = to_u16_const(0x07)
 
     byte_shift = 8
 
     # f8 masks in uint16 domain
-    f8_e_mask = np.uint16(f8e4m3_e_mask << byte_shift)  # 0x7800
-    f8_m_mask = np.uint16(f8e4m3_m_mask << byte_shift)  # 0x0700
-    f8_m_hidden_one_mask = np.uint16(0x0800)  # hidden 1 for subnormals
+    f8_e_mask = (f8e4m3_e_mask << byte_shift).astype(TensorDataType.uint16)  # 0x7800
+    f8_m_mask = (f8e4m3_m_mask << byte_shift).astype(TensorDataType.uint16)  # 0x0700
+    f8_m_hidden_one_mask = to_u16_const(0x0800)  # hidden 1 for subnormals
 
     # rounding constants
-    round_half = np.uint16(0x01FF)
-    round_norm = np.uint16(0x007F)
-    round_even = np.uint16(0x0080)
-    round_odd = np.uint16(0x0180)
+    round_half = to_u16_const(0x01FF)
+    round_norm = to_u16_const(0x007F)
+    round_even = to_u16_const(0x0080)
+    round_odd  = to_u16_const(0x0180)
 
     # min exponent for which subnormals are representable
     f8_e_subnormal_min = -10
 
     # sign bit: f16 sign -> f8 sign position (bit 15 -> bit 7)
-    f8_bits = ((x & f16_s_mask) >> byte_shift).astype(np.uint16)
+    f8_bits = ((x & f16_s_mask) >> byte_shift).astype(TensorDataType.uint16)
 
     f16_e_field = x & f16_e_mask
     is_naninf = f16_e_field == f16_e_mask
-    is_zero = f16_e_field == 0
+    is_zero = f16_e_field == u16_zero
     is_normal = (~is_naninf) & (~is_zero)
 
-    nan_pattern = np.uint16(f8e4m3_e_mask | f8e4m3_m_mask)
+    nan_pattern = (f8e4m3_e_mask | f8e4m3_m_mask).astype(TensorDataType.uint16)
 
     # --- Case 1: f16 NaN / Inf -> f8 NaN (no Inf) ---
-    f8_bits = np.where(is_naninf, f8_bits | nan_pattern, f8_bits)
+    f8_bits = fns.where(is_naninf, f8_bits | nan_pattern, f8_bits)
 
     # --- Case 2: normalized f16 ---
     # f8_biased_exp = (f16_e_field >> f16_m_size) - (f16_e_bias - f8e4m3_e_bias)
-    f8_biased_exp = (f16_e_field >> f16_m_size).astype(np.int32) - (f16_e_bias - f8e4m3_e_bias)
+    f8_biased_exp = (f16_e_field >> f16_m_size).astype(TensorDataType.int32) - (f16_e_bias - f8e4m3_e_bias)
 
     # fractional = (inp & f16_m_mask) << (f16_e_size - f8e4m3_e_size)
-    fractional_norm = ((x & f16_m_mask) << (f16_e_size - f8e4m3_e_size)).astype(np.uint16)
+    fractional_norm = ((x & f16_m_mask) << (f16_e_size - f8e4m3_e_size)).astype(TensorDataType.uint16)
 
     exp_ge0 = (f8_biased_exp >= 0) & is_normal
 
     # Rounding for normalized part (exp >= 0)
     # if (fractional & round_half) == round_odd or (fractional & round_norm) != 0:
-    cond_round_norm = (((fractional_norm & round_half) == round_odd) | ((fractional_norm & round_norm) != 0)) & exp_ge0
+    cond_round_norm = (
+        ((fractional_norm & round_half) == round_odd) |
+        ((fractional_norm & round_norm) != 0)
+    ) & exp_ge0
 
     # fractional += round_even where cond_round_norm
-    frac_tmp = fractional_norm.astype(np.uint32) + np.where(cond_round_norm, round_even, np.uint16(0)).astype(np.uint32)
-    fractional_norm = (frac_tmp & 0xFFFF).astype(np.uint16)
+    frac_tmp = fractional_norm.astype(TensorDataType.uint32) + \
+        fns.where(cond_round_norm, round_even, u16_zero).astype(TensorDataType.uint32)
+    fractional_norm = (frac_tmp & 0xFFFF).astype(TensorDataType.uint16)
 
     # if (fractional & f8_e_mask) != 0: f8_biased_exp += 1
-    exp_inc = np.where(exp_ge0 & ((fractional_norm & f8_e_mask) != 0), 1, 0).astype(np.int32)
+    exp_inc = fns.where(exp_ge0 & ((fractional_norm & f8_e_mask) != 0), 1, 0).astype(TensorDataType.int32)
     f8_biased_exp_after = f8_biased_exp + exp_inc
 
     # fractional &= f8_m_mask
@@ -119,22 +140,22 @@ def f16_to_f8e4m3_bits_numpy(x: np.ndarray) -> np.ndarray:
     subnormal_mask = is_normal & (f8_biased_exp_after <= 0) & (~overflow_mask)
 
     # --- Overflow -> NaN ---
-    f8_bits = np.where(overflow_mask, f8_bits | nan_pattern, f8_bits)
+    f8_bits = fns.where(overflow_mask, f8_bits | nan_pattern, f8_bits)
 
     # --- Normalized f8 ---
     # exp_field = (f8_biased_exp & (f8e4m3_e_mask >> f8e4m3_m_size)) << f8e4m3_m_size
-    exp_field = ((f8_biased_exp_after & (f8e4m3_e_mask >> f8e4m3_m_size)) << f8e4m3_m_size).astype(np.uint16)
-    mant_norm = (fractional_norm >> byte_shift).astype(np.uint16)
+    exp_field = ((f8_biased_exp_after & (f8e4m3_e_mask >> f8e4m3_m_size)) << f8e4m3_m_size).astype(TensorDataType.uint16)
+    mant_norm = (fractional_norm >> byte_shift).astype(TensorDataType.uint16)
 
     f8_bits_norm = f8_bits | exp_field | mant_norm
-    f8_bits = np.where(normal_mask, f8_bits_norm, f8_bits)
+    f8_bits = fns.where(normal_mask, f8_bits_norm, f8_bits)
 
     # --- Subnormal f8 ---
     # fractional = f8_m_hidden_one_mask | ((inp & f16_m_mask) << (f16_e_size - f8e4m3_e_size))
     fractional_sub = f8_m_hidden_one_mask | ((x & f16_m_mask) << (f16_e_size - f8e4m3_e_size))
 
     # f8_exp = f8_biased_exp - f8e4m3_e_bias
-    f8_exp = (f8_biased_exp_after - f8e4m3_e_bias).astype(np.int32)
+    f8_exp = (f8_biased_exp_after - f8e4m3_e_bias).astype(TensorDataType.int32)
 
     # shift = 1 - f8_exp
     shift = 1 - f8_exp
@@ -142,54 +163,67 @@ def f16_to_f8e4m3_bits_numpy(x: np.ndarray) -> np.ndarray:
     # sticky_mask = 0 if f8_exp < f8_e_subnormal_min else ((1 << shift) - 1)
     # we avoid invalid shifts by clipping / masking
     valid_sub = f8_exp >= f8_e_subnormal_min
-    shift_pos = np.maximum(shift, 0)
-    sticky_mask32 = np.where(valid_sub, (np.uint32(1) << shift_pos) - 1, 0).astype(np.uint32)
-    sticky_mask16 = (sticky_mask32 & np.uint32(0xFFFF)).astype(np.uint16)
+    shift_pos = fns.maximum(shift, 0)
+
+    one_u32 = to_u32_const(1)
+    mask_u32_full = to_u32_const(0xFFFF)
+
+    sticky_mask32 = fns.where(
+        valid_sub,
+        (one_u32 << shift_pos) - 1,
+        u32_zero,
+    ).astype(TensorDataType.uint32)
+    sticky_mask16 = (sticky_mask32 & mask_u32_full).astype(TensorDataType.uint16)
 
     # sticky = 1 if (fractional & sticky_mask) != 0 else 0
     sticky = ((fractional_sub & sticky_mask16) != 0) & valid_sub
 
     # fractional = 0 if f8_exp < f8_e_subnormal_min else (fractional >> (1 - f8_biased_exp))
     shift2 = 1 - f8_biased_exp_after
-    shift2_pos = np.maximum(shift2, 0)
-    frac_shifted = (fractional_sub.astype(np.uint32) >> shift2_pos).astype(np.uint16)
-    frac_shifted = np.where(valid_sub, frac_shifted, np.uint16(0))
+    shift2_pos = fns.maximum(shift2, 0)
+    frac_shifted = (fractional_sub.astype(TensorDataType.uint32) >> shift2_pos).astype(TensorDataType.uint16)
+    frac_shifted = fns.where(valid_sub, frac_shifted, u16_zero)
 
     # Rounding for subnormal:
     # if (((fractional & round_half) == round_odd and sticky == 0)
     #     or (fractional & round_norm) != 0
     #     or sticky != 0):
     cond_round_sub = (
-        (((frac_shifted & round_half) == round_odd) & (~sticky)) | ((frac_shifted & round_norm) != 0) | sticky
+        (((frac_shifted & round_half) == round_odd) & (~sticky)) |
+        ((frac_shifted & round_norm) != 0) |
+        sticky
     ) & subnormal_mask
 
-    frac_tmp_sub = frac_shifted.astype(np.uint32) + np.where(cond_round_sub, round_even, np.uint16(0)).astype(np.uint32)
-    fractional_sub_final = (frac_tmp_sub & 0xFFFF).astype(np.uint16)
+    frac_tmp_sub = frac_shifted.astype(TensorDataType.uint32) + \
+        fns.where(cond_round_sub, round_even, u16_zero).astype(TensorDataType.uint32)
+    fractional_sub_final = (frac_tmp_sub & 0xFFFF).astype(TensorDataType.uint16)
 
-    mant_sub = (fractional_sub_final >> byte_shift).astype(np.uint16)
-    f8_bits = np.where(subnormal_mask, f8_bits | mant_sub, f8_bits)
+    mant_sub = (fractional_sub_final >> byte_shift).astype(TensorDataType.uint16)
+    f8_bits = fns.where(subnormal_mask, f8_bits | mant_sub, f8_bits)
 
     # Case: f16 zero / subnormal -> sign + zero exponent/mantissa
     # Already handled by initialization + not touching zero_mask entries.
 
-    return (f8_bits & np.uint16(0x00FF)).astype(np.uint8)
+    return (f8_bits & to_u16_const(0x00FF)).astype(TensorDataType.uint8)
 
 
-def fp32_to_fp8e4m3(x: np.ndarray) -> np.ndarray:
+
+
+def fp32_to_fp8e4m3(x: Tensor) -> Tensor:
     """
-    Bit-exact to ov::float8_e4m3(float):
-        float32 -> float16 -> f8e4m3 bits -> float via LUT
+    Convert float32 to float8 e4m3 via float16.
+    Adopted from OpenVINO C++ implementation
+    https://github.com/openvinotoolkit/openvino/blame/master/src/core/src/type/float8_e4m3.cpp
+
+    :param x: Input tensor with float32 values.
+    :return: Tensor with float8 e4m3 values as float32 type.
     """
-    x = np.asarray(x, dtype=np.float32)
-    x_f16 = x.astype(np.float16)
-    h_bits = x_f16.view(np.uint16)
+    x_f16 = x.astype(TensorDataType.float16)
+    f8_bits = _f16_to_f8e4m3_bits_numpy(x_f16)
 
-    f8_bits = f16_to_f8e4m3_bits_numpy(h_bits)
-
-    # Decode exactly like C++: LUT for magnitude + sign bit
-    idx = f8_bits & 0x7F
-    mag = F8E4M3_LUT[idx.astype(np.int32)]
-
-    sign = np.where((f8_bits & 0x80) != 0, -1.0, 1.0)
-    out = sign * mag
-    return out.astype(np.float32)
+    indexes = f8_bits & 0x7F
+    look_up_table = fns.from_numpy(F8E4M3_LUT, backend=x.backend)
+    magnitude = look_up_table[indexes.astype(TensorDataType.int32)]
+    sign = fns.where((f8_bits & 0x80) != 0, -1.0, 1.0)
+    result = sign * magnitude
+    return result.astype(TensorDataType.float32)

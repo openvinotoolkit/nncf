@@ -522,8 +522,7 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, compression_dtype: Te
     if compression_dtype == TensorDataType.f8e4m3:
         from nncf.quantization.algorithms.weight_compression.fp8_conversion import fp32_to_fp8e4m3
 
-        quantiles_np = fp32_to_fp8e4m3(norm_weight.as_numpy_tensor().data)
-        return fns.from_numpy(quantiles_np, backend=norm_weight.backend)
+        return fp32_to_fp8e4m3(norm_weight)
 
     is_nf4 = compression_dtype == TensorDataType.nf4
     quantiles_np = NF4_QUANTILES if is_nf4 else F4E2M1_QUANTILES

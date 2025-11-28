@@ -225,10 +225,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weight: Optional[CompressedWeight] = None,
     ):
         compression_dtype = DTYPE_MAP[compression_config.compression_dtype]
-        if compression_config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-            scale_dtype = ov.Type.f8e8m0
-        else:
-            scale_dtype = ov.Type.f16
+        scale_dtype = (
+            ov.Type.f8e8m0
+            if compression_config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]
+            else ov.Type.f16
+        )
 
         original_shape = weight.shape
 
@@ -241,7 +242,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         if compression_config.is_codebook:
-            compression_dtype = DTYPE_MAP[compression_config.compression_dtype]
             converted_const = create_ov_codebook_subgraph(
                 codebook=compressed_weight.codebook
                 if compression_config.mode == CompressWeightsMode.CODEBOOK
