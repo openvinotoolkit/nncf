@@ -663,19 +663,21 @@ class TemplateWeightCompression(ABC):
         return 1
 
     @pytest.mark.parametrize(
-        "mean_values_shape,num_samples,subset_size,expected_s_shape,expected_X_shape",
+        "mean_values_shape,num_samples,subset_size,expected_s_shape,expected_X_shape,expected_indices",
         [
             # 2D Activations
-            ((8,), 10, 5, (8,), (8, 5)),
-            ((8,), 5, 10, (8,), (8, 5)),
-            ((8,), 5, 5, (8,), (8, 5)),
+            ((8,), 10, 5, (8,), (8, 5), [0, 2, 4, 6, 8]),
+            ((8,), 5, 10, (8,), (8, 5), [0, 1, 2, 3, 4]),
+            ((8,), 12, 5, (8,), (8, 6), [0, 2, 4, 6, 8, 10]),
             # 3D Activations
-            ((4, 8), 10, 5, (4, 8), (4, 8, 5)),
-            ((4, 8), 5, 10, (4, 8), (4, 8, 5)),
-            ((4, 8), 5, 5, (4, 8), (4, 8, 5)),
+            ((4, 8), 10, 5, (4, 8), (4, 8, 5), [0, 2, 4, 6, 8]),
+            ((4, 8), 5, 10, (4, 8), (4, 8, 5), [0, 1, 2, 3, 4]),
+            ((4, 8), 25, 8, (4, 8), (4, 8, 9), [0, 3, 6, 9, 12, 15, 18, 21, 24]),
         ],
     )
-    def test_process_stats(self, mean_values_shape, num_samples, subset_size, expected_s_shape, expected_X_shape):
+    def test_process_stats(
+        self, mean_values_shape, num_samples, subset_size, expected_s_shape, expected_X_shape, expected_indices
+    ):
         total_elements = reduce(mul, mean_values_shape, 1)
         mean_values = [
             Tensor(np.arange(i * total_elements, (i + 1) * total_elements, dtype=np.float32).reshape(mean_values_shape))
@@ -694,12 +696,6 @@ class TemplateWeightCompression(ABC):
         X_full = fns.stack(X_full_list)
         axes = list(range(1, len(X_full.shape))) + [0]
         X_full_transposed = fns.transpose(X_full, axes=axes)
-
-        if num_samples > subset_size:
-            step = num_samples // subset_size
-            expected_indices = list(range(0, num_samples, step))[:subset_size]
-        else:
-            expected_indices = list(range(num_samples))
 
         for idx, sample_idx in enumerate(expected_indices):
             expected_sample = X_full_transposed[..., sample_idx]
