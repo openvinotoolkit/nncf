@@ -11,6 +11,8 @@
 import math
 from abc import ABC
 from abc import abstractmethod
+from functools import reduce
+from operator import mul
 from typing import Any, Callable, Optional, TypeVar
 from unittest.mock import patch
 
@@ -28,6 +30,8 @@ from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.algorithms.weight_compression.activation_stats import WCTensorStatistic
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -657,3 +661,50 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     def get_reduction_axes() -> int:
         return 1
+
+    @pytest.mark.parametrize(
+        "mean_values_shape,num_samples,subset_size,expected_s_shape,expected_X_shape",
+        [
+            # 2D Activations
+            ((8,), 10, 5, (8,), (8, 5)),
+            ((8,), 5, 10, (8,), (8, 5)),
+            ((8,), 5, 5, (8,), (8, 5)),
+            # 3D Activations
+            ((4, 8), 10, 5, (4, 8), (4, 8, 5)),
+            ((4, 8), 5, 10, (4, 8), (4, 8, 5)),
+            ((4, 8), 5, 5, (4, 8), (4, 8, 5)),
+        ],
+    )
+    def test_process_stats(self, mean_values_shape, num_samples, subset_size, expected_s_shape, expected_X_shape):
+        total_elements = reduce(mul, mean_values_shape, 1)
+        mean_values = [
+            Tensor(np.arange(i * total_elements, (i + 1) * total_elements, dtype=np.float32).reshape(mean_values_shape))
+            for i in range(num_samples)
+        ]
+        shape_values = [(1,) + mean_values_shape for _ in range(num_samples)]
+
+        stats = WCTensorStatistic(mean_values=mean_values, shape_values=shape_values)
+
+        s, X = process_stats(stats, subset_size)
+
+        assert s.shape == expected_s_shape, f"Expected s shape {expected_s_shape}, got {s.shape}"
+        assert X.shape == expected_X_shape, f"Expected X shape {expected_X_shape}, got {X.shape}"
+
+        X_full_list = [mean_values[i] for i in range(num_samples)]
+        X_full = fns.stack(X_full_list)
+        axes = list(range(1, len(X_full.shape))) + [0]
+        X_full_transposed = fns.transpose(X_full, axes=axes)
+
+        if num_samples > subset_size:
+            step = num_samples // subset_size
+            expected_indices = list(range(0, num_samples, step))[:subset_size]
+        else:
+            expected_indices = list(range(num_samples))
+
+        for idx, sample_idx in enumerate(expected_indices):
+            expected_sample = X_full_transposed[..., sample_idx]
+            actual_sample = X[..., idx]
+            assert fns.all(actual_sample == expected_sample)
+
+        expected_s = fns.max(fns.abs(X_full_transposed), axis=-1)
+        assert fns.all(s == expected_s)
