@@ -39,7 +39,6 @@ from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.graph.utils import get_target_dim_for_compression_legacy
 from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.hardware.config import HWConfig
-from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
@@ -125,7 +124,6 @@ from nncf.torch.quantization.metrics import QuantizationShareBuildTimeInfo
 from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPathStatisticsCollector
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
-from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
@@ -135,7 +133,6 @@ from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.translator import PTTargetPointTranslator
-from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
@@ -558,30 +555,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 )
                 raise ValueError(msg) from e
             precision_init_params = HAWQPrecisionInitParams.from_config(init_precision_config, precision_init_args)
-        elif precision_init_type == "autoq":
-            if self.hw_config is not None and self.hw_config.target_device != HWConfigType.NPU.value:
-                msg = (
-                    f"Unsupported device ({self.hw_config.target_device})."
-                    f" Automatic Precision Initialization only supports for target_device NONE or NPU"
-                )
-                raise ValueError(msg)
-            try:
-                precision_init_args = self.config.get_extra_struct(AutoQPrecisionInitArgs)
-            except KeyError as e:
-                msg = (
-                    "Specified Automated precision initialization in the NNCF config, "
-                    "but the initializing data loader and loss criterion are not provided as an extra "
-                    "struct. Refer to `NNCFConfig.register_extra_structs` and the "
-                    "`AutoQPrecisionInitArgs` class"
-                )
-                raise ValueError(msg) from e
-
-            hw_config_type = None
-            if self.hw_config is not None:
-                hw_config_type = HWConfigType(self.hw_config.target_device)
-            precision_init_params = AutoQPrecisionInitParams.from_config(
-                init_precision_config, precision_init_args, hw_config_type
-            )
         elif precision_init_type == "manual":
             precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
         else:

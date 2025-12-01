@@ -41,16 +41,10 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
 
     # Prevent high memory and time consumption by sampling
     if X_full.shape[sample_axis] > subset_size:
-        # Activations were reduced across all but the last dimension
         lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
         step = X_full.shape[sample_axis] // subset_size
-        sorted_idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-        idxs = [idx for idx in sorted_idxs if idx < X_full.shape[sample_axis]][:subset_size]
-
-        # Create index slices for all dimensions except the last one
-        # This works for both 2D and 3D (and theoretically any dimensionality)
-        index_slices = [slice(None)] * (len(X_full.shape) - 1) + [idxs]
-        X = X_full[tuple(index_slices)]
+        idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
+        X = X_full[..., idxs]
     else:
         X = X_full
 
