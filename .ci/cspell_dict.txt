@@ -360,7 +360,6 @@ ptselu
 ptsilu
 ptwc
 pymodules
-pymoo
 pyopenvino
 pythonpath
 qconf
