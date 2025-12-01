@@ -101,7 +101,7 @@ def test_jit_if_tracing_script_patching(tmp_path):
             return test_fn(x)
 
     # ONNX export should work correctly because torch.jit.script_if_tracing is patched
-    torch.onnx.export(TestModel(), (torch.zeros((1,)),), str(tmp_path / "jit_if_tracing_test_model.onnx"))
+    torch.onnx.export(TestModel(), (torch.zeros((1,)),), str(tmp_path / "jit_if_tracing_test_model.onnx"), dynamo=False)
 
 
 def test_jit_if_tracing_script_source():

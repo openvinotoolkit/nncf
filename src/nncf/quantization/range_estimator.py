@@ -29,6 +29,7 @@ class StatisticsType(Enum):
     :param QUANTILE: A specific quantile value in a tensor.
     :param ABS_QUANTILE: A specific quantile value in the absolute tensor.
     :param MEAN: The mean value of a tensor.
+    :param RAW: Tensor values as they are.
     """
 
     MAX = "max"
@@ -37,6 +38,7 @@ class StatisticsType(Enum):
     QUANTILE = "quantile"
     ABS_QUANTILE = "abs_quantile"
     MEAN = "mean"
+    RAW = "raw"
 
 
 @api()
@@ -51,6 +53,8 @@ class AggregatorType(Enum):
     :param MEDIAN: The median value of a set of tensors.
     :param MEAN_NO_OUTLIERS: The mean value of a set of tensors with outliers removed.
     :param MEDIAN_NO_OUTLIERS: The median value of a set of tensors with outliers removed.
+    :param HISTOGRAM: The minimum and maximum values determined by minimization
+        of a quantization error on a histogram of the input tensor distribution.
     """
 
     MEAN = "mean"
@@ -59,6 +63,7 @@ class AggregatorType(Enum):
     MEDIAN = "median"
     MEAN_NO_OUTLIERS = "mean_no_outliers"
     MEDIAN_NO_OUTLIERS = "median_no_outliers"
+    HISTOGRAM = "histogram"
 
 
 @api()
@@ -121,6 +126,8 @@ class RangeEstimatorParametersSet:
     :param MEAN_QUANTILE : The range estimator parameters where the low bound of the range
         is calculated as average (across every sample) of (quantile outlier probability)-quantiles,
         the upper bound of the range as average of (1 - quantile outlier probability)-quantiles of the same values.
+    :param HISTOGRAM: The range estimator parameters, where the lower and upper bounds of the range
+        are calculated as optimal quantization parameters based on the histogram of the given set of tensors.
     """
 
     MINMAX = RangeEstimatorParameters(
@@ -150,4 +157,9 @@ class RangeEstimatorParametersSet:
     MEAN_QUANTILE = RangeEstimatorParameters(
         min=StatisticsCollectorParameters(statistics_type=StatisticsType.QUANTILE, aggregator_type=AggregatorType.MEAN),
         max=StatisticsCollectorParameters(statistics_type=StatisticsType.QUANTILE, aggregator_type=AggregatorType.MEAN),
+    )
+
+    HISTOGRAM = RangeEstimatorParameters(
+        min=StatisticsCollectorParameters(statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM),
+        max=StatisticsCollectorParameters(statistics_type=StatisticsType.RAW, aggregator_type=AggregatorType.HISTOGRAM),
     )

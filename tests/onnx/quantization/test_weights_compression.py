@@ -317,6 +317,43 @@ def test_matmulnbits():
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
 
 
+@pytest.mark.parametrize("trans_b", [0, 1])
+def test_matmulnbits_gemm(trans_b: int):
+    # Build the model with a single Gemm operation
+    np.random.seed(42)
+
+    w = np.random.rand(1280, 10).astype(np.float32)
+    if trans_b:
+        w = w.T
+    b = np.random.rand(10).astype(np.float32)
+
+    mb = ModelBuilder()
+    x = mb.add_input("input", (1, 1280))
+    x = mb.add_gemm(x, shape=w.shape, weight_data=w, bias_data=b, trans_b=trans_b)
+
+    mb.add_output(x, (1, 10))
+
+    model_opset19 = mb.build(opset_version=19)
+    model_opset21 = mb.build(opset_version=21)
+
+    rtol = 1e-5
+    if version.parse(onnxruntime.__version__) < version.parse("1.21.1"):
+        rtol = 1e-3
+
+    compressed_model_opset21 = compress_weights(model_opset21, mode=CompressWeightsMode.INT4_SYM, group_size=64)
+    compressed_model_opset19 = compress_weights(model_opset19, mode=CompressWeightsMode.INT4_SYM, group_size=64)
+
+    dummy_input = np.random.rand(1, 1280).astype(np.float32)
+
+    sess21 = InferenceSession(compressed_model_opset21.SerializeToString())
+    sess19 = InferenceSession(compressed_model_opset19.SerializeToString())
+
+    output21 = sess21.run(None, {"input": dummy_input})[0]
+    output19 = sess19.run(None, {"input": dummy_input})[0]
+
+    assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
+
+
 class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
@@ -355,6 +392,24 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         mb.add_output(x1, (1, 5, 10))
         mb.add_output(x2, (1, 5, 10))
+
+        return mb.build()
+
+    @staticmethod
+    def get_SAM_PE_model() -> onnx.ModelProto:
+        """
+        Builds a model to be used in the TemplateWeightCompression.test_sam_pe_weight_compression() test.
+        """
+        mb = ModelBuilder()
+
+        x = mb.add_input("input", (-1, -1, -1, 2))
+        x = mb.add_matmul(x, shape=(2, 128))
+        x = mb.add_mul_const(x, shape=(1,), data=np.array([2 * np.pi], np.float32))
+        x1 = mb.add_sin(x)
+        x2 = mb.add_cos(x)
+        x = mb.add_concat([x1, x2], axis=-1)
+
+        mb.add_output(x, (-1, -1, -1, 256))
 
         return mb.build()
 

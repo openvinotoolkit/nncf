@@ -113,13 +113,12 @@ def get_label_from_node_data(node_data: dict[str, Any], style: PydotStyleTemplat
                 f"kwargs: {kwargs_to_label(meta.kwargs)}",
             ]
         return "{" + fix_dot_label("|".join(rows)) + "}"
-    else:
-        if isinstance(meta, InOutMeta):
-            return f"{meta.name}"
-        if isinstance(meta, ConstMeta):
-            return f"{meta.name_in_model}"
-        if isinstance(meta, FunctionMeta):
-            return f"{meta.op_name}"
+    if isinstance(meta, InOutMeta):
+        return f"{meta.name}"
+    if isinstance(meta, ConstMeta):
+        return f"{meta.name_in_model}"
+    if isinstance(meta, FunctionMeta):
+        return f"{meta.op_name}"
     msg = f"Unknown meta node {type(meta)}"
     raise ValueError(msg)
 
@@ -137,8 +136,7 @@ def get_label_from_edge_data(node_data: dict[str, Any], style: PydotStyleTemplat
 
     if style == PydotStyleTemplate.disable:
         return f"{meta.output_port} → {meta.input_port}"
-    else:
-        return f"{meta.shape}\n{meta.output_port} → {meta.input_port}"
+    return f"{meta.shape}\n{meta.output_port} → {meta.input_port}"
 
 
 _RAINBOW_COLORS = [

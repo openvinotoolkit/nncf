@@ -67,6 +67,11 @@ class DummyTensorAggregator(AggregatorBase):
         return self._container[0]
 
 
+class DummyMinMaxAggregatedAggregator(DummyTensorAggregator):
+    def _aggregate_impl(self):
+        return {MinMaxTensorStatistic.MIN_STAT: self._container[0], MinMaxTensorStatistic.MAX_STAT: self._container[0]}
+
+
 def get_output_info(reducers: list[DummyTensorReducer]) -> list[tuple[int, list[str]]]:
     retval = []
     for reducer in reducers:
@@ -362,6 +367,16 @@ class TemplateTestStatisticCollector:
         assert isinstance(statistic, MinMaxTensorStatistic)
         assert statistic.min_values == statistic.max_values == Tensor(np.array(1))
 
+    def test_min_max_stat_composed(self):
+        tensor_collector = TensorCollector(MinMaxTensorStatistic)
+        tensor_collector.register_statistic_branch(
+            MinMaxTensorStatistic.MIN_MAX_STAT, DummyTensorReducer("A"), DummyMinMaxAggregatedAggregator()
+        )
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
+        statistic = tensor_collector.get_statistics()
+        assert isinstance(statistic, MinMaxTensorStatistic)
+        assert statistic.min_values == statistic.max_values == Tensor(np.array(1))
+
     def test_mean_max_stat_building(self):
         tensor_collector = TensorCollector(MeanTensorStatistic)
         tensor_collector.register_statistic_branch(
@@ -370,10 +385,10 @@ class TemplateTestStatisticCollector:
         tensor_collector.register_statistic_branch(
             MeanTensorStatistic.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
         )
-        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array([1])))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MeanTensorStatistic)
-        assert statistic.mean_values == statistic.shape == Tensor(np.array(1))
+        assert statistic.mean_values == statistic.shape == Tensor(np.array([1]))
 
     def test_median_mad_stat_building(self):
         class DummyMADPercentileAggregator(DummyTensorAggregator):

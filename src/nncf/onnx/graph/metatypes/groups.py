@@ -139,7 +139,7 @@ BATCH_NORMALIZATION_OPERATIONS = [
 OPERATIONS_WITH_BIAS_REDUCED = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXGemmMetatype,
-    # TODO: Need to add MatMul with the separate bias support (CVS-135433)
+    onnx_metatypes.ONNXMatMulMetatype,
 ]
 
 OPERATIONS_WITH_BIAS = [

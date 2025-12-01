@@ -304,6 +304,18 @@ def quantization_aware_training_torch_resnet18():
     }
 
 
+def magnitude_pruning_torch_resnet18():
+    from examples.pruning.torch.resnet18.main import main as pruning_resnet18_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    set_torch_cuda_seed()
+    results = pruning_resnet18_main()
+
+    return {
+        "acc1": results,
+    }
+
+
 def set_torch_cuda_seed(seed: int = 42):
     """
     Sets torch, cuda and python random module to determenistic mode with

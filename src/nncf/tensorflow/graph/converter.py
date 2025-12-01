@@ -63,7 +63,7 @@ from nncf.tensorflow.tf_internals import KerasTensor
 PREFIX_AUXILIARY_OUTPUT_NODE = "output"
 
 
-class TFLayerInfo:
+class TFLayerInfo:  # noqa: B903
     def __init__(self, layer_name: str, instance_idx: int):
         self.layer_name = layer_name
         self.instance_idx = instance_idx
@@ -548,7 +548,7 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
             if layer_config["class_name"] in ["TFOpLambda", "SlicingOpLambda"]:
                 inbound_nodes = reformat_inbound_nodes_for_oplambda(inbound_nodes)
 
-            for layer_instance_idx, inbound_nodes in enumerate(inbound_nodes):
+            for layer_instance_idx, inbound_nodes in enumerate(inbound_nodes):  # noqa: B020
                 if self._is_layer_shared(layer_name):
                     node_name = get_shared_node_name(layer_name, layer_instance_idx)
                 else:

@@ -14,13 +14,13 @@ on:
 
 jobs:
   examples-cpu:
-    name: Weight compression [${{ matrix.group }}/4]
+    name: Weight compression [${{ matrix.group }}/6]
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4]
+        group: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
@@ -34,7 +34,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: 3.10.14
       - name: cpuinfo
@@ -50,7 +50,7 @@ jobs:
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 4 \
+            --splits 6 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
@@ -63,7 +63,7 @@ jobs:
         run: column -s, -t < tmp/results.csv || echo "no file"
       - name: Upload artifact
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 #v5.0.0
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv

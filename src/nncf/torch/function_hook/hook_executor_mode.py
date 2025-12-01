@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 import inspect
-import sys
 import types
 from collections import defaultdict
 from contextlib import contextmanager
@@ -133,7 +132,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         # Collect how many times shared parameter used
         counter_shared_weights: dict[int, int] = defaultdict(int)
-        for name, parameter in chain(self.model.named_parameters(remove_duplicate=False)):
+        for _, parameter in self.model.named_parameters(remove_duplicate=False):
             counter_shared_weights[id(parameter)] += 1
 
         self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}
@@ -453,7 +452,10 @@ class FunctionHookMode(TorchFunctionMode):
                 for idx, value in enumerate(output):
                     output[idx] = self.process_post_function_hooks_for_value(value, op_meta, idx)
                 if cls_tuple is not None:
-                    output = cls_tuple(output)
+                    if hasattr(cls_tuple, "_fields"):  # likely a namedtuple
+                        output = cls_tuple(*output)
+                    else:
+                        output = cls_tuple(output)
             else:
                 output = self.process_post_function_hooks_for_value(output, op_meta, 0)
         return output
@@ -467,19 +469,6 @@ class FunctionHookMode(TorchFunctionMode):
         :return: The processed arguments, with hooks applied to any tensor inputs.
         """
         forward_signature = inspect.signature(self.model.forward)
-
-        if sys.version_info < (3, 10):
-            # TODO(AlexanderDokuchaev): remove after drop support 3.9
-            # WA for 171692
-            # Combination of decorator of class method and functools.partial return signature
-            # that contains with "self" parameter only for python < 3.10
-            # Python3.9: (self, x)
-            # Python3.10: (x)
-            params = list(forward_signature.parameters.values())
-            if params and params[0].name == "self":
-                params = params[1:]
-                forward_signature = inspect.Signature(parameters=params)
-
         bound_arguments = forward_signature.bind(*args, **kwargs)
 
         # Hooks available only for named arguments
@@ -519,7 +508,10 @@ class FunctionHookMode(TorchFunctionMode):
                 if isinstance(val, Tensor):
                     outputs[idx] = self.execute_hooks_for_model_output(f"output_{idx}", val)
         if cls_tuple is not None:
-            outputs = cls_tuple(outputs)
+            if hasattr(cls_tuple, "_fields"):  # likely a namedtuple
+                outputs = cls_tuple(*outputs)
+            else:
+                outputs = cls_tuple(outputs)
         return outputs
 
     def execute_hooks_for_model_output(self, name: str, value: Any) -> Any:

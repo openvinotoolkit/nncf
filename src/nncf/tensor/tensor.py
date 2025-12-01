@@ -84,6 +84,12 @@ class Tensor:
 
     # built-in operations
 
+    def __or__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return Tensor(self.data | unwrap_tensor_data(other))
+
+    def __and__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return Tensor(self.data & unwrap_tensor_data(other))
+
     def __add__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data + unwrap_tensor_data(other))
 
@@ -143,6 +149,9 @@ class Tensor:
     def __ifloordiv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data //= unwrap_tensor_data(other)
         return self
+
+    def __mod__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return cast(Tensor, _call_function("_binary_op_nowarn", self, other, operator.mod))
 
     def __matmul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data @ unwrap_tensor_data(other))
@@ -204,6 +213,9 @@ class Tensor:
 
     def as_numpy_tensor(self) -> Tensor:
         return cast(Tensor, _call_function("as_numpy_tensor", self))
+
+    def tolist(self) -> Any:
+        return _call_function("tolist", self)
 
     def as_openvino_tensor(self) -> Tensor:
         x = self

@@ -41,6 +41,7 @@ from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.helpers import RoPEModel
+from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -50,7 +51,13 @@ ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 INT8_MODES = (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 SUPPORTED_MODES = INT8_MODES + INT4_MODES
-UNSUPPORTED_MODES = (CompressWeightsMode.NF4, CompressWeightsMode.E2M1)
+UNSUPPORTED_MODES = (
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.MXFP4,
+    CompressWeightsMode.MXFP8_E4M3,
+    CompressWeightsMode.FP8_E4M3,
+    CompressWeightsMode.FP4,
+)
 
 
 class SequentialMatmulModel(nn.Module):
@@ -473,6 +480,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_RoPE_model() -> torch.nn.Module:
         return RoPEModel()
+
+    @staticmethod
+    def get_SAM_PE_model() -> torch.nn.Module:
+        return SAMPEModel()
 
     @staticmethod
     def get_sequential_matmul_model() -> torch.nn.Module:

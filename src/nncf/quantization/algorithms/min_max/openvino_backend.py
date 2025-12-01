@@ -150,7 +150,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             edge = nncf_graph.get_input_edge_by_port_id(node, target_point.port_id)
             return edge.tensor_shape
-        elif target_point.type == TargetType.POST_LAYER_OPERATION:
+        if target_point.type == TargetType.POST_LAYER_OPERATION:
             # NOTE: Assumes that all output edges for the `node` with `output_port_id`
             # equal to `target_point.port_id` should have the same `tensor_shape` value.
             edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)

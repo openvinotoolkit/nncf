@@ -20,10 +20,12 @@ from nncf.tensor.functions.numeric import argsort as argsort
 from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
 from nncf.tensor.functions.numeric import atleast_1d as atleast_1d
+from nncf.tensor.functions.numeric import bincount as bincount
 from nncf.tensor.functions.numeric import ceil as ceil
 from nncf.tensor.functions.numeric import clip as clip
 from nncf.tensor.functions.numeric import concatenate as concatenate
 from nncf.tensor.functions.numeric import count_nonzero as count_nonzero
+from nncf.tensor.functions.numeric import cumsum as cumsum
 from nncf.tensor.functions.numeric import device as device
 from nncf.tensor.functions.numeric import diag as diag
 from nncf.tensor.functions.numeric import dtype as dtype
@@ -31,10 +33,13 @@ from nncf.tensor.functions.numeric import expand_dims as expand_dims
 from nncf.tensor.functions.numeric import eye as eye
 from nncf.tensor.functions.numeric import finfo as finfo
 from nncf.tensor.functions.numeric import flatten as flatten
+from nncf.tensor.functions.numeric import floor as floor
 from nncf.tensor.functions.numeric import from_numpy as from_numpy
+from nncf.tensor.functions.numeric import histogram as histogram
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item
+from nncf.tensor.functions.numeric import linspace as linspace
 from nncf.tensor.functions.numeric import log2 as log2
 from nncf.tensor.functions.numeric import logical_or as logical_or
 from nncf.tensor.functions.numeric import masked_mean as masked_mean
@@ -52,6 +57,7 @@ from nncf.tensor.functions.numeric import ones_like as ones_like
 from nncf.tensor.functions.numeric import percentile as percentile
 from nncf.tensor.functions.numeric import power as power
 from nncf.tensor.functions.numeric import quantile as quantile
+from nncf.tensor.functions.numeric import repeat as repeat
 from nncf.tensor.functions.numeric import reshape as reshape
 from nncf.tensor.functions.numeric import round as round
 from nncf.tensor.functions.numeric import searchsorted as searchsorted

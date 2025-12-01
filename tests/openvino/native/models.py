@@ -793,13 +793,13 @@ class SequentialMatmulModel(OVReferenceModel):
         rel_error= 0.03
     """
 
-    def _create_ov_model(self):
-        input_node = opset.parameter([1, 4, 4], name="Input_1")
+    def _create_ov_model(self, mm_hidden_dim=4):
+        input_node = opset.parameter([1, 4, mm_hidden_dim], name="Input_1")
         main_values = [10000, 1000, 1, 10, 10000]
 
         last_node = input_node
         for i, main_value in enumerate(main_values):
-            weights_data = np.arange(0, 16).reshape(4, 4)
+            weights_data = np.arange(0, mm_hidden_dim**2).reshape(mm_hidden_dim, mm_hidden_dim)
             weights_data[-1, -1] = main_value
             current_weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
             current_node = opset.matmul(
@@ -973,17 +973,16 @@ class AWQMatmulModel(OVReferenceModel):
     def get_weights(weights_data, is_int8, name):
         if not is_int8:
             return opset.constant(weights_data, dtype=np.float32, name=name)
-        else:
-            qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
-            qw = opset.convert(qw, destination_type=np.float32)
+        qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
+        qw = opset.convert(qw, destination_type=np.float32)
 
-            zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
-            zp = opset.convert(zp, destination_type=np.float32)
+        zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
+        zp = opset.convert(zp, destination_type=np.float32)
 
-            scale = opset.constant(
-                np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
-            )
-            return (qw - zp) * scale
+        scale = opset.constant(
+            np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+        )
+        return (qw - zp) * scale
 
     def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
         input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
@@ -1250,6 +1249,26 @@ class RoPEModel(OVReferenceModel):
         cos_result = opset.result(cos, name="cos_result")
 
         model = ov.Model([sin_result, cos_result], [position_ids])
+        return model
+
+
+class SAMPEModel(OVReferenceModel):
+    """
+    Positional Embedding from Segment Anything Model (SAM).
+    """
+
+    def _create_ov_model(self):
+        inp = opset.parameter([-1, -1, -1, 2], name="inp")
+        matmul_data = self._rng.random((128, 2)).astype(np.float32)
+
+        matmul = opset.matmul(inp, matmul_data, transpose_a=False, transpose_b=True, name="MatMul")
+        scaled_matmul = opset.multiply(matmul, opset.constant(2 * np.pi, dtype=np.float32), name="Scaled_MatMul")
+        sin = opset.sin(scaled_matmul, name="sin")
+        cos = opset.cos(scaled_matmul, name="cos")
+        concat = opset.concat([sin, cos], axis=-1, name="concat")
+        concat_result = opset.result(concat, name="concat_result")
+
+        model = ov.Model([concat_result], [inp])
         return model
 
 

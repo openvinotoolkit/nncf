@@ -499,3 +499,24 @@ class RoPEModel(nn.Module):
         x1 = x.sin()
         x2 = x.cos()
         return x1, x2
+
+
+class SAMPEModel(nn.Module):
+    """
+    Positional Embedding from Segment Anything Model (SAM).
+    """
+
+    INPUT_SIZE = [1, 2, 3, 2]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.weight = nn.Parameter(torch.empty((2, 128)))
+
+    def forward(self, x):
+        x = torch.matmul(x, self.weight)
+        x = x * (2 * torch.pi)
+        x1 = x.sin()
+        x2 = x.cos()
+        x = torch.cat([x1, x2], dim=-1)
+        return x

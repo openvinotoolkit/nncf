@@ -16,7 +16,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('slice_1', 'slice_4', 'slice_7')_ActivationQuantizationInsertionPoint": {
+        "('slice_1', 'slice_2', 'slice_3')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,

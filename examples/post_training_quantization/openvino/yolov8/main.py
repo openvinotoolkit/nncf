@@ -38,7 +38,7 @@ def validate(
     validator.seen = 0
     validator.jdict = []
     validator.stats = dict(tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
-    validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
+    validator.confusion_matrix = ConfusionMatrix(names=validator.names)
     model.reshape({0: [1, 3, -1, -1]})
     compiled_model = ov.compile_model(model, device_name="CPU")
     output_layer = compiled_model.output(0)
@@ -50,7 +50,7 @@ def validate(
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
-    return stats, validator.seen, validator.nt_per_class.sum()
+    return stats, validator.seen, validator.metrics.nt_per_class.sum()
 
 
 def print_statistics(stats: dict[str, float], total_images: int, total_objects: int) -> None:
@@ -67,14 +67,15 @@ def print_statistics(stats: dict[str, float], total_images: int, total_objects: 
 
 
 def prepare_validation(model: YOLO, args: Any) -> tuple[DetectionValidator, torch.utils.data.DataLoader]:
-    validator: DetectionValidator = model.task_map[model.task]["validator"](args=args)
+    validator = DetectionValidator(args=args)
     validator.data = check_det_dataset(args.data)
     validator.stride = 32
     validator.is_coco = True
     validator.class_map = coco80_to_coco91_class()
     validator.names = model.model.names
     validator.metrics.names = validator.names
-    validator.nc = model.model.model[-1].nc
+    validator.device = torch.device("cpu")
+    validator.end2end = False
 
     coco_data_path = DATASETS_DIR / "coco128"
     data_loader = validator.get_dataloader(coco_data_path.as_posix(), 1)
@@ -144,6 +145,7 @@ def main():
     model = YOLO(ROOT / f"{MODEL_NAME}.pt")
     args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128.yaml"
+    args.plots = False
 
     # Prepare validation dataset and helper
     validator, data_loader = prepare_validation(model, args)

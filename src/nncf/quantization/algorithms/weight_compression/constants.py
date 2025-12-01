@@ -33,6 +33,27 @@ NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
+MXFP4_QUANTILES = np.array(
+    [
+        -6.0,
+        -4.0,
+        -3.0,
+        -2.0,
+        -1.5,
+        -1.0,
+        -0.5,
+        -0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+    ],
+    dtype=np.float32,
+)
+
 
 CB4_QUANTILES = np.array(
     [
@@ -77,3 +98,6 @@ CENTER_OF_NF4_QUANTILES = np.array(
     ],
     dtype=np.float32,
 )
+
+
+CENTER_OF_MXFP4_QUANTILES = (MXFP4_QUANTILES[1:] + MXFP4_QUANTILES[:-1]) / 2

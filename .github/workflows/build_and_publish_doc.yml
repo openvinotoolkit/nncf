@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Download HTML doc build artifact
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: html_doc_artifact
       - name: Extract artifact
@@ -39,7 +39,7 @@ jobs:
           rm artifact.tar
 
       - name: Download schema doc build artifact
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: schema_doc_artifact
           path: html_build/html
@@ -51,7 +51,7 @@ jobs:
           rm artifact.tar
 
       - name: Publish built docs on Github Pages branch ${{ env.GH_PAGES_BRANCH }}
-        uses: JamesIves/github-pages-deploy-action@6c2d9db40f9296374acc17b90404b6e8864128c8 # v4.7.3
+        uses: JamesIves/github-pages-deploy-action@4a3abc783e1a24aeb44c16e869ad83caf6b4cc23 # v4.7.4
         with:
           folder: html_build/html
           token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}

@@ -84,3 +84,10 @@ def test_track_context_manager(n, is_weighted):
         for i in range(n):
             assert pbar.progress._tasks[pbar.task].completed == (sum(weights[:i]) if is_weighted else i)
             pbar.update(advance=1)
+
+
+def test_disable_with_total_0():
+    pbar = track(iter(get_sequence(0)), total=0)
+    assert pbar.progress.disable is True
+    pbar = track(iter(get_sequence(0)))
+    assert pbar.progress.disable is False

@@ -61,6 +61,11 @@ def _(a: torch.Tensor) -> TensorBackend:
     return TensorBackend.torch
 
 
+@numeric.bincount.register
+def _(a: torch.Tensor, *, weights: Optional[torch.Tensor], minlength: int = 0) -> torch.Tensor:
+    return torch.bincount(input=a, weights=weights, minlength=minlength)
+
+
 @numeric.squeeze.register
 def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     if axis is None:
@@ -108,6 +113,11 @@ def _(a: torch.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
 
 
+@numeric.repeat.register
+def _(a: torch.Tensor, repeats: Union[int, torch.Tensor], *, axis: Optional[int] = None) -> torch.Tensor:
+    return torch.repeat_interleave(a, repeats=repeats, dim=axis)
+
+
 @numeric.reshape.register
 def _(a: torch.Tensor, shape: T_SHAPE) -> torch.Tensor:
     return a.reshape(shape)
@@ -144,6 +154,18 @@ def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
 @numeric.count_nonzero.register
 def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     return torch.count_nonzero(a, dim=axis)
+
+
+@numeric.histogram.register
+def _(
+    a: torch.Tensor,
+    bins: int,
+    *,
+    range: Optional[tuple[float, float]] = None,
+) -> torch.Tensor:
+    if range is None:
+        return torch.histc(input=a, bins=bins)
+    return torch.histc(input=a, bins=bins, min=range[0], max=range[1])
 
 
 @numeric.isempty.register
@@ -240,6 +262,11 @@ def median(
     return quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
 
+@numeric.floor.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.floor(a)
+
+
 @numeric.round.register
 def _(a: torch.Tensor, decimals: int = 0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
@@ -312,6 +339,11 @@ def _(a: torch.Tensor, data: Any) -> torch.Tensor:
 @numeric.item.register
 def _(a: torch.Tensor) -> T_NUMBER:
     return a.item()
+
+
+@numeric.cumsum.register
+def _(a: torch.Tensor, axis: int) -> torch.Tensor:
+    return torch.cumsum(a, dim=axis)
 
 
 @numeric.sum.register
@@ -456,6 +488,19 @@ def eye(
     return torch.eye(*p_args, dtype=pt_dtype, device=pt_device)
 
 
+def linspace(
+    start: float,
+    end: float,
+    num: int,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    pt_device = convert_to_torch_device(device)
+    pt_dtype = convert_to_torch_dtype(dtype)
+    return torch.linspace(start, end, num, dtype=pt_dtype, device=pt_device)
+
+
 def arange(
     start: float,
     end: float,
@@ -497,3 +542,8 @@ def tensor(
 @numeric.as_numpy_tensor.register
 def _(a: torch.Tensor) -> NDArray[Any]:
     return a.cpu().detach().numpy()
+
+
+@numeric.tolist.register
+def _(a: torch.Tensor) -> Any:
+    return a.tolist()

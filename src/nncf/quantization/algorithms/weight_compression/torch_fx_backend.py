@@ -49,11 +49,15 @@ from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
+from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.quantization.ignored_patterns import create_rope
+from nncf.torch.quantization.ignored_patterns import create_sam_pe
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -61,21 +65,17 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
-    MATMUL_METATYPES = PTWeightCompressionAlgoBackend.MATMUL_METATYPES
-    EMBEDDING_METATYPES = PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
-    CONVOLUTION_METATYPES = PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
-
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
-        return FXWeightCompressionAlgoBackend.MATMUL_METATYPES
+        return MATMUL_METATYPES
 
     @property
     def embedding_metatypes(self) -> list[OperatorMetatype]:
-        return FXWeightCompressionAlgoBackend.EMBEDDING_METATYPES
+        return EMBEDDING_METATYPES
 
     @property
     def convolution_metatypes(self) -> list[OperatorMetatype]:
-        return FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
+        return CONVOLUTION_METATYPES
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
@@ -91,31 +91,10 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
+        node_with_weight_metatype = node_with_weight.metatype
 
         ndims = len(edge.tensor_shape)
-        reduction_axes = None
-        if node_with_weight.metatype == om.PTAtenEmbeddingMetatype:
-            reduction_axes = [1]
-        elif node_with_weight.metatype == om.PTLinearMetatype:
-            reduction_axes = [ndims - 1]
-        elif node_with_weight.metatype == om.PTMatMulMetatype:
-            if weight_port_id == 0:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 1:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight.metatype == om.PTAddmmMetatype:
-            if weight_port_id == 1:
-                reduction_axes = [ndims - 1]
-            elif weight_port_id == 2:
-                reduction_axes = [max(0, ndims - 2)]
-        elif node_with_weight.metatype in FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
-            channel_idx = (
-                1
-                if node_with_weight.metatype
-                in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
-                else 0
-            )
-            reduction_axes = [i for i in range(ndims) if i != channel_idx]
+        reduction_axes = get_weight_compression_reduction_axes(node_with_weight_metatype, weight_port_id, ndims)
         return tuple(reduction_axes)
 
     @staticmethod
@@ -193,14 +172,17 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> torch.fx.GraphModule:
         transformation_layout = TransformationLayout()
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [
                 CompressWeightsMode.NF4,
-                CompressWeightsMode.E2M1,
+                CompressWeightsMode.MXFP4,
+                CompressWeightsMode.MXFP8_E4M3,
+                CompressWeightsMode.FP8_E4M3,
+                CompressWeightsMode.FP4,
             ]:
                 msg = f"{compression_config.mode.value} is not supported."
                 raise nncf.ParameterNotSupportedError(msg)
@@ -276,7 +258,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompressionAlgoBackend):

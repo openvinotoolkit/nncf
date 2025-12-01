@@ -11,14 +11,17 @@
 
 import os
 
+import numpy as np
 import onnx
 import pytest
 import torch
 
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.onnx.common import ModelBuilder
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import OneConvolutionalModel
@@ -64,7 +67,7 @@ def test_compare_nncf_graph_classification_real_models(tmp_path, model_to_test):
     model = model_builder(model_to_test.model_name)
     onnx_model_path = tmp_path / (model_to_test.model_name + ".onnx")
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13)
+    torch.onnx.export(model, x, onnx_model_path, opset_version=13, dynamo=False)
 
     original_model = onnx.load(onnx_model_path)
 
@@ -112,3 +115,28 @@ def test_add_output_nodes_with_no_parents_node():
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     path_to_dot = REFERENCE_GRAPHS_DIR / "synthetic" / "output_with_no_parents_model.dot"
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
+
+
+@pytest.mark.parametrize("opset_version, ref_shape", [[13, ()], [19, (-1, -1, -1)]])
+def test_unknown_shape(opset_version: int, ref_shape: tuple[int, ...]):
+    mb = ModelBuilder()
+
+    x = mb.add_input("x", ("batch", 3, 4, 5))
+
+    y = mb.add_shape(x)
+    y = mb.add_gather(y, mb.add_initializer(np.array(0, dtype=np.int64)))
+    y = mb.add_unsqueeze(y, axes=[0])
+    y = mb.add_concat([y, mb.add_initializer(np.array([-1, 60], dtype=np.int64))], axis=0)
+
+    x = mb.add_reshape(x, y)
+    x = mb.add_matmul(x, (60, 10))
+
+    mb.add_output(x, ("batch", 1, 10))
+
+    model = mb.build(opset_version, ir_version=9)
+
+    graph = GraphConverter.create_nncf_graph(model)
+    matmul = graph.get_nodes_by_metatypes([ONNXMatMulMetatype])[0]  # only 1 matmul
+
+    for e in graph.get_input_edges(matmul):
+        assert e.tensor_shape == ref_shape

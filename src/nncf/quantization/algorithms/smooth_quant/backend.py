@@ -19,8 +19,11 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AxesMode
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
@@ -99,27 +102,12 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        """
-        Returns TensorCollector with MaxAggregator and AbsMaxReducer.
-
-        :param stats_reduction_axes: Calculated reduction axes.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param branch_key: Specific string for branch key.
-        :return: TensorCollector instance.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int, nncf_graph: NNCFGraph) -> Tensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> Tensor:
         """
         Returns the weight value for the node with weight.
 
         :param node_with_weight: The node with weight.
         :param model: The model that contains this operation.
-        :param port_id: The input port ID to get weight input.
         :param nncf_graph: NNCFGraph instance.
         :return: The weight value.
         """
@@ -141,7 +129,11 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: TTensor, source_output_port_id: int, nodes: list[NNCFNode]
+        source_node: NNCFNode,
+        scale_value: TTensor,
+        source_output_port_id: int,
+        nodes: list[NNCFNode],
+        scale_node_name: str,
     ) -> TransformationCommand:
         """
         Returns command to insert Smooth Quant node.
@@ -150,6 +142,7 @@ class SmoothQuantAlgoBackend(ABC):
         :param scale_value: Smooth Quant value.
         :param source_output_port_id: Output port for source node.
         :param nodes: List of consumers for Smooth node.
+        :param scale_node_name: Scale node name.
         :return: TransformationCommand instance.
         """
 
@@ -195,3 +188,50 @@ class SmoothQuantAlgoBackend(ABC):
         :param algorithm_key: Current algorithm key.
         :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
+
+    @staticmethod
+    def get_abs_max_reducer_cls() -> type[AbsMaxReducer]:
+        """
+        Returns the backend-specific `AbsMaxReducer` class.
+
+        :return: The `AbsMaxReducer` class.
+        """
+        return AbsMaxReducer
+
+    @staticmethod
+    def get_shape_reducer_cls() -> type[ShapeReducer]:
+        """
+        Returns the backend-specific `ShapeReducer` class.
+
+        :return: The `ShapeReducer` class.
+        """
+        return ShapeReducer
+
+    def calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> tuple[int]:
+        """
+        Returns reduction axes for specified input.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to check.
+        :param input_port: Specified input port id.
+        :return: Calculated reduction axes.
+        """
+        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
+        reduction_axes = tuple([])
+        if len(shape) > 1:
+            channel_axis = self.get_activation_channel_axis(node, input_port)
+            reduction_axes = get_reduction_axes((channel_axis,), shape)
+        return reduction_axes
+
+    def get_tensor_collector_axes(self, nncf_graph: NNCFGraph, node_to_smooth: NNCFNode, input_port: int):
+        """
+        Returns axes and axes mode required for tensor collector.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode to smooth.
+        :param input_port: Specified input port id.
+        :return: Axes and axes mode required for tensor collector.
+        """
+        axes_mode = AxesMode.REDUCTION
+        axes = self.calculate_input_reduction_axes(nncf_graph, node_to_smooth, input_port)
+        return axes_mode, axes

@@ -29,6 +29,7 @@ from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
+from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -326,6 +327,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     def get_RoPE_model() -> torch.fx.GraphModule:
         model = RoPEModel()
         ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_SAM_PE_model() -> torch.fx.GraphModule:
+        model = SAMPEModel()
+        ex_input = torch.ones(SAMPEModel.INPUT_SIZE, dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
