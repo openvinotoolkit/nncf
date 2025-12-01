@@ -12,15 +12,10 @@
 import pytest
 
 import nncf
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.symbolic_mask import AmbiguousSymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProducer
-from nncf.experimental.common.pruning.operations import ElementwisePruningOp
-from nncf.experimental.common.pruning.propagation_data import PropagationGroup
-from nncf.experimental.common.pruning.propagation_data import PropagationMask
-from nncf.experimental.common.pruning.propagation_data import PruningBlock
 
 
 @pytest.mark.parametrize("shape,raise_runtime_error", [(5, False), ([6], False), ([1, 2], True)])
@@ -134,40 +129,6 @@ def test_elementwise_mask_propagation_inconsistent_(consistent):
 def idfn(val):
     if isinstance(val, tuple):
         return "_".join(str(x) for x in val)
-
-
-@pytest.mark.parametrize(
-    "shape_1, shape_2, ref_dim",
-    (
-        ((10,), (1, 2, 10, 10), 1),
-        ((10, 10), (1, 2, 10, 10), 1),
-        ((1, 1, 1, 10), (1, 2, 10, 10), 1),
-        ((1, 1, 10, 10), (1, 2, 10, 10), 1),
-        ((1, 2, 10, 10), (1, 2, 10, 10), None),
-        ((1, 10), (10, 1), None),
-        ((1, 1, 1, 1, 10), (1, 2, 10, 10), 2),
-        ((1, 2, 1, 1, 10), (1, 2, 10, 10), None),
-        ((1, 1, 2, 1, 10), (1, 2, 10, 10), None),
-    ),
-    ids=idfn,
-)
-@pytest.mark.parametrize("in_port_1, in_port_2", ((1, 0), (0, 1)), ids=("direct", "revers"))
-def test_elementwise_mask_propagation_with_one_none_mask(shape_1, shape_2, ref_dim, in_port_1, in_port_2):
-    graph = NNCFGraph()
-    node_1 = graph.add_nncf_node("node_1", "", node_metatype=None)
-    node_2 = graph.add_nncf_node("node_2", "", node_metatype=None)
-    node_3 = graph.add_nncf_node("node_3", "", node_metatype=None)
-    graph.add_edge_between_nncf_nodes(node_1.node_id, node_3.node_id, shape_1, in_port_1, 0, float)
-    graph.add_edge_between_nncf_nodes(node_2.node_id, node_3.node_id, shape_2, in_port_2, 0, float)
-    node_1.attributes["output_mask"] = None
-    node_2.attributes["output_mask"] = PropagationMask({1: [PropagationGroup(PruningBlock())]})
-
-    ElementwisePruningOp.mask_propagation(node_3, graph, None)
-
-    if ref_dim is None:
-        assert node_3.attributes["output_mask"] is None
-    else:
-        assert ref_dim in node_3.attributes["output_mask"].dim_groups_map
 
 
 @pytest.mark.parametrize("consistent,out_shapes", [(True, [2, 2, 3]), (False, [2, 2, 4]), (False, [2, 2, 3, 0])])
