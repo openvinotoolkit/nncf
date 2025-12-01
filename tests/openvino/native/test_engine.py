@@ -13,7 +13,7 @@ from functools import wraps
 import numpy as np
 import pytest
 
-import nncf
+from nncf.definitions import NNCF_DATASET_RESET_STATE_KEY
 from nncf.openvino.engine import OVNativeEngine
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
@@ -95,10 +95,10 @@ def test_stateful_model_inference_with_controlled_resetting():
 
     model = StatefulModel(True).ov_model
     inp = model.get_parameters()[0]
-    input_data = [{"input_data": np.ones(inp.shape), nncf.Dataset.RESET_STATE_KEY: False} for _ in range(10)]
+    input_data = [{"input_data": np.ones(inp.shape), NNCF_DATASET_RESET_STATE_KEY: False} for _ in range(10)]
     reset_ind = [2, 5, 7]
     for ind in reset_ind:
-        input_data[ind][nncf.Dataset.RESET_STATE_KEY] = True
+        input_data[ind][NNCF_DATASET_RESET_STATE_KEY] = True
 
     engine = OVNativeEngine(model)
     reset_order = []

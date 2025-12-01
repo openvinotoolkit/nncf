@@ -30,6 +30,11 @@ class Dataset:
     usually contains both examples and labels. So transformation function should extract
     the examples from the data item.
 
+    A special input key nncf.definitions.NNCF_DATASET_RESET_STATE_KEY can be used by OpenVINO backend to control
+    resetting of internal model state between model inferences. This key can be added to a dataset sample input
+    dictionary with either `True` or `False` value. With `True` value, the model state will be reset before inference
+    on the corresponding sample, and with `False` the state will not be reset.
+
     :param data_source: The iterable object serving as the source of data items.
     :param transform_func: The function that is used to extract the model's input
         from the data item. The data item here is the data item that is returned from
@@ -37,12 +42,6 @@ class Dataset:
         the data item cannot be directly used as model's input. If this is not specified, then the data item
         will be passed into the model as-is.
     """
-
-    # RESET_STATE_KEY is a special input key used by OpenVINO backend to control resetting of internal model state
-    # between model inferences. This key can be added to a dataset sample input dictionary with either
-    # `True` or `False` value. With `True` value, the model state will be reset before inference on the corresponding
-    # sample, and with `False` the state will not be reset.
-    RESET_STATE_KEY = "nncf_reset_state"
 
     def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):
         self._data_source = data_source

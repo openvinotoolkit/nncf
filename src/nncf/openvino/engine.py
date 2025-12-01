@@ -16,8 +16,8 @@ import openvino as ov
 from openvino import Type
 from openvino.properties.hint import inference_precision
 
-import nncf
 from nncf.common.engine import Engine
+from nncf.definitions import NNCF_DATASET_RESET_STATE_KEY
 from nncf.openvino.graph.model_utils import model_has_state
 
 
@@ -44,10 +44,10 @@ class OVCompiledModelEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        if isinstance(input_data, dict) and nncf.Dataset.RESET_STATE_KEY in input_data:
+        if isinstance(input_data, dict) and NNCF_DATASET_RESET_STATE_KEY in input_data:
             # In this case state resetting is controlled by the input data flag
             input_data = input_data.copy()
-            if input_data.pop(nncf.Dataset.RESET_STATE_KEY):
+            if input_data.pop(NNCF_DATASET_RESET_STATE_KEY):
                 if self.reset_state:
                     self.infer_request.reset_state()
                 else:
