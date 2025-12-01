@@ -78,6 +78,7 @@ class CodebookEstimation:
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        apply_per_group: bool = True,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates better codebook.
@@ -97,6 +98,10 @@ class CodebookEstimation:
         self._backend_entity = backend_entity
         if self._backend_entity is None:
             self._set_backend_entity(model)
+
+        if apply_per_group:
+            return self.apply_per_group(model, graph, all_weight_params, statistics, backend_entity)
+
         res = dict()
 
         for wp in track(all_weight_params, description="Applying Codebook Estimation"):
@@ -122,6 +127,85 @@ class CodebookEstimation:
             config.codebook_values = codebook
 
         return res
+
+    def apply_per_group(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        all_weight_params: list[WeightCompressionParameters],
+        statistics: dict[str, WCTensorStatistic],
+        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+    ) -> dict[str, CompressedWeight]:
+        """
+        Estimates better codebook for group of weights grouped by name: down_proj, up_proj, etc.
+        Minimizes difference between floating point MatMul and
+        MatMul with compressed weights.
+        The algorithm computes codebook and indexes for MatMul compression.
+
+        :param model: Model for applying algorithm.
+        :param graph: Model graph.
+        :param all_weight_params: List of all weight parameters.
+        :param statistics: Input activation statistics for each node.
+        :param statistic_points: Statistic points with collected statistics values.
+        :param dataset: A representative dataset for the calibration process.
+        :param backend_entity: Weight compression algorithm backend.
+        :return: A dictionary that maps weight names to CompressedWeight with codebook, codebook indexes and scale.
+        """
+        self._backend_entity = backend_entity
+        if self._backend_entity is None:
+            self._set_backend_entity(model)
+        res = dict()
+
+        for wp in track(all_weight_params, description="Applying Codebook Estimation"):
+            weight_name = wp.weight_name
+            node_name = wp.node_with_weight.node_name
+            config = wp.compression_config
+
+            if weight_name in res:
+                continue
+
+            if config.num_bits != 4:  # or node_name not in statistics:
+                res[weight_name] = CompressedWeight()
+                continue
+
+            weight = self.get_weight(model, graph, wp)
+            if weight is None:
+                continue
+
+            weights = [weight]
+            stats = [statistics[node_name]]
+            group_weights_params = [wp]
+
+            clear_weight_name = "".join(filter(lambda x: x.isalpha(), weight_name))
+
+            for other_wp in all_weight_params:
+                if other_wp.weight_name == weight_name:
+                    continue
+                other_weight_name = "".join(filter(lambda x: x.isalpha(), other_wp.weight_name))
+                other_node_name = other_wp.node_with_weight.node_name
+
+                if clear_weight_name == other_weight_name:
+                    other_weight = self.get_weight(model, graph, other_wp)
+                    if other_weight is not None:
+                        weights.append(other_weight)
+                        stats.append(statistics[other_node_name])
+                        group_weights_params.append(other_wp)
+
+            codebook, scale, indexes = self.calculate_codebook_for_group(stats, weights, wp.reduction_axes, config, wp)
+
+            for i, gwp in enumerate(group_weights_params):
+                res[gwp.weight_name] = CompressedWeight(indexes[i], scale[i], None, codebook)
+                gwp.compression_config.codebook_values = codebook
+
+        return res
+
+    def get_weight(self, model: TModel, graph: NNCFGraph, wp: WeightCompressionParameters) -> Tensor:
+        weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
+        if len(weight_data) != 1:  # not supported by the algorithm
+            return None
+        _, weight_port_id = weight_data[0]
+
+        return self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
     @staticmethod
     def calculate_codebook(
@@ -175,6 +259,70 @@ class CodebookEstimation:
                 best_codebook = var
 
         return Tensor(best_codebook), None, None
+
+    @staticmethod
+    def calculate_codebook_for_group(
+        statistics: list[WCTensorStatistic],
+        weights: list[Tensor],
+        reduction_axes: tuple[int, ...],
+        config: WeightCompressionConfig,
+        wp: WeightCompressionParameters,
+    ) -> Tensor:
+        reduction_axis = reduction_axes[0]
+
+        norm_weight = []
+        importances = []
+        Xs = []
+
+        for stat, weight in zip(statistics, weights):
+            weight = deepcopy(weight.astype(TensorDataType.float32))
+            s, X = process_stats(stat, 128)
+            Xs.append(X)
+
+            if reduction_axis == 0:
+                weight = fns.transpose(weight)
+                reduction_axis = 1
+
+            if config.group_size != -1:
+                weight, reduction_axes = reshape_weight_for_grouped_quantization(
+                    weight, reduction_axes, config.group_size
+                )
+
+            importance = fns.ones_like(weight)
+            importance = importance * s
+            importances.append(importance)
+
+            scale = calculate_float_quantization_params(weight, reduction_axes, config, signed=False)
+            norm_weight.append(_calculate_normalized_weight(weight, scale))
+
+        norm_weight = fns.concatenate(norm_weight, axis=0)
+        importance = fns.concatenate(importances, axis=0)
+
+        codebook, _, variants = weights_clusterization_k_means(norm_weight, importance)
+
+        best_codebook = codebook.as_openvino_tensor().astype(TensorDataType.float16)  # )f8e4m3)
+
+        fp_outs = fns.matmul(weight, X)
+        diff = float("inf")
+
+        variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
+        variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
+
+        for var in variants:
+            var = var.as_openvino_tensor().astype(TensorDataType.float16)  # f8e4m3)
+            config.codebook_values = Tensor(var)
+
+            cur_diff = 0.0
+            for weight, X in zip(weights, Xs):
+                qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
+                q_outs = fns.matmul(qw, X)
+                cur_diff += fns.mean(fns.abs(fp_outs - q_outs)).item()
+
+            if cur_diff < diff:
+                diff = cur_diff
+                best_codebook = var
+
+        return Tensor(best_codebook), [None] * len(weights), [None] * len(weights)
 
 
 def round_to_left(quantiles, values):
