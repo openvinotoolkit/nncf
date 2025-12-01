@@ -1,7 +1,6 @@
 fastdownload==0.0.7
 onnx==1.17.0
-openvino==2025.4.0.*
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
+openvino==2025.4.0
 pycocotools==2.0.7
 torch==2.9.0
 torchmetrics==1.0.1
