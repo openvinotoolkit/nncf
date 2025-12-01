@@ -1,0 +1,53 @@
+strict digraph {
+0 [label="Block: S:1__O:0
+Producers: 19
+Consumers: ", color=red, style=filled];
+1 [label="Block: S:1__O:0
+Producers: 29
+Consumers: ", color=grey, style=filled];
+2 [label="Block: S:24__O:0
+Producers: 29
+Consumers: ", color=red, style=filled];
+3 [label="Block: S:1__O:24
+Producers: 29
+Consumers: ", color=red, style=filled];
+4 [label="Block: S:1__O:0
+Producers: 32
+Consumers: ", color=grey, style=filled];
+5 [label="Block: S:24__O:0
+Producers: 32
+Consumers: ", color=red, style=filled];
+6 [label="Block: S:1__O:24
+Producers: 32
+Consumers: ", color=red, style=filled];
+7 [label="Block: S:1__O:0
+Producers: 35
+Consumers: ", color=grey, style=filled];
+8 [label="Block: S:24__O:0
+Producers: 35
+Consumers: ", color=red, style=filled];
+9 [label="Block: S:1__O:24
+Producers: 35
+Consumers: ", color=red, style=filled];
+10 [label="Block: S:1__O:0
+Producers: 46
+Consumers: ", color=red, style=filled];
+11 [label="Block: S:1__O:0
+Producers: 50
+Consumers: 53", color=green, style=filled];
+12 [label="Block: S:1__O:0
+Producers: 53
+Consumers: ", color=red, style=filled];
+13 [label="Block: S:1__O:0
+Producers: 57
+Consumers: ", color=red, style=filled];
+14 [label="Block: S:1__O:0
+Producers: 59
+Consumers: ", color=red, style=filled];
+1 -> 2;
+1 -> 3;
+4 -> 5;
+4 -> 6;
+7 -> 8;
+7 -> 9;
+}

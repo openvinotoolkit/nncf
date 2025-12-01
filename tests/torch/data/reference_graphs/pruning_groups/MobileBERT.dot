@@ -1,0 +1,120 @@
+strict digraph  {
+0 [color=red, label="Block: S:1__O:0
+Producers: 9
+Consumers: ", style=filled];
+1 [color=grey, label="Block: S:1__O:0
+Producers: 17
+Consumers: ", style=filled];
+2 [color=grey, label="Block: S:1__O:0
+Producers: 17,42
+Consumers: 46", style=filled];
+3 [color=grey, label="Block: S:1__O:0
+Producers: 17,42,48
+Consumers: 46,52", style=filled];
+4 [color=grey, label="Block: S:1__O:0
+Producers: 17,42,48,54
+Consumers: 46,52,58", style=filled];
+5 [color=grey, label="Block: S:1__O:0
+Producers: 17,42,48,54,60
+Consumers: 46,52,58,64", style=filled];
+6 [color=green, label="Block: S:1__O:0
+Producers: 17,42,48,54,60,66
+Consumers: 46,52,58,64,70", style=filled];
+7 [color=green, label="Block: S:1__O:0
+Producers: 20
+Consumers: 23,24", style=filled];
+8 [color=grey, label="Block: S:1__O:0
+Producers: 23
+Consumers: ", style=filled];
+9 [color=grey, label="Block: S:64__O:0
+Producers: 23
+Consumers: ", style=filled];
+10 [color=grey, label="Block: S:64__O:0
+Producers: 23,24
+Consumers: ", style=filled];
+11 [color=green, label="Block: S:64__O:0
+Producers: 23,24,25
+Consumers: 42", style=filled];
+12 [color=grey, label="Block: S:1__O:64
+Producers: 23
+Consumers: ", style=filled];
+13 [color=green, label="Block: S:1__O:64
+Producers: 23,24
+Consumers: 33", style=filled];
+14 [color=grey, label="Block: S:1__O:0
+Producers: 24
+Consumers: ", style=filled];
+15 [color=grey, label="Block: S:64__O:0
+Producers: 24
+Consumers: ", style=filled];
+16 [color=grey, label="Block: S:1__O:64
+Producers: 24
+Consumers: ", style=filled];
+17 [color=grey, label="Block: S:1__O:0
+Producers: 25
+Consumers: ", style=filled];
+18 [color=grey, label="Block: S:64__O:0
+Producers: 25
+Consumers: ", style=filled];
+19 [color=green, label="Block: S:1__O:64
+Producers: 25
+Consumers: 42", style=filled];
+20 [color=grey, label="Block: S:1__O:0
+Producers: 42
+Consumers: ", style=filled];
+21 [color=green, label="Block: S:1__O:0
+Producers: 46
+Consumers: 48", style=filled];
+22 [color=grey, label="Block: S:1__O:0
+Producers: 48
+Consumers: ", style=filled];
+23 [color=green, label="Block: S:1__O:0
+Producers: 52
+Consumers: 54", style=filled];
+24 [color=grey, label="Block: S:1__O:0
+Producers: 54
+Consumers: ", style=filled];
+25 [color=green, label="Block: S:1__O:0
+Producers: 58
+Consumers: 60", style=filled];
+26 [color=grey, label="Block: S:1__O:0
+Producers: 60
+Consumers: ", style=filled];
+27 [color=green, label="Block: S:1__O:0
+Producers: 64
+Consumers: 66", style=filled];
+28 [color=grey, label="Block: S:1__O:0
+Producers: 66
+Consumers: ", style=filled];
+29 [color=red, label="Block: S:1__O:0
+Producers: 70
+Consumers: ", style=filled];
+30 [color=green, label="Block: S:1__O:0
+Producers: 76
+Consumers: 79", style=filled];
+31 [color=red, label="Block: S:1__O:0
+Producers: 79
+Consumers: ", style=filled];
+1 -> 2;
+2 -> 3;
+3 -> 4;
+4 -> 5;
+5 -> 6;
+8 -> 9;
+8 -> 12;
+9 -> 10;
+10 -> 11;
+12 -> 13;
+14 -> 15;
+14 -> 16;
+15 -> 10;
+16 -> 13;
+17 -> 18;
+17 -> 19;
+18 -> 11;
+20 -> 2;
+22 -> 3;
+24 -> 4;
+26 -> 5;
+28 -> 6;
+}

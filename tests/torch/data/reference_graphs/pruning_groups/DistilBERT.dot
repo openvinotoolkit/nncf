@@ -1,0 +1,47 @@
+strict digraph  {
+0 [color=grey, label="Block: S:1__O:0
+Producers: 8
+Consumers: ", style=filled];
+1 [color=red, label="Block: S:2__O:0
+Producers: 8
+Consumers: ", style=filled];
+2 [color=red, label="Block: S:1__O:2
+Producers: 8
+Consumers: ", style=filled];
+3 [color=grey, label="Block: S:1__O:0
+Producers: 11
+Consumers: ", style=filled];
+4 [color=red, label="Block: S:2__O:0
+Producers: 11
+Consumers: ", style=filled];
+5 [color=red, label="Block: S:1__O:2
+Producers: 11
+Consumers: ", style=filled];
+6 [color=grey, label="Block: S:1__O:0
+Producers: 14
+Consumers: ", style=filled];
+7 [color=red, label="Block: S:2__O:0
+Producers: 14
+Consumers: ", style=filled];
+8 [color=red, label="Block: S:1__O:2
+Producers: 14
+Consumers: ", style=filled];
+9 [color=red, label="Block: S:1__O:0
+Producers: 21
+Consumers: ", style=filled];
+10 [color=green, label="Block: S:1__O:0
+Producers: 24
+Consumers: 26", style=filled];
+11 [color=red, label="Block: S:1__O:0
+Producers: 26
+Consumers: ", style=filled];
+12 [color=red, label="Block: S:1__O:0
+Producers: 31
+Consumers: ", style=filled];
+0 -> 1;
+0 -> 2;
+3 -> 4;
+3 -> 5;
+6 -> 7;
+6 -> 8;
+}
