@@ -3,5 +3,5 @@ torchvision==0.24.0
 fastdownload==0.0.7
 onnx==1.17.0
 onnxruntime==1.21.1
-openvino==2025.3.0
+openvino==2025.4.0
 numpy<2
