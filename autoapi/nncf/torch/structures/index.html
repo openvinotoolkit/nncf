@@ -296,21 +296,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.structures.QuantizationPrecisionInitArgs" title="nncf.torch.structures.QuantizationPrecisionInitArgs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPrecisionInitArgs</span></code></a></p></td>
 <td><p>Stores arguments for initialization of quantization's bitwidth.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.torch.structures.AutoQPrecisionInitArgs" title="nncf.torch.structures.AutoQPrecisionInitArgs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AutoQPrecisionInitArgs</span></code></a></p></td>
-<td><p><dl class="field-list simple">
-<dt class="field-odd">param data_loader<span class="colon">:</span></dt>
-<dd class="field-odd"><p>'data_loader' - provides an iterable over the given dataset. Instance of</p>
-</dd>
-</dl>
-</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.structures.LeGRInitArgs" title="nncf.torch.structures.LeGRInitArgs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LeGRInitArgs</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.torch.structures.LeGRInitArgs" title="nncf.torch.structures.LeGRInitArgs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LeGRInitArgs</span></code></a></p></td>
 <td><p>Stores arguments for learning global ranking in pruning algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.torch.structures.DistributedCallbacksArgs" title="nncf.torch.structures.DistributedCallbacksArgs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DistributedCallbacksArgs</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.structures.DistributedCallbacksArgs" title="nncf.torch.structures.DistributedCallbacksArgs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DistributedCallbacksArgs</span></code></a></p></td>
 <td><p>A pair of callbacks that is needed for distributed training of the model: wrapping model with wrapping_callback for</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.structures.ExecutionParameters" title="nncf.torch.structures.ExecutionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ExecutionParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.torch.structures.ExecutionParameters" title="nncf.torch.structures.ExecutionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ExecutionParameters</span></code></a></p></td>
 <td><p>Parameters that are necessary for distributed training of the model.</p></td>
 </tr>
 </tbody>
@@ -355,35 +347,6 @@ use the device of the model’s parameters.</p></li>
 <li><p><strong>criterion_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Any</em><em>, </em><em>torch.nn.modules.loss._Loss</em><em>]</em><em>, </em><em>torch.Tensor</em><em>]</em>) – </p></li>
 <li><p><strong>criterion</strong> (<em>torch.nn.modules.loss._Loss</em>) – </p></li>
 <li><p><strong>data_loader</strong> (<em>torch.utils.data.DataLoader</em>) – </p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="nncf.torch.structures.AutoQPrecisionInitArgs">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.torch.structures.</span></span><span class="sig-name descname"><span class="pre">AutoQPrecisionInitArgs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_loader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eval_fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nncf_config</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/structures.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.structures.AutoQPrecisionInitArgs" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.config.structures.NNCFExtraConfigStruct</span></code></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data_loader</strong> (<em>torch.utils.data.DataLoader</em>) – <dl class="simple">
-<dt>‘data_loader’ - provides an iterable over the given dataset. Instance of</dt><dd><p>nncf.initialization.PTInitializingDataLoader; a regular ‘torch.utils.data.DataLoader’ may
-also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.</p>
-</dd>
-</dl>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The final quantizer setup of the created compressed model is dependent on the data
-provided by the data_loader. When using PyTorch’s DistributedDataParallel with precision
-initialization, make sure that each process in the distributed group receives the same data
-from the data_loader as the other processes, otherwise the create_compressed_model call may
-create different compressed model objects for each distributed process and the distributed training
-will fail.</p>
-</div>
-</p></li>
-<li><p><strong>eval_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>torch.nn.Module</em><em>, </em><em>torch.utils.data.DataLoader</em><em>]</em><em>, </em><em>float</em><em>]</em>) – </p></li>
-<li><p><strong>nncf_config</strong> (<a class="reference internal" href="../../index.html#nncf.NNCFConfig" title="nncf.NNCFConfig"><em>nncf.NNCFConfig</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -501,7 +464,6 @@ example, torch.nn.DataParallel or any custom class), returns wrapped model ready
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.structures</span></code></a><ul>
 <li><a class="reference internal" href="#classes">Classes</a><ul>
 <li><a class="reference internal" href="#nncf.torch.structures.QuantizationPrecisionInitArgs"><code class="docutils literal notranslate"><span class="pre">QuantizationPrecisionInitArgs</span></code></a></li>
-<li><a class="reference internal" href="#nncf.torch.structures.AutoQPrecisionInitArgs"><code class="docutils literal notranslate"><span class="pre">AutoQPrecisionInitArgs</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.structures.LeGRInitArgs"><code class="docutils literal notranslate"><span class="pre">LeGRInitArgs</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.structures.DistributedCallbacksArgs"><code class="docutils literal notranslate"><span class="pre">DistributedCallbacksArgs</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.structures.ExecutionParameters"><code class="docutils literal notranslate"><span class="pre">ExecutionParameters</span></code></a></li>
