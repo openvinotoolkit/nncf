@@ -56,7 +56,6 @@ learning frameworks.
 | [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
 | [Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md)                                                               | Supported    |
 | [Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md)                                                          | Supported    |
-| [Movement pruning](./src/nncf/experimental/torch/sparsity/movement/MovementSparsity.md)                                                       | Experimental |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
 - Common interface for compression methods.
