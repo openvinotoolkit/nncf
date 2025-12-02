@@ -581,6 +581,10 @@ used as input for model inference, the transformation function is used to extrac
 model’s input from this data item. For example, in supervised learning, the data item
 usually contains both examples and labels. So transformation function should extract
 the examples from the data item.</p>
+<p>A special input key nncf.definitions.NNCF_DATASET_RESET_STATE_KEY can be used by OpenVINO backend to control
+resetting of internal model state between model inferences. This key can be added to a dataset sample input
+dictionary with either <cite>True</cite> or <cite>False</cite> value. With <cite>True</cite> value, the model state will be reset before inference
+on the corresponding sample, and with <cite>False</cite> the state will not be reset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
