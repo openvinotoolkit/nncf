@@ -300,7 +300,7 @@ class CodebookEstimation:
 
         codebook, _, variants = weights_clusterization_k_means(norm_weight, importance)
 
-        best_codebook = codebook.as_openvino_tensor().astype(TensorDataType.float16)  # )f8e4m3)
+        best_codebook = codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3)
 
         fp_outs = fns.matmul(weight, X)
         diff = float("inf")
@@ -309,7 +309,7 @@ class CodebookEstimation:
         variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
 
         for var in variants:
-            var = var.as_openvino_tensor().astype(TensorDataType.float16)  # f8e4m3)
+            var = var.as_openvino_tensor().astype(TensorDataType.f8e4m3)
             config.codebook_values = Tensor(var)
 
             cur_diff = 0.0
@@ -410,10 +410,17 @@ class KMeansWeighted:
         res[2].append(fns.sum(importance).item())
 
     @staticmethod
-    def create_histogramm_sorted(data_, importance, granularity=0.01):
+    def create_histogramm_sorted(data_, importance, intervals=100000):
         centers = []
         ranges = []
-        step = data_.max().item() * granularity / 3.5
+
+        if data_.size < intervals:
+            intervals = data_.size // 2 + 1
+
+        step = data_.max().item() - data_.min().item()
+        step /= intervals
+
+        print("Ration of data range to intervals:", data_.shape, intervals, step)
 
         sorted_idx = fns.argsort(data_)
         data = data_[sorted_idx]
