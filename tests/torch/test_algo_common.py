@@ -398,7 +398,7 @@ def test_compression_loss_gpu_device_compatibility(config):
     compression_ctrl.loss()
 
 
-NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm", "elasticity", "progressive_shrinking"]
+NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm", "elasticity", "progressive_shrinking"]
 
 
 @pytest.mark.parametrize("algo_name", sorted(PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO))
@@ -455,7 +455,6 @@ ALGOS_SUPPORTING_SINGLE_LINE_CONFIGS = [
     for x in sorted(PT_COMPRESSION_ALGORITHMS.registry_dict.keys())
     if x
     not in [
-        "knowledge_distillation",
         "movement_sparsity",
         "elasticity",
         "progressive_shrinking",
