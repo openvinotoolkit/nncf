@@ -40,7 +40,6 @@ from nncf.torch.sparsity.const import algo as const_sparsity_algo
 from nncf.torch.sparsity.magnitude import algo as magnitude_sparsity_algo
 from nncf.torch.sparsity.rb import algo as rb_sparsity_algo
 from nncf.torch.pruning.filter_pruning import algo as filter_pruning_algo
-from nncf.torch.knowledge_distillation import algo as knowledge_distillation_algo
 
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience

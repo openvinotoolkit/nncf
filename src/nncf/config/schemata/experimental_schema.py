@@ -12,7 +12,6 @@
 import copy
 
 from nncf.config.definitions import EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
-from nncf.config.definitions import MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.schemata.algo.quantization import QUANTIZATION_SCHEMA
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import BOOLEAN
@@ -20,9 +19,6 @@ from nncf.config.schemata.basic import NUMBER
 from nncf.config.schemata.basic import STRING
 from nncf.config.schemata.basic import make_string_or_array_of_strings_schema
 from nncf.config.schemata.basic import with_attributes
-from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
-from nncf.config.schemata.common.compression import COMPRESSION_LR_MULTIPLIER_PROPERTY
-from nncf.config.schemata.common.targeting import SCOPING_PROPERTIES
 
 ########################################################################################################################
 # Experimental Quantization
@@ -118,28 +114,10 @@ MOVEMENT_SCHEDULER_PARAMS_SCHEMA = {
     ],
 }
 
-
-MOVEMENT_SPARSITY_SCHEMA = {
-    **BASIC_COMPRESSION_ALGO_SCHEMA,
-    "properties": {
-        "algorithm": {"const": MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG},
-        "params": MOVEMENT_SCHEDULER_PARAMS_SCHEMA,
-        "sparse_structure_by_scopes": {
-            "type": "array",
-            "items": MOVEMENT_SPARSE_STRUCTURE_BY_SCOPES_SCHEMA,
-            "description": "Describes how each supported layer will be sparsified.",
-        },
-        **SCOPING_PROPERTIES,
-        **COMPRESSION_LR_MULTIPLIER_PROPERTY,
-    },
-    "additionalProperties": False,
-}
-
 ########################################################################################################################
 # All experimental schemas
 ########################################################################################################################
 
 EXPERIMENTAL_REF_VS_ALGO_SCHEMA = {
     EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG: EXPERIMENTAL_QUANTIZATION_SCHEMA,
-    MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG: MOVEMENT_SPARSITY_SCHEMA,
 }
