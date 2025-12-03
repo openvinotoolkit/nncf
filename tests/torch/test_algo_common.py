@@ -11,12 +11,10 @@
 import copy
 import logging
 import os
-from functools import reduce
 
 import onnx
 import pytest
 import torch
-from torch import cuda
 from torch import nn
 
 import nncf
@@ -32,8 +30,6 @@ from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.pruning.helpers import get_basic_pruning_config
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
-from tests.torch.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
-from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 
 pytestmark = pytest.mark.legacy
@@ -58,12 +54,6 @@ class BasicTestModelWithTwoInputOutput(nn.Module):
         return self.fc0(x0), self.fc1(x1)
 
 
-def get_const_sparsity_config():
-    config = get_empty_config()
-    config["compression"] = {"algorithm": "const_sparsity"}
-    return config
-
-
 def get_basic_asym_quantization_config(model_size=4):
     config = get_quantization_config_without_range_init(model_size)
     config["compression"]["activations"] = {"mode": "asymmetric"}
@@ -83,12 +73,9 @@ def get_filter_pruning_config():
     (
         get_quantization_config_without_range_init,
         get_basic_asym_quantization_config,
-        get_basic_sparsity_config,
-        get_basic_magnitude_sparsity_config,
-        get_const_sparsity_config,
         get_filter_pruning_config,
     ),
-    ids=("SymQuantization", "AsymQuantization", "Sparsity", "MagnitudeSparsity", "ConstSparsity", "FilterPruning"),
+    ids=("SymQuantization", "AsymQuantization", "FilterPruning"),
 )
 @pytest.mark.parametrize("model_provider", (ConvRelu6HSwishHSigmoid, BasicLinearTestModel), ids=("Conv2d", "Linear"))
 class TestCompressionAlgos:
@@ -110,10 +97,9 @@ class TestCompressionAlgos:
 @pytest.mark.parametrize(
     ("config_provider", "mask_getter"),
     [
-        (get_basic_sparsity_config, lambda x: x.mask),
         (get_filter_pruning_config, lambda x: x.binary_filter_pruning_mask),
     ],
-    ids=("sparsity", "filter_pruning"),
+    ids=("filter_pruning",),
 )
 def test_no_weight_override_on_pruning_export(tmp_path, config_provider, mask_getter):
     test_path = str(tmp_path.joinpath("test.onnx"))
@@ -350,52 +336,6 @@ def change_compression_algorithms_order(config):
     shifted_config_compression = shift_list(config_compression)
     config.update({"compression": shifted_config_compression})
     return config
-
-
-def get_basic_rb_sparsity_int8_config():
-    config = get_basic_sparsity_config()
-    config.update(
-        {
-            "compression": [
-                {
-                    "algorithm": "rb_sparsity",
-                    "sparsity_init": 0.02,
-                    "params": {
-                        "schedule": "polynomial",
-                        "sparsity_target": 0.5,
-                        "sparsity_target_epoch": 2,
-                        "sparsity_freeze_epoch": 3,
-                    },
-                },
-                {"algorithm": "quantization"},
-            ]
-        }
-    )
-    return config
-
-
-comp_loss_configs = [
-    get_basic_rb_sparsity_int8_config(),
-    change_compression_algorithms_order(get_basic_rb_sparsity_int8_config()),
-]
-
-
-@pytest.mark.cuda
-@pytest.mark.parametrize(
-    "config",
-    comp_loss_configs,
-    ids=[
-        reduce(lambda x, y: x + "_" + y.get("algorithm", ""), config.get("compression", []), "compression")
-        for config in comp_loss_configs
-    ],
-)
-@pytest.mark.skipif(not cuda.is_available(), reason="Since its GPU test, no need to run this without GPUs available")
-def test_compression_loss_gpu_device_compatibility(config):
-    model = BasicConvTestModel()
-    model.to(cuda.current_device())
-    register_bn_adaptation_init_args(config)
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    compression_ctrl.loss()
 
 
 NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm", "elasticity", "progressive_shrinking"]
