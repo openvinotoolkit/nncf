@@ -183,8 +183,8 @@ class AWQ(Algorithm):
                     prev_statistics = statistics[merge_node.node_name]
                 scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
 
-            w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
-            a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
+            w_scale = fns.unsqueeze(scale, -1 - wp.reduction_axes[0])
+            a_scale = fns.unsqueeze(1.0 / scale, -wp.reduction_axes[0])
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
@@ -194,9 +194,9 @@ class AWQ(Algorithm):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
-                a_scale = fns.transpose(a_scale)
+                a_scale = fns.moveaxis(a_scale, -1, -2)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.transpose(a_scale).astype(weight_dtype)
+                a_scale = fns.moveaxis(a_scale, -1, -2).astype(weight_dtype)
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
                 scale_insertion_command = self._backend_entity.scale_insertion_command(
@@ -217,6 +217,8 @@ class AWQ(Algorithm):
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
 
+        is_2d_weight = weight.ndim == 2
+
         assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
         reduction_axis = wp.reduction_axes[0]
 
@@ -224,41 +226,53 @@ class AWQ(Algorithm):
         if prev_statistics is not None and prev_weight is not None:
             prev_s, _ = process_stats(prev_statistics, self._subset_size)
             prev_s = prev_s.astype(TensorDataType.float32).max().item()
-            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
+            prev_weight = fns.unsqueeze(prev_weight, 0)  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
+            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis + 1)
 
-        top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
-        topk_idxs = fns.argsort(-s)[:top_k]
+        if is_2d_weight:
+            s = fns.unsqueeze(s, 0)  # [hidden_dim] -> [1, hidden_dim]
+            X = fns.unsqueeze(X, 0)  # [hidden_dim, samples] -> [1, hidden_dim, samples]
+            weight = fns.unsqueeze(weight, 0)  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
+            reduction_axis += 1
+
+        top_k = max(int(s.shape[-1] * self._percent_to_apply), 1)
+        topk_idxs = fns.argsort(-s)[:, :top_k]
 
         group_size = config.group_size
         if group_size == -1:
-            group_size = s.shape[0]
+            group_size = s.shape[-1]
 
         groups_to_correct = set()
-        for idx in topk_idxs:
-            groups_to_correct.add(idx.data // group_size)
+        for expert_idx in range(topk_idxs.shape[0]):
+            for k_idx in range(topk_idxs.shape[1]):
+                idx = topk_idxs[expert_idx, k_idx].item()
+                group_idx = idx // group_size
+                groups_to_correct.add((expert_idx, group_idx))
 
         groups_to_correct = list(groups_to_correct)
 
-        if reduction_axis == 0:
-            weight = fns.transpose(weight)
-            reduction_axis = 1
+        if reduction_axis == 1:
+            # Weights
+            # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
+            # 2D: [1, hidden_dimension, out_features] -> [1, out_features, hidden_dimension]
+            weight = fns.moveaxis(weight, -1, -2)
+            reduction_axis = weight.ndim - 1
 
-        shape_vector = fns.mean(X, axis=1)
+        shape_vector = fns.mean(X, axis=-1)
         scale = fns.ones_like(shape_vector)
 
         awq_config = deepcopy(config)
         awq_config.group_size = -1
 
-        for gi in groups_to_correct:
+        for expert_idx, gi in groups_to_correct:
             offset = gi * group_size
-            gscale = s[offset : offset + group_size]
+            gscale = s[expert_idx, offset : offset + group_size]
+            gweight = weight[expert_idx, :, offset : offset + group_size]
+            gacts = X[expert_idx, offset : offset + group_size, :]
 
             a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
             a_max = 1e2
             gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
-
-            gweight = weight[:, offset : offset + group_size]
-            gacts = X[offset : offset + group_size, :]
 
             fp32_out = fns.matmul(gweight, gacts)
             min_diff = fns.max(fns.abs(fp32_out))
@@ -275,14 +289,16 @@ class AWQ(Algorithm):
                     # per channel magnitudes for the previous MatMul
                     # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
                     magnitudes = (
-                        (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
+                        (prev_w[expert_idx, offset : offset + group_size] / cur_scale)
+                        * prev_s
+                        * prev_weight.shape[reduction_axis]
                     )
                     if magnitudes.max() >= threshold:
                         cur_scale = AWQ._clamp_scale(
                             magnitudes,
                             threshold,
                             cur_scale,
-                            prev_w[offset : offset + group_size]
+                            prev_w[expert_idx, offset : offset + group_size]
                             * prev_s
                             * prev_weight.shape[reduction_axis]
                             / threshold,
@@ -290,13 +306,9 @@ class AWQ(Algorithm):
 
                 weights_to_fake_quantize = gweight * cur_scale
                 if not config.is_integer:
-                    g_decompressed_weighs = float_quantize_dequantize_weight(
-                        weights_to_fake_quantize, awq_config, reduction_axis
-                    )
+                    g_decompressed_weighs = float_quantize_dequantize_weight(weights_to_fake_quantize, awq_config, -1)
                 else:
-                    g_decompressed_weighs = integer_quantize_dequantize_weight(
-                        weights_to_fake_quantize, awq_config, reduction_axis
-                    )
+                    g_decompressed_weighs = integer_quantize_dequantize_weight(weights_to_fake_quantize, awq_config, -1)
                 sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                 cur_out = fns.matmul(g_decompressed_weighs, sacts)
@@ -307,7 +319,10 @@ class AWQ(Algorithm):
                 alpha += alpha_step
 
             if best_scale is not None:
-                scale.data[offset : offset + group_size] = best_scale.data
+                scale.data[expert_idx, offset : offset + group_size] = best_scale.data
+
+        if is_2d_weight:
+            scale = fns.squeeze(scale, 0)  # [1, hidden_dim] -> [hidden_dim]
 
         return scale
 
