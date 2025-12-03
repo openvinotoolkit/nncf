@@ -26,7 +26,7 @@ No *compression* in the sense of archiving or entropy coding is being done durin
 
 ### How does your compression make inference faster?
 
-General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization, filter pruning and knowledge distillation) are applied, with Intel HW/runtime specifics in mind.
+General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization and filter pruning) are applied, with Intel HW/runtime specifics in mind.
 
 An overview of some of those can be found in the [following paper](https://arxiv.org/abs/2002.08679).
 
@@ -79,8 +79,7 @@ It is recommended, although by no means mandatory, to pass a dataloader with the
 ### The compression process takes too long, how can I make it faster?
 
 For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here.
-Try the built-in [knowledge distillation](./usage/training_time_compression/other_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
-Alternatively you may want to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
+Try to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
 
 ### I get a "CUDA out of memory" error when running NNCF in the compression-aware training approach, although the original model to be compressed runs and trains fine without NNCF
 

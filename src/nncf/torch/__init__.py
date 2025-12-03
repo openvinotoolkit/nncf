@@ -37,7 +37,6 @@ if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
 from nncf.torch.quantization import algo as quantization_algo
 from nncf.torch.pruning.filter_pruning import algo as filter_pruning_algo
-from nncf.torch.knowledge_distillation import algo as knowledge_distillation_algo
 
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience

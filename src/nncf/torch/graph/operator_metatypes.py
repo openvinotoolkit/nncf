@@ -700,6 +700,12 @@ class PTMeanMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTMedianMetatype(PTOperatorMetatype):
+    name = "MedianOp"
+    module_to_function_names = {NamespaceTarget.ATEN: ["median"]}
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTRoundMetatype(PTOperatorMetatype):
     name = "RoundOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["round"]}
@@ -746,6 +752,16 @@ class PTBatchNormMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTAvgPool1dMetatype(PTOperatorMetatype):
+    name = "AvgPool1DOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool1d", "adaptive_avg_pool1d"],
+        NamespaceTarget.ATEN: ["adaptive_avg_pool1d"],
+    }
+    hw_config_names = [HWConfigOpName.AVGPOOL]
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTAvgPool2dMetatype(PTOperatorMetatype):
     name = "AvgPool2DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool2d", "adaptive_avg_pool2d"]}
@@ -759,6 +775,7 @@ class PTAvgPool3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
+@PT_OPERATOR_METATYPES.register()
 class PTAdaptiveMaxPool1dMetatype(PTOperatorMetatype):
     name = "AdaptiveMaxPool1DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["adaptive_max_pool1d"]}
@@ -963,6 +980,14 @@ class PTEmbeddingBagMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
     subtypes = [PTModuleEmbeddingBagMetatype]
     weight_port_ids = [1]
+
+
+@FX_OPERATOR_METATYPES.register()
+class PTAtenEmbeddingBagMetatype(OperatorMetatype):
+    name = "EmbeddingBagOp"
+    module_to_function_names = {NamespaceTarget.ATEN: ["embedding_bag"]}
+    hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
+    weight_port_ids = [0]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -1222,6 +1247,7 @@ QUANTIZE_NODE_TYPES = [
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTEmbeddingMetatype,
     PTEmbeddingBagMetatype,
+    PTAtenEmbeddingBagMetatype,
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
 ]

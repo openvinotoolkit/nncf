@@ -16,13 +16,11 @@ import jsonschema
 
 from nncf.config.definitions import ALGO_NAME_VS_README_URL
 from nncf.config.definitions import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
-from nncf.config.definitions import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import QUANTIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_MODES_VS_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_TRAINING_SCHEMA
 from nncf.config.schemata.algo.filter_pruning import FILTER_PRUNING_SCHEMA
-from nncf.config.schemata.algo.knowledge_distillation import KNOWLEDGE_DISTILLATION_SCHEMA
 from nncf.config.schemata.algo.quantization import QUANTIZATION_SCHEMA
 from nncf.config.schemata.basic import ARRAY_OF_NUMBERS
 from nncf.config.schemata.basic import BOOLEAN
@@ -38,7 +36,6 @@ logger = logging.getLogger("nncf")
 REF_VS_ALGO_SCHEMA = {
     QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
     FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
-    KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA,
     **EXPERIMENTAL_REF_VS_ALGO_SCHEMA,
 }
 
