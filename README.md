@@ -54,7 +54,6 @@ learning frameworks.
 | [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported    |
 | [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    |
 | [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
-| [Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md)                                                               | Supported    |
 | [Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md)                                                          | Supported    |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
@@ -63,7 +62,6 @@ learning frameworks.
 - Distributed training support.
 - Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
 - Exporting PyTorch compressed models to ONNX\* checkpoints compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
-- Support for [Accuracy-Aware model training](./docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 <a id="documentation"></a>
 
@@ -261,51 +259,6 @@ model.load_state_dict(state_dict)
 ```
 
 </details>
-
-### Training-Time Compression
-
-Here is an example of Accuracy Aware RB Sparsification pipeline where model weights and compression parameters may be fine-tuned to achieve a higher accuracy.
-
-<details><summary><b>PyTorch</b></summary>
-
-```python
-import torch
-import nncf.torch  # Important - must be imported before any other external package that depends on torch
-
-from nncf import NNCFConfig
-from nncf.torch import create_compressed_model, register_default_init_args
-
-# Instantiate your uncompressed model
-from torchvision.models.resnet import resnet50
-model = resnet50()
-
-# Load a configuration file to specify compression
-nncf_config = NNCFConfig.from_json("resnet50_imagenet_rb_sparsity.json")
-
-# Provide data loaders for compression algorithm initialization, if necessary
-import torchvision.datasets as datasets
-representative_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
-init_loader = torch.utils.data.DataLoader(representative_dataset)
-nncf_config = register_default_init_args(nncf_config, init_loader)
-
-# Apply the specified compression algorithms to the model
-compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
-
-# Now use compressed_model as a usual torch.nn.Module
-# to fine-tune compression parameters along with the model weights
-
-# ... the rest of the usual PyTorch-powered training pipeline
-
-# Export to ONNX or .pth when done fine-tuning
-compression_ctrl.export_model("compressed_model.onnx")
-torch.save(compressed_model.state_dict(), "compressed_model.pth")
-```
-
-**NOTE (PyTorch)**: Due to the way NNCF works within the PyTorch backend, `import nncf` must be done before any other import of `torch` in your package _or_ in third-party packages that your code utilizes. Otherwise, the compression may be applied incompletely.
-
-</details>
-
-For a more detailed description of NNCF usage in your training code, see [this tutorial](./docs/usage/training_time_compression/other_algorithms/Usage.md).
 
 <a id="demos-tutorials-and-samples"></a>
 

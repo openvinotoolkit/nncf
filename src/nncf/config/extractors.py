@@ -197,7 +197,6 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> dict[str, Any]
     class NNCFAlgorithmNames:
         QUANTIZATION = "quantization"
         FILTER_PRUNING = "filter_pruning"
-        SPARSITY = ["rb_sparsity", "magnitude_sparsity", "const_sparsity"]
 
     def validate_accuracy_aware_schema(config: NNCFConfig, params: dict[str, Any]) -> None:
         from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
@@ -206,15 +205,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> dict[str, Any]
             return
         if params["mode"] == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
             algorithms = extract_algorithm_names(config)
-            if NNCFAlgorithmNames.FILTER_PRUNING in algorithms and any(
-                algo in NNCFAlgorithmNames.SPARSITY for algo in algorithms
-            ):
-                msg = (
-                    "adaptive_compression_level mode supports filter_pruning or sparsity algorithms"
-                    "separately. Please, choose only one algorithm with adaptive compression level. "
-                    "Take a note that you still can use it combined with quantization."
-                )
-                raise nncf.ValidationError(msg)
+
             if len(algorithms) == 1 and algorithms[0] == NNCFAlgorithmNames.QUANTIZATION:
                 msg = "adaptive_compression_level mode doesn't support quantization"
                 raise nncf.ValidationError(msg)

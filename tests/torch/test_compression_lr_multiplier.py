@@ -29,7 +29,6 @@ from tests.torch.helpers import create_random_mock_dataloader
 from tests.torch.helpers import get_grads
 from tests.torch.helpers import set_torch_seed
 from tests.torch.quantization.test_algo_quantization import get_quantization_config_without_range_init
-from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 
 pytestmark = pytest.mark.legacy
 
@@ -42,11 +41,6 @@ ALGO_NAME_TO_PATH_MAP = {
 def get_quantization_config() -> NNCFConfig:
     config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE[-1])
     config["compression"]["initializer"] = {"range": {"num_init_samples": 10}}
-    return config
-
-
-def get_sparsity_config() -> NNCFConfig:
-    config = get_basic_sparsity_config([1, *LeNet.INPUT_SIZE])
     return config
 
 
@@ -115,7 +109,7 @@ def merge_configs(configs: list[NNCFConfig], use_algo_list: bool = True) -> NNCF
 
 def get_configs_building_params() -> list[dict]:
     res = []
-    get_orig_config_fns = [get_quantization_config, get_sparsity_config]
+    get_orig_config_fns = [get_quantization_config]
     num_orig_configs = len(get_orig_config_fns)
 
     for global_multiplier in [0, 1, 10]:
