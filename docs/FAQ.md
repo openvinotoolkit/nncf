@@ -26,7 +26,7 @@ No *compression* in the sense of archiving or entropy coding is being done durin
 
 ### How does your compression make inference faster?
 
-General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization and filter pruning) are applied, with Intel HW/runtime specifics in mind.
+General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization) are applied, with Intel HW/runtime specifics in mind.
 
 An overview of some of those can be found in the [following paper](https://arxiv.org/abs/2002.08679).
 

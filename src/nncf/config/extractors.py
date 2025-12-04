@@ -196,7 +196,6 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> dict[str, Any]
 
     class NNCFAlgorithmNames:
         QUANTIZATION = "quantization"
-        FILTER_PRUNING = "filter_pruning"
 
     def validate_accuracy_aware_schema(config: NNCFConfig, params: dict[str, Any]) -> None:
         from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
