@@ -40,7 +40,6 @@ MAP_BACKEND_PACKAGES = {
     "torchfx": ["torch", "torchvision"],
     "openvino": ["openvino"],
     "onnx": ["onnx", "onnxruntime"],
-    "tf": ["tensorflow"],
 }
 
 

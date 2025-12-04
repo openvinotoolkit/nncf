@@ -51,15 +51,6 @@ def post_training_quantization_openvino_mobilenet_v2_quantize() -> dict[str, flo
     return post_training_quantization_mobilenet_v2(example_root)
 
 
-def post_training_quantization_tensorflow_mobilenet_v2() -> dict[str, float]:
-    import tensorflow_datasets as tfds
-
-    tfds.display_progress_bar(enable=False)
-
-    example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "tensorflow" / "mobilenet_v2")
-    return post_training_quantization_mobilenet_v2(example_root)
-
-
 def post_training_quantization_torch_mobilenet_v2() -> dict[str, float]:
     example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "torch" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
@@ -365,15 +356,6 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
         "int8_model_size": results[6],
         "model_compression_rate": results[5] / results[6],
     }
-
-
-def quantization_aware_training_tensorflow_mobilenet_v2() -> dict[str, float]:
-    import tensorflow_datasets as tfds
-
-    tfds.display_progress_bar(enable=False)
-
-    example_root = str(PROJECT_ROOT / "examples" / "quantization_aware_training" / "tensorflow" / "mobilenet_v2")
-    return post_training_quantization_mobilenet_v2(example_root)
 
 
 def main(argv):

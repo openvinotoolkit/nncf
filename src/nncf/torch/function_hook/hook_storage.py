@@ -229,6 +229,8 @@ class HookStorage(nn.Module):
             raise ValueError(msg)
 
         del storage_dict[hook_key][hook_id]
+        if not storage_dict[hook_key]:
+            del storage_dict[hook_key]
 
 
 def decode_hook_name(hook_name: str) -> tuple[str, str, int]:

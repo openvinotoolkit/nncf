@@ -149,3 +149,23 @@ def test_save_load(tmpdir: Path):
     assert isinstance(d["post_hooks.conv:weight__0.0"], UnstructuredPruningMask)
 
     assert torch.allclose(orig_output, loaded_output)
+
+
+def test_statistic():
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+
+    pruned_model = nncf.prune(
+        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
+    )
+    stat = nncf.pruning_statistic(pruned_model)
+
+    assert pytest.approx(stat.pruned_tensors[0].pruned_ratio, abs=1e-1) == 0.5
+    assert stat.pruned_tensors[0].tensor_name == "conv.weight"
+    assert stat.pruned_tensors[0].shape == (3, 3, 3, 3)
+    assert pytest.approx(stat.pruning_ratio, abs=1e-2) == 0.5
+    assert pytest.approx(stat.global_pruning_ratio, abs=1e-2) == 0.48
+
+    txt = str(stat)
+    assert "conv.weight" in txt
+    assert "All parameters" in txt

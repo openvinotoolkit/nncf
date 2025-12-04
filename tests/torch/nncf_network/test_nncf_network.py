@@ -46,13 +46,9 @@ from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
-from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import check_correct_nncf_modules_replacement
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nncf_network.helpers import SimplestModel
 from tests.torch.test_models.synthetic import ManyNonEvalModules
 
@@ -302,32 +298,6 @@ def test_can_collect_scopes_of_train_only_modules():
     assert set(actual_scopes) == ref_scopes
 
 
-def test_get_clean_shallow_copy():
-    model = TwoConvTestModelWithUserModule()
-    config = get_basic_sparsity_plus_quantization_config()
-    register_bn_adaptation_init_args(config)
-    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    external_quantizers = getattr(sparse_quantized_model.nncf, EXTERNAL_QUANTIZERS_STORAGE_NAME)
-    assert external_quantizers
-    old_nncf_modules = sparse_quantized_model.nncf.get_nncf_modules()
-    old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
-    assert any(old_nncf_module_pre_ops)
-    assert (
-        sparse_quantized_model.nncf.get_graph().get_nodes_count()
-        != sparse_quantized_model.nncf.get_original_graph().get_nodes_count()
-    )
-
-    old_interface = sparse_quantized_model.nncf
-    clean_copy = sparse_quantized_model.nncf.get_clean_shallow_copy()
-    assert clean_copy is sparse_quantized_model
-    new_interface = clean_copy.nncf
-    assert old_interface is not new_interface
-    new_nncf_modules = clean_copy.nncf.get_nncf_modules()
-    new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
-    assert not any(new_nncf_module_pre_ops)
-    assert clean_copy.nncf.get_graph().get_nodes_count() == clean_copy.nncf.get_original_graph().get_nodes_count()
-
-
 class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
     def __init__(self):
         super().__init__()
@@ -483,32 +453,6 @@ def test_replacing_forward_of_original_model(replacement_forward_provider_cls: t
     assert torch.equal(new_output, original_output)
 
 
-def test_temporary_clean_view():
-    model = TwoConvTestModelWithUserModule()
-    config = get_basic_sparsity_plus_quantization_config()
-    register_bn_adaptation_init_args(config)
-    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    old_sd = sparse_quantized_model.state_dict()
-    old_graph = deepcopy(sparse_quantized_model.nncf.get_graph())
-    with sparse_quantized_model.nncf.temporary_clean_view() as intermediate_model:
-        clean_sd = intermediate_model.state_dict()
-        assert len(clean_sd) < len(old_sd)
-        new_nncf_modules = intermediate_model.nncf.get_nncf_modules()
-        new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
-        assert not any(new_nncf_module_pre_ops)
-        assert (
-            intermediate_model.nncf.get_graph().get_nodes_count()
-            == intermediate_model.nncf.get_original_graph().get_nodes_count()
-        )
-    sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
-    for key in old_sd:
-        assert key in sd_after_tmp_clean_view
-        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
-    sparse_quantized_model.nncf.rebuild_graph()
-    graph_after_tmp_clean_view = sparse_quantized_model.nncf.get_graph()
-    assert graph_after_tmp_clean_view == old_graph
-
-
 class MultipleForwardModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -520,26 +464,6 @@ class MultipleForwardModel(nn.Module):
         x1 = self.conv1(x)
         x2 = self.conv1(x)
         return x1, x2
-
-
-def test_multiple_forward():
-    # Check that all convolution nodes in model have op_address and layer_attributes
-    # for case with multiple forward of one module
-    model = MultipleForwardModel()
-    config = get_basic_sparsity_plus_quantization_config()
-    register_bn_adaptation_init_args(config)
-    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    graph = sparse_quantized_model.nncf.get_original_graph()
-    for node in list(graph.get_all_nodes())[1:-2]:
-        assert node.layer_attributes is not None
-
-
-def test_deepcopy_nncf_network():
-    model = TwoConvTestModelWithUserModule()
-    config = get_basic_sparsity_plus_quantization_config()
-    register_bn_adaptation_init_args(config)
-    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    _ = deepcopy(sparse_quantized_model)
 
 
 def test_insertion_point_target_point_translation():

@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TypeVar
+
 from torch import nn
 
 import nncf
@@ -18,11 +20,13 @@ from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.model_graph_manager import get_const_data_by_name
 
+TModel = TypeVar("TModel", bound=nn.Module)
+
 
 def apply_regularization_based_pruning(
-    model: nn.Module,
+    model: TModel,
     parameters: list[str],
-) -> nn.Module:
+) -> TModel:
     """
     :param model: The neural network model to be pruned.
     :param parameters: A list of parameter names to be pruned.

@@ -14,7 +14,7 @@ from typing import Generator
 
 @contextmanager
 def noninteractive_plotting() -> Generator[None, None, None]:
-    from matplotlib import pyplot as plt
+    from matplotlib import pyplot as plt  # type: ignore[import-not-found]
 
     backend = plt.get_backend()
     plt.switch_backend("agg")
