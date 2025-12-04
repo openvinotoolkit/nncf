@@ -14,7 +14,6 @@ from dataclasses import fields
 from typing import Iterator, Optional
 
 from nncf.api.statistics import Statistics
-from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.quantization.statistics import QuantizationStatistics
 from nncf.common.utils.api_marker import api
 
@@ -27,7 +26,6 @@ class NNCFStatistics:
     Statistics are present only if the algorithm has been started.
     """
 
-    filter_pruning: Optional[FilterPruningStatistics] = None
     quantization: Optional[QuantizationStatistics] = None
 
     def register(self, algorithm_name: str, stats: Statistics) -> None:
@@ -35,7 +33,6 @@ class NNCFStatistics:
         Registers statistics for the algorithm.
 
         :param algorithm_name: Name of the algorithm. Should be one of the following
-            * filter_pruning
             * quantization
 
         :param stats: Statistics of the algorithm.
