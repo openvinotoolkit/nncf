@@ -57,8 +57,6 @@ Post-training is faster, but can degrade accuracy more than the training-enabled
 
 The sparsity algorithms introduce unstructured sparsity which can only be taken advantage of in terms of performance by using specialized hardware and/or software runtimes. Within the scope of these algorithms, NNCF provides functionally correct models with non-salient weights simply zeroed out, which does not lead to the reduction of the model checkpoint size. The models can, however, be used for benchmarking experimental/future hardware or runtimes, and for SOTA claims of applying unstructured sparsity on a given model architecture.
 
-For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./usage/training_time_compression/other_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
-
 ### What is a "saturation issue" and how to avoid it?
 
 On older generations of Intel CPUs (those not supporting [AVX-VNNI](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX-VNNI)) convolutions and linear layer INT8 execution is implemented in OpenVINO's Inference Engine in such a way that mathematical overflow manifests itself *if more than 128 levels are used in the quantized domain* (out of possible 2^8 = 256) for the weights of the corresponding operations.
