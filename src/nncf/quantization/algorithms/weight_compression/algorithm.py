@@ -16,8 +16,6 @@ from collections import defaultdict
 from functools import reduce
 from typing import Any, Optional, TypeVar
 
-from packaging import version
-
 import nncf
 from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -788,11 +786,26 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
-    def _maybe_get_ov_major_version(self) -> Optional[str]:
+    @staticmethod
+    def _maybe_get_ov_version() -> Optional[tuple]:
+        """
+        Parse OpenVINO version strings like:
+            '2026.0.0-20595-5d95073296d'
+        into a tuple:
+            (2026, 0, 0, 20595)
+        """
         try:
+            import re
+
             import openvino as ov
 
-            return ov.__version__.split(".")[0]
+            base, rest = ov.__version__.split("-", 1)
+            major, minor, patch = map(int, base.split("."))
+
+            m = re.match(r"(\d+)", rest)
+            build = int(m.group(1))
+
+            return major, minor, patch, build
         except Exception:
             return None
 
@@ -862,12 +875,12 @@ class WeightCompression(Algorithm):
                         )
 
                     model_backend = get_backend(model)
-                    ov_version = self._maybe_get_ov_major_version()
+                    ov_version = self._maybe_get_ov_version()
                     if (
                         model_backend == BackendType.OPENVINO
                         and len(weight_shape) == 3
                         and ov_version
-                        and version.parse(ov_version) <= version.parse("2026")
+                        and ov_version < (2026, 0, 0, 20483)
                         and node.metatype in self._backend_entity.matmul_metatypes
                         and (
                             self._data_aware_compression
@@ -877,8 +890,10 @@ class WeightCompression(Algorithm):
                     ):
                         # MoE operations are usually matmuls, so the check for matmul metatype is done
                         # This is to avoid raising the error for non-MoE cases with 3D weights.
+                        parsed_ov_version = f"{ov_version[0]}.{ov_version[1]}.{ov_version[2]}-{ov_version[3]}"
                         msg = f"""NNCF compression algorithms do not support 3D weights with current version of 
-                                Openvino {ov_version} due to a known issue in statistics collection Ticket - 176465. 
+                                OpenVINO {parsed_ov_version} due to a known issue in statistics collection 
+                                Ticket - 176465. Please update to the latest OpenVINO nightly version. 
                                 Node with weight: {node.node_name}."""
                         raise nncf.UnsupportedModelError(msg)
 
