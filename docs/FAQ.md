@@ -26,7 +26,7 @@ No *compression* in the sense of archiving or entropy coding is being done durin
 
 ### How does your compression make inference faster?
 
-General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization, filter pruning and knowledge distillation) are applied, with Intel HW/runtime specifics in mind.
+General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization and filter pruning) are applied, with Intel HW/runtime specifics in mind.
 
 An overview of some of those can be found in the [following paper](https://arxiv.org/abs/2002.08679).
 
@@ -71,16 +71,6 @@ This does not apply to activation quantization - values of quantized activation 
 You can influence this behaviour by setting the `"overflow_fix"` parameter in the NNCF configuration file.
 See documentation for this parameter in the [NNCF configuration file JSON schema reference](https://openvinotoolkit.github.io/nncf/#compression_oneOf_i0_oneOf_i0_overflow_fix).
 
-### How can I exclude certain layers from compression?
-
-Utilize the "ignored_scopes" parameter, either using an [NNCF config file](./ConfigFile.md) or by passing these as a function parameter if you are using NNCF purely by its Python API.
-Within this parameter you can set up one or multiple identifiers to layers in your model (regex is possible) and these will be correspondingly ignored while applying the algorithms.
-This can be done either globally or on a per-algorithm basis.
-
-The format of the layer identifiers is different for each backend that NNCF supports, but attempts to be as close to the identifiers encountered in the original framework as possible.
-For better understanding of how NNCF sees the layers in your network so that you can set up a working "ignored_scopes" line, see the `original_graph.dot` and the `compressed_graph.dot` Graphviz-format visualizations of the model's control flow graph.
-These files are dumped in the NNCF's log directory at each invocation of model compression.
-
 ### Why do I need to pass a dataloader to certain NNCF algorithms?
 
 These algorithms have to run a forward pass on the model to be compressed in order to properly initialize the compressed state of the model and/or to gather activation statistics that are indisposable in this algorithm.
@@ -89,8 +79,7 @@ It is recommended, although by no means mandatory, to pass a dataloader with the
 ### The compression process takes too long, how can I make it faster?
 
 For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here.
-Try the built-in [knowledge distillation](./usage/training_time_compression/other_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
-Alternatively you may want to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
+Try to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
 
 ### I get a "CUDA out of memory" error when running NNCF in the compression-aware training approach, although the original model to be compressed runs and trains fine without NNCF
 

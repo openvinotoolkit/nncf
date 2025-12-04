@@ -51,7 +51,6 @@ For more information about NNCF, see:
 | [Quantization Aware Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported    |
 | [Weight-Only Quantization Aware Training with LoRA and NLS](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    |
 | [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
-| [Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Sparsity.md)                                                               | Supported    |
 | [Filter pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Pruning.md)                                                          | Supported    |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
@@ -60,7 +59,6 @@ For more information about NNCF, see:
 - Distributed training support.
 - Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
 - Exporting PyTorch compressed models to ONNX\* checkpoints compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
-- Support for [Accuracy-Aware model training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Installation Guide<a id="installation-guide"></a>
 
