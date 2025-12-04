@@ -1,5 +1,5 @@
 -c ../../constraints.txt
-# matplotlib is required tor the memory monitor tool
+# matplotlib is required for the memory monitor tool
 matplotlib
 torch
 torchvision
