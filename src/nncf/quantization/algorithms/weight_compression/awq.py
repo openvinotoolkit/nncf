@@ -231,18 +231,20 @@ class AWQ(Algorithm):
         assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
         reduction_axis = wp.reduction_axes[0]
 
-        prev_s, prev_w = None, None
-        if prev_statistics is not None and prev_weight is not None:
-            prev_s, _ = process_stats(prev_statistics, self._subset_size)
-            prev_s = prev_s.astype(TensorDataType.float32).max().item()
-            prev_weight = fns.unsqueeze(prev_weight, 0)  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
-            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis + 1)
-
         if is_2d_weight:
             s = fns.unsqueeze(s, 0)  # [hidden_dim] -> [1, hidden_dim]
             X = fns.unsqueeze(X, 0)  # [hidden_dim, samples] -> [1, hidden_dim, samples]
             weight = fns.unsqueeze(weight, 0)  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
+            prev_weight = (
+                fns.unsqueeze(prev_weight, 0) if prev_weight else None
+            )  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
             reduction_axis += 1
+
+        prev_s, prev_w = None, None
+        if prev_statistics is not None and prev_weight is not None:
+            prev_s, _ = process_stats(prev_statistics, self._subset_size)
+            prev_s = prev_s.astype(TensorDataType.float32).max().item()
+            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis + 1)
 
         top_k = max(int(s.shape[-1] * self._percent_to_apply), 1)
         topk_idxs = fns.argsort(-s)[:, :top_k]
