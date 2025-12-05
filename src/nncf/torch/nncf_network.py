@@ -78,14 +78,12 @@ from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.graph.transformations.serialization import serialize_transformations
-from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
-from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
 
 Module = TypeVar("Module", bound=nn.Module)
@@ -372,23 +370,6 @@ class NNCFNetworkInterface(torch.nn.Module):
     @property
     def input_infos(self) -> ModelInputInfo:
         return deepcopy(self._input_info)
-
-    def create_knowledge_distillation_loss_handler(
-        self, kd_original_model: nn.Module, calculate_fn
-    ) -> KnowledgeDistillationLossHandler:
-        """
-        Creates KnowledgeDistillationLossHandler instance for enabling Knowledge Distillation feature.
-            Also returns created KnowledgeDistillationLossHandler for control over Knowledge Distillation logic.
-
-        :param kd_original_model: original non compressed model used for distillation
-        :param calculate_fn: function used to parse model outputs and calculate knowledge distillation loss
-        :return: KnowledgeDistillationLossHandler instance
-        """
-        device = get_model_device(self._model_ref)
-        self._kd_loss_handler = KnowledgeDistillationLossHandler(
-            self._compressed_context, kd_original_model, calculate_fn, device
-        )
-        return self._kd_loss_handler
 
     def reset_nncf_modules(self):
         for scope_list in self.get_nncf_module_scopes():

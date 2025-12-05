@@ -1,4 +1,8 @@
 -c ../../constraints.txt
+
+datasets
+matplotlib # required for the memory monitor tool
+
 torch
 torchvision
 onnx
@@ -21,4 +25,3 @@ timm==0.9.2
 accelerate==1.9.0
 transformers==4.53.0
 whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.4.0.0#subdirectory=tools/who_what_benchmark
-datasets==3.6.0

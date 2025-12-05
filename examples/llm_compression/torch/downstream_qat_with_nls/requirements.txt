@@ -7,3 +7,4 @@ optimum-onnx==0.0.3
 optimum==2.0.0
 transformers==4.53.0
 lm_eval==0.4.8
+pillow==12.0.0

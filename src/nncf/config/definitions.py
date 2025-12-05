@@ -15,19 +15,8 @@ SCHEMA_VISUALIZATION_URL = "https://openvinotoolkit.github.io/nncf/"
 ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG = "adaptive_compression_level"
 EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG = "early_exit"
 EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG = "experimental_quantization"
-CONST_SPARSITY_ALGO_NAME_IN_CONFIG = "const_sparsity"
-FILTER_PRUNING_ALGO_NAME_IN_CONFIG = "filter_pruning"
-KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = "knowledge_distillation"
-MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG = "magnitude_sparsity"
-MOVEMENT_SPARSITY_ALGO_NAME_IN_CONFIG = "movement_sparsity"
 QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
-RB_SPARSITY_ALGO_NAME_IN_CONFIG = "rb_sparsity"
 
 ALGO_NAME_VS_README_URL = {
     QUANTIZATION_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Quantization.md",
-    FILTER_PRUNING_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Pruning.md",
-    MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Sparsity.md",
-    RB_SPARSITY_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Sparsity.md",
-    CONST_SPARSITY_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Sparsity.md",
-    KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/KnowledgeDistillation.md",
 }
