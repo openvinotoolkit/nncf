@@ -482,11 +482,12 @@ class TemplateWeightCompression(ABC):
     def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    def test_awq_scale_reference(self, monkeypatch, mocker):
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    def test_awq_scale_reference(self, monkeypatch, mocker, is_3d_weights):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
-        model = self.get_awq_model()
+        model = self.get_awq_model(is_3d_weights)
 
-        input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
+        input = 0.01 * np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8) + 0.02
         input = self.to_tensor(input)
         dataset = Dataset([input], self.get_transform_func())
 
