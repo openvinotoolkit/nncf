@@ -6,5 +6,5 @@ optimum-onnx==0.0.3
 optimum==2.0.0
 onnx==1.17.0
 onnxruntime==1.21.1
-datasets==2.14.7
+datasets==4.4.1
 pillow==12.0.0
