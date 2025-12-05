@@ -22,7 +22,6 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm
 
-import nncf
 from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
@@ -31,8 +30,6 @@ from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
-from nncf.torch.dynamic_graph.operation_address import OperationAddress
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
@@ -45,7 +42,6 @@ from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
-from nncf.torch.nncf_network import PTInsertionType
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import check_correct_nncf_modules_replacement
@@ -464,15 +460,6 @@ class MultipleForwardModel(nn.Module):
         x1 = self.conv1(x)
         x2 = self.conv1(x)
         return x1, x2
-
-
-def test_insertion_point_target_point_translation():
-    op_address = OperationAddress("dummy", Scope(), 0)
-    for target_type in [PTInsertionType.NNCF_MODULE_POST_OP, TargetType.AFTER_LAYER]:
-        with pytest.raises(nncf.InternalError):
-            PTInsertionPoint(target_type, op_address)
-    target_type = TargetType.POST_LAYER_OPERATION
-    assert PTInsertionPoint(target_type, op_address).insertion_type == PTInsertionType.NNCF_MODULE_POST_OP
 
 
 class IndirectModuleCaller(nn.Module):

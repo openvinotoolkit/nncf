@@ -15,7 +15,6 @@ from typing import Any, TypeVar
 
 from torch import nn
 
-from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.parameters import StripFormat
 
 TModel = TypeVar("TModel", bound=nn.Module)
@@ -37,9 +36,6 @@ def strip(
     :param example_input: An example input tensor to be used for tracing the model.
     :return: The stripped model.
     """
-    if is_torch_tracing_by_patching():
-        return model.nncf.strip(do_copy, strip_format)
-
     from nncf.torch.function_hook.strip import strip_model
 
     model = deepcopy(model) if do_copy else model

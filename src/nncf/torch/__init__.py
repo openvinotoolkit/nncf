@@ -34,9 +34,6 @@ if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
     warn_bkc_version_mismatch("torch", BKC_TORCH_SPEC, torch.__version__)
 
 
-# Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.torch.quantization import algo as quantization_algo
-
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience
 

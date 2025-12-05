@@ -17,8 +17,6 @@ import torch
 from torch import nn
 
 from nncf import NNCFConfig
-from nncf.torch import patch_torch_operators
-from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
 from nncf.torch.exporter import PTExporter
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import create_bn
@@ -26,9 +24,6 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import load_exported_onnx_version
-from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.test_compressed_graph import SingleLayerModelDesc
-from tests.torch.test_compressed_graph import get_basic_quantization_config
 
 pytestmark = pytest.mark.legacy
 
@@ -119,32 +114,6 @@ class MultiParamForwardModel(torch.nn.Module):
         return param1, param2
 
 
-def test_can_export_single_batch_bn(tmp_path):
-    test_path = tmp_path.joinpath("test.onnx")
-    synthetic_model_desc = SingleLayerModelDesc(layer=nn.BatchNorm2d(4), input_sample_sizes=([1, 4, 1, 1]))
-    config = get_basic_quantization_config(
-        input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(),
-        input_info=synthetic_model_desc.create_input_info(),
-    )
-    register_bn_adaptation_init_args(config)
-    model = synthetic_model_desc.get_model()
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    compression_ctrl.export_model(str(test_path))
-    assert test_path.exists()
-
-
-def test_can_export_with_model_args(tmp_path):
-    # Torch now parses the function signature and sets up default parameters for unprovided
-    # arguments on its own. Need to rethink and possibly deprecate model_args parameter.
-    test_path = tmp_path.joinpath("test.onnx")
-    model = MultiParamForwardModel()
-    config = get_basic_quantization_config(input_info=[{"sample_size": [1, 1, 1, 1]}, {"sample_size": [1, 1, 1, 1]}])
-    register_bn_adaptation_init_args(config)
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    compression_ctrl.export_model(str(test_path), model_args=({"param3": 42},))
-    assert test_path.exists()
-
-
 class LinearTestModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -163,38 +132,3 @@ class LinearTestModel(nn.Module):
         x = self.relu(self.conv2(x))
         x = self.bn2(x)
         return x
-
-
-@pytest.mark.parametrize(
-    "compression_section",
-    [{}, {"compression": {"algorithm": "quantization"}}],
-    ids=["none", "quantization"],
-)
-def test_preserves_onnx_node_name_format(tmp_path, compression_section):
-    model = LinearTestModel()
-    model.eval().cpu()
-    try:
-        unpatch_torch_operators()
-        without_nncf_path = tmp_path / "without_nncf.onnx"
-        torch.onnx.export(
-            model,
-            torch.ones([1, 3, 32, 32]),
-            without_nncf_path,
-            export_params=True,
-            opset_version=13,
-            do_constant_folding=False,
-            dynamo=False,
-        )
-        original_model_proto = onnx.load_model(str(without_nncf_path))
-        patch_torch_operators()
-
-        config = NNCFConfig.from_dict({"input_info": {"sample_size": [1, 3, 32, 32]}, **compression_section})
-        compressed_model_proto = load_exported_onnx_version(config, model, tmp_path)
-
-        compressed_model_onnx_node_names = {node.name for node in compressed_model_proto.graph.node}
-        for node in original_model_proto.graph.node:
-            if not node.name.startswith("Identity_"):
-                # Since torch==2.2.0 identity nodes have different indexes
-                assert node.name in compressed_model_onnx_node_names
-    finally:
-        patch_torch_operators()

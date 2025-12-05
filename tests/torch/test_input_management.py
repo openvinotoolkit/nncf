@@ -22,9 +22,6 @@ from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import ModelWithReloadedForward
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.test_compressed_graph import get_basic_quantization_config
 
 pytestmark = pytest.mark.legacy
 
@@ -182,26 +179,6 @@ class CatModel(torch.nn.Module):
 
     def forward(self, x, y):
         return torch.cat([x, y])
-
-
-def test_same_input_tensor_replication(mocker):
-    config = get_basic_quantization_config(
-        input_info=[
-            {"sample_size": [1, 1]},
-            {"sample_size": [1, 1]},
-        ]
-    )
-    register_bn_adaptation_init_args(config)
-    model = CatModel()
-    model, _ = create_compressed_model_and_algo_for_test(model, config)
-
-    test_tensor = torch.ones([1, 1])
-    clone_spy = mocker.spy(test_tensor, "clone")
-    cat_spy = mocker.spy(torch, "cat")
-    _ = model(test_tensor, test_tensor)
-    assert clone_spy.call_count == 1
-    cat_arg = cat_spy.call_args[0][0]
-    assert cat_arg[0] is not cat_arg[1]
 
 
 @pytest.mark.parametrize("use_kwargs", (False, True))

@@ -42,17 +42,11 @@ from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.layers import LSTMCellNNCF
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.algo import QuantizationBuilder
-from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
-from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.modules.seq2seq.gnmt import GNMT
-from tests.torch.modules.test_rnn import replace_lstm
 from tests.torch.test_models.synthetic import ArangeModel
 from tests.torch.test_models.synthetic import Baddbmm
 from tests.torch.test_models.synthetic import ConvBNLeakyReLU
@@ -78,18 +72,6 @@ from tests.torch.test_models.synthetic import ShiftScaleParametrized
 from tests.torch.test_models.synthetic import TransposeModel
 
 pytestmark = pytest.mark.legacy
-
-
-def get_basic_quantization_config(
-    quantization_type="symmetric", input_sample_sizes=None, input_info: Union[list, dict] = None
-):
-    config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
-    config["compression"] = {
-        "algorithm": "quantization",
-        "activations": {"mode": quantization_type},
-        "weights": {"mode": quantization_type},
-    }
-    return config
 
 
 def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_sample_size):
@@ -282,122 +264,6 @@ class TestModelsGraph:
             if algo_name not in module_cls.ignored_algorithms:
                 sparsifiable_modules.append(module_cls.__name__)
         return sparsifiable_modules
-
-    @pytest.mark.parametrize(
-        "algo",
-        (
-            "rb_sparsity",
-            "magnitude_sparsity",
-            "const_sparsity",
-        ),
-        ids=["RB", "Magnitude", "Const"],
-    )
-    def test_sparse_network(self, desc: ModelDesc, algo):
-        model = desc.model_builder()
-
-        config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
-        config["compression"] = {"algorithm": algo}
-
-        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-            model, config, dummy_forward_fn=desc.dummy_forward_fn, wrap_inputs_fn=desc.wrap_inputs_fn
-        )
-
-        sparsifiable_modules = self.get_sparsifiable_modules(algo)
-        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
-        assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
-        check_model_graph(compressed_model, desc.dot_filename(), algo)
-
-    def test_quantize_network(self, desc: ModelDesc, _case_config):
-        model = desc.model_builder()
-
-        config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=desc.input_sample_sizes)
-        register_bn_adaptation_init_args(config)
-        compressed_model, _ = create_compressed_model_and_algo_for_test(
-            model, config, dummy_forward_fn=desc.dummy_forward_fn, wrap_inputs_fn=desc.wrap_inputs_fn
-        )
-        check_model_graph(compressed_model, desc.dot_filename(), _case_config.graph_dir)
-
-    def test_sparse_quantize_network(self, desc: ModelDesc):
-        model = desc.model_builder()
-
-        config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
-        config["compression"] = [{"algorithm": "rb_sparsity"}, {"algorithm": "quantization"}]
-        register_bn_adaptation_init_args(config)
-
-        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-            model, config, dummy_forward_fn=desc.dummy_forward_fn, wrap_inputs_fn=desc.wrap_inputs_fn
-        )
-
-        sparsifiable_modules = self.get_sparsifiable_modules("rb_sparsity")
-        ref_num_sparsed = len(get_all_modules_by_type(compressed_model, sparsifiable_modules))
-
-        assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
-        check_model_graph(compressed_model, desc.dot_filename(), "quantized_rb_sparsity")
-
-
-@pytest.mark.skip(reason="Sporadic failures")
-def test_gnmt_quantization(_case_config):
-    model = GNMT(vocab_size=32)
-    model = replace_lstm(model)
-    forward_fn_ = gnmt_forward_fn(seq_len=10, batch_size=3, vocab_size=32)
-
-    config = get_basic_quantization_config(_case_config.quant_type)
-    config["input_info"] = [
-        {"sample_size": [3, 10], "type": "long"},
-        {"sample_size": [3], "type": "long"},
-        {"sample_size": [3, 10], "type": "long"},
-    ]
-    config["compression"].update(
-        {
-            "ignored_scopes": [
-                "GNMT/ResidualRecurrentEncoder[encoder]/Embedding[embedder]",
-                "GNMT/ResidualRecurrentDecoder[decoder]/Embedding[embedder]",
-            ]
-        }
-    )
-
-    compressed_model = NNCFNetwork(
-        model,
-        input_info=FillerInputInfo.from_nncf_config(config),
-        dummy_forward_fn=forward_fn_,
-        wrap_inputs_fn=gnmt_wrap_inputs_fn,
-        scopes_without_shape_matching=[
-            "GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/BahdanauAttention[attn]"
-        ],
-    )
-
-    builder = QuantizationBuilder(config, should_init=False)
-    builder.apply_to(compressed_model)
-
-    check_model_graph(compressed_model, "gnmt_variable.dot", _case_config.graph_dir)
-
-
-def test_resnet18__with_not_qinput(_case_config):
-    model = test_models.ResNet18()
-    input_shape = [1, 3, 32, 32]
-
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
-    config["compression"].update({"quantize_inputs": False})
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    check_model_graph(compressed_model, "resnet18_no_qinput.dot", _case_config.graph_dir)
-
-
-def test_resnet18__with_ignore(_case_config):
-    model = test_models.ResNet18()
-    input_shape = [1, 3, 32, 32]
-
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
-    ignored_scopes = [
-        "{re}ResNet/Sequential\\[layer3\\].*",
-    ]
-    config.update({"ignored_scopes": ignored_scopes})  # Global config ignored_scopes for NNCF module replacement
-    config["compression"].update({"ignored_scopes": ignored_scopes})  # Local ignored_scopes for quantization
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    check_model_graph(compressed_model, "resnet18_ignore.dot", _case_config.graph_dir)
 
 
 def n_inputs_fn(model_args, model_kwargs, nargs=2):
@@ -815,40 +681,6 @@ SYNTHETIC_MODEL_DESC_LIST = [
 ]
 
 
-@pytest.mark.parametrize(
-    "synthetic_model_desc", SYNTHETIC_MODEL_DESC_LIST, ids=[m.model_name for m in SYNTHETIC_MODEL_DESC_LIST]
-)
-def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
-    model = synthetic_model_desc.get_model()
-    if isinstance(model, MultiOutputSameTensorModel):
-        pytest.xfail("The MultiOutputSameTensorModel is skipped, ticket 110944.")
-
-    config = get_basic_quantization_config(
-        input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(), input_info=synthetic_model_desc.input_info
-    )
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, _ = create_compressed_model_and_algo_for_test(
-        model, config, wrap_inputs_fn=synthetic_model_desc.get_wrap_inputs_fn()
-    )
-
-    check_model_graph(
-        compressed_model, synthetic_model_desc.get_dot_filename(), os.path.join("quantized", "synthetic_model")
-    )
-
-
-def test_output_quantization(_case_config):
-    model = test_models.UNet()
-    input_shape = [1, 3, 360, 480]
-
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
-    config["compression"].update({"quantize_outputs": True})
-    register_bn_adaptation_init_args(config)
-
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    check_model_graph(compressed_model, "unet_qoutput.dot", _case_config.graph_dir)
-
-
 TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True), [2, 3, 299, 299]),
@@ -856,35 +688,6 @@ TEST_HW_MODELS_DESC = [
 ]
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.NPU)]
-
-
-@pytest.fixture(scope="function", params=TYPE_HW)
-def hw_config_type(request):
-    type_hw = request.param
-    return type_hw
-
-
-@pytest.mark.parametrize("desc", TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC])
-def test_compressed_graph_models_hw(desc, hw_config_type):
-    model = desc.model_builder()
-    config = get_basic_quantization_config_with_hw_config_type(
-        hw_config_type.value, input_sample_size=desc.input_sample_sizes
-    )
-    input_info = FillerInputInfo.from_nncf_config(config)
-    compressed_model = NNCFNetwork(model, input_info=input_info)
-
-    quantization_builder = QuantizationBuilder(config, should_init=False)
-    single_config_quantizer_setup = quantization_builder._get_single_config_quantizer_setup(compressed_model)
-    sketch_graph = compressed_model.nncf.get_original_graph()
-
-    potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
-    path_to_dot = get_full_path_to_the_graph(desc.dot_filename(), _case_dir(hw_config_type.value))
-    compare_nx_graph_with_reference(potential_quantizer_graph, path_to_dot, sort_dot_graph=False)
-
-
-def _case_dir(type_hw_config):
-    graph_dir = os.path.join("quantized", "hw", type_hw_config)
-    return graph_dir
 
 
 def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: SingleConfigQuantizerSetup) -> nx.DiGraph:
@@ -965,18 +768,3 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: Singl
             nx_graph.add_edge(weight_quantizer_node_key, node_key)
 
     return nx_graph
-
-
-def test_output_quantization_with_user_forward(_case_config):
-    desc = TEST_MODELS_DESC[-1]
-    model = desc.model_builder()
-
-    input_shape = desc.input_sample_sizes
-
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=input_shape)
-    config["compression"].update({"quantize_outputs": True})
-    register_bn_adaptation_init_args(config)
-    compressed_model, _ = create_compressed_model_and_algo_for_test(
-        model, config, dummy_forward_fn=desc.dummy_forward_fn, wrap_inputs_fn=desc.wrap_inputs_fn
-    )
-    check_model_graph(compressed_model, "sr_small_model_qoutput.dot", _case_config.graph_dir)

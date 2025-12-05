@@ -9,18 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
-import os
 
 import pytest
 import torch
 
-from nncf.common.utils.os import is_windows
-from nncf.config import NNCFConfig
 from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
-from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
@@ -29,12 +24,7 @@ from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
-from tests.torch.helpers import BasicConvTestModel
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.pytorch_patch_isolated import test_compile
 from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
-from tests.torch.pytorch_patch_isolated import test_jit_script_exception_preserves_patching_isolated
 
 pytestmark = pytest.mark.legacy
 
@@ -107,89 +97,6 @@ def test_jit_if_tracing_script_patching(tmp_path):
 def test_jit_if_tracing_script_source():
     # Run test case in a separate process to track patching of torch by NNCF
     run_pytest_case_function_in_separate_process(test_jit_if_tracing_script_source_equals)
-
-
-def test_jit_script_exception_preserves_patching():
-    # Run test case in a separate process to track patching of torch by NNCF
-    run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
-
-
-@pytest.mark.skipif(is_windows(), reason="https://github.com/pytorch/pytorch/issues/122094")
-@pytest.mark.parametrize("compile_forward", [False, True])
-def test_torch_compile(compile_forward):
-    # Run test case in a separate process to track patching of torch by NNCF
-    os.environ["COMPILE_FORWARD"] = f"{int(compile_forward)}"
-    run_pytest_case_function_in_separate_process(test_compile)
-
-
-def test_torch_compile_on_nncf_model():
-    # Calling torch.compile on a regular torch model should work fine
-    model = BasicConvTestModel()
-    compiled_model = torch.compile(model)
-    compiled_model(torch.ones(model.INPUT_SIZE))
-
-    model = BasicConvTestModel()
-    config = get_test_quantization_config(model)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    with pytest.raises(
-        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
-    ):
-        torch.compile(compressed_model)
-
-    stripped_model = compression_ctrl.strip()
-    with pytest.raises(
-        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
-    ):
-        torch.compile(stripped_model)
-
-    with pytest.raises(
-        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
-    ):
-        # Compiling this model would actually work, but inference of the compiled model will fail
-        torch.compile(model)
-
-
-def test_jit_script_signature():
-    # Check that torch.jit.script has the same signature as the wrapper was designed for
-    signature = inspect.signature(_ORIG_JIT_SCRIPT)
-    assert "obj" in signature.parameters and "_rcb" in signature.parameters and "_frames_up" in signature.parameters
-
-
-def test_jit_script_class():
-    # Define an outside function to test custom resolution callback inside torch_jit_script_wrapper
-    def outside_function(x):
-        return x + torch.tensor(1.0)
-
-    class TestClass:
-        def class_method(self, x):
-            return outside_function(x)
-
-    # Scripting a class instead of a method to trigger custom resolution callback usage
-    torch.jit.script(TestClass)
-
-
-def test_jit_trace_model():
-    model = BasicConvTestModel()
-    config = get_test_quantization_config(model)
-
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
-
-    model = compression_ctrl.strip()
-    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
-
-
-def get_test_quantization_config(model):
-    config = NNCFConfig()
-    config.update(
-        {
-            "model": "model",
-            "input_info": {"sample_size": model.INPUT_SIZE},
-            "compression": {"algorithm": "quantization"},
-        }
-    )
-    register_bn_adaptation_init_args(config)
-    return config
 
 
 def test_operator_unpatching():

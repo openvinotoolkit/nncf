@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Union
 from unittest.mock import MagicMock
@@ -23,7 +22,6 @@ from nncf import NNCFConfig
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import NNCFExtraConfigStruct
@@ -48,9 +46,6 @@ from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import NNCFNetworkMeta
 from nncf.torch.utils import is_tensor
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.test_get_modules_by_type import ModelForNameTest
 from tests.torch.test_models.synthetic import ModelForGraphBuildingTest
 
@@ -436,133 +431,6 @@ def test_compressed_model_creation_can_build_exact_input_infos_from_dataloader_i
 
     for keyword, arg in test_kwargs.items():
         check_arg(arg, MockInputInfo.MOCK_KWARGS[keyword])
-
-
-def create_model_and_control_with_defaults():
-    model = ModelForGraphBuildingTest()
-    config = get_basic_quantization_config(
-        "symmetric", input_sample_sizes=list(ModelForGraphBuildingTest.INPUT_SHAPES[0])
-    )
-    register_bn_adaptation_init_args(config)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    return compressed_model, compression_ctrl
-
-
-def create_model_with_user_dummy():
-    model = ModelForGraphBuildingTest()
-    config = get_basic_quantization_config(
-        "symmetric", input_sample_sizes=list(ModelForGraphBuildingTest.INPUT_SHAPES[0])
-    )
-    register_bn_adaptation_init_args(config)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-        model,
-        config,
-        dummy_forward_fn=ModelForGraphBuildingTest.simple_user_dummy_forward,
-        wrap_inputs_fn=ModelForGraphBuildingTest.simple_wrap_fn,
-    )
-    return compressed_model, compression_ctrl
-
-
-def create_model_with_user_wrap_inputs_fn():
-    model = ModelForGraphBuildingTest()
-    config = get_basic_quantization_config(
-        "symmetric", input_sample_sizes=list(ModelForGraphBuildingTest.INPUT_SHAPES[0])
-    )
-    register_bn_adaptation_init_args(config)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-        model,
-        config,
-        dummy_forward_fn=ModelForGraphBuildingTest.simple_user_dummy_forward,
-        wrap_inputs_fn=ModelForGraphBuildingTest.simple_wrap_fn,
-    )
-    return compressed_model, compression_ctrl
-
-
-class TestGraphStability:
-    MODEL_CREATORS_AND_IDS = [
-        (create_model_and_control_with_defaults, "default"),
-        (create_model_with_user_dummy, "user_dummy"),
-        (create_model_with_user_wrap_inputs_fn, "user_wrap_inputs_fn"),
-    ]
-
-    @pytest.fixture(params=[x[0] for x in MODEL_CREATORS_AND_IDS], ids=[x[1] for x in MODEL_CREATORS_AND_IDS])
-    def model_and_ctrl_creator(self, request):
-        return request.param
-
-    def test_dynamic_graph_does_not_inflate_during_multiple_forwards(self, model_and_ctrl_creator):
-        compressed_model, _ = model_and_ctrl_creator()
-        input_tensor = torch.zeros(ModelForGraphBuildingTest.INPUT_SHAPES[0])
-        ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
-        for _ in range(0, 10):
-            _ = compressed_model(input_tensor)
-            curr_graph = compressed_model.nncf.get_dynamic_graph()
-            assert curr_graph == ref_graph
-
-    def test_dynamic_graph_is_the_same_after_export(self, model_and_ctrl_creator, tmp_path):
-        compressed_model, ctrl = model_and_ctrl_creator()
-        ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
-        ctrl.export_model("tmp.onnx")
-        curr_graph = compressed_model.nncf.get_dynamic_graph()
-        assert curr_graph == ref_graph
-
-    def test_dummy_forwards_do_not_inflate_dynamic_graph(self, model_and_ctrl_creator):
-        compressed_model, _ = model_and_ctrl_creator()
-        ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
-        compressed_model.nncf.do_dummy_forward()
-        curr_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
-        assert curr_graph == ref_graph
-
-    def test_compressed_graph_with_user_wrap_fn(self):
-        # Create a model with a dummy forward analogous to
-        # the default dummy forward, compare original and compressed model graphs afterwards
-
-        comp_model_wo_wrap, _ = create_model_and_control_with_defaults()
-        comp_model_w_wrap, _ = create_model_with_user_wrap_inputs_fn()
-
-        ref_original_graph = comp_model_wo_wrap.nncf.get_graph()
-        ref_compressed_graph = comp_model_wo_wrap.nncf.get_graph()
-
-        original_graph_with_wrap = comp_model_w_wrap.nncf.get_graph()
-        compressed_graph_with_wrap = comp_model_w_wrap.nncf.get_graph()
-
-        assert ref_original_graph == original_graph_with_wrap
-        assert ref_compressed_graph == compressed_graph_with_wrap
-
-    def test_compressed_graph_with_user_dummy_forward(self):
-        # Create a model with a dummy forward analogous to
-        # the default dummy forward, compare original and compressed model graphs afterwards
-
-        comp_model_wo_dummy, _ = create_model_and_control_with_defaults()
-        comp_model_w_dummy, _ = create_model_with_user_dummy()
-
-        ref_original_graph = comp_model_wo_dummy.nncf.get_graph()
-        ref_compressed_graph = comp_model_wo_dummy.nncf.get_graph()
-
-        original_graph_with_dummy = comp_model_w_dummy.nncf.get_graph()
-        compressed_graph_with_dummy = comp_model_w_dummy.nncf.get_graph()
-
-        assert ref_original_graph == original_graph_with_dummy
-        assert ref_compressed_graph == compressed_graph_with_dummy
-
-
-def test_nncf_graph_auxiliary_node_structure():
-    model = ModelForGraphBuildingTest()
-    config = get_basic_quantization_config(
-        "symmetric", input_sample_sizes=list(ModelForGraphBuildingTest.INPUT_SHAPES[0])
-    )
-    register_bn_adaptation_init_args(config)
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-
-    nncf_graph = compressed_model.nncf.get_graph()
-
-    input_nodes = nncf_graph.get_input_nodes()
-    output_nodes = nncf_graph.get_output_nodes()
-
-    assert len(input_nodes) == 1
-    assert len(output_nodes) == 1
-
-    assert input_nodes[0].node_type == NNCFGraphNodeType.INPUT_NODE
-    assert output_nodes[0].node_type == NNCFGraphNodeType.OUTPUT_NODE
 
 
 def test_get_all_nodes():

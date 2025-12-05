@@ -28,8 +28,54 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import EmptyModel
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import TwoConvTestModel
-from tests.torch.quantization.test_overflow_issue_export import DepthWiseConvTestModel
-from tests.torch.quantization.test_overflow_issue_export import EightConvTestModel
+from tests.torch.helpers import create_conv
+
+
+class EightConvTestModel(nn.Module):
+    def __init__(self, in_out_ch=((1, 3), (3, 5), (5, 7), (7, 10))):
+        super().__init__()
+        self.features = []
+        self.features.append(create_conv(*in_out_ch[0], 2, -1, -2))
+        self.features.append(nn.BatchNorm2d(in_out_ch[0][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*in_out_ch[1], 5, 1, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[1][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*in_out_ch[2], 1, 2, 2))
+        self.features.append(nn.BatchNorm2d(in_out_ch[2][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*in_out_ch[3], 9, -1, 0))
+        self.features.append(nn.BatchNorm2d(in_out_ch[3][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[3]), 3, 0, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[3][0]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[2]), 1, -1, 9))
+        self.features.append(nn.BatchNorm2d(in_out_ch[2][0]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[1]), 2, 10, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[1][0]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[0]), 1, 1, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[0][0]))
+        self.features.append(nn.ReLU())
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        return self.features(x)
+
+
+class DepthWiseConvTestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = []
+        self.features.append(nn.Conv2d(1, 3, 3, groups=1))
+        self.features.append(nn.Conv2d(3, 30, 3, groups=3))
+        self.features.append(nn.Conv2d(30, 1, 3))
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        return self.features(x)
 
 
 def compare_saved_model_state_and_current_model_state(model: nn.Module, model_state: _ModuleState):

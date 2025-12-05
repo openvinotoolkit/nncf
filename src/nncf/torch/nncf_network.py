@@ -958,12 +958,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         :param strip format: Describes the format in which model is saved after strip.
         :return: The stripped model.
         """
-        if self.compression_controller is None:
-            # PTQ algorithm does not set compressed controller
-            from nncf.torch.quantization.strip import strip_quantized_model
-
-            model = deepcopy(self._model_ref) if do_copy else self._model_ref
-            return strip_quantized_model(model, strip_format=strip_format)
         return self.compression_controller.strip(do_copy, strip_format=strip_format)
 
     def get_reused_parameters(self):
