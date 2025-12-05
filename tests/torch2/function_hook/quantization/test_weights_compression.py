@@ -213,6 +213,34 @@ class AWQLinearModel(nn.Module):
         return node6
 
 
+class AWQLinearModel3D(nn.Module):
+    def __init__(self, is_int8=False):
+        super().__init__()
+        self.is_int8 = is_int8
+
+        weight_data = 0.01 * torch.arange(0, 2 * 8 * 8).reshape(2, 8, 8) + 0.05
+
+        self.w1 = nn.Parameter(weight_data)
+        self.w2 = nn.Parameter(weight_data)
+        self.w3 = nn.Parameter(weight_data)
+        self.w4 = nn.Parameter(weight_data)
+        self.w5 = nn.Parameter(weight_data)
+        self.w6 = nn.Parameter(weight_data)
+
+    def forward(self, x):
+        node1 = torch.bmm(x, self.w1)
+        node2 = torch.bmm(x, self.w2)
+        node_multiply = node1 * node2
+
+        node3 = torch.bmm(node_multiply, self.w3)
+        node4 = torch.bmm(node3, self.w4)
+        node5 = torch.bmm(node3, self.w5)
+        node_multiply_2 = node4 * node5
+
+        node6 = torch.bmm(node_multiply_2, self.w6)
+        return node6
+
+
 class FunctionalModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -516,8 +544,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_awq_model() -> torch.nn.Module:
-        return AWQLinearModel()
+    def get_awq_model(is_3d_weights) -> torch.nn.Module:
+        if not is_3d_weights:
+            return AWQLinearModel()
+        return AWQLinearModel3D()
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> torch.nn.Module:
@@ -715,8 +745,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(unpacked_w)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
-        return "linear5/linear/0"
+    def get_ignored_scope_name(is_3d_weights) -> str:
+        if not is_3d_weights:
+            return "linear5/linear/0"
+        return "/bmm/4"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:

@@ -382,8 +382,11 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_awq_model() -> TModel:
-        "Returns a backend model for test_awq_with_ignored_scope."
+    def get_awq_model(is_3d_weights) -> TModel:
+        """
+        Returns a backend model for test_awq_with_ignored_scope."
+        :param is_3d_weights: The model has 3d weights
+        """
 
     @staticmethod
     @abstractmethod
@@ -402,16 +405,19 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
-    def test_awq_with_ignored_scope(self, mocker):
-        model = self.get_awq_model()
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
+        model = self.get_awq_model(is_3d_weights)
         sz = 8
         n_samples = 10
 
+        input_shape = [2, 8, sz]
+
         dataset = Dataset(
-            [self.to_tensor(np.ones([1, 8, sz], dtype=np.float32)) for i in range(n_samples)],
+            [self.to_tensor(np.ones(input_shape, dtype=np.float32)) for i in range(n_samples)],
             self.get_transform_func(),
         )
 
@@ -423,12 +429,12 @@ class TemplateWeightCompression(ABC):
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
-                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
+                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name(is_3d_weights)]),
             )
 
         int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
-        assert int4_num_nodes == int4_ref_num_compressed
+        assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
     def test_rope_weight_compression(self):
         model = self.get_RoPE_model()

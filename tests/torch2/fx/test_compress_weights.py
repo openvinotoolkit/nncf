@@ -40,6 +40,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import SUP
 from tests.torch2.function_hook.quantization.test_weights_compression import UNSUPPORTED_MODES
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQActLinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel
+from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel3D
 from tests.torch2.function_hook.quantization.test_weights_compression import ConvolutionModel
 from tests.torch2.function_hook.quantization.test_weights_compression import DifferentChannelSizeMatmulModel
 from tests.torch2.function_hook.quantization.test_weights_compression import DTypeModel
@@ -364,10 +365,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_awq_model() -> torch.fx.GraphModule:
-        model = AWQLinearModel()
+    def get_awq_model(is_3d_weights) -> torch.fx.GraphModule:
+        if not is_3d_weights:
+            model = AWQLinearModel()
+        else:
+            model = AWQLinearModel3D()
         dynamic_shapes = [[None, torch.export.Dim("dynamic_shape"), None]]
-        ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        ex_input = torch.ones([2, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
         return exported_model
 
@@ -574,8 +578,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(unpacked_w)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
-        return "linear_4"
+    def get_ignored_scope_name(is_3d_weights) -> str:
+        if not is_3d_weights:
+            return "linear_4"
+        return "bmm_4"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
