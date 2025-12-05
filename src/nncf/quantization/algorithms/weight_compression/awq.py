@@ -244,7 +244,7 @@ class AWQ(Algorithm):
         if prev_statistics is not None and prev_weight is not None:
             prev_s, _ = process_stats(prev_statistics, self._subset_size)
             prev_s = prev_s.astype(TensorDataType.float32).max().item()
-            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis + 1)
+            prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
 
         top_k = max(int(s.shape[-1] * self._percent_to_apply), 1)
         topk_idxs = fns.argsort(-s)[:, :top_k]
