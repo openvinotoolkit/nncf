@@ -183,8 +183,17 @@ class AWQ(Algorithm):
                     prev_statistics = statistics[merge_node.node_name]
                 scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
 
-            w_scale = fns.unsqueeze(scale, -1 - wp.reduction_axes[0])
-            a_scale = fns.unsqueeze(1.0 / scale, -wp.reduction_axes[0])
+            # For 3D weights, len(scale.shape)%2 == 0 whereas for 2D it is 1. This allows us to index
+            # from the last dim and not consider the batch dim in 3D case.
+            # Example:
+            #   3D weights: W shape = [B, M, N]; reduction_axes = 2
+            #   scale_shape = [M, N] -> len(scale.shape) = 2 -> 2 % 2 = 0
+            #   unsqueeze scale at -(0 + 2) = -2.
+            #   2D weights:   W shape = [M, N]; reduction_axes = 1
+            #   scale_shape = [M] -> len(scale.shape) = 1 -> 1 % 2 = 1
+            #   unsqueeze scale at -(1 + 1) = -2.
+            w_scale = fns.unsqueeze(scale, -(len(scale.shape) % 2 + wp.reduction_axes[0]))
+            a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
@@ -243,11 +252,11 @@ class AWQ(Algorithm):
             group_size = s.shape[-1]
 
         groups_to_correct = set()
-        for expert_idx in range(topk_idxs.shape[0]):
+        for batch_idx in range(topk_idxs.shape[0]):
             for k_idx in range(topk_idxs.shape[1]):
-                idx = topk_idxs[expert_idx, k_idx].item()
+                idx = topk_idxs[batch_idx, k_idx].item()
                 group_idx = idx // group_size
-                groups_to_correct.add((expert_idx, group_idx))
+                groups_to_correct.add((batch_idx, group_idx))
 
         groups_to_correct = list(groups_to_correct)
 
@@ -264,11 +273,11 @@ class AWQ(Algorithm):
         awq_config = deepcopy(config)
         awq_config.group_size = -1
 
-        for expert_idx, gi in groups_to_correct:
+        for batch_idx, gi in groups_to_correct:
             offset = gi * group_size
-            gscale = s[expert_idx, offset : offset + group_size]
-            gweight = weight[expert_idx, :, offset : offset + group_size]
-            gacts = X[expert_idx, offset : offset + group_size, :]
+            gscale = s[batch_idx, offset : offset + group_size]
+            gweight = weight[batch_idx, :, offset : offset + group_size]
+            gacts = X[batch_idx, offset : offset + group_size, :]
 
             a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
             a_max = 1e2
@@ -289,7 +298,7 @@ class AWQ(Algorithm):
                     # per channel magnitudes for the previous MatMul
                     # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
                     magnitudes = (
-                        (prev_w[expert_idx, offset : offset + group_size] / cur_scale)
+                        (prev_w[batch_idx, offset : offset + group_size] / cur_scale)
                         * prev_s
                         * prev_weight.shape[reduction_axis]
                     )
@@ -298,7 +307,7 @@ class AWQ(Algorithm):
                             magnitudes,
                             threshold,
                             cur_scale,
-                            prev_w[expert_idx, offset : offset + group_size]
+                            prev_w[batch_idx, offset : offset + group_size]
                             * prev_s
                             * prev_weight.shape[reduction_axis]
                             / threshold,
@@ -319,7 +328,7 @@ class AWQ(Algorithm):
                 alpha += alpha_step
 
             if best_scale is not None:
-                scale.data[expert_idx, offset : offset + group_size] = best_scale.data
+                scale.data[batch_idx, offset : offset + group_size] = best_scale.data
 
         if is_2d_weight:
             scale = fns.squeeze(scale, 0)  # [1, hidden_dim] -> [hidden_dim]
