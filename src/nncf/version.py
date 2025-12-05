@@ -13,5 +13,3 @@ __version__ = "3.0.0"
 
 
 BKC_TORCH_SPEC = "==2.9.*"
-BKC_TF_SPEC = "==2.15.*"
-STRICT_TF_SPEC = ">=2.9.3,<2.16.0"

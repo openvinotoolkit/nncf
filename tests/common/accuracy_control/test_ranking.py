@@ -203,7 +203,6 @@ def evaluator_and_ranker():
     "backend, metric_mode, expected_result",
     [
         (BackendType.OPENVINO, True, operator.sub),
-        (BackendType.TENSORFLOW, True, operator.sub),
         (BackendType.OPENVINO, False, callable),
     ],
 )
@@ -218,7 +217,7 @@ def test_create_ranking_fn_error(evaluator_and_ranker):
     evaluator, ranker = evaluator_and_ranker
     evaluator.is_metric_mode.return_value = False
     with pytest.raises(nncf.UnsupportedBackendError):
-        ranker._create_ranking_fn(BackendType.TENSORFLOW)
+        ranker._create_ranking_fn(None)
 
 
 @pytest.fixture

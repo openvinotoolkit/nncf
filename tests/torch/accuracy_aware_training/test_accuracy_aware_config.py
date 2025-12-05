@@ -27,54 +27,11 @@ pytestmark = pytest.mark.legacy
     (
         (
             {
-                "compression": [
-                    {
-                        "algorithm": "filter_pruning",
-                    },
-                    {
-                        "algorithm": "quantization",
-                    },
-                ]
-            },
-            False,
-        ),
-        (
-            {
                 "compression": {
                     "algorithm": "quantization",
                 },
             },
             True,
-        ),
-        (
-            {
-                "compression": [
-                    {
-                        "algorithm": "filter_pruning",
-                    },
-                    {
-                        "algorithm": "rb_sparsity",
-                    },
-                ]
-            },
-            True,
-        ),
-        (
-            {
-                "accuracy_aware_training": {
-                    "mode": "early_exit",
-                    "params": {"maximal_relative_accuracy_degradation": 1, "maximal_total_epochs": 1},
-                },
-                "compression": [
-                    {
-                        "algorithm": "filter_pruning",
-                    },
-                    {
-                        "algorithm": "rb_sparsity",
-                    },
-                ],
-            },
-            False,
         ),
     ),
 )

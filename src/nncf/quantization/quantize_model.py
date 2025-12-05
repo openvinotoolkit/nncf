@@ -129,6 +129,7 @@ def _update_advanced_quantization_parameters(
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
+    *,
     mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
@@ -214,22 +215,6 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
 
-    if backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow.quantization.quantize_model import quantize_impl
-
-        return quantize_impl(  # type: ignore[no-any-return]
-            model=model,
-            calibration_dataset=calibration_dataset,
-            mode=mode,
-            preset=preset,
-            target_device=target_device,
-            subset_size=subset_size,
-            fast_bias_correction=fast_bias_correction,
-            model_type=model_type,
-            ignored_scope=ignored_scope,
-            advanced_parameters=advanced_parameters,
-        )
-
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
@@ -298,6 +283,7 @@ def quantize_with_accuracy_control(
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+    *,
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -423,6 +409,7 @@ def quantize_with_accuracy_control(
 )
 def compress_weights(
     model: TModel,
+    *,
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
@@ -430,7 +417,6 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
-    *,
     subset_size: int = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
@@ -714,8 +700,8 @@ def compress_weights(
         advanced_parameters,
     )
 
-    return compression_weights_impl(  # type: ignore[no-any-return]
-        model=model,
+    return compression_weights_impl(
+        model=model,  # type: ignore
         dataset=dataset,
         subset_size=subset_size,
         compression_format=compression_format,

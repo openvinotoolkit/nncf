@@ -121,7 +121,7 @@ def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightType
 )
 def test_numbers_of_quantized_weights(mode, reference_counter):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     counter = calculate_numbers_of_quantized_weights(model)
     assert counter == reference_counter
 
@@ -133,7 +133,7 @@ def test_numbers_of_quantized_weights(mode, reference_counter):
 def test_correct_dequantizelinear_int8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -164,7 +164,7 @@ def test_correct_dequantizelinear_int8(mode_weight_type):
 def test_correct_dequantizelinear_uint8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -204,7 +204,7 @@ def test_correct_dequantizelinear_uint8(mode_weight_type):
 def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -240,7 +240,7 @@ def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
 def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -281,7 +281,7 @@ def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
 )
 def test_compression_with_inference(mode):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     onnx.checker.check_model(model)
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())
@@ -484,78 +484,150 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_scale_estimation_ref():
-        return np.array(
-            [
-                [[0.473328]],
-                [[0.929023]],
-                [[1.446527]],
-                [[1.920595]],
-                [[2.517053]],
-                [[3.030101]],
-                [[3.584278]],
-                [[4.04351]],
-                [[4.620007]],
-                [[5.165322]],
-                [[5.710637]],
-                [[6.122580]],
-                [[6.655914]],
-                [[7.237173]],
-                [[7.722581]],
-                [[8.255914]],
-            ]
-        ).T
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            np.array(
+                [
+                    [[0.473328]],
+                    [[0.929023]],
+                    [[1.446527]],
+                    [[1.920595]],
+                    [[2.517054]],
+                    [[3.030102]],
+                    [[3.584279]],
+                    [[4.043509]],
+                    [[4.620008]],
+                    [[5.165322]],
+                    [[5.710637]],
+                    [[6.122581]],
+                    [[6.655914]],
+                    [[7.237174]],
+                    [[7.722580]],
+                    [[8.255914]],
+                ]
+            ).T,
+            np.array(
+                [
+                    [[0.47344488]],
+                    [[0.9287766]],
+                    [[1.4463282]],
+                    [[1.920052]],
+                    [[2.5167778]],
+                    [[3.02987]],
+                    [[3.5842714]],
+                    [[4.0429296]],
+                    [[4.619769]],
+                    [[5.165224]],
+                    [[5.7106786]],
+                    [[6.121212]],
+                    [[6.654546]],
+                    [[7.2366524]],
+                    [[7.7212124]],
+                    [[8.254545]],
+                ]
+            ).T,
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
-    def get_moe_scale_estimation_ref():
-        return np.array(
-            [
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            np.array(
                 [
                     [
                         [
-                            7.573249,
-                            7.4666667,
-                            7.4666667,
-                            7.4666667,
-                            7.4666667,
-                            7.260152,
-                            7.4666667,
-                            7.4666667,
-                            7.4666667,
-                            7.4666667,
-                            7.3082952,
-                            7.846745,
-                            7.223278,
-                            7.271495,
-                            7.420518,
-                            7.4666667,
+                            [
+                                7.5732,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.2602,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.3083,
+                                7.8467,
+                                7.2233,
+                                7.2715,
+                                7.4205,
+                                7.4667,
+                            ]
                         ]
-                    ]
-                ],
+                    ],
+                    [
+                        [
+                            [
+                                14.8205,
+                                14.9032,
+                                14.9858,
+                                15.0685,
+                                15.1512,
+                                14.3400,
+                                14.4173,
+                                14.4945,
+                                14.5718,
+                                14.6491,
+                                14.7264,
+                                14.8037,
+                                14.8810,
+                                14.9583,
+                                15.0355,
+                                15.1128,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+            np.array(
                 [
                     [
                         [
-                            14.820505,
-                            14.903171,
-                            14.985837,
-                            15.068501,
-                            15.151169,
-                            14.339979,
-                            14.417264,
-                            14.494548,
-                            14.571833,
-                            14.649117,
-                            14.726402,
-                            14.803687,
-                            14.880971,
-                            14.958257,
-                            15.035541,
-                            15.112826,
+                            [
+                                7.575118,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.254837,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.495066,
+                                7.850108,
+                                7.219489,
+                                7.2685375,
+                                7.418597,
+                                7.4666667,
+                            ]
                         ]
-                    ]
-                ],
-            ]
-        )
+                    ],
+                    [
+                        [
+                            [
+                                14.820066,
+                                14.902746,
+                                14.985427,
+                                15.068108,
+                                15.150787,
+                                14.3391285,
+                                14.416424,
+                                14.493721,
+                                14.571016,
+                                14.648311,
+                                14.725608,
+                                14.802904,
+                                14.8801985,
+                                14.957496,
+                                15.034791,
+                                15.112087,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: onnx.ModelProto) -> Tensor:

@@ -68,7 +68,7 @@ from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.scopes import Subgraph as Subgraph
 from nncf.version import __version__ as __version__
 
-_SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
+_SUPPORTED_FRAMEWORKS = ["torch", "onnx", "openvino"]
 
 
 from importlib.util import find_spec as _find_spec  # noqa: E402
@@ -90,7 +90,7 @@ for fw_name in _SUPPORTED_FRAMEWORKS:
 
 if not any(_AVAILABLE_FRAMEWORKS.values()):
     nncf_logger.error(
-        "Neither PyTorch, TensorFlow, ONNX or OpenVINO Python packages have been found in your Python "
+        "Neither PyTorch, ONNX or OpenVINO Python packages have been found in your Python "
         "environment.\n"
         "Please install one of the supported frameworks above in order to use NNCF on top of it.\n"
         "See the installation guide at https://github.com/openvinotoolkit/nncf#installation-guide for help."
