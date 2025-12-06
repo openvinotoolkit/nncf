@@ -14,8 +14,6 @@ import numbers
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
-from copy import deepcopy
-from pathlib import Path
 from typing import Any, Callable, TypeVar, Union
 
 import numpy as np
@@ -42,10 +40,8 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.initialization import PTInitializingDataLoader
-from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.layers import NNCF_MODULES_MAP
-from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_module_replacement import get_original_module_scope_from_nncf_module_scope
 from nncf.torch.nncf_network import NNCFNetwork
@@ -401,27 +397,6 @@ class PTTensorListComparator(BaseTensorListComparator):
         raise Exception(msg)
 
 
-def create_compressed_model_and_algo_for_test(
-    model: Module,
-    config: NNCFConfig = None,
-    dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable[[tuple, dict], tuple[tuple, dict]] = None,
-    compression_state: dict[str, Any] = None,
-) -> tuple[NNCFNetwork, PTCompressionAlgorithmController]:
-    if config is not None:
-        assert isinstance(config, NNCFConfig)
-        NNCFConfig.validate(config)
-    algo, model = create_compressed_model(
-        model,
-        config,
-        dump_graphs=False,
-        dummy_forward_fn=dummy_forward_fn,
-        wrap_inputs_fn=wrap_inputs_fn,
-        compression_state=compression_state,
-    )
-    return model, algo
-
-
 def create_nncf_model_and_single_algo_builder(
     model: Module,
     config: NNCFConfig,
@@ -451,12 +426,6 @@ def create_nncf_model_and_single_algo_builder(
     builder_cls = PT_COMPRESSION_ALGORITHMS.get(algo_name)
     builder = builder_cls(config, should_init=True)
     return compressed_model, builder
-
-
-def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig, train_loader: DataLoader) -> nn.Module:
-    config = register_default_init_args(deepcopy(config), train_loader, nn.MSELoss)
-    model, _compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    return model
 
 
 class MockModel(nn.Module):
@@ -656,16 +625,6 @@ def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_ty
         return create_dataloader_semantic_segmentation
     if sample_type == "object_detection":
         return create_dataloader_object_detection
-
-
-def load_exported_onnx_version(
-    nncf_config: NNCFConfig, model: torch.nn.Module, path_to_storage_dir: Path, save_format: str = None
-) -> onnx.ModelProto:
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    onnx_checkpoint_path = path_to_storage_dir / "model.onnx"
-    compression_ctrl.export_model(str(onnx_checkpoint_path), save_format=save_format)
-    model_proto = onnx.load_model(str(onnx_checkpoint_path))
-    return model_proto
 
 
 HookType = TypeVar("HookType")

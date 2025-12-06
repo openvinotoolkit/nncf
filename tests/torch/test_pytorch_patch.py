@@ -23,8 +23,6 @@ from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
-from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
-from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
 
 pytestmark = pytest.mark.legacy
 
@@ -92,11 +90,6 @@ def test_jit_if_tracing_script_patching(tmp_path):
 
     # ONNX export should work correctly because torch.jit.script_if_tracing is patched
     torch.onnx.export(TestModel(), (torch.zeros((1,)),), str(tmp_path / "jit_if_tracing_test_model.onnx"), dynamo=False)
-
-
-def test_jit_if_tracing_script_source():
-    # Run test case in a separate process to track patching of torch by NNCF
-    run_pytest_case_function_in_separate_process(test_jit_if_tracing_script_source_equals)
 
 
 def test_operator_unpatching():

@@ -37,7 +37,6 @@ if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience
 
-from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.model_creation import load_from_config
