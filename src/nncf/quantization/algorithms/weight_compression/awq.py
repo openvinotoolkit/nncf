@@ -236,7 +236,7 @@ class AWQ(Algorithm):
             X = fns.unsqueeze(X, 0)  # [hidden_dim, samples] -> [1, hidden_dim, samples]
             weight = fns.unsqueeze(weight, 0)  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
             prev_weight = (
-                fns.unsqueeze(prev_weight, 0) if prev_weight else None
+                fns.unsqueeze(prev_weight, 0) if prev_weight is not None else None
             )  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
             reduction_axis += 1
 
