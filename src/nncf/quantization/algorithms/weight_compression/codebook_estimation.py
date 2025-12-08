@@ -273,6 +273,7 @@ class CodebookEstimation:
         norm_weight = []
         importances = []
         Xs = []
+        fp_outs = []
 
         for stat, weight in zip(statistics, weights):
             weight = deepcopy(weight.astype(TensorDataType.float32))
@@ -288,6 +289,8 @@ class CodebookEstimation:
                     weight, reduction_axes, config.group_size
                 )
 
+            fp_outs.append(fns.matmul(weight, X))
+
             importance = fns.ones_like(weight)
             importance = importance * s
             importances.append(importance)
@@ -302,22 +305,22 @@ class CodebookEstimation:
 
         best_codebook = codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3)
 
-        fp_outs = fns.matmul(weight, X)
         diff = float("inf")
 
         variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
         variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
+
+        coeffs = [fns.mean(fns.abs(X)).item() for X in Xs]
 
         for var in variants:
             var = var.as_openvino_tensor().astype(TensorDataType.f8e4m3)
             config.codebook_values = Tensor(var)
 
             cur_diff = 0.0
-            for weight, X in zip(weights, Xs):
+            for weight, X, fp_out, c in zip(weights, Xs, fp_outs, coeffs):
                 qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
-                q_outs = fns.matmul(qw, X)
-                cur_diff += fns.mean(fns.abs(fp_outs - q_outs)).item()
-
+                q_out = fns.matmul(qw, X)
+                cur_diff += c * fns.mean(fns.abs(fp_out - q_out)).item()
             if cur_diff < diff:
                 diff = cur_diff
                 best_codebook = var
