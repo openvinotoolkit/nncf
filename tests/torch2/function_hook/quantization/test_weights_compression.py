@@ -173,6 +173,33 @@ class AWQActLinearModel(nn.Module):
         return out
 
 
+class AWQActLinearModel3D(nn.Module):
+    def __init__(self, with_multiply=False, n_layers=8):
+        super().__init__()
+        self.with_multiply = with_multiply
+        self.n_layers = n_layers
+
+        base_w = torch.arange(0, 2 * 8 * 8, dtype=torch.float32).reshape(2, 8, 8) - 32.0
+        self.emb_weight = nn.Parameter(base_w.clone())
+        self.lm_head_weight = nn.Parameter(base_w.clone())
+        n_params = 2 * n_layers if with_multiply else n_layers
+        self.layer_weights = nn.ParameterList(nn.Parameter(base_w) for _ in range(n_params))
+
+    def forward(self, x):
+        out = torch.bmm(x, self.emb_weight)
+
+        for i in range(self.n_layers):
+            node1 = F.relu(torch.bmm(out, self.layer_weights[i]))
+            if self.with_multiply:
+                node2 = torch.selu(torch.bmm(out, self.layer_weights[i]))
+                out = node1 * node2
+            else:
+                out = node1
+
+        out = torch.bmm(out, self.lm_head_weight)
+        return out
+
+
 class AWQLinearModel(nn.Module):
     def __init__(self, is_int8=False):
         super().__init__()
@@ -554,7 +581,9 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes)
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
+        if is_3d_weights:
+            return AWQActLinearModel3D(with_multiply=with_multiply, n_layers=n_layers)
         return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
 
     @staticmethod

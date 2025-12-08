@@ -39,6 +39,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import INT
 from tests.torch2.function_hook.quantization.test_weights_compression import SUPPORTED_MODES
 from tests.torch2.function_hook.quantization.test_weights_compression import UNSUPPORTED_MODES
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQActLinearModel
+from tests.torch2.function_hook.quantization.test_weights_compression import AWQActLinearModel3D
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel3D
 from tests.torch2.function_hook.quantization.test_weights_compression import ConvolutionModel
@@ -382,9 +383,11 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         model = AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
-        ex_input = torch.ones([1, 8, 8], dtype=torch.float32)
+        if is_3d_weights:
+            model = AWQActLinearModel3D(with_multiply=with_multiply, n_layers=n_layers)
+        ex_input = torch.ones([2, 8, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
