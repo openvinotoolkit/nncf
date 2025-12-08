@@ -1,0 +1,24 @@
+strict digraph {
+"0 wte_weight_updated_constant0" [id=0, type="get_attr"];
+"1 asymmetric_weights_decompressor_wte_weight_0" [id=1, type="call_module"];
+"2 linear_weight_updated_constant0" [id=2, type="get_attr"];
+"3 asymmetric_weights_decompressor_linear_weight_0" [id=3, type="call_module"];
+"4 linear_bias" [id=4, type="get_attr"];
+"5 lm_head_bias" [id=5, type="get_attr"];
+"6 input_ids" [id=6, type=input];
+"7 embedding" [id=7, type=embedding];
+"8 linear" [id=8, type=linear];
+"9 linear_1" [id=9, type=linear];
+"10 output" [id=10, type=output];
+"0 wte_weight_updated_constant0" -> "1 asymmetric_weights_decompressor_wte_weight_0" [style=solid, label="(128, 64)"];
+"1 asymmetric_weights_decompressor_wte_weight_0" -> "7 embedding" [style=solid, label="(128, 64)"];
+"1 asymmetric_weights_decompressor_wte_weight_0" -> "9 linear_1" [style=solid, label="(128, 64)"];
+"2 linear_weight_updated_constant0" -> "3 asymmetric_weights_decompressor_linear_weight_0" [style=solid, label="(64, 64)"];
+"3 asymmetric_weights_decompressor_linear_weight_0" -> "8 linear" [style=solid, label="(64, 64)"];
+"4 linear_bias" -> "8 linear" [style=solid, label="(64,)"];
+"5 lm_head_bias" -> "9 linear_1" [style=solid, label="(128,)"];
+"6 input_ids" -> "7 embedding" [style=solid, label="(5,)"];
+"7 embedding" -> "8 linear" [style=solid, label="(5, 64)"];
+"8 linear" -> "9 linear_1" [style=solid, label="(5, 64)"];
+"9 linear_1" -> "10 output" [style=solid, label="(5, 128)"];
+}
