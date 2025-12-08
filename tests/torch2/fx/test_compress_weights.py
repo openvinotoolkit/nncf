@@ -370,7 +370,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         model = AWQLinearModel()
         if is_3d_weights:
             model = AWQLinearModel3D()
-        dynamic_shapes = [[torch.export.Dim.DYNAMIC, torch.export.Dim.DYNAMIC, None]]
+        dynamic_shapes = [[torch.export.Dim.AUTO, torch.export.Dim.DYNAMIC, None]]
         ex_input = torch.ones([2, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
         return exported_model
@@ -387,7 +387,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         model = AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
         if is_3d_weights:
             model = AWQActLinearModel3D(with_multiply=with_multiply, n_layers=n_layers)
-        dynamic_shapes = [[torch.export.Dim.DYNAMIC, torch.export.Dim.DYNAMIC, None]]
+        dynamic_shapes = [[torch.export.Dim.AUTO, torch.export.Dim.DYNAMIC, None]]
         ex_input = torch.ones([2, 8, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
         return exported_model
