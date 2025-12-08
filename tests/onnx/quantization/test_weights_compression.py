@@ -659,7 +659,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(outputs["W_0_dequantized"])
 
     @staticmethod
-    def get_awq_act_model(with_multiply: bool, n_layers: int) -> onnx.ModelProto:
+    def get_awq_act_model(is_3d_weights: bool, with_multiply: bool, n_layers: int) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul()
@@ -668,7 +668,12 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         """
         mb = ModelBuilder()
 
-        data = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+        weight_shape = (8, 8)
+        if is_3d_weights:
+            # The first and last dimension are later transposed
+            weight_shape = (8, 8, 2)
+
+        data = 0.01 * np.arange(0, math.prod(weight_shape)).reshape(weight_shape) + 0.05
         data = data.astype(np.float32).T
 
         x = mb.add_input("input", (1, 8, 8))
@@ -676,17 +681,17 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         x = mb.add_matmul(x, shape=(8, 8), data=data)
         for _ in range(n_layers):
-            a = mb.add_matmul(x, shape=(8, 8), data=data)
+            a = mb.add_matmul(x, shape=data.shape, data=data)
             a = mb.add_relu(a)
             if with_multiply:
-                b = mb.add_matmul(x, shape=(8, 8), data=data)
+                b = mb.add_matmul(x, shape=data.shape, data=data)
                 b = mb.add_selu(b)
                 x = mb.add_mul(a, b)
             else:
                 x = a
-        mb.add_matmul(x, shape=(8, 8), output=output, data=data)
+        mb.add_matmul(x, shape=data.shape, output=output, data=data)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def get_num_multiply_from_awq(model: onnx.ModelProto) -> int:
@@ -708,9 +713,12 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         mb = ModelBuilder()
 
         weight_shape = (8, 8)
+        opset_version = 13
         if is_3d_weights:
             # The first and last dimension are later transposed
             weight_shape = (8, 8, 2)
+            # 3D weights does not work due to no support in MatMulNBits which is used in opset_version < 21
+            opset_version = 21
 
         x = mb.add_input("input", (2, None, 8))
         output = mb.add_output("output", (2, None, 8))
@@ -725,7 +733,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             x = mb.add_mul(a, b)
             x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
 
-        return mb.build()
+        return mb.build(opset_version=opset_version)
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> onnx.ModelProto:

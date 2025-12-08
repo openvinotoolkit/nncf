@@ -259,6 +259,10 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # For opsets earlier than 21, we use the `MatMulNBits` operation from ONNX Runtime contrib operators.
             # See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md
             if opset_version < 21 and dequantize_block_size > 0:
+                if len(weight.shape) == 3:
+                    msg = """ONNX does not support 3D weights for opset version < 21.
+                             Please use a higher opset version or per-channel quantization"""
+                    raise nncf.ParameterNotSupportedError(msg)
                 compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
                     compressed_weight, weight.shape, dequantize_block_size=None, apply_transpose=True
                 )
