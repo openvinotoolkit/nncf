@@ -2083,7 +2083,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SimpleMoEModel().ov_model
 
     @staticmethod
-    def get_awq_model() -> ov.Model:
+    def get_awq_model(is_3d_weights) -> ov.Model:
         return AWQMatmulModel().ov_model
 
     @staticmethod

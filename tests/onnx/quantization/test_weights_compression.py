@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
@@ -696,7 +697,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_awq_model() -> onnx.ModelProto:
+    def get_awq_model(is_3d_weights) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_awq_with_ignored_scope()
@@ -709,7 +710,11 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_input("input", (1, None, 8))
         output = mb.add_output("output", (1, None, 8))
 
-        w_data = 0.01 * np.arange(0, 64, dtype=np.float32).reshape(8, 8) + 0.05
+        weight_shape = (8, 8)
+        if is_3d_weights:
+            weight_shape = (2, 8, 8)
+
+        w_data = 0.01 * np.arange(0, math.prod(weight_shape), dtype=np.float32).reshape(weight_shape) + 0.05
         w_data = w_data.T
 
         num_blocks = 2
