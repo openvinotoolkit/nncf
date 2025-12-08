@@ -240,12 +240,10 @@ class AWQ(Algorithm):
         reduction_axis = wp.reduction_axes[0]
 
         if is_2d_weight:
-            s = fns.unsqueeze(s, 0)  # [hidden_dim] -> [1, hidden_dim]
-            X = fns.unsqueeze(X, 0)  # [hidden_dim, samples] -> [1, hidden_dim, samples]
-            weight = fns.unsqueeze(weight, 0)  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
-            prev_weight = (
-                fns.unsqueeze(prev_weight, 0) if prev_weight is not None else None
-            )  # [out_features, hidden_dim] -> [1, out_features, hidden_dim]
+            s = fns.unsqueeze(s, 0)
+            X = fns.unsqueeze(X, 0)
+            weight = fns.unsqueeze(weight, 0)
+            prev_weight = fns.unsqueeze(prev_weight, 0) if prev_weight is not None else None
             reduction_axis += 1
 
         prev_s, prev_w = None, None
