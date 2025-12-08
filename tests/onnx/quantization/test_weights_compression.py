@@ -707,12 +707,13 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         """
         mb = ModelBuilder()
 
-        x = mb.add_input("input", (1, None, 8))
-        output = mb.add_output("output", (1, None, 8))
-
         weight_shape = (8, 8)
         if is_3d_weights:
-            weight_shape = (2, 8, 8)
+            # The first and last dimension are later transposed
+            weight_shape = (8, 8, 2)
+
+        x = mb.add_input("input", (2, None, 8))
+        output = mb.add_output("output", (2, None, 8))
 
         w_data = 0.01 * np.arange(0, math.prod(weight_shape), dtype=np.float32).reshape(weight_shape) + 0.05
         w_data = w_data.T
@@ -765,7 +766,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return num
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod

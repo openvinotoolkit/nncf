@@ -366,9 +366,8 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_awq_model(is_3d_weights) -> torch.fx.GraphModule:
-        if not is_3d_weights:
-            model = AWQLinearModel()
-        else:
+        model = AWQLinearModel()
+        if is_3d_weights:
             model = AWQLinearModel3D()
         dynamic_shapes = [[None, torch.export.Dim("dynamic_shape"), None]]
         ex_input = torch.ones([2, 4, 8], dtype=torch.float32)
