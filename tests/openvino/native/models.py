@@ -1004,7 +1004,7 @@ class AWQMatmulModel(OVReferenceModel):
         return (qw - zp) * scale
 
     def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
-        input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
+        input_node = opset.parameter([2] * n_extra_dims + [-1, 8], name="Input_1")
 
         weights_data1 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights1 = self.get_weights(weights_data1, is_int8, name="weights_1")
@@ -1032,6 +1032,47 @@ class AWQMatmulModel(OVReferenceModel):
 
         weights_data6 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights6 = self.get_weights(weights_data6, is_int8, name="weights_6")
+        node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
+
+        result = opset.result(node6, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
+class AWQMatmulModel3D(OVReferenceModel):
+    """
+    3D-weights version of AWQMatmulModel.
+    All weight tensors are [2, 8, 8]; input is [2, L, 8].
+    """
+
+    def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
+        input_node = opset.parameter([2] * n_extra_dims + [-1, 8], name="Input_1")
+
+        def make_weights(name):
+            w = 0.01 * np.arange(0, 2 * 8 * 8).reshape(2, 8, 8) + 0.05
+            return opset.constant(w, dtype=np.float32, name=name)
+
+        weights1 = make_weights("weights_1")
+        node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        weights2 = make_weights("weights_2")
+        node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        node_multiply = opset.multiply(node1, node2, name="Multiply")
+
+        weights3 = make_weights("weights_3")
+        node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
+
+        weights4 = make_weights("weights_4")
+        node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
+
+        weights5 = make_weights("weights_5")
+        node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
+
+        node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
+
+        weights6 = make_weights("weights_6")
         node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
 
         result = opset.result(node6, name="Result")
