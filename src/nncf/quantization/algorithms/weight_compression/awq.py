@@ -159,16 +159,24 @@ class AWQ(Algorithm):
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
-            is_mergeable = self._backend_entity.is_node_with_weights(merge_node, graph)
-
-            nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
-
             _, weight_port_id = weight_data[0]
+
             weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
             weight_dtype = weight.dtype
             weight = weight.astype(TensorDataType.float32)
+
+            # returns an empty list if no weights are present
+            mergeable_node_weight_data = self._backend_entity.get_weight_names_and_port_ids(merge_node, graph)
+            merge_node_weight_dims = [
+                len(self._backend_entity.get_weight_shape(merge_node, port_id, graph))
+                for _, port_id in mergeable_node_weight_data
+            ]
+            # if no weights are present, it checks membership with empty list which is False.
+            is_mergeable = len(weight.shape) in merge_node_weight_dims
+
+            nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
 
             if is_data_free:
                 scale = self._data_free_step(weight, 1 - wp.reduction_axes[0])
