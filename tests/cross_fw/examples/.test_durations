@@ -16,11 +16,9 @@
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_mobilenet_v2_quantize]": 169,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_yolo8_quantize_with_accuracy_control]": 205,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_yolo8_quantize]": 170,
-    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_tensorflow_mobilenet_v2]": 149,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_fx_resnet18]": 412,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_mobilenet_v2]": 192,
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_ssd300_vgg16]": 231,
-    "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_tensorflow_mobilenet_v2]": 1500,
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_anomalib]": 478,
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_resnet18]": 1251
 }

@@ -16,8 +16,6 @@ from typing import Optional
 
 from nncf.api.compression import TModel
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
 
 
 class BatchnormAdaptationAlgorithmImpl(ABC):
@@ -83,16 +81,7 @@ class BatchnormAdaptationAlgorithm:
 
         :param model: A model for which the algorithm will be applied.
         """
-        backend = get_backend(model)
-        impl_cls: type[BatchnormAdaptationAlgorithmImpl]
-        if backend is BackendType.TORCH:
-            from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
+        from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
 
-            impl_cls = PTBatchnormAdaptationAlgorithmImpl
-        else:
-            assert backend is BackendType.TENSORFLOW
-            from nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
-
-            impl_cls = TFBatchnormAdaptationAlgorithmImpl
-        impl = impl_cls(self._data_loader, self._num_bn_adaptation_steps, self._device)
+        impl = PTBatchnormAdaptationAlgorithmImpl(self._data_loader, self._num_bn_adaptation_steps, self._device)
         impl.run(model)

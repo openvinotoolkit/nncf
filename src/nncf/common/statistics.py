@@ -14,12 +14,7 @@ from dataclasses import fields
 from typing import Iterator, Optional
 
 from nncf.api.statistics import Statistics
-from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.quantization.statistics import QuantizationStatistics
-from nncf.common.sparsity.statistics import ConstSparsityStatistics
-from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
-from nncf.common.sparsity.statistics import MovementSparsityStatistics
-from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.common.utils.api_marker import api
 
 
@@ -31,24 +26,14 @@ class NNCFStatistics:
     Statistics are present only if the algorithm has been started.
     """
 
-    const_sparsity: Optional[ConstSparsityStatistics] = None
-    filter_pruning: Optional[FilterPruningStatistics] = None
-    magnitude_sparsity: Optional[MagnitudeSparsityStatistics] = None
-    movement_sparsity: Optional[MovementSparsityStatistics] = None
     quantization: Optional[QuantizationStatistics] = None
-    rb_sparsity: Optional[RBSparsityStatistics] = None
 
     def register(self, algorithm_name: str, stats: Statistics) -> None:
         """
         Registers statistics for the algorithm.
 
         :param algorithm_name: Name of the algorithm. Should be one of the following
-            * const_sparsity
-            * filter_pruning
-            * magnitude_sparsity
-            * movement_sparsity
             * quantization
-            * rb_sparsity
 
         :param stats: Statistics of the algorithm.
         """

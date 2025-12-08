@@ -765,8 +765,10 @@ Always use a `.py` filename extension. Never use dashes.
 
 #### 4.7.3 Framework specific class naming
 
-- `PTClassName` for Torch
-- `TFClassName` for TensorFlow
+- `OVClassName` for OpenVINO
+- `PTClassName` for PyTorch
+- `FXClassName` for FX
+- `ONNXClassName` for ONNX
 
 <a id="s4.7.4-file-naming"></a>
 <a id="474-file-naming"></a>
