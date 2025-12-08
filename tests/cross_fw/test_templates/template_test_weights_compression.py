@@ -354,7 +354,7 @@ class TemplateWeightCompression(ABC):
     # AWQ Tests
     @staticmethod
     @abstractmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
 
     @staticmethod
@@ -366,13 +366,16 @@ class TemplateWeightCompression(ABC):
     def int4_mode(self, request):
         return None
 
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("with_multiply", (True, False))
-    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply, mocker):
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
+        self, int4_mode, with_multiply, is_3d_weights, mocker
+    ):
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_model(with_multiply, n_layers)
+        model = self.get_awq_act_model(is_3d_weights, with_multiply, n_layers)
 
-        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+        dataset = Dataset([self.to_tensor(np.ones([2, 8, 8], dtype=np.float32))], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
@@ -626,14 +629,15 @@ class TemplateWeightCompression(ABC):
             f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
         )
 
-    @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
-    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, mocker):
-        input_data = np.ones([1, 8, 8], dtype=np.float32)
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker):
+        input_data = np.ones([2, 8, 8], dtype=np.float32)
 
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_model(True, n_layers)
+        model = self.get_awq_act_model(is_3d_weights, True, n_layers)
         model = self.wrap_model(model, input_data)
 
         if dataset is not None:

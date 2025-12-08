@@ -63,6 +63,7 @@ from tests.cross_fw.test_templates.template_test_weights_compression import ACTI
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
+from tests.openvino.native.models import AWQActMatmulModel3D
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import AWQMatmulModel3D
 from tests.openvino.native.models import AWQModel_fp16_overlow
@@ -2094,7 +2095,9 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes).ov_model
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
+        if is_3d_weights:
+            return AWQActMatmulModel3D(with_multiply=with_multiply, n_layers=n_layers).ov_model
         return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
 
     @staticmethod
