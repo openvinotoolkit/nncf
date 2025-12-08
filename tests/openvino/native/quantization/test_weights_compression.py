@@ -930,7 +930,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
 @pytest.mark.parametrize("mode", INT4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -938,7 +938,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -946,7 +946,7 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
 
