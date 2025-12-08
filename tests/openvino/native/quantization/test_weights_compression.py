@@ -64,6 +64,7 @@ from tests.cross_fw.test_templates.template_test_weights_compression import Temp
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
+from tests.openvino.native.models import AWQMatmulModel3D
 from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
@@ -2084,6 +2085,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_awq_model(is_3d_weights) -> ov.Model:
+        if is_3d_weights:
+            return AWQMatmulModel3D().ov_model
         return AWQMatmulModel().ov_model
 
     @staticmethod
@@ -2322,12 +2325,36 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "MatMul_3": Tensor(
-                np.array(
-                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
-                    dtype=np.float32,
+    def get_reference_for_test_awq_scale_reference(is_3d_weights) -> dict[str, Tensor]:
+        return [
+            {
+                "MatMul_3": Tensor(
+                    np.array(
+                        [[1.4228648, 1.3474456, 1.1335096, 1.001522, 0.90938693, 0.84022623, 0.78575736, 0.7413683]],
+                        dtype=np.float32,
+                    )
                 )
-            )
-        }
+            },
+            {
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
+                            [
+                                [
+                                    0.46889508,
+                                    0.4599662,
+                                    0.4321173,
+                                    0.40815368,
+                                    0.387274,
+                                    0.36888793,
+                                    0.35255024,
+                                    0.33791822,
+                                ]
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                )
+            },
+        ][is_3d_weights]
