@@ -479,7 +479,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    def get_reference_for_test_awq_scale_reference(is_3d_weights) -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
@@ -502,7 +502,7 @@ class TemplateWeightCompression(ABC):
             )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
+            assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference(is_3d_weights)[node_name])
 
     @pytest.mark.parametrize(
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],

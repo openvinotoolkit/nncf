@@ -778,38 +778,42 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "linear3/linear/0": Tensor(
-                torch.tensor([[1.422865, 1.347446, 1.133510, 1.001522, 0.909387, 0.840226, 0.785757, 0.741368]])
-            ),
-            "/bmm/2": Tensor(
-                torch.tensor(
-                    [
+    def get_reference_for_test_awq_scale_reference(is_3d_weights) -> dict[str, Tensor]:
+        return [
+            {
+                "linear3/linear/0": Tensor(
+                    torch.tensor([[1.422865, 1.347446, 1.133510, 1.001522, 0.909387, 0.840226, 0.785757, 0.741368]])
+                ),
+            },
+            {
+                "/bmm/2": Tensor(
+                    torch.tensor(
                         [
-                            [1.109999],
-                            [1.108342],
-                            [1.102878],
-                            [1.097587],
-                            [1.092457],
-                            [1.087481],
-                            [1.082649],
-                            [1.077955],
-                        ],
-                        [
-                            [0.130212],
-                            [0.129630],
-                            [0.127712],
-                            [0.125842],
-                            [0.124017],
-                            [0.122236],
-                            [0.120498],
-                            [0.118800],
-                        ],
-                    ]
-                )
-            ),
-        }
+                            [
+                                [1.109999],
+                                [1.108342],
+                                [1.102878],
+                                [1.097587],
+                                [1.092457],
+                                [1.087481],
+                                [1.082649],
+                                [1.077955],
+                            ],
+                            [
+                                [0.130212],
+                                [0.129630],
+                                [0.127712],
+                                [0.125842],
+                                [0.124017],
+                                [0.122236],
+                                [0.120498],
+                                [0.118800],
+                            ],
+                        ]
+                    )
+                ),
+            },
+        ][is_3d_weights]
 
 
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])

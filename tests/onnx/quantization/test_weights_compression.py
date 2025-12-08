@@ -770,15 +770,46 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "MatMul_3": Tensor(
-                np.array(
-                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
-                    dtype=np.float32,
-                ).T
-            )
-        }
+    def get_reference_for_test_awq_scale_reference(is_3d_weights) -> dict[str, Tensor]:
+        return [
+            {
+                "MatMul_3": Tensor(
+                    np.array(
+                        [[1.4228648, 1.3474456, 1.1335096, 1.001522, 0.90938693, 0.84022623, 0.78575736, 0.7413683]],
+                        dtype=np.float32,
+                    ).T
+                )
+            },
+            {
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [
+                                [1.119726],
+                                [1.1012304],
+                                [1.0438583],
+                                [1.006067],
+                                [0.97812414],
+                                [0.95607865],
+                                [0.9379444],
+                                [0.922586],
+                            ],
+                            [
+                                [0.99698645],
+                                [0.9808075],
+                                [0.9307146],
+                                [0.8974796],
+                                [0.87281394],
+                                [0.8533093],
+                                [0.8372402],
+                                [0.82361573],
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                )
+            },
+        ][is_3d_weights]
 
     @staticmethod
     def get_transform_func() -> Optional[Callable[..., Any]]:
