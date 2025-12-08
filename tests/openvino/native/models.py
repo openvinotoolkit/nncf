@@ -1004,7 +1004,7 @@ class AWQMatmulModel(OVReferenceModel):
         return (qw - zp) * scale
 
     def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
-        input_node = opset.parameter([2] * n_extra_dims + [-1, 8], name="Input_1")
+        input_node = opset.parameter([-1] * n_extra_dims + [-1, 8], name="Input_1")
 
         weights_data1 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights1 = self.get_weights(weights_data1, is_int8, name="weights_1")
@@ -1047,7 +1047,7 @@ class AWQMatmulModel3D(OVReferenceModel):
     """
 
     def _create_ov_model(self, n_extra_dims=1, is_int8=False):
-        input_node = opset.parameter([2] * n_extra_dims + [-1, 8], name="Input_1")
+        input_node = opset.parameter([-1] * n_extra_dims + [-1, 8], name="Input_1")
 
         def make_weights(name):
             w = 0.01 * np.arange(0, 2 * 8 * 8).reshape(2, 8, 8) + 0.05
@@ -1087,7 +1087,7 @@ class AWQActMatmulModel(OVReferenceModel):
     """
 
     def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8):
-        input_node = opset.parameter([2, 8, 8], name="Input_1")
+        input_node = opset.parameter([-1, 8, 8], name="Input_1")
         weights_data = np.arange(0, 64).reshape(8, 8) - 32
         weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_emb")
         out_node = opset.matmul(input_node, weights, transpose_a=False, transpose_b=True, name="MatMul_emb")
@@ -1131,7 +1131,7 @@ class AWQActMatmulModel3D(OVReferenceModel):
     """
 
     def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8):
-        input_node = opset.parameter([2, 8, 8], name="Input_1")
+        input_node = opset.parameter([-1, 8, 8], name="Input_1")
 
         def make_weights(name: str):
             w = np.arange(0, 2 * 8 * 8).reshape(2, 8, 8) - 32

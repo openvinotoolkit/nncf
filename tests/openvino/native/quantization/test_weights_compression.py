@@ -2295,7 +2295,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
     def test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker):
-        return super().test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker)
+        return super().test_data_free_awq(dataset, prefer_data_aware_scaling, is_3d_weights, mocker)
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
@@ -2316,7 +2316,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(weight_output)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         return "MatMul_5"
 
     @staticmethod
