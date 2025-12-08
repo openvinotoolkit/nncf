@@ -2289,6 +2289,14 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def test_awq_scale_reference(self, monkeypatch, mocker, is_3d_weights):
         return super().test_awq_scale_reference(monkeypatch, mocker, is_3d_weights)
 
+    @pytest.mark.parametrize(
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+    )
+    @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
+    @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker):
+        return super().test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker)
+
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
         for op in model.get_ordered_ops():
