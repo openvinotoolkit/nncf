@@ -109,15 +109,16 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         scale = compressed_weight.scale
         zero_point = compressed_weight.zero_point
 
-        axis = 1 if dequantize_block_size else None
+        # For 3D weights, we need to squeeze at the next dimension compared to 2D because of batch dim
+        axis = 1 + len(scale.shape) % 3 if dequantize_block_size else None
         scale = scale.squeeze(axis=axis)
         if zero_point is not None:
             zero_point = zero_point.squeeze(axis=axis)
 
         if apply_transpose:
-            scale = fns.transpose(scale)
+            scale = fns.moveaxis(scale, -1, -2)
             if zero_point is not None:
-                zero_point = fns.transpose(zero_point)
+                zero_point = fns.moveaxis(zero_point, -1, -2)
 
         if zero_point is not None:
             zero_point = zero_point.astype(tensor.dtype)
