@@ -179,7 +179,7 @@ class AWQ(Algorithm):
             nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
 
             if is_data_free:
-                scale = self._data_free_step(weight, 1 - wp.reduction_axes[0])
+                scale = self._data_free_step(weight, -(len(weight.shape) - wp.reduction_axes[0]))
             else:
                 prev_weight, prev_statistics = None, None
                 if is_mergeable:
