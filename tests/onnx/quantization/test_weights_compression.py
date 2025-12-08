@@ -676,10 +676,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         data = 0.01 * np.arange(0, math.prod(weight_shape)).reshape(weight_shape) + 0.05
         data = data.astype(np.float32).T
 
-        x = mb.add_input("input", (1, 8, 8))
-        output = mb.add_output("output", (1, 8, 8))
+        x = mb.add_input("input", (2, 8, 8))
+        output = mb.add_output("output", (2, 8, 8))
 
-        x = mb.add_matmul(x, shape=(8, 8), data=data)
+        x = mb.add_matmul(x, shape=data.shape, data=data)
         for _ in range(n_layers):
             a = mb.add_matmul(x, shape=data.shape, data=data)
             a = mb.add_relu(a)
