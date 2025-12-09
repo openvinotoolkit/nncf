@@ -121,6 +121,12 @@ class LoraCorrectionAlgorithm:
         layer_name = wc_params.node_with_weight.node_name
         layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
+
+        # Get transpose_b value to handle weight shape correctly
+        transpose_b = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id][
+            "transpose"
+        ]
+
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,
             compressed_weight,
@@ -129,6 +135,7 @@ class LoraCorrectionAlgorithm:
             self._lora_correction_params,
             layer_statistics,
             is_debug,
+            transpose_b=transpose_b,
         )
         if is_debug:
             self._debug_interface.add_noises(layer_name, mean_noises)
@@ -143,6 +150,7 @@ class LoraCorrectionAlgorithm:
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
+        transpose_b: bool = True,  # Add this parameter with default True for backward compatibility
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -190,7 +198,8 @@ class LoraCorrectionAlgorithm:
 
         # O stands for output dimension, H - input dimension or hidden size, SS - samples size, R - rank.
         # reduction axes is all axes except output dimension in linear/conv layers.
-        if reduction_axes[0] == 1:
+        # Use transpose_b directly instead of inferring from reduction_axes
+        if not transpose_b:
             svd_residual = fns.transpose(svd_residual)
         residual = svd_residual.clone()  # [H, O]
 

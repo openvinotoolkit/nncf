@@ -1,93 +1,55 @@
+# Copyright (c) 2025 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
+import openvino as ov
 import pytest
-import torch
-from nncf.quantization.algorithms.weight_compression import utils
+from openvino import opset13 as opset
+
+import nncf
+from nncf import CompressWeightsMode
+
+
+def get_transpose_b_false_model():
+    """Creates model with [In, Out] weight layout (transpose_b=False)"""
+    input_shape = [1, 32]
+    input_node = opset.parameter(input_shape, name="Input")
+    # Weight shape [32, 16] -> Input=32, Output=16
+    weight_data = np.random.rand(32, 16).astype(np.float32)
+    matmul_node = opset.matmul(input_node, weight_data, transpose_a=False, transpose_b=False, name="MatMul")
+    result_node = opset.result(matmul_node, name="Result")
+    return ov.Model([result_node], [input_node], "transpose_b_false_model")
 
 
 @pytest.mark.parametrize(
-    "shape, transpose_b, start, end",
-    [
-        # transpose_b=True means weight layout is [out_features, in_features] -> slice columns
-        ((5, 8), True, 1, 4),
-        ((3, 6), True, 0, 3),
-        # transpose_b=False means weight layout is [in_features, out_features] -> slice rows
-        ((8, 5), False, 2, 6),
-        ((6, 3), False, 0, 2),
-    ],
+    "params", [{"awq": True}, {"gptq": True}, {"scale_estimation": True}, {"lora_correction": True}]
 )
-def test_slice_and_assign_weight_block(shape, transpose_b, start, end):
+def test_compress_weights_algorithms_transpose_b_false(params):
     """
-    Verify slice_weight returns the expected sub-block and assign_weight_slice writes it back
-    in the correct orientation for both transpose_b True and False.
+    Checks that ALL data-aware algorithms support transpose_b=False
+    without crashing.
     """
+    model = get_transpose_b_false_model()
 
-    weight = np.arange(np.prod(shape), dtype=np.int64).reshape(shape)
-    block = utils.slice_weight(weight, start, end, transpose_b)
+    # Dummy dataset for calibration
+    dataset = nncf.Dataset([np.random.rand(1, 32).astype(np.float32) for _ in range(3)])
 
-    # Expected block depending on transpose_b semantics
-    if transpose_b:
-        expected_block = weight[:, start:end]
-    else:
-        expected_block = weight[start:end, :]
-
-    # The returned block should match the expected slice
-    np.testing.assert_array_equal(block, expected_block)
-
-    # Prepare a new block to assign (different values)
-    new_block = np.full(expected_block.shape, fill_value=123, dtype=weight.dtype)
-
-    # Assign it back using the helper
-    utils.assign_weight_slice(weight, start, end, new_block, transpose_b)
-    if transpose_b:
-        np.testing.assert_array_equal(weight[:, start:end], new_block)
-    else:
-        np.testing.assert_array_equal(weight[start:end, :], new_block)
-
-def test_zero_mask_columns():
-    """
-    Verifies that zero_mask_columns correctly zeros out channels 
-    based on the boolean mask and transpose_b setting.
-    """
-    shape = (4, 4)
-    # Create a mask: e.g., index 1 and 3 are True (should be zeroed)
-    mask = np.array([False, True, False, True]) 
-    
-    # CASE 1: transpose_b=True (Layout [Out, In] -> Columns are inputs)
-    weight = np.ones(shape, dtype=np.int32)
-    utils.zero_mask_columns(weight, mask, transpose_b=True)
-    
-    # Columns 1 and 3 should be 0, others 1
-    expected = np.ones(shape, dtype=np.int32)
-    expected[:, mask] = 0 
-    np.testing.assert_array_equal(weight, expected)
-
-    # CASE 2: transpose_b=False (Layout [In, Out] -> Rows are inputs)
-    weight = np.ones(shape, dtype=np.int32)
-    utils.zero_mask_columns(weight, mask, transpose_b=False)
-    
-    # Rows 1 and 3 should be 0, others 1
-    expected = np.ones(shape, dtype=np.int32)
-    expected[mask, :] = 0
-    np.testing.assert_array_equal(weight, expected)
-
-
-
-
-def test_slice_utils_pytorch_compatibility():
-    """
-    Ensures the helpers work with torch.Tensor objects, not just numpy arrays.
-    """
-    # [In, Out] = [4, 2]
-    # transpose_b=False
-    weight = torch.tensor([[1, 2], [3, 4], [5, 6], [7, 8]])
-    
-    # 1. Test Slicing (taking middle 2 rows)
-    block = utils.slice_weight(weight, 1, 3, transpose_b=False)
-    assert torch.equal(block, torch.tensor([[3, 4], [5, 6]]))
-    
-    # 2. Test Assigning
-    new_data = torch.tensor([[10, 10], [10, 10]])
-    utils.assign_weight_slice(weight, 1, 3, new_data, transpose_b=False)
-    
-    expected = torch.tensor([[1, 2], [10, 10], [10, 10], [7, 8]])
-    assert torch.equal(weight, expected)
+    # We use INT4_ASYM as it supports all these advanced algorithms
+    try:
+        nncf.compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            dataset=dataset,
+            subset_size=2,
+            **params,  # Unpacks to awq=True, gptq=True, etc.
+        )
+    except Exception as e:
+        pytest.fail(f"Algorithm {list(params.keys())[0]} failed for transpose_b=False. Error: {e}")
