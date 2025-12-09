@@ -178,8 +178,16 @@ class AWQ(Algorithm):
 
             nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
 
+            weight_dim = len(weight.shape)
             if is_data_free:
-                scale = self._data_free_step(weight, -(len(weight.shape) - wp.reduction_axes[0]))
+                # Reached this formula using a simple generalization of possible values.
+                # It comes out to be a beautiful constant - reduction axes where
+                # constant is (n-1)th odd number. Where n is the dimension
+                # 2(n-1)-1 -> 2n-3
+                # Example: 2D -> 1 - reduction_axes (reduction_axes=1 -> 1-1=0; reduction_axes=0; 1-0=1)
+                #          3D -> 3 - reduction_axes (reduction_axes=1 -> 3-1=2; reduction_axes=2; 3-2=1)
+                #          4D -> 5 - reduction_axes (reduction_axes=1 -> 3-1=2; reduction_axes=2; 3-2=1)
+                scale = self._data_free_step(weight, (weight_dim * 2) - 3 - wp.reduction_axes[0])
             else:
                 prev_weight, prev_statistics = None, None
                 if is_mergeable:
@@ -191,16 +199,7 @@ class AWQ(Algorithm):
                     prev_statistics = statistics[merge_node.node_name]
                 scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
 
-            # For 3D weights, len(scale.shape)%2 == 0 whereas for 2D it is 1. This allows us to index
-            # from the last dim and not consider the batch dim in 3D case.
-            # Example:
-            #   3D weights: W shape = [B, M, N]; reduction_axes = 2
-            #   scale_shape = [M, N] -> len(scale.shape) = 2 -> 2 % 2 = 0
-            #   unsqueeze scale at -(0 + 2) = -2.
-            #   2D weights:   W shape = [M, N]; reduction_axes = 1
-            #   scale_shape = [M] -> len(scale.shape) = 1 -> 1 % 2 = 1
-            #   unsqueeze scale at -(1 + 1) = -2.
-            w_scale = fns.unsqueeze(scale, -(len(scale.shape) % 2 + wp.reduction_axes[0]))
+            w_scale = fns.unsqueeze(scale, (weight_dim * 2) - 3 - wp.reduction_axes[0])
             a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
