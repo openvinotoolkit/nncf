@@ -27,7 +27,6 @@ from nncf.torch.graph.transformations.serialization import deserialize_transform
 from nncf.torch.graph.transformations.serialization import serialize_command
 from nncf.torch.graph.transformations.serialization import serialize_transformations
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
@@ -171,29 +170,6 @@ def _check_commands_after_serialization(command, recovered_command, dummy_op_sta
     assert command.fn.get_config() == recovered_command.fn.get_config()
     if dummy_op_state is not None:
         assert command.fn.get_config() == dummy_op_state
-
-
-@pytest.mark.parametrize("size", (4, [3, 4]))
-def test_pruning_mask_serialization(size):
-    node_name = "dummy_node_name"
-    dim = 2
-    mask = FilterPruningMask(size=size, node_name=node_name, dim=dim)
-    mask.binary_filter_pruning_mask = torch.fill(torch.empty(size), 5)
-    state_dict = mask.state_dict()
-
-    state = mask.get_config()
-    json_state = json.dumps(state)
-    state = json.loads(json_state)
-
-    recovered_mask = FilterPruningMask.from_config(state)
-    recovered_mask.load_state_dict(state_dict)
-
-    ref_size = size if isinstance(size, list) else [size]
-    assert list(recovered_mask.binary_filter_pruning_mask.size()) == ref_size
-    assert recovered_mask.node_name == node_name
-    assert recovered_mask.mask_applying_dim == dim
-
-    assert torch.all(mask.binary_filter_pruning_mask == recovered_mask.binary_filter_pruning_mask)
 
 
 @pytest.mark.parametrize("quantizer_class", (SymmetricQuantizer, AsymmetricQuantizer))

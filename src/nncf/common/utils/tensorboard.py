@@ -13,7 +13,6 @@ from functools import singledispatch
 from typing import Any
 
 from nncf.api.statistics import Statistics
-from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.statistics import NNCFStatistics
 
 
@@ -37,14 +36,3 @@ def convert_to_dict(
     algorithm_name: str,
 ) -> dict[Any, Any]:
     return {}
-
-
-@convert_to_dict.register(FilterPruningStatistics)
-def _(stats: FilterPruningStatistics, algorithm_name: str) -> dict[str, float]:
-    tensorboard_stats = {
-        f"{algorithm_name}/algo_current_pruning_level": stats.current_pruning_level,
-        f"{algorithm_name}/model_FLOPS_pruning_level": stats.model_statistics.flops_pruning_level,
-        f"{algorithm_name}/model_params_pruning_level": stats.model_statistics.params_pruning_level,
-        f"{algorithm_name}/model_filters_pruning_level": stats.model_statistics.filter_pruning_level,
-    }
-    return tensorboard_stats

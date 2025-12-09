@@ -26,7 +26,7 @@ No *compression* in the sense of archiving or entropy coding is being done durin
 
 ### How does your compression make inference faster?
 
-General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization and filter pruning) are applied, with Intel HW/runtime specifics in mind.
+General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization) are applied, with Intel HW/runtime specifics in mind.
 
 An overview of some of those can be found in the [following paper](https://arxiv.org/abs/2002.08679).
 
@@ -56,8 +56,6 @@ Post-training is faster, but can degrade accuracy more than the training-enabled
 ### I don't see any improvements after applying the `*_sparsity` algorithms
 
 The sparsity algorithms introduce unstructured sparsity which can only be taken advantage of in terms of performance by using specialized hardware and/or software runtimes. Within the scope of these algorithms, NNCF provides functionally correct models with non-salient weights simply zeroed out, which does not lead to the reduction of the model checkpoint size. The models can, however, be used for benchmarking experimental/future hardware or runtimes, and for SOTA claims of applying unstructured sparsity on a given model architecture.
-
-For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./usage/training_time_compression/other_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
 
 ### What is a "saturation issue" and how to avoid it?
 

@@ -9,5 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.experimental.torch.fx.quantization.quantize_pt2e import compress_pt2e as compress_pt2e
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e as quantize_pt2e
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer as OpenVINOQuantizer

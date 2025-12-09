@@ -167,8 +167,8 @@ class LinearTestModel(nn.Module):
 
 @pytest.mark.parametrize(
     "compression_section",
-    [{}, {"compression": {"algorithm": "quantization"}}, {"compression": {"algorithm": "filter_pruning"}}],
-    ids=["none", "quantization", "filter_pruning"],
+    [{}, {"compression": {"algorithm": "quantization"}}],
+    ids=["none", "quantization"],
 )
 def test_preserves_onnx_node_name_format(tmp_path, compression_section):
     model = LinearTestModel()

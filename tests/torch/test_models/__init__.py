@@ -15,6 +15,7 @@ from .dpn import *
 from .googlenet import *
 from .inceptionv3 import *
 from .lenet import *
+from .llama import *
 from .pnasnet import *
 from .preact_resnet import *
 from .resnet import *

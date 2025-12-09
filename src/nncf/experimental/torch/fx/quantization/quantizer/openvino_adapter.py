@@ -9,12 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import torch.fx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 
 
 class OpenVINOQuantizerAdapter(Quantizer):
@@ -30,3 +33,17 @@ class OpenVINOQuantizerAdapter(Quantizer):
 
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         return self._quantizer.get_nncf_quantization_setup(model, nncf_graph)
+
+    def get_weight_compression_parameters(
+        self,
+        model: torch.fx.GraphModule,
+        nncf_graph: NNCFGraph,
+    ) -> tuple[
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+    ]:
+        return self._quantizer.get_nncf_weight_compression_parameters(model, nncf_graph)
+
+    def get_weight_compression_config(self) -> dict[str, Any]:
+        return self._quantizer.weight_compression_configuration
