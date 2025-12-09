@@ -63,6 +63,7 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP_REV
 
@@ -177,11 +178,16 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         activation_dtype = input_node.get_element_type()
         should_add_convert_node = activation_dtype != ov.Type.f16
         mm_node = self.name_to_node_mapping[wc_params.node_with_weight.node_name]
-        
+
         # Get the original MatMul's transpose attributes
         node_attributes = mm_node.get_attributes()
         transpose_a = node_attributes.get("transpose_a", False)
         transpose_b = node_attributes.get("transpose_b", True)  # Default to True for backward compatibility
+
+        # Transpose lora_B if the original MatMul had transpose_b=False
+        # This ensures the matrix multiplication A_MM @ B_W has compatible dimensions
+        if not transpose_b:
+            lora_B = fns.transpose(lora_B)
 
         if int8_lora:
             const_node_name = wc_params.node_with_weight.node_name

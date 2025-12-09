@@ -27,13 +27,8 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
-from nncf.quantization.algorithms.weight_compression.utils import (
-    assign_weight_column,
-    assign_weight_slice,
-    extract_weight_column,
-    slice_weight,
-    zero_mask_columns,
-)
+from nncf.quantization.algorithms.weight_compression.tensor_slicing import get_weight_slice
+from nncf.quantization.algorithms.weight_compression.tensor_slicing import set_weight_slice
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
@@ -224,15 +219,17 @@ class GPTQ:
             wc_params.node_with_weight, wc_params.weight_port_id, model, graph
         )
         weight_tensor = fns.astype(weight_tensor, TensorDataType.float32)
-        
+
         # Get transpose_b value to handle weight shape correctly
-        transpose_b = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]
+        transpose_b = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id][
+            "transpose"
+        ]
 
         dead_indices = fns.diag(hessian) == 0
         hessian[dead_indices, dead_indices] = 1
-        
+
         # Zero out dead indices using utility helper
-        zero_mask_columns(weight_tensor, dead_indices, transpose_b)
+        set_weight_slice(weight_tensor, dead_indices, 0, transpose_b)
 
         scales = []
         zero_points = []
@@ -264,25 +261,25 @@ class GPTQ:
             count = i2 - i1
 
             # Extract weight block using utility helper
-            weight_block = slice_weight(weight_tensor, i1, i2, transpose_b).clone()
+            weight_block = get_weight_slice(weight_tensor, slice(i1, i2), transpose_b).clone()
             quantized_block = fns.zeros_like(weight_block)
             error_block = fns.zeros_like(weight_block)
             loss_block = fns.zeros_like(weight_block)
             hessian_inv_block = hessian_inv[i1:i2, i1:i2]
 
             for i in range(count):
-                weight_col = extract_weight_column(weight_block, i, transpose_b)
+                weight_col = get_weight_slice(weight_block, i, transpose_b)
                 hessian_diag_val = hessian_inv_block[i, i]
 
                 if (i1 + i) % group_size == 0:
                     if not block_compression_config.is_integer:
-                        weight_slice = slice_weight(weight_tensor, i1 + i, i1 + i + group_size, transpose_b)
+                        weight_slice = get_weight_slice(weight_tensor, slice(i1 + i, i1 + i + group_size), transpose_b)
                         scale = calculate_float_quantization_params(
                             weight_slice, reduction_axes, block_compression_config
                         )
                         scales.append(scale)
                     else:
-                        weight_slice = slice_weight(weight_tensor, i1 + i, i1 + i + group_size, transpose_b)
+                        weight_slice = get_weight_slice(weight_tensor, slice(i1 + i, i1 + i + group_size), transpose_b)
                         if self._scale_estimation and block_compression_config.num_bits == 4:
                             activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
                             wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations)
@@ -315,25 +312,25 @@ class GPTQ:
                         precomputed_zero_point=zero_points[-1],
                     )
                 quantized_col = fns.flatten(quantized_col)
-                assign_weight_column(quantized_block, i, quantized_col, transpose_b)
+                set_weight_slice(quantized_block, i, quantized_col, transpose_b)
                 loss_col = (weight_col - quantized_col) ** 2 / hessian_diag_val**2
-                assign_weight_column(loss_block, i, loss_col, transpose_b)
+                set_weight_slice(loss_block, i, loss_col, transpose_b)
 
                 error_col = (weight_col - quantized_col) / hessian_diag_val
                 if transpose_b:
                     weight_block[:, i:] -= fns.matmul(
                         fns.unsqueeze(error_col, 1), fns.unsqueeze(hessian_inv_block[i, i:], 0)
                     )
-                    assign_weight_column(error_block, i, error_col, transpose_b)
+                    set_weight_slice(error_block, i, error_col, transpose_b)
                 else:
                     weight_block[i:, :] -= fns.matmul(
                         fns.unsqueeze(error_col, 0), fns.unsqueeze(hessian_inv_block[i:, i], 1)
                     )
-                    assign_weight_column(error_block, i, error_col, transpose_b)
+                    set_weight_slice(error_block, i, error_col, transpose_b)
 
-            assign_weight_slice(quantized_tensor, i1, i2, quantized_block, transpose_b)
-            assign_weight_slice(losses, i1, i2, loss_block / 2, transpose_b)
-            
+            set_weight_slice(quantized_tensor, slice(i1, i2), quantized_block, transpose_b)
+            set_weight_slice(losses, slice(i1, i2), loss_block / 2, transpose_b)
+
             # Update remaining weights with error propagation
             if transpose_b:
                 weight_tensor[:, i2:] -= fns.matmul(error_block, hessian_inv[i1:i2, i2:])
@@ -354,10 +351,15 @@ class GPTQ:
             scales = fns.squeeze(scales, axis=-1)
 
         zero_points_tensor = None
-        if zero_points and zero_points[0] is not None and wc_params.compression_config.mode in [
-            CompressWeightsMode.INT8_ASYM,
-            CompressWeightsMode.INT4_ASYM,
-        ]:
+        if (
+            zero_points
+            and zero_points[0] is not None
+            and wc_params.compression_config.mode
+            in [
+                CompressWeightsMode.INT8_ASYM,
+                CompressWeightsMode.INT4_ASYM,
+            ]
+        ):
             zero_points_tensor = fns.stack(zero_points, axis=1)
             if wc_params.compression_config.group_size == -1:
                 zero_points_tensor = fns.squeeze(zero_points_tensor, axis=-1)
