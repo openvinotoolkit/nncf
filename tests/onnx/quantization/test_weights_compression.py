@@ -9,9 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import reduce
+from operator import mul
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -673,7 +674,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             # The first and last dimension are later transposed
             weight_shape = (8, 8, 2)
 
-        data = 0.01 * np.arange(0, math.prod(weight_shape)).reshape(weight_shape) + 0.05
+        data = 0.01 * np.arange(0, reduce(mul, weight_shape, 1)).reshape(weight_shape) + 0.05
         data = data.astype(np.float32).T
 
         x = mb.add_input("input", (2, 8, 8))
@@ -723,7 +724,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_input("input", (2, None, 8))
         output = mb.add_output("output", (2, None, 8))
 
-        w_data = 0.01 * np.arange(0, math.prod(weight_shape), dtype=np.float32).reshape(weight_shape) + 0.05
+        w_data = 0.01 * np.arange(0, reduce(mul, weight_shape, 1), dtype=np.float32).reshape(weight_shape) + 0.05
         w_data = w_data.T
 
         num_blocks = 2
