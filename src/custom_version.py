@@ -48,7 +48,7 @@ from __future__ import annotations
 import contextlib
 import os
 import re
-import subprocess
+import subprocess  # nosec
 from pathlib import Path
 
 NNCF_VERSION_FILE = "src/nncf/version.py"
@@ -81,12 +81,12 @@ def get_custom_version() -> str:
     # Get commit hash
     with contextlib.suppress(subprocess.CalledProcessError):
         dev_version_id = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=repo_root).strip().decode()  # nosec
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=repo_root).strip().decode()
         )
 
     # Detect modified files
     with contextlib.suppress(subprocess.CalledProcessError):
-        run = subprocess.run(["git", "diff-index", "--quiet", "HEAD"], cwd=repo_root)  # nosec
+        run = subprocess.run(["git", "diff-index", "--quiet", "HEAD"], cwd=repo_root)
         if run.returncode == 1:
             dev_version_id += "dirty"
 
