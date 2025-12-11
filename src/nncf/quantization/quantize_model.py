@@ -542,7 +542,7 @@ def compress_weights(
             from nncf.torch.model_creation import wrap_model
 
             example_input = next(iter(dataset.get_inference_data()))
-            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore[arg-type]
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore
         if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
             dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
