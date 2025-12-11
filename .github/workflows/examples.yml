@@ -48,7 +48,7 @@ jobs:
           git checkout pr-${{ github.event.inputs.pull_request_number }}
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: "3.12.12"
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install test requirements
@@ -118,7 +118,7 @@ jobs:
           git checkout pr-${{ github.event.inputs.pull_request_number }}
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: "3.12.12"
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install test requirements
@@ -173,7 +173,7 @@ jobs:
           git checkout pr-${{ github.event.inputs.pull_request_number }}
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: 3.12
+          python-version: "3.12.12"
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Install NNCF and test requirements
         run: |
