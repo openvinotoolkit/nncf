@@ -20,7 +20,6 @@ from torch import nn
 from torch.nn import Module
 
 import nncf
-from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
@@ -281,10 +280,8 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: N
     dict_to_save[module_node_name] = 2 * mac_count
 
 
-def add_domain(name_operator: str) -> str:
-    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
-
-    return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
+def add_ov_domain(name_operator: str) -> str:
+    return f"org.openvinotoolkit::{name_operator}"
 
 
 def default_distributed_wrapper(model: nn.Module, execution_parameters: ExecutionParameters):
@@ -368,49 +365,6 @@ def maybe_convert_legacy_names_in_model_state(state_dict_to_load: dict[str, Any]
             matched_legacy_names[legacy_name].append(name_in_state_dict)
     for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
         rename_legacy_names_in_state_dict(state_dict_to_load, matched_legacy_names[old_name], old_name, new_name)
-
-
-def maybe_convert_legacy_names_in_compress_state(compression_state: dict[str, Any]) -> None:
-    """
-    Convert legacy layer names in compression state in case such names exist.
-
-    :param compression_state: Compression state to convert.
-    """
-    if not compression_state or BaseController.BUILDER_STATE not in compression_state:
-        return
-
-    controller_state = compression_state[BaseController.BUILDER_STATE]
-    if not controller_state or "quantization" not in controller_state:
-        return
-
-    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
-
-    if not controller_state["quantization"].get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME):
-        qips = controller_state["quantization"]["quantizer_setup"]["quantization_points"]
-
-        detected_legacy_names = {
-            "BatchNorm1d": False,
-            "BatchNorm2d": False,
-            "BatchNorm3d": False,
-            "NNCFBatchNorm": False,
-        }
-
-        for point in qips.values():
-            name = point["qip"]["target_node_name"]
-            for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-                if old_name in name and new_name not in name:
-                    detected_legacy_names[old_name] = True
-                    point["qip"]["target_node_name"] = name.replace(old_name, new_name)
-                    break
-
-        for old_name, was_detected in detected_legacy_names.items():
-            if was_detected:
-                new_name = LEGACY_VS_NEW_BN_MAP[old_name]
-                warning_deprecated(
-                    "Legacy Batch Norm layer names was detected in quantization setup target"
-                    f" point names. All occurrences of `{old_name}` in nodes names was replaced by"
-                    f" `{new_name}`"
-                )
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
@@ -499,15 +453,15 @@ class CompilationWrapper:
         :return: Result of the function call.
         """
         if self._compiled_func is None:
-            try:
-                self._compiled_func = torch.compile(self._func)
-                result = self._compiled_func(*args, **kwargs)
-                self._is_compilation_successful = True
-                return result
-            except Exception as e:
-                nncf_logger.warning(
-                    f"Could not use torch.compile. Falling back on not compiled version. Reason: {str(e)}"
-                )
-                self._compiled_func = self._func
-                self._is_compilation_successful = False
+            # try:
+            self._compiled_func = torch.compile(self._func)
+            result = self._compiled_func(*args, **kwargs)
+            self._is_compilation_successful = True
+            return result
+            # except Exception as e:
+            #     nncf_logger.warning(
+            #         f"Could not use torch.compile. Falling back on not compiled version. Reason: {str(e)}"
+            #     )
+            #     self._compiled_func = self._func
+            #     self._is_compilation_successful = False
         return self._compiled_func(*args, **kwargs)

@@ -14,38 +14,26 @@ import numbers
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Callable, TypeVar, Union
+from typing import Any, TypeVar, Union
 
 import numpy as np
 import onnx
 import torch
 from onnx import numpy_helper
 from torch import nn
-from torch.nn import Module
 from torch.nn import functional as F
-from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.config import NNCFConfig
-from nncf.config.extractors import extract_algorithm_names
-from nncf.config.structures import BNAdaptationInitArgs
-from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
-from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.context import PreHookId
-from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
-from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.layer_utils import StatefulModuleInterface
-from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.nncf_module_replacement import get_original_module_scope_from_nncf_module_scope
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.utils import get_all_modules_by_type
 from tests.cross_fw.shared.command import Command as BaseCommand
 from tests.cross_fw.shared.comparator import BaseTensorListComparator
 
@@ -397,37 +385,6 @@ class PTTensorListComparator(BaseTensorListComparator):
         raise Exception(msg)
 
 
-def create_nncf_model_and_single_algo_builder(
-    model: Module,
-    config: NNCFConfig,
-    dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable[[tuple, dict], tuple[tuple, dict]] = None,
-) -> tuple[NNCFNetwork, PTCompressionAlgorithmController]:
-    assert isinstance(config, NNCFConfig)
-    NNCFConfig.validate(config)
-    input_info = FillerInputInfo.from_nncf_config(config)
-    scopes_without_shape_matching = config.get("scopes_without_shape_matching", [])
-    ignored_scopes = config.get("ignored_scopes")
-    target_scopes = config.get("target_scopes")
-
-    compressed_model = NNCFNetwork(
-        model,
-        input_info=input_info,
-        dummy_forward_fn=dummy_forward_fn,
-        wrap_inputs_fn=wrap_inputs_fn,
-        ignored_scopes=ignored_scopes,
-        target_scopes=target_scopes,
-        scopes_without_shape_matching=scopes_without_shape_matching,
-    )
-
-    algo_names = extract_algorithm_names(config)
-    assert len(algo_names) == 1
-    algo_name = next(iter(algo_names))
-    builder_cls = PT_COMPRESSION_ALGORITHMS.get(algo_name)
-    builder = builder_cls(config, should_init=True)
-    return compressed_model, builder
-
-
 class MockModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -463,25 +420,6 @@ class ModelWithReloadedForward(nn.Module):
         return self.linear(x)
 
 
-def check_correct_nncf_modules_replacement(
-    model: torch.nn.Module, compressed_model: NNCFNetwork
-) -> tuple[dict[Scope, Module], dict[Scope, Module]]:
-    """
-    Checks that all extendable modules in model were replaced by NNCF-extended counterparts.
-    :param model: original model
-    :param compressed_model: compressed model
-    :return: list of all extendable modules in `model` and list of all NNCF-extended modules
-     in `compressed_model`
-    """
-    original_modules = get_all_modules_by_type(model, list(NNCF_MODULES_MAP.values()))
-    nncf_modules = get_all_modules_by_type(compressed_model, list(NNCF_MODULES_MAP.keys()))
-    assert len(original_modules) == len(nncf_modules)
-    for nncf_scope in nncf_modules:
-        original_scope = get_original_module_scope_from_nncf_module_scope(nncf_scope)
-        assert original_scope in original_modules
-    return original_modules, nncf_modules
-
-
 class BaseDatasetMock(Dataset, ABC):
     def __init__(self, input_size: tuple, num_samples: int = 10):
         super().__init__()
@@ -504,29 +442,6 @@ class OnesDatasetMock(BaseDatasetMock):
 class RandomDatasetMock(BaseDatasetMock):
     def __getitem__(self, index):
         return torch.rand(self._input_size), torch.zeros(1)
-
-
-def create_any_mock_dataloader(
-    dataset_cls: type, config: NNCFConfig, num_samples: int = 1, batch_size: int = 1
-) -> DataLoader:
-    input_info = FillerInputInfo.from_nncf_config(config)
-    input_sample_size = input_info.elements[0].shape
-    data_loader = DataLoader(
-        dataset_cls(input_sample_size[1:], num_samples),
-        batch_size=batch_size,
-        num_workers=0,  # Workaround
-        shuffle=False,
-        drop_last=True,
-    )
-    return data_loader
-
-
-def create_ones_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batch_size: int = 1) -> DataLoader:
-    return create_any_mock_dataloader(OnesDatasetMock, config, num_samples, batch_size)
-
-
-def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1, batch_size: int = 1) -> DataLoader:
-    return create_any_mock_dataloader(RandomDatasetMock, config, num_samples, batch_size)
 
 
 # ONNX graph helpers
@@ -580,19 +495,6 @@ class Command(BaseCommand):
 def module_scope_from_node_name(name):
     module_name = name.rsplit("/", 1)[0].split(" ", 1)[1]
     return Scope.from_str(module_name)
-
-
-class DummyDataLoader(PTInitializingDataLoader):
-    def __init__(self):
-        super().__init__([])
-
-    @property
-    def batch_size(self):
-        return 1
-
-
-def register_bn_adaptation_init_args(config: NNCFConfig):
-    config.register_extra_structs([BNAdaptationInitArgs(data_loader=DummyDataLoader(), device=None)])
 
 
 @contextlib.contextmanager

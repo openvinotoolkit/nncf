@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 from torch import nn
@@ -19,15 +19,9 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.torch.dynamic_graph.context import PreHookId
-from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import AsymmetricQuantizer
-from nncf.torch.quantization.layers import BaseQuantizer
-from nncf.torch.quantization.layers import SymmetricQuantizer
 
 CONV_META_TYPES = [
     om.PTConv1dMetatype,
@@ -324,35 +318,6 @@ def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         if edge.input_port_id in node.metatype.weight_port_ids and edge.from_node.node_type in om.QUANTIZE_NODE_TYPES:
             return True
     return False
-
-
-def get_fake_quantizer(
-    node: NNCFNode, port_id: Optional[int], model: NNCFNetwork
-) -> Union[SymmetricQuantizer, AsymmetricQuantizer]:
-    """
-    Retrieves the fake quantizer associated with a specific node and input port id.
-
-    :param node: The NNCFNode representing the node for which to retrieve the quantizer.
-    :param port_id: The port id number for which to retrieve the quantizer module, None means output port.
-    :param model: The NNCFNetwork instance.
-    :return: Fake Quantizer module if exists, overwise None.
-    """
-    address_map = model.nncf.get_node_to_op_address_mapping()
-    op_addr = address_map[node.node_name]
-
-    if port_id is not None:
-        id = PreHookId(op_address=op_addr, input_port_id=port_id)
-        hook_container = model.nncf._compressed_context._pre_hooks.get(id, {})
-    else:
-        hook_container = model.nncf._compressed_context._post_hooks.get(op_addr, {})
-
-    for call_hook in hook_container.values():
-        if isinstance(call_hook, ExternalOpCallHook):
-            storage = getattr(model.nncf, call_hook._storage_name)
-            module = storage[call_hook._storage_key]
-            if isinstance(module, BaseQuantizer):
-                return module
-    return None
 
 
 def get_weight_channel_axes(metatype: type[OperatorMetatype], ndims: int, input_port_id: int) -> tuple[int, ...]:

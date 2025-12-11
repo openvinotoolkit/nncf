@@ -19,8 +19,6 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf import NNCFConfig
-from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.utils.api_marker import api
 from nncf.config.structures import NNCFExtraConfigStruct
 
@@ -65,50 +63,6 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     @classmethod
     def get_id(cls) -> str:
         return "quantization_precision_init_args"
-
-
-@api()
-class LeGRInitArgs(NNCFExtraConfigStruct):
-    """
-    Stores arguments for learning global ranking in pruning algorithm.
-
-    :param train_loader: provides an iterable over the given training (or initialising) dataset.
-    :param train_fn: callable for training compressed model. Train model for one epoch or train_steps (if specified) by
-      given args: [dataloader, model, optimizer, compression algorithm controller, train_steps number].
-    :param val_loader: provides an iterable over the given validation dataset.
-    :param val_fn: callable to validate model, calculates pair of validation [acc, loss] by given model and dataloader.
-    :param train_optimizer: optional, optimizer for model training.
-    :param nncf_config: NNCF config for compression.
-    """
-
-    def __init__(
-        self,
-        train_loader: torch.utils.data.DataLoader,
-        train_fn: Callable[
-            [
-                torch.utils.data.DataLoader,
-                torch.nn.Module,
-                torch.optim.Optimizer,
-                CompressionAlgorithmController,
-                Optional[int],
-            ],
-            type(None),
-        ],
-        val_loader: torch.utils.data.DataLoader,
-        val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], tuple[float, float]],
-        train_optimizer: Optional[torch.optim.Optimizer],
-        nncf_config: NNCFConfig,
-    ):
-        self.train_loader = train_loader
-        self.train_steps_fn = train_fn
-        self.val_loader = val_loader
-        self.val_fn = val_fn
-        self.train_optimizer = train_optimizer
-        self.config = nncf_config
-
-    @classmethod
-    def get_id(cls) -> str:
-        return "legr_init_args"
 
 
 @api()

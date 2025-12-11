@@ -16,7 +16,6 @@ from torch import nn
 import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import is_windows
-from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import _ModuleState
 from nncf.torch.utils import get_model_device
@@ -102,30 +101,6 @@ def test_training_mode_switcher(model: nn.Module):
     saved_state = save_module_state(model)
     with training_mode_switcher(model, True):
         pass
-
-    compare_saved_model_state_and_current_model_state(model, saved_state)
-
-
-@pytest.mark.parametrize(
-    "model", [BasicConvTestModel(), TwoConvTestModel(), MockModel(), DepthWiseConvTestModel(), EightConvTestModel()]
-)
-def test_bn_training_state_switcher(model: nn.Module):
-    def check_were_only_bn_training_state_changed(model: nn.Module, saved_state: _ModuleState):
-        for name, module in model.named_modules():
-            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
-                assert module.training
-            else:
-                assert module.training == saved_state.training_state[name]
-
-    runner = DataLoaderBNAdaptationRunner(model, "cuda")
-
-    for p in model.parameters():
-        p.requires_grad = False
-
-    saved_state = save_module_state(model)
-
-    with runner._bn_training_state_switcher():
-        check_were_only_bn_training_state_changed(model, saved_state)
 
     compare_saved_model_state_and_current_model_state(model, saved_state)
 

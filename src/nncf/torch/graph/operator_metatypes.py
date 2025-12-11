@@ -12,7 +12,6 @@
 
 from typing import Optional, TypeVar
 
-from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -740,15 +739,9 @@ class PTBatchNormMetatype(PTOperatorMetatype):
         NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training", "cudnn_batch_norm"],
     }
     subtypes = [PTModuleBatchNormMetatype]
-
-    if is_torch_tracing_by_patching():
-        # torch.nn.functional.batch_norm
-        weight_port_ids = [3]
-        bias_port_id = 4
-    else:
-        # torch.batch_norm
-        weight_port_ids = [1]
-        bias_port_id = 2
+    # torch.batch_norm
+    weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()

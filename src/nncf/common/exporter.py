@@ -11,9 +11,9 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
-from nncf.api.compression import TModel
+TModel = TypeVar("TModel")
 
 
 class Exporter(ABC):
