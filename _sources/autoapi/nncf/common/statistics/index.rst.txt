@@ -25,12 +25,7 @@ Classes
       Registers statistics for the algorithm.
 
       :param algorithm_name: Name of the algorithm. Should be one of the following
-          * const_sparsity
-          * filter_pruning
-          * magnitude_sparsity
-          * movement_sparsity
           * quantization
-          * rb_sparsity
 
       :param stats: Statistics of the algorithm.
 

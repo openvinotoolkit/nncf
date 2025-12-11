@@ -17,9 +17,7 @@ Subpackages
 
    accuracy_aware_training/index.rst
    initialization/index.rst
-   pruning/index.rst
    quantization/index.rst
-   sparsity/index.rst
 
 
 Submodules

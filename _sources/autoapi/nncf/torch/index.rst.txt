@@ -15,10 +15,7 @@ Subpackages
    :titlesonly:
    :maxdepth: 3
 
-   knowledge_distillation/index.rst
-   pruning/index.rst
    quantization/index.rst
-   sparsity/index.rst
 
 
 Submodules
