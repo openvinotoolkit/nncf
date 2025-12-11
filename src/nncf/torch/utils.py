@@ -453,15 +453,15 @@ class CompilationWrapper:
         :return: Result of the function call.
         """
         if self._compiled_func is None:
-            # try:
-            self._compiled_func = torch.compile(self._func)
-            result = self._compiled_func(*args, **kwargs)
-            self._is_compilation_successful = True
-            return result
-            # except Exception as e:
-            #     nncf_logger.warning(
-            #         f"Could not use torch.compile. Falling back on not compiled version. Reason: {str(e)}"
-            #     )
-            #     self._compiled_func = self._func
-            #     self._is_compilation_successful = False
+            try:
+                self._compiled_func = torch.compile(self._func)
+                result = self._compiled_func(*args, **kwargs)
+                self._is_compilation_successful = True
+                return result
+            except Exception as e:
+                nncf_logger.warning(
+                    f"Could not use torch.compile. Falling back on not compiled version. Reason: {str(e)}"
+                )
+                self._compiled_func = self._func
+                self._is_compilation_successful = False
         return self._compiled_func(*args, **kwargs)
