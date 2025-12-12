@@ -35,7 +35,6 @@ from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
-from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.functions import clamp
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
@@ -445,8 +444,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
             return x
         is_exporting = is_tracing_state()
         if is_exporting:
-            with no_nncf_trace():
-                x = self.run_export_quantization(x)
+            x = self.run_export_quantization(x)
 
             # The underlying operator (registered via register_operator) must be executed,
             # otherwise the dynamic graph won't be traced as it was during regular inference.

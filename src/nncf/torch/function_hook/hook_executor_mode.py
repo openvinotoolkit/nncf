@@ -30,6 +30,8 @@ from torch import nn
 from torch.overrides import TorchFunctionMode
 
 from nncf.common.logging import nncf_logger as logger
+from nncf.common.utils.api_marker import api
+from nncf.common.utils.patcher import PATCHER
 from nncf.torch.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.torch.function_hook.hook_storage import HookStorage
 from nncf.torch.function_hook.weak_map import WeakUnhashableKeyMap
@@ -549,3 +551,17 @@ def disable_function_hook_mode() -> Iterator[None]:
     yield
     for mode, enabled in state:
         mode.enabled = enabled
+
+
+@api(canonical_alias="nncf.torch.disable_tracing")
+def disable_tracing(method):
+    """
+    Patch a method so that it will be executed within no_nncf_trace context
+    :param method: A method to patch.
+    """
+
+    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
+        with disable_function_hook_mode():
+            return fn(*args, **kwargs)
+
+    PATCHER.patch(method, no_nncf_trace_wrapper)

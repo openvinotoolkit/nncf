@@ -13,8 +13,7 @@ import contextlib
 import numbers
 from abc import ABC
 from abc import abstractmethod
-from collections import defaultdict
-from typing import Any, TypeVar, Union
+from typing import Union
 
 import numpy as np
 import onnx
@@ -25,14 +24,10 @@ from torch.nn import functional as F
 from torch.utils.data import Dataset
 
 import nncf
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.torch.dynamic_graph.context import PreHookId
-from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.layer_utils import StatefulModuleInterface
-from nncf.torch.module_operations import UpdateWeight
 from tests.cross_fw.shared.command import Command as BaseCommand
 from tests.cross_fw.shared.comparator import BaseTensorListComparator
 
@@ -504,113 +499,6 @@ def create_dataloader_with_num_workers(create_dataloader, num_workers, sample_ty
         return create_dataloader_semantic_segmentation
     if sample_type == "object_detection":
         return create_dataloader_object_detection
-
-
-HookType = TypeVar("HookType")
-
-
-class HookChecker:
-    """
-    Class to check pre/post hooks and pre ops are placed correctly.
-    Supports check for one wrapped NNCFModule for now.
-    """
-
-    def __init__(self, target_model: torch.nn.Module, nncf_module_attr_name: str):
-        """
-        :param nncf_module_attr_name: name of the nncf module attribute name in target model.
-        """
-        self._nncf_module_attr_name = nncf_module_attr_name
-        self._target_model = target_model
-        self._ref_hooks = defaultdict(dict)
-
-    def add_ref(
-        self,
-        ref_hooks: list[callable],
-        target_type: TargetType,
-        target_node_name: str,
-        input_port_id: int,
-    ) -> None:
-        """
-        Adds references hooks.
-        """
-        op_address = self._convert_to_op_address(
-            target_type, target_node_name, input_port_id, self._target_model.nncf.replace_modules
-        )
-        self._ref_hooks[target_type].update({op_address: ref_hooks})
-
-    def _convert_to_op_address(
-        self, target_type: TargetType, target_node_name: str, input_port_id: int, replace_modules: bool
-    ) -> Any:
-        address_map = self._target_model.nncf.get_node_to_op_address_mapping()
-        address = address_map[target_node_name]
-        if replace_modules:
-            if target_type == TargetType.OPERATOR_PRE_HOOK:
-                address = PreHookId(address, input_port_id)
-            elif target_type in [
-                TargetType.OPERATION_WITH_WEIGHTS,
-                TargetType.PRE_LAYER_OPERATION,
-                TargetType.POST_LAYER_OPERATION,
-            ]:
-                address = getattr(self._target_model, self._nncf_module_attr_name)
-        else:
-            if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
-                address = PreHookId(address, input_port_id)
-            elif target_type in [
-                TargetType.PRE_LAYER_OPERATION,
-                TargetType.POST_LAYER_OPERATION,
-            ]:
-                address = getattr(self._target_model, self._nncf_module_attr_name)
-        return address
-
-    def check_with_reference(self):
-        """
-        Check hooks in the target model and reference hooks are matching.
-        """
-        self._check_weight_update_hooks(self._ref_hooks[TargetType.OPERATION_WITH_WEIGHTS])
-
-        target_module = getattr(self._target_model, self._nncf_module_attr_name)
-        if target_module in self._ref_hooks[TargetType.PRE_LAYER_OPERATION]:
-            hooks = target_module.pre_ops
-            self._check_pre_post_op_hooks(hooks, self._ref_hooks[TargetType.PRE_LAYER_OPERATION][target_module])
-        if target_module in self._ref_hooks[TargetType.POST_LAYER_OPERATION]:
-            hooks = target_module.post_ops
-            self._check_pre_post_op_hooks(hooks, self._ref_hooks[TargetType.POST_LAYER_OPERATION][target_module])
-
-        hooks = self._target_model.nncf._compressed_context._pre_hooks
-        self._check_pre_post_hooks(hooks, self._ref_hooks[TargetType.OPERATOR_PRE_HOOK])
-        hooks = self._target_model.nncf._compressed_context._post_hooks
-        self._check_pre_post_hooks(hooks, self._ref_hooks[TargetType.OPERATOR_POST_HOOK])
-
-    def clear(self):
-        """
-        Removes all recorded references.
-        """
-        self._ref_hooks.clear()
-
-    @staticmethod
-    def _check_weight_update_hooks(ref_hooks: dict[torch.nn.Module, list[HookType]]):
-        for target_module, ref_hooks_per_module in ref_hooks.items():
-            assert len(target_module.pre_ops) == len(ref_hooks_per_module)
-            for actual_op, ref_op in zip(target_module.pre_ops.values(), ref_hooks_per_module):
-                assert isinstance(actual_op, UpdateWeight)
-                assert actual_op.op is ref_op
-
-    @staticmethod
-    def _check_pre_post_op_hooks(hooks: list[torch.ModuleDict], ref_hooks: list[HookType]):
-        assert len(hooks) == len(ref_hooks)
-        for actual_hook, ref_hook in zip(hooks.values(), ref_hooks):
-            assert actual_hook is ref_hook
-
-    @staticmethod
-    def _check_pre_post_hooks(
-        hooks: dict[OperationAddress, dict[Any, HookType]], ref_hooks: dict[OperationAddress, list[HookType]]
-    ):
-        assert len(hooks) == len(ref_hooks)
-        for op_address, ref_hooks in ref_hooks.items():
-            actual_hooks = hooks[op_address].values()
-            assert len(actual_hooks) == len(ref_hooks)
-            for actual_hook, ref_hook in zip(actual_hooks, ref_hooks):
-                assert actual_hook is ref_hook
 
 
 class LinearModel(nn.Module):

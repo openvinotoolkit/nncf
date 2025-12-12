@@ -28,7 +28,6 @@ from nncf.common.utils.os import is_windows
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
-from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.structures import ExecutionParameters
 
 
@@ -100,12 +99,6 @@ def get_state_dict_names_with_modules(
         if sub_found:
             found.update(sub_found)
     return found
-
-
-def get_filters_num(module):
-    if isinstance(module, _NNCFModuleMixin):
-        return module.weight.size(module.target_weight_dim_for_compression)
-    return module.weight.size(0)
 
 
 def manual_seed(seed):

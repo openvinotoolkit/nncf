@@ -12,8 +12,6 @@ from typing import Callable, Optional
 
 from torch import nn
 
-from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
-
 
 class BaseOp(nn.Module):
     def __init__(self, op):
@@ -116,16 +114,6 @@ class UpdateWeightAndOptionalBias(UpdateParameterList):
 
     def __init__(self, op):
         super().__init__(["weight", "bias"], op, [False, True])
-
-
-class UpdatePaddingValue(UpdateParameter):
-    """
-    A module which updates `nncf_padding` attributes of a module
-    fed to forward method call by operand call. Eventually, that will be used to apply a custom padding value.
-    """
-
-    def __init__(self, op):
-        super().__init__(NNCF_PADDING_VALUE_ATTR_NAME, op)
 
 
 class UpdateNumGroups(UpdateParameter):

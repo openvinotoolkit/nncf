@@ -42,12 +42,9 @@ from nncf.torch.model_creation import wrap_model
 from nncf.torch.model_creation import load_from_config
 from nncf.torch.model_creation import get_config
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.layers import register_module
 from nncf.torch.dynamic_graph.io_handling import nncf_model_input
 from nncf.torch.dynamic_graph.io_handling import nncf_model_output
-from nncf.torch.dynamic_graph.context import disable_tracing
-from nncf.torch.dynamic_graph.context import no_nncf_trace
-from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.torch.function_hook.hook_executor_mode import disable_tracing
 from nncf.torch.strip import strip
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF

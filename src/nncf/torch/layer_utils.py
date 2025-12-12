@@ -16,8 +16,6 @@ from typing import Any
 import torch
 from torch import nn
 
-from nncf.common.hook_handle import HookHandle
-from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.registry import Registry
 
 COMPRESSION_MODULES = Registry("compression modules")
@@ -49,82 +47,6 @@ class StatefulModuleInterface(ABC):
         """
         Creates a compression module instance from the given config.
         """
-
-
-class ProxyModule:
-    def __init__(self, module):
-        self._module = module
-
-    def __getattr__(self, name):
-        return getattr(self._module, name)
-
-    @property
-    def __class__(self):
-        return type(self._module)
-
-
-class _NNCFModuleMixin:
-    """
-    Default class for modules that will be optimized by NNCF.
-
-    :param op_func_name: Name of corresponding torch function.
-    :param target_weight_dim_for_compression: Target dimension of weights that will be compressed in some algorithms.
-    :param ignored_algorithms: List of algorithms that will skip the module.
-    :param _custom_forward_fn: Wrapper of the custom forward function that is called with `self` argument equals to the
-        ProxyModule
-    """
-
-    op_func_name = ""
-    target_weight_dim_for_compression = 0
-    _custom_forward_fn = None
-    ignored_algorithms = []
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        _NNCFModuleMixin.add_mixin_fields(self)
-
-    @staticmethod
-    def add_mixin_fields(obj):
-        obj.pre_ops = nn.ModuleDict()
-        obj.post_ops = nn.ModuleDict()
-
-    def get_pre_op(self, key):
-        return self.pre_ops[key]
-
-    def get_post_op(self, key):
-        return self.post_ops[key]
-
-    def register_pre_forward_operation(self, op) -> HookHandle:
-        return add_op_to_registry(self.pre_ops, op)
-
-    def remove_pre_forward_operation(self, key):
-        return self.pre_ops.pop(key)
-
-    def register_post_forward_operation(self, op) -> HookHandle:
-        return add_op_to_registry(self.post_ops, op)
-
-    def remove_post_forward_operation(self, key):
-        return self.post_ops.pop(key)
-
-    def reset(self):
-        self.pre_ops.clear()
-        self.post_ops.clear()
-
-    def forward(self, *args):
-        proxy_module = ProxyModule(self)
-        for op in self.pre_ops.values():
-            op_args = op(proxy_module, args)
-            if op_args is not None:
-                if not isinstance(op_args, tuple):
-                    op_args = tuple([op_args])
-                args = op_args
-        forward_fn = self._custom_forward_fn.__func__ if self._custom_forward_fn else super().forward.__func__
-        results = forward_fn(proxy_module, *args)
-        for op in self.post_ops.values():
-            op_results = op(proxy_module, results)
-            if op_results is not None:
-                results = op_results
-        return results
 
 
 class CompressionParameter(nn.Parameter):

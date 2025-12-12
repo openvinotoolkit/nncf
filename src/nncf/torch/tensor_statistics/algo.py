@@ -15,7 +15,7 @@ import torch
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
-from nncf.torch.dynamic_graph.context import no_nncf_trace
+from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 
@@ -47,7 +47,7 @@ def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Te
         :parameter x: tensor to register in hook.
         :return: tensor to register in hook.
         """
-        with no_nncf_trace():
+        with disable_function_hook_mode():
             x_unwrapped = maybe_get_values_from_torch_return_type(x)
             collector.register_input_for_all_reducers(Tensor(x_unwrapped))
         return x
