@@ -391,6 +391,22 @@ class WeightCompression(Algorithm):
     def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
 
+    @property
+    def mode(self) -> CompressWeightsMode:
+        return self._mode
+
+    @property
+    def group_size(self) -> int:
+        return self._group_size
+
+    @property
+    def all_layers(self) -> bool:
+        return self._all_layers
+
+    @property
+    def backup_mode(self) -> CompressWeightsMode:
+        return self._backup_mode
+
     def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
         """
         Set target ignored scope for the Weight Compression algorithm.
@@ -1309,43 +1325,3 @@ class WeightCompression(Algorithm):
                 for node in matmul_nodes:
                     statistics[node.node_name] = copy.deepcopy(stats)
         return statistics
-
-    def get_config(self):
-        return {
-            "mode": self._mode,
-            "ratio": self._ratio,
-            "group_size": self._group_size,
-            "ignored_scope": self._ignored_scope,
-            "all_layers": self._all_layers,
-            "sensitivity_metric": self._sensitivity_metric,
-            "awq": self._awq,
-            "subset_size": self._subset_size,
-            "scale_estimation": self._scale_estimation,
-            "gptq": self._gptq,
-            "lora_correction": self._lora_correction,
-            "backup_mode": self._backup_mode,
-            "compression_format": self._compression_format,
-            "advanced_parameters": self._advanced_parameters,
-        }
-
-    @classmethod
-    def from_config(
-        cls,
-        wc_config: dict[str, Any],
-    ):
-        return cls(
-            wc_config.get("mode"),
-            wc_config.get("ratio"),
-            wc_config.get("group_size"),
-            wc_config.get("ignored_scope"),
-            wc_config.get("all_layers"),
-            wc_config.get("sensitivity_metric"),
-            wc_config.get("awq"),
-            wc_config.get("subset_size"),
-            wc_config.get("scale_estimation"),
-            wc_config.get("gptq"),
-            wc_config.get("lora_correction"),
-            wc_config.get("backup_mode"),
-            wc_config.get("compression_format"),
-            wc_config.get("advanced_parameters"),
-        )
