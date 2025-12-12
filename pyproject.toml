@@ -79,7 +79,6 @@ files = [
     "src/nncf/api",
     "src/nncf/data",
     "src/nncf/common",
-    "src/nncf/config",
     "src/nncf/torch/function_hook",
     "src/nncf/quantization/*py",
     "src/nncf/telemetry/",
