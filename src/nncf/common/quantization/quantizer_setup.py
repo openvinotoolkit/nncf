@@ -16,9 +16,9 @@ from enum import Enum
 from typing import Any, Optional
 
 import nncf
-from nncf.common.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
+from nncf.common.quantization.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig

@@ -15,11 +15,11 @@ from enum import Enum
 from typing import Any, Literal, Optional
 
 import nncf
-from nncf.common.defaults import QUANTIZATION_BITS
-from nncf.common.defaults import QUANTIZATION_NARROW_RANGE
-from nncf.common.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.quantization.defaults import QUANTIZATION_BITS
+from nncf.common.quantization.defaults import QUANTIZATION_NARROW_RANGE
+from nncf.common.quantization.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
 from nncf.parameters import TargetDevice

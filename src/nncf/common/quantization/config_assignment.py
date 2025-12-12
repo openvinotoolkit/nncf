@@ -66,7 +66,7 @@ def assign_qconfig_lists_to_modules(
     :param nodes_with_weights: The nodes in NNCFGraph that correspond to weighted operations.
     :param default_weight_qconfig: The default quantizer configuration for weights, to be used if
       no other information is given.
-    :param global_weight_constraints: The constraints imposed on all weights by the NNCFConfig .json file, such
+    :param global_weight_constraints: The constraints imposed on all weights, such
       as "all symmetric" or "all per-channel" etc.
     :param scope_overrides_dict: The dictionary of strings vs dict of overrides for a given weight quantizer.
       The strings are matched against the name of the NNCFNodes in nodes_with_weights.

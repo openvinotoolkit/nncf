@@ -131,7 +131,7 @@ class CompressionParameter(nn.Parameter):
     """
     The class that should be used in all compression algorithms instead of torch.nn.Parameter.
 
-    This class utilize `compression_lr_multiplier` parameter from :class:`nncf.NNCFConfig`
+    This class utilize `compression_lr_multiplier` parameter
     to increase/decrease gradients for compression algorithms' parameters.
     """
 

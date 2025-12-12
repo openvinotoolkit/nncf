@@ -20,7 +20,6 @@ from typing import Any, Optional, cast
 import networkx as nx  # type: ignore
 
 import nncf
-from nncf.common.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -29,6 +28,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
+from nncf.common.quantization.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
 from nncf.common.quantization.quantizer_propagation.grouping import QuantizersWaitingForMergeManager
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
