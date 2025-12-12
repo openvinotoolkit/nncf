@@ -26,7 +26,6 @@ from torch.utils.data import Dataset
 
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
@@ -346,28 +345,6 @@ class SharedCustomConv(nn.Module):
         a = F.conv2d(x, self.weight)
         b = F.conv2d(x + 1, self.weight)
         return a + b
-
-
-def get_empty_config(
-    model_size=4, input_sample_sizes: Union[tuple[list[int]], list[int]] = None, input_info: dict = None
-) -> NNCFConfig:
-    if input_sample_sizes is None:
-        input_sample_sizes = [1, 1, 4, 4]
-
-    def _create_input_info():
-        if isinstance(input_sample_sizes, tuple):
-            return [{"sample_size": sizes} for sizes in input_sample_sizes]
-        return [{"sample_size": input_sample_sizes}]
-
-    config = NNCFConfig()
-    config.update(
-        {
-            "model": "empty_config",
-            "model_size": model_size,
-            "input_info": input_info if input_info else _create_input_info(),
-        }
-    )
-    return config
 
 
 def get_grads(variables: list[nn.Parameter]) -> list[torch.Tensor]:

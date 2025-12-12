@@ -20,6 +20,7 @@ from typing import Any, Optional, cast
 import networkx as nx  # type: ignore
 
 import nncf
+from nncf.common.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -51,7 +52,6 @@ from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 
 class TransitionStatus(Enum):

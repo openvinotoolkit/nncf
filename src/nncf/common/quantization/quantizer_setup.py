@@ -16,6 +16,7 @@ from enum import Enum
 from typing import Any, Optional
 
 import nncf
+from nncf.common.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import NonWeightQuantizerId
@@ -25,7 +26,6 @@ from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
-from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 QuantizationPointId = int
 

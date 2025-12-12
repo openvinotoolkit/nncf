@@ -12,12 +12,12 @@ from __future__ import annotations
 
 from typing import Any, Optional, Union
 
+from nncf.common.defaults import NUM_INIT_SAMPLES
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 
 
