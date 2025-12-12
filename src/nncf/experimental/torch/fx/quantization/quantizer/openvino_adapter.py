@@ -46,4 +46,4 @@ class OpenVINOQuantizerAdapter(Quantizer):
         return self._quantizer.get_nncf_weight_compression_parameters(model, nncf_graph)
 
     def get_weight_compression_config(self) -> dict[str, Any]:
-        return self._quantizer.get_quantizer_specific_internal_algo_config()
+        return self._quantizer.get_weights_compression_config()
