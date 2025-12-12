@@ -28,3 +28,8 @@ repos:
           - --gitignore
           - --files
         files: (^nncf/.*\.py$|.*\.md$)
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9
+    hooks:
+      - id: actionlint

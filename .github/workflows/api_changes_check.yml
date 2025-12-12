@@ -41,11 +41,11 @@ jobs:
       - name: Get changed file names in API doc path
         id: diff
         run: |
-          cd html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH
-          CHANGED_FILES=$(find . -name "*.html" -exec diff -qrBZ {} $GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{} \;)
-          echo ${CHANGED_FILES}
-          CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
-          echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
+          cd "html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH"
+          CHANGED_FILES=$(find . -name "*.html" -exec diff -qrBZ {} "$GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{}" \;)
+          echo "${CHANGED_FILES}"
+          CHANGED_FILES=$(echo "$CHANGED_FILES" | tr '\n' ' ')
+          echo "changed_files=${CHANGED_FILES}" >> "$GITHUB_OUTPUT"
 
       - name: Add label
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}

@@ -12,7 +12,6 @@ on:
         description: 'Enable gpu tests'
         type: boolean
         default: false
-        required: true
       override_requirements:
         description: 'Override requirements'
         default: ''
