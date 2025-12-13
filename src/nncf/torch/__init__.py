@@ -67,5 +67,19 @@ def patch_torch_operators():
     from nncf.common.deprecation import warning_deprecated
 
     warning_deprecated(
-        "nncf.torch_patch_torch_operators was called. This function is deprecated and no longer does anything."
+        "nncf.torch.patch_torch_operators was called. This function is deprecated and no longer does anything."
     )
+
+
+def register_module(*args, **kwargs):
+    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
+    from nncf.common.deprecation import warning_deprecated
+
+    warning_deprecated(
+        "nncf.torch.register_module was called. This function is deprecated and no longer does anything."
+    )
+
+    def wrap(cls):
+        return cls
+
+    return wrap

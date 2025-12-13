@@ -554,13 +554,13 @@ def disable_function_hook_mode() -> Iterator[None]:
 
 
 @api(canonical_alias="nncf.torch.disable_tracing")
-def disable_tracing(method):
+def disable_tracing(method: Callable[..., Any]) -> None:
     """
     Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
 
-    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
+    def no_nncf_trace_wrapper(self: Any, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         with disable_function_hook_mode():
             return fn(*args, **kwargs)
 
