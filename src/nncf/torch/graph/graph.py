@@ -11,11 +11,9 @@
 
 from itertools import chain
 
-import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.function_hook.graph.graph_utils import TensorMeta
 from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -52,47 +50,6 @@ class PTNNCFGraph(NNCFGraph):
             # Tailored for post-hook quantization and first output quantization only
             quantizer_input_shape = self.get_output_shapes_for_node(target_node_name)[0]
         return quantizer_input_shape
-
-    def get_op_nodes_in_scope(self, scope: Scope) -> list[NNCFNode]:
-        """
-        Returns all NNCFNodes inside the given scope.
-
-        :param scope: Given scope.
-        :return: All NNCFNodes inside the given scope.
-        """
-        matching_graph_op_nodes = []
-        for scope_str, nodes_in_module in self._layer_name_vs_shared_nodes.items():
-            module_scope = Scope.from_str(scope_str)
-            if module_scope in scope:
-                matching_graph_op_nodes.extend(nodes_in_module)
-        return matching_graph_op_nodes
-
-    def get_op_nodes_with_scope(self, scope: Scope) -> list[NNCFNode]:
-        """
-        Returns all NNCFNodes which share the given scope.
-
-        :param scope: Given scope.
-        :return: All NNCFNodes which share the given scope.
-        """
-        return self._layer_name_vs_shared_nodes[str(scope)]
-
-    def get_scope_by_node_name(self, node_name: NNCFNodeName) -> Scope:
-        """
-        Returns a scope which corresponds to the given NNCF node name.
-
-        :param node_name: Given node name.
-        :return: A scope which corresponds to the given NNCF node name.
-        """
-        matches = []
-        for node_id, scope_str in self._node_ids_vs_layer_names.items():
-            node = self.get_node_by_id(node_id)
-            if node.node_name == node_name:
-                matches.append(Scope.from_str(scope_str))
-        assert len(matches) <= 1
-        if not matches:
-            msg = f"Node name {node_name} not found in the node-vs-scope dict!"
-            raise nncf.InternalError(msg)
-        return matches[0]
 
     def get_nodes_with_missed_input_edges(self) -> list[NNCFNode]:
         """

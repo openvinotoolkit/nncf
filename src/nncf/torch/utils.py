@@ -23,11 +23,7 @@ import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.scopes import matches_any
 from nncf.common.utils.os import is_windows
-from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 from nncf.torch.structures import ExecutionParameters
 
 
@@ -45,45 +41,6 @@ def get_all_modules(model, prefix=None):
         sub_found = get_all_modules(module, prefix=full_node_name)
         if sub_found:
             found.update(sub_found)
-    return found
-
-
-def get_all_modules_by_type(
-    model, module_types=None, current_scope=None, ignored_scopes=None, target_scopes=None, memo=None
-) -> dict[Scope, Module]:
-    if memo is None:
-        memo = set()
-    if isinstance(module_types, str):
-        module_types = [module_types]
-    found = OrderedDict()
-
-    if current_scope is None:
-        current_scope = Scope()
-        current_scope.push(ScopeElement(model.__class__.__name__))
-    for name, module in model.named_children():
-        if id(module) in memo:
-            continue
-        memo.add(id(module))
-        child_scope_element = ScopeElement(module.__class__.__name__, name)
-        child_scope = current_scope.copy()
-        child_scope.push(child_scope_element)
-
-        if matches_any(str(child_scope), ignored_scopes):
-            continue
-
-        if target_scopes is None or matches_any(str(child_scope), target_scopes):
-            if module_types is None or module_types.count(str(type(module).__name__)) != 0:
-                found[child_scope] = module
-            sub_found = get_all_modules_by_type(
-                module,
-                module_types,
-                current_scope=child_scope,
-                ignored_scopes=ignored_scopes,
-                target_scopes=target_scopes,
-                memo=memo,
-            )
-            if sub_found:
-                found.update(sub_found)
     return found
 
 
@@ -199,10 +156,6 @@ def safe_thread_call(main_call_fn, after_barrier_call_fn=None):
 
 def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
-
-
-def is_traced_tensor(obj):
-    return isinstance(obj, TracedTensorMixin)
 
 
 class _ModuleState:

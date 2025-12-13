@@ -21,7 +21,6 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch import wrap_model
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import load_json
@@ -51,7 +50,7 @@ def min_max_quantize_model(
     return quantized_model
 
 
-def get_fq_nodes(model: torch.nn.Module) -> dict[Scope, torch.nn.Module]:
+def get_fq_nodes(model: torch.nn.Module) -> dict[str, torch.nn.Module]:
     quantization_types = tuple(class_type for class_type in QUANTIZATION_MODULES.registry_dict.values())
     ret = {}
     for name, module in model.named_modules():
@@ -60,7 +59,7 @@ def get_fq_nodes(model: torch.nn.Module) -> dict[Scope, torch.nn.Module]:
     return ret
 
 
-def get_fq_nodes_params(nncf_module_quantizations: dict[Scope, torch.nn.Module]) -> dict[str, np.ndarray]:
+def get_fq_nodes_params(nncf_module_quantizations: dict[str, torch.nn.Module]) -> dict[str, np.ndarray]:
     output = {}
     for name, nncf_module_quantization in nncf_module_quantizations.items():
         input_low, input_high = nncf_module_quantization.get_input_low_input_high()
