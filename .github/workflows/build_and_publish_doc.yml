@@ -25,9 +25,11 @@ jobs:
     steps:
       - name: Checkout main repo  # the github-pages-deploy-action seems to require this step
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Download HTML doc build artifact
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: html_doc_artifact
       - name: Extract artifact
@@ -44,7 +46,7 @@ jobs:
           rm artifact.tar
 
       - name: Publish built docs on Github Pages branch ${{ env.GH_PAGES_BRANCH }}
-        uses: JamesIves/github-pages-deploy-action@4a3abc783e1a24aeb44c16e869ad83caf6b4cc23 # v4.7.4
+        uses: JamesIves/github-pages-deploy-action@9d877eea73427180ae43cf98e8914934fe157a1a # v4.7.6
         with:
           folder: html_build/html
           token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}
