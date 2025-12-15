@@ -174,16 +174,19 @@ class AWQActLinearModel(nn.Module):
 
 
 class AWQLinearModel(nn.Module):
-    def __init__(self, is_int8=False):
+    def __init__(self, non_mergable_pattern: bool = False, is_int8=False):
         super().__init__()
         self.is_int8 = is_int8
+        self.non_mergable_pattern = non_mergable_pattern
 
         self.linear1 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
         self.linear2 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
         self.linear3 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
         self.linear4 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear5 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear6 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+
+        if not non_mergable_pattern:
+            self.linear5 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+            self.linear6 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
 
     def get_linear_layer(self, weights_data, is_int8):
         if not is_int8:
@@ -200,9 +203,19 @@ class AWQLinearModel(nn.Module):
         return linear_layer
 
     def forward(self, x):
-        node1 = self.linear1(x)
-        node2 = self.linear2(x)
-        node_multiply = node1 * node2
+        if self.non_mergable_pattern:
+            node1 = self.linear1(x)
+            y = torch.relu(node1)
+            node_multiply = self.linear2(y)
+        else:
+            node1 = self.linear1(x)
+            node2 = self.linear2(x)
+            node_multiply = node1 * node2
+
+        if self.non_mergable_pattern:
+            node3 = self.linear3(node_multiply)
+            y = torch.relu(node3)
+            return self.linear4(y)
 
         node3 = self.linear3(node_multiply)
         node4 = self.linear4(node3)
@@ -500,7 +513,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return SAMPEModel()
 
     @staticmethod
-    def get_sequential_matmul_model() -> torch.nn.Module:
+    def get_sequential_matmul_model(transpose_a: bool) -> torch.nn.Module:
         return SequentialMatmulModel()
 
     @staticmethod
@@ -516,8 +529,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_awq_model() -> torch.nn.Module:
-        return AWQLinearModel()
+    def get_awq_model(non_mergable_pattern: bool) -> torch.nn.Module:
+        return AWQLinearModel(non_mergable_pattern=non_mergable_pattern)
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> torch.nn.Module:
@@ -536,7 +549,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model: torch.nn.Module, ref_ids: list[int]) -> None:
+    def check_weights(model: torch.nn.Module, ref_ids: list[int], transpose_a=False) -> None:
         all_names = model.get_weight_names_in_exec_order()
         low_precision_nodes = list(map(lambda i: all_names[i], ref_ids))
         decompressed_modules = list(
@@ -746,12 +759,43 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         return {
             "linear3/linear/0": Tensor(
-                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
-            )
+                torch.tensor(
+                    [[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]],
+                    dtype=torch.float32,
+                ).T
+            ),
+            "linear2/linear/0": Tensor(
+                torch.tensor(
+                    [
+                        [
+                            [
+                                1.9909899235,
+                                1.8632963896,
+                                1.5759800673,
+                                1.3974593878,
+                                1.2722752094,
+                                1.1779977083,
+                                1.1035580635,
+                                1.0427680016,
+                            ]
+                        ]
+                    ],
+                    dtype=torch.float32,
+                )
+            ),
         }
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool):
+        pass
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return False
 
 
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])
@@ -768,3 +812,7 @@ def test_half_precision_models(dtype):
         awq=True,
         dataset=nncf.Dataset([dict(inputs)]),
     )
+
+    @pytest.fixture
+    def tranpose_a_supported() -> bool:
+        return False

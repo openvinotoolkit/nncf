@@ -170,6 +170,8 @@ class AWQ(Algorithm):
             weight_dtype = weight.dtype
             weight = weight.astype(TensorDataType.float32)
 
+            act_ch_axis, act_shape = self._get_activation_channel_axis_and_shape(graph, wp)
+
             if is_data_free:
                 scale = self._data_free_step(weight, 1 - wp.reduction_axes[0])
             else:
@@ -181,10 +183,10 @@ class AWQ(Algorithm):
                     prev_weight = self._backend_entity.get_weight(merge_node, prev_weight_port_id, model, graph)
 
                     prev_statistics = statistics[merge_node.node_name]
-                scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
+                scale = self._data_aware_step(wp, weight, statistics[k], act_ch_axis, prev_weight, prev_statistics)
 
             w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
-            a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
+            a_scale = 1.0 / scale
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
@@ -192,13 +194,17 @@ class AWQ(Algorithm):
             if is_mergeable:  # for MatMul->Multiply->MatMul pattern the scale is merged to the first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
+                    a_scale = fns.unsqueeze(a_scale, wp.reduction_axes[0])
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
-                a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.transpose(a_scale).astype(weight_dtype)
+                # Calculate the activation scale shape
+                a_scale_shape = [scale.shape[0] if axis == act_ch_axis else 1 for axis in range(len(act_shape))]
+                a_scale = fns.reshape(a_scale, tuple(a_scale_shape))
+
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
+
                 scale_insertion_command = self._backend_entity.scale_insertion_command(
                     merge_node, next_nodes, source_node_output_port, a_scale.data
                 )
@@ -210,10 +216,10 @@ class AWQ(Algorithm):
 
         return transformed_model
 
-    def _data_aware_step(self, wp, weight, statistics, prev_weight=None, prev_statistics=None):
+    def _data_aware_step(self, wp, weight, statistics, act_ch_axis, prev_weight=None, prev_statistics=None):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
-        s, X = process_stats(statistics, self._subset_size)
+        s, X = process_stats(statistics, self._subset_size, act_ch_axis)
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
 
@@ -222,7 +228,7 @@ class AWQ(Algorithm):
 
         prev_s, prev_w = None, None
         if prev_statistics is not None and prev_weight is not None:
-            prev_s, _ = process_stats(prev_statistics, self._subset_size)
+            prev_s, _ = process_stats(prev_statistics, self._subset_size, act_ch_axis)
             prev_s = prev_s.astype(TensorDataType.float32).max().item()
             prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
 
@@ -310,6 +316,16 @@ class AWQ(Algorithm):
                 scale.data[offset : offset + group_size] = best_scale.data
 
         return scale
+
+    def _get_activation_channel_axis_and_shape(
+        self, graph: NNCFGraph, wp: WeightCompressionParameters
+    ) -> tuple[int, tuple[int, ...]]:
+        activation_port_id = self._backend_entity.get_activation_port_id(wp.node_with_weight, graph)
+        act_shape = graph.get_input_edge_by_port_id(wp.node_with_weight, activation_port_id).tensor_shape
+        act_ch_axis = self._backend_entity.get_activation_channel_axis(
+            wp.node_with_weight, activation_port_id, act_shape
+        )
+        return act_ch_axis % len(act_shape), act_shape
 
     @staticmethod
     def _clamp_scale(magnitudes, threshold, scale, clamped_scale):

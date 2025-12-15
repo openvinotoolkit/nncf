@@ -35,6 +35,7 @@ from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_codebook_subgraph
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -119,9 +120,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        if node.layer_attributes.input_attributes["transpose"]:
-            msg = "Transposed input is not supported"
-            raise nncf.UnsupportedModelError(msg)
         constant_ports = node.layer_attributes.get_const_port_ids()
         activation_ports = [
             e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
@@ -138,6 +136,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return result
 
     def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph) -> Tensor:
+        if not node_with_weight.layer_attributes.constant_attributes[weight_port_id]["transpose"]:
+            msg = "Only transposed weights are supported"
+            raise nncf.UnsupportedModelError(msg)
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
         weight_tensor = get_const_value_as_numpy_tensor(weight_node)
@@ -309,6 +310,15 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
+            if (
+                lora_correction_algo is not None
+                and lora_correction_algo.is_applicable(wc_params)
+                and wc_params.node_with_weight.layer_attributes.input_attributes["transpose"]
+            ):
+                msg = "Transposed input for the LoRa correction is not supported"
+                raise nncf.UnsupportedModelError(msg)
+
+        for wc_params in weight_compression_parameters:
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
             const_node_name = const_attributes["name"]
             const_node = self.name_to_node_mapping[const_node_name]
@@ -377,6 +387,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         pattern = create_rope()
         pattern.add_pattern_alternative(create_sam_pe())
         return pattern
+
+    @staticmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
+        return get_activation_channel_axis(node, port_id, input_shape)
 
 
 class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):

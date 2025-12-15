@@ -273,6 +273,17 @@ class WeightCompressionAlgoBackend(ABC):
         :return: backend-specific ignored patterns.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
+        """
+        Returns axis number of the activation tensor which correspond to it channel.
+        :param node: NNCFNode instance.
+        :param port_id: Port ID for input.
+        :param input_shape: Shape of the input.
+        :return: Channel axis number.
+        """
+
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
