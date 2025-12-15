@@ -34,7 +34,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
-from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.functions import clamp
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
@@ -349,7 +348,6 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
             requires_grad=False,
             compression_lr_multiplier=qspec.compression_lr_multiplier,
         )
-        OPTIONAL_PARAMETERS_REGISTRY.register("_num_bits")
 
         # These must be made buffers, since they impact the "forward" behaviour and the model can be used
         # in DDP scenarios, so these must be properly synchronized across processes.
@@ -358,7 +356,6 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
 
         ENABLED_VAR_NAME = "enabled"
         self.register_buffer(ENABLED_VAR_NAME, torch.IntTensor([1]))
-        OPTIONAL_PARAMETERS_REGISTRY.register(ENABLED_VAR_NAME)
         self.initialized = False
         self.call_count = 0
         self._scale_shape = qspec.scale_shape
