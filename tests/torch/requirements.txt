@@ -14,7 +14,7 @@ accelerate==1.9.0
 transformers==4.53.0
 
 # Required for movement_sparsity tests
-datasets==3.0.1
+datasets
 evaluate==0.3.0
 openvino
 timm==0.9.2

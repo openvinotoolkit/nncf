@@ -41,7 +41,7 @@ Checkpoint = TypeVar("Checkpoint")
 Image = Any  # Default type for Image.
 
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # type: ignore[import-not-found]
     import PIL.Image
     from PIL.Image import Image
 

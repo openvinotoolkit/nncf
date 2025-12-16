@@ -32,7 +32,6 @@ from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
-from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 from tests.torch.test_models.synthetic import AddTwoConv
 
 pytestmark = pytest.mark.legacy
@@ -176,35 +175,6 @@ def test_can_resume_with_manual_init(mocker, desc, _nncf_caplog):
     get_setup_spy.assert_not_called()
 
     desc.check_precision_init(compression_ctrl)
-
-
-# TODO(nlyalyus): fix algo mixing
-@pytest.mark.skip("algo mixing is not supported")
-@pytest.mark.parametrize("is_strict", (True, False))
-def test_can_resume_with_algo_mixing(mocker, is_strict):
-    desc = PrecisionInitTestDesc().config_with_all_inits()
-    all_quantization_init_spies = desc.setup_init_spies(mocker)
-    sparsity_config = get_basic_sparsity_config()
-    sparsity_config["target_device"] = "TRIAL"
-    config = desc.config
-    quantization_section = config["compression"]
-    config["compression"] = [{"algorithm": "const_sparsity"}, quantization_section]
-
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(desc.model_creator(), sparsity_config)
-    compression_state = compression_ctrl.get_compression_state()
-
-    config = register_default_init_args(config, train_loader=create_ones_mock_dataloader(config))
-    fn = partial(
-        create_compressed_model_and_algo_for_test, desc.model_creator(), config, compression_state=compression_state
-    )
-    if is_strict:
-        with pytest.raises(nncf.InternalError):
-            fn()
-    else:
-        _, compression_ctrl = fn()
-        for m in all_quantization_init_spies:
-            m.assert_called()
-        desc.check_precision_init(compression_ctrl.child_ctrls[1])
 
 
 QUANTIZATION = "quantization"

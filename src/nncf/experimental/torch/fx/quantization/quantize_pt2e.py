@@ -22,11 +22,14 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
+from nncf import AdvancedCompressionParameters
 from nncf import Dataset
+from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
+from nncf.experimental.quantization.algorithms.weight_compression.algorithm import WeightsCompression
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
@@ -157,3 +160,72 @@ def _quant_node_constraint(n: torch.fx.Node) -> bool:
     related to quantization
     """
     return n.op == "call_function" and n.target in QUANTIZE_NODE_TARGETS
+
+
+@api(canonical_alias="nncf.experimental.torch.fx.compress_pt2e")
+def compress_pt2e(
+    model: torch.fx.GraphModule,
+    quantizer: Quantizer,
+    *,
+    dataset: Optional[nncf.Dataset] = None,
+    awq: bool = False,
+    scale_estimation: bool = False,
+    gptq: bool = False,
+    lora_correction: bool = False,
+    subset_size: int = 128,
+    ratio: int = 1,
+    sensitivity_metric: Optional[SensitivityMetric] = None,
+    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+) -> torch.fx.GraphModule:
+    """
+    Applies Weight Compression to the torch.fx.GraphModule model using provided torch.ao quantizer.
+
+    :param model: A torch.fx.GraphModule instance to be quantized.
+    :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
+        to convey the desired way of quantization.
+    :param dataset: A representative dataset for the calibration process.
+    :param awq: Determines whether to use or not the modified AWQ algorithm.
+    :param scale_estimation: Determines whether to use or not scale estimation for 4-bit layers.
+    :param gptq: Determines whether to use or not GPTQ algorithm.
+    :param lora_correction: Determines whether to use or not LoRA Correction algorithm.
+    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+        quantization precision.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8_ASYM).
+    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+        preserve the accuracy of the model, the more sensitive layers receive a higher precision.
+    :param advanced_parameters: Advanced parameters for algorithms in the compression pipeline.
+    """
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_parameters"):
+        quantizer = OpenVINOQuantizerAdapter(quantizer)
+        compression_format = nncf.CompressionFormat.DQ
+    else:
+        # TODO Support Third party quantizers here.
+        msg = "Only OpenVINO Quantizer is supported currently."
+        raise nncf.InternalError(msg)
+
+    sensitivity_metric = (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR if dataset is None else SensitivityMetric.MAX_ACTIVATION_VARIANCE)
+        if sensitivity_metric is None
+        else sensitivity_metric
+    )
+
+    quantization_algorithm = WeightsCompression(
+        quantizer=quantizer,
+        subset_size=subset_size,
+        compression_format=compression_format,
+        ratio=ratio,
+        awq=awq,
+        scale_estimation=scale_estimation,
+        gptq=gptq,
+        lora_correction=lora_correction,
+        sensitivity_metric=sensitivity_metric,
+        advanced_parameters=advanced_parameters,
+    )
+
+    # Here the model is annotated
+    transformed_model = quantizer.transform_prior_quantization(model)
+    nncf_graph = NNCFGraphFactory.create(transformed_model)
+    quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=dataset)
+    quantized_model = torch.fx.GraphModule(quantized_model, graph=quantized_model.graph)
+    return quantized_model
