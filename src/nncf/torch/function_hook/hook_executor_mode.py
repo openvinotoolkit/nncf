@@ -32,7 +32,6 @@ from torch.overrides import TorchFunctionMode
 from nncf.common.logging import nncf_logger as logger
 from nncf.torch.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.torch.function_hook.hook_storage import HookStorage
-from nncf.torch.function_hook.weak_map import WeakUnhashableKeyMap
 
 IGNORED_FN_NAMES = [
     "__repr__",
@@ -119,10 +118,10 @@ class FunctionHookMode(TorchFunctionMode):
         self.op_calls: dict[str, int] = defaultdict(int)
         self.enabled: bool = True
 
-        # Variables for hooks after constant nodes
-        self.const_name_map: WeakUnhashableKeyMap[torch.Tensor, str] = WeakUnhashableKeyMap()
-        for name, parameter in chain(self.model.named_parameters(), self.model.named_buffers()):
-            self.const_name_map[parameter] = name
+        # Mapping id of parameters to names to execute hooks after constant nodes
+        self.const_name_map: dict[int, str] = {
+            id(parameter): name for name, parameter in chain(self.model.named_parameters(), self.model.named_buffers())
+        }
         self.in_process_const = False
 
         # Hook names
@@ -337,7 +336,7 @@ class FunctionHookMode(TorchFunctionMode):
             return ret
 
         ret_value = value
-        name_in_model = self.const_name_map.get(value, None)
+        name_in_model = self.const_name_map.get(id_param)
         if name_in_model is not None and not self.in_process_const:
             self.in_process_const = True
             ret_value = self.hook_storage.execute_post_function_hooks(name_in_model, 0, value)
