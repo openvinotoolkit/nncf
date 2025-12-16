@@ -128,6 +128,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         return Tensor(weight)
 
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, act_port_id: int) -> bool:
+        return False
+
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
     ) -> TensorDataType:

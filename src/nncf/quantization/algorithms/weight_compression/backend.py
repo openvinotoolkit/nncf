@@ -111,6 +111,17 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @abstractmethod
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, act_port_id: int) -> bool:
+        """
+        Checks whether the activation input of a MatMul operation is transposed.
+
+        :param matmul: MatMul NNCFGraph node.
+        :param act_port_id: Index of the input port corresponding to the activation tensor.
+        :return: True if the node is a matmul node and activation input is transposed,
+            False otherwise.
+        """
+
+    @abstractmethod
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph
     ) -> TensorDataType:
@@ -278,6 +289,7 @@ class WeightCompressionAlgoBackend(ABC):
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
         """
         Returns axis number of the activation tensor which correspond to it channel.
+
         :param node: NNCFNode instance.
         :param port_id: Port ID for input.
         :param input_shape: Shape of the input.

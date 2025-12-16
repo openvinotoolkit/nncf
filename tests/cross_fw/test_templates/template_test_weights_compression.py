@@ -31,6 +31,7 @@ from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.algorithms.weight_compression.activation_stats import WCTensorStatistic
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
@@ -779,3 +780,42 @@ class TemplateWeightCompression(ABC):
     @abstractmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None) -> TModel:
         "Returns a backend model for test_compression_with_transpose."
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            dict(scale_estimation=True),
+            dict(lora_correction=True),
+            dict(
+                gptq=True,
+                advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+            ),
+        ],
+    )
+    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
+        if not transpose_a_supported:
+            pytest.skip("transpose_a is not supported for the current backend")
+        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
+            pytest.skip("Scale estimation is not supported")
+        if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
+            pytest.skip("GPTQ is not supported")
+        if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():
+            pytest.skip("lora_correction is not supported")
+
+        INPUT_SHAPE = (2, 4)
+        model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
+        input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
+        input = self.to_tensor(input)
+        dataset = Dataset([input] * 2, self.get_transform_func())
+
+        with pytest.raises(nncf.UnsupportedModelError):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=1,
+                subset_size=2,
+                dataset=dataset,
+                all_layers=True,
+                **kwargs,
+            )

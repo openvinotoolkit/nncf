@@ -136,13 +136,15 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return result
 
     def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph) -> Tensor:
-        if not node_with_weight.layer_attributes.constant_attributes[weight_port_id]["transpose"]:
-            msg = "Only transposed weights are supported"
-            raise nncf.UnsupportedModelError(msg)
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
         weight_tensor = get_const_value_as_numpy_tensor(weight_node)
         return Tensor(weight_tensor)
+
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, act_port_id: int) -> bool:
+        if matmul.metatype != om.OVMatMulMetatype:
+            return False
+        return matmul.layer_attributes.input_attributes["transpose"]
 
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph
@@ -309,15 +311,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ) -> ov.Model:
-        for wc_params in weight_compression_parameters:
-            if (
-                lora_correction_algo is not None
-                and lora_correction_algo.is_applicable(wc_params)
-                and wc_params.node_with_weight.layer_attributes.input_attributes["transpose"]
-            ):
-                msg = "Transposed input for the LoRa correction is not supported"
-                raise nncf.UnsupportedModelError(msg)
-
         for wc_params in weight_compression_parameters:
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
             const_node_name = const_attributes["name"]
