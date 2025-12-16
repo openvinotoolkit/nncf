@@ -143,7 +143,7 @@ def view(a: Tensor, dtype: TensorDataType) -> Tensor:
     Returns a view of the tensor with the specified data type.
 
     :param a: The input tensor.
-    :param dtype: The desired data
+    :param dtype: The desired data type.
     :return: A view of the tensor with the specified data type.
     """
 
