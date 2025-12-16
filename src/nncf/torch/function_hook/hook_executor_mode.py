@@ -21,8 +21,6 @@ from itertools import chain
 from types import MethodType
 from types import TracebackType
 from typing import Any, Callable, Iterator, Optional, cast
-from weakref import ReferenceType
-from weakref import ref
 
 import torch
 from torch import Tensor
@@ -110,7 +108,7 @@ class FunctionHookMode(TorchFunctionMode):
         self.in_process_const = False
 
         # Hook names
-        self.hooks_module_to_group_name: dict[ReferenceType[nn.Module], str] = {}
+        self.hooks_module_to_group_name: dict[int, str] = {}
         self._get_named_hooks(self.hook_storage.pre_hooks, "pre_hook")
         self._get_named_hooks(self.hook_storage.post_hooks, "post_hook")
 
@@ -138,7 +136,7 @@ class FunctionHookMode(TorchFunctionMode):
             for hook_id, hook_module in hook_module_dict.named_children():
                 # Replace / to avoid collision with module separator
                 hook_name = hook_key.replace("/", "-")
-                self.hooks_module_to_group_name[ref(hook_module)] = f"{prefix}__{hook_name}[{hook_id}]"
+                self.hooks_module_to_group_name[id(hook_module)] = f"{prefix}__{hook_name}[{hook_id}]"
 
     def _get_wrapped_call(self, fn_call: MethodType) -> Callable[..., Any]:
         """
@@ -254,7 +252,7 @@ class FunctionHookMode(TorchFunctionMode):
         prev_module = self.module_call_stack[0]
 
         for module in self.module_call_stack[1:]:
-            hook_name = self.hooks_module_to_group_name.get(ref(module))
+            hook_name = self.hooks_module_to_group_name.get(id(module))
             if hook_name is not None:
                 relative_module_names.append(hook_name)
             else:
