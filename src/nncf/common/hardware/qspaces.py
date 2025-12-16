@@ -123,7 +123,7 @@ q4_w = QConfigSpace(
 q2_ch = QConfigSpace(
     bits=2,
     mode=(QuantizationScheme.SYMMETRIC,),
-    granularity=Granularity.PER_CHANNEL,
+    granularity=(Granularity.PER_CHANNEL,),
     narrow_range=(False,),
 )
 

@@ -30,7 +30,7 @@ from nncf.common.hardware.qspaces import q16_w_asym
 from nncf.common.hardware.qspaces import q16_w_sym
 from nncf.common.hardware.qspaces import q16_w_sym_any_nr
 
-NPU_SETUP: list[OpDesc] = [
+NPU_SETUP: tuple[OpDesc, ...] = (
     OpDesc(
         type="Convolution",
         activations=(q8_a, q16_a, q4_tn),
@@ -232,4 +232,4 @@ NPU_SETUP: list[OpDesc] = [
         type="EmbeddingBag",
         weights=(q8_w_sym_any_nr, q8_w_asym, q16_w_sym_any_nr, q16_w_asym),
     ),
-]
+)

@@ -11,64 +11,40 @@
 
 import pytest
 
-from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
-from nncf.common.hardware.config import HWConfig
-from nncf.common.hardware.config import get_hw_config_type
-from nncf.parameters import TargetDevice
-
-BASE_DEVICE = TargetDevice.CPU
-
-
-def load_config_for_device(target_device: TargetDevice) -> HWConfig:
-    """
-    Loads hardware configuration based on the device.
-
-    :param target_device: TargetDevice instance.
-    :return: Hardware configuration as dictionary.
-    """
-    hw_config_type = get_hw_config_type(target_device)
-    hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
-    return HWConfig.from_json(hw_config_path)
+import nncf
+from nncf import TargetDevice
+from nncf.common.hardware.config import get_hw_setup
+from nncf.common.hardware.defines import Granularity
+from nncf.common.hardware.defines import OpDesc
+from nncf.common.hardware.defines import QConfigSpace
+from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizerConfig
 
 
-def get_quantization_config(hw_config: HWConfig) -> dict:
-    """
-    Returns quantization config aggregated by types.
-
-    :param hw_config: HWConfig instance.
-    :return: Dictionary with the configuration by types.
-    """
-    return {c["type"]: c["quantization"] for c in hw_config if "quantization" in c}
+@pytest.mark.parametrize("target_device", TargetDevice)
+def test_get_hw_setup(target_device: TargetDevice):
+    hw_setup = get_hw_setup(target_device)
+    assert len(hw_setup) > 0
+    for x in hw_setup:
+        assert isinstance(x, OpDesc)
 
 
-@pytest.mark.parametrize("target_device", [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
-def test_get_hw_config_type(target_device):
-    expected = HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
-    mesured = get_hw_config_type(target_device.value)
-    assert expected == mesured.value
+def test_get_hw_setup_error():
+    with pytest.raises(nncf.InternalError, match="Unsupported target device:"):
+        get_hw_setup(None)
 
 
-def test_get_hw_config_type_trial():
-    assert get_hw_config_type("TRIAL") is None
+def test_qconfigspace_get_all_qconfigs():
+    space = QConfigSpace(
+        bits=8,
+        mode=(QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC),
+        granularity=(Granularity.PER_TENSOR, Granularity.PER_CHANNEL),
+        narrow_range=(True, False),
+        signedness_to_force=False,
+    )
+    qconfigs = space.get_all_qconfigs()
+    assert len(qconfigs) == 8
+    assert all(isinstance(qc, QuantizerConfig) for qc in qconfigs)
 
-
-@pytest.mark.parametrize("target_device", [TargetDevice.GPU, TargetDevice.NPU])
-def test_device_configuration_alignment(target_device):
-    base_hw_config = load_config_for_device(BASE_DEVICE)
-    base_quantization_config = get_quantization_config(base_hw_config)
-
-    test_hw_config = load_config_for_device(target_device)
-    test_quantization_config = get_quantization_config(test_hw_config)
-
-    for layer_type, layer_configs in base_quantization_config.items():
-        assert layer_type in test_quantization_config, f"{layer_type} was not found in test configuration"
-        test_layer_config = test_quantization_config[layer_type]
-        for config_type, type_options in layer_configs.items():
-            assert config_type in test_layer_config, (
-                f"{config_type} was not found in test configuration for {layer_type}"
-            )
-            test_type_options = test_layer_config[config_type]
-            for idx, option in enumerate(type_options):
-                assert option == test_type_options[idx], (
-                    f"#{idx} option was not aligned for {config_type} type in {layer_type}"
-                )
+    assert qconfigs[0].num_bits == 8
+    assert qconfigs[0].signedness_to_force is False

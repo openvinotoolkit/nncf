@@ -26,7 +26,7 @@ from nncf.common.hardware.qspaces import q16_w_asym
 from nncf.common.hardware.qspaces import q16_w_sym
 from nncf.common.hardware.qspaces import q16_w_sym_any_nr
 
-GPU_SETUP: list[OpDesc] = [
+GPU_SETUP: tuple[OpDesc, ...] = (
     OpDesc(
         type="Convolution",
         activations=(q8_a, q16_a),
@@ -208,4 +208,4 @@ GPU_SETUP: list[OpDesc] = [
         weights=(q8_w_sym_any_nr, q8_w_asym, q16_w_sym_any_nr, q16_w_asym),
     ),
     OpDesc(type="EmbeddingBag"),
-]
+)

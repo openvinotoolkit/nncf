@@ -28,7 +28,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizerConfig
 
 
-def get_hw_setup(target_device: TargetDevice) -> list[OpDesc]:
+def get_hw_setup(target_device: TargetDevice) -> tuple[OpDesc, ...]:
     """
     Retrieves the hardware setup configuration based on the specified target device.
 
@@ -52,7 +52,7 @@ class HWConfig(ABC):
     available operator metatypes, quantizer configurations, and operations with
     specific attribute values.
 
-    :param hw_setup: A list of hardware setup descriptors for the target device.
+    :param hw_setup: A tuple of hardware setup descriptors for the target device.
     :param target_device: The target device for which the hardware configuration is set.
     """
 
