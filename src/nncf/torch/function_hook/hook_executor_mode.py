@@ -29,7 +29,6 @@ from torch import Tensor
 from torch import nn
 from torch.overrides import TorchFunctionMode
 
-from nncf.common.logging import nncf_logger as logger
 from nncf.torch.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.torch.function_hook.hook_storage import HookStorage
 
@@ -60,20 +59,6 @@ class OpMeta:
     op_name: str
     func: Callable[..., Any]
     extra_info: dict[str, Any] = field(default_factory=lambda: dict())
-
-
-def _get_full_fn_name(fn: Callable[..., Any]) -> str:
-    """
-    Get the full name of a function, including its module if applicable.
-
-    :param fn: The function for which to get the full name.
-    :return: The full name of the function.
-    """
-    if inspect.ismethoddescriptor(fn) or inspect.ismethod(fn):
-        return fn.__qualname__
-    if inspect.isbuiltin(fn) or inspect.isfunction(fn):
-        return f"{fn.__module__}.{fn.__name__}"
-    return f"{fn.__name__}"
 
 
 def generate_normalized_op_name(module_name: str, fn_name: str, call_id: Optional[int] = None) -> str:
@@ -182,7 +167,6 @@ class FunctionHookMode(TorchFunctionMode):
         if self.nested_enter_count == 0:
             # Wrap _call_impl function of instance each module.
             # Note: __call__ can`t not be overridden for instance, the function can be override only in class namespace.
-            logger.debug("FunctionHookMode.__enter__: wrap _call_impl function")
             for _, module in self.model.named_modules():
                 module._call_impl = types.MethodType(self._get_wrapped_call(module._call_impl), module)
             self.push_module_call_stack(self.model)
@@ -202,7 +186,6 @@ class FunctionHookMode(TorchFunctionMode):
         self.nested_enter_count -= 1
         if self.nested_enter_count == 0:
             # Unwrap _call_impl functions
-            logger.debug("FunctionHookMode.__exit__: unwrap _call_impl function")
             for _, module in self.model.named_modules():
                 module.__dict__.pop("_call_impl")
             self.pop_module_call_stack()
@@ -239,8 +222,6 @@ class FunctionHookMode(TorchFunctionMode):
             return func(*args, **kwargs)
 
         op_name = self.get_current_executed_op_name(fn_name)
-        full_fn_name = _get_full_fn_name(func)
-        logger.debug(f"FunctionHookMode.__torch_function__: {full_fn_name=} {op_name=}")
         self.register_op(fn_name)
         op_meta = OpMeta(op_name=op_name, func=func)
         args, kwargs = self.execute_pre_hooks(args, kwargs, op_meta)
@@ -256,16 +237,12 @@ class FunctionHookMode(TorchFunctionMode):
         """
         assert isinstance(module, nn.Module)
         self.module_call_stack.append(module)
-        module_name = self.get_current_relative_name()
-        logger.debug(f"FunctionHookMode.push_module_call_stack: {module_name=}")
 
     def pop_module_call_stack(self) -> None:
         """
         Pop a module from the call stack and remove its operation calls.
         """
-        module_name = self.get_current_relative_name()
         self.module_call_stack.pop()
-        logger.debug(f"FunctionHookMode.pop_module_call_stack: {module_name=}")
 
     def get_current_relative_name(self) -> str:
         """
