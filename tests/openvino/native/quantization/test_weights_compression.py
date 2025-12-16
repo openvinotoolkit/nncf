@@ -2133,9 +2133,18 @@ def test_mxfp4_quantization_edge_cases(input_val, expected_val, description):
         (np.nan, np.nan, "NaN input should remain NaN after quantization/dequantization"),
     ],
 )
-def test_f8e4m3_quantization_edge_cases(input_val, expected_val, description):
+@pytest.mark.parametrize("backend", ["numpy", "openvino"])
+def test_f8e4m3_quantization_edge_cases(input_val, expected_val, description, backend):
     norm_weight = Tensor(np.array([input_val], dtype=np.float32))
-    result = _calculate_float_quantized_weight(norm_weight, TensorDataType.f8e4m3)
+    if backend == "numpy":
+        result = _calculate_float_quantized_weight(norm_weight, TensorDataType.f8e4m3)
+    else:
+        result = (
+            norm_weight.as_openvino_tensor()
+            .astype(TensorDataType.f8e4m3)
+            .astype(TensorDataType.float32)
+            .as_numpy_tensor()
+        )
 
     out = result.data[0]
 
