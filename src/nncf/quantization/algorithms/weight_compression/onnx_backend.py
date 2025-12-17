@@ -187,9 +187,10 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_tensor = get_tensor_value(model, weight_name)
         return Tensor(weight_tensor)
 
-    def matmul_has_transposed_activations(self, matmul: NNCFNode, act_port_id: int) -> bool:
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, graph: NNCFGraph) -> bool:
         if matmul.metatype != metatypes.ONNXGemmMetatype:
             return False
+        act_port_id = self.get_activation_port_id(matmul, graph)
         trans_attr = "transB" if act_port_id else "transA"
         return matmul.layer_attributes.node_attrs[trans_attr]
 

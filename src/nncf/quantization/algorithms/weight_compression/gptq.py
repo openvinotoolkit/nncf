@@ -125,8 +125,7 @@ class GPTQ:
             ]:
                 continue
 
-            act_port_id = self._backend_entity.get_activation_port_id(wc_params.node_with_weight, graph)
-            if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, act_port_id):
+            if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, graph):
                 msg = "Transposed activations are not supported yet for the GPTQ algorithm"
                 raise nncf.UnsupportedModelError(msg)
 

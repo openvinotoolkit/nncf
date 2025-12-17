@@ -141,7 +141,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_tensor = get_const_value_as_numpy_tensor(weight_node)
         return Tensor(weight_tensor)
 
-    def matmul_has_transposed_activations(self, matmul: NNCFNode, act_port_id: int) -> bool:
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, graph: NNCFGraph) -> bool:
         if matmul.metatype != om.OVMatMulMetatype:
             return False
         return matmul.layer_attributes.input_attributes["transpose"]

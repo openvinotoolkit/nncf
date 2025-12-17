@@ -1088,8 +1088,7 @@ class WeightCompression(Algorithm):
 
             if self._lora_correction:
                 for wc_params in all_weight_params:
-                    act_port_id = self._backend_entity.get_activation_port_id(wc_params.node_with_weight, graph)
-                    if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, act_port_id):
+                    if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, graph):
                         msg = "Transposed activations are not supported yet for the LoRa correction algorithm"
                         raise nncf.UnsupportedModelError(msg)
 
