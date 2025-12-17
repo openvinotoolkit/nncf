@@ -29,8 +29,6 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.tensor_slicing import get_weight_slice
-from nncf.quantization.algorithms.weight_compression.tensor_slicing import set_weight_slice
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.quantization.passes import transform_to_inference_graph
@@ -183,7 +181,9 @@ class AWQ(Algorithm):
                     prev_weight = self._backend_entity.get_weight(merge_node, prev_weight_port_id, model, graph)
 
                     prev_statistics = statistics[merge_node.node_name]
-                scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics, weight_port_id)
+                scale = self._data_aware_step(
+                    wp, weight, statistics[k], prev_weight, prev_statistics, weight_port_id, graph
+                )
 
             w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
             a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
@@ -212,7 +212,9 @@ class AWQ(Algorithm):
 
         return transformed_model
 
-    def _data_aware_step(self, wp, weight, statistics, prev_weight=None, prev_statistics=None, weight_port_id=None):
+    def _data_aware_step(
+        self, wp, weight, statistics, prev_weight=None, prev_statistics=None, weight_port_id=None, graph=None
+    ):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
         s, X = process_stats(statistics, self._subset_size)
@@ -222,8 +224,8 @@ class AWQ(Algorithm):
         assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
         reduction_axis = wp.reduction_axes[0]
 
-        # Get transpose_b value to handle weight shape correctly
-        transpose_b = wp.node_with_weight.layer_attributes.constant_attributes[weight_port_id]["transpose"]
+        # Get transpose_b value from backend to handle weight shape correctly in a backend-agnostic way
+        transpose_b = self._backend_entity.get_weight_transpose_b(wp.node_with_weight, weight_port_id, graph)
 
         prev_s, prev_w = None, None
         if prev_statistics is not None and prev_weight is not None:
@@ -244,7 +246,7 @@ class AWQ(Algorithm):
 
         groups_to_correct = list(groups_to_correct)
 
-        # Remove the old transpose logic - we'll use get_weight_slice instead
+        # Remove the old transpose logic - we now rely on explicit transpose_b handling
         # if reduction_axis == 0:
         #     weight = fns.transpose(weight)
         #     reduction_axis = 1
@@ -263,8 +265,11 @@ class AWQ(Algorithm):
             a_max = 1e2
             gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
-            # Use get_weight_slice instead of hardcoded slicing
-            gweight = get_weight_slice(weight, slice(offset, offset + group_size), transpose_b)
+            # Slice weight block along the input-channel dimension taking transpose_b into account
+            if transpose_b:
+                gweight = weight[:, offset : offset + group_size]
+            else:
+                gweight = weight[offset : offset + group_size, :]
             gacts = X[offset : offset + group_size, :]
 
             fp32_out = fns.matmul(gweight, gacts)
@@ -310,8 +315,8 @@ class AWQ(Algorithm):
                 alpha += alpha_step
 
             if best_scale is not None:
-                # Use set_weight_slice for assignment
-                set_weight_slice(scale, slice(offset, offset + group_size), best_scale, transpose_b)
+                # Assign best_scale to the corresponding slice of the scale vector
+                scale[offset : offset + group_size] = best_scale
 
         return scale
 

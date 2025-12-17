@@ -90,6 +90,20 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_weight_transpose_b(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> bool:
+        """
+        Returns whether the weight input of the given node is treated as transposed (transpose_b=True).
+
+        This is backend-specific and abstracts away how the underlying framework stores MatMul/Gemm attributes.
+
+        :param node_with_weight: The node with weight.
+        :param weight_port_id: The input port ID that corresponds to the weight.
+        :param graph: The model graph.
+        :return: True if the backend treats the weight as transposed (e.g., [Out, In]), False otherwise.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[tuple[str, int]]:
         """
         Returns a list of weight names and port ids for the given node.

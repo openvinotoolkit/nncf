@@ -104,6 +104,17 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
+    def get_weight_transpose_b(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> bool:
+        """
+        Returns the value of the transpose_b attribute for the given weight input.
+
+        OpenVINO stores this information in the constant_attributes of the node layer attributes.
+        Default to True for backward compatibility with older models that do not expose the flag.
+        """
+        const_attrs = node_with_weight.layer_attributes.constant_attributes[weight_port_id]
+        return const_attrs.get("transpose", True)
+
+    @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
 
@@ -381,7 +392,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 compressed_weight.tensor = compressed_weight.tensor.as_numpy_tensor()
                 if compressed_weight.zero_point is not None:
                     compressed_weight.zero_point = compressed_weight.zero_point.as_numpy_tensor()
-                adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
+                adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params, graph)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
         self.name_to_node_mapping = None
 

@@ -138,6 +138,16 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         edge = graph.get_edge(weight_node, node_with_weight)
         return tuple(edge.tensor_shape)
 
+    @staticmethod
+    def get_weight_transpose_b(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> bool:
+        """
+        Returns whether the weight input is treated as transposed for matmul/linear ops in FX graphs.
+
+        FX weight tensors follow the same convention as eager PyTorch modules, i.e. [out_features, in_features],
+        which corresponds to transpose_b=True in the unified algorithm logic.
+        """
+        return True
+
     def set_weight(
         self,
         node_with_weight: NNCFNode,

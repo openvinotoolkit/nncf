@@ -150,6 +150,26 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
+    def get_weight_transpose_b(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> bool:
+        """
+        Returns the equivalent of transpose_b for ONNX MatMul/Gemm nodes.
+
+        For MatMul the initializer layout already follows the expected [K, N] contract of the op,
+        so we treat weights as transposed (transpose_b=True) by default. For Gemm we respect the
+        transB attribute when the corresponding input port matches the B input.
+        """
+        # Gemm-specific handling: attribute name and semantics follow ONNX Gemm spec.
+        if node_with_weight.metatype is onnx_metatypes.ONNXGemmMetatype and weight_port_id == 1:
+            node_attrs = node_with_weight.layer_attributes.node_attrs
+            # In Gemm, transB=1 means the B input is transposed.
+            trans_b_attr = node_attrs.get("transB", 0)
+            return bool(trans_b_attr)
+
+        # For MatMul and other ops, rely on the fact that the stored initializer already matches
+        # the expected layout for the backend kernels and treat it as transpose_b=True.
+        return True
+
+    @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 

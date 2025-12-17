@@ -27,8 +27,6 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
-from nncf.quantization.algorithms.weight_compression.tensor_slicing import get_weight_slice
-from nncf.quantization.algorithms.weight_compression.tensor_slicing import set_weight_slice
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
@@ -220,16 +218,19 @@ class GPTQ:
         )
         weight_tensor = fns.astype(weight_tensor, TensorDataType.float32)
 
-        # Get transpose_b value to handle weight shape correctly
-        transpose_b = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id][
-            "transpose"
-        ]
+        # Get transpose_b value via backend to handle weight shape correctly in a backend-agnostic way
+        transpose_b = self._backend_entity.get_weight_transpose_b(
+            wc_params.node_with_weight, wc_params.weight_port_id, graph
+        )
 
         dead_indices = fns.diag(hessian) == 0
         hessian[dead_indices, dead_indices] = 1
 
-        # Zero out dead indices using utility helper
-        set_weight_slice(weight_tensor, dead_indices, 0, transpose_b)
+        # Zero out dead indices along the input-channel dimension
+        if transpose_b:
+            weight_tensor[:, dead_indices] = 0
+        else:
+            weight_tensor[dead_indices, :] = 0
 
         scales = []
         zero_points = []
@@ -260,26 +261,38 @@ class GPTQ:
             i2 = min(i1 + self._block_size, columns)
             count = i2 - i1
 
-            # Extract weight block using utility helper
-            weight_block = get_weight_slice(weight_tensor, slice(i1, i2), transpose_b).clone()
+            # Extract weight block along the input-channel dimension
+            if transpose_b:
+                weight_block = weight_tensor[:, i1:i2].clone()
+            else:
+                weight_block = weight_tensor[i1:i2, :].clone()
             quantized_block = fns.zeros_like(weight_block)
             error_block = fns.zeros_like(weight_block)
             loss_block = fns.zeros_like(weight_block)
             hessian_inv_block = hessian_inv[i1:i2, i1:i2]
 
             for i in range(count):
-                weight_col = get_weight_slice(weight_block, i, transpose_b)
+                if transpose_b:
+                    weight_col = weight_block[:, i]
+                else:
+                    weight_col = weight_block[i, :]
                 hessian_diag_val = hessian_inv_block[i, i]
 
                 if (i1 + i) % group_size == 0:
                     if not block_compression_config.is_integer:
-                        weight_slice = get_weight_slice(weight_tensor, slice(i1 + i, i1 + i + group_size), transpose_b)
+                        if transpose_b:
+                            weight_slice = weight_tensor[:, i1 + i : i1 + i + group_size]
+                        else:
+                            weight_slice = weight_tensor[i1 + i : i1 + i + group_size, :]
                         scale = calculate_float_quantization_params(
                             weight_slice, reduction_axes, block_compression_config
                         )
                         scales.append(scale)
                     else:
-                        weight_slice = get_weight_slice(weight_tensor, slice(i1 + i, i1 + i + group_size), transpose_b)
+                        if transpose_b:
+                            weight_slice = weight_tensor[:, i1 + i : i1 + i + group_size]
+                        else:
+                            weight_slice = weight_tensor[i1 + i : i1 + i + group_size, :]
                         if self._scale_estimation and block_compression_config.num_bits == 4:
                             activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
                             wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations)
@@ -312,24 +325,34 @@ class GPTQ:
                         precomputed_zero_point=zero_points[-1],
                     )
                 quantized_col = fns.flatten(quantized_col)
-                set_weight_slice(quantized_block, i, quantized_col, transpose_b)
+                if transpose_b:
+                    quantized_block[:, i] = quantized_col
+                else:
+                    quantized_block[i, :] = quantized_col
                 loss_col = (weight_col - quantized_col) ** 2 / hessian_diag_val**2
-                set_weight_slice(loss_block, i, loss_col, transpose_b)
+                if transpose_b:
+                    loss_block[:, i] = loss_col
+                else:
+                    loss_block[i, :] = loss_col
 
                 error_col = (weight_col - quantized_col) / hessian_diag_val
                 if transpose_b:
                     weight_block[:, i:] -= fns.matmul(
                         fns.unsqueeze(error_col, 1), fns.unsqueeze(hessian_inv_block[i, i:], 0)
                     )
-                    set_weight_slice(error_block, i, error_col, transpose_b)
+                    error_block[:, i] = error_col
                 else:
                     weight_block[i:, :] -= fns.matmul(
                         fns.unsqueeze(error_col, 0), fns.unsqueeze(hessian_inv_block[i:, i], 1)
                     )
-                    set_weight_slice(error_block, i, error_col, transpose_b)
+                    error_block[i, :] = error_col
 
-            set_weight_slice(quantized_tensor, slice(i1, i2), quantized_block, transpose_b)
-            set_weight_slice(losses, slice(i1, i2), loss_block / 2, transpose_b)
+            if transpose_b:
+                quantized_tensor[:, i1:i2] = quantized_block
+                losses[:, i1:i2] = loss_block / 2
+            else:
+                quantized_tensor[i1:i2, :] = quantized_block
+                losses[i1:i2, :] = loss_block / 2
 
             # Update remaining weights with error propagation
             if transpose_b:
