@@ -14,6 +14,7 @@ from typing import Optional
 import pandas as pd
 
 import nncf
+from nncf.common.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
@@ -108,7 +109,11 @@ class LoraCorrectionAlgorithm:
         return wc_params.compression_config.num_bits == 4
 
     def calculate_adapters(
-        self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
+        self,
+        weight: Tensor,
+        compressed_weight: CompressedWeight,
+        wc_params: WeightCompressionParameters,
+        graph: NNCFGraph,
     ) -> tuple[Tensor, Tensor, list[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -116,16 +121,17 @@ class LoraCorrectionAlgorithm:
         :param weight: original floating-point weight matrix.
         :param compressed_weight: compressed weight matrix.
         :param wc_params: parameters of weight compression.
+        :param graph: The model graph.
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
         layer_name = wc_params.node_with_weight.node_name
         layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
 
-        # Get transpose_b value to handle weight shape correctly
-        transpose_b = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id][
-            "transpose"
-        ]
+        # Get transpose_b value via backend to handle weight shape correctly in a backend-agnostic way
+        transpose_b = self._backend_entity.get_weight_transpose_b(
+            wc_params.node_with_weight, wc_params.weight_port_id, graph
+        )
 
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,

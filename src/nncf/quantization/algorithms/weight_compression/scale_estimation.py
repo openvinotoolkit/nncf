@@ -141,8 +141,8 @@ class ScaleEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            # Get transpose_b value to handle weight shape correctly
-            transpose_b = wp.node_with_weight.layer_attributes.constant_attributes[weight_port_id]["transpose"]
+            # Get transpose_b value via backend to handle weight shape correctly in a backend-agnostic way
+            transpose_b = self._backend_entity.get_weight_transpose_b(wp.node_with_weight, weight_port_id, graph)
 
             scale, zero_point = self.calculate_quantization_params(
                 stats,
