@@ -572,8 +572,6 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    assert config.mode not in [CompressWeightsMode.CB4_F8E4M3, CompressWeightsMode.CODEBOOK]
-
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
 

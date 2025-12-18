@@ -23,7 +23,9 @@ from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_
 from nncf.quantization.algorithms.weight_compression.constants import CENTER_OF_NF4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import F4E2M1_QUANTILES
 from nncf.quantization.algorithms.weight_compression.constants import FP_MAX_VALUES
+from nncf.quantization.algorithms.weight_compression.constants import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
 from nncf.quantization.algorithms.weight_compression.constants import NF4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.constants import OPTIMIZED_COMPRESSION_COMPATIBLE_MODES
 from nncf.quantization.algorithms.weight_compression.fp8_conversion import fp32_to_fp8e4m3
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
@@ -33,20 +35,6 @@ from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 
 ReductionAxes = Union[int, tuple[int, ...]]
-
-
-OPTIMIZED_COMPRESSION_COMPATIBLE_MODES = (
-    CompressWeightsMode.INT8_ASYM,
-    CompressWeightsMode.INT8_SYM,
-    CompressWeightsMode.INT4_ASYM,
-    CompressWeightsMode.INT4_SYM,
-    CompressWeightsMode.NF4,
-    CompressWeightsMode.MXFP4,
-    CompressWeightsMode.FP4,
-    CompressWeightsMode.FP8_E4M3,
-    CompressWeightsMode.MXFP8_E4M3,
-)
-MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 10000
 
 
 def get_reduction_channel_size(weight_shape: tuple[int, ...], reduction_axes: ReductionAxes) -> tuple[int, int]:

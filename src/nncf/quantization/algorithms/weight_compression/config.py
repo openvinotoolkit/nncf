@@ -46,17 +46,14 @@ class WeightCompressionConfig:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
-        return (
-            8
-            if self.mode
-            in [
-                CompressWeightsMode.INT8_SYM,
-                CompressWeightsMode.INT8_ASYM,
-                CompressWeightsMode.FP8_E4M3,
-                CompressWeightsMode.MXFP8_E4M3,
-            ]
-            else 4
-        )
+        if self.mode in [
+            CompressWeightsMode.INT8_SYM,
+            CompressWeightsMode.INT8_ASYM,
+            CompressWeightsMode.FP8_E4M3,
+            CompressWeightsMode.MXFP8_E4M3,
+        ]:
+            return 8
+        return 4
 
     @property
     def is_asym_mode(self):
