@@ -232,6 +232,14 @@ class HookStorage(nn.Module):
         if not storage_dict[hook_key]:
             del storage_dict[hook_key]
 
+    def is_empty(self) -> bool:
+        """
+        Check if there are no any hook stored.
+
+        :return: True if both pre-hooks and post-hooks are empty, False otherwise.
+        """
+        return not self.pre_hooks and not self.post_hooks
+
 
 def decode_hook_name(hook_name: str) -> tuple[str, str, int]:
     """
