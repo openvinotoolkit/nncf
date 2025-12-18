@@ -81,12 +81,10 @@ def test_get_current_executed_op_name():
 
     hook_executor_mode.push_module_call_stack(model)
     assert hook_executor_mode.get_current_executed_op_name("foo") == "/foo/0"
-    hook_executor_mode.register_op("foo")
     assert hook_executor_mode.get_current_executed_op_name("foo") == "/foo/1"
 
     hook_executor_mode.push_module_call_stack(model.conv)
     assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/0"
-    hook_executor_mode.register_op("foo")
     assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/1"
 
     hook_executor_mode.push_module_call_stack(hook_storage.post_hooks["conv/conv2d/0__0"]["0"])

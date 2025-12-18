@@ -220,7 +220,6 @@ class FunctionHookMode(TorchFunctionMode):
             return func(*args, **kwargs)
 
         op_name = self.get_current_executed_op_name(fn_name)
-        self.register_op(fn_name)
         op_meta = OpMeta(op_name=op_name, func=func)
         args, kwargs = self.execute_pre_hooks(args, kwargs, op_meta)
         output = func(*args, **kwargs)
@@ -268,23 +267,16 @@ class FunctionHookMode(TorchFunctionMode):
         """
         Get the name of the current operation being executed.
 
+        Note: should be called only ones because it updates op_calls.
+
         :param fn_name: The function name of the operation.
         :return: The name of the operation.
         """
         module_name = self.get_current_relative_name()
         op_name = generate_normalized_op_name(module_name, fn_name)
         call_id = self.op_calls[op_name]
-        return generate_normalized_op_name(module_name, fn_name, call_id)
-
-    def register_op(self, fn_name: str) -> None:
-        """
-        Register an operation call for the current module and increment call counter.
-
-        :param fn_name: The function name of the operation.
-        """
-        module_name = self.get_current_relative_name()
-        op_name = generate_normalized_op_name(module_name, fn_name)
         self.op_calls[op_name] += 1
+        return generate_normalized_op_name(module_name, fn_name, call_id)
 
     def execute_hooks_for_parameter(self, value: torch.Tensor) -> torch.Tensor:
         """
