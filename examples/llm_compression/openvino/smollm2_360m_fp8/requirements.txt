@@ -1,5 +1,5 @@
 datasets==4.4.1
-openvino==2025.4.0
+openvino==2025.4.1
 optimum-intel[openvino]==1.26.0
 optimum-onnx==0.0.3
 optimum==2.0.0
