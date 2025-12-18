@@ -282,7 +282,8 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
 @pytest.mark.parametrize("dtype", SUPPORTED_WEIGHT_DTYPES)
-def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype):
+@pytest.mark.parametrize("reduction", ["max_mean", "frobenius"])
+def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype, reduction):
     results = defaultdict(dict)
     # Iterate over two implementations
     for cb in [ComputationBackend.NumPy, ComputationBackend.OV]:
@@ -297,16 +298,20 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
             fn_to_patch = opt_fns.get_integer_quantization_error
             patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
-                results[cb]["quantization_error"] = get_integer_quantization_error(weight, REDUCTION_AXES, config)
+                results[cb]["quantization_error"] = get_integer_quantization_error(
+                    weight, REDUCTION_AXES, config, reduction=reduction
+                )
 
             if cb == ComputationBackend.NumPy:
                 mock.assert_not_called()
             else:
                 mock.assert_called_once()
 
-    # It seems like numpy and openvino summate elements in different order during reduce_sum / reduce_mean computation.
-    # This results in small numerical differences.
-    _check_values(results, atol=1e-6)
+    # For "max_mean", it seems like numpy and openvino summate elements in different order during
+    # reduce_sum / reduce_mean computation. This results in small numerical differences.
+    # For "frobenius", there is a bit larger error, possibly because np.linalg.norm relies on BLAS/LAPACK
+    # implementations.
+    _check_values(results, atol=1e-6 if reduction == "max_mean" else 0, rtol=1e-4 if reduction == "frobenius" else 0)
 
 
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
@@ -503,7 +508,7 @@ def _check_backends_and_dtypes(
             assert decompressed_weight.dtype == TensorDataType.float32
 
 
-def _check_values(results, atol=0.0):
+def _check_values(results, atol=0.0, rtol=0.0):
     def format_list_of_floats(lst, n_first=32):
         return ", ".join(f"{x:.10f}" for x in lst[:n_first])
 
@@ -521,7 +526,7 @@ def _check_values(results, atol=0.0):
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
         try:
-            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=0)
+            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=rtol)
         except AssertionError:
             not_equal_mask = np.not_equal(ov_result.data, numpy_result.data)
             msg = (

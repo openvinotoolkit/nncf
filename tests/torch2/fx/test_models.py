@@ -40,6 +40,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
+from tests.torch.test_models.synthetic import EmbeddingSumModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
@@ -75,6 +76,7 @@ TEST_MODELS = (
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
     ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
+    ModelCase(EmbeddingSumModel, "embedding_bag_model", [1, 1]),
 )
 
 
@@ -121,7 +123,7 @@ def test_model(test_case: ModelCase, regen_ref_data: bool):
     model = test_case.model_builder()
     model.to(device)
 
-    dtype = torch.int32 if test_case.model_id == "synthetic_transformer" else torch.float32
+    dtype = torch.int32 if test_case.model_id in ["synthetic_transformer", "embedding_bag_model"] else torch.float32
     ex_input = torch.ones(test_case.input_shape, dtype=dtype)
     exported_model = get_torch_fx_model(model, ex_input)
     nncf_graph = GraphConverter.create_nncf_graph(exported_model)

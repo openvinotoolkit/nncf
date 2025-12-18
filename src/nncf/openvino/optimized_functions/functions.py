@@ -11,6 +11,7 @@
 
 from typing import Optional, Union
 
+import nncf
 from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
@@ -278,6 +279,7 @@ def get_integer_quantization_error(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
+    reduction: str,
 ) -> float:
     """
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
@@ -289,9 +291,14 @@ def get_integer_quantization_error(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
+    :param reduction: Reduction mode to aggregate error values. Supported modes: "max_mean", "frobenius".
     :return: The quantity characterizing the error of integer quantization.
     """
     assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
+
+    if reduction not in ["max_mean", "frobenius"]:
+        exception_str = f"Unsupported aggregation mode: {reduction}."
+        raise nncf.InternalError(exception_str)
 
     original_weight_shape = weight.shape
     original_reduction_axes = reduction_axes
@@ -304,7 +311,7 @@ def get_integer_quantization_error(
     ov_model_params = OVModelParameters()
     ov_model_params.input_dtypes["weight"] = weight.dtype
     model = get_integer_quantization_error_model(
-        ov_model_params, config, original_weight_shape, weight.shape, original_reduction_axes, reduction_axes
+        ov_model_params, config, reduction, weight.shape, reduction_axes, original_weight_shape, original_reduction_axes
     )
 
     quantization_error = model([weight])[0].item()

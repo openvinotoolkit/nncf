@@ -391,10 +391,11 @@ def get_integer_quantize_dequantize_weight_model(
 def get_integer_quantization_error_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    original_weight_shape: tuple,
+    reduction: str,
     weight_shape: tuple,
-    original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
+    original_weight_shape: tuple,
+    original_reduction_axes: ReductionAxes,
 ) -> ModelCallable:
     """
     Get a model that calculates the quantization error for a given weight.
@@ -404,16 +405,23 @@ def get_integer_quantization_error_model(
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
-    :param original_weight_shape: Shape of the original weight tensor.
+    :param reduction: Reduction mode to aggregate error values. Supported modes: "max_mean", "frobenius".
     :param weight_shape: Shape of the weight tensor to be compressed.
-    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
     :param reduction_axes: Axes to reduce the weight tensor.
+    :param original_weight_shape: Shape of the original weight tensor.
+    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
     :return: A model callable that returns the quantization error.
     """
     weight_shape, _, _ = _prepare_quantization_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
 
     return _build_integer_quantization_error_model(
-        config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
+        config,
+        ov_model_params,
+        reduction,
+        weight_shape,
+        reduction_axes,
+        original_weight_shape,
+        original_reduction_axes,
     )
 
 
@@ -767,10 +775,11 @@ def _build_float_quantize_dequantize_weight_model(
 def _build_integer_quantization_error_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    original_weight_shape: tuple,
+    reduction: str,
     weight_shape: tuple,
-    original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
+    original_weight_shape: tuple,
+    original_reduction_axes: ReductionAxes,
 ) -> ModelCallable:
     ov_parameters, ov_results, ov_model_params = _build_integer_quantize_dequantize_weight_model(
         config,
@@ -784,13 +793,20 @@ def _build_integer_quantization_error_model(
     weight = ov_parameters[0]
     decompressed_weight = ov_results[0]
 
-    weight = convert_op(opset.reshape(weight, original_weight_shape, special_zero=False), ov.Type.f32)
-    decompressed_weight = convert_op(
-        opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32
-    )
-    diff = opset.squared_difference(decompressed_weight, weight)
-    layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
-    quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
+    weight = convert_op(weight, ov.Type.f32)
+    if reduction == "max_mean":
+        weight = opset.reshape(weight, original_weight_shape, special_zero=False)
+        decompressed_weight = opset.reshape(decompressed_weight, original_weight_shape, special_zero=False)
+        diff = opset.squared_difference(decompressed_weight, weight)
+        layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
+        quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
+    elif reduction == "frobenius":
+        diff = opset.reshape(decompressed_weight - weight, (-1,), special_zero=False)
+        quantization_error = opset.matmul(diff, diff, transpose_a=False, transpose_b=False)
+        quantization_error = opset.sqrt(quantization_error)
+    else:
+        msg = f"Unsupported aggregation method: {reduction}."
+        raise ValueError(msg)
 
     model = ov.Model([quantization_error], ov_parameters)
     compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})

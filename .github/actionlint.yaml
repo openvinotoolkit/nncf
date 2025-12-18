@@ -1,0 +1,5 @@
+self-hosted-runner:
+  labels:
+    - windows-2025-8-core
+    - windows-2025-16-core
+    - aks-linux-4-cores-28gb-gpu-tesla-t4
