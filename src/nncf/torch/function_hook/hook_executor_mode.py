@@ -119,6 +119,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}
         self.cache_parameters: dict[int, Tensor] = {}
+        self.cache_child_name: dict[int, dict[int, str]] = {}
 
     def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str) -> None:
         """
@@ -249,16 +250,21 @@ class FunctionHookMode(TorchFunctionMode):
         """
         relative_module_names = []
         prev_module = self.module_call_stack[0]
+        cache_child_name = self.cache_child_name
 
         for module in self.module_call_stack[1:]:
             hook_name = self.hooks_module_to_group_name.get(id(module))
             if hook_name is not None:
                 relative_module_names.append(hook_name)
             else:
-                for n, m in prev_module.named_children():
-                    if m is module:
-                        relative_module_names.append(n)
-                        break
+                child_names = cache_child_name.get(id(prev_module))
+                if child_names is None:
+                    child_names = {id(child): name for name, child in prev_module.named_children()}
+                    cache_child_name[id(prev_module)] = child_names
+
+                name = child_names.get(id(module))
+                if name is not None:
+                    relative_module_names.append(name)
             prev_module = module
 
         return "/".join(relative_module_names)
