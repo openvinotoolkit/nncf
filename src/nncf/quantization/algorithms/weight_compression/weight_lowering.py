@@ -299,6 +299,7 @@ def get_integer_quantization_error(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
+    reduction: str,
 ) -> float:
     """
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
@@ -310,29 +311,35 @@ def get_integer_quantization_error(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
+    :param reduction: Reduction mode to aggregate error values. Supported modes: "max_mean", "frobenius".
     :return: The quantity characterizing the error of integer quantization.
     """
+    if reduction not in ["max_mean", "frobenius"]:
+        exception_str = f"Unsupported aggregation mode: {reduction}."
+        raise nncf.InternalError(exception_str)
+
     # Optimized implementation
     if _can_run_optimized(weight, config.mode):
         from nncf.openvino.optimized_functions import (
             get_integer_quantization_error as get_integer_quantization_error_ov,
         )
 
-        return get_integer_quantization_error_ov(weight, reduction_axes, config)
+        return get_integer_quantization_error_ov(weight, reduction_axes, config, reduction)
 
     if weight.backend == TensorBackend.ov:
         weight = weight.as_numpy_tensor()
-    orig_shape = weight.shape
 
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
     decompressed_weight = integer_quantize_dequantize_weight(weight, config, reduction_axes)
-
-    decompressed_weight = decompressed_weight.reshape(orig_shape)
-    diff = (decompressed_weight - weight) ** 2
-    layer_err = fns.mean(diff, axis=reduction_axes)
-    val = fns.max(layer_err)
+    decompressed_weight = decompressed_weight.reshape(weight.shape)
+    if reduction == "max_mean":
+        diff = (decompressed_weight - weight) ** 2
+        layer_err = fns.mean(diff, axis=reduction_axes)
+        val = fns.max(layer_err)
+    else:
+        val = fns.linalg.norm(decompressed_weight - weight, ord="fro")
     return val.item()
 
 

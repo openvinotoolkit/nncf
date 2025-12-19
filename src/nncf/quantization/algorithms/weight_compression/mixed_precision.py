@@ -29,10 +29,8 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
-from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
@@ -174,7 +172,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         )
         backup_config = WeightCompressionConfig()
         reduction_axes = weight_param.reduction_axes
-        int_error = get_integer_quantization_error(weight, reduction_axes, backup_config)
+        int_error = get_integer_quantization_error(weight, reduction_axes, backup_config, reduction="max_mean")
         eps = fns.finfo(weight).eps
         return 1 / (int_error + eps)
 
@@ -360,15 +358,7 @@ class HAWQCriterion(DataBasedCriterion):
         )
         backup_config = WeightCompressionConfig()
         reduction_axes = weight_param.reduction_axes
-
-        orig_shape = weight.shape
-
-        if weight.dtype != TensorDataType.float32:
-            weight = weight.astype(TensorDataType.float32)
-
-        decompressed_weight = integer_quantize_dequantize_weight(weight, backup_config, reduction_axes)
-        decompressed_weight = decompressed_weight.reshape(orig_shape)
-        return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
+        return get_integer_quantization_error(weight, reduction_axes, backup_config, reduction="frobenius")
 
     def _get_statistic_collector(self):
         return self._backend_entity.hawq_statistic_collector(self._subset_size)

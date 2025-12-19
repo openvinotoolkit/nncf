@@ -120,9 +120,14 @@ jobs:
       - name: Run PyTorch precommit test scope
         run: |
           set +e
-          export LIB="${LIB};$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
-          export LIB="${LIB};$(python -c "import sys; print(sys.prefix + '/libs')")"
-          export INCLUDE="${INCLUDE};$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
+          prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
+          include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          export LIB="${LIB};${sys_lib};${prefix_lib}"
+          export INCLUDE="${INCLUDE};${include_dir}"
+
           make test-torch-cpu
         env:
           NUM_WORKERS: 1  # Parallel tests are falls on build extenstion.
@@ -153,7 +158,12 @@ jobs:
       - name: Run torch2 precommit test scope
         run: |
           set +e
-          export LIB="${LIB};$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
-          export LIB="${LIB};$(python -c "import sys; print(sys.prefix + '/libs')")"
-          export INCLUDE="${INCLUDE};$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
+          prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
+          include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          export LIB="${LIB};${sys_lib};${prefix_lib}"
+          export INCLUDE="${INCLUDE};${include_dir}"
+
           pytest -ra tests/torch2 -m "not cuda"

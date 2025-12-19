@@ -12,7 +12,6 @@ on:
         description: 'Enable gpu tests'
         type: boolean
         default: false
-        required: true
       override_requirements:
         description: 'Override requirements'
         default: ''
@@ -227,7 +226,7 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run torch2 precommit test scope
-        run: pytest -ra tests/torch2 -m "not cuda"
+        run: pytest -ra -n2 --durations=30 tests/torch2 -m "not cuda"
 
   pytorch2-cuda:
     timeout-minutes: 40
