@@ -234,7 +234,7 @@ class HookStorage(nn.Module):
 
     def is_empty(self) -> bool:
         """
-        Check if there are no hook stored.
+        Check if there are no hooks stored.
 
         :return: True if both pre-hooks and post-hooks are empty, False otherwise.
         """
