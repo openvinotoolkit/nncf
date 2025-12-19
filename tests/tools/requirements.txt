@@ -1,4 +1,6 @@
 matplotlib
+nbclient
+nbformat
 psutil
 pytest
 pandas
