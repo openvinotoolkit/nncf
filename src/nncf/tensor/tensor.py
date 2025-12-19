@@ -159,6 +159,15 @@ class Tensor:
     def __neg__(self) -> Tensor:
         return Tensor(-self.data)
 
+    def __invert__(self) -> Tensor:
+        return Tensor(~self.data)
+
+    def __rshift__(self, other: T_NUMBER) -> Tensor:
+        return Tensor(self.data >> unwrap_tensor_data(other))
+
+    def __lshift__(self, other: T_NUMBER) -> Tensor:
+        return Tensor(self.data << unwrap_tensor_data(other))
+
     # Comparison operators
 
     def __lt__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
@@ -201,6 +210,9 @@ class Tensor:
 
     def astype(self, dtype: TensorDataType) -> Tensor:
         return cast(Tensor, _call_function("astype", self, dtype))
+
+    def view(self, dtype: TensorDataType) -> Tensor:
+        return cast(Tensor, _call_function("view", self, dtype))
 
     def reshape(self, shape: T_SHAPE) -> Tensor:
         return cast(Tensor, _call_function("reshape", self, shape))
