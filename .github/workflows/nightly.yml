@@ -31,4 +31,4 @@ jobs:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/call_precommit_windows.yml
     with:
-      python_version: "3.12.12"
+      python_version: "3.12.10"
