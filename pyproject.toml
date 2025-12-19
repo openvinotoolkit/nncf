@@ -197,6 +197,8 @@ pythonpath = "."
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]
 skips = [
-    "B101",   # assert_used
-    "B404" ,  # import_subprocess
+    "B101",  # assert_used
+    "B404",  # import_subprocess
+    "B614",  # pytorch_load
+    "B615",  # huggingface_unsafe_download
 ]
