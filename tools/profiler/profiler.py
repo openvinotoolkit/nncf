@@ -17,6 +17,7 @@ This profiler can collect raw activations at specific layers matching regex patt
 """
 
 import re
+from collections import defaultdict
 from typing import Any, Optional, Pattern, Union
 
 import numpy as np
@@ -284,37 +285,35 @@ class NNCFProfiler:
         graph = GraphConverter.create_nncf_graph(model)
         statistics_aggregator = OVStatisticsAggregator(dataset)
 
-        # Find target nodes matching the pattern
-        node_keys = graph.get_all_node_keys()
-        target_names = [key for key in node_keys if regexp.search(key)]
+        # Find target nodes matching the pattern and list them in topological order
+        target_ops = []
+        for node in graph.topological_sort():
+            if regexp.search(node.node_key):
+                target_ops.append(node)
 
-        if not target_names:
+        if len(target_ops) == 0:
             msg = f"No layers found matching pattern: {pattern}"
-            raise ValueError(msg)
-
-        target_ops = [graph.get_node_by_key(name) for name in target_names]
-
+            raise ValueError(msg)       
+            
         # Register statistic collection points and collect statistics
         statistic_points = self._get_statistic_points(model, graph, target_ops, num_samples)
         statistics_aggregator.register_statistic_points(statistic_points)
         statistics_aggregator.collect_statistics(model, graph)
 
         # Extract and convert collected statistics to numpy arrays
-        result: ActivationData = {}
-        for layer_name, statistic_points_list in statistics_aggregator.statistic_points.items():
-            # Extract input activations (index 1 in statistic_points_list)
-            in_container = list(
-                statistic_points_list[1].algorithm_to_tensor_collectors["collect"][0].aggregators.values()
-            )[0]._container
-            in_vals = [np.array(elem.data) for elem in in_container]
-
-            # Extract output activations (index 0 in statistic_points_list)
-            out_container = list(
-                statistic_points_list[0].algorithm_to_tensor_collectors["collect"][0].aggregators.values()
-            )[0]._container
-            out_vals = [np.array(elem.data) for elem in out_container]
-
-            result[layer_name] = {"in": in_vals, "out": out_vals}
+        result: ActivationData = defaultdict(dict)
+        target_type_to_str = {
+            TargetType.PRE_LAYER_OPERATION: "in",
+            TargetType.POST_LAYER_OPERATION: "out",
+        }
+        for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
+            if statistic_point.target_point.type not in target_type_to_str:
+                msg = f"Unsupported target type: {statistic_point.target_point.type}"
+                raise RuntimeError(msg)
+            insert_type = target_type_to_str[statistic_point.target_point.type]
+            layer_name = statistic_point.target_point.target_node_name
+            stats = tensor_collector.get_statistics().values
+            result[layer_name][insert_type] = [np.array(elem.data) for elem in stats]
 
         return result
 
