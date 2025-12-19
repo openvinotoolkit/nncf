@@ -19,8 +19,8 @@ optimum-onnx==0.0.3
 optimum==2.0.0
 scikit-learn>=1.2.2,<=1.5.0
 soundfile==0.12.1
-tensorboard==2.13.0
-tensorflow-io==0.32.0
+tensorboard==2.20.0
+tensorflow-io==0.37.1
 timm==0.9.2
 accelerate==1.9.0
 transformers==4.53.0
