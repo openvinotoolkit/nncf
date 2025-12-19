@@ -74,7 +74,15 @@ FP4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.MXFP4, group_size=32),
 ]
 
-COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
+FP8_COMPRESSION_CONFIGS = [
+    WeightCompressionConfig(CompressWeightsMode.FP8_E4M3),
+    WeightCompressionConfig(CompressWeightsMode.FP8_E4M3, group_size=2),
+    WeightCompressionConfig(CompressWeightsMode.MXFP8_E4M3, group_size=32),
+]
+
+COMPRESSION_CONFIGS = (
+    INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS + FP8_COMPRESSION_CONFIGS
+)
 
 WEIGHT_SHAPE = (10000, 32)
 
@@ -372,8 +380,10 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
         CompressWeightsMode.INT8_SYM,
         CompressWeightsMode.MXFP4,
         CompressWeightsMode.FP4,
+        CompressWeightsMode.FP8_E4M3,
+        CompressWeightsMode.MXFP8_E4M3,
     ]:
-        pytest.skip("Data-aware compression is not supported for INT8, MXFP4, FP4 modes.")
+        pytest.skip("Data-aware compression is not supported for INT8, MXFP4, FP4, MXFP8, FP8 modes.")
     if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2]:
             pytest.skip("INT8 compression is not supported for f8 dtypes.")
@@ -470,29 +480,24 @@ def _check_backends_and_dtypes(
         # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
         # zero point must be in ov backend and have (u)int4/nf4/f4e2m1 dtypes in order to be able to insert them into
         # OV model without re-packing
-        if config.is_integer:
-            ref_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
-        else:
-            ref_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
         assert compressed_weight.backend == TensorBackend.ov
-        assert compressed_weight.dtype == ref_dtype
+        assert compressed_weight.dtype == config.compression_dtype
         if config.is_asym_mode and not precompute_s_zp:
             assert zero_point.backend == TensorBackend.ov
             assert zero_point.dtype == TensorDataType.uint4
     else:
         if quantization_task != QuantizationTask.Q_DQ:
             # Otherwise, for integer compression, compressed weight and zero point must be returned in numpy backend,
-            # compressed weight must be of (u)int8, zero point -- in int32; for nf4/f4e2m1 compression, the resulting
+            # compressed weight must be of (u)int8, zero point -- in int32; for float compression, the resulting
             # data type and backend depends on the input tensor backend.
             if config.is_integer:
                 ref_backend = TensorBackend.numpy
                 ref_dtype = TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8
             else:
                 ref_backend = weight_tensor_backend
-                if weight_tensor_backend == TensorBackend.ov:
-                    ref_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
-                else:
-                    ref_dtype = TensorDataType.float32
+                ref_dtype = (
+                    config.compression_dtype if weight_tensor_backend == TensorBackend.ov else TensorDataType.float32
+                )
             assert compressed_weight.backend == ref_backend
             assert compressed_weight.dtype == ref_dtype
             if config.is_asym_mode and not precompute_s_zp:
