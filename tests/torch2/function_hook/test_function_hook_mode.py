@@ -74,21 +74,21 @@ def test_current_relative_name():
     assert hook_executor_mode.get_current_relative_name() == "conv/post_hook__conv-conv2d-0__0[0]"
 
 
-def test_get_current_executed_op_name():
+def test_get_next_op_call_name():
     model = helpers.get_wrapped_simple_model_with_hook()
     hook_storage = get_hook_storage(model)
     hook_executor_mode = FunctionHookMode(model, hook_storage)
 
     hook_executor_mode.push_module_call_stack(model)
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "/foo/0"
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "/foo/1"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "/foo/0"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "/foo/1"
 
     hook_executor_mode.push_module_call_stack(model.conv)
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/0"
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/1"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "conv/foo/0"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "conv/foo/1"
 
     hook_executor_mode.push_module_call_stack(hook_storage.post_hooks["conv/conv2d/0__0"]["0"])
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
 
 
 NamedTuple = namedtuple("NamedTuple", ["output1", "output2"])

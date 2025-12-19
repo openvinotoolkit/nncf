@@ -220,7 +220,7 @@ class FunctionHookMode(TorchFunctionMode):
         if not self.enabled or fn_name in IGNORED_FN_NAMES:
             return func(*args, **kwargs)
 
-        op_name = self.get_current_executed_op_name(fn_name)
+        op_name = self.get_next_op_call_name(fn_name)
         op_meta = OpMeta(op_name=op_name, func=func)
         args, kwargs = self.execute_pre_hooks(args, kwargs, op_meta)
         output = func(*args, **kwargs)
@@ -269,11 +269,13 @@ class FunctionHookMode(TorchFunctionMode):
 
         return "/".join(relative_module_names)
 
-    def get_current_executed_op_name(self, fn_name: str) -> str:
+    def get_next_op_call_name(self, fn_name: str) -> str:
         """
-        Get the name of the current operation being executed.
+        Generate and return a unique, normalized operation name for the current execution of a function.
 
-        Note: should be called only ones because it updates op_calls.
+        The operation name is derived from the current module's relative name and the provided function name.
+        Each call increments an internal counter for that operation, ensuring that repeated executions
+        of the same operation receive distinct, sequentially numbered names.
 
         :param fn_name: The function name of the operation.
         :return: The name of the operation.
