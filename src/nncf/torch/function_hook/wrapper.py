@@ -50,7 +50,7 @@ class ForwardWithHooks:
         hook_storage = get_hook_storage(self.model)
 
         if hook_storage.is_empty():
-            # If no any hooks run model without overhead of FunctionHookMode
+            # If no hooks are present, run model without overhead of FunctionHookMode
             return self.orig_forward(*args, **kwargs)
 
         with FunctionHookMode(model=self.model, hook_storage=hook_storage) as ctx:

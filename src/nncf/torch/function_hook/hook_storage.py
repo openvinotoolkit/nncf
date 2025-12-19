@@ -39,7 +39,7 @@ class RemovableHookHandle:
         Steps:
         - Checks if the storage still exists (i.e., if it's not garbage collected).
         - Verifies if the key and id are present in the storage.
-        - If hook exists, hook will removed.
+        - If hook exists, hook will be removed.
         - If no hooks left under the key, the key is also removed from the storage.
         """
         storage: Optional[nn.ModuleDict] = self.storage_ref()
@@ -65,8 +65,8 @@ class HookStorage(nn.Module):
     """
     A module for storing and executing hooks.
 
-    :param pre_hooks: A instance of nn.ModuleDict for storing pre-hooks.
-    :param post_hooks: A instance of nn.ModuleDict for storing post-hooks.
+    :param pre_hooks: An instance of nn.ModuleDict for storing pre-hooks.
+    :param post_hooks: An instance of nn.ModuleDict for storing post-hooks.
     """
 
     def __init__(self) -> None:
@@ -234,7 +234,7 @@ class HookStorage(nn.Module):
 
     def is_empty(self) -> bool:
         """
-        Check if there are no any hook stored.
+        Check if there are no hook stored.
 
         :return: True if both pre-hooks and post-hooks are empty, False otherwise.
         """
