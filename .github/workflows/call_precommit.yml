@@ -39,9 +39,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/common/requirements.txt
+        run: uv pip install --system . -r tests/common/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Run common precommit test scope
         run: make test-common
         env:
@@ -67,9 +67,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/onnx/requirements.txt
+        run: uv pip install --system . -r tests/onnx/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Run ONNX precommit test scope
         run: make test-onnx
         env:
@@ -95,9 +95,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/openvino/requirements.txt
+        run: uv pip install --system . -r tests/openvino/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Run OV precommit test scope
         run: make test-openvino
         env:
@@ -134,9 +134,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/torch/requirements.txt
+        run: uv pip install --system . -r tests/torch/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Run PyTorch precommit test scope
         run: |
           make test-torch-cpu
@@ -181,9 +181,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/torch/requirements.txt
+        run: uv pip install --system . -r tests/torch/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
@@ -209,9 +209,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Install test requirements
-        run: uv pip install -r tests/tools/requirements.txt
+        run: uv pip install --system -r tests/tools/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Run tools precommit test scope
         run: pytest -ra tests/tools
 
@@ -280,9 +280,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/torch2/requirements.txt
+        run: uv pip install --system . -r tests/torch2/requirements.txt
       - name: Print installed modules
-        run: uv pip list
+        run: pip list
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
