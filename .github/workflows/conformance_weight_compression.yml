@@ -43,7 +43,7 @@ jobs:
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
-        run: uv pip install . -r tests/post_training/requirements.txt
+        run: uv pip install --system . -r tests/post_training/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
