@@ -235,8 +235,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: |
-          pip install . -r tests/torch2/requirements.txt
+        run: uv pip install . -r tests/torch2/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run torch2 precommit test scope
