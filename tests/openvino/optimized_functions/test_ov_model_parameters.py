@@ -355,10 +355,7 @@ def test_recompile(model_getter, recompile):
     assert len(OV_MODEL_CACHE._cache) == ref_size
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
+
 @pytest.mark.parametrize("model_getter", MODEL_GETTERS)
 @pytest.mark.parametrize("return_ov_tensors", [True, False])
 def test_return_ov_tensors(model_getter, return_ov_tensors):
