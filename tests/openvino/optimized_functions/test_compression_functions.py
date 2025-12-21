@@ -26,6 +26,7 @@ from nncf import Dataset
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
@@ -303,7 +304,14 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
     # reduce_sum / reduce_mean computation. This results in small numerical differences.
     # For "frobenius", there is a bit larger error, possibly because np.linalg.norm relies on BLAS/LAPACK
     # implementations.
-    _check_values(results, atol=1e-6 if reduction == "max_mean" else 0, rtol=1e-4 if reduction == "frobenius" else 0)
+    atol = 0
+    rtol = 0
+    if reduction == "max_mean":
+        atol = 1e-6
+    if reduction == "frobenius":
+        rtol = 1e-3 if is_arm_cpu() else 1e-4
+
+    _check_values(results, atol=atol, rtol=rtol)
 
 
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])

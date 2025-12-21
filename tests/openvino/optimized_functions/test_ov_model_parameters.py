@@ -13,7 +13,6 @@ import pytest
 
 from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
-from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
@@ -353,7 +352,6 @@ def test_recompile(model_getter, recompile):
         ref_size = 1
 
     assert len(OV_MODEL_CACHE._cache) == ref_size
-
 
 
 @pytest.mark.parametrize("model_getter", MODEL_GETTERS)
