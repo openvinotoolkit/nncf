@@ -144,7 +144,7 @@ def main():
     quantized_model.model = quantized_inference_model
 
     # Create engine for the quantized model
-    engine = Engine(default_root_dir=INT8_RESULTS_ROOT, max_epochs=1, devices=1)
+    engine = Engine(default_root_dir=INT8_RESULTS_ROOT, max_epochs=5, devices=1)
 
     # Validate the quantized model
     print("Test results for INT8 model after PTQ:")
