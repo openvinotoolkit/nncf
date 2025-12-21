@@ -28,7 +28,6 @@ from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import DistributedCallbacksArgs
 from nncf.torch.structures import ExecutionParameters
 from nncf.torch.structures import LeGRInitArgs
@@ -297,13 +296,6 @@ def register_default_init_args(
                     criterion_fn=criterion_fn, criterion=criterion, data_loader=train_loader, device=device
                 )
             ]
-        )
-
-    if autoq_eval_fn is not None:
-        if not val_loader:
-            val_loader = train_loader
-        nncf_config.register_extra_structs(
-            [AutoQPrecisionInitArgs(data_loader=val_loader, eval_fn=autoq_eval_fn, nncf_config=nncf_config)]
         )
 
     if model_eval_fn is not None:

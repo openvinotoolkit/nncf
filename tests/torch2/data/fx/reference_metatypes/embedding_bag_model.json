@@ -1,0 +1,15 @@
+{
+    "embedding_weight": "PTConstNoopMetatype",
+    "embeddingbag_weight": "PTConstNoopMetatype",
+    "x": "PTInputNoopMetatype",
+    "embedding": "PTAtenEmbeddingMetatype",
+    "arange": "UnknownMetatype",
+    "reshape": "PTReshapeMetatype",
+    "embedding_bag": "PTAtenEmbeddingBagMetatype",
+    "getitem": "PTGatherMetatype",
+    "getitem_1": "PTGatherMetatype",
+    "getitem_2": "PTGatherMetatype",
+    "getitem_3": "PTGatherMetatype",
+    "add": "PTAddMetatype",
+    "output": "PTOutputNoopMetatype"
+}

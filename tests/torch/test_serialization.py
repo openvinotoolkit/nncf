@@ -27,13 +27,10 @@ from nncf.torch.graph.transformations.serialization import deserialize_transform
 from nncf.torch.graph.transformations.serialization import serialize_command
 from nncf.torch.graph.transformations.serialization import serialize_transformations
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
-from nncf.torch.sparsity.layers import BinaryMask
-from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from tests.torch.helpers import DummyOpWithState
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import commands_are_equal
@@ -175,29 +172,6 @@ def _check_commands_after_serialization(command, recovered_command, dummy_op_sta
         assert command.fn.get_config() == dummy_op_state
 
 
-@pytest.mark.parametrize("size", (4, [3, 4]))
-def test_pruning_mask_serialization(size):
-    node_name = "dummy_node_name"
-    dim = 2
-    mask = FilterPruningMask(size=size, node_name=node_name, dim=dim)
-    mask.binary_filter_pruning_mask = torch.fill(torch.empty(size), 5)
-    state_dict = mask.state_dict()
-
-    state = mask.get_config()
-    json_state = json.dumps(state)
-    state = json.loads(json_state)
-
-    recovered_mask = FilterPruningMask.from_config(state)
-    recovered_mask.load_state_dict(state_dict)
-
-    ref_size = size if isinstance(size, list) else [size]
-    assert list(recovered_mask.binary_filter_pruning_mask.size()) == ref_size
-    assert recovered_mask.node_name == node_name
-    assert recovered_mask.mask_applying_dim == dim
-
-    assert torch.all(mask.binary_filter_pruning_mask == recovered_mask.binary_filter_pruning_mask)
-
-
 @pytest.mark.parametrize("quantizer_class", (SymmetricQuantizer, AsymmetricQuantizer))
 def test_quantizer_serialization(quantizer_class: BaseQuantizer):
     scale_shape = [1, 3, 1, 1]
@@ -240,55 +214,6 @@ def test_quantizer_serialization(quantizer_class: BaseQuantizer):
         assert torch.all(quantizer.input_range == recovered_quantizer.input_range)
     else:
         raise RuntimeError()
-
-
-def test_sparsity_binary_mask_serialization():
-    ref_shape = [4, 2, 1, 3]
-    mask = BinaryMask(ref_shape)
-    mask.binary_mask = torch.zeros(ref_shape)
-    state_dict = mask.state_dict()
-
-    state = mask.get_config()
-    json_state = json.dumps(state)
-    state = json.loads(json_state)
-
-    recovered_mask = BinaryMask.from_config(state)
-    recovered_mask.load_state_dict(state_dict)
-
-    assert list(recovered_mask.binary_mask.shape) == ref_shape
-    assert torch.all(mask.binary_mask == recovered_mask.binary_mask)
-
-
-def test_rb_sparsity_mask_serialization():
-    ref_weights_shape = [3, 2, 4, 1]
-    ref_frozen = False
-    ref_compression_lr_multiplier = 2.0
-    ref_eps = 0.3
-    mask = RBSparsifyingWeight(
-        weight_shape=ref_weights_shape,
-        frozen=ref_frozen,
-        compression_lr_multiplier=ref_compression_lr_multiplier,
-        eps=ref_eps,
-    )
-    mask.binary_mask = torch.zeros(ref_weights_shape)
-    mask.mask = torch.fill(torch.empty(ref_weights_shape), 5)
-    state_dict = mask.state_dict()
-
-    state = mask.get_config()
-    json_state = json.dumps(state)
-    state = json.loads(json_state)
-
-    recovered_mask = RBSparsifyingWeight.from_config(state)
-    recovered_mask.load_state_dict(state_dict)
-
-    assert list(recovered_mask.mask.shape) == ref_weights_shape
-    assert recovered_mask.frozen == ref_frozen
-    assert recovered_mask._compression_lr_multiplier == ref_compression_lr_multiplier
-    assert recovered_mask.eps == ref_eps
-
-    assert torch.all(mask.mask == recovered_mask.mask)
-    assert torch.all(mask.binary_mask == recovered_mask.binary_mask)
-    assert torch.all(mask.uniform == recovered_mask.uniform)
 
 
 def test_sq_multiply_serialization():

@@ -68,35 +68,6 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
 
 
 @api()
-class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
-    """
-    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
-      nncf.initialization.PTInitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
-      also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
-     .. WARNING:: The final quantizer setup of the created compressed model is dependent on the data
-      provided by the data_loader. When using PyTorch's DistributedDataParallel with precision
-      initialization, make sure that each process in the distributed group receives the same data
-      from the data_loader as the other processes, otherwise the create_compressed_model call may
-      create different compressed model objects for each distributed process and the distributed training
-      will fail.
-    """
-
-    def __init__(
-        self,
-        data_loader: DataLoader,
-        eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
-        nncf_config: NNCFConfig,
-    ):
-        self.data_loader = data_loader
-        self.eval_fn = eval_fn
-        self.config = nncf_config
-
-    @classmethod
-    def get_id(cls) -> str:
-        return "autoq_precision_init_args"
-
-
-@api()
 class LeGRInitArgs(NNCFExtraConfigStruct):
     """
     Stores arguments for learning global ranking in pruning algorithm.

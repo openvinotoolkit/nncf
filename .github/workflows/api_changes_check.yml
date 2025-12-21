@@ -26,7 +26,7 @@ jobs:
       issues: write
     steps:
       - name: Download built HTML doc as artifact from previous step
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: html_doc_artifact
       - run: |
@@ -34,18 +34,18 @@ jobs:
           rm artifact.tar
         shell: 'bash'
       - name: Checkout latest doc_pages branch tip
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: doc_pages
           path: previous_doc_state
       - name: Get changed file names in API doc path
         id: diff
         run: |
-          cd html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH
-          CHANGED_FILES=$(find . -name "*.html" -exec diff -qrBZ {} $GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{} \;)
-          echo ${CHANGED_FILES}
-          CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
-          echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
+          cd "html_build/html/$API_DOC_HTML_ROOT_RELATIVE_PATH"
+          CHANGED_FILES=$(find . -name "*.html" -exec diff -qrBZ {} "$GITHUB_WORKSPACE/previous_doc_state/$API_DOC_HTML_ROOT_RELATIVE_PATH/{}" \;)
+          echo "${CHANGED_FILES}"
+          CHANGED_FILES=$(echo "$CHANGED_FILES" | tr '\n' ' ')
+          echo "changed_files=${CHANGED_FILES}" >> "$GITHUB_OUTPUT"
 
       - name: Add label
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
@@ -63,7 +63,7 @@ jobs:
           echo '{"pr_number": "${{ github.event.pull_request.number }}", "action": "none"}' > api_status.json
 
       - name: Upload artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 #v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
         with:
           name: api_status
           path: api_status.json

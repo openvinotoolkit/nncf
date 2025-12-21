@@ -138,6 +138,17 @@ def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
 
 
 @tensor_dispatcher
+def view(a: Tensor, dtype: TensorDataType) -> Tensor:
+    """
+    Returns a view of the tensor with the specified data type.
+
+    :param a: The input tensor.
+    :param dtype: The desired data type.
+    :return: A view of the tensor with the specified data type.
+    """
+
+
+@tensor_dispatcher
 def dtype(a: Tensor) -> TensorDataType:
     """
     Return data type of the tensor.

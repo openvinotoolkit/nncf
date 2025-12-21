@@ -23,7 +23,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -68,7 +68,7 @@ jobs:
           export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           lfs: true
       - name: Fetch and Checkout the Pull Request Branch

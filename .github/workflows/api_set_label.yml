@@ -29,8 +29,8 @@ jobs:
       - name: Set output value
         id: status
         run: |
-          echo "action=$(cat api_status.json | jq -r .action)" >> $GITHUB_OUTPUT
-          echo "pr_number=$(cat api_status.json | jq -r .pr_number)" >> $GITHUB_OUTPUT
+          echo "action=$(jq -r .action api_status.json)" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$(jq -r .pr_number api_status.json)" >> "$GITHUB_OUTPUT"
 
       - name: Print outputs
         run: echo ${{ steps.status.outputs.action }} ${{ steps.status.outputs.pr_number }}
