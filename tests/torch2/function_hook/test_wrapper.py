@@ -18,6 +18,7 @@ from pathlib import Path
 import onnxruntime as ort
 import pytest
 import torch
+from pytest_mock import MockerFixture
 
 from nncf.torch.function_hook.wrapper import is_wrapped
 from nncf.torch.function_hook.wrapper import register_post_function_hook
@@ -252,3 +253,16 @@ def test_insert_nested_hook(hook_type: str):
     wrapped(example_input)
 
     assert hook.call_count == 1
+
+
+def test_fast_path(mocker: MockerFixture):
+    example_input = helpers.ConvModel.get_example_inputs()
+    model = helpers.ConvModel()
+    wrapped = wrap_model(model)
+
+    def error(*args, **kwargs):
+        msg = "FunctionHookMode should not be called"
+        raise RuntimeError(msg)
+
+    mocker.patch("nncf.torch.function_hook.hook_executor_mode.FunctionHookMode.__init__", side_effect=error)
+    wrapped(example_input)
