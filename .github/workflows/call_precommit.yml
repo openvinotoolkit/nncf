@@ -32,12 +32,14 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install . -r tests/common/requirements.txt
+        run: uv pip install --system . -r tests/common/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run common precommit test scope
@@ -58,12 +60,14 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install . -r tests/onnx/requirements.txt
+        run: uv pip install --system . -r tests/onnx/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run ONNX precommit test scope
@@ -84,12 +88,14 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install . -r tests/openvino/requirements.txt
+        run: uv pip install --system . -r tests/openvino/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run OV precommit test scope
@@ -116,6 +122,8 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Runner info
         continue-on-error: true
         run: |
@@ -126,7 +134,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install . -r tests/torch/requirements.txt
+        run: uv pip install --system . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope
@@ -166,12 +174,14 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install . -r tests/torch/requirements.txt
+        run: uv pip install --system . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
@@ -196,8 +206,10 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Install test requirements
-        run: pip install -r tests/tools/requirements.txt
+        run: uv pip install --system -r tests/tools/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run tools precommit test scope
@@ -216,13 +228,14 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: |
-          pip install . -r tests/torch2/requirements.txt
+        run: uv pip install --system . -r tests/torch2/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run torch2 precommit test scope
@@ -259,12 +272,14 @@ jobs:
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install . -r tests/torch2/requirements.txt
+        run: uv pip install --system . -r tests/torch2/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
