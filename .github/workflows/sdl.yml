@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: 3.10.14
       - name: Install bandit
-        run: pip install bandit[toml]==1.7.4 stevedore==5.4.1
+        run: pip install bandit[toml]==1.9.2
       - name: Run bandit
         run: bandit -c pyproject.toml -r .
 
