@@ -1,7 +1,7 @@
 tensorboard==2.13.0
 torch==2.9.0
 numpy>=1.23.5,<2
-openvino==2025.4.0
+openvino==2025.4.1
 optimum-intel==1.26.0
 optimum-onnx==0.0.3
 optimum==2.0.0

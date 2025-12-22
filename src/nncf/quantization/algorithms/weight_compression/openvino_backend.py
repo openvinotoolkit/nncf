@@ -64,6 +64,7 @@ from nncf.quantization.algorithms.weight_compression.parameters import Compresse
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP_REV
 
 
@@ -223,32 +224,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         should_add_convert_node: bool,
         precomputed_compressed_weight: Optional[CompressedWeight] = None,
     ):
-        scale_dtype = ov.Type.f16
-        if compression_config.mode == CompressWeightsMode.NF4:
-            compression_dtype = ov.Type.nf4
-        elif compression_config.mode == CompressWeightsMode.MXFP4:
-            compression_dtype = ov.Type.f4e2m1
-            scale_dtype = ov.Type.f8e8m0
-        elif compression_config.mode == CompressWeightsMode.MXFP8_E4M3:
-            compression_dtype = ov.Type.f8e4m3
-            scale_dtype = ov.Type.f8e8m0
-        elif compression_config.mode == CompressWeightsMode.FP8_E4M3:
-            compression_dtype = ov.Type.f8e4m3
-        elif compression_config.mode == CompressWeightsMode.FP4:
-            compression_dtype = ov.Type.f4e2m1
-        elif compression_config.mode == CompressWeightsMode.INT4_SYM:
-            compression_dtype = ov.Type.i4
-        elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
-            compression_dtype = ov.Type.u4
-        elif compression_config.mode == CompressWeightsMode.INT8_SYM:
-            compression_dtype = ov.Type.i8
-        elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
-            compression_dtype = ov.Type.u8
-        elif compression_config.is_codebook:
-            compression_dtype = None
-        else:
-            msg = f"{compression_config.mode.value} is not supported."
-            raise nncf.ParameterNotSupportedError(msg)
+        compression_dtype = DTYPE_MAP[compression_config.compression_dtype]
+        scale_dtype = (
+            ov.Type.f8e8m0
+            if compression_config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]
+            else ov.Type.f16
+        )
 
         original_shape = weight.shape
 
@@ -261,8 +242,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         if compression_config.is_codebook:
-            n_quants = compressed_weight.codebook.size - 1
-            compression_dtype = ov.Type.u16 if n_quants > 255 else (ov.Type.u8 if n_quants > 15 else ov.Type.u4)
             converted_const = create_ov_codebook_subgraph(
                 codebook=compressed_weight.codebook
                 if compression_config.mode == CompressWeightsMode.CODEBOOK

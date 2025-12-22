@@ -21,20 +21,16 @@ from itertools import chain
 from types import MethodType
 from types import TracebackType
 from typing import Any, Callable, Iterator, Optional, cast
-from weakref import ReferenceType
-from weakref import ref
 
 import torch
 from torch import Tensor
 from torch import nn
 from torch.overrides import TorchFunctionMode
 
-from nncf.common.logging import nncf_logger as logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.patcher import PATCHER
 from nncf.torch.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.torch.function_hook.hook_storage import HookStorage
-from nncf.torch.function_hook.weak_map import WeakUnhashableKeyMap
 
 IGNORED_FN_NAMES = [
     "__repr__",
@@ -63,20 +59,6 @@ class OpMeta:
     op_name: str
     func: Callable[..., Any]
     extra_info: dict[str, Any] = field(default_factory=lambda: dict())
-
-
-def _get_full_fn_name(fn: Callable[..., Any]) -> str:
-    """
-    Get the full name of a function, including its module if applicable.
-
-    :param fn: The function for which to get the full name.
-    :return: The full name of the function.
-    """
-    if inspect.ismethoddescriptor(fn) or inspect.ismethod(fn):
-        return fn.__qualname__
-    if inspect.isbuiltin(fn) or inspect.isfunction(fn):
-        return f"{fn.__module__}.{fn.__name__}"
-    return f"{fn.__name__}"
 
 
 def generate_normalized_op_name(module_name: str, fn_name: str, call_id: Optional[int] = None) -> str:
@@ -121,14 +103,14 @@ class FunctionHookMode(TorchFunctionMode):
         self.op_calls: dict[str, int] = defaultdict(int)
         self.enabled: bool = True
 
-        # Variables for hooks after constant nodes
-        self.const_name_map: WeakUnhashableKeyMap[torch.Tensor, str] = WeakUnhashableKeyMap()
-        for name, parameter in chain(self.model.named_parameters(), self.model.named_buffers()):
-            self.const_name_map[parameter] = name
+        # Mapping id of parameters to names to execute hooks after constant nodes
+        self.const_name_map: dict[int, str] = {
+            id(parameter): name for name, parameter in chain(self.model.named_parameters(), self.model.named_buffers())
+        }
         self.in_process_const = False
 
         # Hook names
-        self.hooks_module_to_group_name: dict[ReferenceType[nn.Module], str] = {}
+        self.hooks_module_to_group_name: dict[int, str] = {}
         self._get_named_hooks(self.hook_storage.pre_hooks, "pre_hook")
         self._get_named_hooks(self.hook_storage.post_hooks, "post_hook")
 
@@ -139,6 +121,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}
         self.cache_parameters: dict[int, Tensor] = {}
+        self.cache_child_name: dict[int, dict[int, str]] = {}
 
     def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str) -> None:
         """
@@ -156,7 +139,7 @@ class FunctionHookMode(TorchFunctionMode):
             for hook_id, hook_module in hook_module_dict.named_children():
                 # Replace / to avoid collision with module separator
                 hook_name = hook_key.replace("/", "-")
-                self.hooks_module_to_group_name[ref(hook_module)] = f"{prefix}__{hook_name}[{hook_id}]"
+                self.hooks_module_to_group_name[id(hook_module)] = f"{prefix}__{hook_name}[{hook_id}]"
 
     def _get_wrapped_call(self, fn_call: MethodType) -> Callable[..., Any]:
         """
@@ -185,7 +168,6 @@ class FunctionHookMode(TorchFunctionMode):
         if self.nested_enter_count == 0:
             # Wrap _call_impl function of instance each module.
             # Note: __call__ can`t not be overridden for instance, the function can be override only in class namespace.
-            logger.debug("FunctionHookMode.__enter__: wrap _call_impl function")
             for _, module in self.model.named_modules():
                 module._call_impl = types.MethodType(self._get_wrapped_call(module._call_impl), module)
             self.push_module_call_stack(self.model)
@@ -205,7 +187,6 @@ class FunctionHookMode(TorchFunctionMode):
         self.nested_enter_count -= 1
         if self.nested_enter_count == 0:
             # Unwrap _call_impl functions
-            logger.debug("FunctionHookMode.__exit__: unwrap _call_impl function")
             for _, module in self.model.named_modules():
                 module.__dict__.pop("_call_impl")
             self.pop_module_call_stack()
@@ -241,10 +222,7 @@ class FunctionHookMode(TorchFunctionMode):
         if not self.enabled or fn_name in IGNORED_FN_NAMES:
             return func(*args, **kwargs)
 
-        op_name = self.get_current_executed_op_name(fn_name)
-        full_fn_name = _get_full_fn_name(func)
-        logger.debug(f"FunctionHookMode.__torch_function__: {full_fn_name=} {op_name=}")
-        self.register_op(fn_name)
+        op_name = self.get_next_op_call_name(fn_name)
         op_meta = OpMeta(op_name=op_name, func=func)
         args, kwargs = self.execute_pre_hooks(args, kwargs, op_meta)
         output = func(*args, **kwargs)
@@ -259,16 +237,12 @@ class FunctionHookMode(TorchFunctionMode):
         """
         assert isinstance(module, nn.Module)
         self.module_call_stack.append(module)
-        module_name = self.get_current_relative_name()
-        logger.debug(f"FunctionHookMode.push_module_call_stack: {module_name=}")
 
     def pop_module_call_stack(self) -> None:
         """
         Pop a module from the call stack and remove its operation calls.
         """
-        module_name = self.get_current_relative_name()
         self.module_call_stack.pop()
-        logger.debug(f"FunctionHookMode.pop_module_call_stack: {module_name=}")
 
     def get_current_relative_name(self) -> str:
         """
@@ -278,23 +252,32 @@ class FunctionHookMode(TorchFunctionMode):
         """
         relative_module_names = []
         prev_module = self.module_call_stack[0]
+        cache_child_name = self.cache_child_name
 
         for module in self.module_call_stack[1:]:
-            hook_name = self.hooks_module_to_group_name.get(ref(module))
+            hook_name = self.hooks_module_to_group_name.get(id(module))
             if hook_name is not None:
                 relative_module_names.append(hook_name)
             else:
-                for n, m in prev_module.named_children():
-                    if m is module:
-                        relative_module_names.append(n)
-                        break
+                child_names = cache_child_name.get(id(prev_module))
+                if child_names is None:
+                    child_names = {id(child): name for name, child in prev_module.named_children()}
+                    cache_child_name[id(prev_module)] = child_names
+
+                name = child_names.get(id(module))
+                if name is not None:
+                    relative_module_names.append(name)
             prev_module = module
 
         return "/".join(relative_module_names)
 
-    def get_current_executed_op_name(self, fn_name: str) -> str:
+    def get_next_op_call_name(self, fn_name: str) -> str:
         """
-        Get the name of the current operation being executed.
+        Generate and return a unique, normalized operation name for the current execution of a function.
+
+        The operation name is derived from the current module's relative name and the provided function name.
+        Each call increments an internal counter for that operation, ensuring that repeated executions
+        of the same operation receive distinct, sequentially numbered names.
 
         :param fn_name: The function name of the operation.
         :return: The name of the operation.
@@ -302,17 +285,8 @@ class FunctionHookMode(TorchFunctionMode):
         module_name = self.get_current_relative_name()
         op_name = generate_normalized_op_name(module_name, fn_name)
         call_id = self.op_calls[op_name]
-        return generate_normalized_op_name(module_name, fn_name, call_id)
-
-    def register_op(self, fn_name: str) -> None:
-        """
-        Register an operation call for the current module and increment call counter.
-
-        :param fn_name: The function name of the operation.
-        """
-        module_name = self.get_current_relative_name()
-        op_name = generate_normalized_op_name(module_name, fn_name)
         self.op_calls[op_name] += 1
+        return generate_normalized_op_name(module_name, fn_name, call_id)
 
     def execute_hooks_for_parameter(self, value: torch.Tensor) -> torch.Tensor:
         """
@@ -339,7 +313,7 @@ class FunctionHookMode(TorchFunctionMode):
             return ret
 
         ret_value = value
-        name_in_model = self.const_name_map.get(value, None)
+        name_in_model = self.const_name_map.get(id_param)
         if name_in_model is not None and not self.in_process_const:
             self.in_process_const = True
             ret_value = self.hook_storage.execute_post_function_hooks(name_in_model, 0, value)

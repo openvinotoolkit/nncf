@@ -37,6 +37,8 @@ DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.int32: np.dtype(np.int32),
     TensorDataType.int64: np.dtype(np.int64),
     TensorDataType.uint8: np.dtype(np.uint8),
+    TensorDataType.uint16: np.dtype(np.uint16),
+    TensorDataType.uint32: np.dtype(np.uint32),
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
@@ -95,6 +97,11 @@ def _(a: T_NUMPY) -> T_NUMPY:
 @numeric.astype.register
 def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
     return a.astype(DTYPE_MAP[dtype])
+
+
+@numeric.view.register
+def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
+    return a.view(DTYPE_MAP[dtype])
 
 
 @numeric.dtype.register
