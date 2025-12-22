@@ -19,8 +19,10 @@ from nncf.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.common.tensor_statistics.collectors import MeanPerChReducer
 from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.common.tensor_statistics.collectors import MinReducer
 from nncf.common.tensor_statistics.collectors import QuantileReducer
 from nncf.tensor import Tensor
@@ -42,6 +44,8 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
             "max": MaxReducer,
             "abs_max": AbsMaxReducer,
             "mean": MeanReducer,
+            "mean_variance": MeanVarianceReducer,
+            "max_variance": MaxVarianceReducer,
             "quantile": QuantileReducer,
             "abs_quantile": AbsQuantileReducer,
             "batch_mean": BatchMeanReducer,

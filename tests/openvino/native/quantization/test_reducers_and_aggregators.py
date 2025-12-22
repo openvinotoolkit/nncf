@@ -59,6 +59,8 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
             "abs_max": OVAbsMaxReducer,
             "mean": OVMeanReducer,
             "quantile": OVQuantileReducer,
+            "mean_variance": OVMeanVarianceReducer,
+            "max_variance": OVMaxVarianceReducer,
             "abs_quantile": OVAbsQuantileReducer,
             "batch_mean": OVBatchMeanReducer,
             "mean_per_ch": OVMeanPerChanelReducer,

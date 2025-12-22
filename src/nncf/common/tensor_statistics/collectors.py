@@ -18,11 +18,10 @@ from collections import defaultdict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Optional, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union, cast
 
 import nncf.tensor
 import nncf.tensor.functions as fns
-from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -106,7 +105,7 @@ class TensorReducerBase(ABC):
         self._keepdims = True
 
     @property
-    def inplace(self):
+    def inplace(self) -> bool:
         return self._inplace
 
     @property
@@ -118,11 +117,11 @@ class TensorReducerBase(ABC):
         return 0
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.__class__.__name__ + str(self.__hash__())
 
     @abstractmethod
-    def _reduce_out_of_place(self, x: list[TensorType]) -> list[TensorType]:
+    def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         """
         Specifies the reduction rule.
 
@@ -137,7 +136,7 @@ class TensorReducerBase(ABC):
         """
         return None
 
-    def __call__(self, x: list[Tensor]):
+    def __call__(self, x: list[Tensor]) -> Optional[list[Tensor]]:
         if any(t.isempty() for t in x):
             return None
 
@@ -146,7 +145,7 @@ class TensorReducerBase(ABC):
 
         return self._reduce_out_of_place(x)
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: Any) -> bool:
         return (
             isinstance(__o, self.__class__)
             and self._axes == __o._axes
@@ -184,20 +183,20 @@ class AggregatorBase:
         self._num_samples = num_samples
         self._collected_samples = 0
         self._window_size = window_size
-        self._container = deque(maxlen=window_size)
+        self._container: Any = deque(maxlen=window_size)
 
     @property
-    def num_samples(self) -> int:
+    def num_samples(self) -> Optional[int]:
         return self._num_samples
 
-    def register_reduced_input(self, x: TensorType):
+    def register_reduced_input(self, x: Tensor) -> None:
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return
         self._register_reduced_input_impl(x)
         self._collected_samples += 1
 
     @abstractmethod
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
         """
         Registers incoming tensor in tensor aggregator.
 
@@ -223,15 +222,15 @@ class AggregatorBase:
         :return: Aggregated result.
         """
 
-    def reset(self):
+    def reset(self) -> None:
         self._collected_samples = 0
-        self._container = []
+        self._container = deque(maxlen=self._window_size)
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: Any) -> bool:
         return isinstance(__o, self.__class__) and self._num_samples == __o.num_samples
 
     def __hash__(self) -> int:
-        return hash(self.__class__.__name__)
+        return hash((self.__class__.__name__, self._num_samples, self._aggregation_axes, self._window_size))
 
 
 class TensorCollector:
@@ -267,17 +266,17 @@ class TensorCollector:
         return self._enabled
 
     @property
-    def reducers(self):
+    def reducers(self) -> set[TensorReducerBase]:
         return self._reducers.copy()
 
     @property
-    def aggregators(self):
+    def aggregators(self) -> dict[tuple[int, int, int], AggregatorBase]:
         return self._aggregators.copy()
 
-    def enable(self):
+    def enable(self) -> None:
         self._enabled = True
 
-    def disable(self):
+    def disable(self) -> None:
         self._enabled = False
 
     def register_statistic_branch(
@@ -344,7 +343,7 @@ class TensorCollector:
         """
         self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
 
-    def _aggregate(self) -> None:
+    def _aggregate(self) -> dict[Any, Any]:
         result = {}
         for (
             key,
@@ -359,11 +358,11 @@ class TensorCollector:
         Sets cached statistics from given config and disable TensorCollector.
         :param statistics: TensorStatistic.
         """
-        self._cached_statistics = statistics
+        self._cached_statistics: Optional[TensorStatistic] = statistics
         self.reset()
         self.disable()
 
-    def create_statistics_container(self, config: dict[str, Any]) -> TensorStatistic:
+    def create_statistics_container(self, config: dict[str, Any]) -> Union[TensorStatistic, dict[str, Any]]:
         """
         Returns a TensorStatistic instance with aggregated values.
 
@@ -380,7 +379,7 @@ class TensorCollector:
         """
         self._cached_statistics = None
 
-    def get_statistics(self) -> TensorStatistic:
+    def get_statistics(self) -> Union[TensorStatistic, dict[str, Any]]:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.
@@ -409,7 +408,7 @@ class TensorCollector:
         assert key[2] == hash(aggregator)
         self._aggregators[key] = aggregator
 
-    def reset(self):
+    def reset(self) -> None:
         for aggregator in self._aggregators.values():
             aggregator.reset()
 
@@ -467,7 +466,7 @@ class MergedTensorCollector(TensorCollector):
 
 
 class RawReducer(TensorReducerBase):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(inplace=False)
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
@@ -481,7 +480,7 @@ class ShapeReducer(TensorReducerBase):
     def __init__(self, inplace: bool = False):
         super().__init__(inplace=inplace)
 
-    def _reduce_out_of_place(self, x: list[TensorType]) -> list[TensorType]:
+    def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         # Return as tensor for consistency, because in-place reducer returns a tensor
         return [fns.tensor(x[0].shape, backend=x[0].backend, dtype=TensorDataType.int32, device=x[0].device)]
 
@@ -491,53 +490,53 @@ class ShapeReducer(TensorReducerBase):
 
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = x[0]
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        return [fns.min(x, reduction_axes, keepdims=self._keepdims)]
+        x_ = x[0]
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        return [fns.min(x_, reduction_axes, keepdims=self._keepdims)]
 
 
 class MaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = x[0]
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        return [fns.max(x, reduction_axes, keepdims=self._keepdims)]
+        x_ = x[0]
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        return [fns.max(x_, reduction_axes, keepdims=self._keepdims)]
 
 
 class AbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = fns.abs(x[0])
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        return [fns.max(x, reduction_axes, keepdims=self._keepdims)]
+        x_ = fns.abs(x[0])
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        return [fns.max(x_, reduction_axes, keepdims=self._keepdims)]
 
 
 class MeanReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = x[0]
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        return [fns.mean(x, reduction_axes, keepdims=self._keepdims)]
+        x_ = x[0]
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        return [fns.mean(x_, reduction_axes, keepdims=self._keepdims)]
 
 
 class MeanVarianceReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = x[0]
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        variance = fns.var(x, reduction_axes)
+        x_ = x[0]
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        variance = fns.var(x_, reduction_axes)
         return [fns.mean(variance)]
 
 
 class MaxVarianceReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = x[0]
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        variance = fns.var(x, reduction_axes)
+        x_ = x[0]
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        variance = fns.var(x_, reduction_axes)
         return [fns.max(variance)]
 
 
 class MeanAbsMaxReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = fns.abs(x[0])
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        abs_max = fns.max(x, reduction_axes, keepdims=self._keepdims)
+        x_ = fns.abs(x[0])
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        abs_max = fns.max(x_, reduction_axes, keepdims=self._keepdims)
         return [fns.mean(abs_max)]
 
 
@@ -546,13 +545,19 @@ class QuantileReducerBase(TensorReducerBase):
         self,
         axes: Optional[Axes] = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
-        quantile: Optional[Union[float, tuple[float]]] = None,
+        quantile: Optional[Union[list[float], tuple[float, ...]]] = None,
         inplace: bool = False,
     ):
         super().__init__(axes, axes_mode, False)
+        if quantile is not None and not isinstance(quantile, (tuple, list)):
+            msg = (
+                f"{self} reducer only supports quantile in format of tuple[float, ...],"
+                f" {quantile.__class__} is supplied"
+            )
+            raise nncf.ParameterNotSupportedError(msg)
         self._quantile = (0.01, 0.99) if quantile is None else quantile
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: Any) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
@@ -561,9 +566,15 @@ class QuantileReducerBase(TensorReducerBase):
 
 class QuantileReducer(QuantileReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = x[0]
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        return fns.quantile(x, self._quantile, reduction_axes, keepdims=self._keepdims)
+        x_ = x[0]
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        res = fns.quantile(
+            x_,
+            self._quantile,
+            reduction_axes,
+            keepdims=self._keepdims,
+        )
+        return fns.unstack(res, axis=0)
 
 
 class AbsQuantileReducer(QuantileReducerBase):
@@ -571,21 +582,27 @@ class AbsQuantileReducer(QuantileReducerBase):
         self,
         axes: Optional[Axes] = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
-        quantile: Optional[Union[float, tuple[float]]] = None,
+        quantile: Optional[Union[list[float], tuple[float, ...]]] = None,
         inplace: bool = False,
     ):
         quantile = (0.99,) if quantile is None else quantile
         super().__init__(axes, axes_mode, quantile)
 
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
-        x = fns.abs(x[0])
-        reduction_axes = determine_reduction_axes(x.ndim, self._axes, self._axes_mode)
-        return fns.quantile(x, self._quantile, reduction_axes, keepdims=self._keepdims)
+        x_ = fns.abs(x[0])
+        reduction_axes = determine_reduction_axes(x_.ndim, self._axes, self._axes_mode)
+        res = fns.quantile(
+            x_,
+            self._quantile,
+            reduction_axes,
+            keepdims=self._keepdims,
+        )
+        return fns.unstack(res, axis=0)
 
 
 class BatchMeanReducer(TensorReducerBase):
     def __init__(self, inplace: bool = False):
-        super().__init__(None, inplace)
+        super().__init__(axes=None, inplace=inplace)
 
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         return [fns.mean(x[0], axis=0, keepdims=True)]
@@ -599,11 +616,11 @@ class MeanPerChReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
         return [mean_per_channel(x[0], self._channel_axis)]
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: Any) -> bool:
         return super().__eq__(__o) and self._channel_axis == __o._channel_axis
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._axes, self._axes_mode, self._channel_axis))
+        return hash((self.__class__.__name__, self.inplace, self._channel_axis))
 
 
 ##################################################
@@ -625,11 +642,14 @@ class NoopAggregator(AggregatorBase):
         super().__init__(None, num_samples=1 if return_first else num_samples)
         self._return_first = return_first
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
         self._container.append(x)
 
-    def _aggregate_impl(self):
+    def _aggregate_impl(self) -> Any:
         return self._container[0] if self._return_first else self._container
+
+    def __hash__(self) -> int:
+        return hash((self._num_samples, self._return_first))
 
 
 class OnlineAggregatorBase(AggregatorBase, ABC):
@@ -648,13 +668,13 @@ class OnlineAggregatorBase(AggregatorBase, ABC):
             reduced = x
         if 0 in self._aggregation_axes:
             stacked_tensors = fns.stack([reduced, *self._container], axis=0)
-            aggregated = self._aggregation_fn(stacked_tensors, axis=0, keepdims=self._keepdims)
+            aggregated = self._aggregation_fn(stacked_tensors, axis=(0,), keepdims=self._keepdims)
             aggregated = fns.squeeze(aggregated, 0)
-            self._container = [aggregated]
+            self._container = deque([aggregated])
         else:
             self._container.append(reduced)
 
-    def _aggregate_impl(self) -> Tensor:
+    def _aggregate_impl(self) -> Any:
         if 0 in self._aggregation_axes and self._keepdims:
             return self._container[0]
         return fns.stack(self._container)
@@ -700,8 +720,8 @@ def _move_axes_flatten_cat(
 
     reshaped_tensors = []
     for tensor in tensor_list:
-        transposed_t = fns.transpose(tensor, transpose_dims)
-        reshaped_tensors.append(fns.reshape(transposed_t, reshape_shape))
+        transposed_t = fns.transpose(tensor, tuple(transpose_dims))
+        reshaped_tensors.append(fns.reshape(transposed_t, tuple(reshape_shape)))
 
     shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
@@ -715,7 +735,7 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
     all samples in a container and aggregate them in one step.
     """
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
         self._container.append(x)
 
     def _aggregate_impl(self) -> Tensor:
@@ -729,8 +749,9 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
         # Case when some registered tensors have different shapes and
         # 0 is present in the aggregation axes
         if 0 in self._aggregation_axes:
-            stacked_value, shape_after_aggregation = _move_axes_flatten_cat(self._container, online_axes)
-            aggregated = self._aggregation_fn(stacked_value, axis=0, keepdims=False)
+            _container = cast(list[Tensor], self._container)
+            stacked_value, shape_after_aggregation = _move_axes_flatten_cat(_container, online_axes)
+            aggregated = self._aggregation_fn(stacked_value, axis=(0,), keepdims=False)
             if self._keepdims:
                 aggregated = fns.reshape(aggregated, shape_after_aggregation)
             return aggregated
@@ -762,16 +783,16 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         self,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
-        window_size=None,
+        window_size: Optional[int] = None,
         quantile: float = 0.01,
-    ):
+    ) -> None:
         super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
         self._quantile = quantile
 
-    def _aggregation_fn(self, stacked_value: Tensor, axis: int, keepdims: bool) -> Tensor:
-        low_values, high_values = fns.quantile(stacked_value, q=(self._quantile, 1 - self._quantile), axis=axis)
+    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
+        low_values, high_values = fns.quantile(stacked_value, q=[self._quantile, 1 - self._quantile], axis=axis)
         outliers_mask = fns.logical_or(stacked_value < low_values, high_values < stacked_value)
         aggregated = self._masked_aggregation_fn(
             stacked_samples=stacked_value,
@@ -787,11 +808,13 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     ) -> Tensor:
         pass
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: Any) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self._quantile))
+        return hash(
+            (self.__class__.__name__, self._num_samples, self._aggregation_axes, self._window_size, self._quantile)
+        )
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
@@ -813,7 +836,7 @@ class MedianAbsoluteDeviationAggregator(AggregatorBase):
         self,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
-        window_size=None,
+        window_size: Optional[int] = None,
     ):
         super().__init__(
             aggregation_axes=aggregation_axes,
@@ -824,12 +847,13 @@ class MedianAbsoluteDeviationAggregator(AggregatorBase):
             msg = "Aggregation without 0 dim is not supported yet for MedianAbsoluteDeviationAggregator"
             raise NotImplementedError(msg)
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        return self._container.append(x)
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
+        self._container.append(x)
 
     def _aggregate_impl(self) -> dict[str, Tensor]:
+        _container = cast(list[Tensor], self._container)
         stacked_val, shape_after_aggregation = _move_axes_flatten_cat(
-            self._container, [x - 1 for x in self._aggregation_axes if x > 0]
+            _container, tuple(x - 1 for x in self._aggregation_axes if x > 0)
         )
 
         mask = fns.abs(stacked_val) < fns.finfo(stacked_val).eps
@@ -857,7 +881,7 @@ class PercentileAggregator(AggregatorBase):
         percentiles_to_collect: list[float],
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
-        window_size=None,
+        window_size: Optional[int] = None,
     ):
         super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
         if 0 not in self._aggregation_axes:
@@ -867,12 +891,13 @@ class PercentileAggregator(AggregatorBase):
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
-        return self._container.append(x)
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
+        self._container.append(x)
 
     def _aggregate_impl(self) -> dict[float, Tensor]:
+        _container = cast(list[Tensor], self._container)
         stacked_val, shape_after_aggregation = _move_axes_flatten_cat(
-            self._container, [x - 1 for x in self._aggregation_axes if x > 0]
+            _container, tuple(x - 1 for x in self._aggregation_axes if x > 0)
         )
 
         percentiles = fns.percentile(stacked_val, self._percentiles_to_collect, axis=0, keepdims=False)
@@ -884,13 +909,24 @@ class PercentileAggregator(AggregatorBase):
             retval[percentile] = value
         return retval
 
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.__class__.__name__,
+                self._num_samples,
+                self._aggregation_axes,
+                self._window_size,
+                tuple(self._percentiles_to_collect),
+            )
+        )
+
 
 class HAWQAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int] = None):
         super().__init__(num_samples=num_samples)
-        self._container = Tensor(0.0)
+        self._container: Tensor = Tensor(0.0)
 
-    def _register_reduced_input_impl(self, x: TensorType) -> None:
+    def _register_reduced_input_impl(self, x: Tensor) -> None:
         trace = fns.sum(fns.multiply(x, x))
         # NOTE: average trace?? divide by number of diagonal elements
         # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
@@ -1023,6 +1059,7 @@ class HistogramAggregator(AggregatorBase):
         :return: An approximation for L2 error minimization for selecting min/max.
         """
         assert self.histogram.shape[0] == self.bins, "bins mismatch"
+        assert self.max_val is not None and self.min_val is not None
         bin_width = (self.max_val - self.min_val) / self.bins
 
         # cumulative sum
@@ -1207,6 +1244,7 @@ class HistogramAggregator(AggregatorBase):
             return
 
         update_min, update_max = x_min, x_max
+        assert current_min is not None and current_max is not None
         new_min = min(current_min, update_min)
         new_max = max(current_max, update_max)
 
@@ -1233,6 +1271,9 @@ class HistogramAggregator(AggregatorBase):
                 max_, backend=self.histogram.backend, device=self.histogram.device, dtype=TensorDataType.float32
             ),
         }
+
+    def __hash__(self) -> int:
+        return hash((self.__class__.__name__, self._num_samples, self._window_size, self.bins, self.dst_nbins))
 
 
 REDUCERS_MAP = {

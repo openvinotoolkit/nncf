@@ -228,16 +228,37 @@ class TemplateTestReducersAggregators:
             assert fns.allclose(val[0], self.get_nncf_tensor(ref[i]))
 
     @pytest.mark.parametrize(
-        "reducer_name,ref", [("quantile", ([[[[-20000]]]], [[[[10000]]]])), ("abs_quantile", ([[[[20000]]]],))]
+        "reducer_name,quantile,ref",
+        [
+            ("quantile", None, ([[[[-20000]]]], [[[[10000]]]])),
+            ("abs_quantile", None, ([[[[20000]]]],)),
+            ("quantile", (0.01,), ([[[[-20000]]]])),
+            ("abs_quantile", (0.99,), ([[[[20000]]]])),
+            (
+                "quantile",
+                0.01,
+                None,
+            ),
+            (
+                "abs_quantile",
+                0.99,
+                None,
+            ),
+        ],
     )
-    def test_quantile_reducers(self, reducer_name, ref, reducers):
-        reduction_axes = (1, 2, 3)
+    def test_quantile_reducers(self, reducer_name, quantile, ref, reducers):
         input_ = np.arange(-26, 10).reshape((1, 4, 3, 3))
+        reduction_axes = (1, 2, 3)
         input_[0][0][0] = -20000
         input_[0][0][1] = 10000
-        reducer = reducers[reducer_name](axes=reduction_axes, inplace=False)
+        if ref is None:
+            with pytest.raises(nncf.ParameterNotSupportedError):
+                reducers[reducer_name](axes=reduction_axes, quantile=quantile, inplace=False)
+            return
+
+        reducer = reducers[reducer_name](axes=reduction_axes, quantile=quantile, inplace=False)
         val = reducer([self.get_nncf_tensor(input_, dtype=Dtype.FLOAT)])
-        assert val.shape[0] == len(ref)
+        assert len(val) == len(ref)
         for i, ref_ in enumerate(ref):
             assert fns.allclose(val[i], self.get_nncf_tensor(ref_))
 
@@ -561,17 +582,36 @@ class TemplateTestReducersAggregators:
         with pytest.raises(NotImplementedError):
             MAD_percentile_aggregator_cls(aggregation_axes=(1, 2, 3))
 
+    @staticmethod
+    def _product_dict(**kwargs):
+        keys = kwargs.keys()
+        for instance in product(*kwargs.values()):
+            yield dict(zip(keys, instance))
+
     @pytest.mark.parametrize(
         "reducer_name",
-        ["min", "max", "abs_max", "mean", "quantile", "abs_quantile", "batch_mean", "mean_per_ch"],
+        [
+            "min",
+            "max",
+            "abs_max",
+            "mean",
+            "quantile",
+            "abs_quantile",
+            "batch_mean",
+            "mean_per_ch",
+            "mean_variance",
+            "max_variance",
+        ],
     )
     def test_reducers_name_hash_equal(self, reducer_name, reducers):
         params = {}
-        if reducer_name in ["min", "max", "abs_max", "mean"]:
+        if reducer_name in ["min", "max", "abs_max", "mean", "mean_variance", "max_variance"]:
             params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes_mode"] = [AxesMode.KEEP, AxesMode.REDUCTION]
             params["inplace"] = [False, True]
         elif reducer_name in ["quantile", "abs_quantile"]:
             params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes_mode"] = [AxesMode.KEEP, AxesMode.REDUCTION]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif reducer_name == "batch_mean":
             params["inplace"] = [False, True]
@@ -584,14 +624,9 @@ class TemplateTestReducersAggregators:
             )
             raise nncf.ValidationError(msg)
 
-        def product_dict(**kwargs):
-            keys = kwargs.keys()
-            for instance in product(*kwargs.values()):
-                yield dict(zip(keys, instance))
-
         reducer_cls = reducers[reducer_name]
         reducers_instances = []
-        for params_ in product_dict(**params):
+        for params_ in self._product_dict(**params):
             reducers_instances.append(reducer_cls(**params_))
 
         assert len(set(reducers_instances)) == len(reducers_instances)
@@ -603,6 +638,80 @@ class TemplateTestReducersAggregators:
         for reducer, init_hash in zip(reducers_instances, hashes):
             reducer(test_input)
             assert hash(reducer) == init_hash
+
+    @pytest.mark.parametrize(
+        "aggregator_cls",
+        [
+            NoopAggregator,
+            MinAggregator,
+            MaxAggregator,
+            MeanAggregator,
+            MedianAggregator,
+            MeanNoOutliersAggregator,
+            MedianNoOutliersAggregator,
+            MedianAbsoluteDeviationAggregator,
+            PercentileAggregator,
+            HAWQAggregator,
+            HistogramAggregator,
+        ],
+    )
+    def test_aggregators_hash(self, aggregator_cls):
+        params = {}
+        product = None
+        if aggregator_cls is NoopAggregator:
+            product = [
+                {"return_first": False, "num_samples": 1},
+                {"return_first": False, "num_samples": 5},
+                {"return_first": True, "num_samples": 1},
+            ]
+        elif aggregator_cls in [
+            MinAggregator,
+            MaxAggregator,
+            MeanAggregator,
+            MedianAggregator,
+            MedianAbsoluteDeviationAggregator,
+        ]:
+            params["num_samples"] = [None, 15]
+            params["aggregation_axes"] = [
+                None,
+                (
+                    0,
+                    2,
+                ),
+            ]
+            params["window_size"] = [None, 10]
+        elif aggregator_cls in [MeanNoOutliersAggregator, MedianNoOutliersAggregator]:
+            params["num_samples"] = [None, 15]
+            params["aggregation_axes"] = [None, (2,)]
+            params["window_size"] = [None, 10]
+            params["quantile"] = [0.1, 0.001]
+        elif aggregator_cls is PercentileAggregator:
+            params["num_samples"] = [None, 15]
+            params["aggregation_axes"] = [
+                None,
+                (
+                    0,
+                    2,
+                ),
+            ]
+            params["window_size"] = [None, 10]
+            params["percentiles_to_collect"] = [[0.1], [0.001]]
+        elif aggregator_cls is HAWQAggregator:
+            params["num_samples"] = [None, 15]
+        elif aggregator_cls is HistogramAggregator:
+            params["num_samples"] = [None, 15]
+            params["bins"] = [2048, 4096]
+            params["dist_nbits"] = [4, 8]
+            params["window_size"] = [None, 10]
+
+        if product is None:
+            product = self._product_dict(**params)
+        aggregator_instances = []
+        for params_ in product:
+            aggregator_instances.append(aggregator_cls(**params_))
+
+        assert len(set(aggregator_instances)) == len(aggregator_instances)
+        assert len({hash(aggr) for aggr in aggregator_instances}) == len(aggregator_instances)
 
     HAWQ_AGGREGATOR_REFERENCE_VALUES = [
         ([np.arange(10)], 57.0),

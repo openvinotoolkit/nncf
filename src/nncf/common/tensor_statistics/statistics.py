@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from dataclasses import fields
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Union, cast
 
 import nncf
 from nncf.tensor import Tensor
@@ -83,7 +83,7 @@ class MinMaxTensorStatistic(TensorStatistic):
     min_values: Tensor
     max_values: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, MinMaxTensorStatistic):
             return fns.allclose(self.min_values, other.min_values) and fns.allclose(self.max_values, other.max_values)
         return False
@@ -103,7 +103,7 @@ class AbsMaxTensorStatistic(TensorStatistic):
 
     abs_max: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, AbsMaxTensorStatistic):
             return fns.allclose(self.abs_max, other.abs_max)
         return False
@@ -121,7 +121,7 @@ class MeanTensorStatistic(TensorStatistic):
         self.mean_values = mean_values
         self.shape = tuple(shape.tolist())
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, MeanTensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
@@ -147,7 +147,7 @@ class MedianMADTensorStatistic(TensorStatistic):
     median_values: Tensor
     mad_values: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, MedianMADTensorStatistic):
             return fns.allclose(self.median_values, other.median_values) and fns.allclose(
                 self.mad_values, other.mad_values
@@ -166,9 +166,9 @@ class MedianMADTensorStatistic(TensorStatistic):
 class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT: ClassVar[str] = "percentile_vs_values_dict"
 
-    percentile_vs_values_dict: dict[str, Tensor]
+    percentile_vs_values_dict: dict[int, Tensor]
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, PercentileTensorStatistic):
             if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
                 return False
@@ -179,19 +179,21 @@ class PercentileTensorStatistic(TensorStatistic):
         return False
 
     @classmethod
-    def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: Union[dict[str, Any], dict[tuple[str, int], Any]]) -> TensorStatistic:
         if cls.TENSOR_STATISTIC_OUTPUT_KEY in config:
+            config = cast(dict[str, dict[int, Any]], config)
             percentile_vs_values_dict = config[cls.TENSOR_STATISTIC_OUTPUT_KEY]
         else:
             percentile_vs_values_dict = {}
+            config = cast(dict[tuple[str, int], Any], config)
             for (_, percentile), value in config.items():
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
-    def _get_serialized_data(self) -> dict[str, Tensor]:
-        return self.PERCENTILE_VS_VALUE_DICT
+    def _get_serialized_data(self) -> dict[int, Tensor]:  # type: ignore[override]
+        return self.percentile_vs_values_dict
 
-    def load_data(self, loaded_data: dict[str, Tensor]) -> None:
+    def load_data(self, loaded_data: dict[int, Tensor]) -> None:  # type: ignore[override]
         self.percentile_vs_values_dict = loaded_data
 
 
@@ -201,7 +203,7 @@ class RawTensorStatistic(TensorStatistic):
 
     values: Tensor
 
-    def __eq__(self, other: RawTensorStatistic) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, RawTensorStatistic):
             return fns.allclose(self.values, other.values)
         return False
@@ -213,7 +215,7 @@ class HessianTensorStatistic(TensorStatistic):
 
     hessian: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, HessianTensorStatistic):
             return fns.allclose(self.hessian, other.hessian)
         return False
@@ -225,7 +227,7 @@ class MeanVarianceTensorStatistic(TensorStatistic):
 
     mean_variance: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, MeanVarianceTensorStatistic):
             return fns.allclose(self.mean_variance, other.mean_variance)
         return False
@@ -237,7 +239,7 @@ class MaxVarianceTensorStatistic(TensorStatistic):
 
     max_variance: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, MaxVarianceTensorStatistic):
             return fns.allclose(self.max_variance, other.max_variance)
         return False
@@ -249,7 +251,7 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
 
     mean_magnitude: Tensor
 
-    def __eq__(self, other: TensorStatistic):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, MeanMagnitudeTensorStatistic):
             return fns.allclose(self.mean_magnitude, other.mean_magnitude)
         return False
@@ -261,14 +263,16 @@ class WCTensorStatistic(TensorStatistic):
     SHAPE_STAT = "shape_values"
 
     mean_values: list[Tensor]
-    shape_values: list[tuple[Tensor]]
+    shape_values: list[tuple[Tensor, ...]]
 
     def __eq__(self, other: Any) -> bool:
-        shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))
+        if not isinstance(other, WCTensorStatistic):
+            return False
+        shapes_equal = all(self.shape_values[i] == other.shape_values[i] for i in range(len(self.mean_values)))
         if not shapes_equal:
             return False
         mean_values_equal = all(
-            self.tensor_eq(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
+            fns.allclose(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
         )
         return mean_values_equal
 
@@ -291,9 +295,14 @@ class WCTensorStatistic(TensorStatistic):
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> TensorStatistic:
-        mean_values, shape_values = None, None
         if cls.MEAN_STAT in config and config[cls.MEAN_STAT] is not None:
             mean_values = [fns.squeeze(it) for it in config[cls.MEAN_STAT]]
+        else:
+            mean_values = []
+
         if cls.SHAPE_STAT in config and config[cls.SHAPE_STAT] is not None:
             shape_values = [tuple(it.tolist()) for it in config[cls.SHAPE_STAT]]
+        else:
+            shape_values = []
+
         return cls(mean_values=mean_values, shape_values=shape_values)

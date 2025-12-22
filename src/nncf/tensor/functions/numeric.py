@@ -464,7 +464,7 @@ def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
 @tensor_dispatcher
 def quantile(
     a: Tensor,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> Tensor:

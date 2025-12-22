@@ -287,7 +287,7 @@ def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
 @numeric.quantile.register
 def quantile(
     a: torch.Tensor,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:

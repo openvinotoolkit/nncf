@@ -242,7 +242,7 @@ def _get_collection_without_reduction(
     """
     tensor_collector = TensorCollector(statistic_cls)
     reducer = RawReducer()
-    aggregation_axes = list(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
+    aggregation_axes = tuple(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
     aggregator = aggregator_cls(
         aggregation_axes=aggregation_axes,
         window_size=window_size,
@@ -277,7 +277,7 @@ def get_mean_percentile_statistic_collector(
     """
     tensor_collector = TensorCollector(_get_wrapped_percentile_tensor_statistic(target_shape=scale_shape))
     quantiles_to_collect = np.true_divide(percentiles_to_collect, 100)
-    reducer = QuantileReducer(axes=reduction_axes, quantile=quantiles_to_collect)
+    reducer = QuantileReducer(axes=reduction_axes, quantile=quantiles_to_collect.tolist())
     for output_port_id, p in enumerate(percentiles_to_collect):
         aggregator = MeanAggregator(
             aggregation_axes=aggregation_axes,
