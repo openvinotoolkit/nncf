@@ -127,7 +127,7 @@ def extract_conv(
     """
     Extracts a convolutional layer from an NNCF graph and constructs an ExtractedFunc module.
 
-    :param model: The NNCF network containing the layer.
+    :param model: The nn.Module containing the layer.
     :param graph: The NNCF graph.
     :param input_nodes: The name of input node.
     :param output_nodes: The name of output node.
@@ -189,17 +189,66 @@ def extract_conv(
     return nn.Sequential(conv_module, bn_module)
 
 
+def extract_linear(
+    model: nn.Module,
+    graph: PTNNCFGraph,
+    input_node: NNCFNode,
+    output_node: NNCFNode,
+) -> Optional[nn.Module]:
+    """
+    Extracts a linear layer from an NNCF graph and constructs an ExtractedFunc module.
+
+    :param model: The nn.Module containing the layer.
+    :param graph: The NNCF graph.
+    :param input_nodes: The name of input node.
+    :param output_nodes: The name of output node.
+    :return: The extracted convolutional layer as an ExtractedFunc module.
+    """
+    if input_node != output_node:
+        msg = "Only one input and output node supported."
+        raise nncf.InternalError(msg)
+
+    layer_attrs = input_node.layer_attributes
+
+    if not isinstance(layer_attrs, PT2OpLayerAttributes):
+        msg = f"Expected PT2OpLayerAttributes for input_node.layer_attributes, actual: {type(layer_attrs)}"
+        raise nncf.InternalError(msg)
+
+    weight_node = get_const_node(input_node, 1, graph)
+    if weight_node is None:
+        msg = "Weight node not found for {input_node}"
+        raise nncf.InternalError(msg)
+    weight = get_const_data(weight_node, model)
+
+    hook_storage = get_hook_storage(model)
+    with torch.no_grad():
+        # Calculate weight after execution all hook fro weight data
+        weight = hook_storage.execute_post_function_hooks(weight_node.node_name, 0, weight)
+        weight = hook_storage.execute_pre_function_hooks(input_node.node_name, 1, weight)
+
+    bias_node = get_const_node(input_node, 2, graph)
+    bias = get_const_data(bias_node, model) if bias_node is not None else None
+
+    layer_kwarg = {
+        "weight": weight,
+        "bias": bias,
+    }
+    linear_module = ExtractedFunc(layer_attrs.func, layer_kwarg)
+    return linear_module
+
+
 def extract_model(
     model: nn.Module, graph: PTNNCFGraph, input_nodes: list[str], output_nodes: list[str]
 ) -> Optional[nn.Module]:
     """
-    Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.
+    Extracts a submodule from a given nn.Module containing only the nodes from the input to the output node.
 
     Supported subgraph:
       - Conv
       - Conv + BatchNorm
+      - Linear
 
-    :param model: The NNCF network to extract the submodule from.
+    :param model: The nn.Module to extract the submodule from.
     :param input_nodes: List containing names of the input nodes for the submodule.
     :param output_nodes: List containing names of the output nodes for the submodule.
     :return: An nn.Module containing the extracted submodel, or None if extraction is not supported.
@@ -213,6 +262,9 @@ def extract_model(
 
     if input_node.metatype in CONV_METATYPES:
         return extract_conv(model, graph, input_node, output_node)
+
+    if input_node.metatype is om.PTLinearMetatype:
+        return extract_linear(model, graph, input_node, output_node)
 
     nncf_logger.debug(f"Can`t extract module for {input_node.node_name}")
     return None

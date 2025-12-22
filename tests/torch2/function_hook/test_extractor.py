@@ -48,6 +48,11 @@ TEST_PARAMS = (
         "conv/conv2d/0",
         "conv/conv2d/0",
     ),
+    (
+        helpers.LinearModel,
+        "linear/linear/0",
+        "linear/linear/0",
+    ),
 )
 
 

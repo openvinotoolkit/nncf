@@ -441,6 +441,7 @@ class PTLinearMetatype(PTOperatorMetatype):
     output_channel_axis = -1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()

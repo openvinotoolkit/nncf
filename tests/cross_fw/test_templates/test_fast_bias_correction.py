@@ -22,6 +22,7 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.cross_fw.test_templates.helpers import ConvBNTestModel
 from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import LinearModel
 from tests.cross_fw.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -108,6 +109,7 @@ class TemplateTestFBCAlgorithm:
         (
             (ConvTestModel, [0.0288348, 1.0838453]),
             (ConvBNTestModel, [0.08396978, 1.1676897]),
+            (LinearModel, [0.9999, 1.0990]),
         ),
     )
     def test_update_bias(self, model_cls, ref_bias, tmpdir):
