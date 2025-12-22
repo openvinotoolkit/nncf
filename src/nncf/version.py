@@ -10,6 +10,3 @@
 # limitations under the License.
 
 __version__ = "3.0.0"
-
-
-BKC_TORCH_SPEC = "==2.9.*"
