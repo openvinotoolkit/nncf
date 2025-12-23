@@ -203,6 +203,7 @@ inproceedings
 inputless
 interp
 ioff
+ipynb
 iterval
 jinjie
 junitxml
