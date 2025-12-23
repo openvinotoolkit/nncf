@@ -1133,7 +1133,7 @@ class WeightCompression(Algorithm):
         )
         return transformed_model
 
-    def _get_activation_node_port_and_channel(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
+    def _get_activation_node_port_and_channel(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int, int]:
         """
         This method returns the activation layer, corresponding port id and channel axis for the given node.
 

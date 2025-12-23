@@ -13,7 +13,6 @@ from typing import Callable, Iterable, Optional
 import openvino as ov
 from openvino import opset13 as opset
 
-import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
