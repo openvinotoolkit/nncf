@@ -13,13 +13,13 @@ import os
 import re
 import subprocess
 import tarfile
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from urllib.request import urlretrieve
 
 import torch
-from anomalib import TaskType
-from anomalib.data import MVTec
+from anomalib.data import MVTecAD
 from anomalib.data.utils import DownloadInfo
 from anomalib.data.utils import download
 from anomalib.deploy import ExportType
@@ -28,13 +28,15 @@ from anomalib.models import Stfpm
 
 import nncf
 
+warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
+
 HOME_PATH = Path.home()
 DATASET_PATH = HOME_PATH / ".cache" / "nncf" / "datasets" / "mvtec"
 CHECKPOINT_PATH = HOME_PATH / ".cache" / "nncf" / "models" / "anomalib"
 ROOT = Path(__file__).parent.resolve()
 FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
 INT8_RESULTS_ROOT = ROOT / "results" / "int8"
-CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec.ckpt"
+CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_2.ckpt"
 USE_PRETRAINED = True
 # Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
 DOWNLOAD_INFO = DownloadInfo(
@@ -60,6 +62,15 @@ def safe_extract(tar_path: Path, extract_path: Path) -> None:
                 tar.extract(member, path=extract_path)
 
 
+# Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
+DOWNLOAD_INFO = DownloadInfo(
+    name="mvtecad",
+    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f283/"
+    "download/420938113-1629960298/mvtec_anomaly_detection.tar.xz",
+    hashsum="cf4313b13603bec67abb49ca959488f7eedce2a9f7795ec54446c649ac98cd3d",
+)
+
+
 def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
     root.mkdir(parents=True, exist_ok=True)
     downloaded_file_path = root / info.url.split("/")[-1]
@@ -74,10 +85,12 @@ def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
     downloaded_file_path.unlink()
 
 
-def create_dataset(root: Path) -> MVTec:
-    # if not root.exists():
-    download_and_extract(root, DOWNLOAD_INFO)
-    return MVTec(root)
+def create_dataset(root: Path) -> MVTecAD:
+    if not root.exists():
+        download_and_extract(root, DOWNLOAD_INFO)
+    data = MVTecAD(root, category="bottle")
+    data.setup()
+    return data
 
 
 def run_benchmark(model_path: Path, shape: list[int]) -> float:
@@ -119,7 +132,7 @@ def main():
     datamodule = create_dataset(root=DATASET_PATH)
 
     # Create an engine for the original model
-    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=FP32_RESULTS_ROOT, devices=1)
+    engine = Engine(default_root_dir=FP32_RESULTS_ROOT, devices=1)
     if USE_PRETRAINED:
         # Load the pretrained checkpoint
         CHECKPOINT_PATH.mkdir(parents=True, exist_ok=True)
@@ -153,7 +166,7 @@ def main():
     quantized_model.model = quantized_inference_model
 
     # Create engine for the quantized model
-    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=INT8_RESULTS_ROOT, max_epochs=1, devices=1)
+    engine = Engine(default_root_dir=INT8_RESULTS_ROOT, max_epochs=5, devices=1)
 
     # Validate the quantized model
     print("Test results for INT8 model after PTQ:")
@@ -162,7 +175,7 @@ def main():
     ###############################################################################
     # Step 3: Fine tune the quantized model
     print(os.linesep + "[Step 3] Fine tune the quantized model")
-
+    quantized_model.train()
     engine.fit(model=quantized_model, datamodule=datamodule)
     print("Test results for INT8 model after QAT:")
     int8_test_results = engine.test(model=quantized_model, datamodule=datamodule)
@@ -172,12 +185,22 @@ def main():
     print(os.linesep + "[Step 4] Export models")
 
     # Export FP32 model to OpenVINO™ IR
-    fp32_ir_path = engine.export(model=model, export_type=ExportType.OPENVINO, export_root=FP32_RESULTS_ROOT)
+    fp32_ir_path = engine.export(
+        model=model,
+        export_type=ExportType.OPENVINO,
+        export_root=FP32_RESULTS_ROOT,
+        onnx_kwargs={"dynamo": False},
+    )
     print(f"Original model path: {fp32_ir_path}")
     fp32_size = get_model_size(fp32_ir_path)
 
     # Export INT8 model to OpenVINO™ IR
-    int8_ir_path = engine.export(model=quantized_model, export_type=ExportType.OPENVINO, export_root=INT8_RESULTS_ROOT)
+    int8_ir_path = engine.export(
+        model=quantized_model,
+        export_type=ExportType.OPENVINO,
+        export_root=INT8_RESULTS_ROOT,
+        onnx_kwargs={"dynamo": False},
+    )
     print(f"Quantized model path: {int8_ir_path}")
     int8_size = get_model_size(int8_ir_path)
 
