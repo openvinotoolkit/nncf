@@ -47,7 +47,13 @@ class ForwardWithHooks:
         return self
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        with FunctionHookMode(model=self.model, hook_storage=get_hook_storage(self.model)) as ctx:
+        hook_storage = get_hook_storage(self.model)
+
+        if hook_storage.is_empty():
+            # If no hooks are present, run model without overhead of FunctionHookMode
+            return self.orig_forward(*args, **kwargs)
+
+        with FunctionHookMode(model=self.model, hook_storage=hook_storage) as ctx:
             args, kwargs = ctx.process_model_inputs(args, kwargs)
             outputs = self.orig_forward(*args, **kwargs)
             outputs = ctx.process_model_outputs(outputs)

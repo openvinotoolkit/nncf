@@ -96,70 +96,68 @@ disable_error_code = ["empty-body", "no-any-return"]
 
 [tool.ruff]
 line-length = 120
-exclude = [
-    "src/nncf/torch/function_hook/handle_inner_functions.py"
-]
+exclude = ["src/nncf/torch/function_hook/handle_inner_functions.py"]
 
 [tool.ruff.lint]
 preview = true
 ignore = [
-    "E201", # whitespace-after-open-bracket
-    "E203", # whitespace-before-punctuation
-    "E231", # missing-whitespace
-    "E251", # unexpected-spaces-around-keyword-parameter-equals
-    "E731", # lambda-assignment
-    "SIM108", # if-else-block-instead-of-if-exp
-    "SIM110", # reimplemented-builtin
-    "SIM117", # multiple-with-statements
-    "SIM103", # needless-bool
-    "NPY002", # numpy-legacy-random
-    "UP007", # non-pep604-annotation-union
-    "UP035", # deprecated-import
-    "UP038", # non-pep604-isinstance
-    "UP045", # non-pep604-annotation-optional
-    "D100", # undocumented-public-module
-    "D101", # undocumented-public-class
-    "D102", # undocumented-public-method
-    "D103", # undocumented-public-function
-    "D104", # undocumented-public-package
-    "D105", # undocumented-magic-method
-    "D106", # undocumented-public-nested-class
-    "D107", # undocumented-public-init
-    "D200", # unnecessary-multiline-docstring
-    "D203", # incorrect-blank-line-before-class
-    "D205", # missing-blank-line-after-summary
-    "D212", # multi-line-summary-first-line
-    "D400", # missing-trailing-period
-    "D401", # non-imperative-mood
-    "D402", # signature-in-docstring
-    "D404", # docstring-starts-with-this
-    "D413", # missing-blank-line-after-last-section
-    "D415", # missing-terminal-punctuation
-    "D417", # undocumented-param
+    "E201",    # whitespace-after-open-bracket
+    "E203",    # whitespace-before-punctuation
+    "E231",    # missing-whitespace
+    "E251",    # unexpected-spaces-around-keyword-parameter-equals
+    "E731",    # lambda-assignment
+    "SIM108",  # if-else-block-instead-of-if-exp
+    "SIM110",  # reimplemented-builtin
+    "SIM117",  # multiple-with-statements
+    "SIM103",  # needless-bool
+    "NPY002",  # numpy-legacy-random
+    "UP007",   # non-pep604-annotation-union
+    "UP035",   # deprecated-import
+    "UP038",   # non-pep604-isinstance
+    "UP045",   # non-pep604-annotation-optional
+    "D100",    # undocumented-public-module
+    "D101",    # undocumented-public-class
+    "D102",    # undocumented-public-method
+    "D103",    # undocumented-public-function
+    "D104",    # undocumented-public-package
+    "D105",    # undocumented-magic-method
+    "D106",    # undocumented-public-nested-class
+    "D107",    # undocumented-public-init
+    "D200",    # unnecessary-multiline-docstring
+    "D203",    # incorrect-blank-line-before-class
+    "D205",    # missing-blank-line-after-summary
+    "D212",    # multi-line-summary-first-line
+    "D400",    # missing-trailing-period
+    "D401",    # non-imperative-mood
+    "D402",    # signature-in-docstring
+    "D404",    # docstring-starts-with-this
+    "D413",    # missing-blank-line-after-last-section
+    "D415",    # missing-terminal-punctuation
+    "D417",    # undocumented-param
     "PERF203", # try-except-in-loop
     "PERF401", # manual-list-comprehension
     "PERF403", # manual-dict-comprehension
-    "B009", # get-attr-with-constant
-    "B010", # set-attr-with-constant
-    "B905", # zip-without-explicit-strict
-    "RET502", # implicit-return-value
-    "RET503", # implicit-return
-    "RET504", # unnecessary-assign
+    "B009",    # get-attr-with-constant
+    "B010",    # set-attr-with-constant
+    "B905",    # zip-without-explicit-strict
+    "RET502",  # implicit-return-value
+    "RET503",  # implicit-return
+    "RET504",  # unnecessary-assign
 ]
 select = [
     "CPY001", # copyright check
-    "D", # pydocstyle
-    "E", # pycodestyle rules
-    "EM",  # flake8-errmsg
-    "F", # pyflakes rules
-    "I",  # isort
-    "INP", # flake8-no-pep420
-    "ISC", # flake8-implicit-str-concat
-    "NPY", # numpy rules
-    "UP", # pyupgrade
-    "PERF", # perflint
-    "B", # flake8-bugbear
-    "RET", # flake8-return
+    "D",      # pydocstyle
+    "E",      # pycodestyle rules
+    "EM",     # flake8-errmsg
+    "F",      # pyflakes rules
+    "I",      # isort
+    "INP",    # flake8-no-pep420
+    "ISC",    # flake8-implicit-str-concat
+    "NPY",    # numpy rules
+    "UP",     # pyupgrade
+    "PERF",   # perflint
+    "B",      # flake8-bugbear
+    "RET",    # flake8-return
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -197,6 +195,8 @@ pythonpath = "."
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]
 skips = [
-    "B101",   # assert_used
-    "B404" ,  # import_subprocess
+    "B101", # assert_used
+    "B404", # import_subprocess
+    "B614", # pytorch_load
+    "B615", # huggingface_unsafe_download
 ]
