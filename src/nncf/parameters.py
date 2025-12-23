@@ -218,6 +218,18 @@ class QuantizationMode(StrEnum):
 
 @api(canonical_alias="nncf.PruneMode")
 class PruneMode(StrEnum):
+    """
+    Enumeration for different pruning modes in neural network compression.
+
+    :param UNSTRUCTURED_MAGNITUDE_LOCAL: Unstructured magnitude-based pruning with local importance calculation.
+        Weight importance is computed independently for each tensor.
+    :param UNSTRUCTURED_MAGNITUDE_GLOBAL: Unstructured magnitude-based pruning with **global** importance calculation.
+        Weight importance is computed across all tensors selected for pruning.
+    :param UNSTRUCTURED_REGULARIZATION_BASED: Unstructured pruning based on trainable regularization masks.
+        Trainable masks are introduced for the weights and optimized during training.
+        This mode requires an additional regularization loss `RBLoss`.
+    """
+
     UNSTRUCTURED_MAGNITUDE_LOCAL = auto()
     UNSTRUCTURED_MAGNITUDE_GLOBAL = auto()
     UNSTRUCTURED_REGULARIZATION_BASED = auto()
