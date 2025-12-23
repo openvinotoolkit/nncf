@@ -120,7 +120,7 @@ class ModelPruningStatistic:
         return text
 
 
-@api(canonical_alias="nncf.batch_norm_adaptation")
+@api(canonical_alias="nncf.pruning_statistic")
 def pruning_statistic(model: TModel) -> ModelPruningStatistic:
     """
     Collects and returns pruning statistics for the given model.

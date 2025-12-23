@@ -46,11 +46,12 @@ For more information about NNCF, see:
 
 ### Training-Time Compression Algorithms
 
-| Compression algorithm                                                                                                                         | PyTorch      |
-| :-------------------------------------------------------------------------------------------------------------------------------------------- | :----------: |
-| [Quantization Aware Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported    |
-| [Weight-Only Quantization Aware Training with LoRA and NLS](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    |
-| [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
+| Compression algorithm                                                                                                                         | PyTorch   |
+| :-------------------------------------------------------------------------------------------------------------------------------------------- | :-------: |
+| [Quantization Aware Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported |
+| [Weight-Only Quantization Aware Training with LoRA and NLS](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported |
+| [Mixed-Precision Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported |
+| [Pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/pruning/Usage.md)                                                                           | Supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
 - Common interface for compression methods.
