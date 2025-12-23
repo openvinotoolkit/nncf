@@ -166,4 +166,4 @@ Key features:
 - Visualize activation distributions and comparison results with matplotlib
 - Extensible architecture allowing registration of custom statistics, comparators, and visualizers
 
-See [tiny_llama_profiling.ipynb](profiler/tiny_llama_profiling.ipynb) for a complete usage example demonstrating how to profile an OpenVino model, collect activation statistics, and compare FP32 vs INT8 quantized variants.
+See [nncf_profiler_example.ipynb](profiler/nncf_profiler_example.ipynb) for a complete usage example demonstrating how to profile an OpenVino model, collect activation statistics, and compare FP32 vs INT8 quantized variants.

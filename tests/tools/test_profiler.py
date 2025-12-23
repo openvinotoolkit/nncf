@@ -17,9 +17,9 @@ import nbformat
 from nbclient import NotebookClient
 
 
-def test_tiny_llama_profiling_notebook():
-    """Test that the tiny_llama_profiling.ipynb notebook runs successfully."""
-    notebook_path = Path(__file__).parent.parent.parent / "tools" / "profiler" / "tiny_llama_profiling.ipynb"
+def test_nncf_profiling_notebook():
+    """Test that the nncf_profiler_example.ipynb notebook runs successfully."""
+    notebook_path = Path(__file__).parent.parent.parent / "tools" / "profiler" / "nncf_profiler_example.ipynb"
     profiler_dir = Path(__file__).parent.parent.parent / "tools" / "profiler"
 
     # Check if notebook exists
