@@ -293,8 +293,8 @@ class NNCFProfiler:
 
         if len(target_ops) == 0:
             msg = f"No layers found matching pattern: {pattern}"
-            raise ValueError(msg)       
-            
+            raise ValueError(msg)
+
         # Register statistic collection points and collect statistics
         statistic_points = self._get_statistic_points(model, graph, target_ops, num_samples)
         statistics_aggregator.register_statistic_points(statistic_points)

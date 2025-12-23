@@ -24,14 +24,14 @@ def test_nncf_profiling_notebook():
 
     # Check if notebook exists
     assert notebook_path.exists(), f"Notebook not found at {notebook_path}"
-    
+
     # Read the notebook
     with open(notebook_path) as f:
         nb = nbformat.read(f, as_version=4)
-    
+
     # Execute the notebook using nbclient with a temporary IPython config directory
     with tempfile.TemporaryDirectory() as tmpdir:
-        os.environ['IPYTHONDIR'] = tmpdir
+        os.environ["IPYTHONDIR"] = tmpdir
         # Save original working directory
         original_cwd = os.getcwd()
         try:
@@ -42,5 +42,5 @@ def test_nncf_profiling_notebook():
         finally:
             # Clean up: restore working directory and environment variable
             os.chdir(original_cwd)
-            if 'IPYTHONDIR' in os.environ:
-                del os.environ['IPYTHONDIR']
+            if "IPYTHONDIR" in os.environ:
+                del os.environ["IPYTHONDIR"]
