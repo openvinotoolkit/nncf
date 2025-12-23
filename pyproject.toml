@@ -169,6 +169,7 @@ extend-select = [
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
 "!src/nncf/**.py" = ["INP", "D", "B"]
+"*.ipynb" = ["CPY001"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
