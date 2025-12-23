@@ -49,9 +49,9 @@ TEST_PARAMS = (
         "conv/conv2d/0",
     ),
     (
-        helpers.LinearModel,
-        "linear/linear/0",
-        "linear/linear/0",
+        helpers.FCTestModel,
+        "fc/linear/0",
+        "fc/linear/0",
     ),
 )
 

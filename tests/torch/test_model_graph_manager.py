@@ -118,7 +118,7 @@ class TestManagerForOriginalModels:
         "ConvBiasBNTestModel": True,
         "ConvBNTestModel": True,
         "ConvTestModel": True,
-        "FCTestModel": False,
+        "FCTestModel": True,
         "MultipleConvTestModel": True,
         "CustomConvTestModel": True,
         "CustomConvBNTestModel": True,

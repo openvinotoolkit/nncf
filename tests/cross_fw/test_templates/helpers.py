@@ -176,20 +176,6 @@ class FCTestModel(nn.Module):
         return x
 
 
-class LinearModel(nn.Module):
-    INPUT_SIZE = [1, 3]
-
-    def __init__(self):
-        super().__init__()
-        self.linear = nn.Linear(3, 2)
-        self.linear.weight.data = torch.Tensor([[0.1, 0.2, 0.3], [0.3, -0.1, 0.2]])
-        self.linear.bias.data = torch.Tensor([1.0, 1.1])
-
-    def forward(self, x):
-        x = self.linear(x)
-        return x
-
-
 class MultipleConvTestModel(nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 
