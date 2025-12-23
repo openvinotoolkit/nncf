@@ -303,14 +303,14 @@ class CodebookEstimation:
 
         codebook, _, variants = weights_clusterization_k_means(norm_weight, importance)
 
-        dst_type = TensorDataType.float16
+        dst_type = TensorDataType.f8e4m3
 
         best_codebook = codebook.as_openvino_tensor().astype(dst_type)
 
         diff = float("inf")
 
-        variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=dst_type)
-        variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=dst_type)
+        variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=TensorDataType.float16)
+        variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=TensorDataType.float16)
 
         coeffs = [fns.mean(fns.abs(X)).item() for X in Xs]
 
