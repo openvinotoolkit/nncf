@@ -38,6 +38,29 @@ FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
 INT8_RESULTS_ROOT = ROOT / "results" / "int8"
 CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_2.ckpt"
 USE_PRETRAINED = True
+# Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
+DOWNLOAD_INFO = DownloadInfo(
+    name="mvtecad",
+    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f283/"
+    "download/420938113-1629960298/mvtec_anomaly_detection.tar.xz",
+    hashsum="cf4313b13603bec67abb49ca959488f7eedce2a9f7795ec54446c649ac98cd3d",
+)
+
+
+def safe_extract(tar_path: Path, extract_path: Path) -> None:
+    extract_path = Path(extract_path).resolve()
+    with tarfile.open(tar_path) as tar:
+        for member in tar.getmembers():
+            member_path = extract_path / member.name
+            member_path_resolved = member_path.resolve()
+            # Prevent path traversal
+            if extract_path not in member_path_resolved.parents and member_path_resolved != extract_path:
+                msg = f"Unsafe tar file member: {member.name}"
+                raise RuntimeError(msg)
+            if member.isfile():
+                member_path.parent.mkdir(parents=True, exist_ok=True)
+                tar.extract(member, path=extract_path)
+
 
 # Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
 DOWNLOAD_INFO = DownloadInfo(
@@ -57,8 +80,7 @@ def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
     print("Checking the hash of the downloaded file.")
     download.check_hash(downloaded_file_path, info.hashsum)
     print(f"Extracting the {info.name} dataset.")
-    with tarfile.open(downloaded_file_path) as tar_file:
-        tar_file.extractall(root)
+    safe_extract(downloaded_file_path, root)
     print("Cleaning up files.")
     downloaded_file_path.unlink()
 
