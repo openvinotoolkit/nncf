@@ -20,7 +20,6 @@ from torch import nn
 from torch.nn import Module
 
 import nncf
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import is_windows
@@ -271,46 +270,6 @@ def default_distributed_unwrapper(model: nn.Module):
     if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
         return model.module
     return model
-
-
-def rename_legacy_names_in_state_dict(
-    state_dict_to_load: dict[str, Any], legacy_names: list[str], legacy_name: str, new_name: str
-):
-    for name in legacy_names:
-        tensor = state_dict_to_load.pop(name)
-        new_key = name.replace(legacy_name, new_name) if new_name not in name else name
-        state_dict_to_load[new_key] = tensor
-
-    if legacy_names:
-        warning_deprecated(
-            "Legacy Batch Norm layer names was detected in checkpoint model state dict."
-            f" All occurrences of `{legacy_name}` in nodes names was replaced by `{new_name}`"
-        )
-
-
-LEGACY_VS_NEW_BN_MAP = {
-    "BatchNorm1d": "NNCFBatchNorm1d",
-    "BatchNorm2d": "NNCFBatchNorm2d",
-    "BatchNorm3d": "NNCFBatchNorm3d",
-    "NNCFBatchNorm": "NNCFBatchNorm2d",
-    "ConvBNActivation": "Conv2dNormActivation",
-}
-
-
-def maybe_convert_legacy_names_in_model_state(state_dict_to_load: dict[str, Any]) -> None:
-    """
-    Convert legacy layer names in compressed model state dict in case such names exist.
-
-    :param state_dict_to_load: State dict to convert.
-    """
-    legacy_names = LEGACY_VS_NEW_BN_MAP.keys()
-    matched_legacy_names = {name: [] for name in legacy_names}
-    for name_in_state_dict in state_dict_to_load:
-        matched = filter(lambda x: x in name_in_state_dict, legacy_names)
-        for legacy_name in matched:
-            matched_legacy_names[legacy_name].append(name_in_state_dict)
-    for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-        rename_legacy_names_in_state_dict(state_dict_to_load, matched_legacy_names[old_name], old_name, new_name)
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
