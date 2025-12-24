@@ -33,8 +33,7 @@ pruned_model = nncf.prune(
 )
 ```
 
-To get more accurate model recommend fine tune the model on several epochs or use
-batch norm adaptation.
+To get a more accurate model, it is recommended to fine-tune the model for several epochs or use batch norm adaptation.
 
 #### Batch Norm Adaptation after Pruning
 
@@ -119,7 +118,7 @@ print(stat)
 ```
 
 > [!NOTE]
-> Statistics about the pruning process can not be gathered after use `nncf.strip`
+> Statistics about the pruning process cannot be gathered after using `nncf.strip`
 
 ## Strip
 
