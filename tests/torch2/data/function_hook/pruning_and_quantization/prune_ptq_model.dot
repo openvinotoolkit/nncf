@@ -1,0 +1,23 @@
+strict digraph {
+x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"__nncf_hooks.post_hooks.x__0.0._scale_param_storage" [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"post_hook__x__0[0]/symmetric_quantize/0" [id=2, type="symmetric_quantize", metatype=UnknownMetatype];
+"conv.weight" [id=3, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.post_hooks.conv:weight__0.0.binary_mask" [id=4, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"conv/post_hook__conv:weight__0[0]/apply_magnitude_binary_mask/0" [id=5, type="apply_magnitude_binary_mask", metatype=UnknownMetatype];
+"conv.bias" [id=6, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.pre_hooks.conv/conv2d/0__1.0._scale_param_storage" [id=7, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"conv/pre_hook__conv-conv2d-0__1[0]/symmetric_quantize/0" [id=8, type="symmetric_quantize", metatype=UnknownMetatype];
+"conv/conv2d/0" [id=9, type=conv2d, metatype=PTConv2dMetatype];
+output [id=10, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+x -> "post_hook__x__0[0]/symmetric_quantize/0" [dtype=float, shape="(1, 1, 4, 4)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.x__0.0._scale_param_storage" -> "post_hook__x__0[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"post_hook__x__0[0]/symmetric_quantize/0" -> "conv/conv2d/0" [dtype=float, shape="(1, 1, 4, 4)", out_port_id=0, in_port_id=0];
+"conv.weight" -> "conv/post_hook__conv:weight__0[0]/apply_magnitude_binary_mask/0" [dtype=float, shape="(2, 1, 2, 2)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.conv:weight__0.0.binary_mask" -> "conv/post_hook__conv:weight__0[0]/apply_magnitude_binary_mask/0" [dtype=int, shape="(2, 1, 2, 2)", out_port_id=0, in_port_id=1];
+"conv/post_hook__conv:weight__0[0]/apply_magnitude_binary_mask/0" -> "conv/pre_hook__conv-conv2d-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(2, 1, 2, 2)", out_port_id=0, in_port_id=0];
+"conv.bias" -> "conv/conv2d/0" [dtype=float, shape="(2,)", out_port_id=0, in_port_id=2];
+"__nncf_hooks.pre_hooks.conv/conv2d/0__1.0._scale_param_storage" -> "conv/pre_hook__conv-conv2d-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(2, 1, 1, 1)", out_port_id=0, in_port_id=4];
+"conv/pre_hook__conv-conv2d-0__1[0]/symmetric_quantize/0" -> "conv/conv2d/0" [dtype=float, shape="(2, 1, 2, 2)", out_port_id=0, in_port_id=1];
+"conv/conv2d/0" -> output [dtype=float, shape="(1, 2, 3, 3)", out_port_id=0, in_port_id=0];
+}

@@ -153,7 +153,7 @@ def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel) -> T
 
 
 @torch.no_grad()
-def apply_compression_in_place(model: TModel, hook_types: tuple[type]) -> TModel:
+def apply_compression_in_place(model: TModel, hook_types: tuple[type[Any], ...]) -> TModel:
     """
     Applies NNCF module in-place to the weights:
         (weights + NNCF module) -> (in-place compressed weights)
