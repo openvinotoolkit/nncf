@@ -12,7 +12,7 @@
 import torch
 
 from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
-from nncf.torch.function_hook.pruning.magnitude.modules import apply_magnitude_sparsity_binary_mask
+from nncf.torch.function_hook.pruning.magnitude.modules import apply_magnitude_binary_mask
 
 
 def test_apply_magnitude_sparsity_binary_mask():
@@ -20,7 +20,7 @@ def test_apply_magnitude_sparsity_binary_mask():
     mask = torch.tensor([0, 1, 0, 1], dtype=torch.float32)
     expected_output = torch.tensor([0.0, 0.5, 0.0, 0.9])
 
-    output = apply_magnitude_sparsity_binary_mask(input_tensor, mask)
+    output = apply_magnitude_binary_mask(input_tensor, mask)
     assert torch.equal(output, expected_output)
 
 

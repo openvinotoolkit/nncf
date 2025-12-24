@@ -1240,6 +1240,11 @@ QUANTIZE_NODE_TYPES = [
     "dequantize_per_channel",
 ]
 
+PRUNING_NODE_TYPES = [
+    "apply_magnitude_binary_mask",
+    "apply_rb_binary_mask",
+]
+
 # These metatypes mix outputs for different samples into one axis.
 # If reducers and aggregators collect statistics at the output of the following operations,
 # assuming that 0-axis is batch axis, they get only 1 value instead of batch_size values.

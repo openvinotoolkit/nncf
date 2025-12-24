@@ -58,7 +58,9 @@ def strip_model(model: TModel, example_input: Any = None, strip_format: StripFor
     elif strip_format == StripFormat.DQ:
         model = replace_quantizer_to_compressed_weight_with_decompressor(model)
     elif strip_format == StripFormat.IN_PLACE:
-        model = apply_compression_in_place(model)
+        model = apply_compression_in_place(model, (SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor))
+    elif strip_format == StripFormat.PRUNE_IN_PLACE:
+        model = apply_compression_in_place(model, (RBPruningMask, UnstructuredPruningMask))
     else:
         msg = f"Unsupported strip format: {strip_format}"
         raise nncf.ParameterNotSupportedError(msg)
@@ -151,21 +153,19 @@ def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel) -> T
 
 
 @torch.no_grad()
-def apply_compression_in_place(model: TModel) -> TModel:
+def apply_compression_in_place(model: TModel, hook_types: tuple[type]) -> TModel:
     """
     Applies NNCF module in-place to the weights:
         (weights + NNCF module) -> (in-place compressed weights)
 
     :param model: Compressed model
+    :param hook_types: Types of hooks to be applied in-place.
     :return: The modified NNCF network.
     """
     hook_storage = get_hook_storage(model)
     hooks_to_delete = []
     for hook_name, hook_module in hook_storage.named_hooks():
-        if not isinstance(
-            hook_module,
-            (RBPruningMask, UnstructuredPruningMask, SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor),
-        ):
+        if not isinstance(hook_module, hook_types):
             continue
 
         hook_module.eval()
