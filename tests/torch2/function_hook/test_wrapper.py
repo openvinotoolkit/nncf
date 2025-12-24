@@ -114,7 +114,7 @@ def test_wrapper(model_cls, modifier_type):
     torch.testing.assert_close(ret, wrapped_ret)
 
 
-def test_multiply_wrapper():
+def test_wrap_already_wrapped_model():
     model = helpers.ConvModel().eval()
     wrapped = wrap_model(model)
 

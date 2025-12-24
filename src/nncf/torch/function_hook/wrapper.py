@@ -193,7 +193,7 @@ class ReplicateForDataParallel:
 def wrap_model(model: TModel) -> TModel:
     """
     Wraps a nn.Module to inject custom behavior into the forward pass and replication process.
-    If model already wrapped return as it.
+    If the model is already wrapped, return it unchanged.
 
     This function modifies the given model by:
     1. Replacing the model's `forward` method with a wrapped version (`ForwardWithHooks`) that allows
