@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from dataclasses import fields
-from typing import Any, ClassVar, Union, cast
+from typing import Any, ClassVar, cast
 
 import nncf
 from nncf.tensor import Tensor
@@ -179,15 +179,14 @@ class PercentileTensorStatistic(TensorStatistic):
         return False
 
     @classmethod
-    def from_config(cls, config: Union[dict[str, Any], dict[tuple[str, int], Any]]) -> TensorStatistic:
+    def from_config(cls, config: dict[Any, Any]) -> TensorStatistic:
         if cls.TENSOR_STATISTIC_OUTPUT_KEY in config:
-            config = cast(dict[str, dict[int, Any]], config)
-            percentile_vs_values_dict = config[cls.TENSOR_STATISTIC_OUTPUT_KEY]
-        else:
-            percentile_vs_values_dict = {}
-            config = cast(dict[tuple[str, int], Any], config)
-            for (_, percentile), value in config.items():
-                percentile_vs_values_dict[percentile] = value
+            config = cast(dict[str, dict[int, Tensor]], config)
+            return cls(config[cls.TENSOR_STATISTIC_OUTPUT_KEY])
+        percentile_vs_values_dict = {}
+        config = cast(dict[tuple[str, int], Tensor], config)
+        for (_, percentile), value in config.items():
+            percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
     def _get_serialized_data(self) -> dict[int, Tensor]:  # type: ignore[override]

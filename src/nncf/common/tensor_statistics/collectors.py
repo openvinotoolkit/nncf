@@ -183,7 +183,7 @@ class AggregatorBase:
         self._num_samples = num_samples
         self._collected_samples = 0
         self._window_size = window_size
-        self._container: Any = deque(maxlen=window_size)
+        self._container: deque[Any] = deque(maxlen=window_size)
 
     @property
     def num_samples(self) -> Optional[int]:
@@ -924,7 +924,7 @@ class PercentileAggregator(AggregatorBase):
 class HAWQAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int] = None):
         super().__init__(num_samples=num_samples)
-        self._container: Tensor = Tensor(0.0)
+        self._container: Tensor = Tensor(0.0)  # type: ignore[assignment]
 
     def _register_reduced_input_impl(self, x: Tensor) -> None:
         trace = fns.sum(fns.multiply(x, x))

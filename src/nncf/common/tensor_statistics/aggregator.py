@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from itertools import islice
 from pathlib import Path
-from typing import Any, Optional, TypeVar, cast
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf.common import factory
@@ -118,7 +118,12 @@ class StatisticsAggregator(ABC):
         """
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
-            statistics = cast(TensorStatistic, statistics)
+            if not isinstance(statistics, TensorStatistic):
+                msg = (
+                    "Please use nncf.common.tensor_statistics.statistics.TensorStatistic"
+                    " initializing the TensorCollector to make it possible to dump and load statistics"
+                )
+                raise nncf.InternalError(msg)
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
                 msg = f"Not found statistics for {statistics_key}"
@@ -146,7 +151,12 @@ class StatisticsAggregator(ABC):
         data_to_dump = {}
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
-            statistics = cast(TensorStatistic, statistics)
+            if not isinstance(statistics, TensorStatistic):
+                msg = (
+                    "Please use nncf.common.tensor_statistics.statistics.TensorStatistic"
+                    " initializing the TensorCollector to make it possible to dump and load statistics"
+                )
+                raise nncf.InternalError(msg)
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             data = statistics.get_data(is_serialized=True)
             data_to_dump[statistics_key] = data
