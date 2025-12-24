@@ -239,16 +239,17 @@ class CodebookEstimation:
 
         indexes = indexes.reshape(orig_shape)
 
-        best_codebook = codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3)
+        best_codebook = codebook.as_openvino_tensor().astype(dst_type)
 
         fp_outs = fns.matmul(weight, X)
         diff = float("inf")
+        dst_type = TensorDataType.float16
 
         variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
         variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
 
         for var in variants:
-            var = var.as_openvino_tensor().astype(TensorDataType.f8e4m3)
+            var = var.as_openvino_tensor().astype(dst_type)
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
             q_outs = fns.matmul(qw, X)
