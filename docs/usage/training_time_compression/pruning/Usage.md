@@ -131,5 +131,5 @@ introduced for pruning are removed. The resulting model contains only
 the pruned weights and can be used for inference without pruning overhead.
 
 ```python
-nncf.strip(pruned_model, strip_format=nncf.StripFormat.IN_PLACE)
+nncf.strip(pruned_model, strip_format=nncf.StripFormat.PUNE_IN_PLACE)
 ```
