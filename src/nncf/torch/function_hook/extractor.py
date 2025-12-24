@@ -145,13 +145,13 @@ def extract_conv(
 
     weight_node = get_const_node(input_node, 1, graph)
     if weight_node is None:
-        msg = "Weight node not found for {input_node}"
+        msg = f"Weight node not found for {input_node}"
         raise nncf.InternalError(msg)
     weight = get_const_data(weight_node, model)
 
     hook_storage = get_hook_storage(model)
     with torch.no_grad():
-        # Calculate weight after execution all hook fro weight data
+        # Calculate weight after execution all hook for weight data
         weight = hook_storage.execute_post_function_hooks(weight_node.node_name, 0, weight)
         weight = hook_storage.execute_pre_function_hooks(input_node.node_name, 1, weight)
 
@@ -200,9 +200,9 @@ def extract_linear(
 
     :param model: The nn.Module containing the layer.
     :param graph: The NNCF graph.
-    :param input_nodes: The name of input node.
-    :param output_nodes: The name of output node.
-    :return: The extracted convolutional layer as an ExtractedFunc module.
+    :param input_node: The name of input node.
+    :param output_node: The name of output node.
+    :return: The extracted linear layer as an ExtractedFunc module.
     """
     if input_node != output_node:
         msg = "Only one input and output node supported."
@@ -216,13 +216,13 @@ def extract_linear(
 
     weight_node = get_const_node(input_node, 1, graph)
     if weight_node is None:
-        msg = "Weight node not found for {input_node}"
+        msg = f"Weight node not found for {input_node}"
         raise nncf.InternalError(msg)
     weight = get_const_data(weight_node, model)
 
     hook_storage = get_hook_storage(model)
     with torch.no_grad():
-        # Calculate weight after execution all hook fro weight data
+        # Calculate weight after execution all hook for weight data
         weight = hook_storage.execute_post_function_hooks(weight_node.node_name, 0, weight)
         weight = hook_storage.execute_pre_function_hooks(input_node.node_name, 1, weight)
 
@@ -266,5 +266,5 @@ def extract_model(
     if input_node.metatype is om.PTLinearMetatype:
         return extract_linear(model, graph, input_node, output_node)
 
-    nncf_logger.debug(f"Can`t extract module for {input_node.node_name}")
+    nncf_logger.debug(f"Can not extract module for {input_node.node_name}")
     return None
