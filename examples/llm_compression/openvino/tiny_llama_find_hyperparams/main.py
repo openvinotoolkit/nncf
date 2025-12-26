@@ -239,6 +239,8 @@ def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATIO
         return res
 
     res.update(gen_pkv(4, 64, 22))
+    res["beam_idx"] = np.arange(input_ids.shape[0], dtype=int)
+
     return res
 
 
@@ -255,7 +257,6 @@ def main():
         trust_remote_code=True,
         use_cache=True,
         ov_config=ov_config,
-        stateful=False,
         load_in_8bit=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
