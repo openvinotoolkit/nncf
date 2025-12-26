@@ -12,7 +12,6 @@
 from functools import partial
 
 import numpy as np
-import openvino as ov
 import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
@@ -22,7 +21,7 @@ import nncf
 SEED = 0
 
 
-def transform_func(text, tokenizer, ov_model):
+def transform_func(text, tokenizer):
     tokens = tokenizer(text)
     input_ids = np.expand_dims(np.array(tokens["input_ids"]), 0)
     attention_mask = np.expand_dims(np.array(tokens["attention_mask"]), 0)
@@ -44,9 +43,7 @@ def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    hf_model = OVModelForCausalLM.from_pretrained(
-        MODEL_ID, export=True, load_in_8bit=False, compile=False
-    )
+    hf_model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False)
 
     dataset_size = 100
 
@@ -55,7 +52,7 @@ def main():
     torch.manual_seed(SEED)
     synthetic_dataset = nncf.data.generate_text_data(hf_model, tokenizer, dataset_size=dataset_size)
     quantization_dataset = nncf.Dataset(
-        synthetic_dataset, partial(transform_func, tokenizer=tokenizer, ov_model=hf_model.model)
+        synthetic_dataset, partial(transform_func, tokenizer=tokenizer)
     )
     hf_model.request = None
     torch.manual_seed(saved_seed)

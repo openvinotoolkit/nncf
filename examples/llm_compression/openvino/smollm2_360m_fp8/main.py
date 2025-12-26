@@ -30,10 +30,9 @@ def transform_fn(data, tokenizer):
     position_ids[attention_mask == 0] = 1
     inputs["position_ids"] = position_ids
 
-    
     batch_size = input_ids.shape[0]
     inputs["beam_idx"] = np.arange(batch_size, dtype=int)
-    
+
     return inputs
 
 
