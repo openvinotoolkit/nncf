@@ -1,6 +1,8 @@
 ## Profiler
 
-The Profiler is a tool for collecting and analyzing activation statistics from OpenVINO models. It enables layer-by-layer profiling of model activations using NNCF infrastructure, making it useful for debugging quantization and compression issues, comparing model variants, and understanding activation distributions.
+The Profiler is a tool for collecting and analyzing activation statistics from OpenVINO models. It enables
+layer-by-layer profiling of model activations using NNCF infrastructure, making it useful for debugging quantization
+and compression issues, comparing model variants, and understanding activation distributions.
 
 Key features:
 
@@ -10,4 +12,5 @@ Key features:
 - Visualize activation distributions and comparison results with matplotlib
 - Extensible architecture allowing registration of custom statistics, comparators, and visualizers
 
-See [nncf_profiler_example.ipynb](profiler/nncf_profiler_example.ipynb) for a complete usage example demonstrating how to profile an OpenVino model, collect activation statistics, and compare FP32 vs INT8 quantized variants.
+See [nncf_profiler_example.ipynb](nncf_profiler_example.ipynb) for a complete usage example demonstrating how
+to profile an OpenVINO model, collect activation statistics, and compare FP32 vs INT8 quantized variants.

@@ -458,8 +458,8 @@ class NNCFProfiler:
         Generate visualizations using registered visualizer functions.
 
         :param plot_type: Name of the visualizer to use (must be registered in VISUALIZERS)
-        :param *args: Positional arguments to pass to the visualizer
-        :param **kwargs: Keyword arguments to pass to the visualizer
+        :param args: Positional arguments to pass to the visualizer
+        :param kwargs: Keyword arguments to pass to the visualizer
         :return: Return value from the visualizer function (typically a matplotlib figure)
 
         Example:
@@ -576,7 +576,7 @@ def _compare_detailed_plot(
         Set to False to avoid memory issues with many figures.
     :param data1_label: Label for data1 in plots (e.g., 'fp16', 'fp32')
     :param data2_label: Label for data2 in plots (e.g., 'int8', 'fp8')
-    :param **kwargs: Additional arguments for plotting
+    :param kwargs: Additional arguments for plotting
     :return: List of matplotlib figures (histograms + summary plot)
 
     Example:
