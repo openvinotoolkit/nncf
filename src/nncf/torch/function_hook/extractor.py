@@ -194,7 +194,7 @@ def extract_linear(
     graph: PTNNCFGraph,
     input_node: NNCFNode,
     output_node: NNCFNode,
-) -> Optional[nn.Module]:
+) -> ExtractedFunc:
     """
     Extracts a linear layer from an NNCF graph and constructs an ExtractedFunc module.
 
