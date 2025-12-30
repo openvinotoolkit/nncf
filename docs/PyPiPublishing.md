@@ -50,7 +50,7 @@ For more information about NNCF, see:
 | :-------------------------------------------------------------------------------------------------------------------------------------------- | :-------: |
 | [Quantization Aware Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported |
 | [Weight-Only Quantization Aware Training with LoRA and NLS](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported |
-| [Pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/pruning/Usage.md)                                                                           | Supported |
+| [Pruning](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/pruning/Usage.md)                                                                            | Supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
 - Common interface for compression methods.
