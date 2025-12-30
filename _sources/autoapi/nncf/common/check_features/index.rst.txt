@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.common.check_features`
-====================================
-
-.. py:module:: nncf.common.check_features
-
-

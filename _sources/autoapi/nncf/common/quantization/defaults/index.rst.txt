@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.common.quantization.defaults`
+===========================================
+
+.. py:module:: nncf.common.quantization.defaults
+
+

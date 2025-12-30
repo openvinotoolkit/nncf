@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.torch.quantization.base_ctrl`
-===========================================
-
-.. py:module:: nncf.torch.quantization.base_ctrl
-
-

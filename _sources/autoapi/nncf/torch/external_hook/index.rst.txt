@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.torch.external_hook`
-==================================
-
-.. py:module:: nncf.torch.external_hook
-
-

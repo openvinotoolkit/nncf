@@ -17,7 +17,6 @@ Subpackages
 
    api/index.rst
    common/index.rst
-   config/index.rst
    data/index.rst
    experimental/index.rst
    quantization/index.rst
@@ -30,7 +29,6 @@ Classes
 
 .. autoapisummary::
 
-   nncf.NNCFConfig
    nncf.Dataset
    nncf.BackupMode
    nncf.CompressionFormat
@@ -72,62 +70,6 @@ Functions
    :param strip format: Describes the format in which model is saved after strip.
    :param example_input: An example input tensor to be used for tracing the model.
    :return: The stripped model.
-
-
-.. py:class:: NNCFConfig(*args, **kwargs)
-
-   Bases: :py:obj:`dict`\ [\ :py:obj:`str`\ , :py:obj:`Any`\ ]
-
-   Contains the configuration parameters required for NNCF to apply the selected algorithms.
-
-   This is a regular dictionary object extended with some utility functions, such as the ability to attach well-defined
-   structures to pass non-serializable objects as parameters. It is primarily built from a .json file, or from a
-   Python JSON-like dictionary - both data types will be checked against a JSONSchema. See the definition of the
-   schema at https://openvinotoolkit.github.io/nncf/schema/, or by calling NNCFConfig.schema().
-
-   .. py:method:: from_dict(nncf_dict)
-      :classmethod:
-
-      Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.
-
-      :param nncf_dict: A Python dict with the JSON-style configuration for NNCF.
-
-
-   .. py:method:: from_json(path)
-      :classmethod:
-
-      Load NNCF config from a JSON file at `path`.
-
-      :param path: Path to the .json file containing the NNCF configuration.
-
-
-   .. py:method:: register_extra_structs(struct_list)
-
-      Attach the supplied list of extra configuration structures to this configuration object.
-
-      :param struct_list: List of extra configuration structures.
-
-
-   .. py:method:: get_redefinable_global_param_value_for_algo(param_name, algo_name)
-
-      Some parameters can be specified both on the global NNCF config .json level (so that they apply
-      to all algos), and at the same time overridden in the algorithm-specific section of the .json.
-      This function returns the value that should apply for a given algorithm name, considering the
-      exact format of this config.
-
-      :param param_name: The name of a parameter in the .json specification of the NNCFConfig, that may
-        be present either at the top-most level of the .json, or at the top level of the algorithm-specific
-        subdict.
-      :param algo_name: The name of the algorithm (among the allowed algorithm names in the .json) for which
-        the resolution of the redefinable parameter should occur.
-      :return: The value of the parameter that should be applied for the algo specified by `algo_name`.
-
-
-   .. py:method:: schema()
-      :staticmethod:
-
-      Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.
-
 
 
 .. py:class:: Dataset(data_source, transform_func = None)

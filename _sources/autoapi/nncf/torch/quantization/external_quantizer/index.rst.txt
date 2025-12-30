@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.torch.quantization.external_quantizer`
-====================================================
-
-.. py:module:: nncf.torch.quantization.external_quantizer
-
-

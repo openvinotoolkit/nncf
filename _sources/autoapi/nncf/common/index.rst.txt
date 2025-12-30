@@ -15,7 +15,6 @@ Subpackages
    :titlesonly:
    :maxdepth: 3
 
-   accuracy_aware_training/index.rst
    initialization/index.rst
    quantization/index.rst
 
@@ -26,7 +25,6 @@ Submodules
    :titlesonly:
    :maxdepth: 1
 
-   compression/index.rst
    statistics/index.rst
 
 

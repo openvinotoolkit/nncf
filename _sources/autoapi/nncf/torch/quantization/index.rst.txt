@@ -1,3 +1,5 @@
+:orphan:
+
 :py:mod:`nncf.torch.quantization`
 =================================
 
@@ -7,14 +9,5 @@
 
    Backend-specific implementations of quantization algorithms.
 
-
-
-Submodules
-----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 1
-
-   algo/index.rst
 
 
