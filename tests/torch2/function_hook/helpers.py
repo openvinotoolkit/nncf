@@ -154,6 +154,19 @@ class SharedParamModel(nn.Module):
         return self.module1(x) + self.module2(x)
 
 
+class SharedLayersModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.shared_conv = torch.nn.Conv2d(1, 1, 1)
+
+    def forward(self, x):
+        x = self.shared_conv(x)
+        x = x + x
+        x = self.shared_conv(x)
+        x = x * x
+        return x
+
+
 class CounterHook(nn.Module):
     def __init__(self):
         super().__init__()

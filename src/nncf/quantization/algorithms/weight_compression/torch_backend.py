@@ -12,6 +12,7 @@
 from typing import Callable, Iterable, Optional, Union
 
 import torch
+from torch import nn
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -59,8 +60,6 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import split_const_name
-from nncf.torch.model_transformer import PTModelTransformer
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.ignored_patterns import create_sam_pe
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -345,7 +344,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_dq_insertion_command(
         compressed_weight: CompressedWeight,
         wc_params: WeightCompressionParameters,
-        model: NNCFNetwork,
+        model: nn.Module,
         graph: NNCFGraph,
         weight_node: NNCFNode,
     ) -> PTTransformationCommand:
@@ -416,22 +415,19 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     def transform_model(
         self,
-        model: Union[GraphModelWrapper, torch.nn.Module],
+        model: GraphModelWrapper,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
-    ) -> NNCFNetwork:
+    ) -> GraphModelWrapper:
         if advanced_parameters is None:
             advanced_parameters = AdvancedCompressionParameters()
 
-        if isinstance(model, GraphModelWrapper):
-            model_transformer = PT2ModelTransformer(model)
-            model = model.model
-        else:
-            model_transformer = PTModelTransformer(model)
+        model_transformer = PT2ModelTransformer(model)
+        model = model.model
 
         transformation_layout = TransformationLayout()
         is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)

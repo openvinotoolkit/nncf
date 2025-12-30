@@ -25,8 +25,8 @@ from torch.fx.passes.graph_drawer import FxGraphDrawer
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -168,7 +168,7 @@ def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Ten
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:
     return NNCFGraphToTest(
-        conv_metatype=PTModuleConv2dMetatype,
+        conv_metatype=PTConv2dMetatype,
         nncf_graph_cls=PTNNCFGraph,
         const_metatype=PTConstNoopMetatype,
     )
@@ -176,7 +176,7 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
 
 def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
     return NNCFGraphToTestDepthwiseConv(
-        depthwise_conv_metatype=PTModuleDepthwiseConv2dSubtype,
+        depthwise_conv_metatype=PTDepthwiseConv2dSubtype,
         nncf_graph_cls=PTNNCFGraph,
         const_metatype=PTConstNoopMetatype,
     )
@@ -184,7 +184,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
 
 def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
     return NNCFGraphToTestSumAggregation(
-        conv_metatype=PTModuleConv2dMetatype,
+        conv_metatype=PTConv2dMetatype,
         sum_metatype=PTSumMetatype,
         nncf_graph_cls=PTNNCFGraph,
         const_metatype=PTConstNoopMetatype,
