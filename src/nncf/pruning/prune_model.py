@@ -10,16 +10,17 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 import nncf
-from nncf.api.compression import TModel
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
 from nncf.data.dataset import Dataset
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
+
+TModel = TypeVar("TModel")
 
 
 def prune(

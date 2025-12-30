@@ -32,7 +32,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "jsonschema>=3.2.0",
     "networkx>=2.6, <3.5.0",
     "ninja>=1.10.0.post2, <1.14",
     "numpy>=1.24.0, <2.3.0",
@@ -80,7 +79,6 @@ files = [
     "src/nncf/api",
     "src/nncf/data",
     "src/nncf/common",
-    "src/nncf/config",
     "src/nncf/torch/function_hook",
     "src/nncf/quantization/*py",
     "src/nncf/telemetry/",
