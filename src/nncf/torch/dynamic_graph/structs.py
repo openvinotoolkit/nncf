@@ -24,17 +24,3 @@ class NamespaceTarget(Enum):
     TORCH = "torch"
     ATEN = "aten"
     EXTERNAL = "external_function"
-
-
-class PatchedOperatorInfo:
-    def __init__(self, name: str, operator_namespace: NamespaceTarget, skip_trace: bool = False):
-        """
-        Information about patched operator.
-        :param name: Operator name
-        :param operator_namespace: Python module, from which operator was gotten.
-        :param skip_trace: If it is set to True, the both operator and its internal calls
-         to otherwise traced functions do not appear into the model graph.
-        """
-        self.name = name
-        self.operator_namespace = operator_namespace
-        self.skip_trace = skip_trace

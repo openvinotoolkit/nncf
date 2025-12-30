@@ -1,4 +1,9 @@
+datasets
+ipykernel
 matplotlib
+nbclient
+nbformat
+optimum-intel[openvino]
 psutil
 pytest
 pandas
