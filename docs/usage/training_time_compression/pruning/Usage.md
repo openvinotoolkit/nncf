@@ -8,9 +8,10 @@ do it is different. The framework contains several implementations of pruning me
 
 ### Magnitude
 
-The magnitude pruning method implements a naive approach that is based on the assumption that the contribution
-of lower weights is lower so that they can be pruned. After each training epoch the method calculates a threshold based
-on the current pruning ratio and uses it to zero weights which are lower than this threshold.
+The magnitude pruning method implements a naive approach based on the assumption that weights with smaller
+absolute values contribute less to the model's performance and can therefore be removed. After each training epoch,
+the method calculates a threshold based on the current pruning ratio and uses it to zero out weights that fall
+below this threshold.
 
 And here there are two options:
 
@@ -37,7 +38,8 @@ To get a more accurate model, it is recommended to fine-tune the model for sever
 
 #### Batch Norm Adaptation after Pruning
 
-When using magnitude pruning without fine-tuning, it is recommended to perform Batch Norm adaptation after pruning to get more accurate results.
+When using magnitude pruning without fine-tuning, it is recommended to perform Batch Norm adaptation after pruning
+to get more accurate results.
 
 ```python
 import nncf
@@ -67,7 +69,9 @@ We then reparametrize the network's weights as follows:
 
 $\theta_{sparse}^{(i)} = \theta_i \cdot \epsilon_i, \quad \epsilon_i \sim \mathcal{B}(p_i)$
 
-Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be interpreted as a binary mask that selects which weights should be zeroed. We then add the regularizing term to the objective function that encourages desired level of sparsity to our model:
+Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be interpreted as a binary mask that selects
+which weights should be zeroed. We then add the regularizing term to the objective function that encourages desired
+level of sparsity to our model:
 
 $L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2 $
 
@@ -79,7 +83,11 @@ and reparametrize the sampling of $\epsilon_i$'s as follows:
 
 $\epsilon = \lbrack \sigma(s + \sigma^{-1}(\xi)) > \frac{1}{2} \rbrack, \quad \xi \sim \mathcal{U}(0,1)$
 
-With this reparametrization, the probability of keeping a particular weight during the forward pass equals exactly to $\mathbb{P}( \epsilon_i = 1) = p_i$. We only sample the binary mask once per each training iteration. At test time, we only use the weights with $p_i > \frac{1}{2}$ as given by the trained importance scores $s_i$. To make the objective function differentiable, we treat threshold function $t(x) = x > c$ as a straight through estimator i.e. $\frac{d t}{dx} = 1$
+With this reparametrization, the probability of keeping a particular weight during the forward pass equals exactly
+to $\mathbb{P}( \epsilon_i = 1) = p_i$. We only sample the binary mask once per each training iteration.
+At test time, we only use the weights with $p_i > \frac{1}{2}$ as given by the trained importance scores $s_i$.
+To make the objective function differentiable, we treat threshold function $t(x) = x > c$ as a straight through
+estimator i.e. $\frac{d t}{dx} = 1$
 
 The method requires a long schedule of the training process in order to minimize the accuracy drop.
 
@@ -131,5 +139,5 @@ introduced for pruning are removed. The resulting model contains only
 the pruned weights and can be used for inference without pruning overhead.
 
 ```python
-nncf.strip(pruned_model, strip_format=nncf.StripFormat.PUNE_IN_PLACE)
+nncf.strip(pruned_model, strip_format=nncf.StripFormat.PRUNE_IN_PLACE)
 ```
