@@ -23,7 +23,7 @@ import nncf
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import Dataset
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.openvino.cpu_info import is_arm_cpu
@@ -420,7 +420,7 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
                     mock.assert_called()
 
                 ov_nodes = {node.get_friendly_name(): node for node in model.get_ops()}
-                nncf_graph = NNCFGraphFactory.create(model)
+                nncf_graph = build_graph(model)
                 for i, nncf_node in enumerate(nncf_graph.topological_sort()):
                     node_name = nncf_node.node_name
                     node = ov_nodes[node_name]

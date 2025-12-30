@@ -15,7 +15,7 @@ import onnx
 import torch
 
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
@@ -65,7 +65,7 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def check_bias(model: onnx.ModelProto, ref_bias: list):
         ref_bias = np.array(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = build_graph(model)
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_bias(node):
                 continue
@@ -99,7 +99,7 @@ def test_update_bias_in_matmul_add():
     where the second input to the Add operation is a constant.
     """
     model = _build_matmul_add_model()
-    graph = NNCFGraphFactory.create(model)
+    graph = build_graph(model)
 
     nodes = [node for node in graph.get_all_nodes() if is_node_with_bias(node)]
     assert [x.node_name for x in nodes] == ["MatMul_0", "MatMul_2"]

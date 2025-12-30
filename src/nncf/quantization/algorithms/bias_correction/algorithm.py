@@ -17,7 +17,7 @@ from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -143,9 +143,9 @@ class BiasCorrection(Algorithm):
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
-        graph_copy = NNCFGraphFactory.create(model_copy)
+        graph_copy = build_graph(model_copy)
         model_copy = self._backend_entity.remove_fq_from_inputs(model_copy, graph_copy)
-        nncf_graph = NNCFGraphFactory.create(model_copy)
+        nncf_graph = build_graph(model_copy)
 
         nodes_with_bias = []
         for node in nncf_graph.topological_sort():

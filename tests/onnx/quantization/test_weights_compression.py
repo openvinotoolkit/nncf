@@ -25,7 +25,7 @@ from packaging import version
 
 from nncf import CompressWeightsMode
 from nncf.common.factory import EngineFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
@@ -639,7 +639,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_decompressed_weight(compressed_model: onnx.ModelProto, input: np.ndarray):
-        graph = NNCFGraphFactory.create(compressed_model)
+        graph = build_graph(compressed_model)
         mapping = get_input_edges_mapping(graph)
         transformation_layout = TransformationLayout()
 

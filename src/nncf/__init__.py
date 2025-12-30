@@ -12,6 +12,7 @@
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
 
+from nncf.common.factory import build_graph as build_graph
 from nncf.common.logging import nncf_logger as nncf_logger
 from nncf.common.logging.logger import disable_logging as disable_logging
 from nncf.common.logging.logger import set_log_level as set_log_level
