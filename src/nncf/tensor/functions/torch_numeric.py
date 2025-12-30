@@ -35,6 +35,8 @@ DTYPE_MAP = {
     TensorDataType.int32: torch.int32,
     TensorDataType.int64: torch.int64,
     TensorDataType.uint8: torch.uint8,
+    TensorDataType.uint16: torch.uint16,
+    TensorDataType.uint32: torch.uint32,
 }
 
 DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}
@@ -106,6 +108,11 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.astype.register
 def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
     return a.type(DTYPE_MAP[dtype])
+
+
+@numeric.view.register
+def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
+    return a.view(DTYPE_MAP[dtype])
 
 
 @numeric.dtype.register

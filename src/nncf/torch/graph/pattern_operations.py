@@ -16,32 +16,21 @@ LINEAR_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: [
         # Linear
         om.PTLinearMetatype,
-        om.PTModuleLinearMetatype,
         # Conv1D
         om.PTConv1dMetatype,
         om.PTDepthwiseConv1dSubtype,
-        om.PTModuleConv1dMetatype,
-        om.PTModuleDepthwiseConv1dSubtype,
         # Conv2D
         om.PTConv2dMetatype,
         om.PTDepthwiseConv2dSubtype,
-        om.PTModuleConv2dMetatype,
-        om.PTModuleDepthwiseConv2dSubtype,
         # Conv3D
         om.PTConv3dMetatype,
         om.PTDepthwiseConv3dSubtype,
-        om.PTModuleConv3dMetatype,
-        om.PTModuleDepthwiseConv3dSubtype,
         # Transposed conv
         om.PTConvTranspose1dMetatype,
-        om.PTModuleConvTranspose1dMetatype,
         om.PTConvTranspose2dMetatype,
-        om.PTModuleConvTranspose2dMetatype,
         om.PTConvTranspose3dMetatype,
-        om.PTModuleConvTranspose3dMetatype,
         # Deform conv
         om.PTDeformConv2dMetatype,
-        om.PTModuleDeformConv2dMetatype,
         # MatMul
         om.PTMatMulMetatype,
         # Addmm
@@ -51,17 +40,17 @@ LINEAR_OPERATIONS = {
 }
 
 BATCH_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTBatchNormMetatype, om.PTModuleBatchNormMetatype],
+    GraphPattern.METATYPE_ATTR: [om.PTBatchNormMetatype],
     GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION",
 }
 
 GROUP_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTGroupNormMetatype, om.PTModuleGroupNormMetatype],
+    GraphPattern.METATYPE_ATTR: [om.PTGroupNormMetatype],
     GraphPattern.LABEL_ATTR: "GROUP_NORMALIZATION",
 }
 
 LAYER_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTLayerNormMetatype, om.PTModuleLayerNormMetatype],
+    GraphPattern.METATYPE_ATTR: [om.PTLayerNormMetatype],
     GraphPattern.LABEL_ATTR: "LAYER_NORMALIZATION",
 }
 

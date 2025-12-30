@@ -12,6 +12,7 @@
 from typing import Optional, Union
 
 import torch
+from torch import nn
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
@@ -44,7 +45,6 @@ from nncf.torch.model_graph_manager import get_weight_channel_axes
 from nncf.torch.model_graph_manager import get_weight_nodes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_matmul_with_constant
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -178,7 +178,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight_name not in quantized_weight_names
 
     @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:
+    def get_weight_config(config: QuantizerConfig, model: nn.Module) -> QuantizerConfig:
         return config
 
     @staticmethod
@@ -304,12 +304,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTMaxMetatype,
                 om.PTSqueezeMetatype,
                 om.PTLayerNormMetatype,
-                om.PTModuleLayerNormMetatype,
                 om.PTGroupNormMetatype,
-                om.PTModuleGroupNormMetatype,
                 # Batchnorm
                 om.PTBatchNormMetatype,
-                om.PTModuleBatchNormMetatype,
                 # Comparison operations
                 om.PTGreaterEqualMetatype,
                 om.PTGreaterMetatype,

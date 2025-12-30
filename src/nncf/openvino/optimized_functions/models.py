@@ -31,6 +31,7 @@ from nncf.openvino.cpu_info import is_lnl_cpu
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.constants import FP_MAX_VALUES
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
@@ -579,8 +580,6 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
-
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
 
@@ -605,7 +604,12 @@ def _build_float_quantization_model(
     )
 
     # Validate output dtypes
-    valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4, TensorDataType.f4e2m1]
+    valid_compressed_weight_dtypes = [
+        TensorDataType.float32,
+        TensorDataType.nf4,
+        TensorDataType.f4e2m1,
+        TensorDataType.f8e4m3,
+    ]
     if compressed_weight_dtype not in valid_compressed_weight_dtypes:
         msg = (
             f"Compressed weight must be one of the following data types: {valid_compressed_weight_dtypes}. "
@@ -633,23 +637,17 @@ def _build_float_quantization_model(
         eps = np.finfo(np.float32).eps
         scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
-        # Equals 1.0 for NF4
-        FP_MAX_VALS = {
-            CompressWeightsMode.MXFP4: 6.0,
-            CompressWeightsMode.FP4: 6.0,
-        }
-        if config.mode in FP_MAX_VALS:
-            scale = divide_op(scale, opset.constant(FP_MAX_VALS[config.mode], ov.Type.f32))
+        if config.compression_dtype != TensorDataType.nf4:
+            scale = divide_op(scale, opset.constant(FP_MAX_VALUES[config.compression_dtype], ov.Type.f32))
 
-        if config.mode == CompressWeightsMode.MXFP4:
+        if config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             scale = opset.log(scale) / opset.log(opset.constant(2.0, ov.Type.f32))
             scale = opset.ceil(scale)
             scale = opset.clamp(scale, -127.0, 127.0)
             scale = opset.power(opset.constant(2.0, ov.Type.f32), scale)
 
     compressed_weight = divide_op(weight, scale)
-    target_dtype = ov.Type.nf4 if config.mode == CompressWeightsMode.NF4 else ov.Type.f4e2m1
-    compressed_weight = convert_op(compressed_weight, target_dtype)
+    compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[config.compression_dtype])
     compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
 
     ov_results = [compressed_weight]

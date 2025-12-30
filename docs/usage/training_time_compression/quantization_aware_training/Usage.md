@@ -3,7 +3,7 @@
 This is a step-by-step tutorial on how to integrate the NNCF package into the existing PyTorch projects.
 The use case implies that the user already has a training pipeline that reproduces training of the model in the floating point precision and pretrained model.
 The task is to prepare this model for accelerated inference by simulating the compression at train time.
-Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for details of the implementation.
+Please refer to this [document](/docs/usage/training_time_compression/Quantization.md) for details of the implementation.
 
 ## Basic usage
 

@@ -19,19 +19,20 @@ if __name__ == "__main__":
         msg = "Must be run with target extensions build mode"
         raise nncf.ValidationError(msg)
     mode = sys.argv[1]
+
     if mode == "cpu":
         # Do not remove - the import here is for testing purposes.
 
-        from nncf.torch import force_build_cpu_extensions
+        from nncf.torch.quantization.extensions import QuantizedFunctionsCPULoader
 
-        force_build_cpu_extensions()
+        QuantizedFunctionsCPULoader.load()
     elif mode == "cuda":
-        from nncf.torch import force_build_cuda_extensions
+        from nncf.torch.quantization.extensions import QuantizedFunctionsCUDALoader
 
         # Set CUDA Architecture
         # See cmake/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake
         os.environ["TORCH_CUDA_ARCH_LIST"] = "7.5+PTX"
-        force_build_cuda_extensions()
+        QuantizedFunctionsCUDALoader.load()
     else:
         msg = "Invalid mode type!"
         raise nncf.ValidationError(msg)

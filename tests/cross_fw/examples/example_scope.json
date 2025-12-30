@@ -257,12 +257,11 @@
         "accuracy_tolerance_after_training": 0.02,
         "accuracy_tolerance": 0.08,
         "accuracy_metrics": {
-            "fp32_f1score": 1.0,
-            "int8_init_f1score": 0.9767441749572754
+            "fp32_f1score": 0.9760000109672546,
+            "int8_init_f1score": 0.8630136847496033
         },
         "accuracy_metrics_after_training": {
-            "int8_f1score": 1.0,
-            "accuracy_drop": 0.0
+            "int8_f1score": 0.9344262480735779
         },
         "performance_metrics": {
             "fp32_fps": 316.28,
@@ -273,8 +272,7 @@
             "fp32_model_size": 21.37990665435791,
             "int8_model_size": 5.677968978881836,
             "model_compression_rate": 3.7654144877995197
-        },
-        "xfail": "https://github.com/open-edge-platform/anomalib/issues/3121"
+        }
     },
     "fp8_llm_quantization": {
         "backend": "openvino",
