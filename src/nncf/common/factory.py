@@ -39,11 +39,11 @@ def build_graph(model: TModel, *, example_input: Any = None) -> NNCFGraph:
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.ONNX:
-        from onnx import ModelProto
+        from onnx import ModelProto  # type: ignore
 
         from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
 
-        return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))  # type: ignore
+        return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))
     if model_backend == BackendType.OPENVINO:
         from openvino import Model  # type: ignore
 
