@@ -67,13 +67,15 @@ $||\theta||\_0 = \sum\limits_{i=0}^{|\theta|} \lbrack \theta\_i = 0 \rbrack$
 
 We then reparametrize the network's weights as follows:
 
-$\theta_{sparse}^{(i)} = \theta_i \cdot \epsilon_i, \quad \epsilon_i \sim \mathcal{B}(p_i)$
+$\theta_{pruning}^{(i)} = \theta_i \cdot \epsilon_i, \quad \epsilon_i \sim \mathcal{B}(p_i)$
 
 Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be interpreted as a binary mask that selects
 which weights should be zeroed. We then add the regularizing term to the objective function that encourages desired
 level of sparsity to our model:
 
-$L_{sparse} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2 $
+$L_{pruning} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - \lbrack 1 - ratio \rbrack \rbrack * p \rbrack ^2 $
+
+Here, $p$ is a scaling factor.
 
 During training, we store and optimize $p_i$'s in the logit form:
 
