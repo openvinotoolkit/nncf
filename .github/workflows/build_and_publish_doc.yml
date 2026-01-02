@@ -32,15 +32,9 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: html_doc_artifact
-      - name: Extract artifact
-        shell: 'bash'
-        run: |
-          tar -xvf artifact.tar
-          rm artifact.tar
 
       - name: Extract artifact
         shell: 'bash'
-        working-directory: html_build/html
         run: |
           tar -xvf artifact.tar
           rm artifact.tar
