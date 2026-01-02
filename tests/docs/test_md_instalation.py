@@ -123,7 +123,7 @@ def test_test_environment():
     ref = {
         "python": _parse_python_version_from_precommit_workflow(True),
         "pytorch": actual_versions["pytorch"],
-        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch2-cuda"),
+        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch-cuda"),
     }
     print(md_versions, ref)
     assert md_versions == ref, (

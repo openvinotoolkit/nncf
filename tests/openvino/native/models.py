@@ -21,9 +21,9 @@ from torchvision.models import mobilenet_v2
 from torchvision.models import mobilenet_v3_small
 
 from nncf.common.utils.registry import Registry
-from tests.torch2.test_models.inceptionv3 import inception_v3
-from tests.torch2.test_models.resnet import ResNet18
-from tests.torch2.test_models.swin import SwinTransformerBlock
+from tests.torch.test_models.inceptionv3 import inception_v3
+from tests.torch.test_models.resnet import ResNet18
+from tests.torch.test_models.swin import SwinTransformerBlock
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 
