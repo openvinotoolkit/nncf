@@ -75,7 +75,6 @@ level of sparsity to our model:
 
 $L_{pruning} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - \lbrack 1 - ratio \rbrack \rbrack * \alpha \rbrack ^2 $
 
-
 Here, $\alpha$ is a constant scaling factor, typically equals to 0.05.
 
 During training, we store and optimize $p_i$'s in the logit form:
