@@ -17,7 +17,7 @@ import torch
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from tests.torch.test_models.synthetic import ConcatSDPABlock
+from tests.torch2.test_models.synthetic import ConcatSDPABlock
 
 TModel = TypeVar("TModel")
 

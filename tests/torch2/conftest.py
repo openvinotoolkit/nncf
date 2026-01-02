@@ -21,8 +21,6 @@ from pytest import Parser
 from nncf import set_log_level
 from nncf.common.quantization.structs import QuantizationScheme
 
-pytest.register_assert_rewrite("tests.torch.helpers")
-
 
 @pytest.fixture(scope="session", autouse=True)
 def disable_tf32_precision():
@@ -68,6 +66,21 @@ def use_cuda(request: FixtureRequest):
 
 @pytest.fixture(params=[True, False], ids=["per_channel", "per_tensor"])
 def is_per_channel(request: FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["signed", "unsigned"])
+def is_signed(request: FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["weights", "activation"])
+def is_weights(request: FixtureRequest):
+    return request.param
+
+
+@pytest.fixture(params=[True, False], ids=["half_range", "full_range"])
+def is_half_range(request: FixtureRequest):
     return request.param
 
 

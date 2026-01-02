@@ -31,10 +31,10 @@ from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_gr
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_creation import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.helpers import set_torch_seed
 from tests.torch2.function_hook.sparsify_activations.helpers import ThreeLinearModel
 from tests.torch2.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch2.function_hook.sparsify_activations.helpers import dummy_llama_model
+from tests.torch2.helpers import set_torch_seed
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 

@@ -17,11 +17,11 @@ from torch import nn
 from torch.nn import functional as F
 
 from nncf import Dataset
-from tests.torch.helpers import create_bn
-from tests.torch.helpers import create_conv
-from tests.torch.helpers import create_depthwise_conv
-from tests.torch.helpers import create_transpose_conv
-from tests.torch.helpers import set_torch_seed
+from tests.torch2.helpers import create_bn
+from tests.torch2.helpers import create_conv
+from tests.torch2.helpers import create_depthwise_conv
+from tests.torch2.helpers import create_transpose_conv
+from tests.torch2.helpers import set_torch_seed
 
 TTensor = TypeVar("TTensor")
 

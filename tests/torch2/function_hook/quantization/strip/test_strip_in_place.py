@@ -24,8 +24,8 @@ from nncf.parameters import StripFormat
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import BaseWeightsDecompressor
-from tests.torch.helpers import LinearModel
 from tests.torch2.function_hook.quantization.strip.test_strip_dequantize import check_compression_modules
+from tests.torch2.helpers import LinearModel
 
 
 @dataclass

@@ -37,9 +37,9 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.test_models.llama import LlamaDecoderOnly
-from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.fx.helpers import get_torch_fx_model
+from tests.torch2.test_models.llama import LlamaDecoderOnly
+from tests.torch2.test_models.synthetic import ShortTransformer
 
 FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "compress_pt2e"
 FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "ao_export_compression_OpenVINOQuantizer"

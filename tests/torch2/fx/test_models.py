@@ -39,13 +39,13 @@ from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch import test_models
-from tests.torch.test_models.synthetic import EmbeddingSumModel
-from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
-from tests.torch.test_models.synthetic import ShortTransformer
-from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
+from tests.torch2 import test_models
 from tests.torch2.fx.helpers import get_torch_fx_model
 from tests.torch2.fx.test_sanity import count_q_dq
+from tests.torch2.test_models.synthetic import EmbeddingSumModel
+from tests.torch2.test_models.synthetic import MultiBranchesConnectedModel
+from tests.torch2.test_models.synthetic import ShortTransformer
+from tests.torch2.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_DIR_NAME = TEST_ROOT / "torch2" / "data" / "fx"
 FX_QUANTIZED_DIR_NAME = FX_DIR_NAME / "quantized"

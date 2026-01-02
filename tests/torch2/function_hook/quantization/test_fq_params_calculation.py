@@ -25,7 +25,7 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.helpers import TwoConvTestModel
+from tests.torch2.helpers import TwoConvTestModel
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quantization" / "reference_scales"
 

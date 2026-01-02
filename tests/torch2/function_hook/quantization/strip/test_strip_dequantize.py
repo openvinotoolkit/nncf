@@ -39,7 +39,7 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 from nncf.torch.quantization.strip import asym_fq_to_decompressor
 from nncf.torch.quantization.strip import sym_fq_to_decompressor
-from tests.torch.helpers import LinearModel
+from tests.torch2.helpers import LinearModel
 
 
 def check_compression_modules(

@@ -31,8 +31,6 @@ from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
-from tests.torch.test_models.synthetic import ShortTransformer
-from tests.torch.test_tensor import cast_to
 from tests.torch2.function_hook.quantization.test_weights_compression import ALL_SENSITIVITY_METRICS
 from tests.torch2.function_hook.quantization.test_weights_compression import INT4_MODES
 from tests.torch2.function_hook.quantization.test_weights_compression import INT8_MODES
@@ -50,6 +48,8 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Mat
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
 from tests.torch2.function_hook.quantization.test_weights_compression import SimpleMoEModel
 from tests.torch2.fx.helpers import get_torch_fx_model
+from tests.torch2.test_models.synthetic import ShortTransformer
+from tests.torch2.test_tensor import cast_to
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,

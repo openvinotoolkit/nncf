@@ -32,9 +32,9 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.test_models.synthetic import LinearModel
-from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch2.function_hook.quantization.test_weights_compression import AWQLinearModel
+from tests.torch2.test_models.synthetic import LinearModel
+from tests.torch2.test_models.synthetic import ShortTransformer
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 

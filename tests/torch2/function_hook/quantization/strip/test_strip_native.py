@@ -21,7 +21,7 @@ import nncf.torch
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from tests.common.quantization.data_generators import generate_lazy_sweep_data
-from tests.torch.helpers import BasicConvTestModel
+from tests.torch2.helpers import BasicConvTestModel
 
 
 @pytest.mark.parametrize("strip_type", ("nncf", "torch"))

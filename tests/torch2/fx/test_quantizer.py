@@ -47,13 +47,13 @@ from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _
 from nncf.tensor.definitions import TensorDataType
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch import test_models
-from tests.torch.test_models.synthetic import ConcatModelWithTwoOutputs
-from tests.torch.test_models.synthetic import LinearModel
-from tests.torch.test_models.synthetic import ShortTransformer
-from tests.torch.test_models.synthetic import SimpleConcatModel
-from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
+from tests.torch2 import test_models
 from tests.torch2.fx.helpers import get_torch_fx_model
+from tests.torch2.test_models.synthetic import ConcatModelWithTwoOutputs
+from tests.torch2.test_models.synthetic import LinearModel
+from tests.torch2.test_models.synthetic import ShortTransformer
+from tests.torch2.test_models.synthetic import SimpleConcatModel
+from tests.torch2.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_QUANTIZED_DIR_NAME = TEST_ROOT / "torch2" / "data" / "fx"
 

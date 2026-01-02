@@ -35,8 +35,8 @@ from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWra
 from nncf.torch.function_hook.statistics.aggregator import PT2StatisticsAggregator
 from nncf.torch.model_creation import wrap_model
 from tests.cross_fw.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
-from tests.torch.helpers import get_all_inputs_for_graph_node
-from tests.torch.helpers import get_nodes_by_type
+from tests.torch2.helpers import get_all_inputs_for_graph_node
+from tests.torch2.helpers import get_nodes_by_type
 
 INPUT_SHAPE = (2, 3, 4, 5)
 

@@ -48,14 +48,14 @@ from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.test_models.synthetic import ConstantFoldingTestModel
-from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
-from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
-from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
-from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
-from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
-from tests.torch.test_models.synthetic import ScalarCloneTestModel
 from tests.torch2.fx.helpers import get_torch_fx_model
+from tests.torch2.test_models.synthetic import ConstantFoldingTestModel
+from tests.torch2.test_models.synthetic import ConvolutionWithAllConstantInputsModel
+from tests.torch2.test_models.synthetic import ConvolutionWithNotTensorBiasModel
+from tests.torch2.test_models.synthetic import ConvolutionWithSeveralOutputs
+from tests.torch2.test_models.synthetic import MultiBranchesConnectedModel
+from tests.torch2.test_models.synthetic import MultiBranchesConnectedModelWithConcat
+from tests.torch2.test_models.synthetic import ScalarCloneTestModel
 
 REF_DIR = TEST_ROOT / "torch2" / "data" / "fx"
 

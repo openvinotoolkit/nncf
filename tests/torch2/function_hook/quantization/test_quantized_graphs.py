@@ -26,7 +26,7 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import EmbeddingModel
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
-from tests.torch import test_models
+from tests.torch2 import test_models
 from tests.torch2.function_hook.helpers import SharedLayersModel
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph

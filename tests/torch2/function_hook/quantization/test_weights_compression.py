@@ -43,8 +43,8 @@ from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
-from tests.torch.test_models.synthetic import ShortTransformer
-from tests.torch.test_tensor import cast_to
+from tests.torch2.test_models.synthetic import ShortTransformer
+from tests.torch2.test_tensor import cast_to
 
 ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 
