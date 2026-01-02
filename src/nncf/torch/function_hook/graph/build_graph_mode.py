@@ -376,13 +376,9 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
         hook_storage = HookStorage()
         forward_fn = model.forward
 
-    with (
-        training_mode_switcher(model, is_training=False),
-        GraphBuilderMode(model=model, hook_storage=hook_storage) as ctx,
-    ):
-        args, kwargs = ctx.process_model_inputs(args, kwargs)
-        outputs = forward_fn(*args, **kwargs)
-        outputs = ctx.process_model_outputs(outputs)
-        graph = ctx.graph
-
-    return graph
+    with training_mode_switcher(model, is_training=False):
+        with GraphBuilderMode(model=model, hook_storage=hook_storage) as ctx:
+            args, kwargs = ctx.process_model_inputs(args, kwargs)
+            outputs = forward_fn(*args, **kwargs)
+            outputs = ctx.process_model_outputs(outputs)
+    return ctx.graph
