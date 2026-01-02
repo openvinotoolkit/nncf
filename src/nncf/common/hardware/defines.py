@@ -11,6 +11,7 @@
 
 from dataclasses import dataclass
 from dataclasses import field
+from itertools import product
 from typing import Any
 
 from nncf.common.quantization.structs import QuantizationScheme
@@ -54,25 +55,23 @@ class QConfigSpace:
             a unique combination of the quantization parameters.
         """
         ret = []
-        for mode in self.mode:
-            for granularity in self.granularity:
-                for narrow_range in self.narrow_range:
-                    ret.append(
-                        QuantizerConfig(
-                            num_bits=self.bits,
-                            mode=mode,
-                            per_channel=granularity == Granularity.PER_CHANNEL,
-                            narrow_range=narrow_range,
-                            signedness_to_force=self.signedness_to_force,
-                        )
-                    )
+        for mode, granularity, narrow_range in product(self.mode, self.granularity, self.narrow_range):
+            ret.append(
+                QuantizerConfig(
+                    num_bits=self.bits,
+                    mode=mode,
+                    per_channel=granularity == Granularity.PER_CHANNEL,
+                    narrow_range=narrow_range,
+                    signedness_to_force=self.signedness_to_force,
+                )
+            )
         return ret
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class OpDesc:
     """
-    Represents the description of an operation.
+    Represents the description of quantization schemes applicable for activations and weights of operation.
 
     :param type: The type of the operation.
     :param activations: A tuple containing the quantization configuration for the activations of the operation.

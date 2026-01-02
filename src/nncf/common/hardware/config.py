@@ -87,8 +87,9 @@ class HWConfig(ABC):
             metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
             allowed_spaces = op_desc.weights if for_weights else op_desc.activations
 
-            # Deduplicate
-            # Not found duplicates in current HW configs, but just in case handle them correctly
+            # Deduplication
+            # There are no duplicates in existing HW configs, but this deduplication is just in case of
+            # a custom HW config with duplicates
             qconf_list_with_possible_duplicates = []
             for q_space in allowed_spaces:
                 qconf_list_with_possible_duplicates.extend(q_space.get_all_qconfigs())
