@@ -73,9 +73,10 @@ Here, $\mathcal{B}(p_i)$ is the Bernoulli distribution, $\epsilon_i$ may be inte
 which weights should be zeroed. We then add the regularizing term to the objective function that encourages desired
 level of sparsity to our model:
 
-$L_{pruning} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - \lbrack 1 - ratio \rbrack \rbrack * p \rbrack ^2 $
+$L_{pruning} = \mathbb{E}\_{\epsilon \sim P_{\epsilon}} \lbrack \lbrack \frac{\sum\limits_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - \lbrack 1 - ratio \rbrack \rbrack * \alpha \rbrack ^2 $
 
-Here, $p$ is a scaling factor.
+
+Here, $\alpha$ is a constant scaling factor, typically equals to 0.05.
 
 During training, we store and optimize $p_i$'s in the logit form:
 
