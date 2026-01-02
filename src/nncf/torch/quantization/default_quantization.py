@@ -11,7 +11,6 @@
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes
-from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 # If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
@@ -19,21 +18,13 @@ from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: dict[QuantizationTrait, list[PTOperatorMetatype]] = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         operator_metatypes.PTConv2dMetatype,
-        operator_metatypes.PTModuleConv2dMetatype,
         operator_metatypes.PTConv3dMetatype,
-        operator_metatypes.PTModuleConv3dMetatype,
         operator_metatypes.PTConvTranspose2dMetatype,
-        operator_metatypes.PTModuleConvTranspose2dMetatype,
         operator_metatypes.PTConvTranspose3dMetatype,
-        operator_metatypes.PTModuleConvTranspose3dMetatype,
         operator_metatypes.PTDepthwiseConv2dSubtype,
         operator_metatypes.PTDepthwiseConv3dSubtype,
-        operator_metatypes.PTModuleDepthwiseConv2dSubtype,
-        operator_metatypes.PTModuleDepthwiseConv3dSubtype,
         operator_metatypes.PTLinearMetatype,
-        operator_metatypes.PTModuleLinearMetatype,
         operator_metatypes.PTLayerNormMetatype,
-        operator_metatypes.PTModuleLayerNormMetatype,
         operator_metatypes.PTAddMetatype,
         operator_metatypes.PTMulMetatype,
         operator_metatypes.PTDivMetatype,
@@ -42,7 +33,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: dict[QuantizationTrait, list[PTOperatorMetaty
         operator_metatypes.PTRoundMetatype,
         operator_metatypes.PTPixelShuffleMetatype,
         operator_metatypes.PTBatchNormMetatype,
-        operator_metatypes.PTModuleBatchNormMetatype,
         operator_metatypes.PTAvgPool2dMetatype,
         operator_metatypes.PTAvgPool3dMetatype,
         # 1. Single input activations except Relu and PRelu could not be
@@ -97,11 +87,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: dict[QuantizationTrait, list[PTOperatorMetaty
     QuantizationTrait.CONCAT: [operator_metatypes.PTCatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
         operator_metatypes.PTEmbeddingMetatype,
-        operator_metatypes.PTModuleEmbeddingMetatype,
         operator_metatypes.PTEmbeddingBagMetatype,
-        operator_metatypes.PTModuleEmbeddingBagMetatype,
     ],
 }
-
-
-QUANTIZATION_LAYER_METATYPES: list[PTOperatorMetatype] = OPERATORS_WITH_WEIGHTS_METATYPES

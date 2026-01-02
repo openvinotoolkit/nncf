@@ -11,6 +11,7 @@
 
 
 import torch
+from torch import nn
 
 from nncf.common.factory import TModel
 from nncf.common.graph.graph import NNCFGraph
@@ -23,7 +24,6 @@ from nncf.experimental.common.tensor_statistics.statistics import TensorStatisti
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
 
 
@@ -31,7 +31,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
     BACKEND: BackendType = BackendType.TORCH
     HOOKS_GROUP_NAME = "statistics_hooks"
 
-    def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
+    def collect_statistics(self, model: nn.Module, graph: NNCFGraph) -> None:
         with torch.no_grad():
             super().collect_statistics(model, graph)
         model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)

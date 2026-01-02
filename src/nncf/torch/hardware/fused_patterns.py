@@ -178,7 +178,7 @@ def create_group_norm_relu_operations() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_CONST_MULTIPLY)
 def create_linear_const_multiply() -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(label="linear", type=[om.PTLinearMetatype, om.PTModuleLinearMetatype])
+    linear_node = pattern.add_node(label="linear", type=[om.PTLinearMetatype])
     mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
     pattern.add_edge(linear_node, mul_node)
 

@@ -47,7 +47,6 @@ from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_nodes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_matmul_with_constant
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 
@@ -169,7 +168,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight_name not in quantized_weight_names
 
     @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:
+    def get_weight_config(config: QuantizerConfig, model: torch.fx.GraphModule) -> QuantizerConfig:
         return config
 
     @staticmethod
@@ -298,12 +297,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTMaxMetatype,
                 om.PTSqueezeMetatype,
                 om.PTLayerNormMetatype,
-                om.PTModuleLayerNormMetatype,
                 om.PTGroupNormMetatype,
-                om.PTModuleGroupNormMetatype,
                 # Batchnorm
                 om.PTBatchNormMetatype,
-                om.PTModuleBatchNormMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)
