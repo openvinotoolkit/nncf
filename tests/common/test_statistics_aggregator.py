@@ -19,7 +19,6 @@ import numpy as np
 import pytest
 
 import nncf
-from nncf.common.factory import build_graph
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -428,7 +427,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        graph = build_graph(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
         def filter_func(point):
@@ -613,7 +612,7 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         model = self.get_backend_model(dataset_samples)
-        graph = build_graph(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
         def filter_func(point):
@@ -659,7 +658,7 @@ class TemplateTestStatisticsAggregator:
             inplace_statistics=inplace_statistics,
         )
         algo._set_backend_entity(model)
-        nncf_graph = build_graph(model)
+        nncf_graph = nncf.build_graph(model)
         algo._subset_size = subset_size
         tensor_collector = algo._get_stat_collector(nncf_graph, target_point, q_config, False)
         return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
@@ -701,7 +700,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        graph = build_graph(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
         tensor_collectors = list(statistics_points.get_tensor_collectors())
@@ -773,7 +772,7 @@ class TemplateTestStatisticsAggregator:
     def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics, mocker):
         params = test_params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
-        nncf_graph = build_graph(model)
+        nncf_graph = nncf.build_graph(model)
 
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
@@ -871,7 +870,7 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         # Run statistic collection to check output names matches reducer names
-        graph = build_graph(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
     @pytest.mark.parametrize(
@@ -925,7 +924,7 @@ class TemplateTestStatisticsAggregator:
         statistics_points = StatisticPointsContainer()
         statistics_points.add_statistic_point(dummy_statistic_point)
         dataset = nncf.Dataset(MockedDataset())
-        graph = build_graph(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         with pytest.raises(nncf.ValidationError) as e:

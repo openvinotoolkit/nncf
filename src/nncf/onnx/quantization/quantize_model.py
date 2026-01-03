@@ -21,7 +21,6 @@ from onnx.external_data_helper import load_external_data_for_model
 from onnx.external_data_helper import uses_external_data
 
 import nncf
-from nncf.common.factory import build_graph
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -360,7 +359,7 @@ def compress_weights_impl(
         compression_format,
         advanced_parameters,
     )
-    graph = build_graph(model)
+    graph = nncf.build_graph(model)
 
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
 

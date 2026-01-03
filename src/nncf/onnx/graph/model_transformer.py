@@ -16,7 +16,6 @@ import numpy as np
 import onnx
 
 import nncf
-from nncf.common.factory import build_graph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -503,7 +502,7 @@ class ONNXModelTransformer(ModelTransformer):
         """
         node_name_to_node = get_name_to_node_map(model)
         # TODO(andrey-churkin): Optimize it
-        graph = build_graph(model)
+        graph = nncf.build_graph(model)
         input_edges_mapping = get_input_edges_mapping(graph)
 
         for transformation in transformations:

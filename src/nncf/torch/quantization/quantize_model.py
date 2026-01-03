@@ -15,7 +15,6 @@ from typing import Optional, Union
 import torch
 
 import nncf
-from nncf.common.factory import build_graph
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import BackupMode
@@ -123,7 +122,7 @@ def compress_weights_impl(
         compression_format,
         advanced_parameters,
     )
-    graph = build_graph(model)
+    graph = nncf.build_graph(model)
 
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
     if isinstance(compressed_model, GraphModelWrapper):

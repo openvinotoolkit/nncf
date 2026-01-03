@@ -25,7 +25,6 @@ import nncf
 from nncf import AdvancedCompressionParameters
 from nncf import Dataset
 from nncf import SensitivityMetric
-from nncf.common.factory import build_graph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
@@ -123,7 +122,7 @@ def quantize_pt2e(
         batchwise_statistics=batchwise_statistics,
     )
 
-    nncf_graph = build_graph(transformed_model)
+    nncf_graph = nncf.build_graph(transformed_model)
     quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=calibration_dataset)
 
     # Magic. Without this call compiled model is not performant
@@ -225,7 +224,7 @@ def compress_pt2e(
 
     # Here the model is annotated
     transformed_model = quantizer.transform_prior_quantization(model)
-    nncf_graph = build_graph(transformed_model)
+    nncf_graph = nncf.build_graph(transformed_model)
     quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=dataset)
     quantized_model = torch.fx.GraphModule(quantized_model, graph=quantized_model.graph)
     return quantized_model

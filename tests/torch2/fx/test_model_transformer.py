@@ -25,7 +25,6 @@ from torch.quantization.fake_quantize import FakeQuantize
 import nncf
 import nncf.common
 import nncf.common.factory
-from nncf.common.factory import build_graph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -518,7 +517,7 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_valid.dot"
 
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
-    nx_graph = build_graph(model_with_correct_pattern).get_graph_for_structure_analysis(extended=True)
+    nx_graph = nncf.build_graph(model_with_correct_pattern).get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     model_with_incorrect_pattern = get_torch_fx_model(model, ex_input)
@@ -526,7 +525,7 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     compress_post_quantize_transformation(model_with_incorrect_pattern)
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_invalid.dot"
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
-    nx_graph = build_graph(model_with_incorrect_pattern).get_graph_for_structure_analysis(extended=True)
+    nx_graph = nncf.build_graph(model_with_incorrect_pattern).get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 

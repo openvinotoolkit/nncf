@@ -17,7 +17,6 @@ import nncf
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
-from nncf.common.factory import build_graph
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.parameters import CompressionFormat
@@ -120,7 +119,7 @@ def test_compress_weights_graph_edge(mode):
     input_ids = torch.randint(0, 10, (5,))
     exported_model = get_torch_fx_model(model, input_ids)
     compressed_model = compress_weights(exported_model, mode=mode)
-    nncf_graph = build_graph(compressed_model)
+    nncf_graph = nncf.build_graph(compressed_model)
     for node in nncf_graph.get_all_nodes():
         if "weights_decompressor" in node.node_name and node.node_type == "call_module":
             decompressor_node_edge = nncf_graph.get_input_edges(node)[0]
