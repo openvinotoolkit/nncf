@@ -20,16 +20,9 @@ from torch import nn
 from torch.nn import Module
 
 import nncf
-from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.scopes import matches_any
 from nncf.common.utils.os import is_windows
-from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
-from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.structures import ExecutionParameters
 
 
@@ -50,45 +43,6 @@ def get_all_modules(model, prefix=None):
     return found
 
 
-def get_all_modules_by_type(
-    model, module_types=None, current_scope=None, ignored_scopes=None, target_scopes=None, memo=None
-) -> dict[Scope, Module]:
-    if memo is None:
-        memo = set()
-    if isinstance(module_types, str):
-        module_types = [module_types]
-    found = OrderedDict()
-
-    if current_scope is None:
-        current_scope = Scope()
-        current_scope.push(ScopeElement(model.__class__.__name__))
-    for name, module in model.named_children():
-        if id(module) in memo:
-            continue
-        memo.add(id(module))
-        child_scope_element = ScopeElement(module.__class__.__name__, name)
-        child_scope = current_scope.copy()
-        child_scope.push(child_scope_element)
-
-        if matches_any(str(child_scope), ignored_scopes):
-            continue
-
-        if target_scopes is None or matches_any(str(child_scope), target_scopes):
-            if module_types is None or module_types.count(str(type(module).__name__)) != 0:
-                found[child_scope] = module
-            sub_found = get_all_modules_by_type(
-                module,
-                module_types,
-                current_scope=child_scope,
-                ignored_scopes=ignored_scopes,
-                target_scopes=target_scopes,
-                memo=memo,
-            )
-            if sub_found:
-                found.update(sub_found)
-    return found
-
-
 def get_state_dict_names_with_modules(
     model: torch.nn.Module, str_types: list[str] = None, prefix=""
 ) -> dict[str, torch.nn.Module]:
@@ -101,12 +55,6 @@ def get_state_dict_names_with_modules(
         if sub_found:
             found.update(sub_found)
     return found
-
-
-def get_filters_num(module):
-    if isinstance(module, _NNCFModuleMixin):
-        return module.weight.size(module.target_weight_dim_for_compression)
-    return module.weight.size(0)
 
 
 def manual_seed(seed):
@@ -209,10 +157,6 @@ def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
 
-def is_traced_tensor(obj):
-    return isinstance(obj, TracedTensorMixin)
-
-
 class _ModuleState:
     def __init__(self, base_module: Module = None):
         self._training_state: dict[str, bool] = {}
@@ -281,10 +225,8 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: N
     dict_to_save[module_node_name] = 2 * mac_count
 
 
-def add_domain(name_operator: str) -> str:
-    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
-
-    return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
+def add_ov_domain(name_operator: str) -> str:
+    return f"org.openvinotoolkit::{name_operator}"
 
 
 def default_distributed_wrapper(model: nn.Module, execution_parameters: ExecutionParameters):
@@ -328,89 +270,6 @@ def default_distributed_unwrapper(model: nn.Module):
     if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
         return model.module
     return model
-
-
-def rename_legacy_names_in_state_dict(
-    state_dict_to_load: dict[str, Any], legacy_names: list[str], legacy_name: str, new_name: str
-):
-    for name in legacy_names:
-        tensor = state_dict_to_load.pop(name)
-        new_key = name.replace(legacy_name, new_name) if new_name not in name else name
-        state_dict_to_load[new_key] = tensor
-
-    if legacy_names:
-        warning_deprecated(
-            "Legacy Batch Norm layer names was detected in checkpoint model state dict."
-            f" All occurrences of `{legacy_name}` in nodes names was replaced by `{new_name}`"
-        )
-
-
-LEGACY_VS_NEW_BN_MAP = {
-    "BatchNorm1d": "NNCFBatchNorm1d",
-    "BatchNorm2d": "NNCFBatchNorm2d",
-    "BatchNorm3d": "NNCFBatchNorm3d",
-    "NNCFBatchNorm": "NNCFBatchNorm2d",
-    "ConvBNActivation": "Conv2dNormActivation",
-}
-
-
-def maybe_convert_legacy_names_in_model_state(state_dict_to_load: dict[str, Any]) -> None:
-    """
-    Convert legacy layer names in compressed model state dict in case such names exist.
-
-    :param state_dict_to_load: State dict to convert.
-    """
-    legacy_names = LEGACY_VS_NEW_BN_MAP.keys()
-    matched_legacy_names = {name: [] for name in legacy_names}
-    for name_in_state_dict in state_dict_to_load:
-        matched = filter(lambda x: x in name_in_state_dict, legacy_names)
-        for legacy_name in matched:
-            matched_legacy_names[legacy_name].append(name_in_state_dict)
-    for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-        rename_legacy_names_in_state_dict(state_dict_to_load, matched_legacy_names[old_name], old_name, new_name)
-
-
-def maybe_convert_legacy_names_in_compress_state(compression_state: dict[str, Any]) -> None:
-    """
-    Convert legacy layer names in compression state in case such names exist.
-
-    :param compression_state: Compression state to convert.
-    """
-    if not compression_state or BaseController.BUILDER_STATE not in compression_state:
-        return
-
-    controller_state = compression_state[BaseController.BUILDER_STATE]
-    if not controller_state or "quantization" not in controller_state:
-        return
-
-    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
-
-    if not controller_state["quantization"].get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME):
-        qips = controller_state["quantization"]["quantizer_setup"]["quantization_points"]
-
-        detected_legacy_names = {
-            "BatchNorm1d": False,
-            "BatchNorm2d": False,
-            "BatchNorm3d": False,
-            "NNCFBatchNorm": False,
-        }
-
-        for point in qips.values():
-            name = point["qip"]["target_node_name"]
-            for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-                if old_name in name and new_name not in name:
-                    detected_legacy_names[old_name] = True
-                    point["qip"]["target_node_name"] = name.replace(old_name, new_name)
-                    break
-
-        for old_name, was_detected in detected_legacy_names.items():
-            if was_detected:
-                new_name = LEGACY_VS_NEW_BN_MAP[old_name]
-                warning_deprecated(
-                    "Legacy Batch Norm layer names was detected in quantization setup target"
-                    f" point names. All occurrences of `{old_name}` in nodes names was replaced by"
-                    f" `{new_name}`"
-                )
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:

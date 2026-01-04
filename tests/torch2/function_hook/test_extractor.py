@@ -48,6 +48,11 @@ TEST_PARAMS = (
         "conv/conv2d/0",
         "conv/conv2d/0",
     ),
+    (
+        helpers.FCTestModel,
+        "fc/linear/0",
+        "fc/linear/0",
+    ),
 )
 
 

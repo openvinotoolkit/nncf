@@ -18,9 +18,9 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
-from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -40,7 +40,7 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
         padding_values=[],
     )
     return NNCFGraphToTest(
-        PTModuleConv2dMetatype,
+        PTConv2dMetatype,
         conv_layer_attrs,
         PTNNCFGraph,
         const_metatype=PTConstNoopMetatype,
@@ -61,7 +61,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
         padding_values=(1, 1),
     )
     return NNCFGraphToTestDepthwiseConv(
-        PTModuleDepthwiseConv2dSubtype,
+        PTDepthwiseConv2dSubtype,
         conv_layer_attrs,
         nncf_graph_cls=PTNNCFGraph,
         const_metatype=PTConstNoopMetatype,
@@ -70,7 +70,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
 
 
 def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:
-    return NNCFGraphToTest(PTModuleLinearMetatype, None, PTNNCFGraph)
+    return NNCFGraphToTest(PTLinearMetatype, None, PTNNCFGraph)
 
 
 def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
@@ -86,7 +86,7 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
         padding_values=[],
     )
     return NNCFGraphToTestSumAggregation(
-        PTModuleConv2dMetatype,
+        PTConv2dMetatype,
         PTSumMetatype,
         conv_layer_attrs,
         PTNNCFGraph,

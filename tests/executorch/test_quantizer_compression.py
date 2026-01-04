@@ -89,14 +89,18 @@ def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
 
 
 def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[dict[str, Any]] = None) -> str:
-    mode = qparams.get("mode")
-    gs = qparams.get("group_size", "-1")
-    all_layers = qparams.get("all_layers", "False")
+    output = str(qparams.get("mode").value)
+    output += f"gs{qparams.get('group_size', -1)}"
+    if qparams.get("all_layers", False):
+        output += "_al"
+
     if pt2e_param is None:
-        return f"{mode.value}_gs{gs}_all_layers_{all_layers}"
-    awq = pt2e_param.get("awq", "False")
-    scale_estimation = pt2e_param.get("scale_estimation", "False")
-    return f"{mode.value}_gs{gs}_all_layers_{all_layers}_awq_{awq}_scale_estimation_{scale_estimation}"
+        return output
+    if pt2e_param.get("awq", False):
+        output += "_awq"
+    if pt2e_param.get("scale_estimation", False):
+        output += "_sa"
+    return output
 
 
 def get_scale_values_from_model(model: torch.fx.GraphModule) -> dict[str, torch.Tensor]:

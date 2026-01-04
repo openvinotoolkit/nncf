@@ -48,7 +48,13 @@ OPERATOR_MAP = {
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
-BOOLEAN_OPERATOR_MAP = {"and": operator.and_, "or": operator.or_}
+BOOLEAN_OPERATOR_MAP = {
+    "and": operator.and_,
+    "or": operator.or_,
+    "rshift": operator.rshift,
+    "lshift": operator.lshift,
+    "invert": lambda a, _: ~a,
+}
 
 COMPARISON_OPERATOR_MAP = {
     "lt": operator.lt,
@@ -101,9 +107,9 @@ class TemplateTestNNCFTensorOperators:
         assert all(tensor_a == tensor_b)
 
     @pytest.mark.parametrize("op_name", BOOLEAN_OPERATOR_MAP.keys())
-    @pytest.mark.parametrize("value", [True, False])
+    @pytest.mark.parametrize("value", [0, 1, 2])
     def test_operators_bool(self, op_name, value):
-        tensor_a = self.to_tensor([True, False])
+        tensor_a = self.to_tensor([0, 1, 2])
 
         nncf_tensor_a = Tensor(tensor_a)
 
@@ -654,6 +660,15 @@ class TemplateTestNNCFTensorOperators:
         res = fns.astype(tensor, TensorDataType.int8)
         assert isinstance(res, Tensor)
         assert res.dtype == TensorDataType.int8
+
+    def test_view(self):
+        tensor = Tensor(self.to_tensor([1.5]))
+        res = tensor.view(TensorDataType.uint8)
+        res_back = res.view(tensor.dtype)
+        assert isinstance(res, Tensor)
+        assert res.dtype == TensorDataType.uint8
+        assert res_back.dtype == tensor.dtype
+        assert fns.allclose(res_back, tensor)
 
     def test_atleast_1d(self):
         scalar = Tensor(self.to_tensor(42))
@@ -2138,6 +2153,8 @@ class TemplateTestNNCFTensorOperators:
                 in [
                     TensorDataType.int4,
                     TensorDataType.uint4,
+                    TensorDataType.uint16,
+                    TensorDataType.uint32,
                     TensorDataType.nf4,
                     TensorDataType.f4e2m1,
                     TensorDataType.f8e8m0,

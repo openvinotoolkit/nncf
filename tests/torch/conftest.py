@@ -34,8 +34,8 @@ pytest.register_assert_rewrite("tests.torch.helpers")
 @pytest.fixture(scope="session", autouse=True)
 def disable_tf32_precision():
     if torch:
-        torch.backends.cuda.matmul.allow_tf32 = False
-        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.fp32_precision = "ieee"
+        torch.backends.cudnn.conv.fp32_precision = "ieee"
 
 
 def pytest_addoption(parser: Parser):
@@ -115,9 +115,6 @@ def pytest_configure(config: Config):
     for regen_option in ["dot", "json"]:
         if config.getoption(f"--regen-{regen_option}", False):
             os.environ[f"NNCF_TEST_REGEN_{regen_option.upper()}"] = "1"
-
-    # Enable patching of torch functions
-    os.environ["NNCF_TORCH_LEGACY_TRACING"] = "1"
 
 
 @pytest.fixture(scope="module")
