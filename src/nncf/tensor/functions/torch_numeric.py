@@ -453,6 +453,11 @@ def _(a: torch.Tensor, axis: T_SHAPE) -> torch.Tensor:
     return a.reshape(shape)
 
 
+@numeric.sign.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.sign(a)
+
+
 @numeric.clone.register
 def _(a: torch.Tensor) -> torch.Tensor:
     return a.clone()

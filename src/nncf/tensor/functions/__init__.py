@@ -61,6 +61,7 @@ from nncf.tensor.functions.numeric import repeat as repeat
 from nncf.tensor.functions.numeric import reshape as reshape
 from nncf.tensor.functions.numeric import round as round
 from nncf.tensor.functions.numeric import searchsorted as searchsorted
+from nncf.tensor.functions.numeric import sign as sign
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
 from nncf.tensor.functions.numeric import sum as sum

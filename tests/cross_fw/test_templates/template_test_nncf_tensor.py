@@ -568,6 +568,14 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert res.device == tensor.device
 
+    def test_fn_sign(self):
+        tensor = Tensor(self.to_tensor([1, 0, -1]))
+        tensor_ref = self.to_tensor([1, 0, -1])
+        res = fns.sign(tensor)
+        assert all(res.data == tensor_ref)
+        assert isinstance(res, Tensor)
+        assert res.device == tensor.device
+
     @pytest.mark.parametrize(
         "val, ref",
         (
