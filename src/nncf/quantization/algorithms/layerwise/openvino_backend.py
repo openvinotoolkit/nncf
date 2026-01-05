@@ -15,7 +15,7 @@ import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.data.dataset import Dataset
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
@@ -43,5 +43,5 @@ class OVLayerwiseEngineBackend(LayerwiseEngineBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorStatisticCollectorBase:
+    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
         return get_raw_stat_collector(num_samples)

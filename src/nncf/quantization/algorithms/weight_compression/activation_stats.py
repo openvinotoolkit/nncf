@@ -12,7 +12,7 @@
 from functools import reduce
 from operator import mul
 
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 

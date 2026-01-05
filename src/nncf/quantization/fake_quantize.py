@@ -19,7 +19,7 @@ from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType

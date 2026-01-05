@@ -67,10 +67,10 @@ class Tensor:
     def __iter__(self) -> Iterator[Tensor]:
         return TensorIterator(self)
 
-    def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]]) -> Tensor:
+    def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...], slice]) -> Tensor:
         return Tensor(self.data[unwrap_index(index)])
 
-    def __setitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]], value: Any) -> None:
+    def __setitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...], slice], value: Any) -> None:
         self.data[unwrap_index(index)] = unwrap_tensor_data(value)
 
     def __str__(self) -> str:

@@ -26,8 +26,8 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import TypedQuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import REDUCERS_MAP
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder

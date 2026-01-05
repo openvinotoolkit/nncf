@@ -18,10 +18,10 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map

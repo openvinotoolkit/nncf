@@ -14,27 +14,27 @@ from typing import Optional
 
 import numpy as np
 
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
-from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import AggregatorBase
+from nncf.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.common.tensor_statistics.collectors import MaxAggregator
+from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
+from nncf.common.tensor_statistics.collectors import MinAggregator
+from nncf.common.tensor_statistics.collectors import MinReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import PercentileAggregator
+from nncf.common.tensor_statistics.collectors import QuantileReducer
+from nncf.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.tensor import Tensor
 
 
@@ -242,7 +242,7 @@ def _get_collection_without_reduction(
     """
     tensor_collector = TensorCollector(statistic_cls)
     reducer = RawReducer()
-    aggregation_axes = list(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
+    aggregation_axes = tuple(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
     aggregator = aggregator_cls(
         aggregation_axes=aggregation_axes,
         window_size=window_size,
@@ -277,7 +277,7 @@ def get_mean_percentile_statistic_collector(
     """
     tensor_collector = TensorCollector(_get_wrapped_percentile_tensor_statistic(target_shape=scale_shape))
     quantiles_to_collect = np.true_divide(percentiles_to_collect, 100)
-    reducer = QuantileReducer(axes=reduction_axes, quantile=quantiles_to_collect)
+    reducer = QuantileReducer(axes=reduction_axes, quantile=quantiles_to_collect.tolist())
     for output_port_id, p in enumerate(percentiles_to_collect):
         aggregator = MeanAggregator(
             aggregation_axes=aggregation_axes,

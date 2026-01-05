@@ -13,7 +13,7 @@ from collections import UserDict
 from typing import Any, Callable, Generator, Optional, cast
 
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorCollector
 
 
 class StatisticPoint:

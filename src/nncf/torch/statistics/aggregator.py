@@ -19,8 +19,8 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint

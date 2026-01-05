@@ -22,8 +22,8 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import REDUCERS_MAP
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES

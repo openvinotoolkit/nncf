@@ -15,11 +15,11 @@ import pytest
 import torch
 
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.tensor_statistics.collectors import get_mean_percentile_statistic_collector
@@ -111,7 +111,7 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics_with_shape_convert(
         self,
-        collector: type[TensorStatisticCollectorBase],
+        collector: type[TensorCollector],
         reduction_axes_vs_ref_statistic: dict[tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
         for shapes in reduction_axes_vs_ref_statistic:
@@ -202,7 +202,7 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics(
         self,
-        collector: type[TensorStatisticCollectorBase],
+        collector: type[TensorCollector],
         reduction_axes_vs_ref_statistic: dict[ReductionAxes, TensorStatistic],
     ):
         for reduction_axes in reduction_axes_vs_ref_statistic:

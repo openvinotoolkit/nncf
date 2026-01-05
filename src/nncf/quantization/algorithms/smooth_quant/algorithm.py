@@ -23,14 +23,14 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.collectors import AxesMode
+from nncf.common.tensor_statistics.collectors import MaxAggregator
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.collectors import AxesMode
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns

@@ -18,7 +18,7 @@ from openvino import opset13 as opset
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP

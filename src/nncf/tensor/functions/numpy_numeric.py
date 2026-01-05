@@ -268,7 +268,7 @@ def _(a: T_NUMPY, exponent: Union[T_NUMPY, float]) -> T_NUMPY:
 @numeric.quantile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY:

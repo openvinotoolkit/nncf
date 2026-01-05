@@ -28,15 +28,15 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import MaxAggregator
+from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MinAggregator
+from nncf.common.tensor_statistics.collectors import MinReducer
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
