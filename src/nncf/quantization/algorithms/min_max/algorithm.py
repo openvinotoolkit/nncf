@@ -29,7 +29,6 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
@@ -676,9 +675,7 @@ class MinMaxQuantization(Algorithm):
         :param ignored_patterns: Ignored patterns.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        hw_config_type = get_hw_config_type(self._target_device.value)
-        hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
-        hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
+        hw_config = self._backend_entity.hw_config(self._target_device)
 
         ignored_names = self._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph, inference_nncf_graph)

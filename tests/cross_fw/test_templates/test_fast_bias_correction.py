@@ -16,7 +16,7 @@ from typing import TypeVar
 
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
@@ -129,6 +129,6 @@ class TemplateTestFBCAlgorithm:
         dataset = get_static_dataset(params.model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
         self.check_bias(quantized_model, params.ref_bias)

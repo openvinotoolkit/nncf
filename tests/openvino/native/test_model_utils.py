@@ -13,7 +13,7 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
@@ -66,7 +66,7 @@ def test_remove_friendly_name_duplicates(model_instance, remove_duplicates, uniq
     model_uniqie_names = set([op.get_friendly_name() for op in model_instance.get_ops()])
     assert len(model_uniqie_names) == unique_layer_numbers
 
-    nncf_graph = NNCFGraphFactory.create(model_instance)
+    nncf_graph = build_graph(model_instance)
     assert len(nncf_graph.get_all_nodes()) == unique_layer_numbers
 
     try:

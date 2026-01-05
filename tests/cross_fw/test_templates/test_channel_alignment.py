@@ -184,7 +184,7 @@ class TemplateTestChannelAlignment:
         pass
 
     def mock_nncf_graph_factory(self, mocker, nncf_graph: NNCFGraph) -> None:
-        mocker.patch("nncf.common.factory.NNCFGraphFactory.create", return_value=nncf_graph)
+        mocker.patch("nncf.common.factory.build_graph", return_value=nncf_graph)
 
     def mock_model_transformer_factory(self, mocker, model_transformer: ModelTransformer) -> None:
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=model_transformer)

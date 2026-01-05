@@ -11,8 +11,8 @@
 
 from typing import Optional, TypeVar, Union
 
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -115,7 +115,7 @@ class Pipeline:
         pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step[:-1]:
             current_model = algorithm.apply(current_model, current_graph, step_statistics)
-            current_graph = NNCFGraphFactory.create(current_model)
+            current_graph = build_graph(current_model)
         current_model = pipeline_step[-1].apply(current_model, current_graph, step_statistics)
 
         return current_model
@@ -152,7 +152,7 @@ class Pipeline:
         for step_index in range(start_step_index, len(pipeline_steps)):
             # Create graph required to run current pipeline step
             if step_graph is None:
-                step_graph = NNCFGraphFactory.create(step_model)
+                step_graph = build_graph(step_model)
 
             # Collect statistics required to run current pipeline step
             step_statistics = step_index_to_statistics.get(step_index)

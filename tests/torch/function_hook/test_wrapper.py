@@ -20,6 +20,7 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import is_wrapped
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.function_hook.wrapper import register_pre_function_hook
@@ -111,6 +112,19 @@ def test_wrapper(model_cls, modifier_type):
         wrapped_ret = wrapped(example_input)
 
     torch.testing.assert_close(ret, wrapped_ret)
+
+
+def test_wrap_already_wrapped_model():
+    model = helpers.ConvModel().eval()
+    wrapped = wrap_model(model)
+
+    w_forward = wrapped.forward
+    w_hook_storage = get_hook_storage(wrapped)
+
+    wrapped_2 = wrap_model(wrapped)
+    # Second wrapped should keep forward and hook_storage and do nothing
+    assert w_forward is wrapped_2.forward
+    assert w_hook_storage is get_hook_storage(wrapped)
 
 
 def test_export_strict_false():
