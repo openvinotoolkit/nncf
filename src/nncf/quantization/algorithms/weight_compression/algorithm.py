@@ -1262,11 +1262,6 @@ class WeightCompression(Algorithm):
                 input_channel_axis = input_channel_axis % n_dims
                 reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
 
-                if any(weight_dim > 3 for weight_dim in all_weight_dims):
-                    max_val = max(weight_dim for weight_dim in all_weight_dims)
-                    msg = f"Compression with {max_val} dimentional weight is not supported"
-                    raise nncf.InternalError(msg)
-
                 # For 3D weights, keep the batch dimention
                 if any(weight_dim == 3 for weight_dim in all_weight_dims):
                     assert len(reduction_axes) == 2

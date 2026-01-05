@@ -21,7 +21,6 @@ from nncf.torch.node_utils import get_activation_channel_axis
     "metatype,port_id,ref_out",
     (
         (op.PTLinearMetatype, 0, -1),
-        (op.PTModuleLinearMetatype, 0, -1),
         (op.PTConv2dMetatype, 0, 1),
         (op.PTDepthwiseConv2dSubtype, 0, 1),
         (op.PTConvTranspose2dMetatype, 0, 1),

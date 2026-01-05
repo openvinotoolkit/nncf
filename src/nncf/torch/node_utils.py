@@ -24,7 +24,7 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
     :param port_id: Port ID for input.
     :return: Channel axis number.
     """
-    if node.metatype not in op.CONVOLUTION_METATYPES + op.MATMUL_METATYPES + op.UNIFICATION_PRODUCING_METATYPES:
+    if node.metatype not in op.CONVOLUTION_METATYPES + op.MATMUL_METATYPES:
         msg = f"Activation channel axis retrieval from node with metatype {node.metatype} is not supported"
         raise nncf.InternalError(msg)
 
