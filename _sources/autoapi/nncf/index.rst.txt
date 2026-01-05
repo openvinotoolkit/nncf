@@ -53,6 +53,9 @@ Functions
 .. autoapisummary::
 
    nncf.strip
+   nncf.batch_norm_adaptation
+   nncf.prune
+   nncf.pruning_statistic
    nncf.compress_weights
    nncf.quantize
    nncf.quantize_with_accuracy_control
@@ -227,16 +230,15 @@ Functions
 
    Bases: :py:obj:`StrEnum`
 
-   str(object='') -> str
-   str(bytes_or_buffer[, encoding[, errors]]) -> str
+   Enumeration for different pruning modes in neural network compression.
 
-   Create a new string object from the given object. If encoding or
-   errors is specified, then the object must expose a data buffer
-   that will be decoded using the given encoding and error handler.
-   Otherwise, returns the result of object.__str__() (if defined)
-   or repr(object).
-   encoding defaults to sys.getdefaultencoding().
-   errors defaults to 'strict'.
+   :param UNSTRUCTURED_MAGNITUDE_LOCAL: Unstructured magnitude-based pruning with local importance calculation.
+       Weight importance is computed independently for each tensor.
+   :param UNSTRUCTURED_MAGNITUDE_GLOBAL: Unstructured magnitude-based pruning with **global** importance calculation.
+       Weight importance is computed across all tensors selected for pruning.
+   :param UNSTRUCTURED_REGULARIZATION_BASED: Unstructured pruning based on trainable regularization masks.
+       Trainable masks are introduced for the weights and optimized during training.
+       This mode requires an additional regularization loss `RBLoss`.
 
 
 .. py:class:: QuantizationMode
@@ -294,6 +296,39 @@ Functions
 
    Compression will take into account the value of this parameter in order to obtain the best performance
    for this type of device.
+
+
+.. py:function:: batch_norm_adaptation(model, calibration_dataset, *, num_iterations = None)
+
+   Adapt the batch normalization layers of the given model using the provided dataset.
+   This function runs a specified number of iterations through the model
+   to update the running statistics of the batch normalization layers.
+
+   :param model: The model to adapt.
+   :param calibration_dataset: The dataset to use for the adaptation.
+   :param num_iterations: The number of iterations to use for adaptation.
+       If set to None, the adaptation will run for the entire dataset.
+
+
+.. py:function:: prune(model, mode, *, ratio = None, ignored_scope = None, examples_inputs = None)
+
+   Prunes the given model based on the specified mode and ratio.
+   Insert binary masks for the parameters and calculate the initial masks by the given ratio.
+
+   :param model: The model to be pruned.
+   :param mode: The mode of pruning to be applied.
+   :param ratio: The ratio of parameters to prune from the model.
+   :param ignored_scope: A scope of parameters to ignore during pruning. Defaults to None.
+   :param examples_inputs: Example inputs to guide the pruning process. Defaults to None.
+   :return: The pruned model.
+
+
+.. py:function:: pruning_statistic(model)
+
+   Collects and returns pruning statistics for the given model.
+
+   :param model: The pruned model.
+   :return: A pruning statistic.
 
 
 .. py:class:: QuantizationPreset

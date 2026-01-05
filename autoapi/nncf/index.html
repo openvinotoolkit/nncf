@@ -301,7 +301,7 @@
 <td><p>Describes the model type the specificity of which will be taken into account during compression.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.PruneMode" title="nncf.PruneMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PruneMode</span></code></a></p></td>
-<td><p>str(object='') -&gt; str</p></td>
+<td><p>Enumeration for different pruning modes in neural network compression.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationMode" title="nncf.QuantizationMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationMode</span></code></a></p></td>
 <td><p>Defines special modes.</p></td>
@@ -339,13 +339,22 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model, *[, do_copy, strip_format, example_input])</p></td>
 <td><p>Removes auxiliary layers and operations added during the compression process, resulting in a clean</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model, *[, mode, ratio, group_size, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.batch_norm_adaptation" title="nncf.batch_norm_adaptation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch_norm_adaptation</span></code></a>(model, calibration_dataset, *[, ...])</p></td>
+<td><p>Adapt the batch normalization layers of the given model using the provided dataset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.prune" title="nncf.prune"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prune</span></code></a>(model, mode, *[, ratio, ignored_scope, ...])</p></td>
+<td><p>Prunes the given model based on the specified mode and ratio.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.pruning_statistic" title="nncf.pruning_statistic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pruning_statistic</span></code></a>(model)</p></td>
+<td><p>Collects and returns pruning statistics for the given model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model, *[, mode, ratio, group_size, ...])</p></td>
 <td><p>Compress model weights.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset, *[, mode, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset, *[, mode, ...])</p></td>
 <td><p>Applies post-training quantization to the provided model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
 <td><p>Applies post-training quantization algorithm with accuracy control to provided model.</p></td>
 </tr>
 </tbody>
@@ -593,15 +602,20 @@ the original model.</p></li>
 <dt class="sig sig-object py" id="nncf.PruneMode">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">PruneMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.PruneMode" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
-<p>str(object=’’) -&gt; str
-str(bytes_or_buffer[, encoding[, errors]]) -&gt; str</p>
-<p>Create a new string object from the given object. If encoding or
-errors is specified, then the object must expose a data buffer
-that will be decoded using the given encoding and error handler.
-Otherwise, returns the result of object.__str__() (if defined)
-or repr(object).
-encoding defaults to sys.getdefaultencoding().
-errors defaults to ‘strict’.</p>
+<p>Enumeration for different pruning modes in neural network compression.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>UNSTRUCTURED_MAGNITUDE_LOCAL</strong> – Unstructured magnitude-based pruning with local importance calculation.
+Weight importance is computed independently for each tensor.</p></li>
+<li><p><strong>UNSTRUCTURED_MAGNITUDE_GLOBAL</strong> – Unstructured magnitude-based pruning with <strong>global</strong> importance calculation.
+Weight importance is computed across all tensors selected for pruning.</p></li>
+<li><p><strong>UNSTRUCTURED_REGULARIZATION_BASED</strong> – Unstructured pruning based on trainable regularization masks.
+Trainable masks are introduced for the weights and optimized during training.
+This mode requires an additional regularization loss <cite>RBLoss</cite>.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py class">
@@ -675,6 +689,68 @@ with compressed weights.</p></li>
 <p>Target device architecture for compression.</p>
 <p>Compression will take into account the value of this parameter in order to obtain the best performance
 for this type of device.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nncf.batch_norm_adaptation">
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">batch_norm_adaptation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.batch_norm_adaptation" title="Permalink to this definition">#</a></dt>
+<dd><p>Adapt the batch normalization layers of the given model using the provided dataset.
+This function runs a specified number of iterations through the model
+to update the running statistics of the batch normalization layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>TModel</em>) – The model to adapt.</p></li>
+<li><p><strong>calibration_dataset</strong> (<em>nncf.data.dataset.Dataset</em>) – The dataset to use for the adaptation.</p></li>
+<li><p><strong>num_iterations</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – The number of iterations to use for adaptation.
+If set to None, the adaptation will run for the entire dataset.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>TModel</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nncf.prune">
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">prune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">examples_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.prune" title="Permalink to this definition">#</a></dt>
+<dd><p>Prunes the given model based on the specified mode and ratio.
+Insert binary masks for the parameters and calculate the initial masks by the given ratio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>TModel</em>) – The model to be pruned.</p></li>
+<li><p><strong>mode</strong> (<em>nncf.parameters.PruneMode</em>) – The mode of pruning to be applied.</p></li>
+<li><p><strong>ratio</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – The ratio of parameters to prune from the model.</p></li>
+<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.scopes.IgnoredScope</em><em>]</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
+<li><p><strong>examples_inputs</strong> (<em>Optional</em><em>[</em><em>Any</em><em>]</em>) – Example inputs to guide the pruning process. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The pruned model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TModel</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nncf.pruning_statistic">
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">pruning_statistic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.pruning_statistic" title="Permalink to this definition">#</a></dt>
+<dd><p>Collects and returns pruning statistics for the given model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>TModel</em>) – The pruned model.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pruning statistic.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ModelPruningStatistic</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py class">
@@ -1020,6 +1096,9 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#nncf.SensitivityMetric"><code class="docutils literal notranslate"><span class="pre">SensitivityMetric</span></code></a></li>
 <li><a class="reference internal" href="#nncf.StripFormat"><code class="docutils literal notranslate"><span class="pre">StripFormat</span></code></a></li>
 <li><a class="reference internal" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
+<li><a class="reference internal" href="#nncf.batch_norm_adaptation"><code class="docutils literal notranslate"><span class="pre">batch_norm_adaptation()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.prune"><code class="docutils literal notranslate"><span class="pre">prune()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.pruning_statistic"><code class="docutils literal notranslate"><span class="pre">pruning_statistic()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
 <li><a class="reference internal" href="#nncf.compress_weights"><code class="docutils literal notranslate"><span class="pre">compress_weights()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
