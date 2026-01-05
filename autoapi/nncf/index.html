@@ -336,30 +336,53 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model, *[, do_copy, strip_format, example_input])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.build_graph" title="nncf.build_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_graph</span></code></a>(model, *[, example_input])</p></td>
+<td><p>Builds NNCFGraph from the given model.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model, *[, do_copy, strip_format, example_input])</p></td>
 <td><p>Removes auxiliary layers and operations added during the compression process, resulting in a clean</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.batch_norm_adaptation" title="nncf.batch_norm_adaptation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch_norm_adaptation</span></code></a>(model, calibration_dataset, *[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.batch_norm_adaptation" title="nncf.batch_norm_adaptation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch_norm_adaptation</span></code></a>(model, calibration_dataset, *[, ...])</p></td>
 <td><p>Adapt the batch normalization layers of the given model using the provided dataset.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.prune" title="nncf.prune"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prune</span></code></a>(model, mode, *[, ratio, ignored_scope, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.prune" title="nncf.prune"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prune</span></code></a>(model, mode, *[, ratio, ignored_scope, ...])</p></td>
 <td><p>Prunes the given model based on the specified mode and ratio.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.pruning_statistic" title="nncf.pruning_statistic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pruning_statistic</span></code></a>(model)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.pruning_statistic" title="nncf.pruning_statistic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pruning_statistic</span></code></a>(model)</p></td>
 <td><p>Collects and returns pruning statistics for the given model.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model, *[, mode, ratio, group_size, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model, *[, mode, ratio, group_size, ...])</p></td>
 <td><p>Compress model weights.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset, *[, mode, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset, *[, mode, ...])</p></td>
 <td><p>Applies post-training quantization to the provided model.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
 <td><p>Applies post-training quantization algorithm with accuracy control to provided model.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
+<dl class="py function">
+<dt class="sig sig-object py" id="nncf.build_graph">
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">build_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/factory.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.build_graph" title="Permalink to this definition">#</a></dt>
+<dd><p>Builds NNCFGraph from the given model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>TModel</em>) – The model from which to build the graph.</p></li>
+<li><p><strong>example_input</strong> (<em>Any</em>) – Example input to the model, required for some backends.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The constructed NNCFGraph.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>nncf.common.graph.graph.NNCFGraph</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.strip">
 <span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/strip.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.strip" title="Permalink to this definition">#</a></dt>
@@ -1078,6 +1101,7 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#subpackages">Subpackages</a><ul>
 <li><a class="reference internal" href="#classes">Classes</a></li>
 <li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#nncf.build_graph"><code class="docutils literal notranslate"><span class="pre">build_graph()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.strip"><code class="docutils literal notranslate"><span class="pre">strip()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.Dataset"><code class="docutils literal notranslate"><span class="pre">Dataset</span></code></a><ul>
 <li><a class="reference internal" href="#nncf.Dataset.get_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_data()</span></code></a></li>

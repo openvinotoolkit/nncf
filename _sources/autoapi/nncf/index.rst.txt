@@ -52,6 +52,7 @@ Functions
 
 .. autoapisummary::
 
+   nncf.build_graph
    nncf.strip
    nncf.batch_norm_adaptation
    nncf.prune
@@ -60,6 +61,15 @@ Functions
    nncf.quantize
    nncf.quantize_with_accuracy_control
 
+
+
+.. py:function:: build_graph(model, *, example_input = None)
+
+   Builds NNCFGraph from the given model.
+
+   :param model: The model from which to build the graph.
+   :param example_input: Example input to the model, required for some backends.
+   :return: The constructed NNCFGraph.
 
 
 .. py:function:: strip(model, *, do_copy = True, strip_format = StripFormat.NATIVE, example_input = None)
