@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.experimental.common.tensor_statistics.statistics`
-===============================================================
-
-.. py:module:: nncf.experimental.common.tensor_statistics.statistics
-
-
