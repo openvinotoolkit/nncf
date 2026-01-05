@@ -16,7 +16,6 @@ import pytest
 
 import nncf
 from nncf import IgnoredScope
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import AbsMaxReducer
@@ -165,7 +164,7 @@ class TemplateTestSQAlgorithm:
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm(self.get_ignored_scope(model_cls))
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         self.check_scales(quantized_model, reference_values, model_cls)
@@ -199,7 +198,7 @@ class TemplateTestSQAlgorithm:
             pytest.skip("Current backend does not support shared weights yet.")
 
         model = self.backend_specific_model(model_cls(), tmpdir)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = nncf.build_graph(model)
 
         algo = SmoothQuant()
         algo._set_backend_entity(model)
@@ -222,7 +221,7 @@ class TemplateTestSQAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         algo = SmoothQuant(subset_size=1, inplace_statistics=False)
         algo_statistic_points = algo.get_statistic_points(model, graph)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)

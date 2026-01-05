@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import openvino as ov
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
@@ -78,7 +78,7 @@ TEST_CASES = [
 
 @pytest.mark.parametrize("test_case", TEST_CASES)
 def test_revert_operations_to_floating_point_precision(test_case: InputTestData):
-    quantized_model_graph = NNCFGraphFactory.create(test_case.quantized_model)
+    quantized_model_graph = build_graph(test_case.quantized_model)
     operations = [quantized_model_graph.get_node_by_name(name) for name in test_case.operations]
     quantizers = [quantized_model_graph.get_node_by_name(name) for name in test_case.quantizers]
 
@@ -93,7 +93,7 @@ def test_revert_operations_to_floating_point_precision(test_case: InputTestData)
         lambda node: node.layer_attributes.get_const_port_ids(),
     )
 
-    updated_model_graph = NNCFGraphFactory.create(updated_model)
+    updated_model_graph = build_graph(updated_model)
     actual_remaining_quantizers = [
         x.node_name for x in updated_model_graph.get_nodes_by_metatypes([ov_metatypes.OVFakeQuantizeMetatype])
     ]

@@ -8,59 +8,71 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import nncf
-from nncf.common.engine import Engine
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.command_creation import CommandCreator
-from nncf.common.tensor_statistics import aggregator
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.data.dataset import Dataset
+
+if TYPE_CHECKING:
+    from nncf.common.engine import Engine
+    from nncf.common.graph.graph import NNCFGraph
+    from nncf.common.graph.model_transformer import ModelTransformer
+    from nncf.common.graph.transformations.command_creation import CommandCreator
+    from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+    from nncf.data.dataset import Dataset
 
 TModel = TypeVar("TModel")
 
 
-class NNCFGraphFactory:
-    @staticmethod
-    def create(model: TModel) -> NNCFGraph:
-        """
-        Factory method to create backend-specific NNCFGraph instance based on the input model.
+@api(canonical_alias="nncf.build_graph")
+def build_graph(model: TModel, *, example_input: Any = None) -> NNCFGraph:
+    """
+    Builds NNCFGraph from the given model.
 
-        :param model: backend-specific model instance
-        :return: backend-specific NNCFGraph instance
-        """
-        model_backend = get_backend(model)
-        if model_backend == BackendType.ONNX:
-            from onnx import ModelProto  # type: ignore
+    :param model: The model from which to build the graph.
+    :param example_input: Example input to the model, required for some backends.
+    :return: The constructed NNCFGraph.
+    """
+    model_backend = get_backend(model)
+    if model_backend == BackendType.ONNX:
+        from onnx import ModelProto  # type: ignore
 
-            from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
+        from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
 
-            return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))
-        if model_backend == BackendType.OPENVINO:
-            from openvino import Model  # type: ignore
+        return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))
+    if model_backend == BackendType.OPENVINO:
+        from openvino import Model  # type: ignore
 
-            from nncf.openvino.graph.nncf_graph_builder import GraphConverter as OVGraphConverter
+        from nncf.openvino.graph.nncf_graph_builder import GraphConverter as OVGraphConverter
 
-            return OVGraphConverter.create_nncf_graph(cast(Model, model))
-        if model_backend == BackendType.TORCH_FX:
-            from torch.fx import GraphModule
+        return OVGraphConverter.create_nncf_graph(cast(Model, model))
+    if model_backend == BackendType.TORCH_FX:
+        from torch.fx import GraphModule
 
-            from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter as FXGraphConverter
+        from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter as FXGraphConverter
 
-            return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
-        if model_backend == BackendType.TORCH:
-            from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+        return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
+    if model_backend == BackendType.TORCH:
+        from torch import nn
 
-            if isinstance(model, GraphModelWrapper):
-                return model.get_graph()
-            msg = f"Unexpected type of model {type(model)} for TORCH backend"
-            raise nncf.InternalError(msg)
-        msg = f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
-        raise nncf.UnsupportedBackendError(msg)
+        from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+        from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+
+        if isinstance(model, nn.Module):
+            return build_nncf_graph(model, example_input)
+
+        if isinstance(model, GraphModelWrapper):
+            return model.get_graph()
+
+        msg = f"Unexpected type of model {type(model)} for TORCH backend"
+        raise nncf.InternalError(msg)
+
+    msg = f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
+    raise nncf.UnsupportedBackendError(msg)
 
 
 class ModelTransformerFactory:
@@ -165,7 +177,7 @@ class CommandCreatorFactory:
 
 class StatisticsAggregatorFactory:
     @staticmethod
-    def create(model: TModel, dataset: Dataset) -> aggregator.StatisticsAggregator:
+    def create(model: TModel, dataset: Dataset) -> StatisticsAggregator:
         """
         Factory method to create backend-specific `StatisticsAggregator` instance based on the input model.
 

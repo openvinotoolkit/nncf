@@ -14,7 +14,7 @@ from typing import Any, TypeVar
 
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
@@ -122,7 +122,7 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
         modified_model = self.remove_fq_from_inputs(quantized_model)
         return modified_model
@@ -152,14 +152,14 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         mapped_ref_biases = self.map_references(ref_biases, model_cls)
         self.check_bias(quantized_model, mapped_ref_biases)
 
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
-        nncf_graph = NNCFGraphFactory.create(quantized_test_model)
+        nncf_graph = build_graph(quantized_test_model)
 
         bc_algo = self.get_bias_correction_algorithm()
         bc_algo._set_backend_entity(quantized_test_model)
@@ -173,7 +173,7 @@ class TemplateTestBCAlgorithm:
 
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
 
         bc_algo = self.get_bias_correction_algorithm()
         bc_algo.get_statistic_points(model, graph)

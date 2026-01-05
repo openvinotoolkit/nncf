@@ -26,7 +26,7 @@ import nncf
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.tensor_statistics.collectors import AggregatorBase
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
@@ -1022,7 +1022,7 @@ class TestActivationWeightDtype:
     def test_set_weight(weight_dtype, activation_dtype, tmp_path):
         model = GatherAndMatmulShareData(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
         ov_backend = OVWeightCompressionAlgoBackend(model)
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         node_key = "5 MatMul_2"
         weight_node = graph.get_node_by_key(node_key)
         weight_port_id = 1
