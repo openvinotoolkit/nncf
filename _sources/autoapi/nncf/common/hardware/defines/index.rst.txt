@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.common.hardware.defines`
+======================================
+
+.. py:module:: nncf.common.hardware.defines
+
+

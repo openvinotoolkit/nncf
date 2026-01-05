@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.common.hardware.setups.cpu`
+=========================================
+
+.. py:module:: nncf.common.hardware.setups.cpu
+
+
