@@ -200,6 +200,11 @@ def _(
     return np.where(condition, x, y)
 
 
+@numeric.sign.register
+def _(a: T_NUMPY) -> T_NUMPY:
+    return np.sign(a)
+
+
 @numeric.zeros_like.register
 def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.zeros_like(a)

@@ -78,7 +78,7 @@ class CompressWeightsMode(StrEnum):
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
     :param INT8_ASYM: The same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
         with a typical non-fixed zero point.
-        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
+        https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
     :param INT4_SYM: Stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
         Weights are quantized to a primary precision symmetrically without zero point.
         All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
@@ -167,7 +167,7 @@ class BackupMode(StrEnum):
     :param INT8_SYM: Stands for 8-bit integer symmetric quantization without zero point.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
     :param INT8_ASYM: Stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
-        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
+        https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
     """
 
     NONE = "none"
