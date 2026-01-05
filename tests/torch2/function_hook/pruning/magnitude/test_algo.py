@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,20 +9,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import pytest
 import torch
 from torch import nn
 
 import nncf
+import nncf.torch
 from nncf.parameters import PruneMode
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
-from tests.torch2.function_hook.pruning.magnitude.helpers import ConvModel
-from tests.torch2.function_hook.pruning.magnitude.helpers import MatMulLeft
-from tests.torch2.function_hook.pruning.magnitude.helpers import MatMulRight
-from tests.torch2.function_hook.pruning.magnitude.helpers import MultiDeviceModel
-from tests.torch2.function_hook.pruning.magnitude.helpers import SharedParamModel
-from tests.torch2.function_hook.pruning.magnitude.helpers import TwoConvModel
+from tests.torch2.function_hook.pruning.helpers import ConvModel
+from tests.torch2.function_hook.pruning.helpers import MatMulLeft
+from tests.torch2.function_hook.pruning.helpers import MatMulRight
+from tests.torch2.function_hook.pruning.helpers import MultiDeviceModel
+from tests.torch2.function_hook.pruning.helpers import SharedParamModel
+from tests.torch2.function_hook.pruning.helpers import TwoConvModel
 
 
 @pytest.mark.parametrize(
@@ -113,3 +116,56 @@ def test_multi_device_infer():
         assert isinstance(sparsity_module, UnstructuredPruningMask)
         act_devices[name] = sparsity_module.binary_mask.device.type
     assert ref_devices == act_devices
+
+
+def test_save_load(tmpdir: Path):
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+
+    pruned_model = nncf.prune(
+        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
+    )
+    checkpoint = {
+        "state_dict": pruned_model.state_dict(),
+        "nncf_config": nncf.torch.get_config(pruned_model),
+    }
+    path_to_checkpoint = tmpdir / "checkpoint.pth"
+    torch.save(checkpoint, path_to_checkpoint)
+
+    resuming_checkpoint = torch.load(path_to_checkpoint)
+    nncf_config = resuming_checkpoint["nncf_config"]
+    state_dict = resuming_checkpoint["state_dict"]
+
+    orig_output = pruned_model(example_inputs)
+
+    loaded_model = ConvModel()
+    loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config, example_inputs)
+    loaded_pruned_model.load_state_dict(state_dict)
+    loaded_output = loaded_pruned_model(example_inputs)
+    hook_storage = get_hook_storage(loaded_pruned_model)
+
+    d = {k: v for k, v in hook_storage.named_hooks()}
+    assert len(d) == 1
+    assert isinstance(d["post_hooks.conv:weight__0.0"], UnstructuredPruningMask)
+
+    assert torch.allclose(orig_output, loaded_output)
+
+
+def test_statistic():
+    model = ConvModel()
+    example_inputs = ConvModel.get_example_inputs()
+
+    pruned_model = nncf.prune(
+        model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL, ratio=0.5, examples_inputs=example_inputs
+    )
+    stat = nncf.pruning_statistic(pruned_model)
+
+    assert pytest.approx(stat.pruned_tensors[0].pruned_ratio, abs=1e-1) == 0.5
+    assert stat.pruned_tensors[0].tensor_name == "conv.weight"
+    assert stat.pruned_tensors[0].shape == (3, 3, 3, 3)
+    assert pytest.approx(stat.pruning_ratio, abs=1e-2) == 0.5
+    assert pytest.approx(stat.global_pruning_ratio, abs=1e-2) == 0.48
+
+    txt = str(stat)
+    assert "conv.weight" in txt
+    assert "All parameters" in txt

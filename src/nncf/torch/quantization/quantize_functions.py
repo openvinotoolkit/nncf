@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,11 +16,10 @@ from torch.overrides import has_torch_function_unary
 
 from nncf.common.logging import nncf_logger
 from nncf.errors import ValidationError
-from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.quantization.reference import ReferenceQuantizedFunctions as RQ
-from nncf.torch.utils import add_domain
+from nncf.torch.utils import add_ov_domain
 
 
 class QuantizeSymmetric(torch.autograd.Function):
@@ -206,7 +205,7 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
         g, input_, levels, input_low, input_high, output_low, output_high, scale, zero_point, q_min, q_max, ch_axis
     ):
         output = g.op(
-            add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels
+            add_ov_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels
         )
         # setType is needed for proper shape inference of custom op on ONNX export. Should work for torch >= 1.14
         output.setType(input_.type())
@@ -259,7 +258,6 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
     return y_scale, y_zero_point
 
 
-@register_operator()
 def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
     if has_torch_function_unary(input_):
         return handle_torch_function(
@@ -271,7 +269,6 @@ def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: 
     return QuantizeSymmetric.apply(input_, scale_safe, level_low, level_high, levels)
 
 
-@register_operator()
 def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_range, eps, skip: bool = False):
     if has_torch_function_unary(input_):
         return handle_torch_function(
@@ -284,7 +281,6 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)
 
 
-@register_operator()
 def asymmetric_quantize_lora(
     input_, input_shape, A, B, input_low_, input_range_, level_low, level_high, levels, eps, skip: bool = False
 ):
@@ -320,7 +316,6 @@ def asymmetric_quantize_lora(
     )
 
 
-@register_operator()
 def symmetric_quantize_lora(input_, input_shape, A, B, scale, level_low, level_high, levels, eps, skip: bool = False):
     if has_torch_function_unary(input_):
         return handle_torch_function(
@@ -391,7 +386,6 @@ class TuneRange(torch.autograd.Function):
         return grad_input_low, grad_input_range, None
 
 
-@register_operator()
 def decompress_asymmetric(input: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor) -> torch.Tensor:
     """
     Decompress the asymmetrically quantized input tensor.
@@ -407,7 +401,6 @@ def decompress_asymmetric(input: torch.Tensor, scale: torch.Tensor, zero_point: 
     return decompressed_input
 
 
-@register_operator()
 def decompress_symmetric(input: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     """
     Decompress the symmetrically quantized input tensor.
@@ -440,7 +433,6 @@ def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
     return packed_tensor
 
 
-@register_operator()
 def unpack_uint4(packed_tensor: torch.Tensor) -> torch.Tensor:
     """
     Unpacks a tensor, where each uint8 element stores two uint4 values, back into a tensor with
@@ -469,7 +461,6 @@ def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
     return pack_uint4(tensor.type(torch.uint8))
 
 
-@register_operator()
 def unpack_int4(packed_tensor: torch.Tensor) -> torch.Tensor:
     """
     Unpacks a tensor, where each uint8 element stores two int4 values, back into a tensor with

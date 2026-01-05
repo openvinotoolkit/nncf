@@ -11,10 +11,10 @@ virtualenv
 
 # Required for search_building_blocks tests
 accelerate==1.9.0
-transformers==4.52.1
+transformers==4.53.0
 
 # Required for movement_sparsity tests
-datasets==3.0.1
+datasets
 evaluate==0.3.0
 openvino
 timm==0.9.2
@@ -25,5 +25,6 @@ torchvision
 fastdownload==0.0.7
 
 sentence-transformers>=2.2.2
-optimum-intel==1.24.0
-optimum==1.26.0
+optimum-intel==1.26.0
+optimum-onnx==0.0.3
+optimum==2.0.0

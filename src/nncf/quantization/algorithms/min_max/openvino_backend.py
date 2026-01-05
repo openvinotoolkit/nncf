@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +17,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
@@ -150,7 +150,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             edge = nncf_graph.get_input_edge_by_port_id(node, target_point.port_id)
             return edge.tensor_shape
-        elif target_point.type == TargetType.POST_LAYER_OPERATION:
+        if target_point.type == TargetType.POST_LAYER_OPERATION:
             # NOTE: Assumes that all output edges for the `node` with `output_port_id`
             # equal to `target_point.port_id` should have the same `tensor_shape` value.
             edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,15 +20,15 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.caching import disable_results_caching
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
@@ -43,6 +43,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.optimized_functions import clear_ov_model_cache
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.quantization.ignored_patterns import create_rope
+from nncf.openvino.quantization.ignored_patterns import create_sam_pe
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
@@ -63,6 +64,7 @@ from nncf.quantization.algorithms.weight_compression.parameters import Compresse
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP_REV
 
 
@@ -222,28 +224,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         should_add_convert_node: bool,
         precomputed_compressed_weight: Optional[CompressedWeight] = None,
     ):
-        scale_dtype = ov.Type.f16
-        if compression_config.mode == CompressWeightsMode.NF4:
-            compression_dtype = ov.Type.nf4
-        elif compression_config.mode == CompressWeightsMode.MXFP4:
-            compression_dtype = ov.Type.f4e2m1
-            scale_dtype = ov.Type.f8e8m0
-        elif compression_config.mode == CompressWeightsMode.MXFP8_E4M3:
-            compression_dtype = ov.Type.f8e4m3
-            scale_dtype = ov.Type.f8e8m0
-        elif compression_config.mode == CompressWeightsMode.INT4_SYM:
-            compression_dtype = ov.Type.i4
-        elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
-            compression_dtype = ov.Type.u4
-        elif compression_config.mode == CompressWeightsMode.INT8_SYM:
-            compression_dtype = ov.Type.i8
-        elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
-            compression_dtype = ov.Type.u8
-        elif compression_config.is_codebook:
-            compression_dtype = None
-        else:
-            msg = f"{compression_config.mode.value} is not supported."
-            raise nncf.ParameterNotSupportedError(msg)
+        compression_dtype = DTYPE_MAP[compression_config.compression_dtype]
+        scale_dtype = (
+            ov.Type.f8e8m0
+            if compression_config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]
+            else ov.Type.f16
+        )
 
         original_shape = weight.shape
 
@@ -256,8 +242,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         if compression_config.is_codebook:
-            n_quants = compressed_weight.codebook.size - 1
-            compression_dtype = ov.Type.u16 if n_quants > 255 else (ov.Type.u8 if n_quants > 15 else ov.Type.u4)
             converted_const = create_ov_codebook_subgraph(
                 codebook=compressed_weight.codebook
                 if compression_config.mode == CompressWeightsMode.CODEBOOK
@@ -390,7 +374,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):

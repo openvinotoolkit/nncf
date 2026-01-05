@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -213,7 +213,7 @@ class track(Generic[ProgressType]):
             )
         )
 
-        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0)  # type: ignore[arg-type]
+        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0) or self.total == 0  # type: ignore[arg-type]
 
         progress_cls = Progress if weights is None else WeightedProgress
         self.progress = progress_cls(

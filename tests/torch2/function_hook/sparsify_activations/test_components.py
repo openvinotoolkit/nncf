@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,7 +22,6 @@ from nncf.experimental.torch.sparsify_activations.target_scope import get_target
 from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
 from nncf.torch.model_creation import wrap_model
-from nncf.torch.nncf_network import NNCFNetwork
 from tests.common.test_ignored_scope import CONV_TYPE
 from tests.common.test_ignored_scope import IGNORED_SCOPES_TEST_DATA
 from tests.common.test_ignored_scope import LINEAR_TYPE
@@ -200,7 +199,7 @@ class TestPTSparsifyActivationsAlgoBackend:
         mock_sparsifier.freeze = True
         num_model_forward_calls = 0
 
-        def model_forward_pre_hook(model: NNCFNetwork, args):
+        def model_forward_pre_hook(model, args):
             nonlocal num_model_forward_calls
             num_model_forward_calls += 1
             assert model.training is False

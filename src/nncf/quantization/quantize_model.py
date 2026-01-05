@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
-from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -46,6 +45,7 @@ from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
 TTensor = TypeVar("TTensor")
+TModel = TypeVar("TModel")
 
 BATCHWISE_STATISTICS_WARNING = (
     "For the particular model the batchwise statistics collection can lead to inaccurate statistics. "
@@ -129,6 +129,7 @@ def _update_advanced_quantization_parameters(
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
+    *,
     mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
@@ -214,22 +215,6 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
 
-    if backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow.quantization.quantize_model import quantize_impl
-
-        return quantize_impl(  # type: ignore[no-any-return]
-            model=model,
-            calibration_dataset=calibration_dataset,
-            mode=mode,
-            preset=preset,
-            target_device=target_device,
-            subset_size=subset_size,
-            fast_bias_correction=fast_bias_correction,
-            model_type=model_type,
-            ignored_scope=ignored_scope,
-            advanced_parameters=advanced_parameters,
-        )
-
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
@@ -298,6 +283,7 @@ def quantize_with_accuracy_control(
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
     validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+    *,
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -423,6 +409,7 @@ def quantize_with_accuracy_control(
 )
 def compress_weights(
     model: TModel,
+    *,
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
@@ -430,7 +417,6 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
-    *,
     subset_size: int = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
@@ -461,6 +447,8 @@ def compress_weights(
         MXFP4 is MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
         MXFP8_E4M3 - is MX-compliant FP8 format with E4M3 values sharing a group-level E8M0 scale.
             The size of group is 32.
+        FP8_E4M3 - is FP8 format with E4M3 values sharing a group-level FP16 scale.
+        FP4 - is FP4 format with E2M1 values sharing a group-level FP16 scale.
     :type mode: nncf.CompressWeightsMode
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8_ASYM).
@@ -517,17 +505,21 @@ def compress_weights(
 
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
-        from nncf.torch.nncf_network import NNCFNetwork
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
-        if mode in [
+        not_supported_modes = [
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
+            CompressWeightsMode.FP8_E4M3,
+            CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
-        ]:
-            msg = "Torch backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
+        ]
+        if mode in not_supported_modes:
+            msg = (
+                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+            )
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {"gptq": gptq, "lora_correction": lora_correction, "codebook_estimation": codebook_estimation}
@@ -545,14 +537,7 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         if is_wrapped_model(model):
-            if isinstance(model, NNCFNetwork) and not model.nncf.trace_parameters:
-                msg = (
-                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
-                    "for nncf.compress_weights(). Please wrap the model using "
-                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
-                    "nncf.compress_weights()."
-                )
-                raise nncf.ValidationError(msg)
+            pass
         elif dataset is None:
             msg = "Please provide a dataset of at least one element for PyTorch model tracing."
             raise nncf.ValidationError(msg)
@@ -560,7 +545,7 @@ def compress_weights(
             from nncf.torch.model_creation import wrap_model
 
             example_input = next(iter(dataset.get_inference_data()))
-            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore[arg-type]
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore
         if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
             dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
@@ -570,14 +555,19 @@ def compress_weights(
             compress_weights_impl as fx_compression_weights_impl,
         )
 
-        if mode in [
+        not_supported_modes = [
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
+            CompressWeightsMode.FP8_E4M3,
+            CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
-        ]:
-            msg = "Torch backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
+        ]
+        if mode in not_supported_modes:
+            msg = (
+                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+            )
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
@@ -614,14 +604,19 @@ def compress_weights(
             msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if any((awq, scale_estimation, gptq, lora_correction)) and mode in [
-            CompressWeightsMode.MXFP4,
-            CompressWeightsMode.MXFP8_E4M3,
-        ]:
-            msg = (
-                "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined, but mode in [MXFP4, MXFP8_E4M3]."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        if any((awq, scale_estimation, gptq, lora_correction)):
+            not_supported_modes = [
+                CompressWeightsMode.MXFP4,
+                CompressWeightsMode.MXFP8_E4M3,
+                CompressWeightsMode.FP8_E4M3,
+                CompressWeightsMode.FP4,
+            ]
+            if mode in not_supported_modes:
+                msg = (
+                    "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
+                    f" but mode in {[m.value for m in not_supported_modes]}."
+                )
+                raise nncf.ParameterNotSupportedError(msg)
 
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
@@ -636,14 +631,19 @@ def compress_weights(
     elif backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
 
-        if mode in [
+        not_supported_modes = [
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
+            CompressWeightsMode.FP8_E4M3,
+            CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
-        ]:
-            msg = "ONNX backend does not support NF4, MXFP4, MXFP8_E4M3 and CODEBOOK modes for weight compression."
+        ]
+        if mode in not_supported_modes:
+            msg = (
+                f"ONNX backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+            )
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
@@ -699,8 +699,8 @@ def compress_weights(
         advanced_parameters,
     )
 
-    return compression_weights_impl(  # type: ignore[no-any-return]
-        model=model,
+    return compression_weights_impl(
+        model=model,  # type: ignore
         dataset=dataset,
         subset_size=subset_size,
         compression_format=compression_format,

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,7 @@ import onnx
 import pytest
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
@@ -51,7 +51,9 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         if isinstance(model, OneDimMM):
             pytest.skip("ONNX does not support BC with MM ops")
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
+        torch.onnx.export(
+            model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"], dynamo=False
+        )
         onnx_model = onnx.load(onnx_path)
         return onnx_model
 
@@ -78,7 +80,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def check_bias(model: onnx.ModelProto, ref_biases: dict) -> None:
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = build_graph(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
             ref_value = np.array(ref_value)

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -31,6 +31,7 @@ from nncf.openvino.cpu_info import is_lnl_cpu
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.constants import FP_MAX_VALUES
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
@@ -286,7 +287,7 @@ def get_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
-    Get a model that compresses weights to float (currently only nf4) destination type using the given configuration.
+    Get a model that compresses weights to float destination type using the given configuration.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -318,7 +319,7 @@ def get_float_quantize_dequantize_weight_model(
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
     """
-    Get a model that performs float (currently only nf4) compression and decompression of the given weight.
+    Get a model that performs float compression and decompression of the given weight.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -390,10 +391,11 @@ def get_integer_quantize_dequantize_weight_model(
 def get_integer_quantization_error_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    original_weight_shape: tuple,
+    reduction: str,
     weight_shape: tuple,
-    original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
+    original_weight_shape: tuple,
+    original_reduction_axes: ReductionAxes,
 ) -> ModelCallable:
     """
     Get a model that calculates the quantization error for a given weight.
@@ -403,16 +405,23 @@ def get_integer_quantization_error_model(
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
-    :param original_weight_shape: Shape of the original weight tensor.
+    :param reduction: Reduction mode to aggregate error values. Supported modes: "max_mean", "frobenius".
     :param weight_shape: Shape of the weight tensor to be compressed.
-    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
     :param reduction_axes: Axes to reduce the weight tensor.
+    :param original_weight_shape: Shape of the original weight tensor.
+    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
     :return: A model callable that returns the quantization error.
     """
     weight_shape, _, _ = _prepare_quantization_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
 
     return _build_integer_quantization_error_model(
-        config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
+        config,
+        ov_model_params,
+        reduction,
+        weight_shape,
+        reduction_axes,
+        original_weight_shape,
+        original_reduction_axes,
     )
 
 
@@ -571,8 +580,6 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    assert config.mode == CompressWeightsMode.NF4
-
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
 
@@ -597,8 +604,12 @@ def _build_float_quantization_model(
     )
 
     # Validate output dtypes
-    # TODO: add support for MXFP4 and MXFP8_E4M3 once ticket 164851 is resolved
-    valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4]
+    valid_compressed_weight_dtypes = [
+        TensorDataType.float32,
+        TensorDataType.nf4,
+        TensorDataType.f4e2m1,
+        TensorDataType.f8e4m3,
+    ]
     if compressed_weight_dtype not in valid_compressed_weight_dtypes:
         msg = (
             f"Compressed weight must be one of the following data types: {valid_compressed_weight_dtypes}. "
@@ -626,8 +637,17 @@ def _build_float_quantization_model(
         eps = np.finfo(np.float32).eps
         scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
+        if config.compression_dtype != TensorDataType.nf4:
+            scale = divide_op(scale, opset.constant(FP_MAX_VALUES[config.compression_dtype], ov.Type.f32))
+
+        if config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+            scale = opset.log(scale) / opset.log(opset.constant(2.0, ov.Type.f32))
+            scale = opset.ceil(scale)
+            scale = opset.clamp(scale, -127.0, 127.0)
+            scale = opset.power(opset.constant(2.0, ov.Type.f32), scale)
+
     compressed_weight = divide_op(weight, scale)
-    compressed_weight = convert_op(compressed_weight, ov.Type.nf4)
+    compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[config.compression_dtype])
     compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
 
     ov_results = [compressed_weight]
@@ -690,7 +710,7 @@ def _build_integer_quantize_dequantize_weight_model(
             compressed_weight = ov_results[0]
             scale = ov_parameters[1]
 
-    decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
+    decompressed_weight = opset.multiply(convert_op(compressed_weight, ov.Type.f32), scale)
 
     ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
 
@@ -755,10 +775,11 @@ def _build_float_quantize_dequantize_weight_model(
 def _build_integer_quantization_error_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
-    original_weight_shape: tuple,
+    reduction: str,
     weight_shape: tuple,
-    original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
+    original_weight_shape: tuple,
+    original_reduction_axes: ReductionAxes,
 ) -> ModelCallable:
     ov_parameters, ov_results, ov_model_params = _build_integer_quantize_dequantize_weight_model(
         config,
@@ -772,13 +793,20 @@ def _build_integer_quantization_error_model(
     weight = ov_parameters[0]
     decompressed_weight = ov_results[0]
 
-    weight = convert_op(opset.reshape(weight, original_weight_shape, special_zero=False), ov.Type.f32)
-    decompressed_weight = convert_op(
-        opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32
-    )
-    diff = opset.squared_difference(decompressed_weight, weight)
-    layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
-    quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
+    weight = convert_op(weight, ov.Type.f32)
+    if reduction == "max_mean":
+        weight = opset.reshape(weight, original_weight_shape, special_zero=False)
+        decompressed_weight = opset.reshape(decompressed_weight, original_weight_shape, special_zero=False)
+        diff = opset.squared_difference(decompressed_weight, weight)
+        layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
+        quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
+    elif reduction == "frobenius":
+        diff = opset.reshape(decompressed_weight - weight, (-1,), special_zero=False)
+        quantization_error = opset.matmul(diff, diff, transpose_a=False, transpose_b=False)
+        quantization_error = opset.sqrt(quantization_error)
+    else:
+        msg = f"Unsupported aggregation method: {reduction}."
+        raise ValueError(msg)
 
     model = ov.Model([quantization_error], ov_parameters)
     compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})

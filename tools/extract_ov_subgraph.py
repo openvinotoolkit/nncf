@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -143,8 +143,7 @@ def get_nodes(xml_dict: dict, edges: dict):
                 if from_port not in edges[node_id]:
                     # Some edge descriptions may be missing in execution graph
                     continue
-                else:
-                    edge = edges[node_id][from_port]
+                edge = edges[node_id][from_port]
                 for edge_properties_dict in edge.values():
                     for name, value in zip(("precision", "shape", "is_input"), (precision, shape, is_input)):
                         assert name not in edge_properties_dict

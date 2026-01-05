@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,11 +12,11 @@
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
 
+from nncf.common.factory import build_graph as build_graph
 from nncf.common.logging import nncf_logger as nncf_logger
 from nncf.common.logging.logger import disable_logging as disable_logging
 from nncf.common.logging.logger import set_log_level as set_log_level
 from nncf.common.strip import strip as strip
-from nncf.config import NNCFConfig as NNCFConfig
 from nncf.data import Dataset as Dataset
 from nncf.errors import BufferFullError as BufferFullError
 from nncf.errors import InstallationError as InstallationError
@@ -44,7 +44,9 @@ from nncf.parameters import QuantizationMode as QuantizationMode
 from nncf.parameters import SensitivityMetric as SensitivityMetric
 from nncf.parameters import StripFormat as StripFormat
 from nncf.parameters import TargetDevice as TargetDevice
+from nncf.pruning.prune_model import batch_norm_adaptation as batch_norm_adaptation
 from nncf.pruning.prune_model import prune as prune
+from nncf.pruning.prune_model import pruning_statistic as pruning_statistic
 from nncf.quantization import QuantizationPreset as QuantizationPreset
 from nncf.quantization import compress_weights as compress_weights
 from nncf.quantization import quantize as quantize
@@ -66,7 +68,7 @@ from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.scopes import Subgraph as Subgraph
 from nncf.version import __version__ as __version__
 
-_SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
+_SUPPORTED_FRAMEWORKS = ["torch", "onnx", "openvino"]
 
 
 from importlib.util import find_spec as _find_spec  # noqa: E402
@@ -88,7 +90,7 @@ for fw_name in _SUPPORTED_FRAMEWORKS:
 
 if not any(_AVAILABLE_FRAMEWORKS.values()):
     nncf_logger.error(
-        "Neither PyTorch, TensorFlow, ONNX or OpenVINO Python packages have been found in your Python "
+        "Neither PyTorch, ONNX or OpenVINO Python packages have been found in your Python "
         "environment.\n"
         "Please install one of the supported frameworks above in order to use NNCF on top of it.\n"
         "See the installation guide at https://github.com/openvinotoolkit/nncf#installation-guide for help."

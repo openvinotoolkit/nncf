@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,21 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
 
 import numpy as np
 import pytest
 import torch
-from torch import nn
-from torch.quantization.fake_quantize import FakeQuantize
 
-import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.config import NNCFConfig
-from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTLoraSpec
@@ -34,67 +28,17 @@ from nncf.torch.quantization.strip import asym_fq_to_decompressor
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 from nncf.torch.quantization.strip import sym_fq_to_decompressor
 from tests.common.quantization.data_generators import check_outputs
-from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
 from tests.common.quantization.data_generators import generate_random_scale_by_input_size
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
-from tests.torch.helpers import BasicConvTestModel
-from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_functions import get_test_data
-
-
-def _get_config_for_algo(input_size, quant_mode="symmetric", overflow_fix="enable", bits=8):
-    config = NNCFConfig()
-    config.update({"model": "model", "input_info": {"sample_size": input_size}, "compression": []})
-    config["target_device"] = "TRIAL"
-    config["compression"].append(
-        {
-            "algorithm": "quantization",
-            "initializer": {"range": {"num_init_samples": 0}},
-            "weights": {"mode": quant_mode, "bits": bits},
-            "activations": {"mode": quant_mode, "bits": bits},
-            "overflow_fix": overflow_fix,
-        }
-    )
-    return config
 
 
 def _idfn(val):
     if isinstance(val, tuple):
         return "{}".format("-".join([str(v) for v in val]))
     return None
-
-
-def check_quantizer_operators(model, levels=255):
-    """Check that model contains only 8bit FakeQuantize operators."""
-
-    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
-    if model.nncf.is_compression_module_registered(compression_module_type):
-        external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
-        for key in list(external_quantizers.keys()):
-            op = external_quantizers[key]
-            assert isinstance(external_quantizers[key], FakeQuantize)
-            assert op.quant_max - op.quant_min == levels
-
-    for node in model.nncf.get_original_graph().get_all_nodes():
-        if node.node_type in ["nncf_model_input", "nncf_model_output"]:
-            continue
-
-        nncf_module = model.nncf.get_containing_module(node.node_name)
-
-        if hasattr(nncf_module, "pre_ops"):
-            for key in list(nncf_module.pre_ops.keys()):
-                op = nncf_module.get_pre_op(key).op
-                assert isinstance(op, FakeQuantize)
-                assert op.quant_max - op.quant_min == levels
-
-        if hasattr(nncf_module, "post_ops"):
-            for key in list(nncf_module.post_ops.keys()):
-                op = nncf_module.post_ops(key).op
-                assert isinstance(op, FakeQuantize)
-                assert op.quant_max - op.quant_min == levels
 
 
 INPUT_TEST_SCALES = (
@@ -283,77 +227,6 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
         x_torch = x_torch.cpu()
 
     check_outputs(x_nncf.detach().numpy(), x_torch.detach().numpy(), np_is_near_mid_point, quant_lens)
-
-
-@pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
-@pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
-def test_strip_quantization(mode, overflow_fix, tmp_path):
-    num_bits = 8
-    model = BasicConvTestModel()
-
-    config = _get_config_for_algo(model.INPUT_SIZE, mode, overflow_fix, bits=num_bits)
-    register_bn_adaptation_init_args(config)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    input_tensor = torch.Tensor(generate_lazy_sweep_data(model.INPUT_SIZE))
-    x_nncf = compressed_model(input_tensor)
-
-    inference_model = compression_ctrl.strip()
-    x_torch = inference_model(input_tensor)
-    check_quantizer_operators(inference_model, 2**num_bits - 1)
-
-    assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
-
-    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
-
-
-@pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))
-@pytest.mark.parametrize("do_copy", (True, False), ids=["copy", "inplace"])
-def test_nncf_strip_api(strip_type, do_copy):
-    model = BasicConvTestModel()
-    config = _get_config_for_algo(model.INPUT_SIZE)
-
-    quantized_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    if strip_type == "nncf":
-        strip_model = nncf.strip(quantized_model, do_copy)
-    elif strip_type == "torch":
-        strip_model = nncf.torch.strip(quantized_model, do_copy)
-    elif strip_type == "nncf_interfere":
-        strip_model = quantized_model.nncf.strip(do_copy)
-
-    if do_copy:
-        assert id(strip_model) != id(quantized_model)
-    else:
-        assert id(strip_model) == id(quantized_model)
-
-    assert id(quantized_model) == id(compression_ctrl.model)
-
-    assert isinstance(strip_model.conv.get_pre_op("0").op, FakeQuantize)
-    assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)
-
-
-def check_compression_modules(
-    model_: nn.Module,
-    expected_module_type: ExtraCompressionModuleType,
-    not_expected_module_type: ExtraCompressionModuleType,
-    expected_class: Any,
-) -> None:
-    """
-    Checks if the given model has the expected compression module registered and not the unexpected one.
-    Also verifies that the compression module is of the expected class type.
-
-    :param model_: The model to be checked, which should have an 'nncf' attribute with compression module methods.
-    :param expected_module_type: The type of the compression module that is expected to be registered.
-    :param not_expected_module_type: The type of the compression module that is not expected to be registered.
-    :param expected_class: The class type that the expected compression module should be an instance of.
-    """
-    assert model_.nncf.is_compression_module_registered(expected_module_type)
-    assert not model_.nncf.is_compression_module_registered(not_expected_module_type)
-    compression_modules_dict = model_.nncf.get_compression_modules_by_type(expected_module_type)
-    assert len(compression_modules_dict) == 1
-    compression_module = next(iter(compression_modules_dict.values()))
-    assert isinstance(compression_module, expected_class)
 
 
 SIGNED_WEIGHT_SAMPLE = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75]

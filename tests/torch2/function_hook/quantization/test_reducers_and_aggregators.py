@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,19 +18,21 @@ import torch
 
 import nncf
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MinReducer
-from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
+from nncf.common.tensor_statistics.collectors import MinReducer
+from nncf.common.tensor_statistics.collectors import QuantileReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
+from tests.common.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 
 class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
@@ -49,6 +51,8 @@ class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
             "max": MaxReducer,
             "abs_max": AbsMaxReducer,
             "mean": MeanReducer,
+            "mean_variance": MeanVarianceReducer,
+            "max_variance": MaxVarianceReducer,
             "quantile": QuantileReducer,
             "abs_quantile": AbsQuantileReducer,
             "batch_mean": BatchMeanReducer,

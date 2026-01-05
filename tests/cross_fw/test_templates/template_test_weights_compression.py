@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,8 @@
 import math
 from abc import ABC
 from abc import abstractmethod
+from functools import reduce
+from operator import mul
 from typing import Any, Callable, Optional, TypeVar
 from unittest.mock import patch
 
@@ -28,6 +30,8 @@ from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.algorithms.weight_compression.activation_stats import WCTensorStatistic
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -118,6 +122,11 @@ class TemplateWeightCompression(ABC):
     @abstractmethod
     def get_RoPE_model() -> TModel:
         """Returns a backend model for test_rope_weight_compression."""
+
+    @staticmethod
+    @abstractmethod
+    def get_SAM_PE_model() -> TModel:
+        """Returns a backend model for test_sam_pe_weight_compression."""
 
     @pytest.mark.parametrize(
         ("mode", "ref_act_score", "ref_score"),
@@ -228,20 +237,51 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_scale_estimation_ref() -> TTensor:
+    def get_moe_model_for_test_scale_estimation() -> TModel:
         """
+        Returns a backend MoE model for test_scale_estimation with 3D weights.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
+        """
+        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
+            activation statistics
+        Returns the reference output of calculate_quantization_params for MoE model.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
+        """
+        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
+            activation statistics
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    def test_scale_estimation(self, mocker):
+    @pytest.mark.parametrize("is_moe", [False, True])
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
+    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
-        model = self.get_model_for_test_scale_estimation()
 
-        # prepare dataset with one input tensor
-        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+        if is_moe:
+            model = self.get_moe_model_for_test_scale_estimation()
+            input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
+        else:
+            model = self.get_model_for_test_scale_estimation()
+            input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+
+        # prepare dataset of size subset_size with input tensors
+        subset_size = 2 if check_sampling_activation_stats_flow else 1
+        # make sure that subset size for SE < subset size for statistics collection.
+        # This is to test the Optimized statistics processing flow which samples only a few data
+        # points in nncf/quantization/algorithms/weight_compression/activation_stats.py
+        se_subset_size = subset_size // 2 if check_sampling_activation_stats_flow else subset_size
         input = self.to_tensor(input)
-        dataset = Dataset([input], self.get_transform_func())
+
+        dataset = Dataset([input + i for i in range(subset_size)], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -252,9 +292,19 @@ class TemplateWeightCompression(ABC):
                 scale_estimation=True,
                 all_layers=True,
                 dataset=dataset,
+                subset_size=subset_size,
+                advanced_parameters=nncf.AdvancedCompressionParameters(
+                    scale_estimation_params=nncf.AdvancedScaleEstimationParameters(subset_size=se_subset_size)
+                ),
             )
-        reference = self.get_scale_estimation_ref()
-        assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
+
+        computed_scale = calc_q_params_spy.spy_return[0]
+
+        if is_moe:
+            reference = self.get_moe_scale_estimation_ref(check_sampling_activation_stats_flow)
+        else:
+            reference = self.get_scale_estimation_ref(check_sampling_activation_stats_flow)
+        assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
     @abstractmethod
@@ -323,6 +373,7 @@ class TemplateWeightCompression(ABC):
         model = self.get_awq_act_model(with_multiply, n_layers)
 
         dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+
         with SpyWeightCompressionStatisticsContext(mocker):
             model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -400,6 +451,26 @@ class TemplateWeightCompression(ABC):
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed
 
+    def test_sam_pe_weight_compression(self):
+        model = self.get_SAM_PE_model()
+
+        dataset = Dataset(
+            [self.to_tensor(np.ones([1, 2, 3, 2], dtype=np.float32))],
+            self.get_transform_func(),
+        )
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+            all_layers=True,
+        )
+
+        int4_ref_num_compressed = 0
+        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
+        assert int4_num_nodes == int4_ref_num_compressed
+
     @staticmethod
     @abstractmethod
     def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
@@ -426,7 +497,6 @@ class TemplateWeightCompression(ABC):
         for node_name, scales in spy_instance._scale_per_target_node.items():
             assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
 
-    @pytest.mark.parametrize("algorithm", (None, "awq", "scale_estimation", "gptq", "lora_correction"))
     @pytest.mark.parametrize(
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
         [
@@ -434,12 +504,11 @@ class TemplateWeightCompression(ABC):
             (32, nncf.GroupSizeFallbackMode.IGNORE, 16, "warn_ignored"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 16, "info_cant_adjust"),
             (32, nncf.GroupSizeFallbackMode.ADJUST, 8, "info_adjusted_group_size"),
-            (32, None, None, "warn_ignored"),
+            (32, None, None, "exception"),
         ],
     )
     def test_error_message_for_invalid_group_size(
         self,
-        algorithm,
         group_size,
         fallback_mode,
         min_adjusted_group_size,
@@ -452,21 +521,16 @@ class TemplateWeightCompression(ABC):
             - an info message is logged when an adjustable group size value cannot be found
             - an info message is logged when the group size is adjusted to a valid value
         """
-        if algorithm in self.get_not_supported_algorithms():
-            pytest.skip("Skipping test for not supported algorithms")
 
-        model = self.get_awq_model()
-        hidden_dim = 8
-        input_example = self.to_tensor(np.ones([1, 4, hidden_dim], dtype=np.float32))
+        model = self.get_different_channel_size_model([8, 8, 8, 8, 8, 8, 8, 16, 32])
+        input_example = self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))
         dataset = Dataset([input_example], self.get_transform_func())
-        algorithm_dict = {algorithm: True} if algorithm else {}
         kwargs = dict(
             model=model,
             mode=CompressWeightsMode.INT4_ASYM,
-            ratio=1.0,
+            ratio=0.9,
             group_size=group_size,
             all_layers=True,
-            **algorithm_dict,
             dataset=dataset,
         )
         if fallback_mode is not None or min_adjusted_group_size is not None:
@@ -491,11 +555,20 @@ class TemplateWeightCompression(ABC):
                 compress_weights(**kwargs)
             info_messages = [args[0] for args, _ in mock_info.call_args_list]
             info_msg = (
-                "Adjusted group size values will be used:"
+                "Adjusted group size values will be used"
                 if expected_outcome == "info_adjusted_group_size"
                 else "A valid adjusted group size value can't be found for some nodes."
             )
             assert any(info_msg in msg for msg in info_messages)
+            if expected_outcome == "info_adjusted_group_size":
+                table_rows = [
+                    "int8_asym, per-channel    │ 50% (1 / 9)                 │ 50% (1 / 9)",
+                    "int4_asym, group size 8   │ 25% (7 / 9)                 │ 25% (7 / 9)",
+                    "int4_asym, group size 16  │ 25% (1 / 9)                 │ 25% (1 / 9)",
+                ]
+                for row in table_rows:
+                    # On Windows "|" is printed instead of "│"
+                    assert any(row in msg.replace("|", "│") for msg in info_messages), "\n".join(info_messages)
 
     @pytest.mark.parametrize(
         [
@@ -507,7 +580,6 @@ class TemplateWeightCompression(ABC):
             "ref_num_group_sizes",
         ],
         [
-            ([8, 8, 16, 16, 16, 32], 1.0, 32, None, None, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.IGNORE, None, {32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 16, {16: 3, 32: 1}),
             ([8, 8, 16, 16, 16, 32], 1.0, 32, nncf.GroupSizeFallbackMode.ADJUST, 32, {32: 1}),
@@ -589,3 +661,46 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     def get_reduction_axes() -> int:
         return 1
+
+    @pytest.mark.parametrize(
+        "mean_values_shape,num_samples,subset_size,expected_s_shape,expected_X_shape,expected_indices",
+        [
+            # 2D Activations
+            ((8,), 10, 5, (8,), (8, 5), [0, 2, 4, 6, 8]),
+            ((8,), 5, 10, (8,), (8, 5), [0, 1, 2, 3, 4]),
+            ((8,), 12, 5, (8,), (8, 6), [0, 2, 4, 6, 8, 10]),
+            # 3D Activations
+            ((4, 8), 10, 5, (4, 8), (4, 8, 5), [0, 2, 4, 6, 8]),
+            ((4, 8), 5, 10, (4, 8), (4, 8, 5), [0, 1, 2, 3, 4]),
+            ((4, 8), 25, 8, (4, 8), (4, 8, 9), [0, 3, 6, 9, 12, 15, 18, 21, 24]),
+        ],
+    )
+    def test_process_stats(
+        self, mean_values_shape, num_samples, subset_size, expected_s_shape, expected_X_shape, expected_indices
+    ):
+        total_elements = reduce(mul, mean_values_shape, 1)
+        mean_values = [
+            Tensor(np.arange(i * total_elements, (i + 1) * total_elements, dtype=np.float32).reshape(mean_values_shape))
+            for i in range(num_samples)
+        ]
+        shape_values = [(1,) + mean_values_shape for _ in range(num_samples)]
+
+        stats = WCTensorStatistic(mean_values=mean_values, shape_values=shape_values)
+
+        s, X = process_stats(stats, subset_size)
+
+        assert s.shape == expected_s_shape, f"Expected s shape {expected_s_shape}, got {s.shape}"
+        assert X.shape == expected_X_shape, f"Expected X shape {expected_X_shape}, got {X.shape}"
+
+        X_full_list = [mean_values[i] for i in range(num_samples)]
+        X_full = fns.stack(X_full_list)
+        axes = list(range(1, len(X_full.shape))) + [0]
+        X_full_transposed = fns.transpose(X_full, axes=axes)
+
+        for idx, sample_idx in enumerate(expected_indices):
+            expected_sample = X_full_transposed[..., sample_idx]
+            actual_sample = X[..., idx]
+            assert fns.all(actual_sample == expected_sample)
+
+        expected_s = fns.max(fns.abs(X_full_transposed), axis=-1)
+        assert fns.all(s == expected_s)

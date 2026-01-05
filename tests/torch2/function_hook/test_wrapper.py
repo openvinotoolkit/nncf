@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,7 +18,9 @@ from pathlib import Path
 import onnxruntime as ort
 import pytest
 import torch
+from pytest_mock import MockerFixture
 
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import is_wrapped
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.function_hook.wrapper import register_pre_function_hook
@@ -112,6 +114,19 @@ def test_wrapper(model_cls, modifier_type):
     torch.testing.assert_close(ret, wrapped_ret)
 
 
+def test_wrap_already_wrapped_model():
+    model = helpers.ConvModel().eval()
+    wrapped = wrap_model(model)
+
+    w_forward = wrapped.forward
+    w_hook_storage = get_hook_storage(wrapped)
+
+    wrapped_2 = wrap_model(wrapped)
+    # Second wrapped should keep forward and hook_storage and do nothing
+    assert w_forward is wrapped_2.forward
+    assert w_hook_storage is get_hook_storage(wrapped)
+
+
 def test_export_strict_false():
     example_input = helpers.ConvModel.get_example_inputs()
 
@@ -162,7 +177,8 @@ def test_compile_via_trace():
     torch.testing.assert_close(actual, return_origin + ADD_VALUE)
 
 
-def test_export_onnx(tmp_path: Path):
+@pytest.mark.parametrize("dynamo", [True, False])
+def test_export_onnx(tmp_path: Path, dynamo: bool):
     example_input = helpers.ConvModel.get_example_inputs()
 
     model = helpers.ConvModel()
@@ -173,7 +189,7 @@ def test_export_onnx(tmp_path: Path):
     reference = wrapped(example_input)
 
     onnx_file = tmp_path / "model.onnx"
-    torch.onnx.export(wrapped, (example_input,), onnx_file.as_posix())
+    torch.onnx.export(wrapped, (example_input,), onnx_file.as_posix(), input_names=["input"], dynamo=dynamo)
     session = ort.InferenceSession(onnx_file)
 
     actual = session.run(None, {"input": example_input.numpy()})[0]
@@ -251,3 +267,16 @@ def test_insert_nested_hook(hook_type: str):
     wrapped(example_input)
 
     assert hook.call_count == 1
+
+
+def test_fast_path(mocker: MockerFixture):
+    example_input = helpers.ConvModel.get_example_inputs()
+    model = helpers.ConvModel()
+    wrapped = wrap_model(model)
+
+    def error(*args, **kwargs):
+        msg = "FunctionHookMode should not be called"
+        raise RuntimeError(msg)
+
+    mocker.patch("nncf.torch.function_hook.hook_executor_mode.FunctionHookMode.__init__", side_effect=error)
+    wrapped(example_input)

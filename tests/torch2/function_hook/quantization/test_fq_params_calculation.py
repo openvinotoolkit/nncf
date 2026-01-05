@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,14 +21,11 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch import wrap_model
-from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import TwoConvTestModel
-from tests.torch.helpers import create_random_mock_dataloader
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quantization" / "reference_scales"
 
@@ -36,15 +33,7 @@ REFERENCE_SCALES_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quanti
 def min_max_quantize_model(
     original_model: torch.nn.Module, quantization_params: dict[str, Any] = None
 ) -> torch.nn.Module:
-    config = nncf.NNCFConfig.from_dict({"input_info": {"sample_size": [1, 1, 10, 10]}})
-
-    dataloader = create_random_mock_dataloader(config)
-
-    def transform_fn(sample):
-        inp, _ = sample
-        return inp
-
-    dataset = nncf.Dataset(dataloader, transform_func=transform_fn)
+    dataset = nncf.Dataset([torch.rand(1, 1, 10, 10)])
 
     # Using PTQ, but apply only MinMax
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
@@ -61,7 +50,7 @@ def min_max_quantize_model(
     return quantized_model
 
 
-def get_fq_nodes(model: NNCFNetwork) -> dict[Scope, torch.nn.Module]:
+def get_fq_nodes(model: torch.nn.Module) -> dict[str, torch.nn.Module]:
     quantization_types = tuple(class_type for class_type in QUANTIZATION_MODULES.registry_dict.values())
     ret = {}
     for name, module in model.named_modules():
@@ -70,7 +59,7 @@ def get_fq_nodes(model: NNCFNetwork) -> dict[Scope, torch.nn.Module]:
     return ret
 
 
-def get_fq_nodes_params(nncf_module_quantizations: dict[Scope, torch.nn.Module]) -> dict[str, np.ndarray]:
+def get_fq_nodes_params(nncf_module_quantizations: dict[str, torch.nn.Module]) -> dict[str, np.ndarray]:
     output = {}
     for name, nncf_module_quantization in nncf_module_quantizations.items():
         input_low, input_high = nncf_module_quantization.get_input_low_input_high()

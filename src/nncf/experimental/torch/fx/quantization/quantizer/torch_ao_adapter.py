@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Union
+from typing import Any, Union
 
 import torch
 import torch.fx
@@ -33,6 +33,7 @@ from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_node_args
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
@@ -187,6 +188,24 @@ class TorchAOQuantizerAdapter(Quantizer):
                 q_setup.register_unified_scale_group(qp_ids)
 
         return q_setup
+
+    @staticmethod
+    def get_weight_compression_parameters(
+        self,
+        model: torch.fx.GraphModule,
+        nncf_graph: NNCFGraph,
+    ) -> tuple[
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+    ]:
+        msg = "Please use OpenVINO Quantizer from executorch. Other quantizers are not supported yet"
+        raise NotImplementedError(msg)
+
+    @staticmethod
+    def get_weight_compression_config(self) -> dict[str, Any]:
+        msg = "Please use OpenVINO Quantizer from executorch. Other quantizers are not supported yet"
+        raise NotImplementedError(msg)
 
 
 def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: dict[EdgeOrNode, QuantizationSpec]):

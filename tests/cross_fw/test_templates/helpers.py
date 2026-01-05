@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -163,13 +163,13 @@ class CustomConvBNTestModel(nn.Module):
 
 
 class FCTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
+    INPUT_SIZE = [1, 1, 3, 3]
 
     def __init__(self):
         super().__init__()
-        self.fc = nn.Linear(4, 2)
-        self.fc.weight.data = torch.Tensor([[0.1, 0.2, 0.3, 0.2], [0.3, -0.1, 0.2, 0.4]])
-        self.fc.bias.data = torch.Tensor([1.0, 1.1])
+        self.fc = nn.Linear(3, 2)
+        self.fc.weight.data = torch.Tensor([[0.1, 0.2, 0.3], [0.3, -0.1, 0.2]])
+        self.fc.bias.data = torch.Tensor([1.0, 2.0])
 
     def forward(self, x):
         x = self.fc(x)
@@ -440,6 +440,15 @@ class ScaledDotProductAttentionModel(nn.Module):
         return nn.functional.scaled_dot_product_attention(query, key, value)
 
 
+class UnbindScaledDotProductAttentionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        query, key, value = x.unbind(0)
+        return nn.functional.scaled_dot_product_attention(query, key, value)
+
+
 class DepthwiseConvTestModel(nn.Module):
     INPUT_SIZE = [1, 2, 4, 4]
 
@@ -499,3 +508,24 @@ class RoPEModel(nn.Module):
         x1 = x.sin()
         x2 = x.cos()
         return x1, x2
+
+
+class SAMPEModel(nn.Module):
+    """
+    Positional Embedding from Segment Anything Model (SAM).
+    """
+
+    INPUT_SIZE = [1, 2, 3, 2]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.weight = nn.Parameter(torch.empty((2, 128)))
+
+    def forward(self, x):
+        x = torch.matmul(x, self.weight)
+        x = x * (2 * torch.pi)
+        x1 = x.sin()
+        x2 = x.cos()
+        x = torch.cat([x1, x2], dim=-1)
+        return x

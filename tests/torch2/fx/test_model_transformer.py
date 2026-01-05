@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,7 +25,6 @@ from torch.quantization.fake_quantize import FakeQuantize
 import nncf
 import nncf.common
 import nncf.common.factory
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -518,7 +517,7 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_valid.dot"
 
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
-    nx_graph = NNCFGraphFactory.create(model_with_correct_pattern).get_graph_for_structure_analysis(extended=True)
+    nx_graph = nncf.build_graph(model_with_correct_pattern).get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     model_with_incorrect_pattern = get_torch_fx_model(model, ex_input)
@@ -526,7 +525,7 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     compress_post_quantize_transformation(model_with_incorrect_pattern)
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_invalid.dot"
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
-    nx_graph = NNCFGraphFactory.create(model_with_incorrect_pattern).get_graph_for_structure_analysis(extended=True)
+    nx_graph = nncf.build_graph(model_with_incorrect_pattern).get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
 
@@ -558,7 +557,9 @@ def test_constant_folding_scalar_clone(use_cuda):
         # Use export function instead of export_for_training to
         # reproduce SWIN model capturing
         captured_model = (
-            torch.export.export(model, args=(ex_input,), strict=True).run_decompositions(decomp_table={}).module()
+            torch.export.export(model, args=(ex_input,), strict=True)
+            .run_decompositions(decomp_table={})
+            .module(check_guards=False)
         )
     assert captured_model.lifted_tensor_0.device == torch.device("cpu")
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,7 @@ from typing import Optional, TypeVar
 
 import nncf
 from nncf.common import factory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -258,7 +258,7 @@ def sparsify_activations(
 
     algorithm = SparsifyActivationsAlgorithm(target_sparsity_by_scope, ignored_scope)
 
-    graph = NNCFGraphFactory.create(model)
+    graph = build_graph(model)
     sparse_model = algorithm.apply(model, graph, dataset)
 
     if backend == BackendType.TORCH:

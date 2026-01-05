@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -45,14 +45,14 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.common.tensor_statistics.collectors import HistogramAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -570,14 +570,12 @@ class MinMaxQuantization(Algorithm):
                 else:
                     quantile = 1 - params.quantile_outlier_prob
                 reducer = self._backend_entity.reducer_map[statistic_type](
-                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                    axes=reduction_axes, inplace=inplace, quantile=[quantile]
                 )
             else:
                 if use_abs_max and statistic_type == StatisticsType.MAX:
                     statistic_type = StatisticsType.ABS_MAX
-                reducer = self._backend_entity.reducer_map[statistic_type](
-                    reduction_axes=reduction_axes, inplace=inplace
-                )
+                reducer = self._backend_entity.reducer_map[statistic_type](axes=reduction_axes, inplace=inplace)
 
             kwargs = {
                 "num_samples": num_samples,

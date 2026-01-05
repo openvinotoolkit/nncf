@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,14 +11,14 @@
 from pathlib import Path
 from typing import Optional
 
-import matplotlib.pyplot as plt
 import pandas as pd
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.utils.decorators import skip_if_dependency_unavailable
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
@@ -43,7 +43,10 @@ class DebugInterface:
     def add_noises(self, layer_name: str, value: float):
         self._noise_per_layer[layer_name] = value
 
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_data(self):
+        import matplotlib.pyplot as plt
+
         if not self._noise_per_layer:
             return
         dump_dir = Path(DEBUG_LOG_DIR) / "lora"

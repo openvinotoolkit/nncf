@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,8 @@ from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.statistics.collectors import OVAbsMaxReducer
+from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
@@ -182,3 +184,8 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
     def get_matmul_metatype():
         return [OVMatMulMetatype]
+
+    def test_reducers_cls(self):
+        backend = self.get_backend()
+        assert backend.get_abs_max_reducer_cls() is OVAbsMaxReducer
+        assert backend.get_shape_reducer_cls() is OVShapeReducer

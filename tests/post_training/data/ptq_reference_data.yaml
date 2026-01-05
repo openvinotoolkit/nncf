@@ -139,7 +139,7 @@ timm/deit3_small_patch16_224_backend_CUDA_TORCH:
 timm/deit3_small_patch16_224_backend_FP32:
   metric_value: 0.81358
 timm/deit3_small_patch16_224_backend_ONNX:
-  metric_value: 0.81116
+  metric_value: 0.81156
 timm/deit3_small_patch16_224_backend_OV:
   metric_value: 0.81276
 timm/deit3_small_patch16_224_backend_TORCH:

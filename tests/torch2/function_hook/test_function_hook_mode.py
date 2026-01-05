@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
@@ -73,35 +74,41 @@ def test_current_relative_name():
     assert hook_executor_mode.get_current_relative_name() == "conv/post_hook__conv-conv2d-0__0[0]"
 
 
-def test_get_current_executed_op_name():
+def test_get_next_op_call_name():
     model = helpers.get_wrapped_simple_model_with_hook()
     hook_storage = get_hook_storage(model)
     hook_executor_mode = FunctionHookMode(model, hook_storage)
 
     hook_executor_mode.push_module_call_stack(model)
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "/foo/0"
-    hook_executor_mode.register_op("foo")
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "/foo/1"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "/foo/0"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "/foo/1"
 
     hook_executor_mode.push_module_call_stack(model.conv)
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/0"
-    hook_executor_mode.register_op("foo")
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/1"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "conv/foo/0"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "conv/foo/1"
 
     hook_executor_mode.push_module_call_stack(hook_storage.post_hooks["conv/conv2d/0__0"]["0"])
-    assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
+    assert hook_executor_mode.get_next_op_call_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
 
 
-@pytest.fixture(params=["tensor", "list", "torch_return_type"])
-def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]:
+NamedTuple = namedtuple("NamedTuple", ["output1", "output2"])
+
+
+@pytest.fixture(params=["tensor", "list", "torch_return_type", "named_tuple"])
+def example_outputs(
+    request: FixtureRequest,
+) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple]:
     return {
         "tensor": torch.tensor(1),
         "list": [torch.tensor(1), torch.tensor([2])],
         "torch_return_type": torch.return_types.max((torch.tensor(1), torch.tensor([2]))),
+        "named_tuple": NamedTuple(torch.tensor(1), torch.tensor([2])),
     }.get(request.param)
 
 
-def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]):
+def test_execute_post_hooks(
+    example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple],
+):
     op_name = "/relu/0"
     hook_storage = HookStorage()
     hook_port_0 = CallCount()
@@ -112,12 +119,35 @@ def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tens
     op_meta = OpMeta("/relu/0", torch.relu)
     ret_val = ctx.execute_post_hooks(example_outputs, op_meta)
     assert type(example_outputs) is type(ret_val)
+    assert example_outputs == ret_val
 
     assert hook_port_0.call_count == 1
     if isinstance(example_outputs, torch.Tensor):
         assert hook_port_1.call_count == 0
     else:
         assert hook_port_1.call_count == 1
+
+
+def test_process_model_output(
+    example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple],
+):
+    hook_storage = HookStorage()
+    hook_output = CallCount()
+    hook_output_0 = CallCount()
+    hook_output_1 = CallCount()
+    hook_storage.register_pre_function_hook("output", 0, hook_output)
+    hook_storage.register_pre_function_hook("output_0", 0, hook_output_0)
+    hook_storage.register_pre_function_hook("output_1", 0, hook_output_1)
+
+    ctx = FunctionHookMode(nn.Identity(), hook_storage)
+    ret_val = ctx.process_model_outputs(example_outputs)
+    assert type(example_outputs) is type(ret_val)
+    assert example_outputs == ret_val
+    if isinstance(example_outputs, torch.Tensor):
+        assert hook_output.call_count == 1
+    else:
+        assert hook_output_0.call_count == 1
+        assert hook_output_1.call_count == 1
 
 
 class ConcatModel(nn.Module):

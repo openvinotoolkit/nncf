@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,6 +23,8 @@ from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_N
 
 DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.nf4: ov.Type.nf4,
+    TensorDataType.f4e2m1: ov.Type.f4e2m1,
+    TensorDataType.f8e8m0: ov.Type.f8e8m0,
     TensorDataType.f8e4m3: ov.Type.f8e4m3,
     TensorDataType.f8e5m2: ov.Type.f8e5m2,
     TensorDataType.float16: ov.Type.f16,
@@ -32,6 +34,8 @@ DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.int8: ov.Type.i8,
     TensorDataType.int32: ov.Type.i32,
     TensorDataType.int64: ov.Type.i64,
+    TensorDataType.uint16: ov.Type.u16,
+    TensorDataType.uint32: ov.Type.u32,
     TensorDataType.uint8: ov.Type.u8,
     TensorDataType.uint4: ov.Type.u4,
     TensorDataType.int4: ov.Type.i4,
@@ -42,6 +46,8 @@ NATIVE_OV_CAST_DTYPES = [
     TensorDataType.int4,
     TensorDataType.uint4,
     TensorDataType.nf4,
+    TensorDataType.f4e2m1,
+    TensorDataType.f8e8m0,
     TensorDataType.f8e4m3,
     TensorDataType.f8e5m2,
 ]
@@ -95,7 +101,7 @@ def _(a: ov.Tensor, shape: Union[int, tuple[int, ...]]) -> ov.Tensor:
 
 @numeric.as_numpy_tensor.register
 def _(a: ov.Tensor) -> NDArray[Any]:
-    # Cannot convert bfloat16, uint4, int4, nf4, f8e4m3, f8e5m2 to numpy directly
+    # Cannot convert bfloat16, uint4, int4, nf4, f4e2m1, f8e8m0, f8e4m3, f8e5m2 to numpy directly
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
     if a_dtype in NATIVE_OV_CAST_DTYPES:
         dtype = TensorDataType.float32

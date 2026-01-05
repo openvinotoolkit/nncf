@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -171,8 +171,6 @@ class Evaluator:
             # - np.array([1.0], dtype=np.float32)
             # - torch.tensor(1.0, dtype=torch.float32)
             # - torch.tensor([1.0], dtype=torch.float32)
-            # - tf.constant(1.0, dtype=tf.float32
-            # - tf.constant([1.0], dtype=tf.float32)
             values_for_each_item = [float(x) for x in values_for_each_item]
 
         return float(metric), values_for_each_item

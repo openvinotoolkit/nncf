@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import numpy as np
 import torch
 
 from nncf.tensor import Tensor
-from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
+from tests.common.test_statistic_collector import TemplateTestStatisticCollector
 
 
 class TestPTStatisticCollector(TemplateTestStatisticCollector):

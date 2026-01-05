@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 
 import numpy as np
 import torch
+from torch.fx import GraphModule
 
 from nncf.common.factory import TModel
 from nncf.common.graph.graph import NNCFGraph
@@ -19,14 +20,13 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 
 
@@ -55,7 +55,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
     BACKEND: BackendType = BackendType.TORCH_FX
     HOOKS_GROUP_NAME = "statistics_hooks"
 
-    def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
+    def collect_statistics(self, model: GraphModule, graph: NNCFGraph) -> None:
         with torch.no_grad():
             super().collect_statistics(model, graph)
         # All statistics are collected as a dead code,

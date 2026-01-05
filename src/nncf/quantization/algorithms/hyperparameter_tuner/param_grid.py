@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -87,7 +87,7 @@ def _get_smooth_quant_param_grid() -> ParamGrid:
     alpha_values = [0.15, 0.25, 0.5, 0.75, 0.95]
     return {
         "advanced_parameters:smooth_quant_alphas": [
-            AdvancedSmoothQuantParameters(matmul=alpha_v) for alpha_v in itertools.product(alpha_values)
+            AdvancedSmoothQuantParameters(matmul=alpha_v) for (alpha_v,) in itertools.product(alpha_values)
         ]
     }
 

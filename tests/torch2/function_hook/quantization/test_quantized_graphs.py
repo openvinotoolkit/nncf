@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,8 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from functools import partial
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 import torch
@@ -25,13 +26,20 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import EmbeddingModel
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
+from tests.cross_fw.test_templates.helpers import UnbindScaledDotProductAttentionModel
 from tests.torch import test_models
-from tests.torch.quantization.test_algo_quantization import SharedLayersModel
-from tests.torch.test_compressed_graph import ModelDesc
+from tests.torch2.function_hook.helpers import SharedLayersModel
 from tests.torch2.utils import compare_with_reference_file
 from tests.torch2.utils import to_comparable_nx_graph
 
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "quantization" / "test_quantized_graphs"
+
+
+@dataclass
+class ModelDesc:
+    model_name: str
+    model_builder: Callable[..., Any]
+    input_sample_sizes: tuple[int, ...]
 
 
 TEST_MODELS_DESC = [
@@ -42,6 +50,14 @@ TEST_MODELS_DESC = [
             "scaled_dot_product_attention_model",
             ScaledDotProductAttentionModel,
             {"query": [1, 8, 16], "key": [1, 8, 16], "value": [1, 8, 16]},
+        ),
+        {},
+    ),
+    (
+        ModelDesc(
+            "unbind_scaled_dot_product_attention_model",
+            UnbindScaledDotProductAttentionModel,
+            {"x": [3, 1, 8, 16]},
         ),
         {},
     ),

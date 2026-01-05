@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +17,7 @@ from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -27,10 +27,10 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -143,9 +143,9 @@ class BiasCorrection(Algorithm):
         main_model_transformer = ModelTransformerFactory.create(model)
 
         model_copy = copy_model(model)
-        graph_copy = NNCFGraphFactory.create(model_copy)
+        graph_copy = build_graph(model_copy)
         model_copy = self._backend_entity.remove_fq_from_inputs(model_copy, graph_copy)
-        nncf_graph = NNCFGraphFactory.create(model_copy)
+        nncf_graph = build_graph(model_copy)
 
         nodes_with_bias = []
         for node in nncf_graph.topological_sort():

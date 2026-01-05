@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -63,6 +63,7 @@ from nncf.tensor.functions.numeric import repeat as repeat
 from nncf.tensor.functions.numeric import reshape as reshape
 from nncf.tensor.functions.numeric import round as round
 from nncf.tensor.functions.numeric import searchsorted as searchsorted
+from nncf.tensor.functions.numeric import sign as sign
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
 from nncf.tensor.functions.numeric import sum as sum
@@ -82,11 +83,6 @@ def _initialize_backends() -> None:
     import nncf.tensor.functions.numpy_io
     import nncf.tensor.functions.numpy_linalg
     import nncf.tensor.functions.numpy_numeric
-
-    with contextlib.suppress(ImportError):
-        import nncf.tensor.functions.tf_io
-        import nncf.tensor.functions.tf_linalg
-        import nncf.tensor.functions.tf_numeric
 
     with contextlib.suppress(ImportError):
         import nncf.tensor.functions.torch_io

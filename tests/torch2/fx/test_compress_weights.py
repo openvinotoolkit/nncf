@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +17,6 @@ import nncf
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
-from nncf.common.factory import NNCFGraphFactory
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.parameters import CompressionFormat
@@ -29,6 +28,7 @@ from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
+from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
@@ -47,6 +47,7 @@ from tests.torch2.function_hook.quantization.test_weights_compression import Fun
 from tests.torch2.function_hook.quantization.test_weights_compression import LinearModel
 from tests.torch2.function_hook.quantization.test_weights_compression import MatMulModel
 from tests.torch2.function_hook.quantization.test_weights_compression import SequentialMatmulModel
+from tests.torch2.function_hook.quantization.test_weights_compression import SimpleMoEModel
 from tests.torch2.fx.helpers import get_torch_fx_model
 
 DATA_BASED_SENSITIVITY_METRICS = (
@@ -118,7 +119,7 @@ def test_compress_weights_graph_edge(mode):
     input_ids = torch.randint(0, 10, (5,))
     exported_model = get_torch_fx_model(model, input_ids)
     compressed_model = compress_weights(exported_model, mode=mode)
-    nncf_graph = NNCFGraphFactory.create(compressed_model)
+    nncf_graph = nncf.build_graph(compressed_model)
     for node in nncf_graph.get_all_nodes():
         if "weights_decompressor" in node.node_name and node.node_type == "call_module":
             decompressor_node_edge = nncf_graph.get_input_edges(node)[0]
@@ -330,6 +331,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
+    def get_SAM_PE_model() -> torch.fx.GraphModule:
+        model = SAMPEModel()
+        ex_input = torch.ones(SAMPEModel.INPUT_SIZE, dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
     def get_sequential_matmul_model() -> torch.fx.GraphModule:
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
@@ -340,6 +348,17 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     def get_model_for_test_scale_estimation():
         model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_moe_model_for_test_scale_estimation():
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        seq_len = 4
+        model = SimpleMoEModel(num_experts, hidden_dim, out_dim)
+        ex_input = torch.ones([num_experts, seq_len, hidden_dim], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
@@ -394,27 +413,150 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return get_torch_fx_model(model, data)
 
     @staticmethod
-    def get_scale_estimation_ref():
-        return torch.tensor(
-            [
-                [[0.473328]],
-                [[0.929023]],
-                [[1.446527]],
-                [[1.920595]],
-                [[2.517054]],
-                [[3.030102]],
-                [[3.584279]],
-                [[4.043509]],
-                [[4.620008]],
-                [[5.165322]],
-                [[5.710637]],
-                [[6.122581]],
-                [[6.655914]],
-                [[7.237174]],
-                [[7.722580]],
-                [[8.255914]],
-            ]
-        )
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            torch.tensor(
+                [
+                    [[0.473328]],
+                    [[0.929023]],
+                    [[1.446527]],
+                    [[1.920595]],
+                    [[2.517054]],
+                    [[3.030102]],
+                    [[3.584279]],
+                    [[4.043509]],
+                    [[4.620008]],
+                    [[5.165322]],
+                    [[5.710637]],
+                    [[6.122581]],
+                    [[6.655914]],
+                    [[7.237174]],
+                    [[7.722580]],
+                    [[8.255914]],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [[0.473445]],
+                    [[0.928777]],
+                    [[1.446328]],
+                    [[1.920052]],
+                    [[2.516778]],
+                    [[3.029870]],
+                    [[3.584271]],
+                    [[4.042929]],
+                    [[4.619769]],
+                    [[5.165224]],
+                    [[5.710679]],
+                    [[6.121212]],
+                    [[6.654546]],
+                    [[7.236652]],
+                    [[7.721212]],
+                    [[8.254545]],
+                ]
+            ),
+        )[check_sampling_activation_stats_flow]
+
+    @staticmethod
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            torch.tensor(
+                [
+                    [
+                        [
+                            [
+                                7.5732,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.2602,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.3083,
+                                7.8467,
+                                7.2233,
+                                7.2715,
+                                7.4205,
+                                7.4667,
+                            ]
+                        ]
+                    ],
+                    [
+                        [
+                            [
+                                14.8205,
+                                14.9032,
+                                14.9858,
+                                15.0685,
+                                15.1512,
+                                14.3400,
+                                14.4173,
+                                14.4945,
+                                14.5718,
+                                14.6491,
+                                14.7264,
+                                14.8037,
+                                14.8810,
+                                14.9583,
+                                15.0355,
+                                15.1128,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+            torch.tensor(
+                [
+                    [
+                        [
+                            [
+                                7.5751,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.2548,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4951,
+                                7.8501,
+                                7.2195,
+                                7.2685,
+                                7.4186,
+                                7.4667,
+                            ]
+                        ]
+                    ],
+                    [
+                        [
+                            [
+                                14.8201,
+                                14.9027,
+                                14.9854,
+                                15.0681,
+                                15.1508,
+                                14.3391,
+                                14.4164,
+                                14.4937,
+                                14.5710,
+                                14.6483,
+                                14.7256,
+                                14.8029,
+                                14.8802,
+                                14.9575,
+                                15.0348,
+                                15.1121,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: torch.fx.GraphModule) -> Tensor:
@@ -422,8 +564,6 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.fx.GraphModule, input: torch.Tensor) -> Tensor:
-        for node in compressed_model.graph.nodes:
-            print(node.name)
         model_graph = compressed_model.graph
         weight_node = get_graph_node_by_name(model_graph, "linear_weight_updated_constant0")
         decompression_node = get_graph_node_by_name(model_graph, "asymmetric_weights_decompressor_linear_weight_0")

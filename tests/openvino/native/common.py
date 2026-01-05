@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,7 +27,7 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 def convert_torch_model(model: torch.nn.Module, input_shape: tuple[int], tmp_path: Path) -> ov.Model:
     model_tmp_path = tmp_path / ("model.onnx")
     with torch.no_grad():
-        torch.onnx.export(model, torch.ones(input_shape), model_tmp_path)
+        torch.onnx.export(model, torch.ones(input_shape), model_tmp_path, dynamo=False)
     return ov.convert_model(model_tmp_path)
 
 

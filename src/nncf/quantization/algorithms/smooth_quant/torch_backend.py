@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from typing import Callable
 
 import torch
+from torch import nn
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -20,9 +21,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.function_hook.commands import PT2ConstUpdateCommand
@@ -33,7 +31,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import SQMultiply
 
@@ -79,17 +76,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return 0
 
     @staticmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        collector = TensorCollector()
-        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(num_samples=num_samples)
-        collector.register_statistic_branch(branch_key, reducer, aggregator)
-        return collector
-
-    @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: nn.Module, nncf_graph: NNCFGraph) -> Tensor:
         if isinstance(model, GraphModelWrapper):
             model = model.model
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,15 +11,15 @@
 
 from typing import Optional
 
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
+from nncf.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 
 
 def get_mean_statistic_collector(
@@ -40,7 +40,7 @@ def get_mean_statistic_collector(
         reducer = BatchMeanReducer(inplace)
     else:
         reducer = MeanPerChReducer(channel_axis=channel_axis, inplace=inplace)
-    raw_reducer = RawReducer()
+    shape_reducer = ShapeReducer(inplace=inplace)
 
     kwargs = {
         "num_samples": num_samples,
@@ -48,11 +48,11 @@ def get_mean_statistic_collector(
     }
 
     aggregate_mean = MeanAggregator(**kwargs)
-    aggregate_shape = ShapeAggregator()
+    aggregate_noop = NoopAggregator(num_samples=1, return_first=True)
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, shape_reducer, aggregate_noop)
     return collector
 
 

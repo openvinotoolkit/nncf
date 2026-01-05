@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,7 +44,7 @@ def validate_ov_model(
     validator.jdict = []
     validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
     validator.batch_i = 1
-    validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
+    validator.confusion_matrix = ConfusionMatrix(names=validator.names)
     compiled_model = ov.compile_model(ov_model, device_name="CPU")
     num_outputs = len(compiled_model.outputs)
     for batch_i, batch in enumerate(track(data_loader, description="Validating")):
@@ -62,7 +62,7 @@ def validate_ov_model(
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
-    return stats, validator.seen, validator.nt_per_class.sum()
+    return stats, validator.seen, validator.metrics.nt_per_class.sum()
 
 
 def run_benchmark(model_path: Path, config) -> float:

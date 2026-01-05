@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,10 +20,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import AxesMode
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.onnx.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -75,16 +73,6 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             activation_port = activation_ports[0]
 
         return activation_port
-
-    @staticmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        collector = TensorCollector()
-        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(num_samples=num_samples)
-        collector.register_statistic_branch(branch_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def _get_weight_tensor_port_id(node: NNCFNode) -> int:
@@ -242,3 +230,8 @@ class ONNXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             )
 
         return filter_func
+
+    def get_tensor_collector_axes(self, nncf_graph: NNCFGraph, node_to_smooth: NNCFNode, input_port: int):
+        axes_mode = AxesMode.KEEP
+        axes = (self.get_activation_channel_axis(node_to_smooth, input_port),)
+        return axes_mode, axes

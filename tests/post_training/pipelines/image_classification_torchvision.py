@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,11 +25,11 @@ from tests.post_training.pipelines.image_classification_base import ImageClassif
 
 
 def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export_for_training(model, args, strict=True).module()
+    return torch.export.export_for_training(model, args, strict=True).module(check_guards=False)
 
 
 def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export(model, args, strict=True).module()
+    return torch.export.export(model, args, strict=True).module(check_guards=False)
 
 
 @dataclass
@@ -95,7 +95,13 @@ class ImageClassificationTorchvision(ImageClassificationBase):
                 additional_kwargs["input_names"] = ["image"]
                 additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
             torch.onnx.export(
-                model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
+                model,
+                self.dummy_tensor,
+                onnx_path,
+                export_params=True,
+                opset_version=13,
+                dynamo=False,
+                **additional_kwargs,
             )
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -329,7 +329,7 @@ class LMWeightCompression(BaseTestPipeline):
                 if len(cached_ov_model_files) > 1:
                     msg = "Graph break encountered in torch compile!"
                     raise nncf.InternalError(msg)
-                elif len(cached_ov_model_files) == 0:
+                if len(cached_ov_model_files) == 0:
                     msg = "Openvino Model Files Not Found!"
                     raise FileNotFoundError(msg)
                 self.path_compressed_ir = cached_ov_model_files[0]

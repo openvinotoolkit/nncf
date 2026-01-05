@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import pytest
 import torch
 import torch.fx
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
@@ -50,7 +50,7 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def check_bias(model: torch.fx.GraphModule, ref_bias: list):
         ref_bias = torch.Tensor(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = build_graph(model)
         for node in nncf_graph.get_all_nodes():
             if node.metatype not in OPERATORS_WITH_BIAS_METATYPES:
                 continue

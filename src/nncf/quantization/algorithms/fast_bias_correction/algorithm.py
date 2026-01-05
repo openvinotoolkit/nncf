@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,9 +24,9 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -175,13 +175,11 @@ class FastBiasCorrection(Algorithm):
 
             output_channel_axis = node.metatype.output_channel_axis
             input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
-            if bias_value.ndim > 1:
-                # Make index positive
-                output_channel_axis = range(bias_value.ndim)[output_channel_axis]
-                input_channel_axis = range(bias_value.ndim)[input_channel_axis]
+
             input_blob = self._backend_entity.create_input_data(
                 input_shape, input_fp, sub_input_name, input_channel_axis
             )
+
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,

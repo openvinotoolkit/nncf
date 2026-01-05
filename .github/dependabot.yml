@@ -30,7 +30,6 @@ updates:
       - dependency-name: "onnx"
       - dependency-name: "onnxruntime"
       - dependency-name: "openvino"
-      - dependency-name: "tensorflow"
       - dependency-name: "torch"
       - dependency-name: "torchvision"
       # Tests

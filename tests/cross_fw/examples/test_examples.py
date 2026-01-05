@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -46,7 +46,13 @@ RETRY_TIMEOUT = 60
 def example_test_cases():
     example_scope = load_json(EXAMPLE_SCOPE_PATH)
     for example_name, example_params in example_scope.items():
-        marks = pytest.mark.cuda if example_params.get("device") == "cuda" else ()
+        marks = []
+        if example_params.get("device") == "cuda":
+            marks.append(pytest.mark.cuda)
+        if example_params.get("skip"):
+            marks.append(pytest.mark.skip(reason=example_params.get("skip")))
+        if example_params.get("xfail"):
+            marks.append(pytest.mark.xfail(reason=example_params.get("xfail")))
         yield pytest.param(example_name, example_params, id=example_name, marks=marks)
 
 

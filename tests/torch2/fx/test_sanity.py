@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -129,7 +129,9 @@ def test_sanity(test_case: SanitySampleCase, tiny_imagenet_dataset):
     with torch.no_grad():
         ex_input = next(iter(calibration_dataset.get_inference_data()))
         model.eval()
-        exported_model = torch.export.export_for_training(model, args=(ex_input,), strict=True).module()
+        exported_model = torch.export.export_for_training(model, args=(ex_input,), strict=True).module(
+            check_guards=False
+        )
         quantized_model = nncf.quantize(exported_model, calibration_dataset)
         quantized_model = torch.compile(quantized_model, backend="openvino")
 

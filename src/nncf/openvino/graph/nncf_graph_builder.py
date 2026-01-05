@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,6 +44,8 @@ class GraphConverter:
         type_name = ov_type.get_type_name()
         conversion_map = {
             "nf4": "float",
+            "f4e2m1": "float",
+            "f8e8m0": "float",
             "f8e4m3": "float",
             "f8e5m2": "float",
             "f16": "float",
@@ -56,6 +58,7 @@ class GraphConverter:
             "i32": "int",
             "i64": "int",
             "u1": "int",
+            "u2": "int",
             "u4": "int",
             "u8": "int",
             "u16": "int",

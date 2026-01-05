@@ -2,7 +2,7 @@
 
 Post-Training Quantization is a quantization algorithm that doesn't demand retraining of a quantized model.
 It utilizes a small subset of the initial dataset to calibrate quantization constants.
-Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for details of the implementation.
+Please refer to this [document](/docs/usage/training_time_compression/Quantization.md) for details of the implementation.
 
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of the following techniques:
 
@@ -51,7 +51,7 @@ Every backend has its own return value format for the data transformation functi
 backend inference framework.
 Below are the formats of data transformation function for each supported backend.
 
-<details><summary><b>PyTorch, TorchFX, TensorFlow, OpenVINO</b></summary>
+<details><summary><b>PyTorch, TorchFX, OpenVINO</b></summary>
 
 The return format of the data transformation function is directly the input tensors consumed by the model. \
 _If you are not sure that your implementation of data transformation function is correct you can validate it by using the
@@ -89,11 +89,11 @@ for data_item in val_loader:
 </details>
 
 NNCF provides the examples of Post-Training Quantization where you can find the implementation of data transformation
-function: [PyTorch](/examples/post_training_quantization/torch/mobilenet_v2/README.md), [TorchFX](/examples/post_training_quantization/torch_fx/resnet18/README.md), [TensorFlow](/examples/post_training_quantization/tensorflow/mobilenet_v2/README.md), [ONNX](/examples/post_training_quantization/onnx/mobilenet_v2/README.md), and [OpenVINO](/examples/post_training_quantization/openvino/mobilenet_v2/README.md)
+function: [PyTorch](/examples/post_training_quantization/torch/mobilenet_v2/README.md), [TorchFX](/examples/post_training_quantization/torch_fx/resnet18/README.md), [ONNX](/examples/post_training_quantization/onnx/mobilenet_v2/README.md), and [OpenVINO](/examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
 In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](/examples/quantization_aware_training/torch/resnet18/README.md).
 
-## Using `pytorch.Dataloader` or `tf.data.Dataset` as data source for calibration dataset
+## Using `pytorch.Dataloader` as data source for calibration dataset
 
 ```batch_size``` is a parameter of a dataloader that refers to the number of samples or data points propagated through the neural network in a single pass.
 

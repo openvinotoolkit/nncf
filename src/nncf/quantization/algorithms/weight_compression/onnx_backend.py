@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,12 +25,12 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.onnx.graph.metatypes import onnx_metatypes
 from nncf.onnx.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
@@ -49,6 +49,7 @@ from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
 from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.quantization.ignored_patterns import create_rope
+from nncf.onnx.quantization.ignored_patterns import create_sam_pe
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -143,6 +144,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
+        # Everything remains the same, except when 3D weights, reduce by batch dimension also.
+        if len(const_shape) == 3:
+            channel_axes = (0,) + channel_axes
         return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
@@ -491,7 +495,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_ignored_patterns() -> GraphPattern:
-        return create_rope()
+        pattern = create_rope()
+        pattern.add_pattern_alternative(create_sam_pe())
+        return pattern
 
 
 class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):

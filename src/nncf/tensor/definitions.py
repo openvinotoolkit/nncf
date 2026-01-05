@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -28,7 +28,6 @@ class TensorBackend(Enum):
     """
 
     numpy = auto()
-    tf = auto()
     torch = auto()
     ov = auto()
 
@@ -44,10 +43,14 @@ class TensorDataType(StrEnum):
     float64 = auto()
     f8e4m3 = auto()
     f8e5m2 = auto()
+    f8e8m0 = auto()
+    f4e2m1 = auto()
     nf4 = auto()
     int8 = auto()
     int32 = auto()
     int64 = auto()
+    uint16 = auto()
+    uint32 = auto()
     uint8 = auto()
     uint4 = auto()
     int4 = auto()
@@ -80,6 +83,8 @@ class TensorDataType(StrEnum):
             TensorDataType.f8e5m2: 8,
             TensorDataType.int8: 8,
             TensorDataType.uint8: 8,
+            TensorDataType.uint16: 16,
+            TensorDataType.uint32: 32,
             TensorDataType.float16: 16,
             TensorDataType.bfloat16: 16,
             TensorDataType.float32: 32,

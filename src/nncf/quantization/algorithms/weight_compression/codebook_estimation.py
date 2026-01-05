@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,9 +16,9 @@ from typing import Optional, TypeVar
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -214,6 +214,7 @@ class CodebookEstimation:
         reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
         wp: WeightCompressionParameters,
+        dst_type: TensorDataType = TensorDataType.float16,
     ) -> Tensor:
         reduction_axis = reduction_axes[0]
         weight = deepcopy(weight.astype(TensorDataType.float32))
@@ -243,7 +244,6 @@ class CodebookEstimation:
 
         fp_outs = fns.matmul(weight, X)
         diff = float("inf")
-        dst_type = TensorDataType.float16
 
         variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
         variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)

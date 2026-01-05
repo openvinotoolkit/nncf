@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,7 @@ from typing import Optional, Union
 import torch
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import BackupMode
@@ -125,7 +125,7 @@ def compress_weights_impl(
         compression_format,
         advanced_parameters,
     )
-    graph = NNCFGraphFactory.create(model)
+    graph = build_graph(model)
 
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
     if isinstance(compressed_model, GraphModelWrapper):

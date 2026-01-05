@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -212,3 +212,19 @@ def test_can_not_delete_hook_twice():
     assert ret == []
     with pytest.raises(ValueError, match="No hook was found"):
         hook_storage.delete_hook("pre_hooks.foo__0.0")
+
+
+def test_is_empty():
+    hook_storage = HookStorage()
+    hook1 = nn.Identity()
+    assert hook_storage.is_empty()
+
+    handle = hook_storage.register_pre_function_hook("foo", 0, hook1)
+    assert not hook_storage.is_empty()
+    handle.remove()
+    assert hook_storage.is_empty()
+
+    handle = hook_storage.register_post_function_hook("foo", 0, hook1)
+    assert not hook_storage.is_empty()
+    handle.remove()
+    assert hook_storage.is_empty()

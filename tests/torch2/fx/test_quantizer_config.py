@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -67,8 +67,8 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def embedding_nncf_graph_constant_path(self) -> NNCFGraphToTest:
         return NNCFGraphModelWithEmbeddingsConstantPath(
             const_metatype=om.PTConstNoopMetatype,
-            embedding_metatype=om.PTModuleEmbeddingMetatype,
-            conv_metatype=om.PTModuleConv2dMetatype,
+            embedding_metatype=om.PTEmbeddingMetatype,
+            conv_metatype=om.PTConv2dMetatype,
             add_metatype=om.PTAddMetatype,
         )
 
@@ -76,6 +76,6 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def constant_branch_nncf_graph(self) -> NNCFGraphToTest:
         return NNCFGraphConstantBranchWithWeightedNode(
             const_metatype=om.PTConstNoopMetatype,
-            conv_metatype=om.PTModuleConv2dMetatype,
+            conv_metatype=om.PTConv2dMetatype,
             add_metatype=om.PTAddMetatype,
         )

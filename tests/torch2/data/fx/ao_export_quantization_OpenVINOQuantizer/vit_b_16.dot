@@ -866,10 +866,9 @@ strict digraph {
 "864 layer_norm_24" [id=864, type="layer_norm"];
 "865 quantize_per_tensor_default_61" [id=865, type="quantize_per_tensor"];
 "866 dequantize_per_tensor_default_61" [id=866, type="dequantize_per_tensor"];
-"867 slice_1" [id=867, type=slice];
-"868 select_36" [id=868, type=select];
-"869 linear_48" [id=869, type=linear];
-"870 output" [id=870, type=output];
+"867 select_36" [id=867, type=select];
+"868 linear_48" [id=868, type=linear];
+"869 output" [id=869, type=output];
 "0 class_token" -> "308 expand" [style=solid, label="(1, 1, 768)"];
 "1 encoder_pos_embedding" -> "310 add" [style=solid, label="(1, 197, 768)"];
 "2 _scale_0" -> "5 dequantize_per_channel_default" [style=solid, label="(768,)"];
@@ -1170,8 +1169,8 @@ strict digraph {
 "297 _scale_49" -> "300 dequantize_per_channel_default_49" [style=solid, label="(1000,)"];
 "298 _zero_point_49" -> "300 dequantize_per_channel_default_49" [style=solid, label="(1000,)"];
 "299 _frozen_param49" -> "300 dequantize_per_channel_default_49" [style=solid, label="(1000, 768)"];
-"300 dequantize_per_channel_default_49" -> "869 linear_48" [style=solid, label=None];
-"301 heads_head_bias" -> "869 linear_48" [style=solid, label="(1000,)"];
+"300 dequantize_per_channel_default_49" -> "868 linear_48" [style=solid, label=None];
+"301 heads_head_bias" -> "868 linear_48" [style=solid, label="(1000,)"];
 "302 x" -> "303 quantize_per_tensor_default" [style=solid, label="(1, 3, 224, 224)"];
 "303 quantize_per_tensor_default" -> "304 dequantize_per_tensor_default" [style=solid, label=None];
 "304 dequantize_per_tensor_default" -> "305 conv2d" [style=solid, label=None];
@@ -1784,8 +1783,7 @@ strict digraph {
 "863 add_24" -> "864 layer_norm_24" [style=solid, label="(1, 197, 768)"];
 "864 layer_norm_24" -> "865 quantize_per_tensor_default_61" [style=solid, label="(1, 197, 768)"];
 "865 quantize_per_tensor_default_61" -> "866 dequantize_per_tensor_default_61" [style=solid, label=None];
-"866 dequantize_per_tensor_default_61" -> "867 slice_1" [style=solid, label=None];
-"867 slice_1" -> "868 select_36" [style=solid, label="(1, 197, 768)"];
-"868 select_36" -> "869 linear_48" [style=solid, label="(1, 768)"];
-"869 linear_48" -> "870 output" [style=solid, label="(1, 1000)"];
+"866 dequantize_per_tensor_default_61" -> "867 select_36" [style=solid, label=None];
+"867 select_36" -> "868 linear_48" [style=solid, label="(1, 768)"];
+"868 linear_48" -> "869 output" [style=solid, label="(1, 1000)"];
 }

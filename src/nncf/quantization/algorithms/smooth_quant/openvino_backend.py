@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,8 +20,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -33,6 +31,7 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
+from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
 
@@ -75,16 +74,6 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             msg = f"Too many weight or activation ports for {node.node_name} node"
             raise nncf.InternalError(msg)
         return activation_ports[0]
-
-    @staticmethod
-    def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_axes: tuple[int], inplace: bool, branch_key: str
-    ) -> TensorCollector:
-        collector = TensorCollector()
-        reducer = OVAbsMaxReducer(reduction_axes=stats_reduction_axes, inplace=inplace)
-        aggregator = MaxAggregator(num_samples=num_samples)
-        collector.register_statistic_branch(branch_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> Tensor:
@@ -165,3 +154,11 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             )
 
         return filter_func
+
+    @staticmethod
+    def get_abs_max_reducer_cls() -> type[OVAbsMaxReducer]:
+        return OVAbsMaxReducer
+
+    @staticmethod
+    def get_shape_reducer_cls() -> type[OVShapeReducer]:
+        return OVShapeReducer

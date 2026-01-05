@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,8 +11,8 @@
 
 import torch
 
-from nncf.torch.function_hook.prune.magnitude.modules import UnstructuredPruningMask
-from nncf.torch.function_hook.prune.magnitude.modules import apply_magnitude_sparsity_binary_mask
+from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.magnitude.modules import apply_magnitude_binary_mask
 
 
 def test_apply_magnitude_sparsity_binary_mask():
@@ -20,7 +20,7 @@ def test_apply_magnitude_sparsity_binary_mask():
     mask = torch.tensor([0, 1, 0, 1], dtype=torch.float32)
     expected_output = torch.tensor([0.0, 0.5, 0.0, 0.9])
 
-    output = apply_magnitude_sparsity_binary_mask(input_tensor, mask)
+    output = apply_magnitude_binary_mask(input_tensor, mask)
     assert torch.equal(output, expected_output)
 
 

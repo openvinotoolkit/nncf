@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -139,7 +139,7 @@ BATCH_NORMALIZATION_OPERATIONS = [
 OPERATIONS_WITH_BIAS_REDUCED = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXGemmMetatype,
-    # TODO: Need to add MatMul with the separate bias support (CVS-135433)
+    onnx_metatypes.ONNXMatMulMetatype,
 ]
 
 OPERATIONS_WITH_BIAS = [

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -238,3 +238,19 @@ def test_multi_edges():
         (1, 2, {"meta": EdgeMeta(dtype=torch.float32, shape=(1, 1), input_port=0, output_port=0)}),
     ]
     assert edges == ref_edges
+
+
+def test_build_graph_for_unwrapped_model():
+    model = helpers.ConvModel()
+    graph = build_graph(model, model.get_example_inputs())
+
+    nodes = list(graph.nodes(data=True))
+    assert len(nodes) == 6
+    assert len(list(filter(lambda x: x[1]["type"] == NodeType.input, nodes))) == 1
+    assert len(list(filter(lambda x: x[1]["type"] == NodeType.output, nodes))) == 1
+    assert len(list(filter(lambda x: x[1]["type"] == NodeType.const, nodes))) == 2
+    assert len(list(filter(lambda x: x[1]["type"] == NodeType.fn_call, nodes))) == 2
+
+    edges = list(graph.edges(data=True))
+    assert len(edges) == 5
+    assert len(list(filter(lambda x: isinstance(x[2]["meta"], EdgeMeta), edges))) == 5

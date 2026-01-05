@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -74,6 +74,23 @@ class LinearModel(OVReferenceModel):
         r2 = opset.result(add, name="Result_Add")
         r2.get_output_tensor(0).set_names(set(["Result_Add"]))
         model = ov.Model([r1, r2], [input_1])
+        return model
+
+
+class SimpleMoEModel(OVReferenceModel):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4):
+        input_shape = [num_experts, seq_len, hidden_dim]
+        input_1 = opset.parameter(input_shape, name="Input")
+
+        weight_data = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weight_data = weight_data.reshape(num_experts, hidden_dim, out_dim)
+
+        matmul = opset.matmul(input_1, weight_data, transpose_a=False, transpose_b=False, name="MoE_MatMul")
+
+        result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([result], [input_1])
         return model
 
 
@@ -597,16 +614,18 @@ class SplitConcatModel(OVReferenceModel):
 
 @SYNTHETIC_MODELS.register()
 class IntegerModel(OVReferenceModel):
-    def _create_ov_model(self, dim1=1, dim2=7, dim3=6, max_input_value=2, add_batch_dimension=False):
+    def _create_ov_model(self, dim1=1, dim2=7, dim3=6, max_input_value=2, add_batch_dimension=False, positive_w=True):
+        def get_rand_w(shape):
+            value = self._rng.random(shape)
+            return value if positive_w else value * 2 - 1
+
         input_1 = opset.parameter([dim1, dim2, dim1], name="Input")
         convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
 
         gather_1 = opset.gather(convert_1, 0, axis=0, batch_dims=0)
         gather_1.set_friendly_name("Gather_1")
 
-        gather_2_data = opset.constant(
-            self._rng.random((max_input_value + 1, dim3)), dtype=np.float32, name="gather_2_data"
-        )
+        gather_2_data = opset.constant(get_rand_w((max_input_value + 1, dim3)), dtype=np.float32, name="gather_2_data")
         gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
@@ -615,7 +634,7 @@ class IntegerModel(OVReferenceModel):
             gather_3 = opset.unsqueeze(gather_3, 0)
         gather_3.set_friendly_name("Gather_3")
 
-        matmul_1_data = opset.constant(self._rng.random((dim3, dim3)), dtype=np.float32, name="matmul_1_data")
+        matmul_1_data = opset.constant(get_rand_w((dim3, dim3)), dtype=np.float32, name="matmul_1_data")
         matmul_1 = opset.matmul(gather_3, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
 
         gather_4 = opset.gather(input_1, 0, axis=2, batch_dims=0)
@@ -623,7 +642,7 @@ class IntegerModel(OVReferenceModel):
             gather_4 = opset.unsqueeze(gather_4, 0)
         gather_4.set_friendly_name("Gather_4")
 
-        matmul_2_data = opset.constant(self._rng.random((dim3, dim2)), dtype=np.float32, name="matmul_2_data")
+        matmul_2_data = opset.constant(get_rand_w((dim3, dim2)), dtype=np.float32, name="matmul_2_data")
         matmul_2 = opset.matmul(gather_4, matmul_2_data, transpose_a=False, transpose_b=True, name="MatMul_2")
         add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
 
@@ -973,17 +992,16 @@ class AWQMatmulModel(OVReferenceModel):
     def get_weights(weights_data, is_int8, name):
         if not is_int8:
             return opset.constant(weights_data, dtype=np.float32, name=name)
-        else:
-            qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
-            qw = opset.convert(qw, destination_type=np.float32)
+        qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
+        qw = opset.convert(qw, destination_type=np.float32)
 
-            zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
-            zp = opset.convert(zp, destination_type=np.float32)
+        zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
+        zp = opset.convert(zp, destination_type=np.float32)
 
-            scale = opset.constant(
-                np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
-            )
-            return (qw - zp) * scale
+        scale = opset.constant(
+            np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+        )
+        return (qw - zp) * scale
 
     def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
         input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
@@ -1250,6 +1268,26 @@ class RoPEModel(OVReferenceModel):
         cos_result = opset.result(cos, name="cos_result")
 
         model = ov.Model([sin_result, cos_result], [position_ids])
+        return model
+
+
+class SAMPEModel(OVReferenceModel):
+    """
+    Positional Embedding from Segment Anything Model (SAM).
+    """
+
+    def _create_ov_model(self):
+        inp = opset.parameter([-1, -1, -1, 2], name="inp")
+        matmul_data = self._rng.random((128, 2)).astype(np.float32)
+
+        matmul = opset.matmul(inp, matmul_data, transpose_a=False, transpose_b=True, name="MatMul")
+        scaled_matmul = opset.multiply(matmul, opset.constant(2 * np.pi, dtype=np.float32), name="Scaled_MatMul")
+        sin = opset.sin(scaled_matmul, name="sin")
+        cos = opset.cos(scaled_matmul, name="cos")
+        concat = opset.concat([sin, cos], axis=-1, name="concat")
+        concat_result = opset.result(concat, name="concat_result")
+
+        model = ov.Model([concat_result], [inp])
         return model
 
 

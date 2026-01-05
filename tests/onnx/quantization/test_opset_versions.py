@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,7 +25,7 @@ def test_model_opset_version(tmp_path, opset_version):
     model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1)
     input_shape = [1, 3, 224, 224]
     x = torch.randn(input_shape, requires_grad=False)
-    torch.onnx.export(model, x, tmp_path / "model.onnx", opset_version=opset_version)
+    torch.onnx.export(model, x, tmp_path / "model.onnx", opset_version=opset_version, dynamo=False)
 
     model = onnx.load_model(tmp_path / "model.onnx")
     dataset = get_random_dataset_for_test(model, False)

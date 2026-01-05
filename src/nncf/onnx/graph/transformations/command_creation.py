@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -29,8 +29,13 @@ def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ON
     :param bias_value: The new bias value that will be set.
     :return: The `ONNXInitializerUpdateCommand` command to update bias.
     """
-    bias_port_id = node.metatype.bias_port_id
-    target_point = ONNXTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
+    node_name = node.layer_attributes.bias_attrs.get("node")
+    if node_name:
+        port_id = node.layer_attributes.bias_attrs["port_id"]
+        target_point = ONNXTargetPoint(TargetType.LAYER, node_name, port_id)
+    else:
+        bias_port_id = node.metatype.bias_port_id
+        target_point = ONNXTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
     return ONNXInitializerUpdateCommand(target_point, bias_value)
 
 

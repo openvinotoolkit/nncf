@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import pytest
 
 import nncf
 import nncf.tensor.functions as fns
-from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
+from nncf.common.tensor_statistics import statistical_functions as s_fns
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
@@ -47,6 +47,14 @@ OPERATOR_MAP = {
     "ifloordiv": operator.ifloordiv,
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
+
+BOOLEAN_OPERATOR_MAP = {
+    "and": operator.and_,
+    "or": operator.or_,
+    "rshift": operator.rshift,
+    "lshift": operator.lshift,
+    "invert": lambda a, _: ~a,
+}
 
 COMPARISON_OPERATOR_MAP = {
     "lt": operator.lt,
@@ -98,6 +106,22 @@ class TemplateTestNNCFTensorOperators:
         assert id(tensor_a.data) is not id(tensor_b.data)
         assert all(tensor_a == tensor_b)
 
+    @pytest.mark.parametrize("op_name", BOOLEAN_OPERATOR_MAP.keys())
+    @pytest.mark.parametrize("value", [0, 1, 2])
+    def test_operators_bool(self, op_name, value):
+        tensor_a = self.to_tensor([0, 1, 2])
+
+        nncf_tensor_a = Tensor(tensor_a)
+
+        fn = BOOLEAN_OPERATOR_MAP[op_name]
+        res = fn(tensor_a, value)
+        res_nncf = fn(nncf_tensor_a, value)
+
+        assert res.dtype == res_nncf.data.dtype
+        assert all(res == res_nncf.data)
+        assert isinstance(res_nncf, Tensor)
+        assert res_nncf.device == nncf_tensor_a.device
+
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
         tensor_a = self.to_tensor([1.0, 2.0])
@@ -113,10 +137,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):
@@ -132,10 +153,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", BINARY_OPERATORS)
     def test_operators_int_rev(self, op_name):
@@ -151,10 +169,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_tensor(self, op_name):
@@ -170,10 +185,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_int(self, op_name):
@@ -188,10 +200,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_int_rev(self, op_name):
@@ -206,10 +215,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -411,10 +417,7 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor[1]
         assert res == 1
         assert isinstance(res, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
-            assert res.device == nncf_tensor.device
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize("is_tensor_indecies", (False, True))
     def test_getitem_for_indecies(self, is_tensor_indecies):
@@ -563,10 +566,15 @@ class TemplateTestNNCFTensorOperators:
         res = fns.where(tensor > 0, 1, 0)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
-            assert res.device == tensor.device
+        assert res.device == tensor.device
+
+    def test_fn_sign(self):
+        tensor = Tensor(self.to_tensor([1, 0, -1]))
+        tensor_ref = self.to_tensor([1, 0, -1])
+        res = fns.sign(tensor)
+        assert all(res.data == tensor_ref)
+        assert isinstance(res, Tensor)
+        assert res.device == tensor.device
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -660,6 +668,15 @@ class TemplateTestNNCFTensorOperators:
         res = fns.astype(tensor, TensorDataType.int8)
         assert isinstance(res, Tensor)
         assert res.dtype == TensorDataType.int8
+
+    def test_view(self):
+        tensor = Tensor(self.to_tensor([1.5]))
+        res = tensor.view(TensorDataType.uint8)
+        res_back = res.view(tensor.dtype)
+        assert isinstance(res, Tensor)
+        assert res.dtype == TensorDataType.uint8
+        assert res_back.dtype == tensor.dtype
+        assert fns.allclose(res_back, tensor)
 
     def test_atleast_1d(self):
         scalar = Tensor(self.to_tensor(42))
@@ -1699,10 +1716,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
-        if (
-            self.backend() != TensorBackend.tf
-        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
-            assert res.device == tensor1.device
+        assert res.device == tensor1.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -2114,6 +2128,8 @@ class TemplateTestNNCFTensorOperators:
                     TensorDataType.int4,
                     TensorDataType.uint4,
                     TensorDataType.nf4,
+                    TensorDataType.f4e2m1,
+                    TensorDataType.f8e8m0,
                     TensorDataType.f8e4m3,
                     TensorDataType.f8e5m2,
                 ]
@@ -2145,7 +2161,11 @@ class TemplateTestNNCFTensorOperators:
                 in [
                     TensorDataType.int4,
                     TensorDataType.uint4,
+                    TensorDataType.uint16,
+                    TensorDataType.uint32,
                     TensorDataType.nf4,
+                    TensorDataType.f4e2m1,
+                    TensorDataType.f8e8m0,
                     TensorDataType.f8e4m3,
                     TensorDataType.f8e5m2,
                 ]
@@ -2368,13 +2388,6 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize("data", [[3.0, 2.0, 2.0], [1, 2, 3]])
     @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.int32, TensorDataType.uint8, None])
     def test_fn_tensor(self, data, dtype):
-        if (
-            self.backend() == TensorBackend.tf
-            and dtype is not None
-            and not dtype.is_float()
-            and (data == [3.0, 2.0, 2.0])
-        ):
-            pytest.skip("TF backend does not support non-float dtypes for float data")
         nncf_tensor = fns.tensor(data, backend=self.backend(), dtype=dtype, device=self.device())
         backend_tensor = Tensor(self.to_tensor(data))
         if dtype is not None:
@@ -2390,3 +2403,10 @@ class TemplateTestNNCFTensorOperators:
         assert tensor1.shape == tensor2.shape
         assert tensor2.device == TensorDeviceType.CPU
         assert fns.allclose(tensor1, tensor2)
+
+    def test_tolist(self):
+        inp_list = [[1.0, 2.0], [3.0, 4.0]]
+        tensor = Tensor(self.to_tensor(inp_list))
+        assert tensor.tolist() == inp_list
+        assert tensor[0].tolist() == inp_list[0]
+        assert tensor[0][0].tolist() == inp_list[0][0]

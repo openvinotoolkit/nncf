@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,10 +8,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from functools import wraps
 
 import numpy as np
 import pytest
 
+from nncf.definitions import NNCF_DATASET_RESET_STATE_KEY
 from nncf.openvino.engine import OVNativeEngine
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
@@ -77,3 +79,47 @@ def test_compiled_model_engine_inference_stateful(stateful):
     out = out["Result"]
 
     assert np.array_equal(out[0], input_data[0])
+
+
+def test_stateful_model_inference_with_controlled_resetting():
+    def wrap_reset_state(infer_request):
+        nonlocal reset_order
+        original_reset_state = infer_request.reset_state
+
+        @wraps(infer_request.reset_state)
+        def _reset_state():
+            reset_order.append("reset")
+            original_reset_state()
+
+        infer_request.reset_state = _reset_state
+
+    model = StatefulModel(True).ov_model
+    inp = model.get_parameters()[0]
+    input_data = [{"input_data": np.ones(inp.shape), NNCF_DATASET_RESET_STATE_KEY: False} for _ in range(10)]
+    reset_ind = [2, 5, 7]
+    for ind in reset_ind:
+        input_data[ind][NNCF_DATASET_RESET_STATE_KEY] = True
+
+    engine = OVNativeEngine(model)
+    reset_order = []
+    wrap_reset_state(engine.engine.infer_request)
+
+    for inp_data in input_data:
+        engine.infer(inp_data)
+        reset_order.append("infer")
+
+    assert reset_order == [
+        "infer",
+        "infer",
+        "reset",
+        "infer",
+        "infer",
+        "infer",
+        "reset",
+        "infer",
+        "infer",
+        "reset",
+        "infer",
+        "infer",
+        "infer",
+    ]

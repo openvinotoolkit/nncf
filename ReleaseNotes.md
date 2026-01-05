@@ -1,5 +1,49 @@
 # Release Notes
 
+## New in Release 2.19.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - (OpenVINO) `nncf.CompressWeightsMode.E2M1` `mode` option is renamed to `nncf.CompressWeightsMode.MXFP4`.
+- Features:
+  - The Histogram Aggregator was introduced: it records the running histogram of tensor values and computes the quantization range to minimize the L2 norm of histogram bin quantization error. The Histogram Aggregator improved accuracy metrics for a number of PTQ classification models. It can be activated using `RangeEstimatorParametersSet.HISTOGRAM` through the `AdvancedQuantizationParameters` in `nncf.quantize()`.
+  - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
+  - Now weight compression bitwidth distribution table also displays group size value for each of the compression data type.
+  - (ONNX) Support for the SmoothQuant algorithm has been added to the ONNX backend for INT8 quantization.
+  - (ONNX) A new transformation has been added to optimize models by folding `QuantizeLinear` nodes with constant inputs into precomputed, quantized initializers. This behavior is controlled by the `COMPRESS_WEIGHTS` backend parameter in `nncf.quantize()`, which is now enabled (`True`) by default.
+  - (ONNX) Support has been added for applying the Fast Bias/Bias Correction algorithm to `MatMul` + `Add` subgraphs where one of the inputs to the `Add` operation is a constant. Previously, these cases were skipped because the `MatMul` operation was not recognized as having a bias, preventing the algorithm from being applied.
+- Fixes:
+  - Added an ignored pattern for position embedding layer in Segment Anything model.
+  - (ONNX) Fixed incorrect input handling for the `MatMulNBits` operation that previously caused graph breaks.
+  - (ONNX) Resolved an issue with INT4 weight compression in the `Gemm` operation when `transB=1`.
+  - Fixed a typo in the `_get_smooth_quant_param_grid()` method reported in [#3613](https://github.com/openvinotoolkit/nncf/issues/3613).
+- Improvements:
+  - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
+  - Reduced peak memory footprint for Bias Correction algorithm.
+  - (OpenVINO) Reduced time (by up to 3x) and memory (by up to 1.5x) it takes to compress models to `MXFP4` data type.
+- Tutorials:
+  - [Deployment of a Post-Training Optimized Qwen3 Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/notebooks/qwen-3/smolagents/qwen3_agent.ipynb)
+  - [Post-Training Optimization of ACE Step Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ace-step-music-generation/ace-step-music-generation.ipynb)
+  - [Post-Training Optimization of Qwen3-VL Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-vl/qwen3-vl.ipynb)
+- Other:
+  - Refined the handling of layers that don't have channel size divisible by group size during weight compression. Now the default behavior in such case is that an error will be raised and in the error message users are suggested to provide a different group size value or use `GroupSizeFallbackMode.ADJUST` to automatically adjust group size for problematic layers.
+
+Compression-aware training:
+
+- Improvements:
+  - Optimized `nncf.strip()` for `StripFormat.IN_PLACE` and `example_input` is no longer required.
+
+Deprecations/Removals:
+
+- (TensorFlow) The TensorFlow backend is now deprecated and will be removed in future releases. It is recommended to use PyTorch analogous models for training-aware optimization methods and OpenVINO IR, PyTorch, and ONNX models for post-training optimization methods from NNCF.
+- The following experimental NNCF methods are deprecated and will be removed in future releases: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, Movement Sparsity.
+
+Requirements:
+
+- Updated PyTorch (2.9.0) and Torchvision (0.24.0) versions.
+- Dropped support for Python 3.9.
+
 ## New in Release 2.18.0
 
 Post-training Quantization:

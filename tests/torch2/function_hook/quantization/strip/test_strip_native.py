@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,9 +32,19 @@ def test_nncf_strip_api(strip_type: str, do_copy: bool):
     quantized_model = nncf.quantize(model, nncf.Dataset([torch.ones(model.INPUT_SIZE)]), subset_size=1)
 
     if strip_type == "nncf":
-        strip_model = nncf.strip(quantized_model, do_copy, nncf.StripFormat.NATIVE, example_input)
+        strip_model = nncf.strip(
+            quantized_model,
+            do_copy=do_copy,
+            strip_format=nncf.StripFormat.NATIVE,
+            example_input=example_input,
+        )
     elif strip_type == "torch":
-        strip_model = nncf.torch.strip(quantized_model, do_copy, nncf.StripFormat.NATIVE, example_input)
+        strip_model = nncf.torch.strip(
+            quantized_model,
+            do_copy=do_copy,
+            strip_format=nncf.StripFormat.NATIVE,
+            example_input=example_input,
+        )
 
     if do_copy:
         assert id(strip_model) != id(quantized_model)
@@ -78,4 +88,4 @@ def test_strip_quantization(overflow_fix: OverflowFix, tmp_path: Path):
     check_quantizer_operators(inference_model, 2**8 - 1)
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
-    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
+    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx", dynamo=False)

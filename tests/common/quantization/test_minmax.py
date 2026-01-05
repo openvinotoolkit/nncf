@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -221,7 +221,7 @@ def test_min_max_caching():
     def find_qsetup_mock(self, *args):
         nonlocal find_called
         find_called += 1
-        return None
+        return
 
     def fill_qsetup_mock(self, *args):
         """

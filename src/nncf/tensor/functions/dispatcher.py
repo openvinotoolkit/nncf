@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -285,10 +285,6 @@ def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[...
         from nncf.tensor.functions import torch_numeric
 
         return getattr(torch_numeric, fn_name)
-    if backend == TensorBackend.tf:
-        from nncf.tensor.functions import tf_numeric
-
-        return getattr(tf_numeric, fn_name)
     if backend == TensorBackend.ov:
         from nncf.tensor.functions import openvino_numeric
 
@@ -309,10 +305,6 @@ def get_io_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[..., Any
         from nncf.tensor.functions import numpy_io
 
         return getattr(numpy_io, fn_name)
-    if backend == TensorBackend.tf:
-        from nncf.tensor.functions import tf_io
-
-        return getattr(tf_io, fn_name)
     if backend == TensorBackend.torch:
         from nncf.tensor.functions import torch_io
 

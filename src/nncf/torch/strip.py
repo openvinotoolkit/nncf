@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,12 +11,10 @@
 
 
 from copy import deepcopy
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from torch import nn
 
-import nncf
-from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.parameters import StripFormat
 
 TModel = TypeVar("TModel", bound=nn.Module)
@@ -26,7 +24,7 @@ def strip(
     model: TModel,
     do_copy: bool = True,
     strip_format: StripFormat = StripFormat.NATIVE,
-    example_input: Optional[Any] = None,
+    example_input: Any = None,
 ) -> TModel:
     """
     Removes auxiliary layers and operations added during the compression process, resulting in a clean
@@ -38,13 +36,7 @@ def strip(
     :param example_input: An example input tensor to be used for tracing the model.
     :return: The stripped model.
     """
-    if is_torch_tracing_by_patching():
-        return model.nncf.strip(do_copy, strip_format)
+    from nncf.torch.function_hook.strip import strip_model
 
-    from nncf.torch.function_hook.strip import strip_quantized_model
-
-    if example_input is None:
-        msg = "Required example_input for strip model."
-        raise nncf.InternalError(msg)
     model = deepcopy(model) if do_copy else model
-    return strip_quantized_model(model, example_input, strip_format)
+    return strip_model(model, example_input, strip_format)

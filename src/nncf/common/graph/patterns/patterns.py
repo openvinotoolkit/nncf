@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -408,3 +408,4 @@ class IgnoredPatternNames(Enum):
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
     EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")
     ROPE = PatternDesc("rope", model_types=[ModelType.TRANSFORMER])
+    SAM_PE = PatternDesc("sam_pe", model_types=[ModelType.TRANSFORMER])
