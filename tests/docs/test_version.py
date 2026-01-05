@@ -10,14 +10,18 @@
 # limitations under the License.
 
 import re
+from pathlib import Path
 
-import nncf
+NNCF_VERSION_FILE = "src/nncf/version.py"
 
 
 def test_nncf_version():
     # Validate format of version
     # Needed while src/custom_version.py exists
+    version = re.search(r"^__version__ = ['\"](.*)['\"]", Path(NNCF_VERSION_FILE).read_text(), re.M)
+    assert version, f"Cannot find version in {NNCF_VERSION_FILE}"
+    version_str = version.group(1)
     version_pattern = r"^\d\.\d{1,2}\.\d{1,2}$"  # e.g., "3.0.0"
-    assert re.match(version_pattern, nncf.__version__), (
-        f"NNCF version '{nncf.__version__}' does not match the expected pattern."
+    assert re.match(version_pattern, version_str), (
+        f"NNCF version '{version}' in {NNCF_VERSION_FILE} does not match the expected pattern."
     )
