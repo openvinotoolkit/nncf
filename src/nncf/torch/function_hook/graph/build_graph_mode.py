@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Optional, Union
 
 import networkx as nx  # type: ignore[import-untyped]
 import torch
@@ -358,6 +358,7 @@ class GraphBuilderMode(FunctionHookMode):
         return super().process_post_function_hooks_for_value(value, op_meta, port_id)
 
 
+@torch.no_grad()
 def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
     """
     Constructs a computational graph of the given model.
@@ -368,11 +369,16 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
     :param model: The PyTorch model for which the computational graph will be built.
     :return: A nx.MultiDiGraph where nodes represent operations of model.
     """
+    if isinstance(model.forward, ForwardWithHooks):
+        hook_storage = get_hook_storage(model)
+        forward_fn = model.forward.orig_forward
+    else:
+        hook_storage = HookStorage()
+        forward_fn = model.forward
+
     with training_mode_switcher(model, is_training=False):
-        with torch.no_grad():
-            with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
-                args, kwargs = ctx.process_model_inputs(args, kwargs)
-                wrapped_forward = cast(ForwardWithHooks, model.forward)
-                outputs = wrapped_forward.orig_forward(*args, **kwargs)
-                outputs = ctx.process_model_outputs(outputs)
+        with GraphBuilderMode(model=model, hook_storage=hook_storage) as ctx:
+            args, kwargs = ctx.process_model_inputs(args, kwargs)
+            outputs = forward_fn(*args, **kwargs)
+            outputs = ctx.process_model_outputs(outputs)
     return ctx.graph
