@@ -18,10 +18,8 @@ jobs:
     uses: ./.github/workflows/build_html_doc.yml
     with:
       ref: ${{ github.ref }}
-  call-build-schema-page:
-    uses: ./.github/workflows/build_schema_page.yml
   publish:
-    needs: [call-build-html-doc, call-build-schema-page]
+    needs: [call-build-html-doc]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -34,20 +32,9 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: html_doc_artifact
-      - name: Extract artifact
-        shell: 'bash'
-        run: |
-          tar -xvf artifact.tar
-          rm artifact.tar
 
-      - name: Download schema doc build artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: schema_doc_artifact
-          path: html_build/html
       - name: Extract artifact
         shell: 'bash'
-        working-directory: html_build/html
         run: |
           tar -xvf artifact.tar
           rm artifact.tar

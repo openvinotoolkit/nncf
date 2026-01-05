@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from typing import Optional, Union
 
 import numpy as np
 import torch
+from torch import nn
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -32,7 +33,6 @@ from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import get_potential_fused_node
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from nncf.torch.model_graph_manager import is_quantized_weights
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
 
@@ -72,7 +72,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: NNCFNetwork) -> tuple[Optional[str], Optional[str]]:
+    def get_sub_input_output_names(subgraph: nn.Module) -> tuple[Optional[str], Optional[str]]:
         # Pytorch does not have name for extracted node
         return None, None
 
@@ -86,7 +86,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return blob
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: Union[NNCFNetwork, GraphModelWrapper]) -> Tensor:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: Union[nn.Module, GraphModelWrapper]) -> Tensor:
         if isinstance(model, GraphModelWrapper):
             model = model.model
         return Tensor(get_fused_bias_value(node, nncf_graph, model))

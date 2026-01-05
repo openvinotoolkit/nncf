@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 from typing import Any, TypeVar, cast
 
 import nncf
-from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -55,12 +54,9 @@ class NNCFGraphFactory:
             return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
         if model_backend == BackendType.TORCH:
             from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-            from nncf.torch.nncf_network import NNCFNetwork
 
             if isinstance(model, GraphModelWrapper):
                 return model.get_graph()
-            if isinstance(model, NNCFNetwork):
-                return model.nncf.get_graph()
             msg = f"Unexpected type of model {type(model)} for TORCH backend"
             raise nncf.InternalError(msg)
         msg = f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
@@ -90,17 +86,11 @@ class ModelTransformerFactory:
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
             return OVModelTransformer(cast(Model, model), inplace=inplace)
-        if model_backend == BackendType.TORCH and not is_torch_tracing_by_patching():
+        if model_backend == BackendType.TORCH:
             from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
             from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
             return PT2ModelTransformer(cast(GraphModelWrapper, model))
-
-        if model_backend == BackendType.TORCH and is_torch_tracing_by_patching():
-            from nncf.torch.model_transformer import PTModelTransformer
-            from nncf.torch.nncf_network import NNCFNetwork
-
-            return PTModelTransformer(cast(NNCFNetwork, model))
 
         if model_backend == BackendType.TORCH_FX:
             from torch.fx import GraphModule
@@ -191,11 +181,7 @@ class StatisticsAggregatorFactory:
             from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
             return OVStatisticsAggregator(dataset)
-        if model_backend == BackendType.TORCH and is_torch_tracing_by_patching():
-            from nncf.torch.statistics.aggregator import PTStatisticsAggregator
-
-            return PTStatisticsAggregator(dataset)
-        if model_backend == BackendType.TORCH and not is_torch_tracing_by_patching():
+        if model_backend == BackendType.TORCH:
             from nncf.torch.function_hook.statistics.aggregator import PT2StatisticsAggregator
 
             return PT2StatisticsAggregator(dataset)

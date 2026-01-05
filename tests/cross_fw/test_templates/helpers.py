@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -163,13 +163,13 @@ class CustomConvBNTestModel(nn.Module):
 
 
 class FCTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
+    INPUT_SIZE = [1, 1, 3, 3]
 
     def __init__(self):
         super().__init__()
-        self.fc = nn.Linear(4, 2)
-        self.fc.weight.data = torch.Tensor([[0.1, 0.2, 0.3, 0.2], [0.3, -0.1, 0.2, 0.4]])
-        self.fc.bias.data = torch.Tensor([1.0, 1.1])
+        self.fc = nn.Linear(3, 2)
+        self.fc.weight.data = torch.Tensor([[0.1, 0.2, 0.3], [0.3, -0.1, 0.2]])
+        self.fc.bias.data = torch.Tensor([1.0, 2.0])
 
     def forward(self, x):
         x = self.fc(x)

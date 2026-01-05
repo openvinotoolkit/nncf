@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
 
 import nncf
-from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -46,6 +45,7 @@ from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
 TTensor = TypeVar("TTensor")
+TModel = TypeVar("TModel")
 
 BATCHWISE_STATISTICS_WARNING = (
     "For the particular model the batchwise statistics collection can lead to inaccurate statistics. "
@@ -502,7 +502,6 @@ def compress_weights(
 
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
-        from nncf.torch.nncf_network import NNCFNetwork
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         not_supported_modes = [
@@ -535,14 +534,7 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         if is_wrapped_model(model):
-            if isinstance(model, NNCFNetwork) and not model.nncf.trace_parameters:
-                msg = (
-                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
-                    "for nncf.compress_weights(). Please wrap the model using "
-                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
-                    "nncf.compress_weights()."
-                )
-                raise nncf.ValidationError(msg)
+            pass
         elif dataset is None:
             msg = "Please provide a dataset of at least one element for PyTorch model tracing."
             raise nncf.ValidationError(msg)
@@ -550,7 +542,7 @@ def compress_weights(
             from nncf.torch.model_creation import wrap_model
 
             example_input = next(iter(dataset.get_inference_data()))
-            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore[arg-type]
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore
         if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
             dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl

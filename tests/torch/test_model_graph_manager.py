@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,12 +22,14 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
-from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
+from nncf.torch.function_hook.commands import PT2InsertionCommand
+from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_data_on_port
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.model_graph_manager import get_fake_quantizer
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_potential_fused_node
@@ -39,9 +41,6 @@ from nncf.torch.model_graph_manager import is_quantized_weights
 from nncf.torch.model_graph_manager import set_const_data
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_graph_manager import update_fused_bias
-from nncf.torch.model_transformer import PTModelTransformer
-from nncf.torch.model_transformer import PTTransformationLayout
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import SymmetricQuantizer
@@ -50,7 +49,7 @@ from tests.torch.helpers import create_conv
 
 @dataclass
 class ModelDesc:
-    model: NNCFNetwork
+    model: GraphModelWrapper
     graph: NNCFGraph
     node: NNCFNode
     node_name: str
@@ -58,7 +57,7 @@ class ModelDesc:
 
     def __init__(self, model_cls: type, node_name: str):
         self.model = wrap_model(model_cls(), example_input=torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
-        self.graph = self.model.nncf.get_graph()
+        self.graph = self.model.get_graph()
         self.node = self.graph.get_node_by_name(node_name)
         self.node_name = node_name
 
@@ -78,29 +77,23 @@ class TestManagerForOriginalModels:
     @pytest.fixture(autouse=True, scope="function")
     def init_models(self):
         self.models: dict[str, ModelDesc] = {
-            "ConvBiasBNTestModel": ModelDesc(helpers.ConvBiasBNTestModel, "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0"),
-            "ConvBNTestModel": ModelDesc(helpers.ConvBNTestModel, "ConvBNTestModel/Conv2d[conv]/conv2d_0"),
-            "ConvTestModel": ModelDesc(helpers.ConvTestModel, "ConvTestModel/Conv2d[conv]/conv2d_0"),
-            "FCTestModel": ModelDesc(helpers.FCTestModel, "FCTestModel/Linear[fc]/linear_0"),
-            "MultipleConvTestModel": ModelDesc(
-                helpers.MultipleConvTestModel, "MultipleConvTestModel/Conv2d[conv_1]/conv2d_0"
-            ),
-            "CustomConvTestModel": ModelDesc(
-                helpers.CustomConvTestModel, "CustomConvTestModel/CustomConv[conv]/conv2d_0"
-            ),
-            "CustomConvBNTestModel": ModelDesc(
-                helpers.CustomConvBNTestModel, "CustomConvBNTestModel/CustomConv[conv]/conv2d_0"
-            ),
+            "ConvBiasBNTestModel": ModelDesc(helpers.ConvBiasBNTestModel, "conv/conv2d/0"),
+            "ConvBNTestModel": ModelDesc(helpers.ConvBNTestModel, "conv/conv2d/0"),
+            "ConvTestModel": ModelDesc(helpers.ConvTestModel, "conv/conv2d/0"),
+            "FCTestModel": ModelDesc(helpers.FCTestModel, "fc/linear/0"),
+            "MultipleConvTestModel": ModelDesc(helpers.MultipleConvTestModel, "conv_1/conv2d/0"),
+            "CustomConvTestModel": ModelDesc(helpers.CustomConvTestModel, "conv/conv2d/0"),
+            "CustomConvBNTestModel": ModelDesc(helpers.CustomConvBNTestModel, "conv/conv2d/0"),
         }
 
     REF_FUSED_NODE = {
-        "ConvBiasBNTestModel": "ConvBiasBNTestModel/BatchNorm2d[bn]/batch_norm_0",
-        "ConvBNTestModel": "ConvBNTestModel/BatchNorm2d[bn]/batch_norm_0",
+        "ConvBiasBNTestModel": "bn/batch_norm/0",
+        "ConvBNTestModel": "bn/batch_norm/0",
         "ConvTestModel": None,
         "FCTestModel": None,
         "MultipleConvTestModel": None,
         "CustomConvTestModel": None,
-        "CustomConvBNTestModel": "CustomConvBNTestModel/CustomBN2d[bn]/batch_norm_0",
+        "CustomConvBNTestModel": "bn/batch_norm/0",
     }
 
     @pytest.fixture(params=MODELS_LIST)
@@ -118,7 +111,7 @@ class TestManagerForOriginalModels:
         "ConvBiasBNTestModel": True,
         "ConvBNTestModel": True,
         "ConvTestModel": True,
-        "FCTestModel": False,
+        "FCTestModel": True,
         "MultipleConvTestModel": True,
         "CustomConvTestModel": True,
         "CustomConvBNTestModel": True,
@@ -159,7 +152,7 @@ class TestManagerForOriginalModels:
             [[[[0.1000, -2.0000], [1.0000, 0.1000]]], [[[0.1000, 2.0000], [-1.0000, 0.1000]]]],
             [0.1000, 1.0000],
         ),
-        "FCTestModel": ([[0.1000, 0.2000, 0.3000, 0.2000], [0.3000, -0.1000, 0.2000, 0.4000]], [1.0000, 1.1000]),
+        "FCTestModel": ([[0.1000, 0.2000, 0.3000], [0.3000, -0.1000, 0.2000]], [1.0000, 2.0000]),
         "MultipleConvTestModel": (
             [[[[-2.4661, 0.3623], [0.3765, -0.1808]]], [[[0.3930, 0.4327], [-1.3627, 1.3564]]]],
             [0.6688, -0.7077],
@@ -175,11 +168,11 @@ class TestManagerForOriginalModels:
     }
 
     @pytest.mark.parametrize("port_id", (1, 2))
-    def test_get_const_data_on_port(self, model_desc, port_id):
+    def test_get_const_data_on_port(self, model_desc: ModelDesc, port_id):
         model_name, desc = model_desc
         ref = self.REF_GET_CONST_DATA[model_name][port_id - 1]
 
-        data = get_const_data_on_port(desc.model, desc.model.nncf.get_graph(), desc.node, port_id)
+        data = get_const_data_on_port(desc.model.model, desc.model.get_graph(), desc.node, port_id)
         if ref is None:
             assert data is None
         else:
@@ -236,8 +229,9 @@ def test_get_module_by_name():
 
 def test_get_set_const_data():
     model_cls = helpers.CustomConvBNTestModel
-    model = wrap_model(model_cls(), example_input=torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
-    graph = model.nncf.get_graph()
+    wrapped = wrap_model(model_cls(), example_input=torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
+    model = wrapped.model
+    graph = wrapped.get_graph()
     const_node = graph.get_node_by_name("conv.bias")
 
     assert model.conv.bias.requires_grad
@@ -251,57 +245,18 @@ def test_get_set_const_data():
     assert model.conv.bias.requires_grad
 
 
-@pytest.mark.parametrize(
-    "target_type, port_id",
-    (
-        (TargetType.OPERATOR_POST_HOOK, None),
-        (TargetType.OPERATOR_PRE_HOOK, 1),
-    ),
-    ids=["post_hook", "pre_hook"],
-)
-def test_get_fake_quantizer(target_type, port_id):
-    model = wrap_model(
-        helpers.CustomConvTestModel().eval(),
-        example_input=torch.ones(helpers.CustomConvTestModel.INPUT_SIZE),
-        trace_parameters=True,
-    )
-    node_name = "CustomConvTestModel/CustomConv[conv]/conv2d_0"
-    transformer = PTModelTransformer(model)
-    qspec = PTQuantizerSpec(
-        num_bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=None,
-        scale_shape=(1,),
-        narrow_range=False,
-        half_range=False,
-        logarithm_scale=False,
-    )
-
-    fq = SymmetricQuantizer(qspec)
-    command = create_quantizer_insertion_command(PTTargetPoint(target_type, node_name, input_port_id=port_id), fq)
-    layout = PTTransformationLayout()
-    layout.register(command)
-    q_model = transformer.transform(layout)
-
-    graph = q_model.nncf.get_graph()
-    q_node = graph.get_node_by_name("CustomConvTestModel/CustomConv[conv]/conv2d_0")
-
-    found_fq = get_fake_quantizer(q_node, port_id, q_model)
-    assert fq is found_fq
-
-
 def test_is_quantized_weights():
     model = wrap_model(
         helpers.CustomConvTestModel().eval(),
         example_input=torch.ones(helpers.CustomConvTestModel.INPUT_SIZE),
         trace_parameters=True,
     )
-    node_name = "CustomConvTestModel/CustomConv[conv]/conv2d_0"
-    graph = model.nncf.get_graph()
+    node_name = "conv/conv2d/0"
+    graph = model.get_graph()
     node = graph.get_node_by_name(node_name)
     assert not is_quantized_weights(node, graph)
 
-    transformer = PTModelTransformer(model)
+    transformer = PT2ModelTransformer(model)
     qspec = PTQuantizerSpec(
         num_bits=8,
         mode=QuantizationMode.SYMMETRIC,
@@ -313,14 +268,12 @@ def test_is_quantized_weights():
     )
 
     fq = SymmetricQuantizer(qspec)
-    command = create_quantizer_insertion_command(
-        PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node_name, input_port_id=1), fq
-    )
+    command = PT2InsertionCommand([PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node_name, input_port_id=1)], fq)
     layout = PTTransformationLayout()
     layout.register(command)
     q_model = transformer.transform(layout)
 
-    q_graph = q_model.nncf.get_graph()
+    q_graph = q_model.get_graph()
     q_node = q_graph.get_node_by_name(node_name)
     assert is_quantized_weights(q_node, q_graph)
 
@@ -334,12 +287,12 @@ def test_is_quantized_weights():
     ),
 )
 def test_get_fused_bias_value(model_cls, ref):
-    model = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
+    wrapped = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
 
-    graph = model.nncf.get_graph()
+    graph = wrapped.get_graph()
     target_node = graph.get_nodes_by_types("conv2d")[0]
 
-    bias = get_fused_bias_value(target_node, graph, model)
+    bias = get_fused_bias_value(target_node, graph, wrapped.model)
     assert torch.all(torch.isclose(bias, torch.tensor(ref)))
 
 
@@ -352,9 +305,10 @@ def test_get_fused_bias_value(model_cls, ref):
     ),
 )
 def test_update_fused_bias(model_cls):
-    model = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
+    wrapped = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
+    model = wrapped.model
     ref_new_bias = torch.tensor([-1.0, -1.0])
-    graph = model.nncf.get_graph()
+    graph = wrapped.get_graph()
     target_node = graph.get_nodes_by_types("conv2d")[0]
 
     update_fused_bias(target_node.node_name, ref_new_bias, graph, model)

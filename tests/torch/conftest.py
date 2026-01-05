@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -115,9 +115,6 @@ def pytest_configure(config: Config):
     for regen_option in ["dot", "json"]:
         if config.getoption(f"--regen-{regen_option}", False):
             os.environ[f"NNCF_TEST_REGEN_{regen_option.upper()}"] = "1"
-
-    # Enable patching of torch functions
-    os.environ["NNCF_TORCH_LEGACY_TRACING"] = "1"
 
 
 @pytest.fixture(scope="module")

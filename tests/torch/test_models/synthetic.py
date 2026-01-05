@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,9 +18,6 @@ from torch.nn import Dropout
 from torch.nn import Parameter
 from torchvision.transforms.functional import normalize
 
-from nncf.torch import nncf_model_input
-from nncf.torch import register_module
-from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_depthwise_conv
@@ -49,7 +46,6 @@ class ManyNonEvalModules(ModelWithDummyParameter):
             x = F.relu(x)
             return x
 
-    @register_module()
     class CustomWeightModule(nn.Module):
         def __init__(self):
             super().__init__()
@@ -389,49 +385,6 @@ class ShiftScaleParametrized(torch.nn.Module):
         return output, self.conv(x)
 
 
-class ModelForGraphBuildingTest(torch.nn.Module):
-    IN_CHANNELS = 3
-    OUT_CHANNELS = 10
-    CONV1_OUT_CHANNELS = 15
-    CONV2_IN_CHANNELS = CONV1_OUT_CHANNELS + IN_CHANNELS
-    MAXPOOL_SIZE = 2
-    INPUT_SHAPES = [(1, 3, 224, 224), (2, 3, 224, 224), (1, 3, 500, 500)]
-
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(self.IN_CHANNELS, self.CONV1_OUT_CHANNELS, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(15)
-        self.relu1 = nn.ReLU()
-        self.convt1 = nn.ConvTranspose2d(self.CONV1_OUT_CHANNELS, self.IN_CHANNELS, kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(self.CONV2_IN_CHANNELS, self.OUT_CHANNELS, kernel_size=1)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu1(x)
-        x_prev = x
-        x = F.max_pool2d(x, self.MAXPOOL_SIZE)
-        x = self.convt1(x)
-        x = torch.cat([x, x_prev], 1)
-        x = self.conv2(x)
-        return x
-
-    @staticmethod
-    def simple_wrap_fn(args, kwargs):
-        arglist = list(args)
-        arglist[0] = nncf_model_input(arglist[0])
-        args = tuple(arglist)
-        return args, kwargs
-
-    @classmethod
-    def simple_user_dummy_forward(cls, model):
-        mock_tensor = torch.zeros(cls.INPUT_SHAPES[0])
-        args = (mock_tensor,)
-        kwargs = {}
-        args, kwargs = cls.simple_wrap_fn(args, kwargs)
-        return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
-
-
 class ModelForGraphBuildingTestWithConcat(nn.Module):
     INPUT_SHAPE = (1, 1, 1, 1)
 
@@ -448,29 +401,6 @@ class ModelForGraphBuildingTestWithConcat(nn.Module):
         return outputs
 
 
-class ModelForGraphBuildingTestWithReshapeFlattenAndConcat(ModelForGraphBuildingTest):
-    def forward(self, x):
-        y = super().forward(x)
-        size = y.size()
-        y = y.view(size + (1, 1))
-
-        y_copy = torch.ones_like(y)
-        y = torch.stack([y, y_copy])
-
-        y_copy = torch.ones_like(y)
-        y = torch.cat([y, y_copy], -1)
-
-        y = torch.flatten(y)
-        _ = y.view(-1)
-
-        y_copy = torch.ones_like(y)
-        y = torch.stack([y, y_copy])
-
-        y_copy = torch.ones_like(y)
-        y = torch.cat([y, y_copy], -1)
-        return y
-
-
 class ModelWithPermute(nn.Module):
     def forward(self, x: torch.Tensor):
         # x.shape == [1, 10, 20, 10]
@@ -482,27 +412,6 @@ class ModelWithPermute(nn.Module):
         x = x.transpose(dim0=1, dim1=3)
         x = x.permute(dims=[3, 2, 1, 0])
         return x
-
-
-class ModelForGraphBuildingTestWithSplit(ModelForGraphBuildingTest):
-    def __init__(self, input_shape):
-        super().__init__()
-        self.conv3 = nn.Conv2d(5, 10, kernel_size=3, padding=1)
-        self.conv4 = nn.Conv2d(input_shape[0], 1, kernel_size=1, padding=0)
-
-    def forward(self, x):
-        y = super().forward(x)
-        y1, y2 = torch.chunk(y, chunks=2, dim=1)
-
-        y1 = self.conv3(y1)
-        y2 = self.conv3(y2)
-        y = torch.cat([y1, y2], axis=1)
-
-        y_unbinded = torch.unbind(y, dim=1)
-        unbinded_processed = list(y_unbinded)
-        unbinded_processed[0] = self.conv4(y_unbinded[0])
-        y = torch.cat(unbinded_processed, axis=0)
-        return y
 
 
 class ConvolutionWithNotTensorBiasModel(torch.nn.Module):
