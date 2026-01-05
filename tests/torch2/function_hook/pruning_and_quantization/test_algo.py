@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,13 +12,13 @@
 
 import networkx as nx
 import torch
+from tests.torch2.utils import compare_with_reference_file
+from tests.torch2.utils import to_comparable_nx_graph
 
 import nncf
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
-from tests.torch2.utils import compare_with_reference_file
-from tests.torch2.utils import to_comparable_nx_graph
 
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "pruning_and_quantization"
 
