@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
+  pull_request:
 
 jobs:
   install:
@@ -32,3 +33,10 @@ jobs:
     uses: ./.github/workflows/call_precommit_windows.yml
     with:
       python_version: "3.10"
+
+  precommit-ubuntu:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/call_precommit.yml
+    with:
+      python_version: "3.10.14"
+      gpu_enabled: true
