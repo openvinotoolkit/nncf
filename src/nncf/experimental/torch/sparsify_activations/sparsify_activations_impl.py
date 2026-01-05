@@ -15,6 +15,7 @@ from typing import Optional, TypeVar
 
 import nncf
 from nncf.common import factory
+from nncf.common.factory import build_graph
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -257,7 +258,7 @@ def sparsify_activations(
 
     algorithm = SparsifyActivationsAlgorithm(target_sparsity_by_scope, ignored_scope)
 
-    graph = nncf.build_graph(model)
+    graph = build_graph(model)
     sparse_model = algorithm.apply(model, graph, dataset)
 
     if backend == BackendType.TORCH:

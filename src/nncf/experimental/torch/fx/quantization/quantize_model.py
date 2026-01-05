@@ -21,6 +21,7 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
+from nncf.common.factory import build_graph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -89,7 +90,7 @@ def quantize_impl(
     # To make it easier for bias correction algorithms.
     apply_quantization_transformations(copied_model)
 
-    nncf_graph = nncf.build_graph(copied_model)
+    nncf_graph = build_graph(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
@@ -153,7 +154,7 @@ def compress_weights_impl(
         compression_format,
         advanced_parameters,
     )
-    graph = nncf.build_graph(model)
+    graph = build_graph(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
     compressed_model = GraphModule(compressed_model, compressed_model.graph)
     compressed_model = _disallow_eval_train(compressed_model)
