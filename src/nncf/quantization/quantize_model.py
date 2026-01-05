@@ -511,7 +511,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
         ]
         if mode in not_supported_modes:
             msg = (
@@ -559,7 +559,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
         ]
         if mode in not_supported_modes:
             msg = (
@@ -634,7 +634,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
         ]
         if mode in not_supported_modes:
             msg = (

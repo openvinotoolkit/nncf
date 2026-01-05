@@ -93,7 +93,7 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
-        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
+        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4]:
             group_size = -1
         else:
             group_size = 128
@@ -523,7 +523,7 @@ class WeightCompression(Algorithm):
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
 
-        if self._mode == CompressWeightsMode.CB4_F8E4M3:
+        if self._mode == CompressWeightsMode.CB4:
             codebook_values = Tensor(CB4_QUANTILES)
         elif self._mode == CompressWeightsMode.CODEBOOK:
             codebook_values = Tensor(self._advanced_parameters.codebook)
@@ -959,9 +959,9 @@ class WeightCompression(Algorithm):
                         # MoE operations are usually matmuls, so the check for matmul metatype is done
                         # This is to avoid raising the error for non-MoE cases with 3D weights.
                         parsed_ov_version = f"{ov_version[0]}.{ov_version[1]}.{ov_version[2]}-{ov_version[3]}"
-                        msg = f"""NNCF compression algorithms do not support 3D weights with current version of 
-                                OpenVINO {parsed_ov_version} due to a known issue in statistics collection 
-                                Ticket - 176465. Please update to the latest OpenVINO nightly version. 
+                        msg = f"""NNCF compression algorithms do not support 3D weights with current version of
+                                OpenVINO {parsed_ov_version} due to a known issue in statistics collection
+                                Ticket - 176465. Please update to the latest OpenVINO nightly version.
                                 Node with weight: {node.node_name}."""
                         raise nncf.UnsupportedModelError(msg)
 
