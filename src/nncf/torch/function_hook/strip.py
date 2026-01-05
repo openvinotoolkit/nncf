@@ -164,7 +164,15 @@ def apply_compression_in_place(model: TModel) -> TModel:
     for hook_name, hook_module in hook_storage.named_hooks():
         if not isinstance(
             hook_module,
-            (RBPruningMask, UnstructuredPruningMask, SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor),
+            (
+                RBPruningMask,
+                UnstructuredPruningMask,
+                SymmetricQuantizer,
+                AsymmetricQuantizer,
+                BaseWeightsDecompressor,
+                RBPruningMask,
+                UnstructuredPruningMask,
+            ),
         ):
             continue
 
