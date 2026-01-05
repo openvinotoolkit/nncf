@@ -14,7 +14,7 @@ import numpy as np
 import torch
 
 from nncf.tensor import Tensor
-from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
+from tests.common.test_statistic_collector import TemplateTestStatisticCollector
 
 
 class TestPTStatisticCollector(TemplateTestStatisticCollector):

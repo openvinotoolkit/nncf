@@ -336,6 +336,16 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
 
 
 @tensor_dispatcher
+def sign(a: Tensor) -> Tensor:
+    """
+    Returns an element-wise indication of the sign of a number.
+
+    :param a: The input tensor.
+    :return: A tensor with the same shape as a, containing the sign of each element.
+    """
+
+
+@tensor_dispatcher
 def zeros_like(a: Tensor) -> Tensor:
     """
     Return an tensor of zeros with the same shape and type as a given tensor.
@@ -454,7 +464,7 @@ def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
 @tensor_dispatcher
 def quantile(
     a: Tensor,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> Tensor:

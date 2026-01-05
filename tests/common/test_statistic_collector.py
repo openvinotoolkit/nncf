@@ -17,16 +17,15 @@ import pytest
 
 import nncf
 from nncf.common.tensor import NNCFTensor
-from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
-from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.experimental.common.tensor_statistics.collectors import TensorType
-from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
+from nncf.common.tensor_statistics.collectors import AggregatorBase
+from nncf.common.tensor_statistics.collectors import MergedTensorCollector
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.tensor import Tensor
 
 
@@ -42,7 +41,7 @@ class DummyTensorReducer(TensorReducerBase):
         self.output_name = output_name
         self._inplace_mock = inplace_mock
 
-    def _reduce_out_of_place(self, x: list[TensorType]):
+    def _reduce_out_of_place(self, x: list[Tensor]):
         return x
 
     def get_inplace_fn(self):
@@ -60,7 +59,7 @@ class DummyTensorAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int] = None):
         super().__init__(None, num_samples=num_samples)
 
-    def _register_reduced_input_impl(self, x: TensorType):
+    def _register_reduced_input_impl(self, x: Tensor):
         return self._container.append(x)
 
     def _aggregate_impl(self):
@@ -255,7 +254,7 @@ class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
     NUM_INPUTS = 3
     NUM_OUTPUTS = 2
 
-    def _reduce_out_of_place(self, x: list[TensorType]):
+    def _reduce_out_of_place(self, x: list[Tensor]):
         return x[: self.NUM_OUTPUTS]
 
 

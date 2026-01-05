@@ -20,10 +20,10 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import AxesMode
+from nncf.common.tensor_statistics.collectors import ShapeReducer
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import AxesMode
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")

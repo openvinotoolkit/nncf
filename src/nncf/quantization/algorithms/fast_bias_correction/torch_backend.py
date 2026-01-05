@@ -20,7 +20,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.function_hook.extractor import extract_model

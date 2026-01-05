@@ -25,11 +25,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization

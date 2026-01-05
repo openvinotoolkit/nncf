@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from typing import Optional
 
 from nncf.tensor import Tensor
@@ -32,5 +31,5 @@ def mean_per_channel(x: Tensor, axis: int, dtype: Optional[TensorDataType] = Non
     if pos_axis < 0 or pos_axis >= x.ndim:
         msg = f"axis {axis} is out of bounds for array of dimension {x.ndim}"
         raise ValueError(msg)
-    axis = tuple(i for i in range(x.ndim) if i != pos_axis)
-    return fns.mean(x, axis=axis, dtype=dtype)
+    axis_ = tuple(i for i in range(x.ndim) if i != pos_axis)
+    return fns.mean(x, axis=axis_, dtype=dtype)

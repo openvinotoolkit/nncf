@@ -19,11 +19,11 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import Dataset
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensor import Tensor
 from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.function_hook.hook_storage import RemovableHookHandle

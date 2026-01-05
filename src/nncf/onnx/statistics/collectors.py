@@ -11,15 +11,15 @@
 
 from typing import Optional
 
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
+from nncf.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 
 
 def get_mean_statistic_collector(

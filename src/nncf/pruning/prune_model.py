@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, TypeVar
 
 import nncf
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
@@ -23,6 +24,7 @@ from nncf.scopes import IgnoredScope
 TModel = TypeVar("TModel")
 
 
+@api(canonical_alias="nncf.prune")
 def prune(
     model: TModel,
     mode: PruneMode,
@@ -53,6 +55,7 @@ def prune(
     return model
 
 
+@api(canonical_alias="nncf.batch_norm_adaptation")
 def batch_norm_adaptation(
     model: TModel, calibration_dataset: Dataset, *, num_iterations: Optional[int] = None
 ) -> TModel:
@@ -118,6 +121,7 @@ class ModelPruningStatistic:
         return text
 
 
+@api(canonical_alias="nncf.pruning_statistic")
 def pruning_statistic(model: TModel) -> ModelPruningStatistic:
     """
     Collects and returns pruning statistics for the given model.

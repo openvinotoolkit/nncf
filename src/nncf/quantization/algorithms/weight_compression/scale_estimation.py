@@ -15,9 +15,9 @@ from typing import Optional, TypeVar
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig

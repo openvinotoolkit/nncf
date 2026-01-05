@@ -22,7 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters

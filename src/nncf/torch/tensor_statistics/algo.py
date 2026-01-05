@@ -13,7 +13,7 @@ from typing import Callable, Union
 import torch
 
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.graph.transformations.commands import PTTargetPoint

@@ -25,8 +25,8 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import REDUCERS_MAP
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend

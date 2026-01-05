@@ -15,8 +15,8 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.utils import get_reduction_axes
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 

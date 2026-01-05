@@ -200,6 +200,11 @@ def _(
     return np.where(condition, x, y)
 
 
+@numeric.sign.register
+def _(a: T_NUMPY) -> T_NUMPY:
+    return np.sign(a)
+
+
 @numeric.zeros_like.register
 def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.zeros_like(a)
@@ -263,7 +268,7 @@ def _(a: T_NUMPY, exponent: Union[T_NUMPY, float]) -> T_NUMPY:
 @numeric.quantile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY:

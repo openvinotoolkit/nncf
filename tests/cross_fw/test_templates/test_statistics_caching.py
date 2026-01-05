@@ -13,10 +13,10 @@ from pathlib import Path
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
 
 

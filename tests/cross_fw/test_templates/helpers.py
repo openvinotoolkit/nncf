@@ -440,6 +440,15 @@ class ScaledDotProductAttentionModel(nn.Module):
         return nn.functional.scaled_dot_product_attention(query, key, value)
 
 
+class UnbindScaledDotProductAttentionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        query, key, value = x.unbind(0)
+        return nn.functional.scaled_dot_product_attention(query, key, value)
+
+
 class DepthwiseConvTestModel(nn.Module):
     INPUT_SIZE = [1, 2, 4, 4]
 

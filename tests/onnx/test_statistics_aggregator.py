@@ -15,7 +15,7 @@ import pytest
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
