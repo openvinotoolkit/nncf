@@ -11,36 +11,46 @@
 
 import os
 import tempfile
-from pathlib import Path
+from contextlib import contextmanager
 
 import nbformat
 from nbclient import NotebookClient
 
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+
+TOOL_DIR = PROJECT_ROOT / "tools" / "activation_profiler"
+NOTEBOOK_FILE = TOOL_DIR / "nncf_profiler_example.ipynb"
+
+
+@contextmanager
+def isolated_ipython_cwd(cwd):
+    original_cwd = os.getcwd()
+    original_ipythondir = os.environ.get("IPYTHONDIR")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        os.environ["IPYTHONDIR"] = tmpdir
+        try:
+            os.chdir(cwd)
+            yield
+        finally:
+            os.chdir(original_cwd)
+            if original_ipythondir is None:
+                os.environ.pop("IPYTHONDIR", None)
+            else:
+                os.environ["IPYTHONDIR"] = original_ipythondir
+
 
 def test_nncf_profiling_notebook():
     """Test that the nncf_profiler_example.ipynb notebook runs successfully."""
-    notebook_path = Path(__file__).parent.parent.parent / "tools" / "profiler" / "nncf_profiler_example.ipynb"
-    profiler_dir = Path(__file__).parent.parent.parent / "tools" / "profiler"
 
     # Check if notebook exists
-    assert notebook_path.exists(), f"Notebook not found at {notebook_path}"
+    assert NOTEBOOK_FILE.exists(), f"Notebook not found at {NOTEBOOK_FILE}"
 
     # Read the notebook
-    with open(notebook_path) as f:
+    with NOTEBOOK_FILE.open() as f:
         nb = nbformat.read(f, as_version=4)
 
     # Execute the notebook using nbclient with a temporary IPython config directory
-    with tempfile.TemporaryDirectory() as tmpdir:
-        os.environ["IPYTHONDIR"] = tmpdir
-        # Save original working directory
-        original_cwd = os.getcwd()
-        try:
-            # Change to profiler directory for notebook execution
-            os.chdir(str(profiler_dir))
-            client = NotebookClient(nb, timeout=600)
-            client.execute()
-        finally:
-            # Clean up: restore working directory and environment variable
-            os.chdir(original_cwd)
-            if "IPYTHONDIR" in os.environ:
-                del os.environ["IPYTHONDIR"]
+    with isolated_ipython_cwd(TOOL_DIR):
+        client = NotebookClient(nb, timeout=600)
+        client.execute()
