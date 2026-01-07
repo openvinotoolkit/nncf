@@ -18,7 +18,8 @@ This profiler can collect raw activations at specific layers matching regex patt
 
 import re
 from collections import defaultdict
-from typing import Any, Optional, Pattern, Union
+from re import Pattern
+from typing import Any, Optional, Union
 
 import numpy as np
 import openvino.runtime as ov
@@ -32,7 +33,6 @@ from nncf.openvino.graph.transformations.commands import TargetType
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 
-# Type aliases for better readability
 ActivationData = dict[str, dict[str, list[np.ndarray]]]
 StatisticPointsList = list[Any]
 
@@ -41,58 +41,73 @@ class NNCFProfiler:
     """
     A profiler for collecting activation statistics from OpenVINO models.
 
-    This class provides functionality to:
-    - Collect raw activations at input and output of specific layers
-    - Filter layers using regex patterns
-    - Aggregate statistics across multiple samples
-    - Calculate activation statistics
-    - Compare activations between two model variants
-    - Register custom comparator metrics and visualizers
+    Core features:
+        - Collect input and output activations for selected layers
+        - Select layers using regular expression patterns
+        - Aggregate activations across multiple dataset samples
+        - Compute common activation statistics (mean, std, min/max, etc.)
+        - Compare activations between two model variants
+        - Register custom comparison metrics and visualization hooks
 
-    Attributes:
-        dataset: Dataset object for collecting statistics (typically nncf.Dataset)
-        pattern: Regex pattern to match layer names for activation collection
-        num_samples: Number of samples to collect from the dataset
+    :param dataset: Dataset used to run inference and collect activations.
+    :param pattern: Regex pattern to match layer names for activation collection
+    :param num_samples: Number of samples to collect from the dataset
 
-    Example usage:
-        ```python
-        import openvino.runtime as ov
-        from nncf import Dataset
+    Example
+    -------
+    ```python
+    import openvino.runtime as ov
+    from nncf import Dataset
 
-        model = ov.Core().read_model("model.xml")
-        dataset = Dataset(data_source, transform_fn)
+    model = ov.Core().read_model("model.xml")
+    dataset = Dataset(data_source, transform_fn)
 
-        profiler = NNCFProfiler(
-            pattern=r'__module.model.layers.\d+.self_attn',
-            dataset=dataset,
-            num_samples=100
-        )
+    profiler = NNCFProfiler(
+        pattern=r'__module.model.layers.\d+.self_attn',
+        dataset=dataset,
+        num_samples=100
+    )
 
-        # Collect activations from specific layers
-        activations = profiler.collect_activations(model)
+    # Collect activations from specific layers
+    activations = profiler.collect_activations(model)
 
-        # Access collected data
-        for layer_name, data in activations.items():
-            input_activations = data['in']   # List[np.ndarray]
-            output_activations = data['out']  # List[np.ndarray]
+    # Access collected data
+    for layer_name, data in activations.items():
+        input_activations = data['in']   # List[np.ndarray]
+        output_activations = data['out']  # List[np.ndarray]
 
-        # Register custom metrics
-        @NNCFProfiler.comparator("custom_metric")
-        def custom_metric(a, b):
-            return float(np.abs(a - b).max())
+    # Register custom metrics
+    @NNCFProfiler.comparator("custom_metric")
+    def custom_metric(a, b):
+        return float(np.abs(a - b).max())
 
-        # Compare with custom metrics
-        comparison = profiler.compare_activations(
-            acts1, acts2,
-            metrics=["mean_diff", "custom_metric"]
-        )
-        ```
+    # Compare with custom metrics
+    comparison = profiler.compare_activations(
+        acts1, acts2,
+        metrics=["mean_diff", "custom_metric"]
+    )
+    ```
     """
 
     # Class-level registries for comparators, visualizers, and statistics
     COMPARATORS: dict[str, Any] = {}
     VISUALIZERS: dict[str, Any] = {}
     STATISTICS: dict[str, Any] = {}
+
+    def __init__(self, pattern: Union[str, Pattern[str]], dataset: Any, num_samples: int) -> None:
+        """
+        Initialize the NNCF Profiler.
+
+        :param pattern: Regex pattern (string or compiled Pattern object) to match layer names.
+            Examples: r'self_attn', r'__module.model.layers.\d+.mlp'
+        :param dataset: Dataset object for collecting statistics. Should be compatible with
+            NNCF's OVStatisticsAggregator (typically nncf.Dataset).
+        :param num_samples: Number of samples to collect from the dataset for profiling.
+            Larger values provide more accurate statistics but consume more memory.
+        """
+        self.dataset: Any = dataset
+        self.pattern: Union[str, Pattern[str]] = pattern
+        self.num_samples: int = num_samples
 
     @classmethod
     def comparator(cls, name: str):
@@ -107,11 +122,8 @@ class NNCFProfiler:
             def mean_diff(a: np.ndarray, b: np.ndarray) -> float:
                 return float((a - b).mean())
 
-        Args:
-            name: Name to register the comparator under
-
-        Returns:
-            Decorator function that registers the comparator
+        :param name: Name to register the comparator under
+        :return: Decorator function that registers the comparator
         """
 
         def decorator(func):
@@ -135,11 +147,8 @@ class NNCFProfiler:
                 # ... plotting code ...
                 return plt.gcf()
 
-        Args:
-            name: Name to register the visualizer under
-
-        Returns:
-            Decorator function that registers the visualizer
+        :param name: Name to register the visualizer under
+        :return: Decorator function that registers the visualizer
         """
 
         def decorator(func):
@@ -161,11 +170,8 @@ class NNCFProfiler:
             def median(vals: np.ndarray) -> float:
                 return float(np.median(vals))
 
-        Args:
-            name: Name to register the statistic under
-
-        Returns:
-            Decorator function that registers the statistic
+        :param name: Name to register the statistic under
+        :return: Decorator function that registers the statistic
         """
 
         def decorator(func):
@@ -173,22 +179,6 @@ class NNCFProfiler:
             return func
 
         return decorator
-
-    def __init__(self, pattern: Union[str, Pattern[str]], dataset: Any, num_samples: int) -> None:
-        """
-        Initialize the NNCF Profiler.
-
-        Args:
-            pattern: Regex pattern (string or compiled Pattern object) to match layer names.
-                     Examples: r'self_attn', r'__module.model.layers.\d+.mlp'
-            dataset: Dataset object for collecting statistics. Should be compatible with
-                     NNCF's OVStatisticsAggregator (typically nncf.Dataset)
-            num_samples: Number of samples to collect from the dataset for profiling.
-                        Larger values provide more accurate statistics but consume more memory
-        """
-        self.dataset: Any = dataset
-        self.pattern: Union[str, Pattern[str]] = pattern
-        self.num_samples: int = num_samples
 
     def _get_statistic_points(
         self, model: ov.Model, graph: Any, nodes: list[Any], subset_size: int
@@ -199,18 +189,15 @@ class NNCFProfiler:
         This is an internal helper method that configures collection points for both pre-layer
         (input) and post-layer (output) activations for each target node.
 
-        Args:
-            model: OpenVINO model being profiled
-            graph: NNCF graph representation of the model
-            nodes: List of NNCF graph nodes to collect statistics from
-            subset_size: Number of samples to collect for each statistic point
-
-        Returns:
-            StatisticPointsContainer with configured collection points for all target nodes
+        :param model: OpenVINO model being profiled
+        :param graph: NNCF graph representation of the model
+        :param nodes: List of NNCF graph nodes to collect statistics from
+        :param subset_size: Number of samples to collect for each statistic point
+        :return: StatisticPointsContainer with configured collection points for all target nodes
         """
         statistic_container = StatisticPointsContainer()
-        OUTPUT_PORT_OF_NODE = 0
-        INPUT_PORT_OF_NODE = 0
+        output_port_of_node = 0
+        input_port_of_node = 0
 
         # Collection of statistics after/before layers.
         for node in nodes:
@@ -220,7 +207,7 @@ class NNCFProfiler:
                 channel_axis = -1
 
             # For layers with weights, there is only one output port - 0.
-            statistic_point_out = OVTargetPoint(TargetType.POST_LAYER_OPERATION, node_name, port_id=OUTPUT_PORT_OF_NODE)
+            statistic_point_out = OVTargetPoint(TargetType.POST_LAYER_OPERATION, node_name, port_id=output_port_of_node)
             stat_collector_out = get_raw_stat_collector(num_samples=subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -228,8 +215,8 @@ class NNCFProfiler:
                 )
             )
 
-            # For layers with weights, there is only one output port - 0.
-            statistic_point_in = OVTargetPoint(TargetType.PRE_LAYER_OPERATION, node_name, port_id=INPUT_PORT_OF_NODE)
+            # For layers with weights, there is only one input port - 0.
+            statistic_point_in = OVTargetPoint(TargetType.PRE_LAYER_OPERATION, node_name, port_id=input_port_of_node)
             stat_collector_in = get_raw_stat_collector(num_samples=subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(target_point=statistic_point_in, tensor_collector=stat_collector_in, algorithm="collect")
@@ -250,16 +237,7 @@ class NNCFProfiler:
         This method profiles the model by running inference on the dataset and collecting
         raw activation values at both the input and output of matching layers.
 
-        Args:
-            model: OpenVINO model to profile
-            dataset: Optional dataset to use for collection. If None, uses the instance's dataset.
-                    Should be compatible with NNCF's OVStatisticsAggregator
-            pattern: Optional regex pattern to match layer names. If None, uses the instance's pattern.
-                    Examples: r'self_attn', r'__module.model.layers.\d+.mlp'
-            num_samples: Optional number of samples to collect. If None, uses the instance's num_samples
-
-        Returns:
-            Dictionary mapping layer names to their collected activations:
+        Example of return format:
             {
                 'layer_name_1': {
                     'in': [array1, array2, ...],   # List of input activation arrays
@@ -270,8 +248,13 @@ class NNCFProfiler:
             }
             Each array is a numpy array containing activation values for one sample.
 
-        Raises:
-            ValueError: If no layers match the specified pattern
+        :param model: OpenVINO model to profile
+        :param dataset: Optional dataset to use for collection. If None, uses the instance's dataset.
+            Should be compatible with NNCF's OVStatisticsAggregator
+        :param pattern: Optional regex pattern to match layer names. If None, uses the instance's pattern.
+            Examples: r'self_attn', r'__module.model.layers.\d+.mlp'
+        :param num_samples: Optional number of samples to collect. If None, uses the instance's num_samples
+        :return: Dictionary mapping layer names to their collected activations.
         """
         # Use provided parameters or fall back to instance defaults
         dataset = dataset if dataset is not None else self.dataset
@@ -321,28 +304,22 @@ class NNCFProfiler:
         """
         Calculate custom statistics for collected activations using registered statistic functions.
 
-        Args:
-            data: Activation data dictionary as returned by collect_activations().
-                  Format: {layer_name: {'in': [arrays...], 'out': [arrays...]}}
-            statistics: List of statistic names to compute. If None, uses all registered statistics.
-                       Statistics must be registered in STATISTICS registry.
-
-        Returns:
-            pandas DataFrame with columns:
+        :param data: Activation data dictionary as returned by collect_activations().
+            Format: {layer_name: {'in': [arrays...], 'out': [arrays...]}}
+        :param statistics: List of statistic names to compute. If None, uses all registered statistics.
+            Statistics must be registered in STATISTICS registry.
+        :return: pandas DataFrame with columns:
             - name: Layer name
             - type: Activation type ('in' or 'out')
             - <statistic_name>: One column for each requested statistic
 
-        Raises:
-            ValueError: If any statistic is not found in STATISTICS registry
-
         Example:
-            >>> # Register custom statistic
-            >>> @NNCFProfiler.statistic("median")
-            >>> def median(vals):
-            ...     return float(np.median(vals))
-            >>>
-            >>> profiler.calculate_stats(acts, statistics=["min", "max", "median"])
+            # Register custom statistic
+            @NNCFProfiler.statistic("median")
+            def median(vals):
+                return float(np.median(vals))
+
+            profiler.calculate_stats(acts, statistics=["min", "max", "median"])
         """
         # Use all registered statistics if not specified
         if statistics is None:
@@ -388,29 +365,18 @@ class NNCFProfiler:
         """
         Compare activations between two model variants using specified metrics and statistics.
 
-        Args:
-            data1: Activation data from the first model (baseline)
-            data2: Activation data from the second model (modified)
-            metrics: List of comparator metric names to compute. If None, uses all registered comparators.
-                    Metrics must be registered in COMPARATORS registry.
-            statistics: List of statistic names to compute for each dataset. If None, uses all registered statistics.
-                       Statistics must be registered in STATISTICS registry.
-
-        Returns:
-            pandas DataFrame containing:
+        :param data1: Activation data from the first model (baseline)
+        :param data2: Activation data from the second model (modified)
+        :param metrics: List of comparator metric names to compute. If None, uses all registered comparators.
+            Metrics must be registered in COMPARATORS registry.
+        :param statistics: List of statistic names to compute for each dataset. If None, uses all registered statistics.
+            Statistics must be registered in STATISTICS registry.
+        :return: pandas DataFrame containing:
             - name: Layer name
             - type: Activation type ('in' or 'out')
             - <stat>_data1: Statistics for data1 (e.g., 'mean_data1', 'std_data1')
             - <stat>_data2: Statistics for data2 (e.g., 'mean_data2', 'std_data2')
             - <metric>: Comparator metrics (e.g., 'mean_diff', 'relative_diff')
-
-        Raises:
-            ValueError: If any metric or statistic is not found in respective registries
-
-        Example:
-            >>> profiler.compare_activations(acts_fp32, acts_int8,
-            ...                  metrics=["mean_diff", "relative_diff"],
-            ...                  statistics=["min", "max", "mean", "std"])
         """
         # Verify both datasets have the same layers
         assert set(data1.keys()) == set(data2.keys()), "Activation datasets must contain the same layer names"
@@ -491,21 +457,15 @@ class NNCFProfiler:
         """
         Generate visualizations using registered visualizer functions.
 
-        Args:
-            plot_type: Name of the visualizer to use (must be registered in VISUALIZERS)
-            *args: Positional arguments to pass to the visualizer
-            **kwargs: Keyword arguments to pass to the visualizer
-
-        Returns:
-            Return value from the visualizer function (typically a matplotlib figure)
-
-        Raises:
-            ValueError: If plot_type is not found in VISUALIZERS registry
+        :param plot_type: Name of the visualizer to use (must be registered in VISUALIZERS)
+        :param args: Positional arguments to pass to the visualizer
+        :param kwargs: Keyword arguments to pass to the visualizer
+        :return: Return value from the visualizer function (typically a matplotlib figure)
 
         Example:
-            >>> profiler.plot("hist", acts_fp, acts_int, layer="layer_7")
-            >>> profiler.plot("mean_std", acts_fp)
-            >>> profiler.plot("metric", cmp, metric="relative_diff")
+            profiler.plot("hist", acts_fp, acts_int, layer="layer_7")
+            profiler.plot("mean_std", acts_fp)
+            profiler.plot("metric", cmp, metric="relative_diff")
         """
         if plot_type not in self.VISUALIZERS:
             msg = f"Unknown plot type '{plot_type}'. Available: {list(self.VISUALIZERS.keys())}"
@@ -606,31 +566,28 @@ def _compare_detailed_plot(
        - Mean difference (data1 - data2) across layers
        - Relative difference across layers
 
-    Args:
-        data1: First activation dataset (e.g., FP32 model)
-        data2: Second activation dataset (e.g., quantized model)
-        activation_type: 'in', 'out', or None. If None, processes both 'in' and 'out' activations
-        bins: Number of bins for histograms
-        show_histograms: Whether to show individual histogram plots for each layer
-        show_summary: Whether to show the summary plot with statistics
-        display_figures: Whether to display figures immediately. If False, figures are only returned.
-                        Set to False to avoid memory issues with many figures.
-        data1_label: Label for data1 in plots (e.g., 'fp16', 'fp32')
-        data2_label: Label for data2 in plots (e.g., 'int8', 'fp8')
-        **kwargs: Additional arguments for plotting
-
-    Returns:
-        List of matplotlib figures (histograms + summary plot)
+    :param data1: First activation dataset (e.g., FP32 model)
+    :param data2: Second activation dataset (e.g., quantized model)
+    :param activation_type: 'in', 'out', or None. If None, processes both 'in' and 'out' activations
+    :param bins: Number of bins for histograms
+    :param show_histograms: Whether to show individual histogram plots for each layer
+    :param show_summary: Whether to show the summary plot with statistics
+    :param display_figures: Whether to display figures immediately. If False, figures are only returned.
+        Set to False to avoid memory issues with many figures.
+    :param data1_label: Label for data1 in plots (e.g., 'fp16', 'fp32')
+    :param data2_label: Label for data2 in plots (e.g., 'int8', 'fp8')
+    :param kwargs: Additional arguments for plotting
+    :return: List of matplotlib figures (histograms + summary plot)
 
     Example:
-        >>> # Compare both input and output activations
-        >>> figs = profiler.plot("compare_detailed", acts_fp32, acts_int8,
-        ...                      data1_label='FP32', data2_label='INT8',
-        ...                      display_figures=False)
-        >>> # Display or save figures as needed
-        >>> for i, fig in enumerate(figs):
-        ...     fig.savefig(f'comparison_{i}.png')
-        ...     plt.close(fig)
+        # Compare both input and output activations
+        figs = profiler.plot("compare_detailed", acts_fp32, acts_int8,
+                             data1_label='FP32', data2_label='INT8',
+                             display_figures=False)
+        # Display or save figures as needed
+        for i, fig in enumerate(figs):
+            fig.savefig(f'comparison_{i}.png')
+            plt.close(fig)
     """
     try:
         import matplotlib.pyplot as plt
