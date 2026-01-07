@@ -422,7 +422,6 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
-    codebook_estimation: Optional[bool] = None,
     backup_mode: Optional[BackupMode] = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
@@ -479,8 +478,6 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
-    :param codebook_estimation: Indicates whether to use Codebook Estimation algorithm.
-    :type codebook_estimation: bool
     :param backup_mode: Defines a backup mode for mixed-precision weight compression.
         NONE stands for original floating-point precision of the model weights.
             In this mode, weights are retained in their original precision without any quantization.
@@ -514,6 +511,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]
         if mode in not_supported_modes:
@@ -522,7 +520,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {"gptq": gptq, "lora_correction": lora_correction, "codebook_estimation": codebook_estimation}
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -562,6 +560,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]
         if mode in not_supported_modes:
@@ -570,11 +569,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-            "codebook_estimation": codebook_estimation,
-        }
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -600,7 +595,7 @@ def compress_weights(
     elif backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((scale_estimation, gptq, lora_correction, codebook_estimation)) and dataset is None:
+        if any((scale_estimation, gptq, lora_correction)) and dataset is None:
             msg = "Scale estimation, GPTQ or Lora Correction algorithm is defined, but dataset is None."
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -638,6 +633,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4_F8E4M3,
         ]
         if mode in not_supported_modes:
@@ -646,11 +642,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-            "codebook_estimation": codebook_estimation,
-        }
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -675,7 +667,6 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
-        codebook_estimation,
         ignored_scope,
         sensitivity_metric,
         backup_mode,
@@ -692,7 +683,6 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
-        codebook_estimation,
         ignored_scope,
         sensitivity_metric,
         backup_mode,

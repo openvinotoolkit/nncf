@@ -81,7 +81,6 @@ def get_weight_compression_configuration(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
-    codebook_estimation: Optional[bool] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     backup_mode: Optional[BackupMode] = None,
@@ -95,7 +94,11 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
-        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
+        elif mode in [
+            CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        ]:
             group_size = -1
         else:
             group_size = 128
@@ -109,7 +112,6 @@ def get_weight_compression_configuration(
         "scale_estimation": scale_estimation or False,
         "gptq": gptq or False,
         "lora_correction": lora_correction or False,
-        "codebook_estimation": codebook_estimation or False,
         "ignored_scope": ignored_scope or IgnoredScope(),
         "sensitivity_metric": (
             (
@@ -136,7 +138,6 @@ def check_user_compression_configuration(
     scale_estimation: Optional[bool],
     gptq: Optional[bool],
     lora_correction: Optional[bool],
-    codebook_estimation: Optional[bool],
     ignored_scope: Optional[IgnoredScope],
     sensitivity_metric: Optional[SensitivityMetric],
     backup_mode: Optional[BackupMode],
@@ -167,7 +168,6 @@ def check_user_compression_configuration(
             "gptq": gptq,
             "lora_correction": lora_correction,
             "backup_mode": backup_mode,
-            "codebook_estimation": codebook_estimation,
         }
         unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
         if unsupported_for_int8:
@@ -236,7 +236,9 @@ def check_user_compression_configuration(
         msg = "LoRA Correction algorithm is not compatible with FQ, FQ_LORA and FQ_LORA_NLS compression formats."
         raise nncf.ValidationError(msg)
 
-    if mode == CompressWeightsMode.CODEBOOK and (advanced_parameters is None or advanced_parameters.codebook is None):
+    if mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK] and (
+        advanced_parameters is None or advanced_parameters.codebook is None
+    ):
         msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
 
@@ -281,7 +283,6 @@ class WeightCompression(Algorithm):
         scale_estimation: bool,
         gptq: bool,
         lora_correction: bool,
-        codebook_estimation: bool,
         backup_mode: BackupMode = BackupMode.INT8_ASYM,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
@@ -320,7 +321,6 @@ class WeightCompression(Algorithm):
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         :param gptq: determines whether to use or not GPTQ algorithm.
         :param lora_correction: determines whether to use or not LoRA Correction algorithm.
-        :param codebook_estimation: determines whether to use or not Codebook Estimation algorithm.
         :param backup_mode: Defines a backup mode for mixed-precision weight compression.
             NONE stands for original floating-point precision of the model weights.
                 In this mode, weights are retained in their original precision without any quantization.
@@ -344,7 +344,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
-        self._codebook_estimation = codebook_estimation
+        self._codebook_estimation = mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
         self._backup_mode = backup_mode
         self._compression_format = compression_format
         self._advanced_parameters = (
@@ -537,7 +537,7 @@ class WeightCompression(Algorithm):
 
         if self._mode == CompressWeightsMode.CB4_F8E4M3:
             codebook_values = Tensor(CB4_QUANTILES)
-        elif self._mode == CompressWeightsMode.CODEBOOK:
+        elif self._mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK]:
             codebook_values = Tensor(self._advanced_parameters.codebook)
 
         return WeightCompressionConfig(
