@@ -189,6 +189,16 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         return tuple(weight_node.layer_attributes.shape)
 
+    @staticmethod
+    def get_weight_transpose_b(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> bool:
+        """
+        Returns whether the weight input is treated as transposed for matmul/linear ops.
+
+        PyTorch stores weights for linear/MatMul-like ops in [out_features, in_features] layout,
+        which matches the semantics of transpose_b=True used in other backends.
+        """
+        return True
+
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):

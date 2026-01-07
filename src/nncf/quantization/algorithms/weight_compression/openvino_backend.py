@@ -63,6 +63,7 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP_REV
@@ -102,6 +103,17 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         channel_axes = get_weight_channel_axes(node_with_weight)
         const_shape = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["shape"]
         return get_reduction_axes(channel_axes, const_shape)
+
+    @staticmethod
+    def get_weight_transpose_b(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> bool:
+        """
+        Returns the value of the transpose_b attribute for the given weight input.
+
+        OpenVINO stores this information in the constant_attributes of the node layer attributes.
+        Default to True for backward compatibility with older models that do not expose the flag.
+        """
+        const_attrs = node_with_weight.layer_attributes.constant_attributes[weight_port_id]
+        return const_attrs.get("transpose", True)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -179,6 +191,16 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         should_add_convert_node = activation_dtype != ov.Type.f16
         mm_node = self.name_to_node_mapping[wc_params.node_with_weight.node_name]
 
+        # Get the original MatMul's transpose attributes
+        node_attributes = mm_node.get_attributes()
+        transpose_a = node_attributes.get("transpose_a", False)
+        transpose_b = node_attributes.get("transpose_b", True)  # Default to True for backward compatibility
+
+        # Transpose lora_B if the original MatMul had transpose_b=False
+        # This ensures the matrix multiplication A_MM @ B_W has compatible dimensions
+        if not transpose_b:
+            lora_B = fns.transpose(lora_B)
+
         if int8_lora:
             const_node_name = wc_params.node_with_weight.node_name
             int8_compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT8_ASYM, group_size=-1)
@@ -204,7 +226,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             A_W = opset.constant(lora_A.data)
             B_W = opset.constant(lora_B.data)
 
-        A_MM = opset.matmul(input_node, A_W, transpose_a=False, transpose_b=True)
+        # LoRA adapters: input @ A^T @ B^T
+        # Always keep transpose_b=True to ensure the adapter aligns with the MatMul output shape
+        A_MM = opset.matmul(input_node, A_W, transpose_a=transpose_a, transpose_b=True)
         B_MM = opset.matmul(A_MM, B_W, transpose_a=False, transpose_b=True)
 
         node_output_port = mm_node.output(0)
@@ -347,7 +371,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 compressed_weight.tensor = compressed_weight.tensor.as_numpy_tensor()
                 if compressed_weight.zero_point is not None:
                     compressed_weight.zero_point = compressed_weight.zero_point.as_numpy_tensor()
-                adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
+                adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params, graph)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
         self.name_to_node_mapping = None
 

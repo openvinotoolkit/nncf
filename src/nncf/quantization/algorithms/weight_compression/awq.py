@@ -181,7 +181,9 @@ class AWQ(Algorithm):
                     prev_weight = self._backend_entity.get_weight(merge_node, prev_weight_port_id, model, graph)
 
                     prev_statistics = statistics[merge_node.node_name]
-                scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
+                scale = self._data_aware_step(
+                    wp, weight, statistics[k], prev_weight, prev_statistics, weight_port_id, graph
+                )
 
             w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
             a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
@@ -210,7 +212,9 @@ class AWQ(Algorithm):
 
         return transformed_model
 
-    def _data_aware_step(self, wp, weight, statistics, prev_weight=None, prev_statistics=None):
+    def _data_aware_step(
+        self, wp, weight, statistics, prev_weight=None, prev_statistics=None, weight_port_id=None, graph=None
+    ):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
         s, X = process_stats(statistics, self._subset_size)
@@ -219,6 +223,9 @@ class AWQ(Algorithm):
 
         assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
         reduction_axis = wp.reduction_axes[0]
+
+        # Get transpose_b value from backend to handle weight shape correctly in a backend-agnostic way
+        transpose_b = self._backend_entity.get_weight_transpose_b(wp.node_with_weight, weight_port_id, graph)
 
         prev_s, prev_w = None, None
         if prev_statistics is not None and prev_weight is not None:
@@ -239,9 +246,10 @@ class AWQ(Algorithm):
 
         groups_to_correct = list(groups_to_correct)
 
-        if reduction_axis == 0:
-            weight = fns.transpose(weight)
-            reduction_axis = 1
+        # Remove the old transpose logic - we now rely on explicit transpose_b handling
+        # if reduction_axis == 0:
+        #     weight = fns.transpose(weight)
+        #     reduction_axis = 1
 
         shape_vector = fns.mean(X, axis=1)
         scale = fns.ones_like(shape_vector)
@@ -257,7 +265,11 @@ class AWQ(Algorithm):
             a_max = 1e2
             gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
-            gweight = weight[:, offset : offset + group_size]
+            # Slice weight block along the input-channel dimension taking transpose_b into account
+            if transpose_b:
+                gweight = weight[:, offset : offset + group_size]
+            else:
+                gweight = weight[offset : offset + group_size, :]
             gacts = X[offset : offset + group_size, :]
 
             fp32_out = fns.matmul(gweight, gacts)
@@ -274,18 +286,14 @@ class AWQ(Algorithm):
                     )  # take the threshold from the fp16 type with some margin
                     # per channel magnitudes for the previous MatMul
                     # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
-                    magnitudes = (
-                        (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
-                    )
+                    prev_w_slice = prev_w[offset : offset + group_size]
+                    magnitudes = (prev_w_slice / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
                     if magnitudes.max() >= threshold:
                         cur_scale = AWQ._clamp_scale(
                             magnitudes,
                             threshold,
                             cur_scale,
-                            prev_w[offset : offset + group_size]
-                            * prev_s
-                            * prev_weight.shape[reduction_axis]
-                            / threshold,
+                            prev_w_slice * prev_s * prev_weight.shape[reduction_axis] / threshold,
                         )
 
                 weights_to_fake_quantize = gweight * cur_scale
@@ -307,7 +315,8 @@ class AWQ(Algorithm):
                 alpha += alpha_step
 
             if best_scale is not None:
-                scale.data[offset : offset + group_size] = best_scale.data
+                # Assign best_scale to the corresponding slice of the scale vector
+                scale[offset : offset + group_size] = best_scale
 
         return scale
 

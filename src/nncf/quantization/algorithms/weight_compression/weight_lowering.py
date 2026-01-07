@@ -630,7 +630,11 @@ def _calculate_integer_quantized_weight(
 
     compressed_weights = weight / scale
     if zero_point is not None:
-        compressed_weights += zero_point.astype(weight.dtype)
+        zp = zero_point.astype(weight.dtype)
+        if zp.ndim < compressed_weights.ndim:
+            new_shape = list(zp.shape) + [1] * (compressed_weights.ndim - zp.ndim)
+            zp = fns.reshape(zp, new_shape)
+        compressed_weights += zp
     compressed_weights = fns.round(compressed_weights)
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
 

@@ -141,6 +141,9 @@ class ScaleEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
+            # Get transpose_b value via backend to handle weight shape correctly in a backend-agnostic way
+            transpose_b = self._backend_entity.get_weight_transpose_b(wp.node_with_weight, weight_port_id, graph)
+
             scale, zero_point = self.calculate_quantization_params(
                 stats,
                 weight,
@@ -150,6 +153,7 @@ class ScaleEstimation:
                 self._initial_steps,
                 self._scale_steps,
                 self._weight_penalty,
+                transpose_b=transpose_b,
             )
             res[weight_name] = CompressedWeight(None, scale, zero_point, None)
 
@@ -165,6 +169,7 @@ class ScaleEstimation:
         initial_steps: int = 5,
         scale_steps: int = 10,
         weight_penalty: float = -1.0,
+        transpose_b: bool = True,  # Add this parameter with default True for backward compatibility
     ) -> Tensor:
         """
         Calculates the quantization parameters for a given set of weights and activations.
@@ -199,7 +204,8 @@ class ScaleEstimation:
         is_3d_weight = len(weight.shape) == 3
 
         was_transposed = False
-        if reduction_axis == 0 or (reduction_axis == 1 and is_3d_weight):
+        # Use transpose_b directly instead of inferring from reduction_axis
+        if not transpose_b or (reduction_axis == 1 and is_3d_weight):
             # Weights
             # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
             # 2D: [hidden_dimension, out_features] -> [out_features, hidden_dimension]
