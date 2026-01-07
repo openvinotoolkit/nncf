@@ -1,7 +1,0 @@
-language	gold_label	sentence1_binary_parse	sentence2_binary_parse	sentence1_parse	sentence2_parse	sentence1	sentence2	promptID	pairID	genre	label1	label2	label3	label4	label5	sentence1_tokenized	sentence2_tokenized	match
-zh	neutral					謝謝大家的生日祝福。	覺得很開心能收到大家的祝福。	237	711	facetoface	neutral	neutral	neutral	neutral	neutral	謝謝大家的生日祝福。	覺得很開心能收到大家的祝福。 。	True
-zh	entailment					也看到好多好久不見的朋友，很多曾經的美好經歷也浮上心頭。	238	712	facetoface	entailment	entailment	entailment	entailment	entailment	也看到好多好久不見的朋友，很多曾經的美好經歷也浮上心頭 。	True
-zh	neutral					据环球时报报道,三文鱼肉质鲜嫩,受到无数“吃货”的喜令。	238	713	facetoface	neutral	neutral	neutral	neutral	neutral	据环球时报报道,三文鱼肉质鲜嫩,受到无数“吃货”的喜令 。	True
-zh	contradiction					进口三文鱼被. 推上了风口浪尖。	238	714	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	进口三文鱼被. 推上了风口浪尖 。	True
-zh	entailment					年,全球养殖三文鱼死亡数量高。	242	724	facetoface	entailment	neutral	entailment	entailment	entailment	年,全球养殖三文鱼死亡数量高 。	True
-zh	contradiction					落着巨大的海上三文鱼“农场”,每个养殖场都养着上万条鱼点。	242	725	facetoface	contradiction	contradiction	contradiction	contradiction	contradiction	落着巨大的海上三文鱼“农场”,每个养殖场都养着上万条鱼点 。	True

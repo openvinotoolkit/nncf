@@ -15,8 +15,6 @@ from nncf.torch.return_types import _TORCH_RETURN_TYPES
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
-pytestmark = pytest.mark.legacy
-
 
 @pytest.mark.parametrize("return_type", _TORCH_RETURN_TYPES)
 def test_unwrap_wrap_torch_return_type(return_type):
