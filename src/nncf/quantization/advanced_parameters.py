@@ -28,6 +28,7 @@ from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
+from nncf.tensor import TensorDataType
 
 TTensor = Any
 
@@ -382,6 +383,16 @@ class AdvancedLoraCorrectionParameters:
     apply_regularization: bool = True
     subset_size: int = 128
     use_int8_adapters: bool = True
+
+
+@api()
+@dataclass
+class AdvancedAdaptiveCodebookParameters:
+    """
+    Contains advanced parameters for adaptive codebook estimation.
+    """
+
+    value_type: TensorDataType = TensorDataType.f8e4m3
 
 
 @api()
