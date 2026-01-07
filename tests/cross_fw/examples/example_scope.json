@@ -224,7 +224,7 @@
         "requirements": "examples/llm_compression/onnx/tiny_llama_scale_estimation/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 77
+            "word_count": 81
         }
     },
     "llm_tune_params": {
@@ -242,7 +242,7 @@
         "requirements": "examples/llm_compression/openvino/tiny_llama_synthetic_data/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 77
+            "word_count": 84
         }
     },
     "quantization_aware_training_torch_anomalib": {

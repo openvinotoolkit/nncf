@@ -51,9 +51,7 @@ def main():
     saved_seed = torch.seed()
     torch.manual_seed(SEED)
     synthetic_dataset = nncf.data.generate_text_data(hf_model, tokenizer, dataset_size=dataset_size)
-    quantization_dataset = nncf.Dataset(
-        synthetic_dataset, partial(transform_func, tokenizer=tokenizer)
-    )
+    quantization_dataset = nncf.Dataset(synthetic_dataset, partial(transform_func, tokenizer=tokenizer))
     hf_model.request = None
     torch.manual_seed(saved_seed)
 
