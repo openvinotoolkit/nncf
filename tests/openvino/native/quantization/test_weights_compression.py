@@ -12,7 +12,7 @@
 import inspect
 import os
 from collections import defaultdict
-from typing import Callable
+from typing import Callable, Optional
 from unittest.mock import patch
 
 import numpy as np
@@ -64,6 +64,7 @@ from tests.cross_fw.test_templates.template_test_weights_compression import Temp
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
+from tests.openvino.native.models import AWQModel
 from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
@@ -104,7 +105,9 @@ class LMLinearModel(OVReferenceModel):
     HIDDEN_DIM = 16
     INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
-    def _create_ov_model(self, transpose_b: bool = True, transpose_a=False, input_shape=None):
+    def _create_ov_model(
+        self, transpose_b: bool = True, transpose_a: bool = False, input_shape: Optional[list[int]] = None
+    ):
         self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
         hdim_axis = -2 if transpose_a else -1
         self._hidden_dim = self._input_shape[hdim_axis]
@@ -1972,38 +1975,6 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
     )
 
 
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        dict(scale_estimation=True),
-        dict(lora_correction=True),
-        dict(
-            gptq=True,
-            awq=True,
-            scale_estimation=True,
-            advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
-        ),
-    ],
-)
-def test_compression_with_transposed_activations(kwargs):
-    dataset_size = 4
-    model = LMLinearModel(transpose_a=True, transpose_b=False).ov_model
-    input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
-    dataset = Dataset(input_data)
-
-    with pytest.raises(nncf.UnsupportedModelError):
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=8,
-            subset_size=2,
-            dataset=dataset,
-            all_layers=True,
-            **kwargs,
-        )
-
-
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     hidden_dim = (MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // LMLinearModel.OUTPUT_DIM) + 1
@@ -2190,8 +2161,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SAMPEModel().ov_model
 
     @staticmethod
-    def get_sequential_matmul_model() -> ov.Model:
-        return SequentialMatmulModel().ov_model
+    def get_sequential_matmul_model(transpose_a: bool) -> ov.Model:
+        return SequentialMatmulModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
     def get_model_for_test_scale_estimation():
@@ -2202,8 +2173,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SimpleMoEModel().ov_model
 
     @staticmethod
-    def get_awq_model() -> ov.Model:
-        return AWQMatmulModel().ov_model
+    def get_awq_model(non_mergable_pattern: bool) -> ov.Model:
+        return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern).ov_model
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> ov.Model:
@@ -2212,6 +2183,11 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_act_model(with_multiply, n_layers):
         return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a, transpose_b, input_shape=None):
+        ov_model = AWQModel(transpose_a=transpose_a, transpose_b=transpose_b, input_shape=input_shape).ov_model
+        return ov_model
 
     @staticmethod
     def to_tensor(x) -> np.ndarray:
@@ -2226,7 +2202,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         raise NotImplementedError
 
     @staticmethod
-    def check_weights(model: ov.Model, ref_ids: list[int]) -> None:
+    def check_weights(model: ov.Model, ref_ids: list[int], transpose_a=False) -> None:
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
@@ -2441,12 +2417,24 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         return {
+            "MatMul": Tensor(np.array([[10.337929], [6.4558873]], dtype=np.float32)),
             "MatMul_3": Tensor(
                 np.array(
                     [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
                     dtype=np.float32,
+                ).T
+            ),
+            "MatMul_2": Tensor(
+                np.array(
+                    [[[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]]],
+                    dtype=np.float32,
                 )
-            )
+            ),
         }
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return True
