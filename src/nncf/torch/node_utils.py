@@ -18,7 +18,7 @@ from nncf.torch.graph.operator_metatypes import PTMatMulMetatype
 
 def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
     """
-    Returns axis number of the activation tensor which correspond to it channel.
+    Returns axis number of the activation tensor which correspond to its channel.
 
     :param node: NNCFNode instance.
     :param port_id: Port ID for input.
