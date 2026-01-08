@@ -17,10 +17,6 @@ from typing import Any, Callable
 import pytest
 import torch
 import torch.fx
-import torch.nn.parallel
-import torch.optim
-import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.models as models
 from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
