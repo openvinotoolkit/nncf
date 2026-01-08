@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -37,6 +37,7 @@ CONV_META_TYPES = [
 
 OPERATORS_WITH_BIAS_METATYPES = CONV_META_TYPES + [om.PTLinearMetatype]
 CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype]
+AVAILABLE_NODE_TYPES_FOR_WEIGHT_SUBGRAPH = om.QUANTIZE_NODE_TYPES + om.PRUNING_NODE_TYPES
 
 
 def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
@@ -47,7 +48,7 @@ def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Op
     :param graph: The NNCFGraph.
     :return: The constant node found within the subgraph, or None if no constant node is found.
     """
-    if node.metatype == om.PTNoopMetatype or node.node_type in om.QUANTIZE_NODE_TYPES:
+    if node.metatype == om.PTNoopMetatype or node.node_type in AVAILABLE_NODE_TYPES_FOR_WEIGHT_SUBGRAPH:
         prev_nodes = [e.from_node for e in graph.get_input_edges(node)]
         if not prev_nodes:
             return None

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,9 +22,9 @@ from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend

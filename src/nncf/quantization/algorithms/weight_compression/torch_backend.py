@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,12 +24,12 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters

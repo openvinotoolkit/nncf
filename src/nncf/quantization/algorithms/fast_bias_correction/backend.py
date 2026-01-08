@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
@@ -77,7 +77,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Returns backend-specific mean statistic collector.
 
@@ -85,7 +85,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        :return: Backend-specific TensorCollector for the statistics calculation.
         """
 
     @staticmethod

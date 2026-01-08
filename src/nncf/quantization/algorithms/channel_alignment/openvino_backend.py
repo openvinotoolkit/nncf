@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,11 +19,10 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.experimental.common.tensor_statistics.collectors import AxesMode
-from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.collectors import AxesMode
+from nncf.common.tensor_statistics.collectors import MedianAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.openvino.graph import node_utils
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
@@ -78,9 +77,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return [OVAddMetatype, OVSubtractMetatype]
 
     @staticmethod
-    def get_statistic_collector(
-        reduction_axes, q: float, num_samples: int, inplace: bool
-    ) -> TensorStatisticCollectorBase:
+    def get_statistic_collector(reduction_axes, q: float, num_samples: int, inplace: bool) -> TensorCollector:
         tensor_collector = TensorCollector(MinMaxTensorStatistic)
         quantile_reducer = OVQuantileReducer(reduction_axes, AxesMode.REDUCTION, (q, 1 - q), inplace)
 

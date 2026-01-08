@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -437,6 +437,15 @@ class ScaledDotProductAttentionModel(nn.Module):
         super().__init__()
 
     def forward(self, query, key, value):
+        return nn.functional.scaled_dot_product_attention(query, key, value)
+
+
+class UnbindScaledDotProductAttentionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        query, key, value = x.unbind(0)
         return nn.functional.scaled_dot_product_attention(query, key, value)
 
 

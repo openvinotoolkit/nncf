@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, TypeVar
 
 import nncf
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
@@ -23,6 +24,7 @@ from nncf.scopes import IgnoredScope
 TModel = TypeVar("TModel")
 
 
+@api(canonical_alias="nncf.prune")
 def prune(
     model: TModel,
     mode: PruneMode,
@@ -53,6 +55,7 @@ def prune(
     return model
 
 
+@api(canonical_alias="nncf.batch_norm_adaptation")
 def batch_norm_adaptation(
     model: TModel, calibration_dataset: Dataset, *, num_iterations: Optional[int] = None
 ) -> TModel:
@@ -118,6 +121,7 @@ class ModelPruningStatistic:
         return text
 
 
+@api(canonical_alias="nncf.pruning_statistic")
 def pruning_statistic(model: TModel) -> ModelPruningStatistic:
     """
     Collects and returns pruning statistics for the given model.

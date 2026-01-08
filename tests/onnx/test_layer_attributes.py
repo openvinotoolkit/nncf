@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,7 @@ import pytest
 
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from tests.onnx.models import OPSET_VERSION
+from tests.onnx.models import DEFAULT_OPSET_VERSION
 from tests.onnx.models import create_initializer_tensor
 
 
@@ -86,7 +86,7 @@ def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape
     )
 
     op = onnx.OperatorSetIdProto()
-    op.version = OPSET_VERSION
+    op.version = DEFAULT_OPSET_VERSION
     model = onnx.helper.make_model(graph_def, opset_imports=[op])
     onnx.checker.check_model(model)
     return model

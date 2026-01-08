@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -287,7 +287,7 @@ def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
 @numeric.quantile.register
 def quantile(
     a: torch.Tensor,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -451,6 +451,11 @@ def _(a: torch.Tensor, axis: T_SHAPE) -> torch.Tensor:
     shape_it = iter(a.shape)
     shape = [1 if ax in norm_axis else next(shape_it) for ax in range(out_ndim)]
     return a.reshape(shape)
+
+
+@numeric.sign.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.sign(a)
 
 
 @numeric.clone.register

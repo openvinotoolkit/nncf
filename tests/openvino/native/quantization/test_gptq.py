@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,7 +18,7 @@ import numpy as np
 import openvino as ov
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -342,7 +342,7 @@ def test_calculate_scale_linear():
 
     # convert PyTorch model to OpenVINO
     ov_model = ov.convert_model(layer, example_input=inputs[0])
-    graph = NNCFGraphFactory.create(ov_model)
+    graph = build_graph(ov_model)
 
     # GPTQ
     gptq = GPTQ()

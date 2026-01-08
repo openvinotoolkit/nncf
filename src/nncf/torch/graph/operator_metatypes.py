@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -1005,6 +1005,11 @@ QUANTIZE_NODE_TYPES = [
     "dequantize_per_tensor",
     "quantize_per_channel",
     "dequantize_per_channel",
+]
+
+PRUNING_NODE_TYPES = [
+    "apply_magnitude_binary_mask",
+    "apply_rb_binary_mask",
 ]
 
 # These metatypes mix outputs for different samples into one axis.

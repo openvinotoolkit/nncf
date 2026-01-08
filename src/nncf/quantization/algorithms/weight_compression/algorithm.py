@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -28,10 +28,10 @@ from nncf.common.logging.track_progress import track
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode

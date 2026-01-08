@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -33,7 +33,10 @@ from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
 
 
-@pytest.mark.parametrize("model_cls_to_test", ALL_SYNTHETIC_MODELS.values())
+@pytest.mark.parametrize(
+    "model_cls_to_test",
+    [pytest.param(mod, marks=mod.get_pytest_marks()) for mod in ALL_SYNTHETIC_MODELS.values()],
+)
 def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     model_to_test = model_cls_to_test()
     path_to_dot = REFERENCE_GRAPHS_DIR / "synthetic" / model_to_test.path_ref_graph

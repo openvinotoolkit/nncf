@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@ from typing import Callable, Union
 import torch
 
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.graph.transformations.commands import PTTargetPoint

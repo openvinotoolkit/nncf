@@ -32,3 +32,6 @@
   - Signed and unsigned
   - Per channel quantization for 8bit and group-wise quantization for 4bit
   - Exports to OpenVINO format with packed weight constant and decompressor
+
+- [Pruning](./usage/training_time_compression/pruning/Usage.md) (PyTorch)
+  - Unstructured pruning

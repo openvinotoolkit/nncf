@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import pytest
 
 import nncf
 import nncf.tensor.functions as fns
-from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
+from nncf.common.tensor_statistics import statistical_functions as s_fns
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
@@ -564,6 +564,14 @@ class TemplateTestNNCFTensorOperators:
         tensor = Tensor(self.to_tensor([1, -1]))
         tensor_ref = self.to_tensor([1, 0])
         res = fns.where(tensor > 0, 1, 0)
+        assert all(res.data == tensor_ref)
+        assert isinstance(res, Tensor)
+        assert res.device == tensor.device
+
+    def test_fn_sign(self):
+        tensor = Tensor(self.to_tensor([1, 0, -1]))
+        tensor_ref = self.to_tensor([1, 0, -1])
+        res = fns.sign(tensor)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
         assert res.device == tensor.device

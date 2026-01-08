@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,13 +13,13 @@ from abc import abstractmethod
 
 import pytest
 
-from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
+from nncf.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 
 
 class TemplateTestMixedPrecisionAlgoBackend:

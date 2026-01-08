@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,8 +19,8 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
