@@ -18,12 +18,13 @@ from nncf.common.tensor_statistics.collectors import NoopAggregator
 from nncf.common.tensor_statistics.collectors import RawReducer
 from nncf.common.tensor_statistics.collectors import ShapeReducer
 from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 
 
 def get_mean_statistic_collector(
-    num_samples: int, channel_axis: int, window_size: Optional[int] = None, inplace: bool = True
+    num_samples: int, channel_axis: int, window_size: Optional[int] = None
 ) -> TensorCollector:
     """
     Mean statistic collector builder.
@@ -36,18 +37,14 @@ def get_mean_statistic_collector(
     :return: Mean statistic collector.
     """
     inplace = False
+    reducer: TensorReducerBase
     if channel_axis == 0:
         reducer = BatchMeanReducer(inplace)
     else:
         reducer = MeanPerChReducer(channel_axis=channel_axis, inplace=inplace)
     shape_reducer = ShapeReducer(inplace=inplace)
 
-    kwargs = {
-        "num_samples": num_samples,
-        "window_size": window_size,
-    }
-
-    aggregate_mean = MeanAggregator(**kwargs)
+    aggregate_mean = MeanAggregator(num_samples=num_samples, window_size=window_size)
     aggregate_noop = NoopAggregator(num_samples=1, return_first=True)
 
     collector = TensorCollector(MeanTensorStatistic)

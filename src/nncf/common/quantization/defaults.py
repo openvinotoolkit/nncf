@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-NUM_INIT_SAMPLES = 256
-
 QUANTIZATION_PRESET = "performance"
 QUANTIZE_INPUTS = True
 QUANTIZE_OUTPUTS = False

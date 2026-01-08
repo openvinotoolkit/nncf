@@ -21,21 +21,6 @@ def logit(x: torch.Tensor) -> torch.Tensor:
     return torch.log(x / (1 - x))
 
 
-class STRound(torch.autograd.Function):
-    @staticmethod
-    def symbolic(g, input_, inplace=False):
-        return g.op("STRound", input_)
-
-    @staticmethod
-    def forward(ctx, input_):
-        output = input_.round()
-        return output
-
-    @staticmethod
-    def backward(ctx: Any, *grad_outputs: Any) -> Any:
-        return grad_outputs[0]
-
-
 class STThreshold(torch.autograd.Function):
     @staticmethod
     def forward(ctx: Any, input_: torch.Tensor, threshold: float = 0.5) -> torch.Tensor:

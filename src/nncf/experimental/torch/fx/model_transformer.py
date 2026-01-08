@@ -15,10 +15,10 @@ import torch
 import torch.fx
 
 from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
 
 
 class FXModelTransformer(ModelTransformer):
@@ -36,7 +36,7 @@ class FXModelTransformer(ModelTransformer):
             (PTModelExtractionCommand, self._apply_model_extraction),
         ]
 
-    def transform(self, transformation_layout: PTTransformationLayout) -> torch.fx.GraphModule:
+    def transform(self, transformation_layout: TransformationLayout) -> torch.fx.GraphModule:
         """
         Transforms the target model according to given transformation layout.
 
