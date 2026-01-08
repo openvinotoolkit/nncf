@@ -27,6 +27,7 @@ import nncf
 from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
+from tests.post_training.pipelines.base import QUANTIZER_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import ErrorReason
@@ -175,6 +176,8 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     print(f"Model: {test_model_param['reported_name']}")
     print(f"Backend: {test_model_param['backend']}")
     print(f"PTQ params: {test_model_param['compression_params']}")
+    if test_model_param["backend"] in QUANTIZER_BACKENDS:
+        print(f"Quantizer params: {test_model_param['quantizer_params']}")
 
     # Get target fp32 metric value
     model_name = test_model_param.get("model_name", test_case_name.split("_backend_")[0])
@@ -186,6 +189,7 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
         "model_id": test_model_param["model_id"],
         "backend": test_model_param["backend"],
         "compression_params": test_model_param["compression_params"],
+        "quantizer_params": test_model_param["quantizer_params"],
         "params": test_model_param.get("params"),
         "reference_data": test_reference,
     }

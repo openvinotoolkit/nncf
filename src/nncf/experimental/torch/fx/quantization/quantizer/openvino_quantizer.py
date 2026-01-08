@@ -13,14 +13,14 @@ from collections import defaultdict
 from typing import Optional, Union
 
 import torch.fx
-from torch.ao.quantization.observer import HistogramObserver
-from torch.ao.quantization.observer import PerChannelMinMaxObserver
-from torch.ao.quantization.quantizer.quantizer import EdgeOrNode
-from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation as TorchAOQuantizationAnnotation
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpecBase as TorchAOQuantizationSpecBase
-from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
-from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
+from torchao.quantization.pt2e.observer import HistogramObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
+from torchao.quantization.pt2e.quantizer import EdgeOrNode
+from torchao.quantization.pt2e.quantizer import QuantizationAnnotation as TorchAOQuantizationAnnotation
+from torchao.quantization.pt2e.quantizer import QuantizationSpec as TorchAOQuantizationSpec
+from torchao.quantization.pt2e.quantizer import QuantizationSpecBase as TorchAOQuantizationSpecBase
+from torchao.quantization.pt2e.quantizer import Quantizer as TorchAOQuantizer
+from torchao.quantization.pt2e.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 
 import nncf
 from nncf import IgnoredScope

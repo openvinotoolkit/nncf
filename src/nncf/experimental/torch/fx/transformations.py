@@ -15,12 +15,12 @@ from typing import Any, Callable, Optional, Union
 
 import torch
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx.node import map_arg
 from torch.fx.passes.infra.pass_base import PassBase
 from torch.fx.passes.infra.pass_base import PassResult
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.utils import _fuse_conv_bn_
+from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
 import nncf.torch
@@ -382,7 +382,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         target node.
     :param quantizer: Quantizer module to inherit quantization parameters from.
     """
-    # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
+    # Copied from torchao.quantization.pt2e.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
     quantize_op: Optional[Callable] = None

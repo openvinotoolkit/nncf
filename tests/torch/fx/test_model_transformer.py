@@ -15,12 +15,11 @@ from typing import Any
 
 import pytest
 import torch
-import torch.ao.quantization
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.observer import MinMaxObserver
-from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.observer import MinMaxObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
+from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
 import nncf.common
