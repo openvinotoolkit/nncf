@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -329,14 +329,13 @@ def set_torch_cuda_seed(seed: int = 42):
 
 
 def quantization_aware_training_torch_anomalib(data: Union[str, None]):
-    from anomalib.data.image import mvtec
-
     from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
+    from examples.quantization_aware_training.torch.anomalib.main import DOWNLOAD_INFO
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
 
     if data is not None and not dataset_path.exists():
         dataset_path.mkdir(parents=True, exist_ok=True)
-        tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
+        tar_file_path = Path(data) / DOWNLOAD_INFO.url.split("/")[-1]
         with tarfile.open(tar_file_path) as tar_file:
             tar_file.extractall(dataset_path)
 

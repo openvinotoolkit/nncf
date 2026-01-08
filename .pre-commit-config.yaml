@@ -8,7 +8,6 @@ repos:
       - id: ruff-check
         args: [--fix, --show-fixes]
       - id: ruff-format
-        types_or: [ python, pyi ]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.45.0
@@ -28,3 +27,15 @@ repos:
           - --gitignore
           - --files
         files: (^nncf/.*\.py$|.*\.md$)
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        files: \.toml$
+        args: ["--option", "indent_string=    "]

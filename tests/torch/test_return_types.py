@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,8 +14,6 @@ import torch
 from nncf.torch.return_types import _TORCH_RETURN_TYPES
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
-
-pytestmark = pytest.mark.legacy
 
 
 @pytest.mark.parametrize("return_type", _TORCH_RETURN_TYPES)

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -37,9 +37,9 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.llama import LlamaDecoderOnly
 from tests.torch.test_models.synthetic import ShortTransformer
-from tests.torch2.fx.helpers import get_torch_fx_model
 
 FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "compress_pt2e"
 FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "ao_export_compression_OpenVINOQuantizer"
@@ -89,14 +89,18 @@ def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
 
 
 def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[dict[str, Any]] = None) -> str:
-    mode = qparams.get("mode")
-    gs = qparams.get("group_size", "-1")
-    all_layers = qparams.get("all_layers", "False")
+    output = str(qparams.get("mode").value)
+    output += f"gs{qparams.get('group_size', -1)}"
+    if qparams.get("all_layers", False):
+        output += "_al"
+
     if pt2e_param is None:
-        return f"{mode.value}_gs{gs}_all_layers_{all_layers}"
-    awq = pt2e_param.get("awq", "False")
-    scale_estimation = pt2e_param.get("scale_estimation", "False")
-    return f"{mode.value}_gs{gs}_all_layers_{all_layers}_awq_{awq}_scale_estimation_{scale_estimation}"
+        return output
+    if pt2e_param.get("awq", False):
+        output += "_awq"
+    if pt2e_param.get("scale_estimation", False):
+        output += "_sa"
+    return output
 
 
 def get_scale_values_from_model(model: torch.fx.GraphModule) -> dict[str, torch.Tensor]:

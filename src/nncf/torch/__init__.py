@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,53 +14,24 @@
 Base subpackage for NNCF PyTorch functionality.
 """
 
-import os
-from nncf import nncf_logger
-from nncf.common.logging.logger import warn_bkc_version_mismatch
-
-from nncf.version import BKC_TORCH_SPEC
-
 import torch
 from packaging import version
-from packaging.specifiers import SpecifierSet
-
-try:
-    _torch_version = version.parse(version.parse(torch.__version__).base_version)
-except:  # noqa: E722
-    nncf_logger.debug("Could not parse torch version")
-    _torch_version = version.parse("0.0.0")
-
-if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
-    warn_bkc_version_mismatch("torch", BKC_TORCH_SPEC, torch.__version__)
-
-
-# Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.torch.quantization import algo as quantization_algo
 
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience
 
-from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.model_creation import load_from_config
 from nncf.torch.model_creation import get_config
-from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.initialization import register_default_init_args
-from nncf.torch.layers import register_module
-from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.dynamic_graph.io_handling import nncf_model_input
 from nncf.torch.dynamic_graph.io_handling import nncf_model_output
-from nncf.torch.dynamic_graph.context import disable_tracing
-from nncf.torch.dynamic_graph.context import no_nncf_trace
-from nncf.torch.dynamic_graph.context import forward_nncf_trace
+from nncf.torch.function_hook.hook_executor_mode import disable_tracing
 from nncf.torch.strip import strip
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
 # so this call is moved to package __init__ to ensure this.
-from nncf.torch.dynamic_graph.patch_pytorch import patch_torch_operators
 
 from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_extensions
 
@@ -72,4 +43,25 @@ from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_e
 if torch.__version__ >= "2.5.0":
     from torch._dynamo.polyfills import loader
 
-patch_torch_operators()
+
+def patch_torch_operators():
+    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
+    from nncf.common.deprecation import warning_deprecated
+
+    warning_deprecated(
+        "nncf.torch.patch_torch_operators was called. This function is deprecated and no longer does anything."
+    )
+
+
+def register_module(*args, **kwargs):
+    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
+    from nncf.common.deprecation import warning_deprecated
+
+    warning_deprecated(
+        "nncf.torch.register_module was called. This function is deprecated and no longer does anything."
+    )
+
+    def wrap(cls):
+        return cls
+
+    return wrap

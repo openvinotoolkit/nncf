@@ -1,0 +1,19 @@
+strict digraph {
+"0 QuantizeLinear_Q_1" [id=0, type=QuantizeLinear];
+"1 DequantizeLinear_Q_1" [id=1, type=DequantizeLinear];
+"2 QuantizeLinear_K_1" [id=2, type=QuantizeLinear];
+"3 DequantizeLinear_K_1" [id=3, type=DequantizeLinear];
+"4 Attention" [id=4, type=Attention];
+"5 nncf_model_input_0" [id=5, type="nncf_model_input"];
+"6 nncf_model_input_1" [id=6, type="nncf_model_input"];
+"7 nncf_model_input_2" [id=7, type="nncf_model_input"];
+"8 nncf_model_output_0" [id=8, type="nncf_model_output"];
+"0 QuantizeLinear_Q_1" -> "1 DequantizeLinear_Q_1" [style=dashed, label="[1, 8, 16]"];
+"1 DequantizeLinear_Q_1" -> "4 Attention" [style=solid, label="[1, 8, 16]"];
+"2 QuantizeLinear_K_1" -> "3 DequantizeLinear_K_1" [style=dashed, label="[1, 8, 16]"];
+"3 DequantizeLinear_K_1" -> "4 Attention" [style=solid, label="[1, 8, 16]"];
+"4 Attention" -> "8 nncf_model_output_0" [style=solid, label="[1, 8, 16]"];
+"5 nncf_model_input_0" -> "0 QuantizeLinear_Q_1" [style=solid, label="[1, 8, 16]"];
+"6 nncf_model_input_1" -> "2 QuantizeLinear_K_1" [style=solid, label="[1, 8, 16]"];
+"7 nncf_model_input_2" -> "4 Attention" [style=solid, label="[1, 8, 16]"];
+}

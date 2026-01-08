@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,8 @@
 # limitations under the License.
 
 from typing import Any, Union
+
+import torch
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFGraph
@@ -29,7 +31,6 @@ from nncf.common.graph.layer_attributes import TransposeLayerAttributes
 from nncf.common.graph.operator_metatypes import ConstNoopMetatype
 from nncf.common.graph.operator_metatypes import get_all_aliases
 from nncf.common.graph.utils import get_split_axis
-from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 
 TRANSPOSE_OP_NAMES = ["transpose", "transpose_"]
 PERMUTE_OP_NAMES = ["permute"]
@@ -140,7 +141,7 @@ def _get_kwargs_shifted(args_names, args, kwargs, shift=1):
 def _get_const_attrs_from_args_kwargs(args, _) -> ConstantLayerAttributes:
     name = "Unknown"
     shape = []
-    if args and isinstance(args[0], TracedParameter):
+    if args and isinstance(args[0], torch.Tensor):
         name = args[0].name
         shape = args[0].shape
     return ConstantLayerAttributes(name, shape)

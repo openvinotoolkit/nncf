@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,9 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, Optional
-
-import torch
+from typing import Iterable, Optional, TypeVar
 
 from nncf import AdvancedCompressionParameters
 from nncf import CompressionFormat
@@ -27,6 +25,8 @@ from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression as OriginalWeightCompression
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+
+TModel = TypeVar("TModel")
 
 
 class WeightsCompression(Algorithm):
@@ -49,7 +49,7 @@ class WeightsCompression(Algorithm):
         sensitivity_metric: SensitivityMetric,
         compression_format: CompressionFormat,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
-    ) -> torch.fx.GraphModule:
+    ) -> TModel:
         """
         :param quantizer: Quantizer to use in WeightCompression algorithm.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers specified as
@@ -96,11 +96,11 @@ class WeightsCompression(Algorithm):
 
     def apply(
         self,
-        model: torch.fx.GraphModule,
+        model: TModel,
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> torch.fx.GraphModule:
+    ) -> TModel:
         self._algo.set_backend_entity(model)
 
         all_weight_params, ratio_defining_params, skipped_weight_params = (
@@ -131,7 +131,7 @@ class WeightsCompression(Algorithm):
 
     def get_statistic_points(
         self,
-        model: torch.fx.GraphModule,
+        model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:

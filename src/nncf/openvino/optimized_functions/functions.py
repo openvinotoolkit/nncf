@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 from typing import Optional, Union
 
 import nncf
-from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
@@ -23,6 +22,8 @@ from nncf.openvino.optimized_functions.models import get_integer_quantization_er
 from nncf.openvino.optimized_functions.models import get_integer_quantization_model
 from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.constants import OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES
+from nncf.quantization.algorithms.weight_compression.constants import OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
@@ -49,6 +50,8 @@ def do_integer_quantization(
     :param precomputed_zero_point: Optional precomputed zero point tensor.
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
+    assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
+
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
@@ -117,7 +120,7 @@ def do_float_quantization(
     :param precomputed_scale: Optional precomputed scale.
     :return: Returns quantized weight tensor and corresponding scale tensor.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
+    assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES
 
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
@@ -129,8 +132,7 @@ def do_float_quantization(
     if weight.backend == TensorBackend.ov:
         # Return ov tensors in target precision to seamlessly insert them into openvino model later
         ov_model_params.return_ov_tensors = True
-        weight_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
-        ov_model_params.output_dtypes.update({"compressed_weight": weight_dtype})
+        ov_model_params.output_dtypes.update({"compressed_weight": config.compression_dtype})
 
     model = get_float_quantization_model(
         ov_model_params,
@@ -177,6 +179,8 @@ def integer_quantize_dequantize_weight(
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight, scale,
         (and zero point).
     """
+    assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
+
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
@@ -235,7 +239,7 @@ def float_quantize_dequantize_weight(
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
     """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.MXFP4, CompressWeightsMode.FP4]
+    assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
@@ -290,6 +294,8 @@ def get_integer_quantization_error(
     :param reduction: Reduction mode to aggregate error values. Supported modes: "max_mean", "frobenius".
     :return: The quantity characterizing the error of integer quantization.
     """
+    assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
+
     if reduction not in ["max_mean", "frobenius"]:
         exception_str = f"Unsupported aggregation mode: {reduction}."
         raise nncf.InternalError(exception_str)

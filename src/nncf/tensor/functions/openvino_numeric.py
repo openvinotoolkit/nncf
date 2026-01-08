@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -34,6 +34,8 @@ DTYPE_MAP: dict[TensorDataType, ov.Type] = {
     TensorDataType.int8: ov.Type.i8,
     TensorDataType.int32: ov.Type.i32,
     TensorDataType.int64: ov.Type.i64,
+    TensorDataType.uint16: ov.Type.u16,
+    TensorDataType.uint32: ov.Type.u32,
     TensorDataType.uint8: ov.Type.u8,
     TensorDataType.uint4: ov.Type.u4,
     TensorDataType.int4: ov.Type.i4,

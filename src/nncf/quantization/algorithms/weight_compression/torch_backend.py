@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from typing import Callable, Iterable, Optional, Union
 
 import torch
+from torch import nn
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -23,12 +24,12 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -59,8 +60,6 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
 from nncf.torch.model_graph_manager import split_const_name
-from nncf.torch.model_transformer import PTModelTransformer
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.ignored_patterns import create_rope
 from nncf.torch.quantization.ignored_patterns import create_sam_pe
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -345,7 +344,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_dq_insertion_command(
         compressed_weight: CompressedWeight,
         wc_params: WeightCompressionParameters,
-        model: NNCFNetwork,
+        model: nn.Module,
         graph: NNCFGraph,
         weight_node: NNCFNode,
     ) -> PTTransformationCommand:
@@ -416,22 +415,19 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     def transform_model(
         self,
-        model: Union[GraphModelWrapper, torch.nn.Module],
+        model: GraphModelWrapper,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
-    ) -> NNCFNetwork:
+    ) -> GraphModelWrapper:
         if advanced_parameters is None:
             advanced_parameters = AdvancedCompressionParameters()
 
-        if isinstance(model, GraphModelWrapper):
-            model_transformer = PT2ModelTransformer(model)
-            model = model.model
-        else:
-            model_transformer = PTModelTransformer(model)
+        model_transformer = PT2ModelTransformer(model)
+        model = model.model
 
         transformation_layout = TransformationLayout()
         is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)

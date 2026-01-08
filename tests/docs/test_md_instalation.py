@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -123,7 +123,7 @@ def test_test_environment():
     ref = {
         "python": _parse_python_version_from_precommit_workflow(True),
         "pytorch": actual_versions["pytorch"],
-        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch2-cuda"),
+        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch-cuda"),
     }
     print(md_versions, ref)
     assert md_versions == ref, (

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,7 +20,7 @@ from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
 
 
-def apply_magnitude_sparsity_binary_mask(input_: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+def apply_magnitude_binary_mask(input_: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """
     Applies a binary mask to the input tensor, effectively zeroing out elements
     of the input tensor where the mask is zero.
@@ -31,7 +31,7 @@ def apply_magnitude_sparsity_binary_mask(input_: torch.Tensor, mask: torch.Tenso
     :return: The input tensor with the mask applied.
     """
     if has_torch_function_unary(input_):
-        return handle_torch_function(apply_magnitude_sparsity_binary_mask, (input_,), input_, mask)  # type: ignore[no-any-return]
+        return handle_torch_function(apply_magnitude_binary_mask, (input_,), input_, mask)  # type: ignore[no-any-return]
     return input_ * mask
 
 
@@ -53,7 +53,7 @@ class UnstructuredPruningMask(nn.Module, StatefulModuleInterface):
         self.register_buffer("binary_mask", torch.ones(shape, dtype=torch.bool))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return apply_magnitude_sparsity_binary_mask(x, self.binary_mask)
+        return apply_magnitude_binary_mask(x, self.binary_mask)
 
     def get_config(self) -> dict[str, Any]:
         return {"shape": tuple(self.binary_mask.shape)}

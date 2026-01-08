@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,17 +17,6 @@ import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.parameters import StripFormat
-from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
-from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.model_graph_manager import get_const_data
-from nncf.torch.model_graph_manager import get_module_by_name
-from nncf.torch.model_graph_manager import split_const_name
-from nncf.torch.model_transformer import PTModelTransformer
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
@@ -38,50 +27,6 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.quantize_functions import TuneRange
 
 SUPPORTED_NUM_BITS_FOR_STRIP_MODEL = [8]
-
-
-def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
-    """
-    Replace NNCF quantizer modules to PyTorch FakeQuantizer module and remove unused quantizer operators.
-
-    :param model: Target model.
-    :return: The modified NNCF network.
-    """
-    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
-    if model.nncf.is_compression_module_registered(compression_module_type):
-        external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
-        for key in external_quantizers:
-            if external_quantizers[key].is_enabled_quantization():
-                external_quantizers[key] = convert_to_torch_fakequantizer(external_quantizers[key])
-
-    for node in model.nncf.get_original_graph().get_all_nodes():
-        if node.node_type in ["nncf_model_input", "nncf_model_output"]:
-            continue
-
-        nncf_module = model.nncf.get_containing_module(node.node_name)
-
-        if hasattr(nncf_module, "pre_ops"):
-            for key in list(nncf_module.pre_ops.keys()):
-                op = nncf_module.get_pre_op(key)
-                if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
-                    if op.op.is_half_range or op.op.narrow_range:
-                        # Half range and narrow_range require to clamp weights of module
-                        # Note: Half range and narrow_range used only for weight.
-                        input_low, input_high = op.op.get_input_low_input_high()
-
-                        data = nncf_module.weight.data
-                        data = torch.min(torch.max(data, input_low), input_high)
-                        data = op.op.quantize(data, execute_traced_op_as_identity=False)
-                        nncf_module.weight.data = data
-                    op.op = convert_to_torch_fakequantizer(op.op)
-
-        if hasattr(nncf_module, "post_ops"):
-            for key in list(nncf_module.post_ops.keys()):
-                op = nncf_module.get_post_ops(key)
-                if isinstance(op.op, BaseQuantizer) and op.op.is_enabled_quantization():
-                    op.op = convert_to_torch_fakequantizer(op.op)
-
-    return model
 
 
 def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantize:
@@ -138,66 +83,6 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     fakequantizer.disable_observer()
 
     return fakequantizer
-
-
-def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
-    """
-    Remove all unused quantizer operators from the model.
-
-    :param model: Compressed model.
-    :return: The modified NNCF network.
-    """
-    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
-    if model.nncf.is_compression_module_registered(compression_module_type):
-        external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
-        for key in list(external_quantizers.keys()):
-            op = external_quantizers[key]
-            if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                external_quantizers.pop(key)
-
-    if not model.nncf.replace_modules:
-        return model
-
-    for node in model.nncf.get_original_graph().get_all_nodes():
-        if node.node_type in ["nncf_model_input", "nncf_model_output"]:
-            continue
-
-        nncf_module = model.nncf.get_containing_module(node.node_name)
-
-        if hasattr(nncf_module, "pre_ops"):
-            for key in list(nncf_module.pre_ops.keys()):
-                op = nncf_module.get_pre_op(key)
-                if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                    nncf_module.remove_pre_forward_operation(key)
-
-        if hasattr(nncf_module, "post_ops"):
-            for key in list(nncf_module.post_ops.keys()):
-                op = nncf_module.post_ops(key)
-                if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                    nncf_module.remove_post_forward_operation(key)
-
-    return model
-
-
-def strip_quantized_model(model: NNCFNetwork, strip_format: StripFormat = StripFormat.NATIVE):
-    """
-    Removes auxiliary layers and operations added during the quantization process,
-    resulting in a clean quantized model ready for deployment. The functionality of the model object is still preserved
-    as a compressed model.
-
-    :param model: Compressed model.
-    :param strip format: Describes the format in which model is saved after strip.
-    :return: The modified NNCF network.
-    """
-    if strip_format == StripFormat.DQ:
-        model = replace_with_decompressors(model)
-    elif strip_format == StripFormat.NATIVE:
-        model = replace_quantizer_to_torch_native_module(model)
-        model = remove_disabled_quantizers(model)
-    else:
-        msg = f"Unsupported strip format: {strip_format}"
-        raise nncf.ParameterNotSupportedError(msg)
-    return model
 
 
 def asym_fq_to_decompressor(
@@ -301,79 +186,3 @@ def sym_fq_to_decompressor(
             result_dtype=weight_dtype,
         )
     return decompressor, q_weight
-
-
-def replace_with_decompressors(model: NNCFNetwork) -> NNCFNetwork:
-    """
-    Performs transformation from fake quantize format (FQ) to dequantization one (DQ).
-    The former takes floating-point input, quantizes and dequantizes, and returns a floating-point value,
-    while the latter takes a quantized integer representation, dequantizes it, and outputs a floating-point result.
-
-    Mathematically, both methods lead to the same outcome, but due to differences in the order of operations and
-    rounding errors, the actual results may differ. In particular, this error can occur for values
-    that are located in the midpoint between two quantized values ("quants").
-
-    The FQ format may round these values to one "quant", while the DQ format rounds them to another "quant".
-    To avoid these issues, the compressed representation should be provided not by directly quantizing the input,
-    but by quantizing a pre-processed, fake-quantized, floating-point representation.
-
-    :param model: Compressed model with Decompressors.
-    :return: The modified NNCF network.
-    """
-    transformation_layout = TransformationLayout()
-    transformations = model.nncf.transformation_layout().transformations
-    model = model.nncf.get_clean_shallow_copy()
-    graph = model.nncf.get_graph()
-    for command in transformations:
-        quantizer = command.fn
-        if not isinstance(quantizer, (SymmetricQuantizer, AsymmetricQuantizer)):
-            # strip is only applied to Fake Quantizers, skip all other modules, e.g. SQMultiply for AWQ
-            transformation_layout.register(command)
-            continue
-
-        msg = ""
-        if quantizer._qspec.half_range or quantizer._qspec.narrow_range:
-            msg += "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False.\n"
-        if quantizer.num_bits not in [4, 8]:
-            msg += f"Unsupported number of bits {quantizer.num_bits} for the quantizer {quantizer}.\n"
-        if len(command.target_points) > 1:
-            msg += "Command contains more than one target point."
-        if msg:
-            raise nncf.ValidationError(msg)
-
-        tp = command.target_points[0]
-        weight_node = graph.get_node_by_name(tp.target_node_name)
-        if weight_node is None:
-            msg = "FQ is not assigned to weight. Strip to DQ format is not supported for FQ on activation."
-            raise nncf.UnsupportedModelError(msg)
-        weight_name = weight_node.layer_attributes.name
-        weight = get_const_data(weight_node, model)
-
-        convert_fn = asym_fq_to_decompressor if isinstance(quantizer, AsymmetricQuantizer) else sym_fq_to_decompressor
-        decompressor, q_weight = convert_fn(quantizer, weight)
-
-        packed_tensor = decompressor.pack_weight(q_weight)
-
-        # sets compressed tensor
-        # TODO:(AlexanderDokuchaev): update set_const_data
-        module_name, weight_attr_name = split_const_name(weight_name)
-        module = get_module_by_name(module_name, model)
-        weight = getattr(module, weight_attr_name)
-
-        if not isinstance(weight, torch.nn.Parameter):
-            msg = f"Weight is not a torch.nn.Parameter in the model by name {weight_name}."
-            raise nncf.InternalError(msg)
-
-        weight.requires_grad = False
-        weight.data = packed_tensor
-
-        decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-        transformation_layout.register(
-            PTSharedFnInsertionCommand(
-                [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
-                decompressor,
-                decompressor_name,
-            )
-        )
-
-    return PTModelTransformer(model).transform(transformation_layout)

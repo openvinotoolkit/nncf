@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -47,7 +47,13 @@ class ForwardWithHooks:
         return self
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        with FunctionHookMode(model=self.model, hook_storage=get_hook_storage(self.model)) as ctx:
+        hook_storage = get_hook_storage(self.model)
+
+        if hook_storage.is_empty():
+            # If no hooks are present, run model without overhead of FunctionHookMode
+            return self.orig_forward(*args, **kwargs)
+
+        with FunctionHookMode(model=self.model, hook_storage=hook_storage) as ctx:
             args, kwargs = ctx.process_model_inputs(args, kwargs)
             outputs = self.orig_forward(*args, **kwargs)
             outputs = ctx.process_model_outputs(outputs)
@@ -187,6 +193,7 @@ class ReplicateForDataParallel:
 def wrap_model(model: TModel) -> TModel:
     """
     Wraps a nn.Module to inject custom behavior into the forward pass and replication process.
+    If the model is already wrapped, return it unchanged.
 
     This function modifies the given model by:
     1. Replacing the model's `forward` method with a wrapped version (`ForwardWithHooks`) that allows
@@ -199,6 +206,8 @@ def wrap_model(model: TModel) -> TModel:
     :param model: The nn.Module to be wrapped.
     :return: The modified model with the custom behavior injected.
     """
+    if is_wrapped(model):
+        return model
     model.forward = ForwardWithHooks(model)
     model._replicate_for_data_parallel = ReplicateForDataParallel(model._replicate_for_data_parallel)  # type: ignore
     model.add_module(ATR_HOOK_STORAGE, HookStorage())

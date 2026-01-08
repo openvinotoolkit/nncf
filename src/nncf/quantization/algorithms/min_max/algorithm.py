@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -29,7 +29,6 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
@@ -45,14 +44,14 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.common.tensor_statistics.collectors import HistogramAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import HistogramAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -676,9 +675,7 @@ class MinMaxQuantization(Algorithm):
         :param ignored_patterns: Ignored patterns.
         :return: SingleConfigQuantizerSetup for the current NNCFGraph entity.
         """
-        hw_config_type = get_hw_config_type(self._target_device.value)
-        hw_config_path = self._backend_entity.hw_config.get_path_to_hw_config(hw_config_type)
-        hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
+        hw_config = self._backend_entity.hw_config(self._target_device)
 
         ignored_names = self._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph, inference_nncf_graph)

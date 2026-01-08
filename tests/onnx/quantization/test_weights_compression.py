@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,7 +25,7 @@ from packaging import version
 
 from nncf import CompressWeightsMode
 from nncf.common.factory import EngineFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
@@ -639,7 +639,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_decompressed_weight(compressed_model: onnx.ModelProto, input: np.ndarray):
-        graph = NNCFGraphFactory.create(compressed_model)
+        graph = build_graph(compressed_model)
         mapping = get_input_edges_mapping(graph)
         transformation_layout = TransformationLayout()
 

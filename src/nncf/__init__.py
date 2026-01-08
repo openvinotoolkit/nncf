@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,11 +12,11 @@
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
 
+from nncf.common.factory import build_graph as build_graph
 from nncf.common.logging import nncf_logger as nncf_logger
 from nncf.common.logging.logger import disable_logging as disable_logging
 from nncf.common.logging.logger import set_log_level as set_log_level
 from nncf.common.strip import strip as strip
-from nncf.config import NNCFConfig as NNCFConfig
 from nncf.data import Dataset as Dataset
 from nncf.errors import BufferFullError as BufferFullError
 from nncf.errors import InstallationError as InstallationError

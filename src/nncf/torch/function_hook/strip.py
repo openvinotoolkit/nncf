@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -164,7 +164,15 @@ def apply_compression_in_place(model: TModel) -> TModel:
     for hook_name, hook_module in hook_storage.named_hooks():
         if not isinstance(
             hook_module,
-            (RBPruningMask, UnstructuredPruningMask, SymmetricQuantizer, AsymmetricQuantizer, BaseWeightsDecompressor),
+            (
+                RBPruningMask,
+                UnstructuredPruningMask,
+                SymmetricQuantizer,
+                AsymmetricQuantizer,
+                BaseWeightsDecompressor,
+                RBPruningMask,
+                UnstructuredPruningMask,
+            ),
         ):
             continue
 

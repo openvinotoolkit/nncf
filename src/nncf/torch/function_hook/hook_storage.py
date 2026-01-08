@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -39,7 +39,7 @@ class RemovableHookHandle:
         Steps:
         - Checks if the storage still exists (i.e., if it's not garbage collected).
         - Verifies if the key and id are present in the storage.
-        - If hook exists, hook will removed.
+        - If hook exists, hook will be removed.
         - If no hooks left under the key, the key is also removed from the storage.
         """
         storage: Optional[nn.ModuleDict] = self.storage_ref()
@@ -65,8 +65,8 @@ class HookStorage(nn.Module):
     """
     A module for storing and executing hooks.
 
-    :param pre_hooks: A instance of nn.ModuleDict for storing pre-hooks.
-    :param post_hooks: A instance of nn.ModuleDict for storing post-hooks.
+    :param pre_hooks: An instance of nn.ModuleDict for storing pre-hooks.
+    :param post_hooks: An instance of nn.ModuleDict for storing post-hooks.
     """
 
     def __init__(self) -> None:
@@ -231,6 +231,14 @@ class HookStorage(nn.Module):
         del storage_dict[hook_key][hook_id]
         if not storage_dict[hook_key]:
             del storage_dict[hook_key]
+
+    def is_empty(self) -> bool:
+        """
+        Check if there are no hooks stored.
+
+        :return: True if both pre-hooks and post-hooks are empty, False otherwise.
+        """
+        return not self.pre_hooks and not self.post_hooks
 
 
 def decode_hook_name(hook_name: str) -> tuple[str, str, int]:
