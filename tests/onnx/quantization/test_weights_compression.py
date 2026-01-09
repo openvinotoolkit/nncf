@@ -416,30 +416,65 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def get_sequential_matmul_model() -> onnx.ModelProto:
+    def get_sequential_matmul_model(transpose_a: bool) -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_mixed_precision() test.
         """
         mb = ModelBuilder()
-        x = mb.add_input("input", (1, 4, 4))
-        output = mb.add_output("output", (1, 4, 4))
+        input_shape = (4, 4) if transpose_a else (1, 4, 4)
+        x = mb.add_input("input", input_shape)
 
         main_values = [10000, 1000, 1, 10, 10000]
+
+        if transpose_a:
+            x = mb.add_transpose(x, [1, 0])
         for i, main_value in enumerate(main_values):
             weights_data = np.arange(0, 16).reshape(4, 4).astype(np.float32)
             weights_data[-1, -1] = main_value
             weights_data = weights_data.T
-            x = mb.add_matmul(x, shape=weights_data.shape, output=output if i == 4 else None, data=weights_data)
+            if transpose_a:
+                x = mb.add_gemm(x, shape=weights_data.shape, weight_data=weights_data)
+                # Without additional output there is no edges between gemms in the graph
+                # for some odd reason
+                mb.add_output(x, input_shape)
+            else:
+                x = mb.add_matmul(x, shape=weights_data.shape, data=weights_data)
+                if i == 4:
+                    mb.add_output(x, input_shape)
 
         return mb.build(opset_version=21)
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None):
+        mb = ModelBuilder()
+
+        assert len(input_shape) == 2
+        input_shape = input_shape or (2, 3)
+        x = mb.add_input("input", input_shape)
+        output = mb.add_output("output", input_shape)
+
+        inp_ch_idx = -2 if transpose_a else -1
+        w_shape = (input_shape[inp_ch_idx], input_shape[inp_ch_idx])
+        w_data = 0.1 * np.arange(0, np.prod(w_shape), dtype=np.float32).reshape(w_shape) + 0.05
+        w_data = w_data.T
+
+        relu = mb.add_relu(x)
+        mb.add_gemm(
+            relu, w_data.shape, weight_data=w_data, trans_a=int(transpose_a), trans_b=int(transpose_b), output=output
+        )
+        model = mb.build()
+        return model
 
     @staticmethod
     def to_tensor(x: np.ndarray) -> np.ndarray:
         return np.array(x)
 
     @staticmethod
-    def check_weights(model: onnx.ModelProto, ref_ids: list[int]) -> None:
+    def check_weights(model: onnx.ModelProto, ref_ids: list[int], transpose_a: bool = False) -> None:
         names = {i.name for i in model.graph.initializer if i.data_type == onnx.TensorProto.INT4}
+        if transpose_a:
+            # First transpose node increments weights indexes
+            ref_ids = [i + 1 for i in ref_ids]
         low_precision_nodes = {f"W_{i}_quantized" for i in ref_ids}
         assert low_precision_nodes == names
 
@@ -703,7 +738,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_awq_model(is_3d_weights) -> onnx.ModelProto:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_awq_with_ignored_scope()
@@ -728,11 +763,17 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         w_data = w_data.T
 
         num_blocks = 2
+
         for i in range(num_blocks):
-            a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-            b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-            x = mb.add_mul(a, b)
-            x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+            if non_mergable_pattern:
+                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                b = mb.add_relu(a)
+                x = mb.add_matmul(b, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+            else:
+                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                x = mb.add_mul(a, b)
+                x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
 
         return mb.build(opset_version=opset_version)
 
@@ -779,15 +820,35 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference(is_3d_weights) -> dict[str, Tensor]:
+    def test_awq_scale_ref(is_3d_weights) -> dict[str, Tensor]:
         return [
             {
+                "Gemm_1": Tensor(np.array([[14.299703], [8.364688]], dtype=np.float32)),
                 "MatMul_3": Tensor(
                     np.array(
                         [[1.4228648, 1.3474456, 1.1335096, 1.001522, 0.90938693, 0.84022623, 0.78575736, 0.7413683]],
                         dtype=np.float32,
                     ).T
-                )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [
+                                [
+                                    1.9909902,
+                                    1.8632966,
+                                    1.5759803,
+                                    1.3974594,
+                                    1.2722752,
+                                    1.1779976,
+                                    1.1035581,
+                                    1.042768,
+                                ]
+                            ]
+                        ],
+                        dtype=np.float32,
+                    ),
+                ),
             },
             {
                 "MatMul_3": Tensor(
@@ -830,3 +891,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_reduction_axes() -> int:
         return 0
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return True

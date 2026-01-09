@@ -340,7 +340,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_sequential_matmul_model() -> torch.fx.GraphModule:
+    def get_sequential_matmul_model(transpose_a: bool) -> torch.fx.GraphModule:
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
@@ -365,10 +365,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_awq_model(is_3d_weights) -> torch.fx.GraphModule:
-        model = AWQLinearModel()
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> torch.fx.GraphModule:
+        model = AWQLinearModel(non_mergable_pattern=non_mergable_pattern)
         if is_3d_weights:
-            model = AWQLinearModel3D()
+            model = AWQLinearModel3D(non_mergable_pattern=non_mergable_pattern)
         dynamic_shapes = [[torch.export.Dim.AUTO, torch.export.Dim.DYNAMIC, None]]
         ex_input = torch.ones([2, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
@@ -400,7 +400,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model: torch.fx.GraphModule, ref_ids: list[int]) -> None:
+    def check_weights(model: torch.fx.GraphModule, ref_ids: list[int], transpose_a=False) -> None:
         all_names = list(model.graph.nodes)
         low_precision_nodes = list(map(lambda i: all_names[i].name, ref_ids))
         for node in model.graph.nodes:
@@ -619,11 +619,31 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference(is_3d_weights) -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref(is_3d_weights) -> dict[str, Tensor]:
         return [
             {
                 "linear_2": Tensor(
                     torch.tensor([[1.422865, 1.347446, 1.133510, 1.001522, 0.909387, 0.840226, 0.785757, 0.741368]])
+                ),
+                "linear_1": Tensor(
+                    torch.tensor(
+                        [
+                            [
+                                [
+                                    1.9909899235,
+                                    1.8632963896,
+                                    1.5759800673,
+                                    1.3974593878,
+                                    1.2722752094,
+                                    1.1779977083,
+                                    1.1035580635,
+                                    1.0427680016,
+                                ]
+                            ]
+                        ],
+                        dtype=torch.float32,
+                    )
                 ),
             },
             {
