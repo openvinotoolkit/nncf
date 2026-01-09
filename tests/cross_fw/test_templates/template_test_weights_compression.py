@@ -489,7 +489,7 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     @abstractmethod
     @pytest.fixture
-    def test_awq_scale_ref(is_3d_weights) -> dict[str, Tensor]:
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
     @abstractmethod
@@ -516,10 +516,13 @@ class TemplateWeightCompression(ABC):
                 msg = "Transpose a is not supported for the current backend"
                 pytest.skip(msg)
 
-            INPUT_SHAPE = (2, 4)
-            model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
+            INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
+            model = self.get_transposable_awq_model(
+                transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
+            )
         else:
-            INPUT_SHAPE = (1, 4, 8)
+            batch_size = 1 if not is_3d_weights else 2
+            INPUT_SHAPE = (batch_size, 4, 8)
             model = self.get_awq_model(non_mergable_pattern, is_3d_weights)
         input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
         input = self.to_tensor(input)
@@ -537,7 +540,7 @@ class TemplateWeightCompression(ABC):
             )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            ref = test_awq_scale_ref(is_3d_weights)[node_name]
+            ref = test_awq_scale_ref[is_3d_weights][node_name]
             assert fns.allclose(scales, ref)
             assert scales.shape == ref.shape
 
@@ -790,7 +793,9 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None) -> TModel:
+    def get_transposable_awq_model(
+        transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False
+    ) -> TModel:
         "Returns a backend model for test_compression_with_transpose."
 
     @pytest.mark.parametrize(

@@ -1011,18 +1011,21 @@ class AWQMatmulModel(OVReferenceModel):
         zp = opset.convert(zp, destination_type=np.float32)
 
         scale = opset.constant(
-            np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+            np.ones((weights_data.shape[-2], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
         )
         return (qw - zp) * scale
 
-    def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False, non_mergable_pattern: bool = False):
-        input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
-
-        weights_data1 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+    def _create_ov_model(
+        self, n_extra_dims: int = 1, is_int8=False, non_mergable_pattern: bool = False, is_3d_weights: bool = False
+    ):
+        input_node = opset.parameter([-1] * n_extra_dims + [-1, 8], name="Input_1")
+        WEIGHT_SHAPE = [2, 8, 8] if is_3d_weights else [8, 8]
+        NUM_WEIGHT_VALUES = np.multiply.reduce(WEIGHT_SHAPE)
+        weights_data1 = 0.01 * np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) + 0.05
         weights1 = self.get_weights(weights_data1, is_int8, name="weights_1")
         node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
 
-        weights_data2 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+        weights_data2 = 0.01 * np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) + 0.05
         weights2 = self.get_weights(weights_data2, is_int8, name="weights_2")
         if non_mergable_pattern:
             relu = opset.relu(node1)
@@ -1031,15 +1034,15 @@ class AWQMatmulModel(OVReferenceModel):
             node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
             node_multiply = opset.multiply(node1, node2, name="Multiply")
 
-            weights_data3 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+            weights_data3 = 0.01 * np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) + 0.05
             weights3 = self.get_weights(weights_data3, is_int8, name="weights_3")
             node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
 
-        weights_data4 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+        weights_data4 = 0.01 * np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) + 0.05
         weights4 = self.get_weights(weights_data4, is_int8, name="weights_4")
         node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
 
-        weights_data5 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+        weights_data5 = 0.01 * np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) + 0.05
         weights5 = self.get_weights(weights_data5, is_int8, name="weights_5")
 
         if non_mergable_pattern:
@@ -1050,50 +1053,9 @@ class AWQMatmulModel(OVReferenceModel):
 
             node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
 
-            weights_data6 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+            weights_data6 = 0.01 * np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) + 0.05
             weights6 = self.get_weights(weights_data6, is_int8, name="weights_6")
             node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
-
-        result = opset.result(node6, name="Result")
-        result.get_output_tensor(0).set_names(set(["Result"]))
-        model = ov.Model([result], [input_node])
-        return model
-
-
-class AWQMatmulModel3D(OVReferenceModel):
-    """
-    3D-weights version of AWQMatmulModel.
-    All weight tensors are [2, 8, 8]; input is [2, L, 8].
-    """
-
-    def _create_ov_model(self, n_extra_dims=1, is_int8=False):
-        input_node = opset.parameter([-1] * n_extra_dims + [-1, 8], name="Input_1")
-
-        def make_weights(name):
-            w = 0.01 * np.arange(0, 2 * 8 * 8).reshape(2, 8, 8) + 0.05
-            return opset.constant(w, dtype=np.float32, name=name)
-
-        weights1 = make_weights("weights_1")
-        node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
-
-        weights2 = make_weights("weights_2")
-        node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
-
-        node_multiply = opset.multiply(node1, node2, name="Multiply")
-
-        weights3 = make_weights("weights_3")
-        node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
-
-        weights4 = make_weights("weights_4")
-        node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
-
-        weights5 = make_weights("weights_5")
-        node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
-
-        node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
-
-        weights6 = make_weights("weights_6")
-        node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
 
         result = opset.result(node6, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
@@ -1106,20 +1068,22 @@ class AWQActMatmulModel(OVReferenceModel):
     Model for testing AWQ algorithm. Contains MatMul->Multiply->MatMul pattern.
     """
 
-    def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8):
+    def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8, is_3d_weights: bool = False):
         input_node = opset.parameter([-1, 8, 8], name="Input_1")
-        weights_data = np.arange(0, 64).reshape(8, 8) - 32
+        WEIGHT_SHAPE = [2, 8, 8] if is_3d_weights else [8, 8]
+        NUM_WEIGHT_VALUES = np.multiply.reduce(WEIGHT_SHAPE)
+        weights_data = np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) - 32
         weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_emb")
         out_node = opset.matmul(input_node, weights, transpose_a=False, transpose_b=True, name="MatMul_emb")
 
         for i in range(n_layers):
-            weights_data = np.arange(0, 64).reshape(8, 8) - 32
+            weights_data = np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) - 32
             weights = AWQMatmulModel.get_weights(weights_data, is_int8, name=f"weights_1_{i}")
             mm1 = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_1_{i}")
             node1 = opset.relu(mm1, name=f"ReLU_{i}")
 
             if with_multiply:
-                weights_data = np.arange(0, 64).reshape(8, 8) - 32
+                weights_data = np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) - 32
                 weights = AWQMatmulModel.get_weights(weights_data, is_int8, name=f"weights_2_{i}")
                 mm2 = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_2_{i}")
 
@@ -1135,50 +1099,9 @@ class AWQActMatmulModel(OVReferenceModel):
 
             out_node = node_multiply
 
-        weights_data = np.arange(0, 64).reshape(8, 8) - 32
+        weights_data = np.arange(0, NUM_WEIGHT_VALUES).reshape(WEIGHT_SHAPE) - 32
         weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_lm_head")
         out_node = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
-
-        result = opset.result(out_node, name="Result")
-        result.get_output_tensor(0).set_names(set(["Result"]))
-        model = ov.Model([result], [input_node])
-        return model
-
-
-class AWQActMatmulModel3D(OVReferenceModel):
-    """
-    Model for testing AWQ algorithm with 3D weights. Contains MatMul->Multiply->MatMul pattern.
-    """
-
-    def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8):
-        input_node = opset.parameter([-1, 8, 8], name="Input_1")
-
-        def make_weights(name: str):
-            w = np.arange(0, 2 * 8 * 8).reshape(2, 8, 8) - 32
-            return opset.constant(w, dtype=np.float32, name=name)
-
-        weights_emb = make_weights("weights_emb")
-        out_node = opset.matmul(input_node, weights_emb, transpose_a=False, transpose_b=True, name="MatMul_emb")
-
-        for i in range(n_layers):
-            weights1 = make_weights(f"weights_1_{i}")
-            mm1 = opset.matmul(out_node, weights1, transpose_a=False, transpose_b=True, name=f"MatMul_1_{i}")
-            node1 = opset.relu(mm1, name=f"ReLU_{i}")
-
-            if with_multiply:
-                weights2 = make_weights(f"weights_2_{i}")
-                mm2 = opset.matmul(out_node, weights2, transpose_a=False, transpose_b=True, name=f"MatMul_2_{i}")
-                alpha = opset.constant(np.array([1.5], dtype=np.float32), dtype=np.float32)
-                lambda_value = opset.constant(np.array([1.5], dtype=np.float32), dtype=np.float32)
-                node2 = opset.selu(mm2, alpha, lambda_value, name=f"SeLU_{i}")
-                node_multiply = opset.multiply(node1, node2, name=f"Multiply_{i}")
-            else:
-                node_multiply = node1
-
-            out_node = node_multiply
-
-        weights_lm_head = make_weights("weights_lm_head")
-        out_node = opset.matmul(out_node, weights_lm_head, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
 
         result = opset.result(out_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
@@ -1189,7 +1112,7 @@ class AWQActMatmulModel3D(OVReferenceModel):
 class AWQModel(OVReferenceModel):
     OUTPUT_DIM = 32
     HIDDEN_DIM = 16
-    INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
+    INPUT_SHAPE = [2, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
     def _create_ov_model(
         self,
@@ -1197,12 +1120,13 @@ class AWQModel(OVReferenceModel):
         transpose_b: bool = True,
         input_shape: Optional[list[int]] = None,
         is_int8=False,
+        is_3d_weights: bool = False,
     ):
         self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
         hdim_axis = -2 if transpose_a else -1
         self._hidden_dim = self._input_shape[hdim_axis]
         input_1 = opset.parameter(self._input_shape, name="Input")
-        weight_shape = self.get_weight_shape(transpose_b)
+        weight_shape = self.get_weight_shape(transpose_b, is_3d_weights)
         data = self._rng.random(weight_shape).astype(np.float32)
 
         weights = AWQMatmulModel.get_weights(data, is_int8=is_int8, name="weights_1")
@@ -1219,8 +1143,19 @@ class AWQModel(OVReferenceModel):
     def hidden_dim(self):
         return self._hidden_dim
 
-    def get_weight_shape(self, transpose_b: bool = True):
-        return [self.OUTPUT_DIM, self.hidden_dim] if transpose_b else [self.hidden_dim, self.OUTPUT_DIM]
+    def get_weight_shape(self, transpose_b: bool = True, is_3d_weight: bool = False):
+        weight_shape = (
+            [
+                2,
+            ]
+            if is_3d_weight
+            else []
+        )
+        hidden_and_output_dims = (
+            [self.OUTPUT_DIM, self.hidden_dim] if transpose_b else [self.hidden_dim, self.OUTPUT_DIM]
+        )
+        weight_shape.extend(hidden_and_output_dims)
+        return weight_shape
 
 
 class AWQModel_fp16_overlow(OVReferenceModel):
