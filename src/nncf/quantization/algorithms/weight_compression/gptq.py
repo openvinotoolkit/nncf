@@ -219,8 +219,8 @@ class GPTQ:
             batch_size = 1 if not is_3d_act and not is_3d_weight else inp.shape[0]
             if node.metatype in self._backend_entity.matmul_metatypes:
                 # For 3D act + 2D weight case we should reshape activation to 2D to match weight
-                # For 3D act + 3D weight it should remain in 3D and the last 2 dimensions should be activation
-                # per batch/0-th dimension
+                # For 3D act + 3D weight it should remain in 3D and the last 2 dimensions should be activation per
+                # batch/0-th dimension
                 if is_3d_act and not is_3d_weight:
                     inp = inp.reshape((-1, inp.shape[-1]))
                 inp = fns.moveaxis(inp, -1, -2)
