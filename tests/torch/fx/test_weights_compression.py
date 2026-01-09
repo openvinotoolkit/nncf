@@ -675,3 +675,11 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                 ),
             },
         ]
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, is_3d_weights: bool = False):
+        pass
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return False
