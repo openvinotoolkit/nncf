@@ -254,9 +254,10 @@ class AWQLinearModel(nn.Module):
 
 
 class AWQLinearModel3D(nn.Module):
-    def __init__(self, is_int8=False):
+    def __init__(self, non_mergable_pattern: bool = False, is_int8=False):
         super().__init__()
         self.is_int8 = is_int8
+        self.non_mergable_pattern = non_mergable_pattern
 
         weight_data = 0.01 * torch.arange(0, 2 * 8 * 8).reshape(2, 8, 8) + 0.05
 
@@ -268,9 +269,19 @@ class AWQLinearModel3D(nn.Module):
         self.w6 = nn.Parameter(weight_data)
 
     def forward(self, x):
-        node1 = torch.bmm(x, self.w1)
-        node2 = torch.bmm(x, self.w2)
-        node_multiply = node1 * node2
+        if self.non_mergable_pattern:
+            node1 = torch.bmm(x, self.w1)
+            y = torch.relu(node1)
+            node_multiply = torch.bmm(y, self.w2)
+        else:
+            node1 = torch.bmm(x, self.w1)
+            node2 = torch.bmm(x, self.w2)
+            node_multiply = node1 * node2
+
+        if self.non_mergable_pattern:
+            node3 = torch.bmm(node_multiply, self.w3)
+            y = torch.relu(node3)
+            return torch.bmm(y, self.w4)
 
         node3 = torch.bmm(node_multiply, self.w3)
         node4 = torch.bmm(node3, self.w4)
@@ -821,27 +832,35 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     @pytest.fixture
-    def test_awq_scale_ref(is_3d_weights) -> dict[str, Tensor]:
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
         return [
             {
                 "linear3/linear/0": Tensor(
-                    torch.tensor([[1.422865, 1.347446, 1.133510, 1.001522, 0.909387, 0.840226, 0.785757, 0.741368]])
+                    torch.tensor(
+                        [
+                            [1.226455],
+                            [1.205499],
+                            [1.141340],
+                            [1.097436],
+                            [1.064355],
+                            [1.037971],
+                            [1.016118],
+                            [0.997526],
+                        ],
+                        dtype=torch.float32,
+                    )
                 ),
                 "linear2/linear/0": Tensor(
                     torch.tensor(
                         [
-                            [
-                                [
-                                    1.9909899235,
-                                    1.8632963896,
-                                    1.5759800673,
-                                    1.3974593878,
-                                    1.2722752094,
-                                    1.1779977083,
-                                    1.1035580635,
-                                    1.0427680016,
-                                ]
-                            ]
+                            [1.990990],
+                            [1.863296],
+                            [1.575980],
+                            [1.397459],
+                            [1.272275],
+                            [1.177998],
+                            [1.103558],
+                            [1.042768],
                         ],
                         dtype=torch.float32,
                     )
@@ -851,31 +870,23 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                 "/bmm/2": Tensor(
                     torch.tensor(
                         [
-                            [
-                                [1.109999],
-                                [1.108342],
-                                [1.102878],
-                                [1.097587],
-                                [1.092457],
-                                [1.087481],
-                                [1.082649],
-                                [1.077955],
-                            ],
-                            [
-                                [0.130212],
-                                [0.129630],
-                                [0.127712],
-                                [0.125842],
-                                [0.124017],
-                                [0.122236],
-                                [0.120498],
-                                [0.118800],
-                            ],
-                        ]
+                            [[1.109999, 1.108342, 1.102878, 1.097587, 1.092457, 1.087481, 1.082649, 1.077955]],
+                            [[0.130212, 0.129630, 0.127712, 0.125842, 0.124017, 0.122236, 0.120498, 0.118800]],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+                "/bmm/1": Tensor(
+                    torch.tensor(
+                        [
+                            [[1.146233, 1.144337, 1.138152, 1.132161, 1.126355, 1.120723, 1.115255, 1.109944]],
+                            [[0.259758, 0.258977, 0.256409, 0.253892, 0.251424, 0.249004, 0.246630, 0.244301]],
+                        ],
+                        dtype=torch.float32,
                     )
                 ),
             },
-        ][is_3d_weights]
+        ]
 
     @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool):

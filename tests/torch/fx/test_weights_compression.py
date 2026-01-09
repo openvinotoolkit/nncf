@@ -620,7 +620,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     @pytest.fixture
-    def test_awq_scale_ref(is_3d_weights) -> dict[str, Tensor]:
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
         return [
             {
                 "linear_2": Tensor(
@@ -674,4 +674,4 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     )
                 ),
             },
-        ][is_3d_weights]
+        ]
