@@ -438,8 +438,6 @@ class KMeansWeighted:
         step = data_.max().item() - data_.min().item()
         step /= intervals
 
-        print("Ration of data range to intervals:", data_.shape, intervals, step)
-
         sorted_idx = fns.argsort(data_)
         data = data_[sorted_idx]
         importance = importance[sorted_idx]

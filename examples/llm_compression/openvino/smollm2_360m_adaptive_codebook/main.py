@@ -96,7 +96,7 @@ def create_normal_distributed_values(n_levels=8) -> np.ndarray:
 
 
 def generate_answers(
-    questions: list[str], model: OVModelForCausalLM, tokenizer: AutoTokenizer, max_new_tokens: int = 50
+    questions: list[str], model: OVModelForCausalLM, tokenizer: AutoTokenizer, max_new_tokens: int = 10
 ) -> dict[str, str]:
     """
     Generate answers for a list of questions using the provided model and tokenizer.
@@ -212,9 +212,8 @@ def codebook_example(
 
 
 def main():
-    res = []  # codebook_example(MODEL_ID, COMPRESSED_MODEL_ID)
+    res = codebook_example(MODEL_ID, COMPRESSED_MODEL_ID)
     res += codebook_example(MODEL_ID, COMPRESSED_MODEL_ID + "_adaptive", adaptive_codebook=True)
-
     return res
 
 
