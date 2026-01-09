@@ -386,7 +386,12 @@ class WeightCompression(Algorithm):
             )
 
         if self._codebook_estimation:
-            self._codebook_estimation_algo = CodebookEstimation()
+            codebook_estimation_params = self._advanced_parameters.adaptive_codebook_params
+            self._codebook_estimation_algo = CodebookEstimation(
+                codebook_estimation_params.value_type,
+                codebook_estimation_params.per_block,
+                codebook_estimation_params.num_elements,
+            )
 
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0

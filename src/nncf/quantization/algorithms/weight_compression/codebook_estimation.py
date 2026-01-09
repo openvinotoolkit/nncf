@@ -23,7 +23,6 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
@@ -42,12 +41,16 @@ class CodebookEstimation:
     """
 
     def __init__(
-        self,
+        self, value_type: TensorDataType = TensorDataType.f8e4m3, per_block: bool = True, num_elements: int = 16
     ):
         """
         Initializes the CodebookEstimation algorithm.
         """
         super().__init__()
+
+        self._value_type = value_type
+        self._per_block = per_block
+        self._num_elements = num_elements
 
     @property
     def available_backends(self) -> list[BackendType]:
@@ -78,7 +81,6 @@ class CodebookEstimation:
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-        apply_per_group: bool = True,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates better codebook.
@@ -99,7 +101,7 @@ class CodebookEstimation:
         if self._backend_entity is None:
             self._set_backend_entity(model)
 
-        if apply_per_group:
+        if self._per_block:
             return self.apply_per_group(model, graph, all_weight_params, statistics, backend_entity)
 
         res = dict()
@@ -156,7 +158,7 @@ class CodebookEstimation:
             self._set_backend_entity(model)
         res = dict()
 
-        for wp in track(all_weight_params, description="Applying Codebook Estimation"):
+        for wp in track(all_weight_params, description="Applying Codebook Estimation per group"):
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
@@ -207,14 +209,13 @@ class CodebookEstimation:
 
         return self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-    @staticmethod
     def calculate_codebook(
+        self,
         statistics: WCTensorStatistic,
         weight: Tensor,
         reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
         wp: WeightCompressionParameters,
-        dst_type: TensorDataType = TensorDataType.float16,
     ) -> Tensor:
         reduction_axis = reduction_axes[0]
         weight = deepcopy(weight.astype(TensorDataType.float32))
@@ -236,20 +237,29 @@ class CodebookEstimation:
         scale = calculate_float_quantization_params(weight, reduction_axes, config, signed=True)
         norm_weight = _calculate_normalized_weight(weight, scale)
 
-        codebook, indexes, variants = weights_clusterization_k_means(norm_weight, importance)
+        codebook, indexes, variants = weights_clusterization_k_means(
+            norm_weight, importance, n_centroids=self._num_elements
+        )
 
         indexes = indexes.reshape(orig_shape)
 
-        best_codebook = codebook.as_openvino_tensor().astype(dst_type)
+        best_codebook = codebook.as_openvino_tensor().astype(self._value_type)
 
         fp_outs = fns.matmul(weight, X)
         diff = float("inf")
 
-        variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=weight.dtype)
-        variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=weight.dtype)
+        if self._num_elements == config.get_numpy_codebook().size:
+            variants[0] = fns.tensor(
+                config.get_numpy_codebook().data, backend=weight.backend, dtype=TensorDataType.float16
+            )
+        variants[1] = fns.tensor(
+            list(range(-self._num_elements // 2, self._num_elements - self._num_elements // 2)),
+            backend=weight.backend,
+            dtype=TensorDataType.float16,
+        )
 
         for var in variants:
-            var = var.as_openvino_tensor().astype(dst_type)
+            var = var.as_openvino_tensor().astype(self._value_type)
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
             q_outs = fns.matmul(qw, X)
@@ -261,8 +271,8 @@ class CodebookEstimation:
 
         return Tensor(best_codebook), None, None
 
-    @staticmethod
     def calculate_codebook_for_group(
+        self,
         statistics: list[WCTensorStatistic],
         weights: list[Tensor],
         reduction_axes: tuple[int, ...],
@@ -302,21 +312,24 @@ class CodebookEstimation:
         norm_weight = fns.concatenate(norm_weight, axis=0)
         importance = fns.concatenate(importances, axis=0)
 
-        codebook, _, variants = weights_clusterization_k_means(norm_weight, importance)
+        codebook, _, variants = weights_clusterization_k_means(norm_weight, importance, n_centroids=self._num_elements)
 
-        dst_type = TensorDataType.f8e4m3
-
-        best_codebook = codebook.as_openvino_tensor().astype(dst_type)
+        best_codebook = codebook.as_openvino_tensor().astype(self._value_type)
 
         diff = float("inf")
 
-        variants[0] = fns.tensor(CB4_QUANTILES, backend=weight.backend, dtype=TensorDataType.float16)
-        variants[1] = fns.tensor(list(range(-8, 8)), backend=weight.backend, dtype=TensorDataType.float16)
+        if self._num_elements == config.get_numpy_codebook().size:
+            variants[0] = fns.tensor(config.get_numpy_codebook(), backend=weight.backend, dtype=TensorDataType.float16)
+        variants[1] = fns.tensor(
+            list(range(-self._num_elements // 2, self._num_elements - self._num_elements // 2)),
+            backend=weight.backend,
+            dtype=TensorDataType.float16,
+        )
 
         coeffs = [fns.mean(fns.abs(X)).item() for X in Xs]
 
         for var in variants:
-            var = var.as_openvino_tensor().astype(dst_type)
+            var = var.as_openvino_tensor().astype(self._value_type)
             config.codebook_values = Tensor(var)
 
             cur_diff = 0.0
@@ -420,8 +433,7 @@ class KMeansWeighted:
         centers = []
         ranges = []
 
-        if data_.size < intervals:
-            intervals = data_.size // 2 + 1
+        intervals = max(min(intervals, int(0.005 * data_.size)), 100)
 
         step = data_.max().item() - data_.min().item()
         step /= intervals
@@ -531,7 +543,8 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
 
     kmeans = KMeansWeighted(n_centroids, max_iter=70)
 
-    kmeans.fit(weight, importance, n_init, fixed=[0, 7, 15])
+    # fixed centroids: min, zero, max
+    kmeans.fit(weight, importance, n_init, fixed=[0, n_centroids // 2 - 1, n_centroids - 1])
     codebook, indexes = kmeans.evaluate(weight)
 
     indexes = fns.reshape(indexes, orig_shape)

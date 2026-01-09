@@ -390,9 +390,18 @@ class AdvancedLoraCorrectionParameters:
 class AdvancedAdaptiveCodebookParameters:
     """
     Contains advanced parameters for adaptive codebook estimation.
+
+    :param value_type: The target tensor data type for the codebook.
+    :type value_type: TensorDataType
+    :param per_block: Whether to use per-block codebooks (e.g., all down_proj has the same codeboook).
+    :type per_block: bool
+    :param num_elements: The number of elements in each codebook entry.
+    :type num_elements: int
     """
 
     value_type: TensorDataType = TensorDataType.f8e4m3
+    per_block: bool = True
+    num_elements: int = 16
 
 
 @api()
@@ -437,6 +446,9 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
     codebook: Optional[TTensor] = None
+    adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
+        default_factory=AdvancedAdaptiveCodebookParameters
+    )
 
 
 @api()
