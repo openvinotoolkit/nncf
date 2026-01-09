@@ -445,20 +445,26 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None):
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
         mb = ModelBuilder()
 
-        assert len(input_shape) == 2
         input_shape = input_shape or (2, 3)
         x = mb.add_input("input", input_shape)
         output = mb.add_output("output", input_shape)
 
         inp_ch_idx = -2 if transpose_a else -1
-        w_shape = (input_shape[inp_ch_idx], input_shape[inp_ch_idx])
+        w_shape = () if not is_3d_weights else (input_shape[0],)
+        w_shape += (input_shape[inp_ch_idx], input_shape[inp_ch_idx])
         w_data = 0.1 * np.arange(0, np.prod(w_shape), dtype=np.float32).reshape(w_shape) + 0.05
         w_data = w_data.T
 
         relu = mb.add_relu(x)
+        if is_3d_weights:
+            act = mb.add_transpose(relu, perm=(0, 2, 1)) if transpose_a else relu
+            weight = np.transpose(w_data, (0, 2, 1)) if transpose_b else w_data
+            mb.add_matmul(act, shape=weight.shape, output=output, data=weight)
+            return mb.build(opset_version=21)
+
         mb.add_gemm(
             relu, w_data.shape, weight_data=w_data, trans_a=int(transpose_a), trans_b=int(transpose_b), output=output
         )
@@ -750,14 +756,14 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         weight_shape = (8, 8)
         opset_version = 13
+
         if is_3d_weights:
             # The first and last dimension are later transposed
             weight_shape = (8, 8, 2)
             # 3D weights does not work due to no support in MatMulNBits which is used in opset_version < 21
             opset_version = 21
-
-        x = mb.add_input("input", (2, None, 8))
-        output = mb.add_output("output", (2, None, 8))
+        x = mb.add_input("input", (None, None, 8))
+        output = mb.add_output("output", (None, None, 8))
 
         w_data = 0.01 * np.arange(0, reduce(mul, weight_shape, 1), dtype=np.float32).reshape(weight_shape) + 0.05
         w_data = w_data.T
@@ -820,66 +826,98 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod
-    def test_awq_scale_ref(is_3d_weights) -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
         return [
             {
                 "Gemm_1": Tensor(np.array([[14.299703], [8.364688]], dtype=np.float32)),
                 "MatMul_3": Tensor(
                     np.array(
-                        [[1.4228648, 1.3474456, 1.1335096, 1.001522, 0.90938693, 0.84022623, 0.78575736, 0.7413683]],
+                        [
+                            [
+                                1.2264546,
+                                1.2054994,
+                                1.1413404,
+                                1.0974358,
+                                1.0643553,
+                                1.0379708,
+                                1.0161183,
+                                0.9975262,
+                            ]
+                        ],
                         dtype=np.float32,
-                    ).T
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [1.9909902],
+                            [1.8632966],
+                            [1.5759803],
+                            [1.3974594],
+                            [1.2722752],
+                            [1.1779976],
+                            [1.1035581],
+                            [1.042768],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+            {
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [[1.119726, 1.1012304, 1.0438583, 1.006067, 0.97812414, 0.95607865, 0.9379444, 0.922586]],
+                            [
+                                [
+                                    0.99698645,
+                                    0.9808075,
+                                    0.9307146,
+                                    0.8974796,
+                                    0.87281394,
+                                    0.8533093,
+                                    0.8372402,
+                                    0.82361573,
+                                ]
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
                 ),
                 "MatMul_2": Tensor(
                     np.array(
                         [
                             [
                                 [
-                                    1.9909902,
-                                    1.8632966,
-                                    1.5759803,
-                                    1.3974594,
-                                    1.2722752,
-                                    1.1779976,
-                                    1.1035581,
-                                    1.042768,
+                                    1.1409731,
+                                    1.1160939,
+                                    1.0581433,
+                                    1.0199243,
+                                    0.9916471,
+                                    0.96932924,
+                                    0.95096624,
+                                    0.93541104,
                                 ]
-                            ]
-                        ],
-                        dtype=np.float32,
-                    ),
-                ),
-            },
-            {
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [
-                                [1.119726],
-                                [1.1012304],
-                                [1.0438583],
-                                [1.006067],
-                                [0.97812414],
-                                [0.95607865],
-                                [0.9379444],
-                                [0.922586],
                             ],
                             [
-                                [0.99698645],
-                                [0.9808075],
-                                [0.9307146],
-                                [0.8974796],
-                                [0.87281394],
-                                [0.8533093],
-                                [0.8372402],
-                                [0.82361573],
+                                [
+                                    1.0040698,
+                                    0.9826729,
+                                    0.9324939,
+                                    0.8991995,
+                                    0.87448895,
+                                    0.85494846,
+                                    0.83884954,
+                                    0.8251996,
+                                ]
                             ],
                         ],
                         dtype=np.float32,
                     )
-                )
+                ),
             },
-        ][is_3d_weights]
+        ]
 
     @staticmethod
     def get_transform_func() -> Optional[Callable[..., Any]]:
