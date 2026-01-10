@@ -216,7 +216,8 @@ class AWQ(Algorithm):
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.unsqueeze(a_scale, (weight_dim * 2) - 3 - act_ch_axis)
+                act_dim = len(act_shape)
+                a_scale = fns.unsqueeze(a_scale, (act_dim * 2) - 3 - act_ch_axis)
 
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
