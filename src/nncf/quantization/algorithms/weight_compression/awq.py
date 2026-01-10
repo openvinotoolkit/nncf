@@ -216,8 +216,18 @@ class AWQ(Algorithm):
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                act_dim = len(act_shape)
-                a_scale = fns.unsqueeze(a_scale, (act_dim * 2) - 3 - act_ch_axis)
+                act_dims = len(act_shape)
+                scale_shape = a_scale.shape
+                # Only the last dim in the activation scale is for channel. The others are for batch
+                batch_dims = iter(scale_shape[:-1])
+                # For the last dim of the scale which is assumed channel, we place it as it is
+                # For the rest of the elements we iterate the batch dims and place accordingly
+                # And once we finish, we start placing ones if the current dimension is not
+                # channel axis And it is not a batch dim, we place 1.
+                act_scale_shape = tuple(
+                    scale_shape[-1] if dim == act_ch_axis else next(batch_dims, 1) for dim in range(act_dims)
+                )
+                a_scale = fns.reshape(a_scale, act_scale_shape)
 
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
