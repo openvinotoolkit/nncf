@@ -853,14 +853,18 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                 "linear2/linear/0": Tensor(
                     torch.tensor(
                         [
-                            [1.990990],
-                            [1.863296],
-                            [1.575980],
-                            [1.397459],
-                            [1.272275],
-                            [1.177998],
-                            [1.103558],
-                            [1.042768],
+                            [
+                                [
+                                    1.990990,
+                                    1.863296,
+                                    1.575980,
+                                    1.397459,
+                                    1.272275,
+                                    1.177998,
+                                    1.103558,
+                                    1.042768,
+                                ]
+                            ]
                         ],
                         dtype=torch.float32,
                     )
