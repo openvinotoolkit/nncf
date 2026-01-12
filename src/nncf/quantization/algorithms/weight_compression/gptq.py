@@ -193,7 +193,7 @@ class GPTQ:
 
         return self._layerwise_engine.get_statistic_points(model, graph, filtered_nodes)
 
-    def _calculate_hessian(self, node: NNCFNode, inputs: list[Tensor], is_3d_weight: bool) -> Tensor:
+    def _calculate_hessian(self, node: NNCFNode, inputs: list[Tensor], is_3d_weight: bool = False) -> Tensor:
         """
         Calculates the Hessian matrix for the given node and inputs.
 
