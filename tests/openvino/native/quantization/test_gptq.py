@@ -365,7 +365,8 @@ def test_calculate_scale_linear():
     )
     wc_params.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=16)
 
-    scale, _ = gptq._quantize_weights(ov_model, graph, wc_params, H, wrapped_inputs)
+    nncf_weight = Tensor(weights)
+    _, scale, _ = gptq._quantize_weights(wc_params, H, nncf_weight, wrapped_inputs)
     ref_scale = ref_scale.numpy()
     scale = scale.reshape(ref_scale.shape)
     assert np.all(np.isclose(ref_scale, scale.data))

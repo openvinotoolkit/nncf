@@ -18,6 +18,7 @@ import nncf
 from nncf import Dataset
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -259,6 +260,12 @@ class GPTQ:
         if not wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]:
             msg = "Transpose is not supported"
             raise RuntimeError(msg)
+
+        if len(hessian.shape) == 3 and hessian.shape[0] == 1:
+            hessian = fns.squeeze(hessian)
+            msg = "The hessian passed to quantize_weights is 3D. It should be 2D"
+            nncf_logger.warning(msg=msg)
+        assert len(hessian.shape) == 2, "Hessian should be 2D"
 
         dead_indices = fns.diag(hessian) == 0
         hessian[dead_indices, dead_indices] = 1
