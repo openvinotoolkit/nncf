@@ -216,30 +216,18 @@ def find_parameters(
 
 
 def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATION_FUNCTION>
-    input_dtypes = {inp.get_any_name(): inp.get_element_type() for inp in ov_model.inputs}
     tokens = tokenizer(item["text"])
     input_ids = np.expand_dims(np.array(tokens["input_ids"]), 0)
     attention_mask = np.expand_dims(np.array(tokens["attention_mask"]), 0)
     position_ids = np.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
-    res = {
+    batch_size = input_ids.shape[0]
+    return {
         "input_ids": input_ids,
         "attention_mask": attention_mask,
-        "position_ids": position_ids.reshape(*attention_mask.shape),
+        "position_ids": position_ids,
+        "beam_idx": np.arange(batch_size, dtype=np.int64),
     }
-
-    def gen_pkv(num_heads, head_dim, num_layers):
-        res = {}
-        shape = (1, num_heads, 0, head_dim)
-        for i in range(num_layers):
-            key_name = f"past_key_values.{i}.key"
-            val_name = f"past_key_values.{i}.value"
-            res[key_name] = ov.Tensor(shape=shape, type=input_dtypes[key_name])
-            res[val_name] = ov.Tensor(shape=shape, type=input_dtypes[val_name])
-        return res
-
-    res.update(gen_pkv(4, 64, 22))
-    return res
 
 
 def main():
@@ -255,7 +243,6 @@ def main():
         trust_remote_code=True,
         use_cache=True,
         ov_config=ov_config,
-        stateful=False,
         load_in_8bit=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
