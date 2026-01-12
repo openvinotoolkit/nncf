@@ -152,8 +152,9 @@ class GPTQ:
                 reduction_axes = wc_params.reduction_axes
                 assert len(reduction_axes) == 1, "2D reduction axes is not currently supported in GPTQ"
                 wc_params.reduction_axes = (reduction_axes[0] - 1,) if is_3d_weight else reduction_axes
+                input_tensor = input_tensors[batch_idx] if is_3d_weight else input_tensors
                 batch_quantized_weight, batch_scale, batch_zero_point = self._quantize_weights(
-                    wc_params, batch_hessian, batch_weight, input_tensors
+                    wc_params, batch_hessian, batch_weight, input_tensor
                 )
                 wc_params.reduction_axes = reduction_axes
                 weights.append(batch_quantized_weight)
