@@ -208,6 +208,15 @@ def check_user_compression_configuration(
             if msg:
                 raise nncf.ValidationError(msg)
 
+        if advanced_parameters.adaptive_codebook_params is not None and codebook is not None:
+            cb_params = advanced_parameters.adaptive_codebook_params
+            if cb_params.num_elements is not None and cb_params.num_elements != np_codebook.size:
+                msg = (
+                    "The 'num_elements' parameter in Adaptive Codebook parameters "
+                    "must match the size of the provided codebook."
+                )
+                raise nncf.ValidationError(msg)
+
     for size in values_to_check:
         if size <= 0:
             msg = f"The subset_size value should be positive, but subset_size={size} is given."
