@@ -236,9 +236,7 @@ def check_user_compression_configuration(
         msg = "LoRA Correction algorithm is not compatible with FQ, FQ_LORA and FQ_LORA_NLS compression formats."
         raise nncf.ValidationError(msg)
 
-    if mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK] and (
-        advanced_parameters is None or advanced_parameters.codebook is None
-    ):
+    if mode in [CompressWeightsMode.CODEBOOK] and (advanced_parameters is None or advanced_parameters.codebook is None):
         msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
 
@@ -542,8 +540,12 @@ class WeightCompression(Algorithm):
 
         if self._mode == CompressWeightsMode.CB4_F8E4M3:
             codebook_values = Tensor(CB4_QUANTILES)
-        elif self._mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK]:
+        elif self._mode == CompressWeightsMode.CODEBOOK:
             codebook_values = Tensor(self._advanced_parameters.codebook)
+        elif self._mode == CompressWeightsMode.ADAPTIVE_CODEBOOK:
+            codebook_values = Tensor(
+                self._advanced_parameters.codebook if self._advanced_parameters.codebook is not None else CB4_QUANTILES
+            )
 
         return WeightCompressionConfig(
             mode=self._mode,

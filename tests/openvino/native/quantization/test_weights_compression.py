@@ -37,6 +37,7 @@ from nncf.openvino.optimized_functions import astype
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedAdaptiveCodebookParameters as CodebookParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
@@ -2450,3 +2451,35 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                 )
             )
         }
+
+
+@pytest.mark.parametrize("value_type", [None, TensorDataType.float16, TensorDataType.f8e4m3, TensorDataType.int8])
+def test_adaptive_codebooks(value_type):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([1, 8, 8])])
+    advanced_parameters = (
+        CompressionParams()
+        if value_type is None
+        else CompressionParams(adaptive_codebook_params=CodebookParams(value_type=value_type))
+    )
+
+    n_matmuls = 0
+    for op in model.get_ordered_ops():
+        if op.get_type_name() == "MatMul":
+            n_matmuls += 1
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        group_size=-1,
+        dataset=dataset,
+        advanced_parameters=advanced_parameters,
+    )
+
+    n_gathers = 0
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Gather":
+            n_gathers += 1
+
+    # For each MatMul except lm_head, there should be one Gather operation to fetch from the codebook
+    assert n_gathers == n_matmuls - 1
