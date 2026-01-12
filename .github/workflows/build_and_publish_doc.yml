@@ -40,7 +40,7 @@ jobs:
           rm artifact.tar
 
       - name: Publish built docs on Github Pages branch ${{ env.GH_PAGES_BRANCH }}
-        uses: JamesIves/github-pages-deploy-action@9d877eea73427180ae43cf98e8914934fe157a1a # v4.7.6
+        uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # v4.8.0
         with:
           folder: html_build/html
           token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}
