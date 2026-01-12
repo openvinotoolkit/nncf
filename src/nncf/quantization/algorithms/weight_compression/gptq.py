@@ -12,6 +12,8 @@
 import math
 from typing import Optional, TypeVar
 
+import numpy as np
+
 import nncf
 from nncf import Dataset
 from nncf.common.graph import NNCFGraph
@@ -146,9 +148,13 @@ class GPTQ:
             for batch_idx in range(hessian.shape[0]):
                 batch_hessian = hessian[batch_idx]
                 batch_weight = weight_tensor[batch_idx]
+                reduction_axes = wc_params.reduction_axes
+                assert len(reduction_axes) == 1, "2D reduction axes is not currently supported in GPTQ"
+                wc_params.reduction_axes = (reduction_axes[0] - 1,) if is_3d_weight else reduction_axes
                 batch_quantized_weight, batch_scale, batch_zero_point = self._quantize_weights(
                     wc_params, batch_hessian, batch_weight, input_tensors
                 )
+                wc_params.reduction_axes = reduction_axes
                 weights.append(batch_quantized_weight)
                 scales.append(batch_scale)
                 zero_points.append(batch_zero_point)
@@ -203,14 +209,14 @@ class GPTQ:
         if node.layer_attributes.input_attributes["transpose"]:
             msg = "Transposed input is not supported"
             raise nncf.UnsupportedModelError(msg)
-
-        hessian = fns.zeros(
-            (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
-        )
-
         # Make hessian 3D. Such that for 2D weights it is only 1 batch and can be squeezed later.
         # For 3D weights this dimension matches the weights dimensions
-        hessian = fns.unsqueeze(hessian, 0)
+        hessian_batch = 1 if not is_3d_weight else np.multiply.reduce(inputs[0].shape[:-2])
+        hessian = fns.zeros(
+            (hessian_batch, inputs[0].shape[-1], inputs[0].shape[-1]),
+            backend=inputs[0].backend,
+            dtype=TensorDataType.float32,
+        )
 
         for inp in inputs:
             is_3d_act = len(inp.shape) == 3
