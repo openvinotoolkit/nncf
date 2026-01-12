@@ -172,24 +172,21 @@ class AWQ(Algorithm):
             is_mergeable = False
             if self._backend_entity.is_node_with_weights(merge_node, graph):
                 mergeable_node_weight_data = self._backend_entity.get_weight_names_and_port_ids(merge_node, graph)
-                merge_node_weight_dims = [
+                merge_node_weight_ndims = [
                     len(self._backend_entity.get_weight_shape(merge_node, port_id, graph))
                     for _, port_id in mergeable_node_weight_data
                 ]
-                is_mergeable = len(weight.shape) in merge_node_weight_dims
+                is_mergeable = len(weight.shape) in merge_node_weight_ndims
 
             nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
 
-            weight_dim = len(weight.shape)
-            # Reached this formula using a simple generalization of possible values.
-            # It comes out to be: constant minus reduction axes
-            # where,
-            # constant is (n-1)th odd number and n is the weight dimension
+            weight_ndim = len(weight.shape)
+            # Weights scale reduction formula:
             # 2(n-1)-1 -> 2n-3
-            # Example: 2D -> 1 - reduction_axes (reduction_axes=1 -> 1-1=0; reduction_axes=0; 1-0=1)
-            #          3D -> 3 - reduction_axes (reduction_axes=1 -> 3-1=2; reduction_axes=2; 3-2=1)
-            #          4D -> 5 - reduction_axes (reduction_axes=1 -> 3-1=2; reduction_axes=2; 3-2=1)
-            weight_scale_reduction_axes = (weight_dim * 2) - 3 - wp.reduction_axes[0]
+            # Example: 2D -> 1 - reduction_axes (reduction_axes=1) = 0
+            #          3D -> 3 - reduction_axes (reduction_axes=1) = 2
+            #          4D -> 5 - reduction_axes (reduction_axes=1) = 4
+            weight_scale_reduction_axes = (weight_ndim * 2) - 3 - wp.reduction_axes[0]
             if is_data_free:
                 scale = self._data_free_step(weight, axis=weight_scale_reduction_axes)
             else:
@@ -216,7 +213,7 @@ class AWQ(Algorithm):
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                act_dims = len(act_shape)
+                act_ndim = len(act_shape)
                 scale_shape = a_scale.shape
                 # Only the last dim in the activation scale is for channel. The others are for batch
                 batch_dims = iter(scale_shape[:-1])
@@ -225,7 +222,7 @@ class AWQ(Algorithm):
                 # And once we finish, we start placing ones if the current dimension is not
                 # channel axis And it is not a batch dim, we place 1.
                 act_scale_shape = tuple(
-                    scale_shape[-1] if dim == act_ch_axis else next(batch_dims, 1) for dim in range(act_dims)
+                    scale_shape[-1] if dim == act_ch_axis else next(batch_dims, 1) for dim in range(act_ndim)
                 )
                 a_scale = fns.reshape(a_scale, act_scale_shape)
 
