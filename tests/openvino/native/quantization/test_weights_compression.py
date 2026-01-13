@@ -2260,12 +2260,12 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SequentialMatmulModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
-        return MatMul().ov_model
+    def get_model_for_test_scale_estimation(transpose_a: bool):
+        return MatMul(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation():
-        return SimpleMoEModel().ov_model
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+        return SimpleMoEModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
     def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> ov.Model:
@@ -2460,10 +2460,15 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             ),
         )[check_sampling_activation_stats_flow]
 
+    @pytest.mark.parametrize("transpose_a", [False, True])
     @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
-    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
-        return super().test_scale_estimation(mocker, is_moe, check_sampling_activation_stats_flow)
+    def test_scale_estimation(
+        self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
+    ):
+        return super().test_scale_estimation(
+            mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
+        )
 
     @pytest.mark.parametrize(
         "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
