@@ -2,7 +2,7 @@ whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai@2025.4.1.0#
 numpy==1.26.4
 openvino==2025.4.1
 optimum-intel==1.27.0
-optimum-onnx==0.0.3
+optimum-onnx==0.1.0
 optimum==2.0.0
 transformers==4.53.0
 onnx==1.17.0

@@ -1,7 +1,7 @@
 transformers==4.53.0
 openvino==2025.4.1
 optimum-intel[openvino]==1.27.0
-optimum-onnx==0.0.3
+optimum-onnx==0.1.0
 optimum==2.0.0
 onnx==1.19.1
 onnxruntime==1.21.1
