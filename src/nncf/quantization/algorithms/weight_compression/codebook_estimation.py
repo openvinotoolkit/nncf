@@ -227,10 +227,12 @@ class CodebookEstimation(Algorithm):
             weight = fns.transpose(weight)
             reduction_axis = 1
 
+        orig_shape = weight.shape
+
         if config.group_size != -1:
             weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
-
-        orig_shape = weight.shape
+            s = fns.unsqueeze(s, -2)
+            s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, config.group_size)
 
         importance = fns.ones_like(weight)
         importance = importance * s
@@ -242,11 +244,10 @@ class CodebookEstimation(Algorithm):
             norm_weight, importance, n_centroids=self._num_elements
         )
 
-        indexes = indexes.reshape(orig_shape)
+        indexes = indexes.reshape(weight.shape)
 
         best_codebook = codebook.as_openvino_tensor().astype(self._value_type)
 
-        fp_outs = fns.matmul(weight, X)
         diff = float("inf")
 
         if self._num_elements == config.get_numpy_codebook().size:
@@ -259,11 +260,14 @@ class CodebookEstimation(Algorithm):
             dtype=TensorDataType.float16,
         )
 
+        weight = fns.reshape(weight, orig_shape)
+
+        fp_outs = fns.matmul(weight, X)
         for var in variants:
             var = var.as_openvino_tensor().astype(self._value_type)
             config.codebook_values = Tensor(var)
             qw = float_quantize_dequantize_weight(weight, config, wp.reduction_axes)
-            q_outs = fns.matmul(qw, X)
+            q_outs = fns.matmul(fns.reshape(qw, orig_shape), X)
 
             cur_diff = fns.mean(fns.abs(fp_outs - q_outs)).item()
             if cur_diff < diff:
