@@ -360,7 +360,7 @@ class TemplateWeightCompression(ABC):
     # AWQ Tests
     @staticmethod
     @abstractmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
 
     @staticmethod
@@ -372,13 +372,16 @@ class TemplateWeightCompression(ABC):
     def int4_mode(self, request):
         return None
 
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("with_multiply", (True, False))
-    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply, mocker):
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
+        self, int4_mode, with_multiply, is_3d_weights, mocker
+    ):
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_model(with_multiply, n_layers)
+        model = self.get_awq_act_model(is_3d_weights, with_multiply, n_layers)
 
-        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+        dataset = Dataset([self.to_tensor(np.ones([2, 8, 8], dtype=np.float32))], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
@@ -388,8 +391,11 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_awq_model(non_mergable_pattern: bool) -> TModel:
-        "Returns a backend model for test_awq_with_ignored_scope."
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> TModel:
+        """
+        Returns a backend model for test_awq_with_ignored_scope."
+        :param is_3d_weights: The model has 3d weights
+        """
 
     @staticmethod
     @abstractmethod
@@ -408,16 +414,19 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
-    def test_awq_with_ignored_scope(self, mocker):
-        model = self.get_awq_model(non_mergable_pattern=False)
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
+        model = self.get_awq_model(non_mergable_pattern=False, is_3d_weights=is_3d_weights)
         sz = 8
         n_samples = 10
 
+        input_shape = [2, 8, sz]
+
         dataset = Dataset(
-            [self.to_tensor(np.ones([1, 8, sz], dtype=np.float32)) for i in range(n_samples)],
+            [self.to_tensor(np.ones(input_shape, dtype=np.float32)) for i in range(n_samples)],
             self.get_transform_func(),
         )
 
@@ -429,12 +438,12 @@ class TemplateWeightCompression(ABC):
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
-                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
+                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name(is_3d_weights)]),
             )
 
         int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
-        assert int4_num_nodes == int4_ref_num_compressed
+        assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
     def test_rope_weight_compression(self):
         model = self.get_RoPE_model()
@@ -490,12 +499,14 @@ class TemplateWeightCompression(ABC):
 
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
     def test_awq_scale_reference(
         self,
         non_mergable_pattern,
         transpose_a,
         test_awq_scale_ref,
         transpose_a_supported,
+        is_3d_weights,
         monkeypatch,
         mocker,
     ):
@@ -505,11 +516,14 @@ class TemplateWeightCompression(ABC):
                 msg = "Transpose a is not supported for the current backend"
                 pytest.skip(msg)
 
-            INPUT_SHAPE = (2, 4)
-            model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
+            INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
+            model = self.get_transposable_awq_model(
+                transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
+            )
         else:
-            INPUT_SHAPE = (1, 4, 8)
-            model = self.get_awq_model(non_mergable_pattern)
+            batch_size = 1 if not is_3d_weights else 2
+            INPUT_SHAPE = (batch_size, 4, 8)
+            model = self.get_awq_model(non_mergable_pattern, is_3d_weights)
         input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
         input = self.to_tensor(input)
         dataset = Dataset([input] * 2, self.get_transform_func())
@@ -526,7 +540,7 @@ class TemplateWeightCompression(ABC):
             )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            ref = test_awq_scale_ref[node_name]
+            ref = test_awq_scale_ref[is_3d_weights][node_name]
             assert fns.allclose(scales, ref)
             assert scales.shape == ref.shape
 
@@ -652,14 +666,15 @@ class TemplateWeightCompression(ABC):
             f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
         )
 
-    @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
-    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, mocker):
-        input_data = np.ones([1, 8, 8], dtype=np.float32)
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker):
+        input_data = np.ones([2, 8, 8], dtype=np.float32)
 
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_model(True, n_layers)
+        model = self.get_awq_act_model(is_3d_weights, True, n_layers)
         model = self.wrap_model(model, input_data)
 
         if dataset is not None:
@@ -778,7 +793,9 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None) -> TModel:
+    def get_transposable_awq_model(
+        transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False
+    ) -> TModel:
         "Returns a backend model for test_compression_with_transpose."
 
     @pytest.mark.parametrize(

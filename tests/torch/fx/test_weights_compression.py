@@ -36,7 +36,9 @@ from tests.torch.function_hook.quantization.test_weights_compression import INT8
 from tests.torch.function_hook.quantization.test_weights_compression import SUPPORTED_MODES
 from tests.torch.function_hook.quantization.test_weights_compression import UNSUPPORTED_MODES
 from tests.torch.function_hook.quantization.test_weights_compression import AWQActLinearModel
+from tests.torch.function_hook.quantization.test_weights_compression import AWQActLinearModel3D
 from tests.torch.function_hook.quantization.test_weights_compression import AWQLinearModel
+from tests.torch.function_hook.quantization.test_weights_compression import AWQLinearModel3D
 from tests.torch.function_hook.quantization.test_weights_compression import ConvolutionModel
 from tests.torch.function_hook.quantization.test_weights_compression import DifferentChannelSizeMatmulModel
 from tests.torch.function_hook.quantization.test_weights_compression import DTypeModel
@@ -363,10 +365,12 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_awq_model(non_mergable_pattern: bool) -> torch.fx.GraphModule:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> torch.fx.GraphModule:
         model = AWQLinearModel(non_mergable_pattern=non_mergable_pattern)
-        dynamic_shapes = [[None, torch.export.Dim("dynamic_shape"), None]]
-        ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        if is_3d_weights:
+            model = AWQLinearModel3D(non_mergable_pattern=non_mergable_pattern)
+        dynamic_shapes = [[torch.export.Dim.AUTO, torch.export.Dim.DYNAMIC, None]]
+        ex_input = torch.ones([2, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
         return exported_model
 
@@ -378,10 +382,13 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         model = AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
-        ex_input = torch.ones([1, 8, 8], dtype=torch.float32)
-        exported_model = get_torch_fx_model(model, ex_input)
+        if is_3d_weights:
+            model = AWQActLinearModel3D(with_multiply=with_multiply, n_layers=n_layers)
+        dynamic_shapes = [[torch.export.Dim.AUTO, torch.export.Dim.DYNAMIC, None]]
+        ex_input = torch.ones([2, 8, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
         return exported_model
 
     @staticmethod
@@ -573,8 +580,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(unpacked_w)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
-        return "linear_4"
+    def get_ignored_scope_name(is_3d_weights) -> str:
+        if not is_3d_weights:
+            return "linear_4"
+        return "bmm_4"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
@@ -611,34 +620,112 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     @pytest.fixture
-    def test_awq_scale_ref() -> dict[str, Tensor]:
-        return {
-            "linear_2": Tensor(
-                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]]).T
-            ),
-            "linear_1": Tensor(
-                torch.tensor(
-                    [
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
+        return [
+            {
+                "linear_2": Tensor(
+                    torch.tensor(
+                        [
+                            [1.226455],
+                            [1.205499],
+                            [1.141340],
+                            [1.097436],
+                            [1.064355],
+                            [1.037971],
+                            [1.016118],
+                            [0.997526],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+                "linear_1": Tensor(
+                    torch.tensor(
                         [
                             [
-                                1.9909899235,
-                                1.8632963896,
-                                1.5759800673,
-                                1.3974593878,
-                                1.2722752094,
-                                1.1779977083,
-                                1.1035580635,
-                                1.0427680016,
+                                [
+                                    1.990990,
+                                    1.863296,
+                                    1.575980,
+                                    1.397459,
+                                    1.272275,
+                                    1.177998,
+                                    1.103558,
+                                    1.042768,
+                                ]
                             ]
-                        ]
-                    ],
-                    dtype=torch.float32,
-                )
-            ),
-        }
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+            },
+            {
+                "bmm_2": Tensor(
+                    torch.tensor(
+                        [
+                            [
+                                [
+                                    1.109999,
+                                    1.108342,
+                                    1.102878,
+                                    1.097587,
+                                    1.092457,
+                                    1.087481,
+                                    1.082649,
+                                    1.077955,
+                                ]
+                            ],
+                            [
+                                [
+                                    0.130212,
+                                    0.129630,
+                                    0.127712,
+                                    0.125842,
+                                    0.124017,
+                                    0.122236,
+                                    0.120498,
+                                    0.118800,
+                                ]
+                            ],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+                "bmm_1": Tensor(
+                    torch.tensor(
+                        [
+                            [
+                                [
+                                    1.146233,
+                                    1.144337,
+                                    1.138152,
+                                    1.132161,
+                                    1.126355,
+                                    1.120723,
+                                    1.115255,
+                                    1.109944,
+                                ]
+                            ],
+                            [
+                                [
+                                    0.259758,
+                                    0.258977,
+                                    0.256409,
+                                    0.253892,
+                                    0.251424,
+                                    0.249004,
+                                    0.246630,
+                                    0.244301,
+                                ]
+                            ],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+            },
+        ]
 
     @staticmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool):
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, is_3d_weights: bool = False):
         pass
 
     @pytest.fixture
