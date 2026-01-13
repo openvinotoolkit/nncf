@@ -213,7 +213,8 @@ def check_user_compression_configuration(
             if cb_params.num_elements is not None and cb_params.num_elements != np_codebook.size:
                 msg = (
                     "The 'num_elements' parameter in Adaptive Codebook parameters "
-                    "must match the size of the provided codebook."
+                    "must match the size of the provided codebook. "
+                    f"Expected {np_codebook.size}, but got {cb_params.num_elements}."
                 )
                 raise nncf.ValidationError(msg)
 

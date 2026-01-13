@@ -16,9 +16,11 @@ from typing import Optional, TypeVar
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -35,7 +37,7 @@ from nncf.tensor import functions as fns
 TModel = TypeVar("TModel")
 
 
-class CodebookEstimation:
+class CodebookEstimation(Algorithm):
     """
     Codebook estimation algorithm implementation.
     """
@@ -124,9 +126,8 @@ class CodebookEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            codebook, scale, indexes = self.calculate_codebook(stats, weight, wp.reduction_axes, config, wp)
-            res[weight_name] = CompressedWeight(indexes, scale, None, codebook)
-            config.codebook_values = codebook
+            codebook = self.calculate_codebook(stats, weight, wp.reduction_axes, config, wp)
+            res[weight_name] = CompressedWeight(None, None, None, codebook)
 
         return res
 
@@ -193,10 +194,10 @@ class CodebookEstimation:
                         stats.append(statistics[other_node_name])
                         group_weights_params.append(other_wp)
 
-            codebook, scale, indexes = self.calculate_codebook_for_group(stats, weights, wp.reduction_axes, config, wp)
+            codebook = self.calculate_codebook_for_group(stats, weights, wp.reduction_axes, config, wp)
 
-            for i, gwp in enumerate(group_weights_params):
-                res[gwp.weight_name] = CompressedWeight(indexes[i], scale[i], None, codebook)
+            for gwp in group_weights_params:
+                res[gwp.weight_name] = CompressedWeight(None, None, None, codebook)
                 gwp.compression_config.codebook_values = codebook
 
         return res
@@ -220,7 +221,7 @@ class CodebookEstimation:
         reduction_axis = reduction_axes[0]
         weight = deepcopy(weight.astype(TensorDataType.float32))
 
-        s, X = process_stats(statistics, 128)
+        s, X = process_stats(statistics, -1)
 
         if reduction_axis == 0:
             weight = fns.transpose(weight)
@@ -269,7 +270,7 @@ class CodebookEstimation:
                 diff = cur_diff
                 best_codebook = var
 
-        return Tensor(best_codebook), None, None
+        return Tensor(best_codebook)
 
     def calculate_codebook_for_group(
         self,
@@ -288,7 +289,7 @@ class CodebookEstimation:
 
         for stat, weight in zip(statistics, weights):
             weight = deepcopy(weight.astype(TensorDataType.float32))
-            s, X = process_stats(stat, 128)
+            s, X = process_stats(stat, -1)
             Xs.append(X)
 
             if reduction_axis == 0:
@@ -343,7 +344,17 @@ class CodebookEstimation:
                 diff = cur_diff
                 best_codebook = var
 
-        return Tensor(best_codebook), [None] * len(weights), [None] * len(weights)
+        return Tensor(best_codebook)
+
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+        """
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
+        """
+        return StatisticPointsContainer()
 
 
 def round_to_left(quantiles, values):
@@ -504,12 +515,15 @@ class KMeansWeighted:
 
         self.centroids = deepcopy(init)
 
+        # not only last variant is stored,
+        # but also intermediate ones for choosing codebook which gives minimum diff in MatMul
+        saving_intervals = 5
         iteration = 0
         prev_centroids = self.centroids
         while iteration < self.max_iter:
             prev_centroids = deepcopy(self.centroids)
 
-            if iteration % 5 == 0:
+            if iteration % saving_intervals == 0:
                 self.variants.append(deepcopy(self.centroids))
 
             centroid_idxs = round_to_left(self.centroids, self.hist[0])
@@ -525,7 +539,8 @@ class KMeansWeighted:
             if fns.any(fns.all(fns.abs(self.centroids - prev_centroids) < 0.00001)):
                 break
 
-        self.variants.append(deepcopy(self.centroids))
+        if (iteration - 1) % saving_intervals != 0:
+            self.variants.append(deepcopy(self.centroids))
 
     def evaluate(self, X):
         centroid_idxs = round_to_left(self.centroids, X)
