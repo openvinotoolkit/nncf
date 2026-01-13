@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 from nncf.common.initialization.dataloader import NNCFDataLoader
 
 
+# TODO(dlyakhov): Remove after removal from the Optimum-Intel
 class PTInitializingDataLoader(NNCFDataLoader):
     """
     THIS CLASS IS ONLY USED IN THE Optimum-Intel REPO AND

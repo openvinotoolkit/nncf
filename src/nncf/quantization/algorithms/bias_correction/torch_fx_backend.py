@@ -17,9 +17,9 @@ import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
-from nncf.common.tensor_statistics.helpers import get_mean_statistic_collector
-from nncf.common.tensor_statistics.helpers import get_raw_stat_collector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.model_utils import remove_fq_from_inputs

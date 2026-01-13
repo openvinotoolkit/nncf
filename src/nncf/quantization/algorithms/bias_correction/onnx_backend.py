@@ -16,9 +16,9 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
-from nncf.common.tensor_statistics.helpers import get_mean_statistic_collector
-from nncf.common.tensor_statistics.helpers import get_raw_stat_collector
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
