@@ -27,7 +27,7 @@ def run_pytest_case_function_in_separate_process(fn: Callable) -> tuple[int, str
     pytest run failed, this function will trigger pytest.fail().
     :param fn - The function object corresponding to a pytest test function defined elsewhere.
     :returns A tuple of return code for the pytest invocation, and string representations of the stdout and stderr
-    pipe outputs of the pytest invoсation.
+    pipe outputs of the pytest invocation.
     """
     filename = inspect.getfile(fn)
     func_name = fn.__name__
