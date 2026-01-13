@@ -236,14 +236,14 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_for_test_scale_estimation() -> TModel:
+    def get_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
         """
         Returns a backend model for test_scale_estimation.
         """
 
     @staticmethod
     @abstractmethod
-    def get_moe_model_for_test_scale_estimation() -> TModel:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
         """
         Returns a backend MoE model for test_scale_estimation with 3D weights.
         """
@@ -266,17 +266,24 @@ class TemplateWeightCompression(ABC):
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
+    @pytest.mark.parametrize("transpose_a", [False, True])
     @pytest.mark.parametrize("is_moe", [False, True])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
-    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
+    def test_scale_estimation(
+        self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
+    ):
         """Checks that scales match the reference."""
+        if transpose_a and not transpose_a_supported:
+            msg = "Transpose a is not supported for the current backend"
+            pytest.skip(msg)
+
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         if is_moe:
-            model = self.get_moe_model_for_test_scale_estimation()
+            model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
         else:
-            model = self.get_model_for_test_scale_estimation()
+            model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
 
         # prepare dataset of size subset_size with input tensors
@@ -325,7 +332,7 @@ class TemplateWeightCompression(ABC):
     def test_scale_estimation_outlier_channel_has_lowest_error(self, mocker):
         """Checks that outlier channel has a lowest error after quantization."""
         OUTLIER_CHANNEL = 4
-        model = self.get_model_for_test_scale_estimation()
+        model = self.get_model_for_test_scale_estimation(transpose_a=False)
         original_weight = self.get_orig_weight(model)
 
         # prepare dataset with one input tensor
@@ -801,7 +808,6 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize(
         "kwargs",
         [
-            dict(scale_estimation=True),
             dict(lora_correction=True),
             dict(
                 gptq=True,
@@ -812,8 +818,6 @@ class TemplateWeightCompression(ABC):
     def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
         if not transpose_a_supported:
             pytest.skip("transpose_a is not supported for the current backend")
-        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
-            pytest.skip("Scale estimation is not supported")
         if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
             pytest.skip("GPTQ is not supported")
         if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():

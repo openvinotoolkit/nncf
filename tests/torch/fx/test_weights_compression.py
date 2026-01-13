@@ -349,14 +349,14 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
+    def get_model_for_test_scale_estimation(transpose_a: bool):
         model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation():
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
