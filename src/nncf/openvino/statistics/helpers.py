@@ -39,11 +39,7 @@ def get_mean_statistic_collector(
         reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
     shape_reducer = OVShapeReducer(inplace=inplace)
 
-    kwargs = {
-        "num_samples": num_samples,
-        "window_size": window_size,
-    }
-    aggregate_mean = MeanAggregator(**kwargs)
+    aggregate_mean = MeanAggregator(num_samples=num_samples, window_size=window_size)
     aggregate_noop = NoopAggregator(num_samples=1, return_first=True)
 
     collector = TensorCollector(MeanTensorStatistic)
