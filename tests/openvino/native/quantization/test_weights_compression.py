@@ -2504,16 +2504,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "MatMul_3": Tensor(
-                np.array(
-                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
-                    dtype=np.float32,
-                )
-            )
-        }
-
     @pytest.fixture
     def test_awq_scale_ref() -> list[dict[str, Tensor]]:
         return [
