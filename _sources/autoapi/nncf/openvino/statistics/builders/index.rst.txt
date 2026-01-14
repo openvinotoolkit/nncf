@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.openvino.statistics.builders`
+===========================================
+
+.. py:module:: nncf.openvino.statistics.builders
+
+

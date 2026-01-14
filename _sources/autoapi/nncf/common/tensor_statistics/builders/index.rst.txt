@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.common.tensor_statistics.builders`
+================================================
+
+.. py:module:: nncf.common.tensor_statistics.builders
+
+

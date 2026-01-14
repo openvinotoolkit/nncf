@@ -19,12 +19,3 @@ Subpackages
    quantization/index.rst
 
 
-Submodules
-----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 1
-
-   statistics/index.rst
-
-

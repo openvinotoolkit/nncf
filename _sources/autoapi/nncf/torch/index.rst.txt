@@ -9,15 +9,6 @@
 
 
 
-Submodules
-----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 1
-
-   structures/index.rst
-
-
 
 
 Functions
@@ -25,18 +16,10 @@ Functions
 
 .. autoapisummary::
 
-   nncf.torch.nncf_model_input
-   nncf.torch.nncf_model_output
    nncf.torch.disable_tracing
    nncf.torch.force_build_cpu_extensions
    nncf.torch.force_build_cuda_extensions
 
-
-
-.. py:function:: nncf_model_input(tensor)
-
-
-.. py:function:: nncf_model_output(tensor)
 
 
 .. py:function:: disable_tracing(method)

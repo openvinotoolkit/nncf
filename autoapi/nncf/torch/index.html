@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
-<link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" /><link rel="next" title="nncf.torch.structures" href="structures/index.html" /><link rel="prev" title="nncf.quantization.range_estimator" href="../quantization/range_estimator/index.html" />
+<link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" /><link rel="prev" title="nncf.quantization.range_estimator" href="../quantization/range_estimator/index.html" />
 
     <!-- Generated with Sphinx 6.1.3 and Furo 2023.03.27 -->
         <title>nncf.torch - NNCF</title>
@@ -176,7 +176,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../common/quantization/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.structs</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="../common/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.statistics</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
@@ -192,10 +191,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a><input checked="" class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="structures/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.structures</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference external" href="https://github.com/openvinotoolkit/nncf">Github</a></li>
@@ -236,24 +232,11 @@
           <section id="module-nncf.torch">
 <span id="nncf-torch"></span><h1><a class="reference internal" href="#module-nncf.torch" title="nncf.torch"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a><a class="headerlink" href="#module-nncf.torch" title="Permalink to this heading">#</a></h1>
 <p>Base subpackage for NNCF PyTorch functionality.</p>
-<section id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading">#</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="structures/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.structures</span></code></a></li>
-</ul>
-</div>
 <section id="functions">
-<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h3>
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h2>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.nncf_model_input" title="nncf.torch.nncf_model_input"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf_model_input</span></code></a>(tensor)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.torch.nncf_model_output" title="nncf.torch.nncf_model_output"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf_model_output</span></code></a>(tensor)</p></td>
-<td><p></p></td>
-</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.disable_tracing" title="nncf.torch.disable_tracing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">disable_tracing</span></code></a>(method)</p></td>
 <td><p>Patch a method so that it will be executed within no_nncf_trace context</p></td>
 </tr>
@@ -266,26 +249,6 @@
 </tbody>
 </table>
 </div>
-<dl class="py function">
-<dt class="sig sig-object py" id="nncf.torch.nncf_model_input">
-<span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">nncf_model_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/dynamic_graph/io_handling.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.nncf_model_input" title="Permalink to this definition">#</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>tensor</strong> (<em>torch.Tensor</em>) – </p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nncf.torch.nncf_model_output">
-<span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">nncf_model_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/dynamic_graph/io_handling.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.nncf_model_output" title="Permalink to this definition">#</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>tensor</strong> (<em>torch.Tensor</em>) – </p>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.torch.disable_tracing">
 <span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">disable_tracing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/function_hook/hook_executor_mode.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.disable_tracing" title="Permalink to this definition">#</a></dt>
@@ -313,22 +276,13 @@
 
 </section>
 </section>
-</section>
 
         </article>
       </div>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="structures/index.html">
-              <div class="page-info">
-                <div class="context">
-                  <span>Next</span>
-                </div>
-                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.structures</span></code></div>
-              </div>
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-            </a>
+          
           <a class="prev-page" href="../quantization/range_estimator/index.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
@@ -370,15 +324,10 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a><ul>
 <li><a class="reference internal" href="#functions">Functions</a><ul>
-<li><a class="reference internal" href="#nncf.torch.nncf_model_input"><code class="docutils literal notranslate"><span class="pre">nncf_model_input()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.torch.nncf_model_output"><code class="docutils literal notranslate"><span class="pre">nncf_model_output()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.disable_tracing"><code class="docutils literal notranslate"><span class="pre">disable_tracing()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.force_build_cpu_extensions"><code class="docutils literal notranslate"><span class="pre">force_build_cpu_extensions()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.force_build_cuda_extensions"><code class="docutils literal notranslate"><span class="pre">force_build_cuda_extensions()</span></code></a></li>
-</ul>
-</li>
 </ul>
 </li>
 </ul>
