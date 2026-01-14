@@ -18,6 +18,7 @@ import torch.fx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
@@ -29,7 +30,6 @@ from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import is_quantized_weights
-from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
 
 class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):

@@ -25,13 +25,13 @@ import numpy as np
 import openvino.runtime as ov
 import pandas as pd
 
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import TargetType
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
-from nncf.openvino.statistics.collectors import get_raw_stat_collector
 
 ActivationData = dict[str, dict[str, list[np.ndarray]]]
 StatisticPointsList = list[Any]

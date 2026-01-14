@@ -20,7 +20,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 
@@ -109,13 +108,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> NNCFTensor:
+    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 
         :param raw_data: Backend-specific output from the model.
         :param output_name: Name of the output layer or tensor name.
-        :return: Processed output as NNCFTensor.
+        :return: Processed output as an nncf Tensor.
         """
 
     @staticmethod

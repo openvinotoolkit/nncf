@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+from enum import Enum
 from typing import Optional, TypeVar
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -22,12 +23,24 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
+
+
+class NamespaceTarget(Enum):
+    """
+    NamespaceTarget stores modules from which patched operators were obtained.
+    """
+
+    TORCH_NN_FUNCTIONAL = "torch.nn.functional"
+    TORCH_TENSOR = "torch.tensor"
+    TORCH_NN_PARAMETER = "torch.nn.parameter"
+    TORCH = "torch"
+    ATEN = "aten"
+    EXTERNAL = "external_function"
 
 
 class PTOperatorMetatype(OperatorMetatype):
