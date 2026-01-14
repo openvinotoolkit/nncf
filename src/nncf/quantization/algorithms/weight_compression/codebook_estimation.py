@@ -369,11 +369,8 @@ def round_to_left(quantiles, values):
 @dataclass
 class KMeansAlgoData:
     centroids: Tensor
-    hist: Tensor
-    weighted_hist: Tensor | None = None
-
-    frequencies: Tensor | None = None
-    weights: Tensor | None = None
+    weighted_centroids: Tensor
+    weighted_importance: Tensor | None = None
 
 
 class KMeansWeighted:
@@ -441,11 +438,6 @@ class KMeansWeighted:
         return res
 
     @staticmethod
-    def add_weighted_data_and_weights(res, data, importance):
-        res[1].append(fns.sum(fns.multiply(data, importance)).item())
-        res[2].append(fns.sum(importance).item())
-
-    @staticmethod
     def create_histogramm_sorted(data_, importance, intervals=100000):
         centers = []
         ranges = []
@@ -475,29 +467,33 @@ class KMeansWeighted:
 
         ranges_idxs = round_to_left(data, ranges)
 
-        res = [[], [], []]
+        res_centers = []
+        weighted_data = []
+        weighted_importance = []
+
         for i in range(centers.size):
-            res[0].append(centers[i])
             if i == 0:
-                KMeansWeighted.add_weighted_data_and_weights(
-                    res, data[: ranges_idxs[1].item()], importance[: ranges_idxs[1].item()]
-                )
+                data_range, importance_range = data[: ranges_idxs[1].item()], importance[: ranges_idxs[1].item()]
             elif i == centers.size - 1:
-                KMeansWeighted.add_weighted_data_and_weights(
-                    res, data[ranges_idxs[-2].item() :], importance[ranges_idxs[-2].item() :]
-                )
+                data_range, importance_range = data[ranges_idxs[-2].item() :], importance[ranges_idxs[-2].item() :]
             else:
                 idx = 2 * i
-                KMeansWeighted.add_weighted_data_and_weights(
-                    res,
+                data_range, importance_range = (
                     data[ranges_idxs[idx - 1].item() : ranges_idxs[idx + 1].item()],
                     importance[ranges_idxs[idx - 1].item() : ranges_idxs[idx + 1].item()],
                 )
 
-        res[0] = centers
-        res[1] = fns.tensor(res[1], backend=data_.backend, dtype=data_.dtype)
-        res[2] = fns.tensor(res[2], backend=data_.backend, dtype=data_.dtype)
+            if data_range.size == 0:
+                continue
+            res_centers.append(centers[i].item())
+            weighted_data.append(fns.sum(fns.multiply(data_range, importance_range)).item())
+            weighted_importance.append(fns.sum(importance_range).item())
 
+        res = KMeansAlgoData(
+            fns.tensor(res_centers, backend=data_.backend, dtype=data_.dtype),
+            fns.tensor(weighted_data, backend=data_.backend, dtype=data_.dtype),
+            fns.tensor(weighted_importance, backend=data_.backend, dtype=data_.dtype),
+        )
         return res
 
     def fit(self, X_train, importance, init, fixed=None):
@@ -509,12 +505,14 @@ class KMeansWeighted:
 
         self.hist = KMeansWeighted.create_histogramm_sorted(X_train, importance)
 
-        init_by_hist = self.get_init(self.hist[0], self.hist[2], self.n_clusters)
+        init_by_hist = self.get_init(self.hist.centroids, self.hist.weighted_importance, self.n_clusters)
         init_by_hist[0] = init[0]
         init_by_hist[-1] = init[-1]
         zero_idx = fns.argmin(fns.abs(init_by_hist[:]), axis=0).item()
-        init_by_hist[zero_idx] = 0.0  # to have zero in codebook
-        fixed[1] = zero_idx
+
+        if init[0] <= 0.0:
+            init_by_hist[zero_idx] = 0.0  # to have zero in codebook
+            fixed[1] = zero_idx
         init = init_by_hist
 
         self.centroids = deepcopy(init)
@@ -530,12 +528,15 @@ class KMeansWeighted:
             if iteration % saving_intervals == 0:
                 self.variants.append(deepcopy(self.centroids))
 
-            centroid_idxs = round_to_left(self.centroids, self.hist[0])
+            centroid_idxs = round_to_left(self.centroids, self.hist.centroids)
             for i in range(self.n_clusters):
                 idxs = fns.nonzero(centroid_idxs == i)
                 if len(idxs[0]) == 0:
                     continue
-                self.centroids[i] = fns.sum(self.hist[1][idxs]).item() / fns.sum(self.hist[2][idxs]).item()
+                self.centroids[i] = (
+                    fns.sum(self.hist.weighted_centroids[idxs]).item()
+                    / fns.sum(self.hist.weighted_importance[idxs]).item()
+                )
 
             for idx in fixed:
                 self.centroids[idx] = init[idx]
@@ -563,7 +564,12 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
     kmeans = KMeansWeighted(n_centroids, max_iter=70)
 
     # fixed centroids: min, zero, max
-    kmeans.fit(weight, importance, n_init, fixed=[0, n_centroids // 2 - 1, n_centroids - 1])
+    kmeans.fit(
+        weight,
+        importance,
+        n_init,
+        fixed=[0, n_centroids // 2 - 1, n_centroids - 1] if n_init[0] < 0.0 else [0, n_centroids - 1],
+    )
     codebook, indexes = kmeans.evaluate(weight)
 
     indexes = fns.reshape(indexes, orig_shape)

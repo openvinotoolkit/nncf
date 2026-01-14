@@ -222,6 +222,13 @@ def check_user_compression_configuration(
                 )
                 raise nncf.ValidationError(msg)
 
+            if cb_params.per_block and (group_size and group_size != -1):
+                msg = (
+                    "When 'per_block' is set to True in Adaptive Codebook parameters, "
+                    "the 'group_size' must be -1 (no grouping) or None."
+                )
+                raise nncf.ValidationError(msg)
+
     for size in values_to_check:
         if size <= 0:
             msg = f"The subset_size value should be positive, but subset_size={size} is given."

@@ -2149,7 +2149,8 @@ def test_codebook_is_correct_array(codebook):
 
 
 @pytest.mark.parametrize("value_type", [None, TensorDataType.float16, TensorDataType.f8e4m3, TensorDataType.int8])
-def test_adaptive_codebooks(value_type):
+@pytest.mark.parametrize("group_size", [-1, 4])
+def test_adaptive_codebooks(value_type, group_size):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
     advanced_parameters = (
@@ -2166,7 +2167,7 @@ def test_adaptive_codebooks(value_type):
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.ADAPTIVE_CODEBOOK,
-        group_size=-1,
+        group_size=group_size,
         dataset=dataset,
         advanced_parameters=advanced_parameters,
     )

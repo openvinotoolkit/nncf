@@ -400,7 +400,7 @@ class AdvancedAdaptiveCodebookParameters:
     """
 
     value_type: TensorDataType = TensorDataType.f8e4m3
-    per_block: bool = True
+    per_block: bool = False
     num_elements: int = 16
 
 
