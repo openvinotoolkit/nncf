@@ -208,7 +208,11 @@ def check_user_compression_configuration(
             if msg:
                 raise nncf.ValidationError(msg)
 
-        if advanced_parameters.adaptive_codebook_params is not None and codebook is not None:
+        if (
+            advanced_parameters.adaptive_codebook_params is not None
+            and codebook is not None
+            and mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
+        ):
             cb_params = advanced_parameters.adaptive_codebook_params
             if cb_params.num_elements is not None and cb_params.num_elements != np_codebook.size:
                 msg = (
