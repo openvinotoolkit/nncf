@@ -11,6 +11,7 @@
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
+from nncf.quantization.ignored_patterns import create_rope_pattern
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
@@ -234,22 +235,13 @@ def create_se_block() -> GraphPattern:
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.ROPE)
 def create_rope() -> GraphPattern:
-    pattern = GraphPattern()
-    matmul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.PTMatMulMetatype}
+    return create_rope_pattern(
+        mm_metatype=om.PTMatMulMetatype,
+        transpose_metatype=om.PTTransposeMetatype,
+        concat_metatype=om.PTCatMetatype,
+        cos_metatype=om.PTCosMetatype,
+        sin_metatype=om.PTSinMetatype,
     )
-    transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.PTTransposeMetatype}
-    )
-    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.PTCatMetatype})
-    cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.PTCosMetatype})
-    sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.PTSinMetatype})
-
-    pattern.add_edge(matmul_node, transpose_node)
-    pattern.add_edge(transpose_node, concat_node)
-    pattern.add_edge(concat_node, cos_node)
-    pattern.add_edge(concat_node, sin_node)
-    return pattern
 
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.SAM_PE)

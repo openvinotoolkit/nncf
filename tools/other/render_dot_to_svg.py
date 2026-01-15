@@ -28,7 +28,7 @@ def main(argv):
     parser.add_argument("-i", "--input_file", help="Input .dot file", required=True)
     args = parser.parse_args(args=argv)
 
-    graph = nx.DiGraph(read_dot_graph(args.input_file))
+    graph = nx.MultiDiGraph(read_dot_graph(args.input_file))
     A = to_agraph(graph)
     A.layout("dot")
     png_path = Path(args.input_file).with_suffix(".svg")
