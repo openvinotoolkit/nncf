@@ -13,10 +13,16 @@ from typing import Any
 
 import torch.fx
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
-from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
+
+try:
+    from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+except ModuleNotFoundError as err:
+    msg = "OpenVINO Quantizer could not be imported from Executorch. Please Install Executorch"
+    raise nncf.ModuleNotFoundError(msg) from err
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 
 
