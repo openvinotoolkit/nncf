@@ -9,21 +9,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import torch.fx
 
-import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
-
-try:
-    from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
-except ModuleNotFoundError as err:
-    msg = "OpenVINO Quantizer could not be imported from Executorch. Please Install Executorch"
-    raise nncf.ModuleNotFoundError(msg) from err
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+
+if TYPE_CHECKING:
+    from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 
 
 class OpenVINOQuantizerAdapter(Quantizer):

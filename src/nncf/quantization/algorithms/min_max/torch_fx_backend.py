@@ -12,6 +12,7 @@
 from typing import Optional
 
 import torch
+import torchao
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -203,9 +204,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             )
 
         if per_channel:
-            observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+            observer = torchao.quantization.pt2e.observer.PerChannelMinMaxObserver
         else:
-            observer = torch.ao.quantization.observer.MinMaxObserver
+            observer = torchao.quantization.observer.MinMaxObserver
 
         if dtype is TensorDataType.int8:
             level_high = 127

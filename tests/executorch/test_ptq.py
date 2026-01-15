@@ -177,8 +177,8 @@ def test_quantized_model(
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     # Uncomment to visualize reference graphs
-    # from torch.ao.quantization.quantize_pt2e import convert_pt2e
-    # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+    # from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+    # from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
     # from tests.torch2.fx.helpers import visualize_fx_model
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)

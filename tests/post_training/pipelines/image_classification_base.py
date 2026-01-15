@@ -24,9 +24,9 @@ import numpy as np
 import openvino as ov
 import torch
 from sklearn.metrics import accuracy_score
-from torch.ao.quantization.quantize_pt2e import convert_pt2e
-from torch.ao.quantization.quantize_pt2e import prepare_pt2e
-from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
+from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
+from torchao.quantization.pt2e.quantizer import Quantizer as TorchAOQuantizer
 from torchvision import datasets
 
 import nncf

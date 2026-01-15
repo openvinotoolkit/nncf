@@ -49,11 +49,12 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     scale_shape = nncf_quantizer.scale_shape
     ch_axis = int(np.argmax(scale_shape))
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
+    import torchao
 
     if per_channel:
-        observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+        observer = torchao.quantization.pt2e.observer.PerChannelMinMaxObserver
     else:
-        observer = torch.ao.quantization.observer.MinMaxObserver
+        observer = torchao.quantization.pt2e.observer.MinMaxObserver
 
     if isinstance(nncf_quantizer, SymmetricQuantizer):
         qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
