@@ -51,7 +51,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
-FX_QUANTIZED_DIR_NAME = TEST_ROOT / "torch" / "data" / "fx"
+FX_QUANTIZED_DIR_NAME = TEST_ROOT / "executorch" / "data" / "fx"
 
 
 @dataclass
