@@ -2,12 +2,15 @@ name: ExecuTorch
 permissions: read-all
  
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
   pull_request:
     paths: 
        - 'src/nncf/experimental/quantization/algorithms/range_estimator/*'
        - 'src/nncf/experimental/quantization/algorithms/post_training/*'
        - 'src/nncf/experimental/quantization/algorithms/weight_compression/*'
-       - 'tests/torch2/fx/*'
+       - 'tests/executorch*'
        - 'src/nncf/experimental/torch/fx/*'
        - 'src/nncf/quantization/algorithms/algorithm.py'
 
