@@ -17,12 +17,13 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, Tensor]:
+def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int = -1) -> tuple[Tensor, Tensor]:
     """
     A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
     :param stats: An object containing statistics for the layer.
     :param subset_size: The number of samples for AWQ.
+    :param act_ch_axis: The activation channel axis.
     :return: tuple of the following tensors:
         s - maximum channel magnitude across samples [HiddenDim]
         X - average channel magnitude across tokens in the sequence [HiddenDim, min(SampleSize, ~subset_size)]
@@ -41,7 +42,9 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
 
     # Prevent high memory and time consumption by sampling
     if X_full.shape[sample_axis] > subset_size:
-        lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
+        lens = [
+            reduce(mul, shape[:act_ch_axis] + shape[act_ch_axis % len(shape) + 1 :], 1) for shape in stats.shape_values
+        ]
         step = X_full.shape[sample_axis] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
         X = X_full[..., idxs]

@@ -159,19 +159,36 @@ class AWQ(Algorithm):
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
-            is_mergeable = self._backend_entity.is_node_with_weights(merge_node, graph)
-
-            nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
-
             _, weight_port_id = weight_data[0]
+
             weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
             weight_dtype = weight.dtype
             weight = weight.astype(TensorDataType.float32)
 
+            act_ch_axis, act_shape = self._get_activation_channel_axis_and_shape(graph, wp)
+
+            is_mergeable = False
+            if self._backend_entity.is_node_with_weights(merge_node, graph):
+                mergeable_node_weight_data = self._backend_entity.get_weight_names_and_port_ids(merge_node, graph)
+                merge_node_weight_ndims = [
+                    len(self._backend_entity.get_weight_shape(merge_node, port_id, graph))
+                    for _, port_id in mergeable_node_weight_data
+                ]
+                is_mergeable = len(weight.shape) in merge_node_weight_ndims
+
+            nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
+
+            weight_ndim = len(weight.shape)
+            # Weights scale reduction formula:
+            # 2(n-1)-1 -> 2n-3
+            # Example: 2D -> 1 - reduction_axes (reduction_axes=1) = 0
+            #          3D -> 3 - reduction_axes (reduction_axes=1) = 2
+            #          4D -> 5 - reduction_axes (reduction_axes=1) = 4
+            weight_scale_reduction_axes = (weight_ndim * 2) - 3 - wp.reduction_axes[0]
             if is_data_free:
-                scale = self._data_free_step(weight, 1 - wp.reduction_axes[0])
+                scale = self._data_free_step(weight, axis=weight_scale_reduction_axes)
             else:
                 prev_weight, prev_statistics = None, None
                 if is_mergeable:
@@ -181,10 +198,10 @@ class AWQ(Algorithm):
                     prev_weight = self._backend_entity.get_weight(merge_node, prev_weight_port_id, model, graph)
 
                     prev_statistics = statistics[merge_node.node_name]
-                scale = self._data_aware_step(wp, weight, statistics[k], prev_weight, prev_statistics)
+                scale = self._data_aware_step(wp, weight, statistics[k], act_ch_axis, prev_weight, prev_statistics)
 
-            w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
-            a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
+            w_scale = fns.unsqueeze(scale, weight_scale_reduction_axes)
+            a_scale = 1.0 / scale
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
@@ -192,13 +209,26 @@ class AWQ(Algorithm):
             if is_mergeable:  # for MatMul->Multiply->MatMul pattern the scale is merged to the first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
+                    a_scale = fns.unsqueeze(a_scale, wp.reduction_axes[0])
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
-                a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.transpose(a_scale).astype(weight_dtype)
+                act_ndim = len(act_shape)
+                scale_shape = a_scale.shape
+                # Only the last dim in the activation scale is for channel. The others are for batch
+                batch_dims = iter(scale_shape[:-1])
+                # For the last dim of the scale which is assumed channel, we place it as it is
+                # For the rest of the elements we iterate the batch dims and place accordingly
+                # And once we finish, we start placing ones if the current dimension is not
+                # channel axis And it is not a batch dim, we place 1.
+                act_scale_shape = tuple(
+                    scale_shape[-1] if dim == act_ch_axis else next(batch_dims, 1) for dim in range(act_ndim)
+                )
+                a_scale = fns.reshape(a_scale, act_scale_shape)
+
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
+
                 scale_insertion_command = self._backend_entity.scale_insertion_command(
                     merge_node, next_nodes, source_node_output_port, a_scale.data
                 )
@@ -210,55 +240,69 @@ class AWQ(Algorithm):
 
         return transformed_model
 
-    def _data_aware_step(self, wp, weight, statistics, prev_weight=None, prev_statistics=None):
+    def _data_aware_step(self, wp, weight, statistics, act_ch_axis, prev_weight=None, prev_statistics=None):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
-        s, X = process_stats(statistics, self._subset_size)
+        s, X = process_stats(statistics, self._subset_size, act_ch_axis)
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
+
+        is_2d_weight = weight.ndim == 2
 
         assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
         reduction_axis = wp.reduction_axes[0]
 
+        if is_2d_weight:
+            s = fns.unsqueeze(s, 0)
+            X = fns.unsqueeze(X, 0)
+            weight = fns.unsqueeze(weight, 0)
+            prev_weight = fns.unsqueeze(prev_weight, 0) if prev_weight is not None else None
+            reduction_axis += 1
+
         prev_s, prev_w = None, None
         if prev_statistics is not None and prev_weight is not None:
-            prev_s, _ = process_stats(prev_statistics, self._subset_size)
+            prev_s, _ = process_stats(prev_statistics, self._subset_size, act_ch_axis)
             prev_s = prev_s.astype(TensorDataType.float32).max().item()
             prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
 
-        top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
-        topk_idxs = fns.argsort(-s)[:top_k]
+        top_k = max(int(s.shape[-1] * self._percent_to_apply), 1)
+        topk_idxs = fns.argsort(-s)[:, :top_k]
 
         group_size = config.group_size
         if group_size == -1:
-            group_size = s.shape[0]
+            group_size = s.shape[-1]
 
         groups_to_correct = set()
-        for idx in topk_idxs:
-            groups_to_correct.add(idx.data // group_size)
+        for batch_idx in range(topk_idxs.shape[0]):
+            for k_idx in range(topk_idxs.shape[1]):
+                idx = topk_idxs[batch_idx, k_idx].item()
+                group_idx = idx // group_size
+                groups_to_correct.add((batch_idx, group_idx))
 
         groups_to_correct = list(groups_to_correct)
 
-        if reduction_axis == 0:
-            weight = fns.transpose(weight)
-            reduction_axis = 1
+        if reduction_axis == 1:
+            # Weights
+            # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
+            # 2D: [1, hidden_dimension, out_features] -> [1, out_features, hidden_dimension]
+            weight = fns.moveaxis(weight, -1, -2)
+            reduction_axis = weight.ndim - 1
 
-        shape_vector = fns.mean(X, axis=1)
+        shape_vector = fns.mean(X, axis=-1)
         scale = fns.ones_like(shape_vector)
 
         awq_config = deepcopy(config)
         awq_config.group_size = -1
 
-        for gi in groups_to_correct:
+        for batch_idx, gi in groups_to_correct:
             offset = gi * group_size
-            gscale = s[offset : offset + group_size]
+            gscale = s[batch_idx, offset : offset + group_size]
+            gweight = weight[batch_idx, :, offset : offset + group_size]
+            gacts = X[batch_idx, offset : offset + group_size, :]
 
             a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
             a_max = 1e2
             gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
-
-            gweight = weight[:, offset : offset + group_size]
-            gacts = X[offset : offset + group_size, :]
 
             fp32_out = fns.matmul(gweight, gacts)
             min_diff = fns.max(fns.abs(fp32_out))
@@ -275,14 +319,16 @@ class AWQ(Algorithm):
                     # per channel magnitudes for the previous MatMul
                     # mean(abs(prev_weight)) * max(abs((prev_activation))) * prev_weight.shape[reduction_axis]
                     magnitudes = (
-                        (prev_w[offset : offset + group_size] / cur_scale) * prev_s * prev_weight.shape[reduction_axis]
+                        (prev_w[batch_idx, offset : offset + group_size] / cur_scale)
+                        * prev_s
+                        * prev_weight.shape[reduction_axis]
                     )
                     if magnitudes.max() >= threshold:
                         cur_scale = AWQ._clamp_scale(
                             magnitudes,
                             threshold,
                             cur_scale,
-                            prev_w[offset : offset + group_size]
+                            prev_w[batch_idx, offset : offset + group_size]
                             * prev_s
                             * prev_weight.shape[reduction_axis]
                             / threshold,
@@ -290,13 +336,9 @@ class AWQ(Algorithm):
 
                 weights_to_fake_quantize = gweight * cur_scale
                 if not config.is_integer:
-                    g_decompressed_weighs = float_quantize_dequantize_weight(
-                        weights_to_fake_quantize, awq_config, reduction_axis
-                    )
+                    g_decompressed_weighs = float_quantize_dequantize_weight(weights_to_fake_quantize, awq_config, -1)
                 else:
-                    g_decompressed_weighs = integer_quantize_dequantize_weight(
-                        weights_to_fake_quantize, awq_config, reduction_axis
-                    )
+                    g_decompressed_weighs = integer_quantize_dequantize_weight(weights_to_fake_quantize, awq_config, -1)
                 sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                 cur_out = fns.matmul(g_decompressed_weighs, sacts)
@@ -307,9 +349,22 @@ class AWQ(Algorithm):
                 alpha += alpha_step
 
             if best_scale is not None:
-                scale.data[offset : offset + group_size] = best_scale.data
+                scale.data[batch_idx, offset : offset + group_size] = best_scale.data
+
+        if is_2d_weight:
+            scale = fns.squeeze(scale, 0)  # [1, hidden_dim] -> [hidden_dim]
 
         return scale
+
+    def _get_activation_channel_axis_and_shape(
+        self, graph: NNCFGraph, wp: WeightCompressionParameters
+    ) -> tuple[int, tuple[int, ...]]:
+        activation_port_id = self._backend_entity.get_activation_port_id(wp.node_with_weight, graph)
+        act_shape = graph.get_input_edge_by_port_id(wp.node_with_weight, activation_port_id).tensor_shape
+        act_ch_axis = self._backend_entity.get_activation_channel_axis(
+            wp.node_with_weight, activation_port_id, act_shape
+        )
+        return act_ch_axis % len(act_shape), act_shape
 
     @staticmethod
     def _clamp_scale(magnitudes, threshold, scale, clamped_scale):

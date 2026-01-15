@@ -16,7 +16,6 @@ import numpy as np
 import pytest
 
 import nncf
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import AggregatorBase
 from nncf.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.common.tensor_statistics.collectors import TensorCollector
@@ -314,7 +313,7 @@ def test_register_unnamed_statistics(mocker):
 
 class TemplateTestStatisticCollector:
     @abstractmethod
-    def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
+    def get_nncf_tensor(self, value: np.ndarray) -> Tensor:
         pass
 
     @pytest.mark.parametrize("inplace", [False, True])

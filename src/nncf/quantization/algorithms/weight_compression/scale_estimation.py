@@ -139,6 +139,10 @@ class ScaleEstimation:
                 continue
             _, weight_port_id = weight_data[0]
 
+            if self._backend_entity.matmul_has_transposed_activations(wp.node_with_weight, graph):
+                msg = "Transposed activations are not supported yet for the Scale Estimation algorithm"
+                raise nncf.UnsupportedModelError(msg)
+
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
             scale, zero_point = self.calculate_quantization_params(

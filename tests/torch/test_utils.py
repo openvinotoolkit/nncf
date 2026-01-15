@@ -19,7 +19,6 @@ from nncf.common.utils.os import is_windows
 from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import _ModuleState
 from nncf.torch.utils import get_model_device
-from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import is_multidevice
 from nncf.torch.utils import save_module_state
 from nncf.torch.utils import training_mode_switcher
@@ -28,6 +27,22 @@ from tests.torch.helpers import EmptyModel
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_conv
+
+
+def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
+    """
+    Get the datatype of the first model parameter.
+
+    :param model: The PyTorch model.
+    :return: The datatype of the first model parameter.
+        Default to torch.float32 if the model has no parameters.
+    """
+    try:
+        dtype = next(model.parameters()).dtype
+    except StopIteration:
+        # The model had no parameters at all, assume FP32
+        dtype = torch.float32
+    return dtype
 
 
 class EightConvTestModel(nn.Module):

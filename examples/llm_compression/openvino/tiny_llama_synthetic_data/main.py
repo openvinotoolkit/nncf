@@ -12,7 +12,6 @@
 from functools import partial
 
 import numpy as np
-import openvino as ov
 import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
@@ -22,40 +21,29 @@ import nncf
 SEED = 0
 
 
-def transform_func(text, tokenizer, ov_model):
-    input_dtypes = {inp.get_any_name(): inp.get_element_type() for inp in ov_model.inputs}
+def transform_func(text, tokenizer):
     tokens = tokenizer(text)
     input_ids = np.expand_dims(np.array(tokens["input_ids"]), 0)
     attention_mask = np.expand_dims(np.array(tokens["attention_mask"]), 0)
+
     position_ids = np.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
-    res = {
+
+    batch_size = input_ids.shape[0]
+
+    return {
         "input_ids": input_ids,
         "attention_mask": attention_mask,
-        "position_ids": position_ids.reshape(*attention_mask.shape),
+        "position_ids": position_ids,
+        "beam_idx": np.arange(batch_size, dtype=np.int64),
     }
-
-    def gen_pkv(num_heads, head_dim, num_layers):
-        res = {}
-        shape = (1, num_heads, 0, head_dim)
-        for i in range(num_layers):
-            key_name = f"past_key_values.{i}.key"
-            val_name = f"past_key_values.{i}.value"
-            res[key_name] = ov.Tensor(shape=shape, type=input_dtypes[key_name])
-            res[val_name] = ov.Tensor(shape=shape, type=input_dtypes[val_name])
-        return res
-
-    res.update(gen_pkv(4, 64, 22))
-    return res
 
 
 def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    hf_model = OVModelForCausalLM.from_pretrained(
-        MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False
-    )
+    hf_model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False)
 
     dataset_size = 100
 
@@ -63,9 +51,7 @@ def main():
     saved_seed = torch.seed()
     torch.manual_seed(SEED)
     synthetic_dataset = nncf.data.generate_text_data(hf_model, tokenizer, dataset_size=dataset_size)
-    quantization_dataset = nncf.Dataset(
-        synthetic_dataset, partial(transform_func, tokenizer=tokenizer, ov_model=hf_model.model)
-    )
+    quantization_dataset = nncf.Dataset(synthetic_dataset, partial(transform_func, tokenizer=tokenizer))
     hf_model.request = None
     torch.manual_seed(saved_seed)
 

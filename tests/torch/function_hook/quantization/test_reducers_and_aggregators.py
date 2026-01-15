@@ -28,10 +28,8 @@ from nncf.common.tensor_statistics.collectors import MeanReducer
 from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.common.tensor_statistics.collectors import MinReducer
 from nncf.common.tensor_statistics.collectors import QuantileReducer
-from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
-from nncf.torch.tensor_statistics.algo import create_register_input_hook
 from tests.common.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 
@@ -122,17 +120,3 @@ def test_median_function(use_cuda, size, ref):
     res = fns.median(tensor, axis=0)
     assert res.data == ref
     assert res.data.is_cuda == (device == "cuda")
-
-
-def test_create_register_input_hook_with_return_type(mocker):
-    collector = TensorCollector()
-    collector.register_input_for_all_reducers = mocker.MagicMock()
-    hook = create_register_input_hook(collector)
-    input_ = torch.return_types.max([torch.tensor((1,))] * 2)
-    output_ = hook(input_)
-    assert input_ is output_
-    mocker = collector.register_input_for_all_reducers
-    mocker.assert_called_once()
-    attr = mocker.call_args_list[0][0][0]
-    assert isinstance(attr, Tensor)
-    assert attr.data == torch.tensor(1)

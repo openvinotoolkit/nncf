@@ -21,7 +21,6 @@ import pytest
 
 import nncf
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import AggregationAxes
 from nncf.common.tensor_statistics.collectors import AxesMode
 from nncf.common.tensor_statistics.collectors import HAWQAggregator
@@ -414,7 +413,7 @@ class TemplateTestReducersAggregators:
         aggregation_axes: tuple[int, ...],
         is_median: bool,
         different_sizes: bool = False,
-    ) -> Iterator[NNCFTensor]:
+    ) -> Iterator[Tensor]:
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         input_with_outliers = np.array(
             [100_000, -100_000, 200_000, -200_000, 300_000, -300_000, 400_000, -400_000, 500_000]
