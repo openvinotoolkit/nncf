@@ -119,7 +119,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
       - name: Install test requirements
-        run: uv pip install --system -r tests/tools/requirements.txt
+        run: uv pip install --system . -r tests/tools/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run tools precommit test scope

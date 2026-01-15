@@ -173,17 +173,47 @@ class AWQActLinearModel(nn.Module):
         return out
 
 
+class AWQActLinearModel3D(nn.Module):
+    def __init__(self, with_multiply=False, n_layers=8):
+        super().__init__()
+        self.with_multiply = with_multiply
+        self.n_layers = n_layers
+
+        base_w = torch.arange(0, 2 * 8 * 8, dtype=torch.float32).reshape(2, 8, 8) - 32.0
+        self.emb_weight = nn.Parameter(base_w.clone())
+        self.lm_head_weight = nn.Parameter(base_w.clone())
+        n_params = 2 * n_layers if with_multiply else n_layers
+        self.layer_weights = nn.ParameterList(nn.Parameter(base_w) for _ in range(n_params))
+
+    def forward(self, x):
+        out = torch.bmm(x, self.emb_weight)
+
+        for i in range(self.n_layers):
+            node1 = F.relu(torch.bmm(out, self.layer_weights[i]))
+            if self.with_multiply:
+                node2 = torch.selu(torch.bmm(out, self.layer_weights[i]))
+                out = node1 * node2
+            else:
+                out = node1
+
+        out = torch.bmm(out, self.lm_head_weight)
+        return out
+
+
 class AWQLinearModel(nn.Module):
-    def __init__(self, is_int8=False):
+    def __init__(self, non_mergable_pattern: bool = False, is_int8=False):
         super().__init__()
         self.is_int8 = is_int8
+        self.non_mergable_pattern = non_mergable_pattern
 
         self.linear1 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
         self.linear2 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
         self.linear3 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
         self.linear4 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear5 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear6 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+
+        if not non_mergable_pattern:
+            self.linear5 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+            self.linear6 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
 
     def get_linear_layer(self, weights_data, is_int8):
         if not is_int8:
@@ -200,9 +230,19 @@ class AWQLinearModel(nn.Module):
         return linear_layer
 
     def forward(self, x):
-        node1 = self.linear1(x)
-        node2 = self.linear2(x)
-        node_multiply = node1 * node2
+        if self.non_mergable_pattern:
+            node1 = self.linear1(x)
+            y = torch.relu(node1)
+            node_multiply = self.linear2(y)
+        else:
+            node1 = self.linear1(x)
+            node2 = self.linear2(x)
+            node_multiply = node1 * node2
+
+        if self.non_mergable_pattern:
+            node3 = self.linear3(node_multiply)
+            y = torch.relu(node3)
+            return self.linear4(y)
 
         node3 = self.linear3(node_multiply)
         node4 = self.linear4(node3)
@@ -210,6 +250,45 @@ class AWQLinearModel(nn.Module):
         node_multiply_2 = node4 * node5
 
         node6 = self.linear6(node_multiply_2)
+        return node6
+
+
+class AWQLinearModel3D(nn.Module):
+    def __init__(self, non_mergable_pattern: bool = False, is_int8=False):
+        super().__init__()
+        self.is_int8 = is_int8
+        self.non_mergable_pattern = non_mergable_pattern
+
+        weight_data = 0.01 * torch.arange(0, 2 * 8 * 8).reshape(2, 8, 8) + 0.05
+
+        self.w1 = nn.Parameter(weight_data)
+        self.w2 = nn.Parameter(weight_data)
+        self.w3 = nn.Parameter(weight_data)
+        self.w4 = nn.Parameter(weight_data)
+        self.w5 = nn.Parameter(weight_data)
+        self.w6 = nn.Parameter(weight_data)
+
+    def forward(self, x):
+        if self.non_mergable_pattern:
+            node1 = torch.bmm(x, self.w1)
+            y = torch.relu(node1)
+            node_multiply = torch.bmm(y, self.w2)
+        else:
+            node1 = torch.bmm(x, self.w1)
+            node2 = torch.bmm(x, self.w2)
+            node_multiply = node1 * node2
+
+        if self.non_mergable_pattern:
+            node3 = torch.bmm(node_multiply, self.w3)
+            y = torch.relu(node3)
+            return torch.bmm(y, self.w4)
+
+        node3 = torch.bmm(node_multiply, self.w3)
+        node4 = torch.bmm(node3, self.w4)
+        node5 = torch.bmm(node3, self.w5)
+        node_multiply_2 = node4 * node5
+
+        node6 = torch.bmm(node_multiply_2, self.w6)
         return node6
 
 
@@ -500,7 +579,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return SAMPEModel()
 
     @staticmethod
-    def get_sequential_matmul_model() -> torch.nn.Module:
+    def get_sequential_matmul_model(transpose_a: bool) -> torch.nn.Module:
         return SequentialMatmulModel()
 
     @staticmethod
@@ -516,15 +595,19 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_awq_model() -> torch.nn.Module:
-        return AWQLinearModel()
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> torch.nn.Module:
+        if not is_3d_weights:
+            return AWQLinearModel(non_mergable_pattern=non_mergable_pattern)
+        return AWQLinearModel3D(non_mergable_pattern=non_mergable_pattern)
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> torch.nn.Module:
         return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes)
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
+        if is_3d_weights:
+            return AWQActLinearModel3D(with_multiply=with_multiply, n_layers=n_layers)
         return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
 
     @staticmethod
@@ -536,7 +619,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model: torch.nn.Module, ref_ids: list[int]) -> None:
+    def check_weights(model: torch.nn.Module, ref_ids: list[int], transpose_a=False) -> None:
         all_names = model.get_weight_names_in_exec_order()
         low_precision_nodes = list(map(lambda i: all_names[i], ref_ids))
         decompressed_modules = list(
@@ -715,8 +798,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(unpacked_w)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
-        return "linear5/linear/0"
+    def get_ignored_scope_name(is_3d_weights) -> str:
+        if not is_3d_weights:
+            return "linear5/linear/0"
+        return "/bmm/4"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:
@@ -746,12 +831,74 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "linear3/linear/0": Tensor(
-                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
-            )
-        }
+    @pytest.fixture
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
+        return [
+            {
+                "linear3/linear/0": Tensor(
+                    torch.tensor(
+                        [
+                            [1.226455],
+                            [1.205499],
+                            [1.141340],
+                            [1.097436],
+                            [1.064355],
+                            [1.037971],
+                            [1.016118],
+                            [0.997526],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+                "linear2/linear/0": Tensor(
+                    torch.tensor(
+                        [
+                            [
+                                [
+                                    1.990990,
+                                    1.863296,
+                                    1.575980,
+                                    1.397459,
+                                    1.272275,
+                                    1.177998,
+                                    1.103558,
+                                    1.042768,
+                                ]
+                            ]
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+            },
+            {
+                "/bmm/2": Tensor(
+                    torch.tensor(
+                        [
+                            [[1.109999, 1.108342, 1.102878, 1.097587, 1.092457, 1.087481, 1.082649, 1.077955]],
+                            [[0.130212, 0.129630, 0.127712, 0.125842, 0.124017, 0.122236, 0.120498, 0.118800]],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+                "/bmm/1": Tensor(
+                    torch.tensor(
+                        [
+                            [[1.146233, 1.144337, 1.138152, 1.132161, 1.126355, 1.120723, 1.115255, 1.109944]],
+                            [[0.259758, 0.258977, 0.256409, 0.253892, 0.251424, 0.249004, 0.246630, 0.244301]],
+                        ],
+                        dtype=torch.float32,
+                    )
+                ),
+            },
+        ]
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, is_3d_weights: bool = False):
+        pass
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return False
 
 
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])

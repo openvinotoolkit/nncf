@@ -106,6 +106,7 @@ class ModelBuilder:
         output: Optional[str] = None,
         weight_data: Optional[np.ndarray] = None,
         bias_data: Optional[np.ndarray] = None,
+        trans_a: int = 0,
         trans_b: int = 0,
     ) -> str:
         i = len(self._nodes)
@@ -140,7 +141,7 @@ class ModelBuilder:
                 inputs=[input, w_name, b_name],
                 outputs=[output],
                 name=f"Gemm_{i}",
-                transA=0,
+                transA=trans_a,
                 transB=trans_b,
             )
         )

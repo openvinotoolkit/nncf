@@ -11,7 +11,6 @@
 from functools import partial
 
 import numpy as np
-import openvino as ov
 from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
@@ -19,7 +18,7 @@ from transformers import AutoTokenizer
 import nncf
 
 
-def transform_fn(data, model, tokenizer):
+def transform_fn(data, tokenizer):
     tokenized_text = tokenizer(data["text"], return_tensors="np")
     input_ids = tokenized_text["input_ids"]
     attention_mask = tokenized_text["attention_mask"]
@@ -29,20 +28,11 @@ def transform_fn(data, model, tokenizer):
     inputs["attention_mask"] = tokenized_text["attention_mask"]
     position_ids = np.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
-
-    # The magic forms KV cache as model inputs
-    batch_size = input_ids.shape[0]
-    for input_name in model.key_value_input_names:
-        model_inputs = model.model.input(input_name)
-        shape = model_inputs.get_partial_shape()
-        shape[0] = batch_size
-        if shape[2].is_dynamic:
-            shape[2] = 0
-        else:
-            shape[1] = 0
-        inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
     inputs["position_ids"] = position_ids
+
+    batch_size = input_ids.shape[0]
+    inputs["beam_idx"] = np.arange(batch_size, dtype=int)
+
     return inputs
 
 
@@ -85,7 +75,6 @@ def main():
         export=True,
         load_in_8bit=False,
         compile=False,
-        stateful=False,
         ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
 
@@ -99,7 +88,7 @@ def main():
     answers_by_questions = generate_answers(questions, model, tokenizer)
     print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
-    quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=model, tokenizer=tokenizer))
+    quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, tokenizer=tokenizer))
 
     model.model = nncf.quantize(
         model.model,

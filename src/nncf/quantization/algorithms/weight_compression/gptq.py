@@ -124,6 +124,11 @@ class GPTQ:
                 CompressWeightsMode.INT8_SYM,
             ]:
                 continue
+
+            if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, graph):
+                msg = "Transposed activations are not supported yet for the GPTQ algorithm"
+                raise nncf.UnsupportedModelError(msg)
+
             _, input_tensors = next(iter(inputs.items()))
             hessian = self._calculate_hessian(node, input_tensors)
             scale, zero_point = self._quantize_weights(model, graph, wc_params, hessian, input_tensors)
