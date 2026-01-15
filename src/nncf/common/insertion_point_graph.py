@@ -47,13 +47,11 @@ class PostHookInsertionPoint:
         return self.target_node_name
 
 
-class InsertionPointGraph(nx.DiGraph):  # type: ignore
+class InsertionPointGraph(nx.MultiDiGraph):  # type: ignore
     """
     This graph is built from the NNCFGraph representation of the model control flow graph and adds ephemeral
     "insertion point nodes" into the NNCF model graph representation corresponding to operator pre- and
-    post-hooks. Module pre-op and post-op insertion points are currently not reflected here, but they are
-    probably not required for quantizing activations, for which the quantizer propagation makes sense.
-    This "insertion point graph" representation is useful for quantizer propagation and for referencing
+    post-hooks. This "insertion point graph" representation is useful for quantizer propagation and for referencing
     the compression algorithm hooks to the model operations to which they are applied to.
     """
 
@@ -118,13 +116,11 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
         for edge in self._base_nx_graph.edges:
             input_port_id = self._base_nx_graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
             dtype = self._base_nx_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR]
-            parallel_input_port_ids = self._base_nx_graph.edges[edge][NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]
-            from_node, to_node = edge
+            from_node, to_node, _ = edge
 
             attrs = {
                 INPUT_PORT_ID: input_port_id,
                 self.IS_INTEGER_PATH_EDGE_ATTR: dtype is Dtype.INTEGER,
-                NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR: parallel_input_port_ids,
             }
             self.add_edge(from_node, to_node, **attrs)
 
@@ -143,19 +139,17 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
             if original_node.node_name in target_node_name_vs_pre_hook_ips:
                 pre_hook_ips = list(target_node_name_vs_pre_hook_ips[original_node.node_name])
                 pre_hook_ips = sorted(pre_hook_ips, key=lambda x: x.input_port_id)
-                in_edges = list(self.in_edges(operator_node_key))
+                in_edges = list(self.in_edges(operator_node_key, keys=True))
                 input_port_id_vs_edge = {}
                 for edge in in_edges:
                     input_port_id = self.edges[edge][INPUT_PORT_ID]
                     input_port_id_vs_edge[input_port_id] = edge
-                    for parallel_input_port_id in self.edges[edge][NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
-                        input_port_id_vs_edge[parallel_input_port_id] = edge
 
                 encountered_input_edges = set()
                 for pre_hook_point in pre_hook_ips:
                     edge = input_port_id_vs_edge[pre_hook_point.input_port_id]
                     original_edge_attrs = self.edges[edge]
-                    from_node_key, to_node_key = edge
+                    from_node_key, to_node_key, _ = edge
                     ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), pre_hook_point.input_port_id)
 
                     pre_hook_ip_attrs = {
@@ -183,14 +177,14 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
                 }
                 ip_node_key = self.get_post_hook_node_key(str(operator_node_key))
                 self.add_node(ip_node_key, **post_hook_ip_attrs)
-                out_edges = list(self.out_edges(operator_node_key))
+                out_edges = list(self.out_edges(operator_node_key, keys=True))
                 has_integer_outputs = False
                 for out_edge in out_edges:
                     # Need to preserve original edge attributes in order not to lose
                     # input port ID information
                     original_edge_attrs = self.edges[out_edge]
-                    from_node_key, to_node_key = out_edge
-                    self.remove_edge(from_node_key, to_node_key)
+                    from_node_key, to_node_key, _ = out_edge
+                    self.remove_edge(*out_edge)
                     self.add_edge(ip_node_key, to_node_key, **original_edge_attrs)
                     if original_edge_attrs[self.IS_INTEGER_PATH_EDGE_ATTR]:
                         has_integer_outputs = True
@@ -212,7 +206,7 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
             # tensor output. In multi-output case when some of tensors are integer, need to make
             # sure that the propagation won't happen from a pre-hook of the op consuming the floating part
             # of the output into the post-hook of the operation that produces both int and float tensors.
-            from_node_key, to_node_key = edge
+            from_node_key, to_node_key, _ = edge
             from_node = self.nodes[from_node_key]
             to_node = self.nodes[to_node_key]
             if (
@@ -220,12 +214,14 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
                 and to_node[self.NODE_TYPE_NODE_ATTR] is InsertionPointGraphNodeType.PRE_HOOK
             ):
                 post_hook_has_integer_outputs = False
-                for follower_node_key in self.successors(from_node_key):
-                    if self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR]:
+                for _, follower_node_key, follower_edge_key in self.out_edges(from_node_key, keys=True):
+                    if self.edges[from_node_key, follower_node_key, follower_edge_key][self.IS_INTEGER_PATH_EDGE_ATTR]:
                         post_hook_has_integer_outputs = True
                 if post_hook_has_integer_outputs:
-                    for follower_node_key in self.successors(from_node_key):
-                        self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR] = True
+                    for _, follower_node_key, follower_edge_key in self.out_edges(from_node_key, keys=True):
+                        self.edges[from_node_key, follower_node_key, follower_edge_key][
+                            self.IS_INTEGER_PATH_EDGE_ATTR
+                        ] = True
 
     @staticmethod
     def _get_default_pre_hook_ip_list(nncf_graph: NNCFGraph) -> list[PreHookInsertionPoint]:
@@ -235,8 +231,8 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
             pred_nodes = nncf_graph.get_previous_nodes(nncf_node)
 
             for pred_node in pred_nodes:
-                input_edge = nncf_graph.get_edge(pred_node, nncf_node)
-                input_port_ids = [input_edge.input_port_id] + input_edge.parallel_input_port_ids
+                input_edges = nncf_graph.get_edges(pred_node, nncf_node)
+                input_port_ids = [edge.input_port_id for edge in input_edges]
                 node_name = nncf_node.node_name
                 for input_port_id in input_port_ids:
                     allowed_pre_hook_insertion_points.append(PreHookInsertionPoint(node_name, input_port_id))
@@ -261,7 +257,7 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
         constant_nodes_base_nx_graph = [node for node in nodes if node in self._base_nx_graph]
         self._base_nx_graph.remove_nodes_from(constant_nodes_base_nx_graph)
 
-    def get_base_nx_graph(self) -> nx.DiGraph:
+    def get_base_nx_graph(self) -> nx.MultiDiGraph:
         """
         Returns the self._base_nx_graph.
 
@@ -328,8 +324,8 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
             input_node_key = match[0]
             output_node_key = match[-1]
 
-            in_edges = list(self.in_edges(input_node_key))
-            out_edges = list(self.out_edges(output_node_key))
+            in_edges = list(self.in_edges(input_node_key, keys=True))
+            out_edges = list(self.out_edges(output_node_key, keys=True))
 
             in_edge_copies_dict = {}
             for in_edge_key in in_edges:

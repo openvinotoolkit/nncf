@@ -101,12 +101,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         ):
             return False
         for prev_node in graph.get_previous_nodes(node):
-            edge = graph.get_edge(prev_node, node)
-            if edge.input_port_id not in node.metatype.weight_port_ids:
-                continue
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
-            if weight_node is not None:
-                return True
+            for edge in graph.get_edges(prev_node, node):
+                if edge.input_port_id not in node.metatype.weight_port_ids:
+                    continue
+                weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
+                if weight_node is not None:
+                    return True
         return False
 
     @staticmethod
@@ -116,9 +116,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
             if weight_node is None:
                 continue
-            edge = graph.get_edge(prev_node, node)
-            if edge.input_port_id in node.metatype.weight_port_ids:
-                weight_port_ids.append((weight_node.layer_attributes.name, edge.input_port_id))
+            for edge in graph.get_edges(prev_node, node):
+                if edge.input_port_id in node.metatype.weight_port_ids:
+                    weight_port_ids.append((weight_node.layer_attributes.name, edge.input_port_id))
         return weight_port_ids
 
     @staticmethod
@@ -152,8 +152,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         for prev_node in graph.get_previous_nodes(node):
             if prev_node.metatype in CONST_NOOP_METATYPES:
                 continue
-            edge = graph.get_edge(prev_node, node)
-            activation_ports.append(edge.input_port_id)
+            for edge in graph.get_edges(prev_node, node):
+                activation_ports.append(edge.input_port_id)
         assert len(activation_ports) == 1
         return activation_ports[0]
 

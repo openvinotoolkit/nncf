@@ -310,7 +310,6 @@ def _normalize_nncf_graph(nncf_graph: NNCFGraph, fx_graph: torch.fx.Graph):
             input_port_id=edge.input_port_id,
             output_port_id=edge.output_port_id,
             dtype=dtype,
-            parallel_input_port_ids=edge.parallel_input_port_ids,
         )
     return norm_nncf_graph
 

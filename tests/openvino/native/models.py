@@ -1320,7 +1320,7 @@ class UnifiedScalesModel(OVReferenceModel):
 
 
 class RoPEModel(OVReferenceModel):
-    def _create_ov_model(self):
+    def _create_ov_model(self, degree: int):
         position_ids = opset.parameter([1, 10], name="position_ids")
 
         unsqueeze = opset.unsqueeze(position_ids, 0, name="unsqueeze")
@@ -1332,7 +1332,7 @@ class RoPEModel(OVReferenceModel):
 
         matmul = opset.matmul(broadcast, convert, transpose_a=False, transpose_b=False, name="MatMul")
         transpose = opset.transpose(matmul, [0, 2, 1], name="transpose")
-        concat = opset.concat([transpose], axis=0, name="concat")
+        concat = opset.concat([transpose] * degree, axis=0, name="concat")
         sin = opset.sin(concat, name="sin")
         cos = opset.cos(concat, name="cos")
         sin_result = opset.result(sin, name="sin_result")
@@ -1374,4 +1374,41 @@ class MatMul(OVReferenceModel):
         result_node = opset.result(matmul_node, name="Result")
 
         model = ov.Model([result_node], [input_node], name="MLP_Model")
+        return model
+
+
+@SYNTHETIC_MODELS.register()
+class YOLO26AttentionBlock(OVReferenceModel):
+    def _create_ov_model(self):
+        input_node = opset.parameter([1, 2, 4, 4], name="Input")
+
+        kernel = self._rng.random((6, 2, 1, 1)).astype(np.float32)
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        qkv = opset.convolution(input_node, kernel, strides, pads, pads, dilations, name="Conv")
+        split = opset.split(qkv, axis=1, num_splits=3, name="Split")
+        split_outputs = split.outputs()
+        qk = opset.matmul(split_outputs[0], split_outputs[1], transpose_a=True, transpose_b=True, name="MatMul_qk")
+        qk = opset.multiply(qk, np.sqrt(6, dtype=np.float32), name="Mul")
+        qk = opset.softmax(qk, axis=1, name="SoftMax")
+        attn = opset.matmul(qk, split_outputs[2], transpose_a=False, transpose_b=True, name="MatMul_qkv")
+
+        result_node = opset.result(attn, name="Result")
+
+        model = ov.Model([result_node], [input_node], name="YOLO26AttnBlock")
+        return model
+
+
+class ParallelEdgesOutputPortIdModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_node = opset.parameter([1, 2, 4, 4], name="Input")
+        split = opset.split(input_node, axis=1, num_splits=2, name="Split")
+        split_outputs = split.outputs()
+        matmul = opset.matmul(split_outputs[0], split_outputs[1], transpose_a=False, transpose_b=True, name="MatMul")
+        matmul1 = opset.matmul(split_outputs[0], split_outputs[1], transpose_a=False, transpose_b=True, name="MatMul1")
+        result_node = opset.result(matmul, name="Result")
+        result_node1 = opset.result(matmul1, name="Result1")
+
+        model = ov.Model([result_node, result_node1], [input_node], name="ParallelEdgesOutputPortIdModel")
         return model

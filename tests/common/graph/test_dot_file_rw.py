@@ -22,8 +22,8 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 @pytest.fixture(scope="module")
-def ref_graph() -> nx.DiGraph:
-    graph = nx.DiGraph()
+def ref_graph() -> nx.MultiDiGraph:
+    graph = nx.MultiDiGraph()
     graph.add_node("Node::A", label=":baz")
     graph.add_node("Node::B", label="qux:")
     graph.add_node("Node::C")

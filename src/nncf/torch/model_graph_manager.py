@@ -67,13 +67,13 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> NNCFNode |
     :return: The NNCF node providing the constant input to the specified port, or None if no such node is found.
     """
     for prev_node in graph.get_previous_nodes(node):
-        edge = graph.get_edge(prev_node, node)
-        if edge.input_port_id == port_id:
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
-            if weight_node is None:
-                msg = "Could not find a constant node in the model graph."
-                raise nncf.InternalError(msg)
-            return weight_node
+        for edge in graph.get_edges(prev_node, node):
+            if edge.input_port_id == port_id:
+                weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
+                if weight_node is None:
+                    msg = "Could not find a constant node in the model graph."
+                    raise nncf.InternalError(msg)
+                return weight_node
 
 
 def split_const_name(const_name: str) -> tuple[str, str]:

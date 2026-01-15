@@ -378,7 +378,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def get_RoPE_model() -> onnx.ModelProto:
+    def get_RoPE_model(degree: int) -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_rope_weight_compression() test.
         """
@@ -388,7 +388,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_unsqueeze(x, axes=(2,))
         x = mb.add_matmul(x, shape=(1, 5))
         x = mb.add_transpose(x, perm=[0, 2, 1])
-        x = mb.add_concat([x], axis=-1)
+        x = mb.add_concat([x] * degree, axis=-1)
         x1 = mb.add_sin(x)
         x2 = mb.add_cos(x)
 

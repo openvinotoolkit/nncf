@@ -35,6 +35,7 @@ from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.cross_fw.test_templates.helpers import YOLO26AttentionBlock
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.fx.test_sanity import count_q_dq
@@ -72,6 +73,7 @@ TEST_MODELS = (
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
     ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
+    ModelCase(YOLO26AttentionBlock, "yolo26_attn_block", YOLO26AttentionBlock.INPUT_SIZE),
     ModelCase(EmbeddingSumModel, "embedding_bag_model", [1, 1]),
 )
 

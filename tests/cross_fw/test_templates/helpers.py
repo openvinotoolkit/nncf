@@ -494,8 +494,9 @@ class OneDimMM(nn.Module):
 class RoPEModel(nn.Module):
     INPUT_SIZE = [1, 10]
 
-    def __init__(self):
+    def __init__(self, degree: int):
         super().__init__()
+        self._degree = degree
         with set_torch_seed():
             self.data = torch.randn([5])
 
@@ -504,7 +505,7 @@ class RoPEModel(nn.Module):
         reshape = torch.reshape(self.data, [1, 5, 1])
         x = torch.matmul(reshape, x)
         x = torch.transpose(x, 2, 1)
-        x = torch.cat([x], dim=2)
+        x = torch.cat([x] * self._degree, dim=2)
         x1 = x.sin()
         x2 = x.cos()
         return x1, x2
@@ -529,3 +530,33 @@ class SAMPEModel(nn.Module):
         x2 = x.cos()
         x = torch.cat([x1, x2], dim=-1)
         return x
+
+
+class ParallelEdgesModel(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self, different_output_ports=True):
+        super().__init__()
+        self._different_output_ports = different_output_ports
+        self.conv = create_conv(2, 2, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        a, b = torch.split(x, 1, dim=1)
+        if self._different_output_ports:
+            return torch.mul(a, b), torch.mul(a, b)
+        return torch.mul(a, a), torch.mul(a, a)
+
+
+class YOLO26AttentionBlock(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.qkv_conv = create_conv(2, 6, 1)
+
+    def forward(self, x):
+        x = self.qkv_conv(x)
+        q, k, v = torch.split(x, 2, dim=1)
+        attn = torch.softmax(torch.matmul(q, k) / np.sqrt(2), dim=1)
+        return torch.matmul(v, attn)
