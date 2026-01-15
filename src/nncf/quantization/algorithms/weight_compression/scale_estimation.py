@@ -140,13 +140,7 @@ class ScaleEstimation:
             _, weight_port_id = weight_data[0]
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
-
-            activation_port_id = self._backend_entity.get_activation_port_id(wp.node_with_weight, graph)
-            act_shape = graph.get_input_edge_by_port_id(wp.node_with_weight, activation_port_id).tensor_shape
-            act_ch_axis = self._backend_entity.get_activation_channel_axis(
-                wp.node_with_weight, activation_port_id, act_shape
-            )
-            act_ch_axis %= len(act_shape)
+            act_ch_axis, _ = self._backend_entity.get_activation_channel_axis_and_shape(graph, wp.node_with_weight)
 
             scale, zero_point = self.calculate_quantization_params(
                 stats,

@@ -294,6 +294,23 @@ class WeightCompressionAlgoBackend(ABC):
         :return: Channel axis number.
         """
 
+    def get_activation_channel_axis_and_shape(
+        self,
+        graph: NNCFGraph,
+        node: NNCFNode,
+    ) -> tuple[int, tuple[int, ...]]:
+        """
+        Returns the activation channel axis and activation tensor shape for a node with weights.
+
+        :param graph: NNCF graph containing the model structure and tensor metadata.
+        :param node: NNCF node with weights instance.
+        :return: A tuple consisting of activation channel axis and activation tensor shape.
+        """
+        activation_port_id = self.get_activation_port_id(node, graph)
+        act_shape = graph.get_input_edge_by_port_id(node, activation_port_id).tensor_shape
+        act_ch_axis = self.get_activation_channel_axis(node, activation_port_id, act_shape)
+        return act_ch_axis % len(act_shape), act_shape
+
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
