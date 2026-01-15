@@ -206,7 +206,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         if per_channel:
             observer = torchao.quantization.pt2e.observer.PerChannelMinMaxObserver
         else:
-            observer = torchao.quantization.observer.MinMaxObserver
+            observer = torchao.quantization.pt2e.observer.MinMaxObserver
 
         if dtype is TensorDataType.int8:
             level_high = 127
