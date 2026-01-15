@@ -75,18 +75,18 @@ class LinearModel(OVReferenceModel):
 
 
 class SimpleMoEModel(OVReferenceModel):
-    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4, tranpsose_a: bool = False):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4, transpose_a: bool = False):
         input_shape = [num_experts, seq_len, hidden_dim]
         input_1 = opset.parameter(input_shape, name="Input")
 
         weight_data = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
         weight_data = weight_data.reshape(num_experts, hidden_dim, out_dim)
 
-        if tranpsose_a:
+        if transpose_a:
             transpose = opset.transpose(input_1, (0, 2, 1))
         else:
             transpose = input_1
-        matmul = opset.matmul(transpose, weight_data, transpose_a=False, transpose_b=False, name="MoE_MatMul")
+        matmul = opset.matmul(transpose, weight_data, transpose_a=transpose_a, transpose_b=False, name="MoE_MatMul")
 
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
