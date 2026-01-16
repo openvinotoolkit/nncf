@@ -161,7 +161,7 @@ class GPTQ:
                 scales.append(batch_scale)
                 zero_points.append(batch_zero_point)
             scale = fns.stack(scales, axis=0) if is_3d_weight else scales[0]
-            zero_point = fns.stack(zero_points, axis=0) if is_3d_weight else zero_points[0]
+            zero_point = fns.stack(zero_points, axis=0) if is_3d_weight and None not in zero_points else zero_points[0]
             weight = fns.stack(weights, axis=0) if is_3d_weight else weights[0]
             self._backend_entity.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, weight)
             res[wc_params.weight_name] = CompressedWeight(None, scale, zero_point, None)
