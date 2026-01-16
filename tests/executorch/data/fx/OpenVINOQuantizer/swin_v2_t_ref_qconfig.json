@@ -1,0 +1,2353 @@
+{
+    "quantization_points": {
+        "('conv2d',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_8',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_11',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_5',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_16',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_6',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_18',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_7',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_21',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_6',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_7',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_6',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_7',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_22',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_8',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_12',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_24',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_10',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_8',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_8',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_29',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_11',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_31',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_12',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_34',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_10',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_11',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_10',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_11',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_35',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_13',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_19',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_37',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_14',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_12',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_13',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_12',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_13',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_41',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_15',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_43',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_16',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_46',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_14',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_15',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_14',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_15',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_47',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_17',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_26',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_49',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_18',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_16',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_17',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_16',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_17',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_53',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_19',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_55',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_20',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_58',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_18',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_19',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_18',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_19',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_59',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_21',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_33',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_61',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_22',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_23',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_20',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_21',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_20',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_21',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_66',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_24',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_68',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_25',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_22',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('div_23',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_22',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('matmul_23',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_72',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_26',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_74',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_27',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_28',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('adaptive_avg_pool2d',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_75',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_2', 'linear_4')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_6',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_6', 'linear_10')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_9',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_9', 'linear_17')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_13',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_13', 'linear_23')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_16', 'linear_30')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_16',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_20',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_20', 'linear_36')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_23', 'linear_42')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_23',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_27', 'linear_48')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_27',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_30',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_30', 'linear_54')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_34',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_34', 'linear_60')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_37', 'linear_67')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_37',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_40', 'linear_73')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_40',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('sub',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('sub_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('sub_2',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('sub_3',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('sub_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_4',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_12',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_11',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_25',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_18',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_25',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_32',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_62',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_1', 'linear_2')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_8', 'linear_15')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_8',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_15',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_15', 'linear_28')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_22',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_22', 'linear_40')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_29',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_29', 'linear_52')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_36',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_36', 'linear_65')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_39',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('add_39', 'linear_71')_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('conv2d',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_2',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_3',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_1',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_4',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_5',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_2',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_8',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_9',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_3',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_10',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_11',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_4',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_12',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_5',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_15',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_16',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_6',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_17',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_18',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_7',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_21',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_22',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_8',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_23',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_24',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_9',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_25',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_10',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_28',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_29',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_11',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_30',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_31',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_12',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_34',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_35',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_13',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_36',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_37',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_14',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_40',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_41',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_15',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_42',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_43',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_16',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_46',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_47',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_17',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_48',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_49',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_18',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_52',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_53',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_19',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_54',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_55',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_20',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_58',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_59',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_21',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_60',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_61',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_22',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_62',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_23',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_65',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_66',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_24',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_67',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_68',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_25',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_71',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_72',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_26',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_73',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_74',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('layer_norm_27',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('layer_norm_28',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_75',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        }
+    },
+    "unified_scale_groups": {
+        "0": [
+            377
+        ],
+        "1": [
+            379
+        ],
+        "2": [
+            383
+        ]
+    },
+    "shared_input_operation_set_groups": {
+        "0": [
+            1,
+            392
+        ],
+        "1": [
+            2,
+            393
+        ],
+        "2": [
+            4,
+            5
+        ],
+        "3": [
+            6,
+            7
+        ],
+        "4": [
+            8,
+            9
+        ],
+        "5": [
+            11,
+            12
+        ],
+        "6": [
+            13,
+            395
+        ],
+        "7": [
+            14,
+            396
+        ],
+        "8": [
+            18,
+            398
+        ],
+        "9": [
+            19,
+            399
+        ],
+        "10": [
+            22,
+            400
+        ],
+        "11": [
+            23,
+            24
+        ],
+        "12": [
+            25,
+            26
+        ],
+        "13": [
+            27,
+            28
+        ],
+        "14": [
+            34,
+            35
+        ],
+        "15": [
+            36,
+            401
+        ],
+        "16": [
+            37,
+            402
+        ],
+        "17": [
+            38,
+            39
+        ],
+        "18": [
+            41,
+            404
+        ],
+        "19": [
+            42,
+            405
+        ],
+        "20": [
+            46,
+            407
+        ],
+        "21": [
+            48,
+            49
+        ],
+        "22": [
+            50,
+            51
+        ],
+        "23": [
+            52,
+            53
+        ],
+        "24": [
+            55,
+            56
+        ],
+        "25": [
+            57,
+            409
+        ],
+        "26": [
+            58,
+            410
+        ],
+        "27": [
+            62,
+            412
+        ],
+        "28": [
+            63,
+            413
+        ],
+        "29": [
+            66,
+            414
+        ],
+        "30": [
+            67,
+            68
+        ],
+        "31": [
+            69,
+            70
+        ],
+        "32": [
+            71,
+            72
+        ],
+        "33": [
+            78,
+            79
+        ],
+        "34": [
+            80,
+            415
+        ],
+        "35": [
+            81,
+            416
+        ],
+        "36": [
+            82,
+            83
+        ],
+        "37": [
+            85,
+            418
+        ],
+        "38": [
+            86,
+            419
+        ],
+        "39": [
+            90,
+            421
+        ],
+        "40": [
+            92,
+            93
+        ],
+        "41": [
+            94,
+            95
+        ],
+        "42": [
+            96,
+            97
+        ],
+        "43": [
+            99,
+            100
+        ],
+        "44": [
+            101,
+            423
+        ],
+        "45": [
+            102,
+            424
+        ],
+        "46": [
+            106,
+            426
+        ],
+        "47": [
+            107,
+            427
+        ],
+        "48": [
+            110,
+            428
+        ],
+        "49": [
+            111,
+            112
+        ],
+        "50": [
+            113,
+            114
+        ],
+        "51": [
+            115,
+            116
+        ],
+        "52": [
+            122,
+            123
+        ],
+        "53": [
+            124,
+            429
+        ],
+        "54": [
+            125,
+            430
+        ],
+        "55": [
+            126,
+            127
+        ],
+        "56": [
+            129,
+            432
+        ],
+        "57": [
+            130,
+            433
+        ],
+        "58": [
+            134,
+            135
+        ],
+        "59": [
+            136,
+            137
+        ],
+        "60": [
+            138,
+            139
+        ],
+        "61": [
+            141,
+            142
+        ],
+        "62": [
+            143,
+            435
+        ],
+        "63": [
+            144,
+            436
+        ],
+        "64": [
+            148,
+            438
+        ],
+        "65": [
+            149,
+            439
+        ],
+        "66": [
+            152,
+            440
+        ],
+        "67": [
+            153,
+            154
+        ],
+        "68": [
+            155,
+            156
+        ],
+        "69": [
+            157,
+            158
+        ],
+        "70": [
+            164,
+            165
+        ],
+        "71": [
+            166,
+            441
+        ],
+        "72": [
+            167,
+            442
+        ],
+        "73": [
+            168,
+            169
+        ],
+        "74": [
+            171,
+            444
+        ],
+        "75": [
+            172,
+            445
+        ],
+        "76": [
+            176,
+            177
+        ],
+        "77": [
+            178,
+            179
+        ],
+        "78": [
+            180,
+            181
+        ],
+        "79": [
+            183,
+            184
+        ],
+        "80": [
+            185,
+            447
+        ],
+        "81": [
+            186,
+            448
+        ],
+        "82": [
+            190,
+            450
+        ],
+        "83": [
+            191,
+            451
+        ],
+        "84": [
+            194,
+            452
+        ],
+        "85": [
+            195,
+            196
+        ],
+        "86": [
+            197,
+            198
+        ],
+        "87": [
+            199,
+            200
+        ],
+        "88": [
+            206,
+            207
+        ],
+        "89": [
+            208,
+            453
+        ],
+        "90": [
+            209,
+            454
+        ],
+        "91": [
+            210,
+            211
+        ],
+        "92": [
+            213,
+            456
+        ],
+        "93": [
+            214,
+            457
+        ],
+        "94": [
+            218,
+            459
+        ],
+        "95": [
+            220,
+            221
+        ],
+        "96": [
+            222,
+            223
+        ],
+        "97": [
+            224,
+            225
+        ],
+        "98": [
+            227,
+            228
+        ],
+        "99": [
+            229,
+            461
+        ],
+        "100": [
+            230,
+            462
+        ],
+        "101": [
+            234,
+            464
+        ],
+        "102": [
+            235,
+            465
+        ],
+        "103": [
+            239,
+            240
+        ],
+        "104": [
+            241,
+            242
+        ],
+        "105": [
+            243,
+            244
+        ],
+        "106": [
+            246,
+            247
+        ],
+        "107": [
+            248,
+            467
+        ],
+        "108": [
+            249,
+            468
+        ],
+        "109": [
+            253,
+            470
+        ],
+        "110": [
+            254,
+            471
+        ],
+        "111": [
+            257,
+            472
+        ],
+        "112": [
+            258
+        ],
+        "113": [
+            259,
+            473
+        ],
+        "114": [
+            21,
+            264,
+            397
+        ],
+        "115": [
+            44,
+            269,
+            403
+        ],
+        "116": [
+            65,
+            277,
+            411
+        ],
+        "117": [
+            88,
+            282,
+            417
+        ],
+        "118": [
+            109,
+            290,
+            425
+        ],
+        "119": [
+            132,
+            295,
+            431
+        ],
+        "120": [
+            151,
+            300,
+            437
+        ],
+        "121": [
+            174,
+            305,
+            443
+        ],
+        "122": [
+            193,
+            310,
+            449
+        ],
+        "123": [
+            216,
+            315,
+            455
+        ],
+        "124": [
+            237,
+            323,
+            463
+        ],
+        "125": [
+            256,
+            328,
+            469
+        ],
+        "126": [
+            344
+        ],
+        "127": [
+            347
+        ],
+        "128": [
+            350
+        ],
+        "129": [
+            353
+        ],
+        "130": [
+            356
+        ],
+        "131": [
+            32,
+            33,
+            360,
+            376
+        ],
+        "132": [
+            377,
+            406
+        ],
+        "133": [
+            76,
+            77,
+            363,
+            378
+        ],
+        "134": [
+            379,
+            420
+        ],
+        "135": [
+            120,
+            121,
+            366,
+            380
+        ],
+        "136": [
+            162,
+            163,
+            369,
+            381
+        ],
+        "137": [
+            204,
+            205,
+            372,
+            382
+        ],
+        "138": [
+            383,
+            458
+        ],
+        "139": [
+            16,
+            384,
+            394
+        ],
+        "140": [
+            60,
+            385,
+            408
+        ],
+        "141": [
+            104,
+            386,
+            422
+        ],
+        "142": [
+            146,
+            387,
+            434
+        ],
+        "143": [
+            188,
+            388,
+            446
+        ],
+        "144": [
+            232,
+            389,
+            460
+        ],
+        "145": [
+            251,
+            390,
+            466
+        ]
+    }
+}
