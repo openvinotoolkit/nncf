@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from collections import Counter
+from typing import Any, Union
 
 import torch.fx
 
@@ -21,7 +22,6 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -222,3 +222,46 @@ class GraphConverter:
 
         input_port_id = dist_node.all_input_nodes.index(source_node)
         return input_port_id, output_port_id, tensor_shape
+
+
+def apply_args_defaults(
+    args: list[Any], kwargs: dict[str, Any], args_signature=list[Union[str, tuple[str, Any]]]
+) -> dict[str, Any]:
+    """
+    Combines positional arguments (`args`) and keyword arguments (`kwargs`)
+    according to the provided `args_signature`.
+
+    The `args_signature` is a list that defines the expected arguments.
+    Each element in the list can be either:
+
+    - string: This represents the name of an argument expected to be a positional argument.
+    - tuple: This represents the name and default value of an argument.
+        - The first element in the tuple is the argument name.
+        - The second element in the tuple is the default value.
+
+    :param args: List of positional arguments.
+    :param kwargs: Dictionary of keyword arguments.
+    :param args_signature: List defining the expected arguments as described above.
+
+    :return: A dictionary combining arguments from `args` and `kwargs` according to the `args_signature`.
+    """
+    # Manual defines function signature necessary because inspection of torch function is not available
+    # https://github.com/pytorch/pytorch/issues/74539
+
+    args_dict: dict[str, Any] = dict()
+    for idx, arg_desc in enumerate(args_signature):
+        if isinstance(arg_desc, str):
+            if arg_desc in kwargs:
+                args_dict[arg_desc] = kwargs[arg_desc]
+            elif idx < len(args):
+                args_dict[arg_desc] = args[idx]
+            else:
+                msg = "Incorrect args_signature, can not by applied to function arguments."
+                raise ValueError(msg)
+        elif isinstance(arg_desc, tuple):
+            arg_name, default = arg_desc
+            args_dict[arg_name] = kwargs.get(arg_name, args[idx] if idx < len(args) else default)
+        else:
+            msg = "Incorrect args_signature, element of list should be str or tuple."
+            raise ValueError(msg)
+    return args_dict

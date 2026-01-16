@@ -12,8 +12,8 @@ import torch
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.tensor import Tensor
+from nncf.torch.function_hook.statistics.aggregator import PT2StatisticsAggregator
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from tests.cross_fw.test_templates.test_statistics_caching import TemplateTestStatisticsCaching
 
 
@@ -22,7 +22,7 @@ class TestStatisticsCaching(TemplateTestStatisticsCaching):
         return PTTargetPoint(target_type=target_point_type, target_node_name=name, input_port_id=port_id)
 
     def get_statistics_aggregator(self):
-        return PTStatisticsAggregator(None)
+        return PT2StatisticsAggregator(None)
 
     def _create_dummy_min_max_tensor(self) -> Tensor:
         return Tensor(torch.zeros(3)), Tensor(torch.ones(3))

@@ -8,59 +8,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import random
-from collections import OrderedDict
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
 
 import numpy as np
 import torch
-from torch import distributed as dist
-from torch import nn
 from torch.nn import Module
 
 import nncf
-from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import is_windows
-from nncf.torch.structures import ExecutionParameters
-
-
-def get_node_name(module, module_name, prefix):
-    return f"{prefix}/{module.__class__.__name__}[{module_name}]"
-
-
-def get_all_modules(model, prefix=None):
-    found = OrderedDict()
-    if prefix is None:
-        prefix = model.__class__.__name__
-    for name, module in model.named_children():
-        full_node_name = get_node_name(module, name, prefix)
-        found[full_node_name] = module
-        sub_found = get_all_modules(module, prefix=full_node_name)
-        if sub_found:
-            found.update(sub_found)
-    return found
-
-
-def get_state_dict_names_with_modules(
-    model: torch.nn.Module, str_types: list[str] = None, prefix=""
-) -> dict[str, torch.nn.Module]:
-    found = OrderedDict()
-    for name, module in model.named_children():
-        full_node_name = f"{prefix}{name}"
-        if str_types is not None and type(module).__name__ in str_types:
-            found[full_node_name] = module
-        sub_found = get_state_dict_names_with_modules(module, str_types, prefix=full_node_name + ".")
-        if sub_found:
-            found.update(sub_found)
-    return found
-
-
-def manual_seed(seed):
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
 
 
 def is_tracing_state():
@@ -116,47 +73,6 @@ def get_flat_tensor_contents_string(input_tensor):
     return retval
 
 
-def is_dist_avail_and_initialized():
-    if not dist.is_available():
-        return False
-    if not dist.is_initialized():
-        return False
-    return True
-
-
-def get_rank():
-    if not is_dist_avail_and_initialized():
-        return 0
-    return dist.get_rank()
-
-
-def is_main_process():
-    return get_rank() == 0
-
-
-def get_world_size():
-    if not is_dist_avail_and_initialized():
-        return 1
-    return dist.get_world_size()
-
-
-def safe_thread_call(main_call_fn, after_barrier_call_fn=None):
-    result = None
-    if is_dist_avail_and_initialized():
-        if is_main_process():
-            result = main_call_fn()
-        dist.barrier()
-        if not is_main_process():
-            result = after_barrier_call_fn() if after_barrier_call_fn else main_call_fn()
-    else:
-        result = main_call_fn()
-    return result
-
-
-def is_tensor(obj):
-    return isinstance(obj, torch.Tensor)
-
-
 class _ModuleState:
     def __init__(self, base_module: Module = None):
         self._training_state: dict[str, bool] = {}
@@ -207,69 +123,8 @@ def training_mode_switcher(model: Module, is_training: bool = True):
         load_module_state(model, saved_state)
 
 
-def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: NNCFNodeName):
-    # WARNING: numpy should be explicitly given np.int64 as dtype, since default integer type on Win is np.int32
-    if isinstance(
-        module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d, nn.ConvTranspose3d)
-    ):
-        ks = module.weight.data.shape
-        mac_count = np.prod(ks, dtype=np.int64) * np.prod(output.shape[2:], dtype=np.int64)
-    elif isinstance(module, nn.Linear):
-        if len(input_[0].shape) == 1:
-            # In some test cases input tensor could have dimension [N]
-            mac_count = input_[0].shape[0] * output.shape[-1]
-        else:
-            mac_count = np.prod(input_[0].shape[1:], dtype=np.int64) * output.shape[-1]
-    else:
-        return
-    dict_to_save[module_node_name] = 2 * mac_count
-
-
 def add_ov_domain(name_operator: str) -> str:
     return f"org.openvinotoolkit::{name_operator}"
-
-
-def default_distributed_wrapper(model: nn.Module, execution_parameters: ExecutionParameters):
-    """
-    Wrapping model for distributed training with DataParallel or DistributedDataParallel depending on execution mode
-    chosen by user.
-    :param execution_parameters: structure with necessary execution parameters
-    :param model: model to wrap  in accordance with execution mode chosen by user
-    :return: wrapped model
-    """
-    if not execution_parameters or execution_parameters.cpu_only:
-        # If execution params is not set or in cpu_only mode model can't be optimized by parallelization
-        return model
-
-    current_gpu = execution_parameters.current_gpu
-    if not is_dist_avail_and_initialized():
-        if current_gpu is not None:
-            # ExecutionMode.SINGLE_GPU
-            torch.cuda.set_device(current_gpu)
-        else:
-            # ExecutionMode.GPU_DATAPARALLEL
-            model = torch.nn.DataParallel(model)
-    else:
-        if current_gpu is None:
-            # ExecutionMode.DISTRIBUTED
-            model = torch.nn.parallel.DistributedDataParallel(model)
-        else:
-            # ExecutionMode.MULTIPROCESSING_DISTRIBUTED
-            torch.cuda.set_device(current_gpu)
-            model = torch.nn.parallel.distributed.DistributedDataParallel(model, device_ids=[current_gpu])
-    return model
-
-
-def default_distributed_unwrapper(model: nn.Module):
-    """
-    Unwrapping model prepared from distributed training in Pytorch
-    (and wrapped with Dataparallel or DistributedDataParallel).
-    :param model: model to unwrap.
-    :return: model without parallelization
-    """
-    if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
-        return model.module
-    return model
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
@@ -311,22 +166,6 @@ def is_multidevice(model: torch.nn.Module) -> bool:
         if d != curr_device:
             return True
     return False
-
-
-def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
-    """
-    Get the datatype of the first model parameter.
-
-    :param model: The PyTorch model.
-    :return: The datatype of the first model parameter.
-        Default to torch.float32 if the model has no parameters.
-    """
-    try:
-        dtype = next(model.parameters()).dtype
-    except StopIteration:
-        # The model had no parameters at all, assume FP32
-        dtype = torch.float32
-    return dtype
 
 
 class CompilationWrapper:
