@@ -46,7 +46,7 @@ jobs:
           pip install --pre torch torchvision torchao --index-url https://download.pytorch.org/whl/nightly/cpu
           # Executorch
           # Editable install due to https://github.com/pytorch/executorch/issues/6475
-          pip install --no-build-isolation -e git+https://github.com/anzr299/executorch.git@an/openvino/nncf_compress_pt2e#egg=executorch
+          pip install --no-build-isolation -e executorch
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope
