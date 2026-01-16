@@ -9,6 +9,7 @@ pytest-dependency
 pytest-mock
 pytest-xdist
 torch
+torchao
 torchvision
 
 addict>=2.4.0
