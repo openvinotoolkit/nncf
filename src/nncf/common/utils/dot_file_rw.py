@@ -24,20 +24,6 @@ def write_dot_graph(G: nx.DiGraph, path: Union[pathlib.Path, str]) -> None:
     nx.nx_pydot.write_dot(relabeled, str(path))
 
 
-def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
-    """
-    Returns the data-less version of the given nx.Digraph. The new graph has no data in nodes and edges.
-
-    :return: nx.DiGraph without data in nodes and edges
-    """
-    out_graph = nx.DiGraph()
-    for node_key in G.nodes(data=False):
-        out_graph.add_node(node_key)
-    for u, v in G.edges(data=False):
-        out_graph.add_edge(u, v)
-    return out_graph
-
-
 def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
     loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)

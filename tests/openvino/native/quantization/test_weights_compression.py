@@ -931,7 +931,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
 @pytest.mark.parametrize("mode", INT4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -939,7 +939,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -947,7 +947,7 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
 
@@ -2173,20 +2173,24 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SimpleMoEModel().ov_model
 
     @staticmethod
-    def get_awq_model(non_mergable_pattern: bool) -> ov.Model:
-        return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern).ov_model
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> ov.Model:
+        # if is_3d_weights:
+        #     return AWQMatmulModel3D(non_mergable_pattern=non_mergable_pattern).ov_model
+        return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern, is_3d_weights=is_3d_weights).ov_model
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> ov.Model:
         return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes).ov_model
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
-        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
+        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers, is_3d_weights=is_3d_weights).ov_model
 
     @staticmethod
-    def get_transposable_awq_model(transpose_a, transpose_b, input_shape=None):
-        ov_model = AWQModel(transpose_a=transpose_a, transpose_b=transpose_b, input_shape=input_shape).ov_model
+    def get_transposable_awq_model(transpose_a, transpose_b, input_shape=None, is_3d_weights: bool = False):
+        ov_model = AWQModel(
+            transpose_a=transpose_a, transpose_b=transpose_b, input_shape=input_shape, is_3d_weights=is_3d_weights
+        ).ov_model
         return ov_model
 
     @staticmethod
@@ -2316,44 +2320,44 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5783,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4993,
-                                7.8557,
-                                7.2131,
-                                7.4667,
-                                7.4154,
-                                7.4667,
+                                7.575118,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.254837,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.495066,
+                                7.850108,
+                                7.219489,
+                                7.2685375,
+                                7.418597,
+                                7.4666667,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8192,
-                                14.9020,
-                                14.9847,
-                                15.0674,
-                                14.2602,
-                                14.3375,
-                                14.4148,
-                                14.4922,
-                                14.5695,
-                                14.6468,
-                                14.7241,
-                                14.8014,
-                                14.8787,
-                                14.9561,
-                                15.0334,
-                                15.1107,
+                                14.820066,
+                                14.902746,
+                                14.985427,
+                                15.068108,
+                                15.150787,
+                                14.3391285,
+                                14.416424,
+                                14.493721,
+                                14.571016,
+                                14.648311,
+                                14.725608,
+                                14.802904,
+                                14.8801985,
+                                14.957496,
+                                15.034791,
+                                15.112087,
                             ]
                         ]
                     ],
@@ -2364,7 +2368,57 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
     def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
-        super().test_scale_estimation(mocker, is_moe, check_sampling_activation_stats_flow)
+        return super().test_scale_estimation(mocker, is_moe, check_sampling_activation_stats_flow)
+
+    @pytest.mark.parametrize(
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+    )
+    def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
+        return super().test_awq_with_ignored_scope(mocker, is_3d_weights)
+
+    # Transpose inputs does not affect mergable pattern code, skippting (True, False)
+    @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
+    @pytest.mark.parametrize(
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+    )
+    def test_awq_scale_reference(
+        self,
+        non_mergable_pattern,
+        transpose_a,
+        test_awq_scale_ref,
+        transpose_a_supported,
+        is_3d_weights,
+        monkeypatch,
+        mocker,
+    ):
+        return super().test_awq_scale_reference(
+            non_mergable_pattern,
+            transpose_a,
+            test_awq_scale_ref,
+            transpose_a_supported,
+            is_3d_weights,
+            monkeypatch,
+            mocker,
+        )
+
+    @pytest.mark.parametrize(
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+    )
+    @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
+    @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker):
+        return super().test_data_free_awq(dataset, prefer_data_aware_scaling, is_3d_weights, mocker)
+
+    @pytest.mark.parametrize(
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+    )
+    @pytest.mark.parametrize("with_multiply", (True, False))
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
+        self, int4_mode, with_multiply, is_3d_weights, mocker
+    ):
+        return super().test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
+            int4_mode, with_multiply, is_3d_weights, mocker
+        )
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
@@ -2385,7 +2439,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(weight_output)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         return "MatMul_5"
 
     @staticmethod
@@ -2418,22 +2472,104 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     @pytest.fixture
-    def test_awq_scale_ref() -> dict[str, Tensor]:
-        return {
-            "MatMul": Tensor(np.array([[10.337929], [6.4558873]], dtype=np.float32)),
-            "MatMul_3": Tensor(
-                np.array(
-                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
-                    dtype=np.float32,
-                ).T
-            ),
-            "MatMul_2": Tensor(
-                np.array(
-                    [[[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]]],
-                    dtype=np.float32,
-                )
-            ),
-        }
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
+        return [
+            {
+                "MatMul": Tensor(np.array([[10.337929], [6.4558873]], dtype=np.float32)),
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [1.2264546],
+                            [1.2054994],
+                            [1.1413403],
+                            [1.0974358],
+                            [1.0643553],
+                            [1.0379708],
+                            [1.0161183],
+                            [0.9975262],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [
+                                [
+                                    1.9909902,
+                                    1.8632966,
+                                    1.5759803,
+                                    1.3974594,
+                                    1.2722752,
+                                    1.1779976,
+                                    1.1035581,
+                                    1.042768,
+                                ]
+                            ]
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+            {
+                "MatMul": Tensor(
+                    np.array(
+                        [
+                            [[10.337929], [6.4558873]],
+                            [[7.7174687], [5.987996]],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [
+                                [1.2264546],
+                                [1.2054994],
+                                [1.1413403],
+                                [1.0974358],
+                                [1.0643553],
+                                [1.0379708],
+                                [1.0161183],
+                                [0.9975262],
+                            ],
+                            [
+                                [0.46889508],
+                                [0.4599662],
+                                [0.4321173],
+                                [0.40815368],
+                                [0.387274],
+                                [0.36888793],
+                                [0.35255024],
+                                [0.33791822],
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]],
+                            [
+                                [
+                                    0.47422293,
+                                    0.4648561,
+                                    0.4367122,
+                                    0.41249463,
+                                    0.39139354,
+                                    0.37281245,
+                                    0.3563014,
+                                    0.3415141,
+                                ]
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+        ]
 
     @pytest.fixture
     def transpose_a_supported(self) -> bool:

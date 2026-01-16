@@ -391,6 +391,22 @@ class WeightCompression(Algorithm):
     def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
 
+    @property
+    def mode(self) -> CompressWeightsMode:
+        return self._mode
+
+    @property
+    def group_size(self) -> int:
+        return self._group_size
+
+    @property
+    def all_layers(self) -> bool:
+        return self._all_layers
+
+    @property
+    def backup_mode(self) -> CompressWeightsMode:
+        return self._backup_mode
+
     def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
         """
         Set target ignored scope for the Weight Compression algorithm.
