@@ -137,3 +137,14 @@ def test_parallel_edges():
 def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_dtype: Dtype):
     actual_nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_type)
     assert actual_nncf_dtype == expected_nncf_dtype
+
+
+@pytest.mark.parametrize(
+    "ov_type",
+    [
+        ov.Type.dynamic,
+    ],
+)
+def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):
+    with pytest.raises(NotImplementedError):
+        _ = GraphConverter.convert_to_nncf_dtype(ov_type)
