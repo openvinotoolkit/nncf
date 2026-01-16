@@ -14,6 +14,7 @@ from typing import Union
 
 import numpy as np
 import torch
+import torchao
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -49,7 +50,6 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     scale_shape = nncf_quantizer.scale_shape
     ch_axis = int(np.argmax(scale_shape))
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
-    import torchao
 
     if per_channel:
         observer = torchao.quantization.pt2e.observer.PerChannelMinMaxObserver

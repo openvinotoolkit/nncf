@@ -96,22 +96,22 @@ TEST_MODELS_QUANIZED = (
     (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}, {}),
     (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {},
         {"smooth_quant": True},
     ),
     (
         torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {},
         {"smooth_quant": True},
     ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {},
         {"smooth_quant": True},
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {},
         {"smooth_quant": True},
     ),
 )
