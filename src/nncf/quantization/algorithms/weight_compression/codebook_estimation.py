@@ -317,7 +317,9 @@ class CodebookEstimation(Algorithm):
         norm_weight = fns.concatenate(norm_weight, axis=0)
         importance = fns.concatenate(importances, axis=0)
 
-        codebook, _, variants = weights_clusterization_k_means(norm_weight, importance, n_centroids=self._num_elements)
+        codebook, _, variants = weights_clusterization_k_means(
+            norm_weight, importance, n_centroids=self._num_elements, intervals=100000
+        )
 
         best_codebook = codebook.as_openvino_tensor().astype(self._value_type)
 
@@ -408,41 +410,9 @@ class KMeansWeighted:
         return res
 
     @staticmethod
-    def create_histogramm(data, granularity=0.01):
-        centers = []
-        step = granularity
-
-        data_range = (data.min().item(), data.max().item())
-        prev = data_range[0]
-
-        while prev < data_range[1]:
-            centers.append(prev + step / 2)
-            prev += step
-
-        centers = fns.tensor(centers, backend=data.backend)
-        centroid_idxs = round_to_left(centers, data)
-
-        res = [[], [], []]
-        for i in range(centers.size):
-            idxs = fns.nonzero(centroid_idxs == i)
-            if len(idxs[0]) == 0:
-                continue
-            res[0].append(centers[i])
-            res[1].append(fns.sum(data[idxs]))
-            res[2].append(len(idxs[0]))
-
-        res[0] = fns.tensor(res[0], backend=data.backend)  # centers of histogram bins
-        res[1] = fns.tensor(res[1], backend=data.backend)  # sum of values in each bin
-        res[2] = fns.tensor(res[2], backend=data.backend)  # count of values in each bin
-
-        return res
-
-    @staticmethod
-    def create_histogramm_sorted(data_, importance, intervals=100000):
+    def create_histogramm_sorted(data_, importance, intervals=700):
         centers = []
         ranges = []
-
-        intervals = max(min(intervals, int(0.005 * data_.size)), 100)
 
         step = data_.max().item() - data_.min().item()
         step /= intervals
@@ -496,14 +466,14 @@ class KMeansWeighted:
         )
         return res
 
-    def fit(self, X_train, importance, init, fixed=None):
+    def fit(self, X_train, importance, init, fixed=None, intervals=700):
         if self.max_iter == 1:
             self.centroids = deepcopy(init)
             return
         if fixed is None:
             fixed = [0, len(init) // 2, len(init) - 1]
 
-        self.hist = KMeansWeighted.create_histogramm_sorted(X_train, importance)
+        self.hist = KMeansWeighted.create_histogramm_sorted(X_train, importance, intervals=intervals)
 
         init_by_hist = self.get_init(self.hist.centroids, self.hist.weighted_importance, self.n_clusters)
         init_by_hist[0] = init[0]
@@ -552,7 +522,7 @@ class KMeansWeighted:
         return deepcopy(self.centroids).flatten(), centroid_idxs
 
 
-def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
+def weights_clusterization_k_means(weight, importance, n_centroids=2**4, intervals=700):
     orig_shape = weight.shape
     weight = weight.flatten()
     importance = importance.flatten()
@@ -569,6 +539,7 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4):
         importance,
         n_init,
         fixed=[0, n_centroids // 2 - 1, n_centroids - 1] if n_init[0] < 0.0 else [0, n_centroids - 1],
+        intervals=intervals,
     )
     codebook, indexes = kmeans.evaluate(weight)
 
