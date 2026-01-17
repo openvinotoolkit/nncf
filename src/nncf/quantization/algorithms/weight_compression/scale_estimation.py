@@ -194,19 +194,17 @@ class ScaleEstimation:
         :return: A tensor containing the calculated quantization scales and zero points if applicable.
         """
         reduction_axis = reduction_axes[0]
+        transpose_a_flag = getattr(weight, "transpose_a", False)
 
         s, X = process_stats(statistics, subset_size)
 
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
-        is_3d_weight = len(weight.shape) == 3
 
         was_transposed = False
-        if reduction_axis == 0 or (reduction_axis == 1 and is_3d_weight):
-            # Weights
-            # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
-            # 2D: [hidden_dimension, out_features] -> [out_features, hidden_dimension]
+        if transpose_a_flag:
+            # Weight was transposed in matmul due to transpose_a=True
             weight = fns.moveaxis(weight, -1, -2)
             reduction_axis = weight.ndim - 1
             was_transposed = True

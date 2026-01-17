@@ -121,6 +121,7 @@ class LoraCorrectionAlgorithm:
         layer_name = wc_params.node_with_weight.node_name
         layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
+        transpose_a_flag = getattr(wc_params.node_with_weight, "transpose_a", False)
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,
             compressed_weight,
@@ -129,6 +130,7 @@ class LoraCorrectionAlgorithm:
             self._lora_correction_params,
             layer_statistics,
             is_debug,
+            transpose_a=transpose_a_flag,
         )
         if is_debug:
             self._debug_interface.add_noises(layer_name, mean_noises)
@@ -143,6 +145,7 @@ class LoraCorrectionAlgorithm:
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
+        transpose_a: bool = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -193,8 +196,7 @@ class LoraCorrectionAlgorithm:
         if reduction_axes[0] == 1:
             svd_residual = fns.transpose(svd_residual)
         residual = svd_residual.clone()  # [H, O]
-
-        s, X = process_stats(layer_statistics, subset_size)  # [H], [H, SS]
+        s, X = process_stats(layer_statistics, subset_size, act_ch_axis=-1, transpose_a=transpose_a)
         X = fns.transpose(X)  # [SS, H]
         if compression_config.group_size > 0:
             # Multiply residual of weights by maximum channel magnitude of activations normalized per quantization

@@ -243,7 +243,18 @@ class AWQ(Algorithm):
     def _data_aware_step(self, wp, weight, statistics, act_ch_axis, prev_weight=None, prev_statistics=None):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
-        s, X = process_stats(statistics, self._subset_size, act_ch_axis)
+        matmul_node = wp.node_with_weight
+        transpose_a = False
+
+        if hasattr(matmul_node, "attributes"):
+            transpose_a = matmul_node.attributes.get("transpose_a", False)
+
+        s, X = process_stats(
+            statistics,
+            self._subset_size,
+            act_ch_axis,
+            transpose_a=transpose_a,
+        )
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
 
@@ -261,7 +272,7 @@ class AWQ(Algorithm):
 
         prev_s, prev_w = None, None
         if prev_statistics is not None and prev_weight is not None:
-            prev_s, _ = process_stats(prev_statistics, self._subset_size, act_ch_axis)
+            prev_s, _ = process_stats(prev_statistics, self._subset_size, act_ch_axis, transpose_a=transpose_a)
             prev_s = prev_s.astype(TensorDataType.float32).max().item()
             prev_w = fns.mean(fns.abs(prev_weight), axis=reduction_axis)
 
