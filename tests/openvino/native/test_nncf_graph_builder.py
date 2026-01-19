@@ -142,7 +142,7 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
 @pytest.mark.parametrize(
     "ov_type",
     [
-        ov.Type.undefined,
+        ov.Type.dynamic,
     ],
 )
 def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):
