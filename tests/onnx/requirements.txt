@@ -9,6 +9,7 @@ pytest-ordering
 pytest-xdist
 torch
 torchvision
+onnxscript
 
 fastdownload==0.0.7
 scikit-learn>=1.2.2,<=1.5.0
