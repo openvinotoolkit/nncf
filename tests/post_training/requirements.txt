@@ -13,6 +13,7 @@ pytest
 pytest-forked
 pytest-split
 
+executorch==1.0.1
 librosa==0.10.0
 memory-profiler==0.61.0
 optimum-intel==1.27.0

@@ -23,6 +23,7 @@ from itertools import islice
 import numpy as np
 import openvino as ov
 import torch
+from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 from sklearn.metrics import accuracy_score
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
 from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
@@ -32,7 +33,6 @@ from torchvision import datasets
 import nncf
 from nncf import AdvancedQuantizationParameters
 from nncf.common.logging.track_progress import track
-from nncf.experimental.torch.fx import OpenVINOQuantizer
 from nncf.experimental.torch.fx import quantize_pt2e
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
