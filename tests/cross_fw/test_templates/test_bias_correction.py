@@ -133,17 +133,17 @@ class TemplateTestBCAlgorithm:
             (
                 MultipleConvTestModel,
                 {
-                    "/conv_1/Conv": [0.6658976, -0.70563036],
-                    "/conv_2/Conv": [-0.307696, -0.42806846, 0.44965455],
-                    "/conv_3/Conv": [-0.0033792169, 1.0661412],
-                    "/conv_4/Conv": [-0.6941606, 0.9958957, 0.6081058],
+                    "node_conv2d": [0.6658976, -0.70563036],
+                    "node_conv2d_1": [-0.307696, -0.42806846, 0.44965455],
+                    "node_conv2d_2": [-0.0033792169, 1.0661412],
+                    "node_conv2d_3": [-0.6941606, 0.9958957, 0.6081058],
                     # Disabled latest layer due to backends differences
-                    # "/conv_5/Conv": [0.07476559, -0.75797373],
+                    # "node_conv2d_4": [0.07476559, -0.75797373],
                 },
             ),
-            (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
-            (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
-            (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
+            (ConvTestModel, {"node_conv2d": [0.11085186, 1.0017344]}),
+            (DepthwiseConvTestModel, {"node_conv2d": [-1.1229, -0.1863]}),
+            (TransposeConvTestModel, {"node_convolution": [0.66797173, -0.7070703]}),
             (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
         ),
     )

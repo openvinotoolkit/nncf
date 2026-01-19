@@ -51,7 +51,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         if isinstance(model, OneDimMM):
             pytest.skip("ONNX does not support BC with MM ops")
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
+        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=18, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
         return onnx_model
 
@@ -90,90 +90,90 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         "layer_name, ref_data",
         (
             (
-                "/conv_1/Conv",
+                "node_conv2d",
                 {
                     "collected_inputs": {
-                        ("/Concat", 1): ("nncf_model_input_0", 0),
-                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                        ("node_concat", 1): ("nncf_model_input_0", 0),
+                        ("node_conv2d", 0): ("nncf_model_input_0", 0),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
+                        "subgraph_input_ids": {("node_conv2d", 0)},
+                        "subgraph_output_ids": {("node_Split_27", 0), ("node_max_pool2d", 0), ("node_Split_27", 1)},
                     },
                 },
             ),
             (
-                "/conv_2/Conv",
+                "node_conv2d_1",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
-                        ("/conv_2/Conv", 0): ("/maxpool_1/MaxPool", 0),
-                        ("/conv_4/Conv", 0): ("/Split", 0),
-                        ("/conv_6/Conv", 0): ("/Split", 1),
+                        ("node_conv2d", 0): ("nncf_model_input_0", 0),
+                        ("node_conv2d_1", 0): ("node_max_pool2d", 0),
+                        ("node_conv2d_3", 0): ("node_Split_27", 0),
+                        ("node_conv2d_5", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_2/Conv", 0)},
-                        "subgraph_output_ids": {("/Relu_1", 0)},
+                        "subgraph_input_ids": {("node_conv2d_1", 0)},
+                        "subgraph_output_ids": {("node_relu_1", 0)},
                     },
                 },
             ),
             (
-                "/conv_3/Conv",
+                "node_conv2d_2",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
-                        ("/conv_2/Conv", 0): ("/maxpool_1/MaxPool", 0),
-                        ("/conv_3/Conv", 0): ("/Relu_1", 0),
-                        ("/conv_4/Conv", 0): ("/Split", 0),
-                        ("/conv_6/Conv", 0): ("/Split", 1),
+                        ("node_conv2d", 0): ("nncf_model_input_0", 0),
+                        ("node_conv2d_1", 0): ("node_max_pool2d", 0),
+                        ("node_conv2d_2", 0): ("node_relu_1", 0),
+                        ("node_conv2d_3", 0): ("node_Split_27", 0),
+                        ("node_conv2d_5", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv", 0), ("/conv_3/Conv", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
+                        "subgraph_input_ids": {("node_conv2d", 0), ("node_conv2d_2", 0)},
+                        "subgraph_output_ids": {("node_Split_27", 0), ("node_Split_27", 1)},
                     },
                 },
             ),
             (
-                "/conv_4/Conv",
+                "node_conv2d_3",
                 {
                     "collected_inputs": {
-                        ("/conv_4/Conv", 0): ("/Split", 0),
-                        ("/conv_6/Conv", 0): ("/Split", 1),
+                        ("node_conv2d_3", 0): ("node_Split_27", 0),
+                        ("node_conv2d_5", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_4/Conv", 0)},
-                        "subgraph_output_ids": {("/Relu_2", 0)},
+                        "subgraph_input_ids": {("node_conv2d_3", 0)},
+                        "subgraph_output_ids": {("node_relu_2", 0)},
                     },
                 },
             ),
             (
-                "/conv_6/Conv",
+                "node_conv2d_5",
                 {
                     "collected_inputs": {
-                        ("/conv_5/Conv", 0): ("/Relu_2", 0),
-                        ("/conv_6/Conv", 0): ("/Split", 1),
+                        ("node_conv2d_4", 0): ("node_relu_2", 0),
+                        ("node_conv2d_5", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_5/Conv", 0), ("/conv_6/Conv", 0)},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
+                        "subgraph_input_ids": {("node_conv2d_4", 0), ("node_conv2d_5", 0)},
+                        "subgraph_output_ids": {("node_add_3", 0), ("node_concat_1", 0)},
                     },
                 },
             ),
             (
-                "/conv_10/Conv",
+                "node_conv2d_9",
                 {
                     "collected_inputs": {
-                        ("/conv_8/Conv", 0): ("/conv_7/Conv", 0),
-                        ("/conv_9/Conv", 0): ("/Add_3", 0),
-                        ("/conv_10/Conv", 0): ("/Concat_1", 0),
+                        ("node_conv2d_7", 0): ("node_conv2d_6", 0),
+                        ("node_conv2d_8", 0): ("node_add_3", 0),
+                        ("node_conv2d_9", 0): ("node_concat_1", 0),
                     },
                     "subgraph_data": {
                         "subgraph_input_ids": {
-                            ("/conv_8/Conv", 0),
-                            ("/conv_9/Conv", 0),
-                            ("/conv_10/Conv", 0),
+                            ("node_conv2d_7", 0),
+                            ("node_conv2d_8", 0),
+                            ("node_conv2d_9", 0),
                         },
-                        "subgraph_output_ids": {("/Concat_2", 0)},
+                        "subgraph_output_ids": {("node_concat_2", 0)},
                     },
                 },
             ),
@@ -203,20 +203,20 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
             (
                 SplittedModel,
                 {
-                    ("/conv_1/Conv", 0): ("/Concat", 0),
-                    ("/Concat", 1): ("nncf_model_input_0", 0),
+                    ("node_conv2d", 0): ("node_concat", 0),
+                    ("node_concat", 1): ("nncf_model_input_0", 0),
                 },
             ),
             (
                 MultipleConvTestModel,
                 {
-                    ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
-                    ("/conv_3/Conv", 0): ("nncf_model_input_0", 0),
+                    ("node_conv2d", 0): ("nncf_model_input_0", 0),
+                    ("node_conv2d_2", 0): ("nncf_model_input_0", 0),
                 },
             ),
-            (ConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),
-            (DepthwiseConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),
-            (TransposeConvTestModel, {("/conv/ConvTranspose", 0): ("nncf_model_input_0", 0)}),
+            (ConvTestModel, {("node_conv2d", 0): ("nncf_model_input_0", 0)}),
+            (DepthwiseConvTestModel, {("node_conv2d", 0): ("nncf_model_input_0", 0)}),
+            (TransposeConvTestModel, {("node_convolution", 0): ("nncf_model_input_0", 0)}),
         ),
     )
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
