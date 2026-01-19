@@ -152,7 +152,9 @@ class GPTQ:
                 reduction_axes = wc_params.reduction_axes
                 assert len(reduction_axes) == 1, "2D reduction axes is not currently supported in GPTQ"
                 wc_params.reduction_axes = (reduction_axes[0] - 1,) if is_3d_weight else reduction_axes
-                input_tensor = input_tensors[batch_idx] if is_3d_weight else input_tensors
+                # Input tensors is a List of tensors with shape [batch_size, seq_len, hidden_dim] for 3D weights case
+                # So we need to prepare the list by selecting only the current batch inputs only
+                input_tensor = [inp[batch_idx] for inp in input_tensors] if is_3d_weight else input_tensors
                 batch_quantized_weight, batch_scale, batch_zero_point = self._quantize_weights(
                     wc_params, batch_hessian, batch_weight, input_tensor
                 )
@@ -224,7 +226,7 @@ class GPTQ:
             is_3d_act = len(inp.shape) == 3
             # For 3D weights case, batch size will always be 1. Each "batch"/expert of the activation is treated as
             # single 2D matmuls
-            batch_size = 1 if not is_3d_act and not is_3d_weight else inp.shape[0]
+            batch_size = 1 if is_3d_weight or not is_3d_act else inp.shape[0]
             if node.metatype in self._backend_entity.matmul_metatypes:
                 # For 3D act + 2D weight case we should reshape activation to 2D to match weight
                 # For 3D act + 3D weight it should remain in 3D and the last 2 dimensions should be activation per
@@ -379,4 +381,4 @@ class GPTQ:
                 zero_points = fns.squeeze(zero_points, axis=-1)
         else:
             zero_points = None
-        return weight_tensor, scales, zero_points
+        return quantized_tensor, scales, zero_points
