@@ -496,7 +496,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('view_31',)_ActivationQuantizationInsertionPoint": {
+        "('transpose_23',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -504,7 +504,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('transpose_23',)_ActivationQuantizationInsertionPoint": {
+        "('view_31',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -768,7 +768,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('transpose_35',)_ActivationQuantizationInsertionPoint": {
+        "('view_47',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -776,7 +776,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('view_47',)_ActivationQuantizationInsertionPoint": {
+        "('transpose_35',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1176,7 +1176,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('transpose_53',)_ActivationQuantizationInsertionPoint": {
+        "('view_71',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1184,7 +1184,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('view_71',)_ActivationQuantizationInsertionPoint": {
+        "('transpose_53',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1448,7 +1448,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('transpose_65',)_ActivationQuantizationInsertionPoint": {
+        "('view_87',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1456,7 +1456,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('view_87',)_ActivationQuantizationInsertionPoint": {
+        "('transpose_65',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1584,7 +1584,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('transpose_71',)_ActivationQuantizationInsertionPoint": {
+        "('view_95',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1592,7 +1592,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('view_95',)_ActivationQuantizationInsertionPoint": {
+        "('transpose_71',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
