@@ -16,8 +16,10 @@ import math
 
 import numpy as np
 import openvino as ov
+import pytest
 import torch
 
+from nncf import Dataset
 from nncf.common.factory import build_graph
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -323,54 +325,128 @@ class GPTQReference:
         return scale, zero, g_idx
 
 
-def test_calculate_scale_linear():
-    # generate inputs
+class Linear3DModel(torch.nn.Module):
+    def __init__(self, weight_3d: np.ndarray):
+        super().__init__()
+        w = torch.from_numpy(weight_3d)
+        self.weight = torch.nn.Parameter(w)
+
+    def forward(self, x):
+        # OV expects transposed constant when applying GPTQ
+        return torch.matmul(x, self.weight.transpose(1, 2))
+
+
+def _create_ov_model(weights: np.ndarray, input_shape: tuple, is_3d_weights: bool = False):
+    import openvino.runtime.opset13 as opset
+
+    param = opset.parameter(input_shape, dtype=np.float32, name="input")
+    const = opset.constant(weights, dtype=np.float32, name="self.weight")
+    matmul = opset.matmul(param, const, transpose_a=False, transpose_b=True)
+    result = opset.result(matmul, name="output")
+    return ov.Model([result], [param])
+
+
+def _make_nncf_dataset(ov_model, inputs: list[np.ndarray]) -> Dataset:
+    input_name = ov_model.inputs[0].get_any_name()
+    items = [{input_name: inp} for inp in inputs]
+    return Dataset(items, lambda x: x)
+
+
+@pytest.mark.parametrize("is_3d_weights", [False, True], ids=["2D_weights", "3D_weights"])
+def test_calculate_scale_linear(is_3d_weights: bool):
     np.random.seed(0)
-    inputs = [np.random.rand(128, 32).astype(np.float32) for _ in range(10)]
-    weights = np.random.rand(20, 32).astype(np.float32)
 
-    # calculate reference
+    hidden_dims = 32
+    out_dims = 20
+    group_size = 16
+    n_inputs = 10
+    batch_size = 4
+
+    inputs = [np.random.rand(batch_size, 128, hidden_dims).astype(np.float32) for _ in range(n_inputs)]
+    weights = np.random.rand(batch_size, out_dims, hidden_dims).astype(np.float32)
+
+    # Select only first batch for 2D case and make it 2D
+    inputs = inputs if is_3d_weights else [activation[0] for activation in inputs]
+    weights = weights if is_3d_weights else weights[0]
+
+    # Step 1: We apply a reference GPTQ implementation on the Pytorch model. This gives us a ground truth of scales and
+    # Quantized values
     with torch.no_grad():
-        layer = torch.nn.Linear(32, 20)
-        layer.weight.copy_(torch.from_numpy(weights))
+        weight = weights if is_3d_weights else np.expand_dims(weights, axis=0)
+        # Inputs for 3D is a list of shape [n_inputs, batch_size, 128, in_dim]
+        # For 2D it is [n_inputs, 1, 128, in_dim]. We unsqueeze at 0 for every input tensor
+        batched_inputs = inputs if is_3d_weights else [np.expand_dims(x, axis=0) for x in inputs]
 
-        ref_gptq = GPTQReference(layer)
-        for inp in inputs:
-            ref_gptq.add_batch(torch.from_numpy(inp))
+        pt_model = Linear3DModel(weights) if is_3d_weights else torch.nn.Linear(hidden_dims, out_dims, bias=False)
+        if not is_3d_weights:
+            pt_model.weight.copy_(torch.from_numpy(weights))
 
-        ref_scale, _, _ = ref_gptq.fasterquant(percdamp=0.1, group_size=16)
+        ref_gptqs, ref_scales = [], []
+        for batch in range(weight.shape[0]):
+            layer = torch.nn.Linear(hidden_dims, out_dims, bias=False)
+            layer.weight.copy_(torch.from_numpy(weight[batch]))
 
-    # convert PyTorch model to OpenVINO
-    ov_model = ov.convert_model(layer, example_input=inputs[0])
+            ref_gptq = GPTQReference(layer)
+            for inp in batched_inputs:
+                ref_gptq.add_batch(torch.from_numpy(inp[batch]))
+
+            ref_scale_for_batch, _, _ = ref_gptq.fasterquant(percdamp=0.1, group_size=group_size)
+            ref_gptqs.append(ref_gptq)
+            ref_scales.append(ref_scale_for_batch)
+
+        ref_scale = np.stack([s.detach().cpu().numpy() for s in ref_scales], axis=0)
+
+    # Step 2: Create OV models so that we can use nncf to compress this with our own GPTQ
+    # We do not use ov.convert_model() here since we expect a specific transposed weight and
+    # not transposed activation. It is hard to create and convert such a model from PT -> OV
+    # due to things like constant folding etc. which are automatically performed or generally
+    # hard to translate.
+    ov_model = _create_ov_model(weights, inputs[0].shape, is_3d_weights)
     graph = build_graph(ov_model)
 
-    # GPTQ
+    # Step 3: Setup and apply GPTQ as usual
     gptq = GPTQ()
     gptq._set_backend_entity(ov_model)
 
-    nodes = graph.get_all_nodes()
+    node_with_weight = graph.get_all_nodes()[1]
+
     wrapped_inputs = [Tensor(inp) for inp in inputs]
-    H = gptq._calculate_hessian(nodes[1], wrapped_inputs)
+    H = gptq._calculate_hessian(node_with_weight, wrapped_inputs, is_3d_weight=is_3d_weights)
 
-    ref_H = ref_gptq.H.numpy()
-    assert np.all(np.isclose(ref_H, H.data))
+    reference_gptq_list = ref_gptqs if is_3d_weights else [ref_gptq]
+    nncf_hessian_list = H.data if is_3d_weights else np.expand_dims(H.data, axis=0)
 
-    wc_params = WeightCompressionParameters(
+    for batch_index, (reference_gptq, nncf_hessian) in enumerate(zip(reference_gptq_list, nncf_hessian_list)):
+        reference_hessian = reference_gptq.H.detach().numpy()
+        assert np.all(np.isclose(reference_hessian, nncf_hessian)), f"Hessian mismatch for batch {batch_index}"
+
+    nncf_dataset = _make_nncf_dataset(ov_model, inputs)
+    reduction_axes = (1,) if not is_3d_weights else (2,)
+    wc_param = WeightCompressionParameters(
         weight_name="self.weight",
-        node_with_weight=nodes[1],
+        node_with_weight=node_with_weight,
         weight_port_id=1,
         weight_dtype=TensorDataType.float32,
         weight_shape=weights.shape,
-        reduction_axes=(1,),
+        reduction_axes=reduction_axes,
     )
-    wc_params.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=16)
+    wc_param.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=group_size)
+    wc_params = [wc_param]
 
-    nncf_weight = Tensor(weights)
-    _, scale, _ = gptq._quantize_weights(wc_params, H, nncf_weight, wrapped_inputs)
-    ref_scale = ref_scale.numpy()
-    scale = scale.reshape(ref_scale.shape)
-    assert np.all(np.isclose(ref_scale, scale.data))
+    _, res = gptq.apply(ov_model, graph, nncf_dataset, wc_params)
 
-    torch_weight = layer.weight.detach().numpy()
-    ov_weight = gptq._backend_entity.get_weight(nodes[1], 1, ov_model, graph)
-    assert np.all(np.isclose(torch_weight, ov_weight.data))
+    # Step 4: Obtain the scales from our GPTQ implementation and compare with referencee
+    scale_from_nncf = res.get("self.weight").scale.data
+    ref_scale = ref_scale.numpy() if isinstance(ref_scale, torch.Tensor) else ref_scale
+    ref_scale = ref_scale.reshape(scale_from_nncf.shape)
+
+    assert np.all(np.isclose(ref_scale, scale_from_nncf))
+    # Here we obtain weights from the model instead of apply directly so that we also check
+    # if the weight is changed in the OV model.
+    ov_weight = gptq._backend_entity.get_weight(node_with_weight, 1, ov_model, graph)
+    ref_weights = np.stack(
+        [ref_gptq.layer.weight.detach().numpy() for ref_gptq in ref_gptqs],
+        axis=0,
+    )
+
+    assert np.all(np.isclose(ref_weights, ov_weight.data))
