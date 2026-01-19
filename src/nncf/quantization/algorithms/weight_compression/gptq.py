@@ -10,9 +10,9 @@
 # limitations under the License.
 
 import math
+from functools import reduce
+from operator import mul
 from typing import Optional, TypeVar
-
-import numpy as np
 
 import nncf
 from nncf import Dataset
@@ -215,7 +215,7 @@ class GPTQ:
             raise nncf.UnsupportedModelError(msg)
         # Make hessian 3D. Such that for 2D weights it is only 1 batch and can be squeezed later.
         # For 3D weights this dimension matches the weights dimensions
-        hessian_batch = 1 if not is_3d_weight else np.multiply.reduce(inputs[0].shape[:-2])
+        hessian_batch = 1 if not is_3d_weight else reduce(mul, inputs[0].shape[:-2])
         hessian = fns.zeros(
             (hessian_batch, inputs[0].shape[-1], inputs[0].shape[-1]),
             backend=inputs[0].backend,
