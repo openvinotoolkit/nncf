@@ -51,9 +51,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         if isinstance(model, OneDimMM):
             pytest.skip("ONNX does not support BC with MM ops")
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(
-            model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"]
-        )
+        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
         return onnx_model
 

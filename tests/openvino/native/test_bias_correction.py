@@ -45,9 +45,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(
-            model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"]
-        )
+        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_model = ov.convert_model(onnx_path)
         if isinstance(model, TransposeConvTestModel):
             for node in ov_model.get_ops():
