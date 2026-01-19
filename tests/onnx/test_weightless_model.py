@@ -22,7 +22,7 @@ def test_save_weightless_model(tmp_path):
     model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
     onnx_model_path = tmp_path / "resnet18.onnx"
     x = torch.randn([1, 3, 224, 224], requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path, dynamo=False)
+    torch.onnx.export(model, x, onnx_model_path)
     onnx_model = onnx.load_model(onnx_model_path)
 
     weightless_model_path = tmp_path / Path("weightless_model.onnx")

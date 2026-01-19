@@ -151,11 +151,11 @@ def main():
     dummy_input = torch.randn(1, 3, 480, 480)
 
     fp32_onnx_path = ROOT / "ssd300_vgg16_fp32.onnx"
-    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path, dynamo=False)
+    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path)
     ov_model = ov.convert_model(fp32_onnx_path)
 
     int8_onnx_path = ROOT / "ssd300_vgg16_int8.onnx"
-    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path, dynamo=False)
+    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path)
     ov_quantized_model = ov.convert_model(int8_onnx_path)
 
     fp32_ir_path = ROOT / "ssd300_vgg16_fp32.xml"
