@@ -47,10 +47,10 @@ def _is_openvino_quantizer_instance(obj) -> bool:
     """
     try:
         from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
-    except ModuleNotFoundError as err:
-        msg = "OpenVINO Quantizer could not be imported from Executorch. Please install Executorch."
-        raise nncf.ModuleNotFoundError(msg) from err
-    return isinstance(obj, OpenVINOQuantizer)
+
+        return isinstance(obj, OpenVINOQuantizer)
+    except ImportError:
+        return False
 
 
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")

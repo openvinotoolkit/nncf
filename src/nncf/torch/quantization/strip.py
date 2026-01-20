@@ -14,8 +14,9 @@ from typing import Union
 
 import numpy as np
 import torch
-import torchao
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.observer import MinMaxObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 
 import nncf
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -52,9 +53,9 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
 
     if per_channel:
-        observer = torchao.quantization.pt2e.observer.PerChannelMinMaxObserver
+        observer = PerChannelMinMaxObserver
     else:
-        observer = torchao.quantization.pt2e.observer.MinMaxObserver
+        observer = MinMaxObserver
 
     if isinstance(nncf_quantizer, SymmetricQuantizer):
         qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
