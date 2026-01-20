@@ -41,8 +41,8 @@ from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.llama import LlamaDecoderOnly
 from tests.torch.test_models.synthetic import ShortTransformer
 
-FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "compress_pt2e"
-FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "ao_export_compression_OpenVINOQuantizer"
+FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "compress_pt2e"
+FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "ao_export_compression_OpenVINOQuantizer"
 INT8_COMPRESSION_MODES = [QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM]
 
 

@@ -19,6 +19,7 @@ import torch
 import torch.fx
 import torchvision.models as models
 from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 from executorch.backends.xnnpack.quantizer import xnnpack_quantizer
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
 from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
@@ -51,7 +52,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
-FX_QUANTIZED_DIR_NAME = TEST_ROOT / "executorch" / "data" / "fx"
+FX_QUANTIZED_DIR_NAME = TEST_ROOT / "executorch" / "data"
 
 
 @dataclass
@@ -96,22 +97,22 @@ TEST_MODELS_QUANIZED = (
     (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}, {}),
     (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-        {},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
     (
         torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
-        {},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
-        {},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
-        {},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
 )

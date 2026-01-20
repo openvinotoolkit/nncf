@@ -2,14 +2,14 @@
     "quantization_points": {
         "('linear',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
-            "mode": "symmetric",
+            "mode": "asymmetric",
             "signedness_to_force": null,
             "per_channel": false,
             "narrow_range": false
         },
         "('linear_1',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
-            "mode": "symmetric",
+            "mode": "asymmetric",
             "signedness_to_force": null,
             "per_channel": false,
             "narrow_range": false
