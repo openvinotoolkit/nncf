@@ -33,6 +33,7 @@ from torchvision import datasets
 
 import nncf
 from nncf import AdvancedQuantizationParameters
+from nncf import QuantizationPreset
 from nncf.common.logging.track_progress import track
 from nncf.experimental.torch.fx import quantize_pt2e
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
@@ -202,12 +203,23 @@ class ImageClassificationBase(PTQTestPipeline):
     def _build_quantizer(self) -> TorchAOQuantizer:
         quantizer_kwargs = {}
         for key in (
-            "mode",
-            "target_device",
+            "presetmodel_typetarget_device",
             "ignored_scope",
         ):
             if key in self.compression_params:
                 quantizer_kwargs[key] = self.compression_params[key]
+        preset = quantizer_kwargs.pop("preset", None)
+        model_type = quantizer_kwargs.pop("model_type", None)
+
+        # This logic is copied and inverted from OVQuantizer code
+        # https://github.com/pytorch/executorch/blob/3b162950a516242da722c790cb466feb05cb299e/backends/openvino/quantizer/quantizer.py#L105
+        quantizer_mode = QuantizationMode.INT8_TRANSFORMER
+        if preset == QuantizationPreset.PERFORMANCE and model_type is None:
+            quantizer_mode = QuantizationMode.INT8_SYM
+        elif preset == QuantizationPreset.MIXED and model_type is None:
+            quantizer_mode = QuantizationMode.INT8_MIXED
+
+        quantizer_kwargs["mode"] = quantizer_mode
         advanced_parameters: AdvancedQuantizationParameters = self.compression_params.get(
             "advanced_parameters", AdvancedQuantizationParameters()
         )
