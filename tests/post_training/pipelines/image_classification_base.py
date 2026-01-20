@@ -203,7 +203,9 @@ class ImageClassificationBase(PTQTestPipeline):
     def _build_quantizer(self) -> TorchAOQuantizer:
         quantizer_kwargs = {}
         for key in (
-            "presetmodel_typetarget_device",
+            "preset",
+            "model_type",
+            "target_device",
             "ignored_scope",
         ):
             if key in self.compression_params:
@@ -218,8 +220,8 @@ class ImageClassificationBase(PTQTestPipeline):
             quantizer_mode = QuantizationMode.INT8_SYM
         elif preset == QuantizationPreset.MIXED and model_type is None:
             quantizer_mode = QuantizationMode.INT8_MIXED
-
         quantizer_kwargs["mode"] = quantizer_mode
+
         advanced_parameters: AdvancedQuantizationParameters = self.compression_params.get(
             "advanced_parameters", AdvancedQuantizationParameters()
         )

@@ -141,7 +141,7 @@ def quantize_pt2e(
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     if fold_quantize:
-        if _is_openvino_quantizer_instance(quantizer):
+        if isinstance(quantizer, OpenVINOQuantizerAdapter):
             compress_post_quantize_transformation(quantized_model)
         else:
             constant_fold(quantized_model, _quant_node_constraint)
