@@ -11,9 +11,9 @@
 
 import copy
 
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
+
 import nncf
-from nncf import ModelType
-from nncf import QuantizationPreset
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
@@ -42,8 +42,7 @@ QUANTIZATION_MODELS = [
         "model_id": "bert-base-uncased",
         "pipeline_cls": MaskedLanguageModelingHF,
         "compression_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "subset_size": 2,
         },
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
@@ -53,8 +52,7 @@ QUANTIZATION_MODELS = [
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "compression_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "subset_size": 2,
         },
         "params": {"is_stateful": True},
@@ -65,8 +63,7 @@ QUANTIZATION_MODELS = [
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "compression_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "subset_size": 2,
         },
         "params": {"is_stateful": False},
@@ -77,8 +74,7 @@ QUANTIZATION_MODELS = [
         "model_id": "hf-internal-testing/tiny-random-gpt2",
         "pipeline_cls": GPT,
         "compression_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "subset_size": 2,
         },
         "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
@@ -107,7 +103,7 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "subset_size": 2,
             "fast_bias_correction": False,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
@@ -117,7 +113,7 @@ QUANTIZATION_MODELS = [
         "model_id": "vit_b_16",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alpha=0.15,
             ),
@@ -130,7 +126,7 @@ QUANTIZATION_MODELS = [
         "model_id": "swin_v2_s",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alpha=0.5,
             ),
@@ -145,8 +141,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alpha=-1.0, activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -160,7 +155,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -174,8 +169,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
             ),
@@ -189,7 +183,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -200,7 +194,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -211,7 +205,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -222,7 +216,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "fast_bias_correction": False,
         },
         "backends": [BackendType.ONNX, BackendType.OV],
@@ -234,7 +228,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -245,7 +239,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -269,7 +263,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -283,7 +277,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "fast_bias_correction": False,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
@@ -298,7 +292,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -312,7 +306,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "fast_bias_correction": False,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
@@ -327,7 +321,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -341,7 +335,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
                 activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
             ),
@@ -355,8 +349,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 9,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
         },
         "backends": [BackendType.OV],
         "batch_size": 32,
@@ -367,8 +360,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
             ),
@@ -382,7 +374,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -403,8 +395,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.INT8_TRANSFORMER,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
@@ -415,7 +406,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
+            "mode": QuantizationMode.INT8_MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,

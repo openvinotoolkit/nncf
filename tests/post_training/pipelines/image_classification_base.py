@@ -24,6 +24,7 @@ import numpy as np
 import openvino as ov
 import torch
 from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 from sklearn.metrics import accuracy_score
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
 from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
@@ -165,8 +166,8 @@ class ImageClassificationBase(PTQTestPipeline):
         pt2e_kwargs["weights_range_estimator_params"] = advanced_parameters.weights_range_estimator_params
 
         smooth_quant = False
-        if self.compression_params.get("model_type", False):
-            smooth_quant = self.compression_params["model_type"] == nncf.ModelType.TRANSFORMER
+        if self.compression_params.get("mode", False):
+            smooth_quant = self.compression_params["mode"] == QuantizationMode.INT8_TRANSFORMER
 
         with torch.no_grad():
             self.compressed_model = quantize_pt2e(
@@ -202,9 +203,7 @@ class ImageClassificationBase(PTQTestPipeline):
         quantizer_kwargs = {}
         for key in (
             "mode",
-            "preset",
             "target_device",
-            "model_type",
             "ignored_scope",
         ):
             if key in self.compression_params:
