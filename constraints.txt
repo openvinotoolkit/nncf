@@ -4,7 +4,7 @@ openvino==2025.4.1
 # Pytorch
 torch==2.9.0
 torchvision==0.24.0
-torchao==0.14.0
+torchao==0.15.0
 
 # ONNX
 onnx==1.17.0; python_version < '3.13'
