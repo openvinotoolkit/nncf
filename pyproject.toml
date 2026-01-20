@@ -84,6 +84,8 @@ files = [
     "src/nncf/telemetry/",
     "src/nncf/tensor/",
     "src/nncf/*py",
+    "src/nncf/experimental/torch/gptqmodel/",
+    "examples/llm_compression/torch/gptq_model_convertor/main.py",
 ]
 disable_error_code = ["import-untyped"]
 
@@ -91,6 +93,9 @@ disable_error_code = ["import-untyped"]
 module = "nncf.tensor.functions.*"
 disable_error_code = ["empty-body", "no-any-return"]
 
+[[tool.mypy.overrides]]
+module = ["transformers.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120

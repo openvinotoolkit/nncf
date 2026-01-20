@@ -164,6 +164,7 @@ giga
 gmtime
 googlenet
 gptq
+gptqmodel
 graphdef
 groupnormalization
 groupsize
