@@ -1,5 +1,5 @@
 {
-    "/linear/Gemm/WithoutBiases/fq_weights_1": {
+    "node_linear/WithoutBiases/fq_weights_1": {
         "input_low": [
             [
                 -0.04406487196683884
@@ -129,31 +129,31 @@
             ]
         ]
     },
-    "/avgpool/GlobalAveragePool/fq_output_0": {
+    "node_mean/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.13112583756446838,
         "output_low": 0.0,
         "output_high": 0.13112583756446838
     },
-    "/layer4/layer4.1/Relu_1/fq_output_0": {
+    "node_relu_16/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.1664111614227295,
         "output_low": 0.0,
         "output_high": 0.1664111614227295
     },
-    "/layer4/layer4.0/Relu_1/fq_output_0": {
+    "node_relu_14/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.16673137247562408,
         "output_low": 0.0,
         "output_high": 0.16673137247562408
     },
-    "/layer4/layer4.0/shortcut/shortcut.0/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_303/fq_output_0": {
         "input_low": -0.1807611733675003,
         "input_high": 0.17934897541999817,
         "output_low": -0.1807611733675003,
         "output_high": 0.17934897541999817
     },
-    "/layer4/layer4.0/shortcut/shortcut.0/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_303/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -14499,25 +14499,25 @@
             ]
         ]
     },
-    "/layer3/layer3.1/Relu_1/fq_output_0": {
+    "node_relu_12/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.44623756408691406,
         "output_low": 0.0,
         "output_high": 0.44623756408691406
     },
-    "/layer3/layer3.0/Relu_1/fq_output_0": {
+    "node_relu_10/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.4423001706600189,
         "output_low": 0.0,
         "output_high": 0.4423001706600189
     },
-    "/layer3/layer3.0/shortcut/shortcut.0/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_288/fq_output_0": {
         "input_low": -0.4381639063358307,
         "input_high": 0.43474075198173523,
         "output_low": -0.4381639063358307,
         "output_high": 0.43474075198173523
     },
-    "/layer3/layer3.0/shortcut/shortcut.0/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_288/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -21695,25 +21695,25 @@
             ]
         ]
     },
-    "/layer2/layer2.1/Relu_1/fq_output_0": {
+    "node_relu_8/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.8556914329528809,
         "output_low": 0.0,
         "output_high": 0.8556914329528809
     },
-    "/layer2/layer2.0/Relu_1/fq_output_0": {
+    "node_relu_6/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.8078867197036743,
         "output_low": 0.0,
         "output_high": 0.8078867197036743
     },
-    "/layer2/layer2.0/shortcut/shortcut.0/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_273/fq_output_0": {
         "input_low": -0.8177046179771423,
         "input_high": 0.8113163113594055,
         "output_low": -0.8177046179771423,
         "output_high": 0.8113163113594055
     },
-    "/layer2/layer2.0/shortcut/shortcut.0/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_273/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -25307,25 +25307,25 @@
             ]
         ]
     },
-    "/layer1/layer1.1/Relu_1/fq_output_0": {
+    "node_relu_4/fq_output_0": {
         "input_low": 0.0,
         "input_high": 1.406464695930481,
         "output_low": 0.0,
         "output_high": 1.406464695930481
     },
-    "/layer1/layer1.0/Relu_1/fq_output_0": {
+    "node_relu_2/fq_output_0": {
         "input_low": 0.0,
         "input_high": 1.414509892463684,
         "output_low": 0.0,
         "output_high": 1.414509892463684
     },
-    "/Relu/fq_output_0": {
+    "node_relu/fq_output_0": {
         "input_low": 0.0,
         "input_high": 1.4288616180419922,
         "output_low": 0.0,
         "output_high": 1.4288616180419922
     },
-    "/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_252/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -27127,19 +27127,19 @@
             ]
         ]
     },
-    "input.1/fq_output_0": {
+    "x/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.9999967813491821,
         "output_low": 0.0,
         "output_high": 0.9999967813491821
     },
-    "/layer1/layer1.0/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_258/fq_output_0": {
         "input_low": -0.3677194118499756,
         "input_high": 0.3648466169834137,
         "output_low": -0.3677194118499756,
         "output_high": 0.3648466169834137
     },
-    "/layer1/layer1.0/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_258/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -28941,13 +28941,13 @@
             ]
         ]
     },
-    "/layer1/layer1.0/Relu/fq_output_0": {
+    "node_relu_1/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.8217993974685669,
         "output_low": 0.0,
         "output_high": 0.8217993974685669
     },
-    "/layer1/layer1.0/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_255/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -30749,13 +30749,13 @@
             ]
         ]
     },
-    "/layer1/layer1.1/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_264/fq_output_0": {
         "input_low": -0.352088063955307,
         "input_high": 0.3493373692035675,
         "output_low": -0.352088063955307,
         "output_high": 0.3493373692035675
     },
-    "/layer1/layer1.1/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_264/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -32557,13 +32557,13 @@
             ]
         ]
     },
-    "/layer1/layer1.1/Relu/fq_output_0": {
+    "node_relu_3/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.7861555218696594,
         "output_low": 0.0,
         "output_high": 0.7861555218696594
     },
-    "/layer1/layer1.1/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_261/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -34365,13 +34365,13 @@
             ]
         ]
     },
-    "/layer2/layer2.0/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_270/fq_output_0": {
         "input_low": -0.3533228039741516,
         "input_high": 0.3505624830722809,
         "output_low": -0.3533228039741516,
         "output_high": 0.3505624830722809
     },
-    "/layer2/layer2.0/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_270/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -37965,13 +37965,13 @@
             ]
         ]
     },
-    "/layer2/layer2.0/Relu/fq_output_0": {
+    "node_relu_5/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.6004354357719421,
         "output_low": 0.0,
         "output_high": 0.6004354357719421
     },
-    "/layer2/layer2.0/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_267/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -41565,13 +41565,13 @@
             ]
         ]
     },
-    "/layer2/layer2.1/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_279/fq_output_0": {
         "input_low": -0.1644960194826126,
         "input_high": 0.1632108986377716,
         "output_low": -0.1644960194826126,
         "output_high": 0.1632108986377716
     },
-    "/layer2/layer2.1/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_279/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -45165,13 +45165,13 @@
             ]
         ]
     },
-    "/layer2/layer2.1/Relu/fq_output_0": {
+    "node_relu_7/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.4028574526309967,
         "output_low": 0.0,
         "output_high": 0.4028574526309967
     },
-    "/layer2/layer2.1/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_276/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -48765,13 +48765,13 @@
             ]
         ]
     },
-    "/layer3/layer3.0/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_285/fq_output_0": {
         "input_low": -0.19086621701717377,
         "input_high": 0.18937507271766663,
         "output_low": -0.19086621701717377,
         "output_high": 0.18937507271766663
     },
-    "/layer3/layer3.0/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_285/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -55949,13 +55949,13 @@
             ]
         ]
     },
-    "/layer3/layer3.0/Relu/fq_output_0": {
+    "node_relu_9/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.40198957920074463,
         "output_low": 0.0,
         "output_high": 0.40198957920074463
     },
-    "/layer3/layer3.0/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_282/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -63133,13 +63133,13 @@
             ]
         ]
     },
-    "/layer3/layer3.1/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_294/fq_output_0": {
         "input_low": -0.061216287314891815,
         "input_high": 0.060738034546375275,
         "output_low": -0.061216287314891815,
         "output_high": 0.060738034546375275
     },
-    "/layer3/layer3.1/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_294/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -70317,13 +70317,13 @@
             ]
         ]
     },
-    "/layer3/layer3.1/Relu/fq_output_0": {
+    "node_relu_11/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.17175772786140442,
         "output_low": 0.0,
         "output_high": 0.17175772786140442
     },
-    "/layer3/layer3.1/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_291/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -77501,13 +77501,13 @@
             ]
         ]
     },
-    "/layer4/layer4.0/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_300/fq_output_0": {
         "input_low": -0.0849958062171936,
         "input_high": 0.08433177322149277,
         "output_low": -0.0849958062171936,
         "output_high": 0.08433177322149277
     },
-    "/layer4/layer4.0/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_300/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -91853,13 +91853,13 @@
             ]
         ]
     },
-    "/layer4/layer4.0/Relu/fq_output_0": {
+    "node_relu_13/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.18447628617286682,
         "output_low": 0.0,
         "output_high": 0.18447628617286682
     },
-    "/layer4/layer4.0/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_297/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -106205,13 +106205,13 @@
             ]
         ]
     },
-    "/layer4/layer4.1/conv2/Conv/WithoutBiases/fq_output_0": {
+    "node_Conv_309/fq_output_0": {
         "input_low": -0.03414605185389519,
         "input_high": 0.03387928754091263,
         "output_low": -0.03414605185389519,
         "output_high": 0.03387928754091263
     },
-    "/layer4/layer4.1/conv2/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_309/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -120557,13 +120557,13 @@
             ]
         ]
     },
-    "/layer4/layer4.1/Relu/fq_output_0": {
+    "node_relu_15/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.079043909907341,
         "output_low": 0.0,
         "output_high": 0.079043909907341
     },
-    "/layer4/layer4.1/conv1/Conv/WithoutBiases/fq_weights_1": {
+    "node_Conv_306/fq_weights_1": {
         "input_low": [
             [
                 [
