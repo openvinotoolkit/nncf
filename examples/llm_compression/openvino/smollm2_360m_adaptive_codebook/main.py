@@ -31,50 +31,83 @@ MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
 COMPRESSED_MODEL_ID = "smollm2_360m_compressed_codebook"
 
 
+def get_input_shapes(model, batch_size=1):
+    """
+    Extract input shapes from the model and configure them with the specified batch size.
+
+    :param model: The model from which to extract input shapes.
+    :param batch_size: The batch size to use for the input shapes. Defaults to 1.
+    :return: A dictionary mapping input names to their shapes.
+    """
+    inputs = {}
+
+    for val in model.model.inputs:
+        name = val.any_name
+        shape = list(val.partial_shape.get_min_shape())
+        shape[0] = batch_size
+        inputs[name] = shape
+
+    return inputs
+
+
+def preprocess_fn(example, tokenizer):
+    """
+    Preprocess an example by applying the chat template to its messages.
+
+    :param example: The example containing messages to preprocess.
+    :param tokenizer: The tokenizer to use for applying the chat template.
+    :return: A dictionary with the processed text.
+    """
+    return {"text": tokenizer.apply_chat_template(example["messages"], add_generation_prompt=False, tokenize=False)}
+
+
+def transform_func(item, tokenizer, input_shapes, max_tokens=128):
+    """
+    Transform a dataset item into model input format with tokenization and shape handling.
+
+    :param item: The dataset item containing text to transform.
+    :param tokenizer: The tokenizer to use for text tokenization.
+    :param input_shapes: Dictionary of expected input shapes for the model.
+    :param max_tokens: Maximum number of tokens to use from the tokenized text. Defaults to 128.
+    :return: A dictionary containing transformed inputs ready for model inference.
+    """
+    text = item["text"]
+    tokens = tokenizer(text)
+
+    res = {
+        "input_ids": np.expand_dims(np.array(tokens["input_ids"][:max_tokens]), 0),
+        "attention_mask": np.expand_dims(np.array(tokens["attention_mask"][:max_tokens]), 0),
+    }
+
+    if "position_ids" in input_shapes:
+        position_ids = np.cumsum(res["attention_mask"], axis=1) - 1
+        position_ids[res["attention_mask"] == 0] = 1
+        res["position_ids"] = position_ids
+    batch_size = res["input_ids"].shape[0]
+
+    if "beam_idx" in input_shapes:
+        res["beam_idx"] = np.arange(batch_size, dtype=int)
+
+    return res
+
+
 def get_dataset(model, tokenizer):
-    def transform_func(item, tokenizer, input_shapes, max_tokens=128):
-        text = item["text"]
-        tokens = tokenizer(text)
+    """
+    Create and prepare a quantization dataset for model compression.
 
-        res = {
-            "input_ids": np.expand_dims(np.array(tokens["input_ids"][:max_tokens]), 0),
-            "attention_mask": np.expand_dims(np.array(tokens["attention_mask"][:max_tokens]), 0),
-        }
-
-        if "position_ids" in input_shapes:
-            position_ids = np.cumsum(res["attention_mask"], axis=1) - 1
-            position_ids[res["attention_mask"] == 0] = 1
-            res["position_ids"] = position_ids
-        batch_size = res["input_ids"].shape[0]
-
-        if "beam_idx" in input_shapes:
-            res["beam_idx"] = np.arange(batch_size, dtype=int)
-
-        return res
-
-    def get_input_shapes(model, batch_size=1):
-        inputs = {}
-
-        for val in model.model.inputs:
-            name = val.any_name
-            shape = list(val.partial_shape.get_min_shape())
-            shape[0] = batch_size
-            inputs[name] = shape
-
-        return inputs
-
+    :param model: The model for which to prepare the dataset.
+    :param tokenizer: The tokenizer to use for processing the dataset.
+    :return: An NNCF dataset ready for quantization.
+    """
     input_shapes = get_input_shapes(model, batch_size=1)
 
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
 
-    def preprocess_fn(example):
-        return {"text": tokenizer.apply_chat_template(example["messages"], add_generation_prompt=False, tokenize=False)}
-
     num_samples = 2048
     ds = datasets.load_dataset("neuralmagic/LLM_compression_calibration", split="train")
     ds = ds.shuffle(seed=42).select(range(num_samples))
-    ds = ds.map(preprocess_fn)
+    ds = ds.map(partial(preprocess_fn, tokenizer=tokenizer))
     dataset = ds
 
     quantization_dataset = nncf.Dataset(
@@ -84,6 +117,12 @@ def get_dataset(model, tokenizer):
 
 
 def create_normal_distributed_values(n_levels=8) -> np.ndarray:
+    """
+    Create a codebook of normally distributed values normalized to the range [-1, 1].
+
+    :param n_levels: The number of quantization levels in the codebook. Defaults to 8.
+    :return: A numpy array of normalized normally distributed values.
+    """
     probs = (np.arange(n_levels) + 0.5) / n_levels
 
     # Inverse CDF (quantiles) of standard normal distribution
@@ -170,7 +209,7 @@ def codebook_example(
     model_id: str, compressed_model_id: str, adaptive_codebook: bool = False, num_elements: int = 10
 ) -> list[str]:
     """
-    Example of using the custom codebook compression.
+    Example of using the adaptive codebook compression.
 
     :param model_id: The identifier of the model to load.
     :param compressed_model_id: The identifier for the compressed model to save.
@@ -212,6 +251,11 @@ def codebook_example(
 
 
 def main():
+    """
+    Main function that demonstrates both standard and adaptive codebook compression.
+
+    :return: A list of answers generated by both compressed models.
+    """
     res = codebook_example(MODEL_ID, COMPRESSED_MODEL_ID)
     res += codebook_example(MODEL_ID, COMPRESSED_MODEL_ID + "_adaptive", adaptive_codebook=True)
     return res
