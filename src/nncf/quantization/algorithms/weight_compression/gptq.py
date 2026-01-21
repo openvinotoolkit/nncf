@@ -18,7 +18,6 @@ import nncf
 from nncf import Dataset
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
