@@ -435,7 +435,7 @@ def test_calculate_scale_linear(is_3d_weights: bool):
 
     _, res = gptq.apply(ov_model, graph, nncf_dataset, wc_params)
 
-    # Step 4: Obtain the scales from our GPTQ implementation and compare with referencee
+    # Step 4: Obtain the scales from our GPTQ implementation and compare with reference
     scale_from_nncf = res.get("self.weight").scale.data
     ref_scale = ref_scale.numpy() if isinstance(ref_scale, torch.Tensor) else ref_scale
     ref_scale = ref_scale.reshape(scale_from_nncf.shape)
