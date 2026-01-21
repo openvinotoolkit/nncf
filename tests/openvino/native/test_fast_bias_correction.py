@@ -34,6 +34,7 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
+        model.eval()
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_model = ov.convert_model(onnx_path, input=model.INPUT_SIZE)
         return ov_model
