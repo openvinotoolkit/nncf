@@ -144,7 +144,7 @@ class TemplateTestBCAlgorithm:
             (ConvTestModel, {"node_conv2d": [0.11085186, 1.0017344]}),
             (DepthwiseConvTestModel, {"node_conv2d": [-1.1229, -0.1863]}),
             (TransposeConvTestModel, {"node_convolution": [0.66797173, -0.7070703]}),
-            (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
+            (OneDimMM, {"node_MatMul_1": [0.95773065, 1.3218939, 0.81694865]}),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):

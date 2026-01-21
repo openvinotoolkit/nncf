@@ -32,7 +32,7 @@ from tests.openvino.native.common import compare_nncf_graphs
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
-    TRANSPOSE_CONV_NAME = "/conv/ConvTranspose/WithoutBiases"
+    TRANSPOSE_CONV_NAME = "node_convolution"
 
     @staticmethod
     def list_to_backend_type(data: list) -> np.ndarray:
@@ -45,7 +45,8 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
+        model.eval()
+        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=18, input_names=["input.1"])
         ov_model = ov.convert_model(onnx_path)
         if isinstance(model, TransposeConvTestModel):
             for node in ov_model.get_ops():
@@ -69,6 +70,9 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
         if model_cls is OneDimMM:
             return ref_biases
+        if model_cls is TransposeConvTestModel:
+            return ref_biases
+
         mapping = {f"{name}/WithoutBiases": val for name, val in ref_biases.items()}
         return mapping
 
@@ -95,102 +99,102 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         "layer_name, ref_data",
         (
             (
-                "/conv_1/Conv/WithoutBiases",
+                "node_conv2d/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/Concat", 1): ("input.1", 0),
-                        ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
+                        ("node_concat", 1): ("input.1", 0),
+                        ("node_conv2d/WithoutBiases", 0): ("node_concat", 0),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
+                        "subgraph_input_ids": {("node_conv2d/WithoutBiases", 0)},
+                        "subgraph_output_ids": {("node_Split_27", 0), ("node_max_pool2d", 0), ("node_Split_27", 1)},
                     },
                 },
             ),
             (
-                "/conv_2/Conv/WithoutBiases",
+                "node_conv2d_1/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
-                        ("/conv_2/Conv/WithoutBiases", 0): ("/maxpool_1/MaxPool", 0),
-                        ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
-                        ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
+                        ("node_conv2d/WithoutBiases", 0): ("node_concat", 0),
+                        ("node_conv2d_1/WithoutBiases", 0): ("node_max_pool2d", 0),
+                        ("node_conv2d_3/WithoutBiases", 0): ("node_Split_27", 0),
+                        ("node_conv2d_5/WithoutBiases", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_2/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Relu_1", 0)},
+                        "subgraph_input_ids": {("node_conv2d_1/WithoutBiases", 0)},
+                        "subgraph_output_ids": {("node_relu_1", 0)},
                     },
                 },
             ),
             (
-                "/conv_3/Conv/WithoutBiases",
+                "node_conv2d_2/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
-                        ("/conv_2/Conv/WithoutBiases", 0): ("/maxpool_1/MaxPool", 0),
-                        ("/conv_3/Conv/WithoutBiases", 0): ("/Relu_1", 0),
-                        ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
-                        ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
+                        ("node_conv2d/WithoutBiases", 0): ("node_concat", 0),
+                        ("node_conv2d_1/WithoutBiases", 0): ("node_max_pool2d", 0),
+                        ("node_conv2d_2/WithoutBiases", 0): ("node_relu_1", 0),
+                        ("node_conv2d_3/WithoutBiases", 0): ("node_Split_27", 0),
+                        ("node_conv2d_5/WithoutBiases", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv/WithoutBiases", 0), ("/conv_3/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
+                        "subgraph_input_ids": {("node_conv2d/WithoutBiases", 0), ("node_conv2d_2/WithoutBiases", 0)},
+                        "subgraph_output_ids": {("node_Split_27", 0), ("node_Split_27", 1)},
                     },
                 },
             ),
             (
-                "/conv_4/Conv/WithoutBiases",
+                "node_conv2d_3/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
-                        ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
+                        ("node_conv2d_3/WithoutBiases", 0): ("node_Split_27", 0),
+                        ("node_conv2d_5/WithoutBiases", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_4/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Relu_2", 0)},
+                        "subgraph_input_ids": {("node_conv2d_3/WithoutBiases", 0)},
+                        "subgraph_output_ids": {("node_relu_2", 0)},
                     },
                 },
             ),
             (
-                "/conv_6/Conv/WithoutBiases",
+                "node_conv2d_5/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_5/Conv/WithoutBiases", 0): ("/Relu_2", 0),
-                        ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
+                        ("node_conv2d_4/WithoutBiases", 0): ("node_relu_2", 0),
+                        ("node_conv2d_5/WithoutBiases", 0): ("node_Split_27", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_5/Conv/WithoutBiases", 0), ("/conv_6/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
+                        "subgraph_input_ids": {("node_conv2d_4/WithoutBiases", 0), ("node_conv2d_5/WithoutBiases", 0)},
+                        "subgraph_output_ids": {("node_add_3", 0), ("node_concat_1", 0)},
                     },
                 },
             ),
             (
-                "/conv_10/Conv/WithoutBiases",
+                "node_conv2d_9/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_8/Conv/WithoutBiases", 0): ("/conv_7/Conv", 0),
-                        ("/conv_9/Conv/WithoutBiases", 0): ("/Add_3", 0),
-                        ("/conv_10/Conv/WithoutBiases", 0): ("/Concat", 0),
+                        ("node_conv2d_7/WithoutBiases", 0): ("node_conv2d_6", 0),
+                        ("node_conv2d_8/WithoutBiases", 0): ("node_add_3", 0),
+                        ("node_conv2d_9/WithoutBiases", 0): ("node_concat", 0),
                     },
                     "subgraph_data": {
                         "subgraph_input_ids": {
-                            ("/conv_8/Conv/WithoutBiases", 0),
-                            ("/conv_9/Conv/WithoutBiases", 0),
-                            ("/conv_10/Conv/WithoutBiases", 0),
+                            ("node_conv2d_7/WithoutBiases", 0),
+                            ("node_conv2d_8/WithoutBiases", 0),
+                            ("node_conv2d_9/WithoutBiases", 0),
                         },
-                        "subgraph_output_ids": {("/Concat_2", 0)},
+                        "subgraph_output_ids": {("node_concat_2", 0)},
                     },
                 },
             ),
             (
-                "/MatMul",
+                "node_matmul",
                 {
                     "collected_inputs": {
-                        ("/MatMul", 0): ("/Reshape", 0),
+                        ("node_matmul", 0): ("node_view", 0),
                     },
                     "subgraph_data": {
-                        "subgraph_input_ids": {("/MatMul", 0)},
-                        "subgraph_output_ids": {("/Reshape_1", 0), ("/Add_4", 0)},
+                        "subgraph_input_ids": {("node_matmul", 0)},
+                        "subgraph_output_ids": {("node_view_1", 0), ("node_add_4", 0)},
                     },
                 },
             ),
@@ -205,19 +209,19 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
             (
                 SplittedModel,
                 {
-                    ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
-                    ("/Concat", 1): ("input.1", 0),
+                    ("node_conv2d/WithoutBiases", 0): ("node_concat", 0),
+                    ("node_concat", 1): ("input.1", 0),
                 },
             ),
             (
                 MultipleConvTestModel,
                 {
-                    ("/conv_1/Conv/WithoutBiases", 0): ("input.1", 0),
-                    ("/conv_3/Conv/WithoutBiases", 0): ("input.1", 0),
+                    ("node_conv2d/WithoutBiases", 0): ("input.1", 0),
+                    ("node_conv2d_2/WithoutBiases", 0): ("input.1", 0),
                 },
             ),
-            (ConvTestModel, {("/conv/Conv/WithoutBiases", 0): ("input.1", 0)}),
-            (DepthwiseConvTestModel, {("/conv/Conv/WithoutBiases", 0): ("input.1", 0)}),
+            (ConvTestModel, {("node_conv2d/WithoutBiases", 0): ("input.1", 0)}),
+            (DepthwiseConvTestModel, {("node_conv2d/WithoutBiases", 0): ("input.1", 0)}),
             (TransposeConvTestModel, {(TRANSPOSE_CONV_NAME, 0): ("input.1", 0)}),
         ),
     )
