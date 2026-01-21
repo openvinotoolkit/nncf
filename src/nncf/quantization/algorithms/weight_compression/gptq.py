@@ -264,10 +264,6 @@ class GPTQ:
             msg = "Transpose is not supported"
             raise RuntimeError(msg)
 
-        if len(hessian.shape) == 3 and hessian.shape[0] == 1:
-            hessian = fns.squeeze(hessian)
-            msg = "The hessian passed to quantize_weights is 3D. It should be 2D"
-            nncf_logger.warning(msg=msg)
         assert len(hessian.shape) == 2, "Hessian should be 2D"
 
         dead_indices = fns.diag(hessian) == 0
