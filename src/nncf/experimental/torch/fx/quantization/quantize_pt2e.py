@@ -45,6 +45,7 @@ def _is_openvino_quantizer_instance(obj) -> bool:
     Safely check if an object is instance of OpenVINOQuantizer.
     This is to avoid a circular import
     """
+    # TODO(anazir) refactor to avoid circular import - 179719
     try:
         from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 
