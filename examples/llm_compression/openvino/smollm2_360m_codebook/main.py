@@ -110,7 +110,7 @@ def default_codebook_example(model_id: str, compressed_model_id: str) -> list[st
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print_answers("Non-optimized model outputs:\n", answers_by_questions)
 
-    model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CB4_F8E4M3, ratio=1.0, group_size=64)
+    model.model = nncf.compress_weights(model.model, mode=nncf.CompressWeightsMode.CB4, ratio=1.0, group_size=64)
     model.save_pretrained(compressed_model_id)
     tokenizer.save_pretrained(compressed_model_id)
 
