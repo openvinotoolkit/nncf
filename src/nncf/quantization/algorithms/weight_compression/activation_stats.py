@@ -22,7 +22,7 @@ def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int =
     A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
     :param stats: An object containing statistics for the layer.
-    :param subset_size: The number of samples for AWQ.
+    :param subset_size: The number of samples for AWQ. If subset_size <= 0, all samples are used.
     :param act_ch_axis: The activation channel axis.
     :return: tuple of the following tensors:
         s - maximum channel magnitude across samples [HiddenDim]
@@ -41,7 +41,7 @@ def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int =
     sample_axis = -1
 
     # Prevent high memory and time consumption by sampling
-    if X_full.shape[sample_axis] > subset_size:
+    if X_full.shape[sample_axis] > subset_size and subset_size > 0:
         lens = [
             reduce(mul, shape[:act_ch_axis] + shape[act_ch_axis % len(shape) + 1 :], 1) for shape in stats.shape_values
         ]

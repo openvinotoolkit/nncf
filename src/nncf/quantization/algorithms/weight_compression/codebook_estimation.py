@@ -168,7 +168,7 @@ class CodebookEstimation(Algorithm):
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
 
-            if config.num_bits != 4:  # or node_name not in statistics:
+            if config.num_bits != 4:
                 res[weight_name] = CompressedWeight()
                 continue
 
@@ -222,7 +222,7 @@ class CodebookEstimation(Algorithm):
             if weight_name in res:
                 continue
 
-            if config.num_bits != 4:  # or node_name not in statistics:
+            if config.num_bits != 4:
                 res[weight_name] = CompressedWeight()
                 continue
 
@@ -825,8 +825,7 @@ class KMeansWeighted:
             if fns.any(fns.all(fns.abs(self.centroids - prev_centroids) < 0.00001)):
                 break
 
-        if (iteration - 1) % saving_intervals != 0:
-            self.variants.append(deepcopy(self.centroids))
+        self.variants.append(deepcopy(self.centroids))
 
     def evaluate(self, X):
         """
@@ -844,7 +843,7 @@ class KMeansWeighted:
         return deepcopy(self.centroids).flatten(), centroid_idxs
 
 
-def weights_clusterization_k_means(weight, importance, n_centroids=2**4, intervals=700):
+def weights_clusterization_k_means(weight, importance, n_centroids=2**4, intervals=700, max_iter=70):
     """
     Perform weighted K-means clustering on weight data to find optimal codebook.
 
@@ -865,6 +864,7 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4, interva
                    activation statistics. Same shape as weight.
         n_centroids: Number of codebook entries (clusters), default 16 for 4-bit quantization.
         intervals: Number of histogram bins for efficient clustering, default 700.
+        max_iter: Maximum number of K-means iterations, default 70.
 
     Returns:
         Tuple of (codebook, indexes, variants):
@@ -896,7 +896,7 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4, interva
     n_init[0] = weight.min()
     n_init[-1] = weight.max()
 
-    kmeans = KMeansWeighted(n_centroids, max_iter=70)
+    kmeans = KMeansWeighted(n_centroids, max_iter=max_iter)
 
     # fixed centroids: min, zero, max
     kmeans.fit(

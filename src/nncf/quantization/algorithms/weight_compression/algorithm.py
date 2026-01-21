@@ -257,7 +257,7 @@ def check_user_compression_configuration(
         msg = "LoRA Correction algorithm is not compatible with FQ, FQ_LORA and FQ_LORA_NLS compression formats."
         raise nncf.ValidationError(msg)
 
-    if mode in [CompressWeightsMode.CODEBOOK] and (advanced_parameters is None or advanced_parameters.codebook is None):
+    if mode == CompressWeightsMode.CODEBOOK and (advanced_parameters is None or advanced_parameters.codebook is None):
         msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
 
