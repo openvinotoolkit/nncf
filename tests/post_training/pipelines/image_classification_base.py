@@ -33,6 +33,7 @@ from torchvision import datasets
 
 import nncf
 from nncf import AdvancedQuantizationParameters
+from nncf import ModelType
 from nncf import QuantizationPreset
 from nncf.common.logging.track_progress import track
 from nncf.experimental.torch.fx import quantize_pt2e
@@ -167,8 +168,8 @@ class ImageClassificationBase(PTQTestPipeline):
         pt2e_kwargs["weights_range_estimator_params"] = advanced_parameters.weights_range_estimator_params
 
         smooth_quant = False
-        if self.compression_params.get("mode", False):
-            smooth_quant = self.compression_params["mode"] == QuantizationMode.INT8_TRANSFORMER
+        if self.compression_params.get("model_type", False):
+            smooth_quant = self.compression_params["model_type"] == ModelType.TRANSFORMER
 
         with torch.no_grad():
             self.compressed_model = quantize_pt2e(
