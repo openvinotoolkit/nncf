@@ -76,17 +76,6 @@ class CodebookEstimation(Algorithm):
     - Uses activation-weighted importance during clustering
     - Optimizes for specific floating-point formats (e.g., FP8 E4M3)
     - Can process weights with group_size != -1 for per-weight quantization
-
-    Attributes
-    ----------
-    _value_type : TensorDataType
-        Target data type for codebook values (e.g., TensorDataType.f8e4m3 for 8-bit float).
-    _per_block : bool
-        If True, applies per-group estimation; if False, applies per-weight estimation.
-    _num_elements : int
-        Number of elements (centroids) in the codebook, typically 16 for 4-bit quantization (2^4).
-    _backend_entity : WeightCompressionAlgoBackend
-        Backend-specific implementation for weight access and operations.
     """
 
     def __init__(
