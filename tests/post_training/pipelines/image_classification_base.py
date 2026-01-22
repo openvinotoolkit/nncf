@@ -202,15 +202,13 @@ class ImageClassificationBase(PTQTestPipeline):
     def _build_quantizer(self) -> TorchAOQuantizer:
         quantizer_kwargs = {}
         for key in (
-            "target_device",
+            "modetarget_device",
             "ignored_scope",
         ):
-            if key in self.compression_params:
-                quantizer_kwargs[key] = self.compression_params[key]
+            if key in self.quantizer_params:
+                quantizer_kwargs[key] = self.quantizer_params[key]
 
-        quantizer_params = self.compression_params["quantizer_params"]
-        quantizer_kwargs["mode"] = quantizer_params["quantizer_mode"]
-        advanced_parameters: AdvancedQuantizationParameters = self.compression_params.get(
+        advanced_parameters: AdvancedQuantizationParameters = self.quantizer_params.get(
             "advanced_parameters", AdvancedQuantizationParameters()
         )
         quantizer_kwargs["overflow_fix"] = advanced_parameters.overflow_fix

@@ -618,11 +618,12 @@ def add_quantizer_compression_params(models_list: list[dict]) -> list[dict]:
     from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 
     for test_model_param in models_list:
-        # All other params from compression_params is used by the quantizer except model_type and preset
-        # mode used by quantizer is changed. Other params are used as it is
+        # We need all the compression params for the OVQuantizer except mode, preset and model_type
         quantizer_params = {}
-        preset = test_model_param.get("preset")
-        model_type = test_model_param.get("model_type")
+        compression_params = test_model_param.get("compression_params")
+        quantizer_params = copy.deepcopy(compression_params)
+        preset = quantizer_params.pop("preset", None)
+        model_type = quantizer_params.pop("model_type", None)
 
         # This logic is copied and inverted from OVQuantizer code
         # https://github.com/pytorch/executorch/blob/3b162950a516242da722c790cb466feb05cb299e/backends/openvino/quantizer/quantizer.py#L105
@@ -631,8 +632,8 @@ def add_quantizer_compression_params(models_list: list[dict]) -> list[dict]:
             quantizer_mode = QuantizationMode.INT8_SYM
         elif preset == QuantizationPreset.MIXED and model_type is None:
             quantizer_mode = QuantizationMode.INT8_MIXED
-        quantizer_params["quantizer_mode"] = quantizer_mode
-        test_model_param["compression_params"]["quantizer_params"] = quantizer_params
+        quantizer_params["mode"] = quantizer_mode
+        test_model_param["quantizer_params"] = quantizer_params
 
     return models_list
 
