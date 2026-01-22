@@ -155,7 +155,7 @@ def main():
     ov_model = ov.convert_model(fp32_onnx_path)
 
     int8_onnx_path = ROOT / "ssd300_vgg16_int8.onnx"
-    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path)
+    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path, dynamo=False)
     ov_quantized_model = ov.convert_model(int8_onnx_path)
 
     fp32_ir_path = ROOT / "ssd300_vgg16_fp32.xml"
