@@ -1,4 +1,4 @@
-# Large Language Models FP8 Compression Example
+# Adaptive Codebook Compression for Large Language Models
 
 This example demonstrates how to apply codebook compression to [HuggingFaceTB/SmolLM2-360M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct) model. It can be useful for evaluation and early HW enablement purposes.
 
