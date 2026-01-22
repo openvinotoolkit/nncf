@@ -202,7 +202,8 @@ class ImageClassificationBase(PTQTestPipeline):
     def _build_quantizer(self) -> TorchAOQuantizer:
         quantizer_kwargs = {}
         for key in (
-            "modetarget_device",
+            "mode",
+            "target_device",
             "ignored_scope",
         ):
             if key in self.quantizer_params:
