@@ -7,4 +7,5 @@ pycocotools==2.0.7
 torch==2.9.0
 torchmetrics==1.0.1
 torchvision==0.24.0
+onnxscript==0.5.7
 numpy<2
