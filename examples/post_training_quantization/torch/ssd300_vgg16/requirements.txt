@@ -4,7 +4,7 @@ fastcore==1.11.5
 onnx==1.17.0
 openvino==2025.4.1
 pycocotools==2.0.7
-torch==2.9.0
+torch==2.10.0
 torchmetrics==1.0.1
-torchvision==0.24.0
+torchvision==0.25.0
 numpy<2
