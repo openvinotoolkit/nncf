@@ -71,7 +71,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
         ]
 
     @property
@@ -79,7 +79,7 @@ class WeightCompressionConfig:
         """
         :return: True if compression type is codebook, else False.
         """
-        return self.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
+        return self.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4]
 
     @property
     def compression_dtype(self) -> TensorDataType:
