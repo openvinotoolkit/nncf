@@ -694,12 +694,12 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
 
 
 @tensor_dispatcher
-def argmin(a: Tensor, axis: None) -> Tensor:
+def argmin(a: Tensor, axis: int = -1) -> Tensor:
     """
     Returns the indices of the minimum values along an axis.
 
     :param a: The tensor for which to find the minimum values.
-    :param axis: Axis or tuple of axes along which to find the minimum values.
+    :param axis: Axis along which to find the minimum values. If None, the index is into the flattened array.
     :return: Indices of the minimum values along an axis.
     """
 

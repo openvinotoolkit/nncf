@@ -395,6 +395,11 @@ def _(a: torch.Tensor, axis: int = -1, descending: bool = False, stable: bool = 
     return torch.argsort(a, dim=axis, descending=descending, stable=stable)
 
 
+@numeric.argmin.register
+def _(a: torch.Tensor, axis: int = -1) -> torch.Tensor:
+    return torch.argmin(a, dim=axis)
+
+
 @numeric.diag.register
 def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
     return torch.diag(a, diagonal=k)

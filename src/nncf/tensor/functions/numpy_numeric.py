@@ -388,7 +388,7 @@ def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False
 
 
 @numeric.argmin.register
-def _(a: T_NUMPY, axis: None) -> T_NUMPY:
+def _(a: T_NUMPY, axis: int = -1) -> T_NUMPY:
     return np.argmin(a, axis=axis)
 
 
