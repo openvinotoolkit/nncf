@@ -96,7 +96,7 @@ def get_weight_compression_configuration(
             group_size = 32
         elif mode in [
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
         ]:
             group_size = -1
@@ -575,7 +575,7 @@ class WeightCompression(Algorithm):
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
 
-        if self._mode == CompressWeightsMode.CB4_F8E4M3:
+        if self._mode == CompressWeightsMode.CB4:
             codebook_values = Tensor(CB4_QUANTILES)
         elif self._mode == CompressWeightsMode.CODEBOOK:
             codebook_values = Tensor(self._advanced_parameters.codebook)

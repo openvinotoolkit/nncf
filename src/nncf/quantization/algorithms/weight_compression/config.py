@@ -72,7 +72,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
         ]
 
     @property
@@ -82,7 +82,7 @@ class WeightCompressionConfig:
         """
         return self.mode in [
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.CB4,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
         ]
 

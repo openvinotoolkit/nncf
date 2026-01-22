@@ -375,7 +375,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
         (CompressWeightsMode.INT4_SYM, 3, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.INT4_ASYM, 3, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.NF4, 3, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.CB4_F8E4M3, 3, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.CB4, 3, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP4, 32, get_mixed_mapping(check_mxfp4, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.MXFP8_E4M3, 32, get_mixed_mapping(check_mxfp8, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.FP8_E4M3, 3, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
@@ -1334,7 +1334,7 @@ def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(
         model,
-        mode=CompressWeightsMode.CB4_F8E4M3,
+        mode=CompressWeightsMode.CB4,
         ratio=ratio,
         group_size=1,
         all_layers=all_layers,
