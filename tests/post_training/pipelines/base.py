@@ -67,8 +67,12 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-QUANTIZER_BACKENDS = [BackendType.OV_QUANTIZER_NNCF, BackendType.OV_QUANTIZER_AO]
-FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH] + QUANTIZER_BACKENDS
+FX_BACKENDS = [
+    BackendType.FX_TORCH,
+    BackendType.CUDA_FX_TORCH,
+    BackendType.OV_QUANTIZER_NNCF,
+    BackendType.OV_QUANTIZER_AO,
+]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
@@ -231,7 +235,6 @@ class BaseTestPipeline(ABC):
         model_id: str,
         backend: BackendType,
         compression_params: dict,
-        quantizer_params: dict,
         output_dir: Path,
         data_dir: Path,
         reference_data: dict,
@@ -245,7 +248,6 @@ class BaseTestPipeline(ABC):
         self.model_id = model_id
         self.backend = backend
         self.compression_params = compression_params
-        self.quantizer_params = quantizer_params
         self.output_dir = output_dir
         self.data_dir = data_dir
         self.reference_data = reference_data
@@ -412,7 +414,6 @@ class PTQTestPipeline(BaseTestPipeline):
         model_id,
         backend,
         compression_params,
-        quantizer_params,
         output_dir,
         data_dir,
         reference_data,
@@ -427,7 +428,6 @@ class PTQTestPipeline(BaseTestPipeline):
             model_id,
             backend,
             compression_params,
-            quantizer_params,
             output_dir,
             data_dir,
             reference_data,
