@@ -147,7 +147,7 @@ class CodebookEstimation(Algorithm):
             self._set_backend_entity(model)
 
         if self._across_blocks:
-            return self.apply_per_group(model, graph, all_weight_params, statistics, backend_entity)
+            return self.apply_across_blocks(model, graph, all_weight_params, statistics, backend_entity)
 
         res = dict()
 
@@ -174,7 +174,7 @@ class CodebookEstimation(Algorithm):
 
         return res
 
-    def apply_per_group(
+    def apply_across_blocks(
         self,
         model: TModel,
         graph: NNCFGraph,
@@ -199,7 +199,7 @@ class CodebookEstimation(Algorithm):
             self._set_backend_entity(model)
         res = dict()
 
-        for wp in track(all_weight_params, description="Applying Codebook Estimation per group"):
+        for wp in track(all_weight_params, description="Applying Codebook Estimation across blocks"):
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
