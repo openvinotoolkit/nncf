@@ -23,16 +23,6 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 @torch.no_grad()
-def print_tensor(t: torch.Tensor):
-    print()
-    print("=" * 80)
-    print(f"values = {t.flatten()[:8].tolist()}")
-    print(f"type   = {t.dtype}, shape={tuple(t.shape)}")
-    print(f"max    = {t.max()}, min={t.min()}, mean={t.mean()}, std={t.std()}")
-    print("=" * 80)
-
-
-@torch.no_grad()
 @pytest.mark.parametrize("with_bias", [True, False], ids=["with_bias", "without_bias"])
 @pytest.mark.parametrize("is_sym", [True, False], ids=["sym", "asym"])
 def test_convert_int8_linear(with_bias: bool, is_sym: bool):
@@ -63,7 +53,6 @@ def test_convert_int8_linear(with_bias: bool, is_sym: bool):
     gptq_module = convert_linear_module(linear, decompressor)
     gptq_module.cuda()
     gptq_result = gptq_module(example_input.cuda())
-    print_tensor(gptq_result)
 
     torch.testing.assert_close(result, gptq_result.cpu(), atol=1e-3, rtol=1e-3)
 
