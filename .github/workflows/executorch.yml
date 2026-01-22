@@ -43,10 +43,9 @@ jobs:
         run: |
           # Torchao installation requires pytorch to be installed first.
           pip install . -r tests/executorch/requirements.txt
-          pip install --pre torch torchvision torchao --index-url https://download.pytorch.org/whl/nightly/cpu
+          pip install torch==2.10.0 torchvision torchao==0.14.0
           # Executorch
-          # Editable install due to https://github.com/pytorch/executorch/issues/6475
-          pip install --no-build-isolation -e git+https://github.com/anzr299/executorch.git@an/openvino/nncf_compress_pt2e#egg=executorch
+          pip install executorch==1.0.1
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope
