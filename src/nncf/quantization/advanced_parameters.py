@@ -390,15 +390,15 @@ class AdvancedAdaptiveCodebookParameters:
 
     :param value_type: The target tensor data type for the codebook. Defaults to f8e4m3.
     :type value_type: TensorDataType
-    :param per_block: Whether to use per-block codebooks (e.g., all down_proj has the same codeboook).
+    :param across_blocks: Whether to use across-block codebooks (e.g., all down_proj has the same codeboook).
         Defaults to False.
-    :type per_block: bool
+    :type across_blocks: bool
     :param num_elements: The number of elements in each codebook entry. Defaults to 16.
     :type num_elements: int
     """
 
     value_type: TensorDataType = TensorDataType.f8e4m3
-    per_block: bool = False
+    across_blocks: bool = False
     num_elements: int = 16
 
 

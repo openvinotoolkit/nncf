@@ -79,14 +79,14 @@ class CodebookEstimation(Algorithm):
     """
 
     def __init__(
-        self, value_type: TensorDataType = TensorDataType.f8e4m3, per_block: bool = True, num_elements: int = 16
+        self, value_type: TensorDataType = TensorDataType.f8e4m3, across_blocks: bool = True, num_elements: int = 16
     ):
         """
         Initializes the Codebook Estimation algorithm.
 
         :param value_type: Target data type for codebook values. Default is TensorDataType.f8e4m3
             (8-bit floating point with 4 exponent bits and 3 mantissa bits).
-        :param per_block: If True, estimates codebooks per group of weights sharing the same name pattern.
+        :param across_blocks: If True, estimates codebooks per group of weights sharing the same name pattern.
             If False, estimates a separate codebook for each individual weight tensor.
         :param num_elements: Number of centroids in the codebook. For 4-bit quantization, this is
             typically 16 (2^4). Each weight value will be mapped to one of these centroids.
@@ -94,7 +94,7 @@ class CodebookEstimation(Algorithm):
         super().__init__()
 
         self._value_type = value_type
-        self._per_block = per_block
+        self._across_blocks = across_blocks
         self._num_elements = num_elements
 
     @property
@@ -146,7 +146,7 @@ class CodebookEstimation(Algorithm):
         if self._backend_entity is None:
             self._set_backend_entity(model)
 
-        if self._per_block:
+        if self._across_blocks:
             return self.apply_per_group(model, graph, all_weight_params, statistics, backend_entity)
 
         res = dict()

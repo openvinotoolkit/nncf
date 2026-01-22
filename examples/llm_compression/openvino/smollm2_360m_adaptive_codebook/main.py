@@ -225,7 +225,7 @@ def codebook_example(
     codebook = create_normal_distributed_values(num_elements)
 
     adaptive_codebook_params = AdvancedAdaptiveCodebookParameters(
-        num_elements=num_elements, value_type=nncf.tensor.TensorDataType.float16, per_block=False
+        num_elements=num_elements, value_type=nncf.tensor.TensorDataType.float16, across_blocks=False
     )
     quantization_dataset = get_dataset(model, tokenizer)
 

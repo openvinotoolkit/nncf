@@ -222,9 +222,9 @@ def check_user_compression_configuration(
                 )
                 raise nncf.ValidationError(msg)
 
-            if cb_params.per_block and (group_size and group_size != -1):
+            if cb_params.across_blocks and (group_size and group_size != -1):
                 msg = (
-                    "When 'per_block' is set to True in Adaptive Codebook parameters, "
+                    "When 'across_blocks' is set to True in Adaptive Codebook parameters, "
                     "the 'group_size' must be -1 (no grouping) or None."
                 )
                 raise nncf.ValidationError(msg)
@@ -408,7 +408,7 @@ class WeightCompression(Algorithm):
             codebook_estimation_params = self._advanced_parameters.adaptive_codebook_params
             self._codebook_estimation_algo = CodebookEstimation(
                 codebook_estimation_params.value_type,
-                codebook_estimation_params.per_block,
+                codebook_estimation_params.across_blocks,
                 codebook_estimation_params.num_elements,
             )
 
