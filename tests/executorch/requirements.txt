@@ -1,6 +1,10 @@
 # Openvino
 openvino==2025.3.0
 
+torch==2.10.0 
+torchvision==0.25.0 
+torchao==0.14.0
+executorch==1.0.1
 # ONNX
 onnx==1.17.0; python_version < '3.13'
 onnx==1.18.0; python_version >= '3.13'

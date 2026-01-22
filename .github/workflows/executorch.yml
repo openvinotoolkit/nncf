@@ -43,9 +43,6 @@ jobs:
         run: |
           # Torchao installation requires pytorch to be installed first.
           pip install . -r tests/executorch/requirements.txt
-          pip install torch==2.10.0 torchvision torchao==0.14.0
-          # Executorch
-          pip install executorch==1.0.1
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope
