@@ -151,7 +151,7 @@ def main():
     dummy_input = torch.randn(1, 3, 480, 480)
 
     fp32_onnx_path = ROOT / "ssd300_vgg16_fp32.onnx"
-    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path)
+    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path, dynamo=False)
     ov_model = ov.convert_model(fp32_onnx_path)
 
     int8_onnx_path = ROOT / "ssd300_vgg16_int8.onnx"
