@@ -33,8 +33,8 @@ import nncf
 from nncf import AdvancedQuantizationParameters
 from nncf import ModelType
 from nncf.common.logging.track_progress import track
+from nncf.experimental.torch.fx import OpenVINOQuantizer
 from nncf.experimental.torch.fx import quantize_pt2e
-from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import BackendType
