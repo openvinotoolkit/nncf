@@ -93,15 +93,14 @@ class CodebookEstimation(Algorithm):
         self, value_type: TensorDataType = TensorDataType.f8e4m3, per_block: bool = True, num_elements: int = 16
     ):
         """
-        Initialize the CodebookEstimation algorithm.
+        Initializes the Codebook Estimation algorithm.
 
-        Args:
-            value_type: Target data type for codebook values. Default is TensorDataType.f8e4m3
-                       (8-bit floating point with 4 exponent bits and 3 mantissa bits).
-            per_block: If True, estimates codebooks per group of weights sharing the same name pattern.
-                      If False, estimates a separate codebook for each individual weight tensor.
-            num_elements: Number of centroids in the codebook. For 4-bit quantization, this is
-                         typically 16 (2^4). Each weight value will be mapped to one of these centroids.
+        :param value_type: Target data type for codebook values. Default is TensorDataType.f8e4m3
+            (8-bit floating point with 4 exponent bits and 3 mantissa bits).
+        :param per_block: If True, estimates codebooks per group of weights sharing the same name pattern.
+            If False, estimates a separate codebook for each individual weight tensor.
+        :param num_elements: Number of centroids in the codebook. For 4-bit quantization, this is
+            typically 16 (2^4). Each weight value will be mapped to one of these centroids.
         """
         super().__init__()
 
@@ -196,18 +195,15 @@ class CodebookEstimation(Algorithm):
     ) -> dict[str, CompressedWeight]:
         """
         Estimates better codebook for group of weights grouped by name: down_proj, up_proj, etc.
-        Minimizes difference between floating point MatMul and
-        MatMul with compressed weights.
+        Minimizes difference between floating point MatMul and MatMul with compressed weights.
         The algorithm computes codebook and indexes for MatMul compression.
 
-        :param model: Model for applying algorithm.
-        :param graph: Model graph.
-        :param all_weight_params: List of all weight parameters.
-        :param statistics: Input activation statistics for each node.
-        :param statistic_points: Statistic points with collected statistics values.
-        :param dataset: A representative dataset for the calibration process.
-        :param backend_entity: Weight compression algorithm backend.
-        :return: A dictionary that maps weight names to CompressedWeight with codebook, codebook indexes and scale.
+        :param model: Model for applying algorithm
+        :param graph: Model graph
+        :param all_weight_params: List of all weight parameters
+        :param statistics: Input activation statistics for each node
+        :param backend_entity: Weight compression algorithm backend
+        :return: A dictionary that maps weight names to CompressedWeight with codebook, codebook indexes and scale
         """
         self._backend_entity = backend_entity
         if self._backend_entity is None:
@@ -258,6 +254,14 @@ class CodebookEstimation(Algorithm):
         return res
 
     def get_weight(self, model: TModel, graph: NNCFGraph, wp: WeightCompressionParameters) -> Tensor:
+        """
+        Retrieves weight tensor from the model for a given weight parameter.
+
+        :param model: Model containing the weights
+        :param graph: Model graph
+        :param wp: Weight compression parameters
+        :return: Weight tensor or None if not supported
+        """
         weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
         if len(weight_data) != 1:  # not supported by the algorithm
             return None
@@ -286,25 +290,15 @@ class CodebookEstimation(Algorithm):
         5. Variant generation: Create multiple codebook candidates
         6. Optimal selection: Select codebook that minimizes MatMul reconstruction error
 
-        Args:
-            statistics: Input activation statistics for the layer containing statistical
-                       information used to compute importance weights.
-            weight: The weight tensor to compress, will be converted to float32.
-            reduction_axes: Tuple of axes along which to perform quantization reduction.
-            config: Weight compression configuration containing parameters like group_size,
-                   num_bits, and quantization mode.
-            wp: Weight compression parameters containing node and reduction information.
-
-        Returns:
-            Optimal codebook tensor in the target data type with shape (num_elements,).
-            This codebook contains the centroid values that minimize reconstruction error.
-
-        Notes:
-            - If group_size != -1, weights are reshaped into groups before quantization
-            - Importance is computed as activation statistics multiplied across weight groups
-            - Multiple codebook variants are tested including K-means results, default codebook,
-              and linear range codebook
-            - Selection criterion: argmin ||W @ X - Q(W) @ X||₁ over all variants
+        :param statistics: Input activation statistics for the layer containing statistical
+            information used to compute importance weights
+        :param weight: The weight tensor to compress, will be converted to float32
+        :param reduction_axes: Tuple of axes along which to perform quantization reduction
+        :param config: Weight compression configuration containing parameters like group_size,
+            num_bits, and quantization mode
+        :param wp: Weight compression parameters containing node and reduction information
+        :return: Optimal codebook tensor in the target data type with shape (num_elements,).
+            This codebook contains the centroid values that minimize reconstruction error
         """
         reduction_axis = reduction_axes[0]
         weight = deepcopy(weight.astype(TensorDataType.float32))
@@ -388,23 +382,13 @@ class CodebookEstimation(Algorithm):
         value of its activation statistics, ensuring that more important layers have greater
         influence on codebook selection.
 
-        Args:
-            statistics: List of activation statistics, one per weight tensor in the group.
-            weights: List of weight tensors to compress with a shared codebook.
-            reduction_axes: Tuple of axes along which to perform quantization reduction.
-            config: Weight compression configuration shared across all weights.
-            wp: Weight compression parameters for accessing reduction information.
-
-        Returns:
-            Optimal shared codebook tensor in the target data type with shape (num_elements,).
-            This codebook is used to compress all weights in the group.
-
-        Notes:
-            - All weights in the group must have compatible shapes for grouped quantization
-            - The total error is a weighted sum: Σᵢ (mean(|Xᵢ|) * ||Wᵢ @ Xᵢ - Q(Wᵢ) @ Xᵢ||₁)
-            - More weight tensors in the group lead to better codebook generalization
-            - This approach is particularly effective for transformer architectures with
-              repeated layer patterns
+        :param statistics: List of activation statistics, one per weight tensor in the group
+        :param weights: List of weight tensors to compress with a shared codebook
+        :param reduction_axes: Tuple of axes along which to perform quantization reduction
+        :param config: Weight compression configuration shared across all weights
+        :param wp: Weight compression parameters for accessing reduction information
+        :return: Optimal shared codebook tensor in the target data type with shape (num_elements,).
+            This codebook is used to compress all weights in the group
         """
         reduction_axis = reduction_axes[0]
 
@@ -493,18 +477,10 @@ def round_to_left(quantiles, values):
     efficient binary search. It's used for assigning data points to histogram bins
     and for assigning values to their nearest centroids.
 
-    Args:
-        quantiles: Sorted tensor of bin boundaries or centroid positions.
-        values: Tensor of values to assign to bins.
-
-    Returns:
-        Tensor of integer indices indicating which bin each value belongs to.
-        Index i means the value falls between quantiles[i] and quantiles[i+1].
-
-    Notes:
-        - Uses center-of-quantiles approach: bins are centered between consecutive quantiles
-        - Implemented via searchsorted for O(m log n) complexity where m = len(values),
-          n = len(quantiles)
+    :param quantiles: Sorted tensor of bin boundaries or centroid positions
+    :param values: Tensor of values to assign to bins
+    :return: Tensor of integer indices indicating which bin each value belongs to.
+        Index i means the value falls between quantiles[i] and quantiles[i+1]
     """
     center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
     return fns.searchsorted(center_of_quantiles, values, side="left", sorter=None)
@@ -584,13 +560,10 @@ class KMeansWeighted:
 
     def __init__(self, n_clusters=8, max_iter=300):
         """
-        Initialize the weighted K-means clustering algorithm.
-
-        Args:
-            n_clusters: Number of clusters (centroids) to find. For codebook estimation,
-                       this equals the number of representable values (e.g., 16 for 4-bit).
-            max_iter: Maximum number of iterations for centroid updates. The algorithm
-                     may converge earlier if centroids stabilize (change < 0.00001).
+        :param n_clusters: Number of clusters (centroids) to find. For codebook estimation,
+            this equals the number of representable values (e.g., 16 for 4-bit)
+        :param max_iter: Maximum number of iterations for centroid updates. The algorithm
+            may converge earlier if centroids stabilize (change < 0.00001)
         """
         self.n_clusters = n_clusters
         self.max_iter = max_iter
@@ -606,20 +579,12 @@ class KMeansWeighted:
         cumulative distribution. This approach ensures centroids start at representative
         positions across the data distribution.
 
-        Args:
-            values: Sorted array of unique or binned data values.
-            frequencies: Importance weights corresponding to each value.
-            n_clusters: Number of centroids to initialize.
-
-        Returns:
-            Tensor of initial centroid positions with shape (n_clusters,).
+        :param values: Sorted array of unique or binned data values
+        :param frequencies: Importance weights corresponding to each value
+        :param n_clusters: Number of centroids to initialize
+        :return: Tensor of initial centroid positions with shape (n_clusters,).
             First and last centroids are placed at min and max values.
-            Interior centroids are placed between quantile-based positions.
-
-        Notes:
-            - Uses cumulative distribution based on importance weights
-            - Includes anti-collision logic to prevent centroids from being too close
-            - Threshold of 5% relative distance is used to detect and correct collisions
+            Interior centroids are placed between quantile-based positions
         """
         step = 1.0 / (n_clusters - 1)
         denum = fns.sum(frequencies)
@@ -664,23 +629,13 @@ class KMeansWeighted:
            - Weighted data: Σ(data * importance) for all values in bin
            - Weighted importance: Σ(importance) for all values in bin
 
-        Args:
-            data_: Input data tensor to be histogrammed (will be sorted internally).
-            importance: Importance weights for each data point.
-            intervals: Number of histogram bins to create, default 700.
-                      Higher values provide more precision but slower updates.
-
-        Returns:
-            KMeansAlgoData object containing:
-            - centroids: Bin center positions
-            - weighted_centroids: Weighted sum of data in each bin
-            - weighted_importance: Total importance weight in each bin
-
-        Notes:
-            - Input data is sorted once for O(n log n) preprocessing
-            - Empty bins are automatically excluded from the result
-            - Bin boundaries are at midpoints between consecutive centers
-            - This representation enables O(intervals) centroid updates instead of O(n)
+        :param data_: Input data tensor to be histogrammed (will be sorted internally)
+        :param importance: Importance weights for each data point
+        :param intervals: Number of histogram bins to create, default 700.
+            Higher values provide more precision but slower updates
+        :return: KMeansAlgoData object containing centroids (bin center positions),
+            weighted_centroids (weighted sum of data in each bin), and
+            weighted_importance (total importance weight in each bin)
         """
         centers = []
         ranges = []
@@ -757,26 +712,13 @@ class KMeansWeighted:
            e. Check convergence (centroid change < 0.00001)
         5. Termination: Stop at max_iter or when centroids stabilize
 
-        Args:
-            X_train: Training data tensor to cluster.
-            importance: Importance weight for each data point in X_train.
-            init: Initial centroid positions, with at least first and last positions set.
-            fixed: List of indices for centroids that should not move during optimization.
-                  Default: [0, n_clusters//2, n_clusters-1] for data with negative values,
-                          [0, n_clusters-1] for non-negative data.
-            intervals: Number of histogram bins to use for efficient updates, default 700.
-
-        Side Effects:
-            - Sets self.centroids to the final optimized centroid positions
-            - Populates self.variants with intermediate centroid configurations
-            - Creates self.hist containing the histogram representation
-
-        Notes:
-            - If max_iter == 1, no optimization is performed (use init as-is)
-            - Fixed centroids are typically: minimum value, zero (if applicable), maximum value
-            - The zero centroid is critical for maintaining symmetric quantization
-            - Convergence is detected when all centroids move less than 0.00001
-            - Variants are saved every 5 iterations by default for later selection
+        :param X_train: Training data tensor to cluster
+        :param importance: Importance weight for each data point in X_train
+        :param init: Initial centroid positions, with at least first and last positions set
+        :param fixed: List of indices for centroids that should not move during optimization.
+            Default: [0, n_clusters//2, n_clusters-1] for data with negative values,
+            [0, n_clusters-1] for non-negative data
+        :param intervals: Number of histogram bins to use for efficient updates, default 700
         """
         if self.max_iter == 1:
             self.centroids = deepcopy(init)
@@ -831,13 +773,9 @@ class KMeansWeighted:
         """
         Assign data points to their nearest centroids.
 
-        Args:
-            X: Input data tensor to assign to clusters.
-
-        Returns:
-            Tuple of (centroids, assignments):
-            - centroids: Flattened tensor of centroid values
-            - assignments: Tensor of cluster indices for each input value
+        :param X: Input data tensor to assign to clusters
+        :return: Tuple of (centroids, assignments) where centroids is a flattened tensor
+            of centroid values and assignments is a tensor of cluster indices for each input value
         """
         centroid_idxs = round_to_left(self.centroids, X)
         return deepcopy(self.centroids).flatten(), centroid_idxs
@@ -858,35 +796,16 @@ def weights_clusterization_k_means(weight, importance, n_centroids=2**4, interva
     3. Perform weighted K-means with fixed min, zero (if applicable), and max centroids
     4. Return codebook (centroids), index assignments, and intermediate variants
 
-    Args:
-        weight: Weight tensor to cluster, will be flattened internally.
-        importance: Importance weights for each element, typically derived from
-                   activation statistics. Same shape as weight.
-        n_centroids: Number of codebook entries (clusters), default 16 for 4-bit quantization.
-        intervals: Number of histogram bins for efficient clustering, default 700.
-        max_iter: Maximum number of K-means iterations, default 70.
-
-    Returns:
-        Tuple of (codebook, indexes, variants):
-        - codebook: Tensor of optimal centroid values with shape (n_centroids,)
-        - indexes: Tensor of cluster assignments reshaped to original weight shape
-        - variants: List of alternative codebook configurations from different iterations
-
-    Notes:
-        - For signed weights (min < 0), fixes three centroids: min, zero, max
-        - For unsigned weights (min >= 0), fixes two centroids: min, max
-        - Zero is typically fixed at index (n_centroids // 2 - 1) for symmetry
-        - Returns multiple variants to enable selection based on actual reconstruction error
-        - The importance weighting ensures that more critical weight values (those
-          multiplied by larger activations) have greater influence on clustering
-
-    Example:
-        For 4-bit quantization (16 levels) of a signed weight matrix:
-        >>> codebook, indexes, variants = weights_clusterization_k_means(
-        ...     weight, importance, n_centroids=16, intervals=700
-        ... )
-        >>> # codebook shape: (16,), indexes shape: same as weight
-        >>> # Reconstruct approximation: reconstructed = codebook[indexes]
+    :param weight: Weight tensor to cluster, will be flattened internally
+    :param importance: Importance weights for each element, typically derived from
+        activation statistics. Same shape as weight
+    :param n_centroids: Number of codebook entries (clusters), default 16 for 4-bit quantization
+    :param intervals: Number of histogram bins for efficient clustering, default 700
+    :param max_iter: Maximum number of K-means iterations, default 70
+    :return: Tuple of (codebook, indexes, variants) where codebook is a tensor of optimal
+        centroid values with shape (n_centroids,), indexes is a tensor of cluster assignments
+        reshaped to original weight shape, and variants is a list of alternative codebook
+        configurations from different iterations
     """
     orig_shape = weight.shape
     weight = weight.flatten()
