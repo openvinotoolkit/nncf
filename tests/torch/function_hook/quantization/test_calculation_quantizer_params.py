@@ -338,6 +338,7 @@ def test_quantizer_parameters_export(tmp_path: Path, _seed):
         export_params=True,
         opset_version=13,
         do_constant_folding=False,
+        dynamo=False
     )
 
     onnx_model = onnx.load(path)

@@ -9,11 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 from typing import Any
 
 import numpy as np
-import openvino as ov
 import pytest
 import torch.fx
 
@@ -59,18 +57,12 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
     def map_references(ref_biases: dict, model_cls: Any) -> dict[str, list]:
         if model_cls is OneDimMM:
-            return {"linear": ref_biases["/linear/MatMul"]}
+            return {"linear": ref_biases["node_MatMul_1"]}
         if model_cls is ConvTestModel or model_cls is DepthwiseConvTestModel:
-            return {"conv2d": ref_biases["/conv/Conv"]}
+            return {"conv2d": ref_biases["node_conv2d"]}
         if model_cls is TransposeConvTestModel:
-            return {"conv_transpose2d": ref_biases["/conv/ConvTranspose"]}
-        mapping = dict()
-        for name, value in ref_biases.items():
-            conv_idx = int(name[re.search(r"\d", name).start()])
-            conv_idx -= 1
-            conv_idx = "_" + str(conv_idx) if conv_idx else ""
-            fx_name = "conv2d" + conv_idx
-            mapping[fx_name] = value
+            return {"conv_transpose2d": ref_biases["node_convolution"]}
+        mapping = {name[5:]: value for name, value in ref_biases.items()}
         return mapping
 
     @staticmethod
@@ -79,7 +71,7 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
         return remove_fq_from_inputs(model, graph)
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: dict) -> None:
+    def check_bias(model: torch.fx.GraphModule, ref_biases: dict) -> None:
         nncf_graph = build_graph(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)

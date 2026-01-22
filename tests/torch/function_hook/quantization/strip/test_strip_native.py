@@ -88,4 +88,4 @@ def test_strip_quantization(overflow_fix: OverflowFix, tmp_path: Path):
     check_quantizer_operators(inference_model, 2**8 - 1)
     assert torch.all(torch.isclose(x_nncf, x_torch)), f"{x_nncf.view(-1)} != {x_torch.view(-1)}"
 
-    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
+    torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx", dynamo=False)
