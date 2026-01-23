@@ -40,20 +40,6 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
-def _is_openvino_quantizer_instance(obj) -> bool:
-    """
-    Safely check if an object is instance of OpenVINOQuantizer.
-    This is to avoid a circular import
-    """
-    # TODO(anazir) refactor to avoid circular import - 179719
-    try:
-        from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
-
-        return isinstance(obj, OpenVINOQuantizer)
-    except ImportError:
-        return False
-
-
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
 def quantize_pt2e(
     model: torch.fx.GraphModule,
@@ -115,7 +101,7 @@ def quantize_pt2e(
         model = deepcopy(model)
 
     _fuse_conv_bn_(model)
-    if _is_openvino_quantizer_instance(quantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
+    if hasattr(quantizer, "get_nncf_quantization_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
     else:
         quantizer = TorchAOQuantizerAdapter(quantizer)
@@ -208,7 +194,7 @@ def compress_pt2e(
         preserve the accuracy of the model, the more sensitive layers receive a higher precision.
     :param advanced_parameters: Advanced parameters for algorithms in the compression pipeline.
     """
-    if _is_openvino_quantizer_instance(quantizer) or hasattr(quantizer, "get_nncf_weight_compression_parameters"):
+    if hasattr(quantizer, "get_nncf_weight_compression_parameters"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
         compression_format = nncf.CompressionFormat.DQ
     else:
