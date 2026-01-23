@@ -70,27 +70,6 @@ quantized_model.load_state_dict(state_dict)
 
 You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods.
 
-## Advanced usage
-
-### Compression of custom modules
-
-With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`.
-If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
-
-```python
-import nncf
-
-@nncf.register_module(ignored_algorithms=[...])
-class MyModule(torch.nn.Module):
-    def __init__(self, ...):
-        self.weight = torch.nn.Parameter(...)
-    # ...
-```
-
-If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
-
-In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
-
 ## Examples
 
 - See a PyTorch [example](/examples/quantization_aware_training/torch/resnet18/README.md) for **Quantization** Compression scenario on Tiny ImageNet-200 dataset.
