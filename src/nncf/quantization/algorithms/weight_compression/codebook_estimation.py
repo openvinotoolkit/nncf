@@ -458,7 +458,7 @@ class CodebookEstimation(Algorithm):
         return StatisticPointsContainer()
 
 
-def round_to_left(quantiles, values):
+def round_to_left(quantiles, values) -> Tensor:
     """
     Assign values to quantile bins using binary search.
 
@@ -560,7 +560,7 @@ class KMeansWeighted:
         self.centroids = None
 
     @staticmethod
-    def get_init(values, frequencies, n_clusters):
+    def get_init(values, frequencies, n_clusters) -> Tensor:
         """
         Initialize centroids using quantile-based placement.
 
@@ -601,7 +601,7 @@ class KMeansWeighted:
         return res
 
     @staticmethod
-    def create_histogramm_sorted(data_, importance, intervals=700):
+    def create_histogramm_sorted(data_, importance, intervals=700) -> KMeansAlgoData:
         """
         Create a weighted histogram from sorted data for efficient K-means updates.
 
@@ -681,7 +681,7 @@ class KMeansWeighted:
         )
         return res
 
-    def fit(self, X_train, importance, init, fixed=None, intervals=700):
+    def fit(self, X_train, importance, init, fixed=None, intervals=700) -> None:
         """
         Fit the weighted K-means model to training data with optional fixed centroids.
 
@@ -758,7 +758,7 @@ class KMeansWeighted:
 
         self.variants.append(deepcopy(self.centroids))
 
-    def evaluate(self, X):
+    def evaluate(self, X) -> tuple[Tensor, Tensor]:
         """
         Assign data points to their nearest centroids.
 
@@ -770,7 +770,9 @@ class KMeansWeighted:
         return deepcopy(self.centroids).flatten(), centroid_idxs
 
 
-def weights_clusterization_k_means(weight, importance, n_centroids=2**4, intervals=700, max_iter=70):
+def weights_clusterization_k_means(
+    weight, importance, n_centroids=2**4, intervals=700, max_iter=70
+) -> tuple[Tensor, Tensor, list[Tensor]]:
     """
     Perform weighted K-means clustering on weight data to find optimal codebook.
 
