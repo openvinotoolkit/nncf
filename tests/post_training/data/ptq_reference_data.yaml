@@ -213,7 +213,7 @@ timm/inception_resnet_v2_backend_TORCH:
 timm/mobilenetv2_050_BC_backend_FP32:
   metric_value: 0.6594
 timm/mobilenetv2_050_BC_backend_ONNX:
-  metric_value: 0.65486
+  metric_value: 0.65604
 timm/mobilenetv2_050_BC_backend_OV:
   metric_value: 0.6550
 timm/mobilenetv2_050_backend_CUDA_TORCH:
@@ -239,7 +239,7 @@ timm/mobilenetv3_small_050_backend_TORCH:
 timm/mobilenetv3_small_050_BC_backend_FP32:
   metric_value: 0.57906
 timm/mobilenetv3_small_050_BC_backend_ONNX:
-  metric_value: 0.5674
+  metric_value: 0.5661
 timm/mobilenetv3_small_050_BC_backend_OV:
   metric_value: 0.5670
 timm/regnetx_002_backend_CUDA_TORCH:
@@ -247,7 +247,7 @@ timm/regnetx_002_backend_CUDA_TORCH:
 timm/regnetx_002_backend_FP32:
   metric_value: 0.68756
 timm/regnetx_002_backend_ONNX:
-  metric_value: 0.6866
+  metric_value: 0.68546
 timm/regnetx_002_backend_OV:
   metric_value: 0.6864
 timm/regnetx_002_backend_TORCH:
@@ -257,7 +257,7 @@ timm/resnest14d_backend_CUDA_TORCH:
 timm/resnest14d_backend_FP32:
   metric_value: 0.75516
 timm/resnest14d_backend_ONNX:
-  metric_value: 0.7538
+  metric_value: 0.7525
 timm/resnest14d_backend_OV:
   metric_value: 0.7534
 timm/resnest14d_backend_TORCH:
