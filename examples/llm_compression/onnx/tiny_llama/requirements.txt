@@ -5,5 +5,5 @@ optimum-onnx==0.1.0
 optimum==2.1.0
 onnx==1.19.1
 onnxruntime==1.21.1
-torch==2.9.0
+torch==2.10.0
 pillow==12.0.0
