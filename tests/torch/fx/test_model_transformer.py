@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 import torch
 import torch.fx
-from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.fake_quantize import FakeQuantize
 from torchao.quantization.pt2e.observer import MinMaxObserver
 from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 from torchao.quantization.pt2e.utils import create_getattr_from_value

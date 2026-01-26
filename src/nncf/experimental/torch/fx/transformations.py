@@ -18,7 +18,7 @@ import torch.fx
 from torch.fx.node import map_arg
 from torch.fx.passes.infra.pass_base import PassBase
 from torch.fx.passes.infra.pass_base import PassResult
-from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.fake_quantize import FakeQuantize
 from torchao.quantization.pt2e.utils import _fuse_conv_bn_
 from torchao.quantization.pt2e.utils import create_getattr_from_value
 
