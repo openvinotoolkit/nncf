@@ -31,7 +31,7 @@ MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
 COMPRESSED_MODEL_ID = "smollm2_360m_compressed_codebook"
 
 
-def get_input_shapes(model, batch_size=1):
+def get_input_shapes(model, batch_size=1) -> dict[str, list[int]]:
     """
     Extract input shapes from the model and configure them with the specified batch size.
 
@@ -50,7 +50,7 @@ def get_input_shapes(model, batch_size=1):
     return inputs
 
 
-def preprocess_fn(example, tokenizer):
+def preprocess_fn(example, tokenizer) -> dict[str, str]:
     """
     Preprocess an example by applying the chat template to its messages.
 
@@ -61,7 +61,7 @@ def preprocess_fn(example, tokenizer):
     return {"text": tokenizer.apply_chat_template(example["messages"], add_generation_prompt=False, tokenize=False)}
 
 
-def transform_func(item, tokenizer, input_shapes, max_tokens=128):
+def transform_func(item, tokenizer, input_shapes, max_tokens=128) -> dict[str, np.ndarray]:
     """
     Transform a dataset item into model input format with tokenization and shape handling.
 
@@ -91,7 +91,7 @@ def transform_func(item, tokenizer, input_shapes, max_tokens=128):
     return res
 
 
-def get_dataset(model, tokenizer):
+def get_dataset(model, tokenizer) -> nncf.Dataset:
     """
     Create and prepare a quantization dataset for model compression.
 
@@ -250,7 +250,7 @@ def codebook_example(
     return list(answers_by_questions.values())
 
 
-def main():
+def main() -> list[str]:
     """
     Main function that demonstrates both standard and adaptive codebook compression.
 
