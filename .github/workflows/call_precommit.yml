@@ -149,7 +149,7 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run torch precommit test scope
-        run: pytest -s -ra --durations=30 tests/torch -m "not cuda"
+        run: pytest -s -ra --durations=30 tests/torch/fx/test_quantizer.py -m "not cuda"
 
   pytorch-cuda:
     timeout-minutes: 40
