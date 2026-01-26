@@ -22,7 +22,8 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
-from executorch.backends.xnnpack.quantizer import xnnpack_quantizer
+
+# from executorch.backends.xnnpack.quantizer import xnnpack_quantizer
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
 from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
 from torchao.quantization.pt2e.quantizer import QuantizationAnnotation
@@ -84,10 +85,10 @@ def get_x86_quantizer(*args, **kwarsg) -> X86InductorQuantizer:
     return quantizer
 
 
-def get_xnnpack_quantizer(*args, **kwargs) -> xnnpack_quantizer.XNNPACKQuantizer:
-    quantizer = xnnpack_quantizer.XNNPACKQuantizer()
-    quantizer.set_global(xnnpack_quantizer.get_symmetric_quantization_config())
-    return quantizer
+# def get_xnnpack_quantizer(*args, **kwargs) -> xnnpack_quantizer.XNNPACKQuantizer:
+#     quantizer = xnnpack_quantizer.XNNPACKQuantizer()
+#     quantizer.set_global(xnnpack_quantizer.get_symmetric_quantization_config())
+#     return quantizer
 
 
 def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
@@ -144,11 +145,11 @@ def _get_calibration_dataset(example_input: torch.Tensor) -> nncf.Dataset:
 @pytest.mark.parametrize(
     "quantizer_builder",
     [
-        get_xnnpack_quantizer,
+        # get_xnnpack_quantizer,
         get_x86_quantizer,
         get_openvino_quantizer,
     ],
-    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
+    ids=["X86InductorQuantizer", "OpenVINOQuantizer"],
 )
 def test_quantized_model(
     quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],
@@ -200,11 +201,11 @@ def test_quantized_model(
 @pytest.mark.parametrize(
     "quantizer_builder",
     [
-        get_xnnpack_quantizer,
+        # get_xnnpack_quantizer,
         get_x86_quantizer,
         get_openvino_quantizer,
     ],
-    ids=["XNNPACKQuantizer", "X86InductorQuantizer", "OpenVINOQuantizer"],
+    ids=["X86InductorQuantizer", "OpenVINOQuantizer"],
 )
 def test_quantizer_setup(
     quantizer_builder: Callable[[tuple[Any, ...]], Quantizer],

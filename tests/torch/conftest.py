@@ -11,7 +11,6 @@
 import logging
 import os
 import random
-import time
 
 import pytest
 import torch
@@ -21,34 +20,6 @@ from pytest import Parser
 
 from nncf import set_log_level
 from nncf.common.quantization.structs import QuantizationScheme
-
-
-def _rss_mb() -> float:
-    with open("/proc/self/status") as f:
-        for line in f:
-            if line.startswith("VmRSS:"):
-                kb = int(line.split()[1])
-                return kb / 1024.0
-    return -1.0
-
-
-def pytest_runtest_setup(item):
-    item._mem_rss_before = _rss_mb()
-    item._mem_t0 = time.time()
-
-
-def pytest_runtest_teardown(item, nextitem):
-    before = getattr(item, "_mem_rss_before", -1.0)
-    after = _rss_mb()
-    dt = time.time() - getattr(item, "_mem_t0", time.time())
-    delta = after - before
-    print(
-        f"\n[MEM] {item.nodeid}\n"
-        f"      RSS before: {before:.1f} MB\n"
-        f"      RSS after : {after:.1f} MB\n"
-        f"      ΔRSS      : {delta:+.1f} MB\n"
-        f"      time      : {dt:.2f}s\n"
-    )
 
 
 @pytest.fixture(scope="session", autouse=True)
