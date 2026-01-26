@@ -258,6 +258,7 @@ def main() -> list[str]:
     """
     res = codebook_example(MODEL_ID, COMPRESSED_MODEL_ID)
     res += codebook_example(MODEL_ID, COMPRESSED_MODEL_ID + "_adaptive", adaptive_codebook=True)
+    print(res)
     return res
 
 
