@@ -215,6 +215,13 @@ def _(
     return torch.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: torch.Tensor,
+) -> tuple[torch.Tensor, ...]:
+    return torch.nonzero(condition, as_tuple=True)
+
+
 @numeric.zeros_like.register
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)

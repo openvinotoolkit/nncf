@@ -568,6 +568,18 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert res.device == tensor.device
 
+    def test_fn_nonzero(self):
+        tensor = Tensor(self.to_tensor([[0, -1, 0], [1, 0, 2]]))
+        tensor_ref = (self.to_tensor([0, 1, 1]), self.to_tensor([1, 0, 2]))
+
+        res = fns.nonzero(tensor)
+
+        assert all(res[0].data == tensor_ref[0])
+        assert all(res[1].data == tensor_ref[1])
+
+        assert isinstance(res, tuple)
+        assert res[0].device == tensor.device
+
     def test_fn_sign(self):
         tensor = Tensor(self.to_tensor([1, 0, -1]))
         tensor_ref = self.to_tensor([1, 0, -1])
