@@ -237,7 +237,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     def prepare_calibration_dataset(self):
         subset_size = self.compression_params.get("subset_size") or self.DEFAULT_SUBSET_SIZE
         dataset = (
-            load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
+            load_dataset("Salesforce/wikitext", "wikitext-2-v1", split="train", revision="b08601e")
             .filter(lambda example: len(example["text"].split()) > 256)
             .shuffle(seed=42)
             .select(range(subset_size))
