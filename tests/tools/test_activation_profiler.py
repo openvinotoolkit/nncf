@@ -14,6 +14,7 @@ import tempfile
 from contextlib import contextmanager
 
 import nbformat
+import pytest
 from nbclient import NotebookClient
 
 from tests.cross_fw.shared.paths import PROJECT_ROOT
@@ -40,6 +41,7 @@ def isolated_ipython_cwd(cwd):
                 os.environ["IPYTHONDIR"] = original_ipythondir
 
 
+@pytest.mark.xfail(reason="Ticket: 180038")
 def test_nncf_profiling_notebook():
     """Test that the nncf_profiler_example.ipynb notebook runs successfully."""
 

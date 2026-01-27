@@ -61,7 +61,7 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
     :param device: Device to move the tensors to (e.g., 'cpu' or 'cuda').
     :return: A list of tensors containing the tokenized text samples.
     """
-    traindata = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
+    traindata = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train")
     limit = num_samples * seqlen // 4  # ~1k for 128 samples with seqlen=32 to be aligned with optimum
     text = "".join([" \n" if s == "" else s for s in traindata["text"][:limit]])
     trainenc = tokenizer(text, return_tensors="pt")
