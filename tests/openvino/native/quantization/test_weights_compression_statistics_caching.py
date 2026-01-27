@@ -56,7 +56,7 @@ def create_transform_fn(model: OVModelForCausalLM, tokenizer: AutoTokenizer):
 
 
 def _setup_model_and_dataset(model_id: str) -> tuple[OVModelForCausalLM, nncf.Dataset]:
-    dataset = datasets.load_dataset("Safetensor/wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = datasets.load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = OVModelForCausalLM.from_pretrained(model_id, export=True, load_in_8bit=False, compile=False, stateful=False)
     transform_fn = create_transform_fn(model, tokenizer)

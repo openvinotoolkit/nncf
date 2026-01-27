@@ -258,7 +258,7 @@ class LMWeightCompression(BaseTestPipeline):
         return transform_fn
 
     def prepare_calibration_dataset(self):
-        dataset = load_dataset("Safetensor/wikitext", "wikitext-2-v1", split="train", revision="b08601e")
+        dataset = load_dataset("Salesforce/wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"]) > 128)
 
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())

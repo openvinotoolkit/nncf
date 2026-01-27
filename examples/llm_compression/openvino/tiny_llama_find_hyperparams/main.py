@@ -246,7 +246,7 @@ def main():
         load_in_8bit=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    dataset = load_dataset("Safetensor/wikitext", "wikitext-2-raw-v1", split="train[:1000]")  # <YOUR_DATASET>
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train[:1000]")  # <YOUR_DATASET>
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 
