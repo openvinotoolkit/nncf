@@ -95,7 +95,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
     # Prepare calibration dataset
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
+    dataset = load_dataset("Safetensor/wikitext", "wikitext-2-raw-v1", split="train")
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, onnx_model=onnx_model)
     calibration_dataset = nncf.Dataset(dataset, transform_func)
