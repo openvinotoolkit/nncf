@@ -101,14 +101,10 @@ def get_dataset(model, tokenizer) -> nncf.Dataset:
     """
     input_shapes = get_input_shapes(model, batch_size=1)
 
-    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-    dataset = dataset.filter(lambda example: len(example["text"]) > 128)
-
     num_samples = 2048
-    ds = datasets.load_dataset("neuralmagic/LLM_compression_calibration", split="train")
-    ds = ds.shuffle(seed=42).select(range(num_samples))
-    ds = ds.map(partial(preprocess_fn, tokenizer=tokenizer))
-    dataset = ds
+    dataset = datasets.load_dataset("neuralmagic/LLM_compression_calibration", split="train")
+    dataset = dataset.shuffle(seed=42).select(range(num_samples))
+    dataset = dataset.map(partial(preprocess_fn, tokenizer=tokenizer))
 
     quantization_dataset = nncf.Dataset(
         dataset, partial(transform_func, tokenizer=tokenizer, input_shapes=input_shapes)
