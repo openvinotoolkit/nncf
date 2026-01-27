@@ -12,6 +12,8 @@
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
 
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
 from nncf.common.factory import build_graph as build_graph
 from nncf.common.logging import nncf_logger as nncf_logger
 from nncf.common.logging.logger import disable_logging as disable_logging
@@ -95,3 +97,17 @@ if not any(_AVAILABLE_FRAMEWORKS.values()):
         "Please install one of the supported frameworks above in order to use NNCF on top of it.\n"
         "See the installation guide at https://github.com/openvinotoolkit/nncf#installation-guide for help."
     )
+
+# Lazy import for backend parts
+if _TYPE_CHECKING:
+    from nncf import torch as torch
+else:
+
+    def __getattr__(name: str):
+        from importlib import import_module
+
+        if name == "torch":
+            return import_module(f".{name}", __name__)
+
+        msg = f"module '{__name__}' has no attribute '{name}'"
+        raise AttributeError(msg)
