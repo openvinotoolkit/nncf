@@ -73,6 +73,18 @@ QDQ_PAIR = {
 }
 
 
+# Referenced from: https://github.com/pytorch/pytorch/blob/9105d54c6b37099575c0059ef274c86c4dc80c57/torch/ao/quantization/utils.py#L711
+def _get_model_device(model: torch.fx.GraphModule) -> Any:
+    """
+    Copied from torchao.quantization.pt2e.utils
+    Returns the unique device for a module, or None if no device is found.
+    Throws an error if multiple devices are detected.
+    """
+    devices = {p.device for p in model.parameters()} | {p.device for p in model.buffers()}
+    device = next(iter(devices))
+    return device
+
+
 def _set_new_node_meta(
     new_node: torch.fx.Node,
     prev_nodes: tuple[Argument, ...],
@@ -239,7 +251,7 @@ def constant_update(
     """
     graph = model.graph
     old_const = get_node_args(node)[input_port_id]
-
+    breakpoint()
     if old_const.op != "get_attr":
         msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
         raise nncf.InternalError(msg)
@@ -251,9 +263,12 @@ def constant_update(
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     sorted_consumer_nodes = [node for node in graph.nodes if node in consumer_nodes]
+    model_device = _get_model_device(model)
+    tensor_device = value.device if isinstance(value, torch.Tensor) else model_device
 
     with graph.inserting_before(sorted_consumer_nodes[0]):
-        new_const = create_getattr_from_value(model, graph, node_name, value)
+        # Passing device is neccesary to avoid large models to be cached by torchao.
+        new_const = create_getattr_from_value(model, graph, node_name, value, device=tensor_device)
 
     old_const.replace_all_uses_with(new_const, propagate_meta=True)
     graph.eliminate_dead_code()
@@ -431,7 +446,10 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 # With extra check of scale and zero_point being scalar, it makes
                 # sure that the default overload can be used.
                 # TODO(dlyakhov): maybe need more complex attr name here
-                qparam_node = create_getattr_from_value(model, graph, target_node.name + key, value_or_node)
+                tensor_device = value_or_node.device
+                qparam_node = create_getattr_from_value(
+                    model, graph, target_node.name + key, value_or_node, device=tensor_device
+                )
                 quantize_op_inputs.append(qparam_node)
             else:
                 # for qparams that are not scale/zero_point (like axis, dtype) we store
