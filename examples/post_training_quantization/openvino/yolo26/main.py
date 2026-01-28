@@ -27,7 +27,7 @@ from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
 
-MODEL_NAME = "yolov8n"
+MODEL_NAME = "yolo26n"
 
 ROOT = Path(__file__).parent.resolve()
 
@@ -128,15 +128,8 @@ def quantize(model: ov.Model, data_loader: torch.utils.data.DataLoader, validato
         quantization_dataset,
         subset_size=len(data_loader),
         preset=nncf.QuantizationPreset.MIXED,
-        ignored_scope=nncf.IgnoredScope(
-            types=["Multiply", "Subtract", "Sigmoid"],
-            subgraphs=[
-                nncf.Subgraph(
-                    inputs=["/model.22/Concat", "/model.22/Concat_1", "/model.22/Concat_2"],
-                    outputs=["output0/sink_port_0"],
-                )
-            ],
-        ),
+        fast_bias_correction=False,
+        ignored_scope=nncf.IgnoredScope(patterns=[".*one2one.*"]),
     )
     return quantized_model
 

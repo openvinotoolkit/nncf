@@ -1,6 +1,6 @@
-# Post-Training Quantization of YOLOv8 OpenVINO Model
+# Post-Training Quantization of YOLO26 OpenVINO Model
 
-This example demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize YOLOv8n model.
+This example demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize YOLO26 model.
 
 The example includes the following steps:
 
@@ -32,7 +32,3 @@ The example is fully automated. Just run the following command in the prepared P
 ```bash
 python main.py
 ```
-
-## See also
-
-- [YOLOv8 Jupyter notebook](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization)
