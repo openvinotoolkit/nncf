@@ -77,8 +77,7 @@ QDQ_PAIR = {
 def _get_model_device(model: torch.fx.GraphModule) -> Any:
     """
     Copied from torchao.quantization.pt2e.utils
-    Returns the unique device for a module, or None if no device is found.
-    Throws an error if multiple devices are detected.
+    Returns the device for a module.
     """
     devices = {p.device for p in model.parameters()} | {p.device for p in model.buffers()}
     device = next(iter(devices))
@@ -251,7 +250,7 @@ def constant_update(
     """
     graph = model.graph
     old_const = get_node_args(node)[input_port_id]
-    breakpoint()
+
     if old_const.op != "get_attr":
         msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
         raise nncf.InternalError(msg)
@@ -447,6 +446,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 # sure that the default overload can be used.
                 # TODO(dlyakhov): maybe need more complex attr name here
                 tensor_device = value_or_node.device
+                # Passing device is neccesary to avoid large models to be cached by torchao.
                 qparam_node = create_getattr_from_value(
                     model, graph, target_node.name + key, value_or_node, device=tensor_device
                 )

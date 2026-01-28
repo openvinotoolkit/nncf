@@ -475,6 +475,7 @@ def insert_qdq_nodes(
     model_device = _get_model_device(model)
     if per_channel:
         with model.graph.inserting_before(conv_node):
+            # Passing device is neccesary to avoid large models to be cached by torchao.
             scale_node = create_getattr_from_value(
                 model,
                 model.graph,
