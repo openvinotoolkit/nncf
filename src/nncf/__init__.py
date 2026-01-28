@@ -106,6 +106,14 @@ if _TYPE_CHECKING:
 else:
 
     def __getattr__(name: str) -> _ModuleType:
+        """
+        This function intercepts attribute access on the module.
+        If 'torch' backend is requested, it dynamically imports the sub-package.
+        This prevents heavy dependencies from being loaded into memory until they are actually needed by the runtime.
+
+        :param name: Name of the attribute to lazily load.
+        :return: The imported module.
+        """
         from importlib import import_module
 
         if name == "torch":
