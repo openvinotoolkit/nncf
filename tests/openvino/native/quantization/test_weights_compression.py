@@ -28,6 +28,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import build_graph
 from nncf.common.tensor_statistics.collectors import AggregatorBase
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
@@ -42,6 +43,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters 
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
 from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -2574,3 +2576,79 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+
+def test_process_stats_with_transpose_a_changes_layout():
+    activations = np.random.randn(10, 3, 8)
+
+    stats = WCTensorStatistic(
+        Tensor(activations),
+        shape_values=activations.shape,
+    )
+
+    subset_size = 10
+
+    s_default, X_default = process_stats(
+        stats,
+        subset_size=subset_size,
+        act_ch_axis=-1,
+        transpose_a=False,
+    )
+
+    s_transposed, X_transposed = process_stats(
+        stats,
+        subset_size=subset_size,
+        act_ch_axis=-1,
+        transpose_a=True,
+    )
+
+    # Rank must stay the same
+    assert len(s_default.shape) == len(s_transposed.shape)
+
+    # Reduction dimension (seq_len) must be preserved
+    assert s_default.shape[0] == s_transposed.shape[0] == 3
+
+    # Layout must change
+    assert X_default.shape != X_transposed.shape
+
+    # Element count preserved
+    assert np.prod(X_default.shape) == np.prod(X_transposed.shape)
+
+
+@pytest.mark.parametrize(
+    "transpose_a,transpose_b",
+    [
+        (False, False),
+        (False, True),
+    ],
+)
+def test_lora_transpose_a_fix(transpose_a, transpose_b):
+    """
+    Test LoRA correction insertion only with transpose_a=False
+    because transposed activations are not yet supported by LoRA.
+    """
+    # Setup LoRA parameters
+    params = LoraParams(adapter_rank=4, use_int8_adapters=False)
+    advanced_parameters = CompressionParams(lora_correction_params=params)
+
+    # Initialize model with given transpose configuration
+    model = LMLinearModel(transpose_b=transpose_b, transpose_a=transpose_a)
+    ov_model = model.ov_model
+
+    # Use dummy dataset with same shape as model input
+    dataset = Dataset(np.ones(inp.shape) for inp in ov_model.inputs)
+
+    # Compress weights with LoRA correction enabled
+    compressed_model = compress_weights(
+        ov_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=8,
+        dataset=dataset,
+        all_layers=True,
+        lora_correction=True,
+        advanced_parameters=advanced_parameters,
+    )
+
+    # Simple assertion: compressed model is returned
+    assert compressed_model is not None
