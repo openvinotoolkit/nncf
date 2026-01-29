@@ -17,12 +17,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(
-    stats: WCTensorStatistic,
-    subset_size: int,
-    act_ch_axis: int = -1,
-    transpose_a: bool = False,
-) -> tuple[Tensor, Tensor]:
+def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int = -1) -> tuple[Tensor, Tensor]:
     """
     A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
@@ -41,11 +36,6 @@ def process_stats(
     # General approach: move axis 0 to the end
     axes = list(range(1, len(X.shape))) + [0]
     X_full = fns.transpose(X, axes=axes)
-
-    if transpose_a:
-        axes = list(range(len(X_full.shape)))
-        axes[-1], axes[-2] = axes[-2], axes[-1]
-        X_full = fns.transpose(X_full, axes=axes)
 
     # The sample dimension is always the last axis after transpose
     sample_axis = -1

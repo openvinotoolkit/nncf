@@ -121,7 +121,6 @@ class LoraCorrectionAlgorithm:
         layer_name = wc_params.node_with_weight.node_name
         layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
-        transpose_a_flag = getattr(wc_params.node_with_weight, "transpose_a", False)
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,
             compressed_weight,
@@ -130,7 +129,6 @@ class LoraCorrectionAlgorithm:
             self._lora_correction_params,
             layer_statistics,
             is_debug,
-            transpose_a=transpose_a_flag,
         )
         if is_debug:
             self._debug_interface.add_noises(layer_name, mean_noises)
@@ -145,7 +143,6 @@ class LoraCorrectionAlgorithm:
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
-        transpose_a: bool = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -173,15 +170,7 @@ class LoraCorrectionAlgorithm:
         )
         mode = compression_config.mode
         assert len(reduction_axes) == 1, "Assumed a single reduction axis"
-
-        if compression_config.group_size != -1:
-            reduction_axis = reduction_axes[0]
-        else:
-            reduction_axis = -1
-
-        if transpose_a and reduction_axis != -1:
-            reduction_axis = 1
-
+        reduction_axis = reduction_axes[0] if compression_config.group_size != -1 else -1
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
             fq_weights = do_integer_dequantization(
                 compressed_weight.tensor,
@@ -203,9 +192,18 @@ class LoraCorrectionAlgorithm:
         # reduction axes is all axes except output dimension in linear/conv layers.
         if reduction_axes[0] == 1:
             svd_residual = fns.transpose(svd_residual)
-        residual = fns.transpose(svd_residual) if transpose_a else svd_residual  # [H, O] or [O, H]
-        s, X = process_stats(layer_statistics, subset_size, act_ch_axis=-1, transpose_a=transpose_a)
-        X = fns.transpose(X)  # [SS, H]
+        residual = svd_residual.clone()  # [H, O]
+
+        # Get the activation channel axis
+        act_ch_axis = getattr(layer_statistics, "act_ch_axis", -1)  # default to last axis
+
+        # Pass it to process_stats
+        s, X = process_stats(layer_statistics, subset_size, act_ch_axis)
+
+        # Conditionally transpose X so samples are rows and channels are columns
+        if act_ch_axis != 0:  # if channel is not already the first axis
+            X = fns.transpose(X, axes=(1, 0))  # [SS, H]
+
         if compression_config.group_size > 0:
             # Multiply residual of weights by maximum channel magnitude of activations normalized per quantization
             # group. As a consequence, weights corresponding to a "noisy" activations has a higher error to correct.
