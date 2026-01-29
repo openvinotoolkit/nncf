@@ -81,6 +81,7 @@ files = [
     "src/nncf/data",
     "src/nncf/common",
     "src/nncf/torch/function_hook",
+    "src/nncf/torch/node_utils.py",
     "src/nncf/quantization/*py",
     "src/nncf/telemetry/",
     "src/nncf/tensor/",
