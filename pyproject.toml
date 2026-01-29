@@ -76,6 +76,7 @@ strict = true
 # https://github.com/hauntsaninja/no_implicit_optional
 implicit_optional = true
 files = [
+    "src/custom_version.py",
     "src/nncf/api",
     "src/nncf/data",
     "src/nncf/common",
