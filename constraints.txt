@@ -9,7 +9,7 @@ torchvision==0.24.0
 onnx==1.17.0; python_version < '3.13'
 onnx==1.18.0; python_version >= '3.13'
 onnxruntime==1.21.1
-onnxscript==0.5.7
+onnxscript==0.6.0
 
 # Tests and examples
 pytest==8.0.2
