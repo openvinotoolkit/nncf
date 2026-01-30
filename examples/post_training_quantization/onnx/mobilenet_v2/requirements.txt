@@ -5,5 +5,6 @@ fastprogress==1.0.5
 fastcore==1.11.5
 onnx==1.17.0
 onnxruntime==1.21.1
-openvino==2025.4.1
+openvino==2026.0.0.*
+--extra-index-url https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/ --pre
 numpy<2

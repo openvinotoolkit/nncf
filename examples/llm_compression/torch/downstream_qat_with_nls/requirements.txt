@@ -1,7 +1,8 @@
 tensorboard==2.13.0
 torch==2.9.0
 numpy>=1.23.5,<2
-openvino==2025.4.1
+openvino==2026.0.0.*
+--extra-index-url https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/ --pre
 optimum-intel==1.27.0
 optimum-onnx==0.1.0
 optimum==2.1.0
