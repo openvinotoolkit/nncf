@@ -48,17 +48,6 @@ def no_jit_trace() -> Generator[None, None, None]:
         torch._C._set_tracing_state(original_state)  # type: ignore[attr-defined]
 
 
-def get_flat_tensor_contents_string(input_tensor: torch.Tensor) -> str:
-    retval = "["
-    for idx, el in enumerate(input_tensor.view(-1)):
-        if idx >= 10:
-            retval += f"... (first 10/{len(input_tensor.view(-1))} elements shown only) "
-            break
-        retval += f"{el.item():.4f}, "
-    retval += "]"
-    return retval
-
-
 class _ModuleState:
     def __init__(self, base_module: Module = None):
         self._training_state: dict[str, bool] = {}
