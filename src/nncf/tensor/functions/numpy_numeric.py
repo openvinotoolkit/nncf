@@ -200,6 +200,13 @@ def _(
     return np.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: T_NUMPY,
+) -> tuple[T_NUMPY_ARRAY, ...]:
+    return np.nonzero(condition)
+
+
 @numeric.sign.register
 def _(a: T_NUMPY) -> T_NUMPY:
     return np.sign(a)
@@ -326,14 +333,14 @@ def _(a: T_NUMPY) -> T_NUMBER:
     return a.item()
 
 
-@numeric.cumsum.register
-def _(a: T_NUMPY, axis: int) -> T_NUMPY:
-    return np.cumsum(a, axis=axis)
-
-
 @numeric.sum.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))
+
+
+@numeric.cumsum.register
+def _(a: T_NUMPY, axis: int) -> T_NUMPY:
+    return np.cumsum(a, axis=axis)
 
 
 @numeric.multiply.register
@@ -378,6 +385,11 @@ def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False
     if descending and not stable:
         return np.flip(np.argsort(a, axis=axis), axis)
     return np.argsort(a, axis=axis, kind="stable" if stable else None)
+
+
+@numeric.argmin.register
+def _(a: T_NUMPY, axis: int = -1) -> T_NUMPY:
+    return np.argmin(a, axis=axis)
 
 
 @numeric.diag.register
