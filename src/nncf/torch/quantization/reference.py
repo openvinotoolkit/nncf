@@ -17,7 +17,7 @@ import torch
 
 import nncf
 from nncf.torch.utils import CompilationWrapper
-from nncf.torch.utils import sum_like
+from tests.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
 

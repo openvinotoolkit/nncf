@@ -85,6 +85,8 @@ files = [
     "src/nncf/torch/functions.py",
     "src/nncf/torch/model_creation.py",
     "src/nncf/torch/node_utils.py",
+    "src/nncf/torch/strip.py",
+    "src/nncf/torch/utils.py",
     "src/nncf/quantization/*py",
     "src/nncf/telemetry/",
     "src/nncf/tensor/",
