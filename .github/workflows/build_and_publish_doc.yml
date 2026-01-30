@@ -18,15 +18,13 @@ jobs:
     uses: ./.github/workflows/build_html_doc.yml
     with:
       ref: ${{ github.ref }}
-  call-build-schema-page:
-    uses: ./.github/workflows/build_schema_page.yml
   publish:
-    needs: [call-build-html-doc, call-build-schema-page]
+    needs: [call-build-html-doc]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout main repo  # the github-pages-deploy-action seems to require this step
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -34,26 +32,15 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: html_doc_artifact
-      - name: Extract artifact
-        shell: 'bash'
-        run: |
-          tar -xvf artifact.tar
-          rm artifact.tar
 
-      - name: Download schema doc build artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: schema_doc_artifact
-          path: html_build/html
       - name: Extract artifact
         shell: 'bash'
-        working-directory: html_build/html
         run: |
           tar -xvf artifact.tar
           rm artifact.tar
 
       - name: Publish built docs on Github Pages branch ${{ env.GH_PAGES_BRANCH }}
-        uses: JamesIves/github-pages-deploy-action@9d877eea73427180ae43cf98e8914934fe157a1a # v4.7.6
+        uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # v4.8.0
         with:
           folder: html_build/html
           token: ${{ secrets.PUSH_TO_GH_PAGES_BRANCH }}

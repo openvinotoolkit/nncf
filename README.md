@@ -49,11 +49,11 @@ learning frameworks.
 
 ### Training-Time Compression Algorithms
 
-| Compression algorithm                                                                                                                         | PyTorch      |
-| :-------------------------------------------------------------------------------------------------------------------------------------------- | :----------: |
-| [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported    |
-| [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported    |
-| [Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization)    | Supported    |
+| Compression algorithm                                                                                                                         | PyTorch   |
+| :-------------------------------------------------------------------------------------------------------------------------------------------- | :-------: |
+| [Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md)                                    | Supported |
+| [Weight-Only Quantization Aware Training with LoRA and NLS](./docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) | Supported |
+| [Pruning](./docs/usage/training_time_compression/pruning/Usage.md)                                                                            | Supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
 - Common interface for compression methods.
@@ -303,7 +303,7 @@ Compact scripts demonstrating quantization/weight compression and corresponding 
 | Example Name                                                                                                                             |              Compression Algorithm               |  Backend   |         Domain         |
 |:-----------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
 | [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
-| [OpenVINO YOLOv8](./examples/post_training_quantization/openvino/yolov8/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
+| [OpenVINO YOLO26](./examples/post_training_quantization/openvino/yolo26/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
 | [OpenVINO YOLOv8 QwAC](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
 | [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
 | [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |

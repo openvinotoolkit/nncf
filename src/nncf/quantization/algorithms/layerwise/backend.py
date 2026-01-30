@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ from typing import Optional, TypeVar
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.layerwise.iterator import LayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
@@ -67,11 +67,11 @@ class LayerwiseEngineBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorStatisticCollectorBase:
+    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
         """
         Returns backend-specific raw statistic collector.
         This statistic collector is used for raw data calculation, without aggregating.
 
         :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        :return: Backend-specific TensorCollector for the statistics calculation.
         """

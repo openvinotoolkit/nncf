@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -71,7 +71,8 @@ class WeightCompressionConfig:
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4_F8E4M3,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
+            CompressWeightsMode.CB4,
         ]
 
     @property
@@ -79,7 +80,11 @@ class WeightCompressionConfig:
         """
         :return: True if compression type is codebook, else False.
         """
-        return self.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]
+        return self.mode in [
+            CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.CB4,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        ]
 
     @property
     def compression_dtype(self) -> TensorDataType:

@@ -32,7 +32,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "jsonschema>=3.2.0",
     "networkx>=2.6, <3.5.0",
     "ninja>=1.10.0.post2, <1.14",
     "numpy>=1.24.0, <2.3.0",
@@ -80,7 +79,6 @@ files = [
     "src/nncf/api",
     "src/nncf/data",
     "src/nncf/common",
-    "src/nncf/config",
     "src/nncf/torch/function_hook",
     "src/nncf/quantization/*py",
     "src/nncf/telemetry/",
@@ -169,10 +167,11 @@ extend-select = [
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
 "!src/nncf/**.py" = ["INP", "D", "B"]
+"*.ipynb" = ["CPY001"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
-# Copyright \\(c\\) (202[5,6]) Intel Corporation
+# Copyright \\(c\\) (202[6,7]) Intel Corporation
 # Licensed under the Apache License, Version 2.0 \\(the "License"\\);
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at

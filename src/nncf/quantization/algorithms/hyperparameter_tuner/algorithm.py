@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import itertools
 import operator
 from typing import Any, Callable, Iterable, Mapping, Optional, TypeVar, Union
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -284,7 +284,7 @@ class HyperparameterTuner:
         best_settings = {}
 
         for step_index, step_param_grid in enumerate(self._param_grids):
-            step_graph = NNCFGraphFactory.create(step_model)
+            step_graph = build_graph(step_model)
 
             # If there are no parameters to optimize for the current step, simply execute
             # this pipeline step on the model.

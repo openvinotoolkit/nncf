@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -28,10 +28,11 @@ from nncf.common.logging.track_progress import track
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation import CodebookEstimation
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -93,7 +94,11 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
-        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
+        elif mode in [
+            CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.CB4,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        ]:
             group_size = -1
         else:
             group_size = 128
@@ -201,6 +206,27 @@ def check_user_compression_configuration(
             elif fns.any(np_codebook[:-1] >= np_codebook[1:]):
                 msg = "The codebook must be a sorted 1D array with unique elements, but an unsorted array is given."
             if msg:
+                raise nncf.ValidationError(msg)
+
+        if (
+            advanced_parameters.adaptive_codebook_params is not None
+            and codebook is not None
+            and mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
+        ):
+            cb_params = advanced_parameters.adaptive_codebook_params
+            if cb_params.num_elements is not None and cb_params.num_elements != np_codebook.size:
+                msg = (
+                    "The 'num_elements' parameter in Adaptive Codebook parameters "
+                    "must match the size of the provided codebook. "
+                    f"Expected {np_codebook.size}, but got {cb_params.num_elements}."
+                )
+                raise nncf.ValidationError(msg)
+
+            if cb_params.across_blocks and (group_size and group_size != -1):
+                msg = (
+                    "When 'across_blocks' is set to True in Adaptive Codebook parameters, "
+                    "the 'group_size' must be -1 (no grouping) or None."
+                )
                 raise nncf.ValidationError(msg)
 
     for size in values_to_check:
@@ -337,6 +363,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
+        self._codebook_estimation = mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
         self._backup_mode = backup_mode
         self._compression_format = compression_format
         self._advanced_parameters = (
@@ -377,6 +404,14 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
 
+        if self._codebook_estimation:
+            codebook_estimation_params = self._advanced_parameters.adaptive_codebook_params
+            self._codebook_estimation_algo = CodebookEstimation(
+                codebook_estimation_params.value_type,
+                codebook_estimation_params.across_blocks,
+                codebook_estimation_params.num_elements,
+            )
+
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
@@ -385,11 +420,28 @@ class WeightCompression(Algorithm):
             or self._scale_estimation
             or self._lora_correction
             or self._gptq
+            or self._codebook_estimation
         )
 
     @property
     def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
+
+    @property
+    def mode(self) -> CompressWeightsMode:
+        return self._mode
+
+    @property
+    def group_size(self) -> int:
+        return self._group_size
+
+    @property
+    def all_layers(self) -> bool:
+        return self._all_layers
+
+    @property
+    def backup_mode(self) -> CompressWeightsMode:
+        return self._backup_mode
 
     def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
         """
@@ -523,10 +575,14 @@ class WeightCompression(Algorithm):
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
 
-        if self._mode == CompressWeightsMode.CB4_F8E4M3:
+        if self._mode == CompressWeightsMode.CB4:
             codebook_values = Tensor(CB4_QUANTILES)
         elif self._mode == CompressWeightsMode.CODEBOOK:
             codebook_values = Tensor(self._advanced_parameters.codebook)
+        elif self._mode == CompressWeightsMode.ADAPTIVE_CODEBOOK:
+            codebook_values = Tensor(
+                self._advanced_parameters.codebook if self._advanced_parameters.codebook is not None else CB4_QUANTILES
+            )
 
         return WeightCompressionConfig(
             mode=self._mode,
@@ -959,9 +1015,9 @@ class WeightCompression(Algorithm):
                         # MoE operations are usually matmuls, so the check for matmul metatype is done
                         # This is to avoid raising the error for non-MoE cases with 3D weights.
                         parsed_ov_version = f"{ov_version[0]}.{ov_version[1]}.{ov_version[2]}-{ov_version[3]}"
-                        msg = f"""NNCF compression algorithms do not support 3D weights with current version of 
-                                OpenVINO {parsed_ov_version} due to a known issue in statistics collection 
-                                Ticket - 176465. Please update to the latest OpenVINO nightly version. 
+                        msg = f"""NNCF compression algorithms do not support 3D weights with current version of
+                                OpenVINO {parsed_ov_version} due to a known issue in statistics collection
+                                Ticket - 176465. Please update to the latest OpenVINO nightly version.
                                 Node with weight: {node.node_name}."""
                         raise nncf.UnsupportedModelError(msg)
 
@@ -1067,6 +1123,15 @@ class WeightCompression(Algorithm):
         lora_correction_algo = None
         description = "Applying Weight Compression"
 
+        if self._codebook_estimation:
+            precomputed_compressed_weights = self._codebook_estimation_algo.apply(
+                model=model,
+                graph=graph,
+                all_weight_params=all_weight_params,
+                statistics=statistics,
+                backend_entity=self._backend_entity,
+            )
+
         if self._gptq:
             del statistics
             model, precomputed_compressed_weights = self._gptq_algo.apply(
@@ -1087,6 +1152,11 @@ class WeightCompression(Algorithm):
                 )
 
             if self._lora_correction:
+                for wc_params in all_weight_params:
+                    if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, graph):
+                        msg = "Transposed activations are not supported yet for the LoRa correction algorithm"
+                        raise nncf.UnsupportedModelError(msg)
+
                 lora_correction_params = self._advanced_parameters.lora_correction_params
                 lora_correction_algo = LoraCorrectionAlgorithm(statistics, lora_correction_params)
                 description += " with correction of low-rank adapters"
@@ -1128,19 +1198,21 @@ class WeightCompression(Algorithm):
         )
         return transformed_model
 
-    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
+    def _get_activation_node_port_and_channel(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int, int]:
         """
-        This method returns the activation layer and corresponding port id for the node.
+        This method returns the activation layer, corresponding port id and channel axis for the given node.
 
         :param node: NNCFGraph node for which the activation is sought.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: Tuple with the activation node and port id.
+        :return: Tuple with the activation node, port id and channel axis.
         """
         activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
         activation_edge = nncf_graph.get_input_edge_by_port_id(node, activation_port)
         activation_node = activation_edge.from_node
-        port_id = activation_edge.output_port_id
-        return activation_node, port_id
+        activation_channel_axis = self._backend_entity.get_activation_channel_axis(
+            node, activation_edge.input_port_id, activation_edge.tensor_shape
+        )
+        return activation_node, activation_edge.output_port_id, activation_channel_axis
 
     def get_matmul_input_to_output_nodes_map(
         self, matmul_nodes: list[NNCFNode], graph: NNCFGraph
@@ -1161,8 +1233,8 @@ class WeightCompression(Algorithm):
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
-            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
-            matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
+            act_node, output_port_id, act_channel_axis = self._get_activation_node_port_and_channel(node, graph)
+            matmul_input_to_output_nodes_map[(act_node, output_port_id, act_channel_axis)].append(node)
         return matmul_input_to_output_nodes_map
 
     def get_compression_nodes_info(
@@ -1230,7 +1302,11 @@ class WeightCompression(Algorithm):
 
         # Statistics for data aware algorithms
         if self._data_aware_compression:
-            for (node, output_port_id), node_with_weights in matmul_input_to_output_nodes_map.items():
+            for (
+                node,
+                output_port_id,
+                input_channel_axis,
+            ), node_with_weights in matmul_input_to_output_nodes_map.items():
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
@@ -1245,13 +1321,16 @@ class WeightCompression(Algorithm):
                     ]
                     all_weight_dims.extend(weight_dims)
 
-                # by default, reduce activations across all but the last dimension. The last dimension is
-                # assumed to be the hidden size dimension.
+                # Reduce activations across all but the hidden dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
-                reduction_axes = tuple(range(n_dims - 1))
+                # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
+                input_channel_axis = input_channel_axis % n_dims
+                reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
 
-                # For 3D weights, hidden dimension is the second dimension. Reduce by all other dimensions
-                reduction_axes = (1,) if any(weight_dim == 3 for weight_dim in all_weight_dims) else reduction_axes
+                # For 3D weights, keep the batch dimention
+                if any(weight_dim == 3 for weight_dim in all_weight_dims):
+                    assert len(reduction_axes) == 2
+                    reduction_axes = reduction_axes[1:]
 
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
@@ -1291,7 +1370,7 @@ class WeightCompression(Algorithm):
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
-        for (act_node, output_port_id), matmul_nodes in matmul_input_to_output_nodes_map.items():
+        for (act_node, output_port_id, _), matmul_nodes in matmul_input_to_output_nodes_map.items():
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(
                     act_node.node_name,

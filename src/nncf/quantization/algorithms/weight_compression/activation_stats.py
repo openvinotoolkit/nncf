@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,17 +12,18 @@
 from functools import reduce
 from operator import mul
 
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, Tensor]:
+def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int = -1) -> tuple[Tensor, Tensor]:
     """
     A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
     :param stats: An object containing statistics for the layer.
-    :param subset_size: The number of samples for AWQ.
+    :param subset_size: The number of samples for AWQ. If subset_size <= 0, all samples are used.
+    :param act_ch_axis: The activation channel axis.
     :return: tuple of the following tensors:
         s - maximum channel magnitude across samples [HiddenDim]
         X - average channel magnitude across tokens in the sequence [HiddenDim, min(SampleSize, ~subset_size)]
@@ -40,8 +41,10 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> tuple[Tensor, T
     sample_axis = -1
 
     # Prevent high memory and time consumption by sampling
-    if X_full.shape[sample_axis] > subset_size:
-        lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
+    if X_full.shape[sample_axis] > subset_size and subset_size > 0:
+        lens = [
+            reduce(mul, shape[:act_ch_axis] + shape[act_ch_axis % len(shape) + 1 :], 1) for shape in stats.shape_values
+        ]
         step = X_full.shape[sample_axis] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
         X = X_full[..., idxs]

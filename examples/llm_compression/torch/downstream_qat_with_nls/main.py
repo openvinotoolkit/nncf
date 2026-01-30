@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -226,7 +226,7 @@ def get_arc(name: str = "ARC-Easy") -> list[str]:
 
     :return: A list of processed prompts from the ARC dataset.
     """
-    train_dataset = datasets.load_dataset("ai2_arc", name, split="train")
+    train_dataset = datasets.load_dataset("allenai/ai2_arc", name, split="train")
     processed_train_dataset = []
     for sample in train_dataset:
         # Map numeric answer keys to letter representations.

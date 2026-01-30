@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +17,7 @@ import openvino as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS_REDUCED
 from nncf.openvino.graph.model_builder import OVModelBuilder
@@ -28,7 +28,7 @@ from nncf.openvino.graph.transformations.command_creation import OVCommandCreato
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.statistics.collectors import get_mean_statistic_collector
+from nncf.openvino.statistics.builders import get_mean_statistic_collector
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 
@@ -62,7 +62,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> TensorCollector:
-        return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: ov.Model) -> tuple[str, str]:

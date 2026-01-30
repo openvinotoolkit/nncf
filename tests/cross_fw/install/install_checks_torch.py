@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,7 +26,7 @@ package_type = sys.argv[2]
 
 
 import nncf  # noqa: F401, E402
-from nncf.torch import create_compressed_model  # noqa: F401, E402
+import nncf.torch  # noqa: F401, E402
 
 input_low_tensor = torch.zeros([1])
 input_tensor = torch.ones([1, 1, 1, 1])

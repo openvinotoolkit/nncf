@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -42,7 +42,7 @@ def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor
 
 
 def main() -> str:
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model_hf = AutoModelForCausalLM.from_pretrained(MODEL_ID)

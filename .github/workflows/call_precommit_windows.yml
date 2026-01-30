@@ -22,10 +22,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -48,10 +48,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -74,10 +74,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
@@ -94,55 +94,16 @@ jobs:
           NUM_WORKERS: 4
 
   pytorch-cpu:
-    timeout-minutes: 100
-    runs-on: windows-2025-8-core
-    defaults:
-      run:
-        shell: bash
-    env:
-      DEBIAN_FRONTEND: noninteractive
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          lfs: true
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
-      - name: Install NNCF and test requirements
-        run: pip install . -r tests/torch/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run PyTorch precommit test scope
-        run: |
-          set +e
-
-          sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
-          prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
-          include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
-
-          export LIB="${LIB};${sys_lib};${prefix_lib}"
-          export INCLUDE="${INCLUDE};${include_dir}"
-
-          make test-torch-cpu
-        env:
-          NUM_WORKERS: 1  # Parallel tests are falls on build extenstion.
-
-  pytorch2-cpu:
     timeout-minutes: 40
     runs-on: windows-2025-8-core
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           lfs: true
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ inputs.python_version }}
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
@@ -152,10 +113,10 @@ jobs:
         shell: bash
       - name: Install NNCF and test requirements
         run: |
-          pip install . -r tests/torch2/requirements.txt
+          pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
-      - name: Run torch2 precommit test scope
+      - name: Run torch precommit test scope
         run: |
           set +e
 
@@ -166,4 +127,4 @@ jobs:
           export LIB="${LIB};${sys_lib};${prefix_lib}"
           export INCLUDE="${INCLUDE};${include_dir}"
 
-          pytest -ra tests/torch2 -m "not cuda"
+          pytest -ra tests/torch -m "not cuda"

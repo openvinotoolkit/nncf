@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -67,10 +67,10 @@ def format_results(results: tuple[float]) -> dict[str, float]:
     }
 
 
-def post_training_quantization_openvino_yolo8_quantize() -> dict[str, float]:
-    from examples.post_training_quantization.openvino.yolov8.main import main as yolo8_main
+def post_training_quantization_openvino_yolo26_quantize() -> dict[str, float]:
+    from examples.post_training_quantization.openvino.yolo26.main import main as yolo26_main
 
-    results = yolo8_main()
+    results = yolo26_main()
 
     return format_results(results)
 
@@ -213,6 +213,14 @@ def codebook_llm_compression() -> list[str]:
     return {"answers": codebook_llm_compression_main()}
 
 
+def adaptive_codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_adaptive_codebook.main import (
+        main as adaptive_codebook_llm_compression_main,
+    )
+
+    return {"answers": adaptive_codebook_llm_compression_main()}
+
+
 def llm_compression_distillation_qat_with_lora() -> float:
     from examples.llm_compression.torch.distillation_qat_with_lora.main import main as distillation_qat_with_lora_main
 
@@ -329,14 +337,13 @@ def set_torch_cuda_seed(seed: int = 42):
 
 
 def quantization_aware_training_torch_anomalib(data: Union[str, None]):
-    from anomalib.data.image import mvtec
-
     from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
+    from examples.quantization_aware_training.torch.anomalib.main import DOWNLOAD_INFO
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
 
     if data is not None and not dataset_path.exists():
         dataset_path.mkdir(parents=True, exist_ok=True)
-        tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
+        tar_file_path = Path(data) / DOWNLOAD_INFO.url.split("/")[-1]
         with tarfile.open(tar_file_path) as tar_file:
             tar_file.extractall(dataset_path)
 

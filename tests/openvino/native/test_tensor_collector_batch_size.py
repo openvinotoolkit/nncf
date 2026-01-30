@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,10 +12,10 @@
 import numpy as np
 import pytest
 
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.common.tensor_statistics.collectors import RawReducer
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
+from tests.common.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):

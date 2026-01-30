@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
@@ -53,7 +53,7 @@ def mock_collect_statistics(mocker):
         "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
     )
     _ = mocker.patch(
-        "nncf.experimental.common.tensor_statistics.collectors.TensorCollector.get_statistics",
+        "nncf.common.tensor_statistics.collectors.TensorCollector.get_statistics",
         return_value=get_statistics_value,
     )
 

@@ -1,0 +1,11 @@
+strict digraph {
+"0 Attention" [id=0, type=Attention];
+"1 nncf_model_input_0" [id=1, type="nncf_model_input"];
+"2 nncf_model_input_1" [id=2, type="nncf_model_input"];
+"3 nncf_model_input_2" [id=3, type="nncf_model_input"];
+"4 nncf_model_output_0" [id=4, type="nncf_model_output"];
+"0 Attention" -> "4 nncf_model_output_0" [style=solid, label="[1, 8, 16]"];
+"1 nncf_model_input_0" -> "0 Attention" [style=solid, label="[1, 8, 16]"];
+"2 nncf_model_input_1" -> "0 Attention" [style=solid, label="[1, 8, 16]"];
+"3 nncf_model_input_2" -> "0 Attention" [style=solid, label="[1, 8, 16]"];
+}

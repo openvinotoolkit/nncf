@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -46,4 +46,4 @@ class OpenVINOQuantizerAdapter(Quantizer):
         return self._quantizer.get_nncf_weight_compression_parameters(model, nncf_graph)
 
     def get_weight_compression_config(self) -> dict[str, Any]:
-        return self._quantizer.weight_compression_configuration
+        return self._quantizer.get_weights_compression_config()

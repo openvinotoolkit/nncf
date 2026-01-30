@@ -2,7 +2,7 @@
 
 Post-Training Quantization is a quantization algorithm that doesn't demand retraining of a quantized model.
 It utilizes a small subset of the initial dataset to calibrate quantization constants.
-Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for details of the implementation.
+Please refer to this [document](/docs/usage/Quantization.md) for details of the implementation.
 
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of the following techniques:
 

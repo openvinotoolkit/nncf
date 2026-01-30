@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -142,7 +142,7 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
 @pytest.mark.parametrize(
     "ov_type",
     [
-        ov.Type.undefined,
+        ov.Type.dynamic,
     ],
 )
 def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):

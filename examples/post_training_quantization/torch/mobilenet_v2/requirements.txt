@@ -1,4 +1,6 @@
 fastdownload==0.0.7
+fastprogress==1.0.5
+fastcore==1.11.5
 openvino==2025.4.1
 scikit-learn
 torch==2.9.0

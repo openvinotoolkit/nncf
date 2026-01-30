@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,9 +15,9 @@ from typing import Optional, TypeVar
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -138,6 +138,10 @@ class ScaleEstimation:
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
             _, weight_port_id = weight_data[0]
+
+            if self._backend_entity.matmul_has_transposed_activations(wp.node_with_weight, graph):
+                msg = "Transposed activations are not supported yet for the Scale Estimation algorithm"
+                raise nncf.UnsupportedModelError(msg)
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 

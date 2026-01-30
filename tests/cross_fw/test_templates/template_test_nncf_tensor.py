@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,7 +21,7 @@ import pytest
 
 import nncf
 import nncf.tensor.functions as fns
-from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
+from nncf.common.tensor_statistics import statistical_functions as s_fns
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
@@ -564,6 +564,26 @@ class TemplateTestNNCFTensorOperators:
         tensor = Tensor(self.to_tensor([1, -1]))
         tensor_ref = self.to_tensor([1, 0])
         res = fns.where(tensor > 0, 1, 0)
+        assert all(res.data == tensor_ref)
+        assert isinstance(res, Tensor)
+        assert res.device == tensor.device
+
+    def test_fn_nonzero(self):
+        tensor = Tensor(self.to_tensor([[0, -1, 0], [1, 0, 2]]))
+        tensor_ref = (self.to_tensor([0, 1, 1]), self.to_tensor([1, 0, 2]))
+
+        res = fns.nonzero(tensor)
+
+        assert all(res[0].data == tensor_ref[0])
+        assert all(res[1].data == tensor_ref[1])
+
+        assert isinstance(res, tuple)
+        assert res[0].device == tensor.device
+
+    def test_fn_sign(self):
+        tensor = Tensor(self.to_tensor([1, 0, -1]))
+        tensor_ref = self.to_tensor([1, 0, -1])
+        res = fns.sign(tensor)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
         assert res.device == tensor.device
@@ -1793,6 +1813,24 @@ class TemplateTestNNCFTensorOperators:
         ref_tensor = self.to_tensor(ref)
 
         res = fns.argsort(tensor, axis, descending, stable)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "x, axis, ref",
+        (
+            ([[10, 11, 12], [13, 14, 15]], None, 0),
+            ([[10, 14, 12], [13, 11, 15]], 0, [0, 1, 0]),
+            ([[10, 11, 12], [14, 13, 15]], 1, [0, 1]),
+        ),
+    )
+    def test_fn_argmin(self, x, axis, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.argmin(tensor, axis)
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)

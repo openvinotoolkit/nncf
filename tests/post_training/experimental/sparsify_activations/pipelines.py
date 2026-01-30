@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -45,8 +45,8 @@ from tests.post_training.pipelines.lm_weight_compression import LMWeightCompress
 from tests.post_training.pipelines.lm_weight_compression import WCNumCompressNodes
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
 from tests.post_training.pipelines.lm_weight_compression import collect_int4_int8_num_errors
+from tests.torch.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
-from tests.torch2.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 
 
 @dataclass
@@ -237,7 +237,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     def prepare_calibration_dataset(self):
         subset_size = self.compression_params.get("subset_size") or self.DEFAULT_SUBSET_SIZE
         dataset = (
-            load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
+            load_dataset("Salesforce/wikitext", "wikitext-2-v1", split="train", revision="b08601e")
             .filter(lambda example: len(example["text"].split()) > 256)
             .shuffle(seed=42)
             .select(range(subset_size))
