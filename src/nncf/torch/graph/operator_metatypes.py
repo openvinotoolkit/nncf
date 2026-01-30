@@ -284,11 +284,17 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PTDeformConv2dMetatype(PTOperatorMetatype):
+    """
+    Deformable Conv2D operator metatype.
+    NOTE: torchvision.ops.deform_conv2d is NOT part of torch.nn.functional.
+    Therefore, it must be registered as an external operator.
+    """
     name = "DeformConv2dOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]}
-    subtypes = []
+    # Correct: deform_conv2d comes from torchvision.ops (other library)
+    external_op_names = ["deform_conv2d"]
     num_expected_input_edges = 4
     weight_port_ids = [2]
+    subtypes = []
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -1050,3 +1056,5 @@ CONVOLUTION_METATYPES = [
     PTConvTranspose2dMetatype,
     PTConvTranspose3dMetatype,
 ]
+
+
