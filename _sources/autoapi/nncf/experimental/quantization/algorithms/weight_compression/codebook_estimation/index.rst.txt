@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation`
+==========================================================================================
+
+.. py:module:: nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation
+
+

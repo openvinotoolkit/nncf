@@ -270,10 +270,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedLoraCorrectionParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for lora correction algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters" title="nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAdaptiveCodebookParameters</span></code></a></p></td>
+<td><p>Contains advanced parameters for adaptive codebook estimation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for compression algorithms.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning the accuracy restorer algorithm.</p></td>
 </tr>
 </tbody>
@@ -515,6 +518,22 @@ precision. Defaults to True.</p></li>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedAdaptiveCodebookParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters" title="Permalink to this definition">#</a></dt>
+<dd><p>Contains advanced parameters for adaptive codebook estimation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value_type</strong> (<em>TensorDataType</em>) – The target tensor data type for the codebook. Defaults to f8e4m3.</p></li>
+<li><p><strong>across_blocks</strong> (<em>bool</em>) – Whether to use across-block codebooks (e.g., all down_proj has the same codeboook).
+Defaults to False.</p></li>
+<li><p><strong>num_elements</strong> (<em>int</em>) – The number of elements in each codebook entry. Defaults to 16.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedCompressionParameters">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedCompressionParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="Permalink to this definition">#</a></dt>
 <dd><p>Contains advanced parameters for compression algorithms.</p>
@@ -533,6 +552,7 @@ behind this argument is to avoid too small group size values, which may lead to 
 <li><p><strong>backend_params</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
 <li><p><strong>codebook</strong> (<em>TTensor</em>) – The codebook (LUT) for the weight compression.
 Applicable for vector quantization. Must be a numpy array or ov Tensor.</p></li>
+<li><p><strong>adaptive_codebook_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters" title="nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters"><em>AdvancedAdaptiveCodebookParameters</em></a>) – Advanced parameters for adaptive codebook estimation.</p></li>
 </ul>
 </dd>
 </dl>
@@ -635,6 +655,7 @@ quantized with initial parameters, should be saved.</p></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedScaleEstimationParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedGPTQParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedGPTQParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedLoraCorrectionParameters</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAdaptiveCodebookParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAdaptiveCodebookParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></li>
 </ul>
