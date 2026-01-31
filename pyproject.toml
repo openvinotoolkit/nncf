@@ -76,10 +76,17 @@ strict = true
 # https://github.com/hauntsaninja/no_implicit_optional
 implicit_optional = true
 files = [
+    "src/custom_version.py",
     "src/nncf/api",
     "src/nncf/data",
     "src/nncf/common",
     "src/nncf/torch/function_hook",
+    "src/nncf/torch/engine.py",
+    "src/nncf/torch/functions.py",
+    "src/nncf/torch/model_creation.py",
+    "src/nncf/torch/node_utils.py",
+    "src/nncf/torch/strip.py",
+    "src/nncf/torch/utils.py",
     "src/nncf/quantization/*py",
     "src/nncf/telemetry/",
     "src/nncf/tensor/",
