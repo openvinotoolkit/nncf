@@ -2,7 +2,6 @@ name: weekly
 permissions: read-all
 
 on:
-  pull_request:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'
@@ -25,6 +24,6 @@ jobs:
       override_requirements: ${{ matrix.override_requirements || '' }}
       gpu_enabled: false
 
-  # macos:
-  #   if: github.repository_owner == 'openvinotoolkit'
-  #   uses: ./.github/workflows/macos.yml
+  macos:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/macos.yml
