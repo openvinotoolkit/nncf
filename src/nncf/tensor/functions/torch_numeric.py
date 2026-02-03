@@ -215,6 +215,13 @@ def _(
     return torch.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: torch.Tensor,
+) -> tuple[torch.Tensor, ...]:
+    return torch.nonzero(condition, as_tuple=True)
+
+
 @numeric.zeros_like.register
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
@@ -348,14 +355,14 @@ def _(a: torch.Tensor) -> T_NUMBER:
     return a.item()
 
 
-@numeric.cumsum.register
-def _(a: torch.Tensor, axis: int) -> torch.Tensor:
-    return torch.cumsum(a, dim=axis)
-
-
 @numeric.sum.register
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     return torch.sum(a, dim=axis, keepdim=keepdims)
+
+
+@numeric.cumsum.register
+def _(a: torch.Tensor, axis: int) -> torch.Tensor:
+    return torch.cumsum(a, dim=axis)
 
 
 @numeric.multiply.register
@@ -393,6 +400,11 @@ def _(a: torch.Tensor, axes: Optional[T_SHAPE_ARRAY] = None) -> torch.Tensor:
 @numeric.argsort.register
 def _(a: torch.Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> torch.Tensor:
     return torch.argsort(a, dim=axis, descending=descending, stable=stable)
+
+
+@numeric.argmin.register
+def _(a: torch.Tensor, axis: int = -1) -> torch.Tensor:
+    return torch.argmin(a, dim=axis)
 
 
 @numeric.diag.register

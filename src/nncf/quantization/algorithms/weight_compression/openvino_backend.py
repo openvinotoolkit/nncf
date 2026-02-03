@@ -246,7 +246,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         if compression_config.is_codebook:
             converted_const = create_ov_codebook_subgraph(
                 codebook=compressed_weight.codebook
-                if compression_config.mode == CompressWeightsMode.CODEBOOK
+                if compression_config.mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK]
                 else compressed_weight.codebook.as_openvino_tensor().astype(TensorDataType.f8e4m3),
                 indexes=compressed_weight.tensor,
                 dtype=compression_dtype,

@@ -82,7 +82,7 @@ def reshape_weight_for_grouped_quantization(
 
 
 def calculate_float_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, signed: bool = False
 ) -> Tensor:
     """
     Calculates the scale for nf4 or mxfp8_e4m3/mxfp4/fp8_e4m3/fp4 quantization.
@@ -90,6 +90,7 @@ def calculate_float_quantization_params(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
     :param config: Weight compression configuration.
+    :param signed: Whether to use signed scale for quantization.
     :return: Scale tensor of float32 type for float quantization.
     """
     assert not config.is_integer
@@ -97,7 +98,12 @@ def calculate_float_quantization_params(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
+    if signed:
+        scale_neg = fns.min(weight, axis=reduction_axes, keepdims=True)
+        scale_pos = fns.max(weight, axis=reduction_axes, keepdims=True)
+        scale = fns.where(fns.abs(scale_neg) >= fns.abs(scale_pos), scale_neg, scale_pos)
+    else:
+        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
     if config.mode != CompressWeightsMode.NF4:
         if config.compression_dtype in FP_MAX_VALUES:
             max_val = FP_MAX_VALUES[config.compression_dtype]
@@ -340,6 +346,13 @@ def compress_weight(
     )
 
     if not config.is_integer:
+        if (
+            precomputed_compressed_weight is not None
+            and precomputed_compressed_weight.tensor is not None
+            and precomputed_compressed_weight.codebook is not None
+        ):
+            return precomputed_compressed_weight
+
         compressed_weight, scale, indexes = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
         if indexes is not None:
             return CompressedWeight(

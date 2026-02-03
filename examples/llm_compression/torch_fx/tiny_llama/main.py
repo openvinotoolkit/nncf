@@ -42,7 +42,7 @@ def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor
 
 
 def main() -> str:
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model_hf = AutoModelForCausalLM.from_pretrained(MODEL_ID)

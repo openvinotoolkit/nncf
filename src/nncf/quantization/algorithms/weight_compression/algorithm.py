@@ -32,6 +32,7 @@ from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
+from nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation import CodebookEstimation
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -93,7 +94,11 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
-        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4]:
+        elif mode in [
+            CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.CB4,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        ]:
             group_size = -1
         else:
             group_size = 128
@@ -201,6 +206,27 @@ def check_user_compression_configuration(
             elif fns.any(np_codebook[:-1] >= np_codebook[1:]):
                 msg = "The codebook must be a sorted 1D array with unique elements, but an unsorted array is given."
             if msg:
+                raise nncf.ValidationError(msg)
+
+        if (
+            advanced_parameters.adaptive_codebook_params is not None
+            and codebook is not None
+            and mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
+        ):
+            cb_params = advanced_parameters.adaptive_codebook_params
+            if cb_params.num_elements is not None and cb_params.num_elements != np_codebook.size:
+                msg = (
+                    "The 'num_elements' parameter in Adaptive Codebook parameters "
+                    "must match the size of the provided codebook. "
+                    f"Expected {np_codebook.size}, but got {cb_params.num_elements}."
+                )
+                raise nncf.ValidationError(msg)
+
+            if cb_params.across_blocks and (group_size and group_size != -1):
+                msg = (
+                    "When 'across_blocks' is set to True in Adaptive Codebook parameters, "
+                    "the 'group_size' must be -1 (no grouping) or None."
+                )
                 raise nncf.ValidationError(msg)
 
     for size in values_to_check:
@@ -337,6 +363,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
+        self._codebook_estimation = mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
         self._backup_mode = backup_mode
         self._compression_format = compression_format
         self._advanced_parameters = (
@@ -377,6 +404,14 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
 
+        if self._codebook_estimation:
+            codebook_estimation_params = self._advanced_parameters.adaptive_codebook_params
+            self._codebook_estimation_algo = CodebookEstimation(
+                codebook_estimation_params.value_type,
+                codebook_estimation_params.across_blocks,
+                codebook_estimation_params.num_elements,
+            )
+
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
@@ -385,6 +420,7 @@ class WeightCompression(Algorithm):
             or self._scale_estimation
             or self._lora_correction
             or self._gptq
+            or self._codebook_estimation
         )
 
     @property
@@ -543,6 +579,10 @@ class WeightCompression(Algorithm):
             codebook_values = Tensor(CB4_QUANTILES)
         elif self._mode == CompressWeightsMode.CODEBOOK:
             codebook_values = Tensor(self._advanced_parameters.codebook)
+        elif self._mode == CompressWeightsMode.ADAPTIVE_CODEBOOK:
+            codebook_values = Tensor(
+                self._advanced_parameters.codebook if self._advanced_parameters.codebook is not None else CB4_QUANTILES
+            )
 
         return WeightCompressionConfig(
             mode=self._mode,
@@ -1082,6 +1122,15 @@ class WeightCompression(Algorithm):
         precomputed_compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
+
+        if self._codebook_estimation:
+            precomputed_compressed_weights = self._codebook_estimation_algo.apply(
+                model=model,
+                graph=graph,
+                all_weight_params=all_weight_params,
+                statistics=statistics,
+                backend_entity=self._backend_entity,
+            )
 
         if self._gptq:
             del statistics
