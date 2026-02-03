@@ -2399,13 +2399,13 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             ),
         )[check_sampling_activation_stats_flow]
 
-    @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
+    @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 179366"))])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
     def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
         return super().test_scale_estimation(mocker, is_moe, check_sampling_activation_stats_flow)
 
     @pytest.mark.parametrize(
-        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 179366"))]
     )
     def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
         return super().test_awq_with_ignored_scope(mocker, is_3d_weights)
@@ -2413,7 +2413,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
     @pytest.mark.parametrize(
-        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 179366"))]
     )
     def test_awq_scale_reference(
         self,
@@ -2436,7 +2436,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         )
 
     @pytest.mark.parametrize(
-        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 179366"))]
     )
     @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
@@ -2444,7 +2444,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return super().test_data_free_awq(dataset, prefer_data_aware_scaling, is_3d_weights, mocker)
 
     @pytest.mark.parametrize(
-        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
+        "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 179366"))]
     )
     @pytest.mark.parametrize("with_multiply", (True, False))
     def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
