@@ -197,7 +197,7 @@ def _get_activation_tensor_shape(
                     It could lead to inaccurate statistics collection."
             )
         nncf_logger.info("Please consider to run pre-processing before quantization.")
-        # TODO: add preprocessing tool for ONNX model.
+        # TODO(andrey-churkin): add preprocessing tool for ONNX model.
         return None
     return shape
 

@@ -58,7 +58,7 @@ def run(
     original_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
     print(f"  number of samples: {num_init_samples}")
-    # TODO(kshpv):: add support of types ignored_scopes
+    # TODO(andrey-churkin): add support of types ignored_scopes
     if ignored_scopes is None:
         ignored_scopes = []
     if disallowed_op_types is not None:

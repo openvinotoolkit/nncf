@@ -359,7 +359,7 @@ def output_insertion(model: torch.fx.GraphModule, target_point: PTTargetPoint) -
     cloned_input.meta["val"] = copy(input_node.meta.get("val"))
 
     # Update args of the output node as one output could be present in the model
-    # TODO(dlyakhov) Support case when there are no outputs in the input model.
+    # TODO(dlyakhov): Support case when there are no outputs in the input model.
     output_nodes = [node for node in model.graph.nodes if node.op == "output"]
     assert len(output_nodes) == 1
     output_node = output_nodes[0]

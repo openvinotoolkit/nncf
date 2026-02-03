@@ -32,7 +32,7 @@ class QuantizationTrait(Enum):
 
     # For embeddings, the inputs are integer and are used to index into the weight of the layer,
     # therefore if the weight is already quantized there may be no need to quantize the outgoing tensor.
-    # TODO: unify scales for such operations if they become linked through a downstream op (such as
+    # TODO(N/A): unify scales for such operations if they become linked through a downstream op (such as
     # two embeddings added to each other)
     OUTPUT_QUANTIZATION_AS_WEIGHTS = 2
 

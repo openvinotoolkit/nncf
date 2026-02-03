@@ -35,7 +35,6 @@ TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 
 def fill_conv_weight(conv, value, dim=2):
     conv.weight.data.fill_(value)
-    # TODO: Fill it right
     if dim in [2, 3]:
         with torch.no_grad():
             mask = torch.eye(conv.kernel_size[0])

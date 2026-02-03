@@ -197,7 +197,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         qconfig_state = state[cls._state_names.QCONFIG]
         # Need to instantiate TypedQuantizerConfig
         # to support additional fields used by ExecuTorch-specific quantizer configs.
-        # TODO (dlyakhov): Refactor and generalize quantizer config deserialization to cleanly handle both
+        # TODO(dlyakhov): Refactor and generalize quantizer config deserialization to cleanly handle both
         # standard and extended formats without relying on manual key comparison (ticket 170078).
         if QuantizerConfig().__dict__.keys() == qconfig_state.keys():
             qconfig = QuantizerConfig.from_state(qconfig_state)

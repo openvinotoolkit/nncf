@@ -500,7 +500,6 @@ class BiasCorrection(Algorithm):
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> Tensor:
         """
-        # TODO: paraphrase
         Makes out pre-layer needed data from the floating-point collected statistics.
 
         :param statistic_points: Filled StatisticPointsContainer.

@@ -238,7 +238,7 @@ class ChannelAlignment(Algorithm):
         :param eps: Minimal significant value > 0 for convolution weights and biases precision.
         """
         conv_in_shape = conv_in_value.shape
-        # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
+        # TODO(dlyakhov): support group convolutions with groups number not in [1, out_channels]
         if conv_in_shape[conv_in_descr.conv_weight_out_channels_dim] != ascale.shape[conv_in_descr.bias_channels_dim]:
             return conv_in_value, conv_out_value, bias_in_value
 
