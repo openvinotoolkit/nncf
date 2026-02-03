@@ -2,6 +2,7 @@ name: Test examples
 permissions: read-all
 
 on:
+  pull_request: # remove it
   workflow_call:
   workflow_dispatch:
     inputs:
@@ -62,7 +63,7 @@ jobs:
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
-            --durations-path=tests/cross_fw/examples/.test_durations \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
@@ -132,7 +133,7 @@ jobs:
           python -m pytest -s -ra tests/cross_fw/examples \
             -m cuda \
             --junit-xml=pytest-results.xml \
-            --durations-path=tests/cross_fw/examples/.test_durations \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 1 \
             --group ${{ matrix.group }} \
@@ -194,7 +195,7 @@ jobs:
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
-            --durations-path=tests/cross_fw/examples/.test_durations \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
