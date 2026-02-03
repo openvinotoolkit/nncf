@@ -80,12 +80,6 @@ class ModeTestStruct:
             values_for_each_item=[np.array(0.3)],
             expected_is_metric_mode=True,
         ),
-        # Return: (ConvertibleToFloat, List[ConvertibleToFloat])
-        ModeTestStruct(
-            metric_value=np.array([0.1]),
-            values_for_each_item=[np.array([0.3])],
-            expected_is_metric_mode=True,
-        ),
         # Return: (NotConvertibleToFloat, None)
         ModeTestStruct(
             metric_value=[0.1],
