@@ -46,7 +46,6 @@ tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
   metric_value: 0.86503
   num_int4: 94
   num_int8: 124
-  metrics_xfail_reason: "Issue-148819"
 tinyllama_scale_estimation_per_channel_backend_OV:
   metric_value: 0.80873
   num_int4: 188
@@ -64,7 +63,6 @@ tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
   metric_value: 0.88663
   num_int4: 11
   num_int8: 290
-  metrics_xfail_reason: "Issue-148819"
 tinyllama_awq_backup_mode_none_backend_OV:
   metric_value: 0.84783
   num_int4: 208
