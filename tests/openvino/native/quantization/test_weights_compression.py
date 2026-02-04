@@ -1893,6 +1893,58 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
     assert act_num == num_compressed
 
 
+@pytest.mark.parametrize(
+    (
+        "compress_mode",
+        "backup_mode",
+        "num_compressed",
+        "scale_type",
+    ),
+    [
+        # FP4
+        (CompressWeightsMode.FP4, BackupMode.NONE, 3, ov.Type.f16),
+        (CompressWeightsMode.FP4, BackupMode.FP8_E4M3, 3, ov.Type.f16),
+        (CompressWeightsMode.FP4, None, 3, ov.Type.f16),
+        # MXFP4
+        (CompressWeightsMode.MXFP4, BackupMode.NONE, 3, ov.Type.f8e8m0),
+        (CompressWeightsMode.MXFP4, BackupMode.MXFP8_E4M3, 3, ov.Type.f8e8m0),
+        (CompressWeightsMode.MXFP4, None, 3, ov.Type.f8e8m0),
+    ],
+)
+def test_fp4_compression_with_backup_mode(
+    compress_mode,
+    backup_mode,
+    num_compressed,
+    scale_type,
+):
+    model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
+
+    compressed_model = compress_weights(
+        model,
+        mode=compress_mode,
+        ratio=0.8,
+        group_size=32,
+        backup_mode=backup_mode,
+    )
+
+    backup_ov_type = ov.Type.f32 if backup_mode == BackupMode.NONE else ov.Type.f8e4m3
+    act_num = 0
+    for op in compressed_model.get_ops():
+        if op.get_type_name() != "Constant":
+            continue
+
+        if op.get_element_type() == ov.Type.f4e2m1:
+            act_num += 1
+        elif "/scale" in op.get_friendly_name():
+            assert op.get_element_type() == scale_type
+        elif "Constant_" in op.get_friendly_name():
+            continue
+        else:
+            assert op.get_element_type() == backup_ov_type
+
+    assert act_num == num_compressed
+
+
 def test_awq_fp16_overflow_fix(mocker):
     """
     Special model with low magnitude activations for testing the fix for overflow in AWQ fp16 quantization.

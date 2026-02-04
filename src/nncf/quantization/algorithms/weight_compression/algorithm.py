@@ -103,6 +103,14 @@ def get_weight_compression_configuration(
         else:
             group_size = 128
 
+    if backup_mode is None:
+        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+            backup_mode = BackupMode.MXFP8_E4M3
+        elif mode in [CompressWeightsMode.FP4, CompressWeightsMode.FP8_E4M3]:
+            backup_mode = BackupMode.FP8_E4M3
+        else:
+            backup_mode = BackupMode.INT8_ASYM
+
     return {
         "mode": mode,
         "ratio": ratio or 1,
@@ -122,7 +130,7 @@ def get_weight_compression_configuration(
             if sensitivity_metric is None
             else sensitivity_metric
         ),
-        "backup_mode": backup_mode or BackupMode.INT8_ASYM,
+        "backup_mode": backup_mode,
         "advanced_parameters": advanced_parameters or AdvancedCompressionParameters(),
     }
 
@@ -302,7 +310,7 @@ class WeightCompression(Algorithm):
         scale_estimation: bool,
         gptq: bool,
         lora_correction: bool,
-        backup_mode: BackupMode = BackupMode.INT8_ASYM,
+        backup_mode: BackupMode,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
@@ -345,6 +353,8 @@ class WeightCompression(Algorithm):
                 In this mode, weights are retained in their original precision without any quantization.
             INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
             INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+            MXFP8_E4M3 stands for MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale.
+            FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.
         :param compression_format: Describes the format in which the model is saved after weight compression.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
@@ -565,12 +575,23 @@ class WeightCompression(Algorithm):
         """
         if self._backup_mode == BackupMode.NONE:
             return None
-        mode = (
-            CompressWeightsMode.INT8_ASYM if self._backup_mode == BackupMode.INT8_ASYM else CompressWeightsMode.INT8_SYM
-        )
+
+        if self._backup_mode == BackupMode.FP8_E4M3:
+            mode = CompressWeightsMode.FP8_E4M3
+            group_size = self._group_size
+        elif self._backup_mode == BackupMode.MXFP8_E4M3:
+            mode = CompressWeightsMode.MXFP8_E4M3
+            group_size = self._group_size
+        elif self._backup_mode == BackupMode.INT8_SYM:
+            mode = CompressWeightsMode.INT8_SYM
+            group_size = -1
+        else:
+            mode = CompressWeightsMode.INT8_ASYM
+            group_size = -1
+
         if not self.is_weight_compression_supported(weight_dtype, mode):
             return None
-        return WeightCompressionConfig(mode=mode)
+        return WeightCompressionConfig(mode=mode, group_size=group_size)
 
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
