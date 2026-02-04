@@ -1,4 +1,4 @@
 anomalib==0.6.0
-openvino==2026.0.0rc1
+openvino==2026.0.0rc2
 --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 numpy<2
