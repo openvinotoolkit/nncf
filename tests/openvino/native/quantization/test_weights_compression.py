@@ -1612,12 +1612,25 @@ def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
 
 
 @pytest.mark.parametrize(
-    "params, transpose_b",
-    ((None, True), (LoraParams(adapter_rank=4, use_int8_adapters=False), False)),
+    "params, transpose_a, transpose_b",
+    (
+        (None, False, True),  # original
+        (LoraParams(adapter_rank=4, use_int8_adapters=False), False, False),  # original
+        pytest.param(
+            LoraParams(adapter_rank=4, use_int8_adapters=False),
+            True,
+            False,
+        ),
+        pytest.param(
+            LoraParams(adapter_rank=8, use_int8_adapters=True),
+            True,
+            True,
+        ),
+    ),
 )
-def test_lora_adapters_in_the_graph(params, transpose_b):
+def test_lora_adapters_in_the_graph(params, transpose_a, transpose_b):
     advanced_parameters = CompressionParams() if params is None else CompressionParams(lora_correction_params=params)
-    model = LMLinearModel(transpose_b=transpose_b)
+    model = LMLinearModel(transpose_a=transpose_a, transpose_b=transpose_b)
     ov_model = model.ov_model
     dataset = Dataset(np.ones(inp.shape) for inp in ov_model.inputs)
 
@@ -2410,7 +2423,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
         return super().test_awq_with_ignored_scope(mocker, is_3d_weights)
 
-    # Transpose inputs does not affect mergable pattern code, skippting (True, False)
+    # Transpose inputs does not affect mergable pattern code
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
     @pytest.mark.parametrize(
         "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
@@ -2608,3 +2621,39 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            dict(scale_estimation=True),
+            dict(
+                gptq=True,
+                advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+            ),
+        ],
+    )
+    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
+        if not transpose_a_supported:
+            pytest.skip("transpose_a is not supported for the current backend")
+        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
+            pytest.skip("Scale estimation is not supported")
+        if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
+            pytest.skip("GPTQ is not supported")
+
+        INPUT_SHAPE = (2, 4)
+        model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
+        input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
+        input = self.to_tensor(input)
+        dataset = Dataset([input] * 2, self.get_transform_func())
+
+        with pytest.raises(nncf.UnsupportedModelError):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=1,
+                subset_size=2,
+                dataset=dataset,
+                all_layers=True,
+                **kwargs,
+            )

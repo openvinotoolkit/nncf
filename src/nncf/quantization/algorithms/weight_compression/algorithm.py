@@ -1152,11 +1152,6 @@ class WeightCompression(Algorithm):
                 )
 
             if self._lora_correction:
-                for wc_params in all_weight_params:
-                    if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, graph):
-                        msg = "Transposed activations are not supported yet for the LoRa correction algorithm"
-                        raise nncf.UnsupportedModelError(msg)
-
                 lora_correction_params = self._advanced_parameters.lora_correction_params
                 lora_correction_algo = LoraCorrectionAlgorithm(statistics, lora_correction_params)
                 description += " with correction of low-rank adapters"
@@ -1370,7 +1365,7 @@ class WeightCompression(Algorithm):
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
-        for (act_node, output_port_id, _), matmul_nodes in matmul_input_to_output_nodes_map.items():
+        for (act_node, output_port_id, _act_channel_axis), matmul_nodes in matmul_input_to_output_nodes_map.items():
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(
                     act_node.node_name,

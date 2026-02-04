@@ -108,7 +108,11 @@ class LoraCorrectionAlgorithm:
         return wc_params.compression_config.num_bits == 4
 
     def calculate_adapters(
-        self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
+        self,
+        weight: Tensor,
+        compressed_weight: CompressedWeight,
+        wc_params: WeightCompressionParameters,
+        act_ch_axis: int,
     ) -> tuple[Tensor, Tensor, list[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -116,6 +120,7 @@ class LoraCorrectionAlgorithm:
         :param weight: original floating-point weight matrix.
         :param compressed_weight: compressed weight matrix.
         :param wc_params: parameters of weight compression.
+        :param act_ch_axis: axis number of the activation tensor which correspond to it channel.
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
         layer_name = wc_params.node_with_weight.node_name
@@ -128,6 +133,7 @@ class LoraCorrectionAlgorithm:
             wc_params.reduction_axes,
             self._lora_correction_params,
             layer_statistics,
+            act_ch_axis,
             is_debug,
         )
         if is_debug:
@@ -142,6 +148,7 @@ class LoraCorrectionAlgorithm:
         reduction_axes: tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
+        act_ch_axis: int,
         is_debug: Optional[bool] = False,
     ):
         """
@@ -157,6 +164,7 @@ class LoraCorrectionAlgorithm:
         :param reduction_axes: axes along which different statistics reduced.
         :param lora_correction_params: parameters to configure the algorithm.
         :param layer_statistics: an object containing statistics for the layer.
+        :param act_ch_axis: axis number of the activation tensor which correspond to it channel.
         :param is_debug: whether to collect debug information, defaults to False.
         :return: two low rank matrices in the order of execution of corresponding linear layers and list of mean noises.
             Noises are collected from each step of the algorithm if debug was enabled.
@@ -193,9 +201,6 @@ class LoraCorrectionAlgorithm:
         if reduction_axes[0] == 1:
             svd_residual = fns.transpose(svd_residual)
         residual = svd_residual.clone()  # [H, O]
-
-        # Get the activation channel axis
-        act_ch_axis = getattr(layer_statistics, "act_ch_axis", -1)  # default to last axis
 
         # Pass it to process_stats
         s, X = process_stats(layer_statistics, subset_size, act_ch_axis)
