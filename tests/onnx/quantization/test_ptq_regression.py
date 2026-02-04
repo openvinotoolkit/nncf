@@ -35,6 +35,9 @@ class TestModel:
     num_inputs_initial_model: int
     num_inputs_quantized_model: int
 
+    def __str__(self) -> str:
+        return self.model_name
+
 
 MODELS = [
     TestModel(
@@ -128,7 +131,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     return accuracy_score(predictions, references)
 
 
-@pytest.mark.parametrize("test_model", MODELS, ids=[test_model.model_name for test_model in MODELS])
+@pytest.mark.parametrize("test_model", MODELS, ids=str)
 def test_compression(tmp_path, model_dir, data_dir, test_model):
     original_model_path = download_model(test_model.model_url, model_dir)
     dataset_path = download_dataset(data_dir)
