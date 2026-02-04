@@ -1,4 +1,4 @@
-ultralytics==8.4.7
+ultralytics==8.4.9
 onnx==1.17.0
 openvino==2025.4.1
 torch==2.10.0
