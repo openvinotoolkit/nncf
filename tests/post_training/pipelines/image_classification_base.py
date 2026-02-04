@@ -24,6 +24,7 @@ import numpy as np
 import openvino as ov
 import torch
 from sklearn.metrics import accuracy_score
+from torch.ao.quantization.fx.utils import assert_and_get_unique_device
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
@@ -137,6 +138,8 @@ class ImageClassificationBase(PTQTestPipeline):
             for data in islice(self.calibration_dataset.get_inference_data(), subset_size):
                 prepared_model(data)
             self.compressed_model = convert_pt2e(prepared_model, fold_quantize=False)
+            # This is required to avoid OOM in tests. This function from torch.ao caches entire model
+            assert_and_get_unique_device.cache_clear()
 
     def _compress_nncf_pt2e(self, quantizer):
         pt2e_kwargs = {}
