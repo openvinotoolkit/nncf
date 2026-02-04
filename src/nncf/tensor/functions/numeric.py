@@ -336,6 +336,16 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
 
 
 @tensor_dispatcher
+def nonzero(condition: Tensor) -> tuple[Tensor, ...]:
+    """
+    Return the indices of the elements that are non-zero.
+
+    :param condition: The input tensor.
+    :return: A tensor containing the indices of the non-zero elements.
+    """
+
+
+@tensor_dispatcher
 def sign(a: Tensor) -> Tensor:
     """
     Returns an element-wise indication of the sign of a number.
@@ -680,6 +690,17 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
     :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
         If False, the relative order of values which compare equal is not guaranteed. True is slower.
     :return: A tensor of indices that sort a along the specified axis.
+    """
+
+
+@tensor_dispatcher
+def argmin(a: Tensor, axis: int = -1) -> Tensor:
+    """
+    Returns the indices of the minimum values along an axis.
+
+    :param a: The tensor for which to find the minimum values.
+    :param axis: Axis along which to find the minimum values. If None, the index is into the flattened array.
+    :return: Indices of the minimum values along an axis.
     """
 
 

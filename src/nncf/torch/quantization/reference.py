@@ -17,9 +17,36 @@ import torch
 
 import nncf
 from nncf.torch.utils import CompilationWrapper
-from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
+
+
+def fp32_accum_wrapper(func):
+    def wrapper(tensor_to_sum, ret_tensor):
+        half = tensor_to_sum.dtype == np.float16
+        if half:
+            tensor_to_sum = tensor_to_sum.astype(np.float32)
+        retval = func(tensor_to_sum, ret_tensor)
+        if half:
+            retval = retval.astype(np.float16)
+        return retval
+
+    return wrapper
+
+
+@fp32_accum_wrapper
+def sum_like(tensor_to_sum, ref_tensor):
+    """Warning: may modify tensor_to_sum"""
+    if ref_tensor.size == 1:
+        return tensor_to_sum.sum()
+
+    for dim, size in enumerate(ref_tensor.shape):
+        if size == 1:
+            if isinstance(tensor_to_sum, np.ndarray):
+                tensor_to_sum = tensor_to_sum.sum(dim, keepdims=True)
+            else:
+                tensor_to_sum = tensor_to_sum.sum(dim, keepdim=True)
+    return tensor_to_sum
 
 
 class ReferenceBackendType(Enum):

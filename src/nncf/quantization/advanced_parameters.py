@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.tensor import TensorDataType
 
 TTensor = Any
 
@@ -383,6 +384,26 @@ class AdvancedLoraCorrectionParameters:
 
 @api()
 @dataclass
+class AdvancedAdaptiveCodebookParameters:
+    """
+    Contains advanced parameters for adaptive codebook estimation.
+
+    :param value_type: The target tensor data type for the codebook. Defaults to f8e4m3.
+    :type value_type: TensorDataType
+    :param across_blocks: Whether to use across-block codebooks (e.g., all down_proj has the same codeboook).
+        Defaults to False.
+    :type across_blocks: bool
+    :param num_elements: The number of elements in each codebook entry. Defaults to 16.
+    :type num_elements: int
+    """
+
+    value_type: TensorDataType = TensorDataType.f8e4m3
+    across_blocks: bool = False
+    num_elements: int = 16
+
+
+@api()
+@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -409,6 +430,8 @@ class AdvancedCompressionParameters:
     :param codebook: The codebook (LUT) for the weight compression.
         Applicable for vector quantization. Must be a numpy array or ov Tensor.
     :type codebook: TTensor
+    :param adaptive_codebook_params: Advanced parameters for adaptive codebook estimation.
+    :type adaptive_codebook_params: AdvancedAdaptiveCodebookParameters
     """
 
     statistics_path: Optional[str] = None
@@ -423,6 +446,9 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
     codebook: Optional[TTensor] = None
+    adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
+        default_factory=AdvancedAdaptiveCodebookParameters
+    )
 
 
 @api()

@@ -34,7 +34,6 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
-import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat

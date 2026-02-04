@@ -213,6 +213,14 @@ def codebook_llm_compression() -> list[str]:
     return {"answers": codebook_llm_compression_main()}
 
 
+def adaptive_codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_adaptive_codebook.main import (
+        main as adaptive_codebook_llm_compression_main,
+    )
+
+    return {"answers": adaptive_codebook_llm_compression_main()}
+
+
 def llm_compression_distillation_qat_with_lora() -> float:
     from examples.llm_compression.torch.distillation_qat_with_lora.main import main as distillation_qat_with_lora_main
 
