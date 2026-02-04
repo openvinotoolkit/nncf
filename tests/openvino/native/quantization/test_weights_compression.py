@@ -12,7 +12,7 @@
 import inspect
 import os
 from collections import defaultdict
-from typing import Callable, Optional
+from typing import Callable
 from unittest.mock import patch
 
 import numpy as np
@@ -28,6 +28,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import build_graph
 from nncf.common.tensor_statistics.collectors import AggregatorBase
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
@@ -43,6 +44,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters 
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
 from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -107,7 +109,7 @@ class LMLinearModel(OVReferenceModel):
     INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
     def _create_ov_model(
-        self, transpose_b: bool = True, transpose_a: bool = False, input_shape: Optional[list[int]] = None
+        self, transpose_b: bool = True, transpose_a: bool = False, input_shape: list[int] | None = None
     ):
         self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
         hdim_axis = -2 if transpose_a else -1
@@ -361,7 +363,14 @@ def check_fp4(op: ov.Node):
 
 
 def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
-    mapping = {node_name: check_int8_node for node_name in list_layers}
+    if primary_fn in (check_fp8, check_fp4):
+        backup_fn = check_fp8
+    elif primary_fn in (check_mxfp4, check_mxfp8):
+        backup_fn = check_mxfp8
+    else:
+        backup_fn = check_int8_node
+
+    mapping = {node_name: backup_fn for node_name in list_layers}
     primary_node_name = TEST_MODELS[IntegerModel][0]
     mapping[primary_node_name] = primary_fn
     return mapping
@@ -385,7 +394,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     model = IntegerModel(
         dim2=group_size if group_size > 0 else 3,
-        dim3=1 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3) else 6,
+        dim3=32 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3) else 6,
         positive_w=False,
     ).ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
@@ -1232,6 +1241,7 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
         all_layers=all_layers,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        backup_mode=nncf.BackupMode.INT8_ASYM,
         **kwargs,
     )
     ops = []
@@ -1295,6 +1305,7 @@ def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode
         all_layers=all_layers,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        backup_mode=nncf.BackupMode.INT8_SYM,
         **kwargs,
     )
     ops = []
@@ -1611,13 +1622,97 @@ def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
             assert op.get_shape() == [sz, 1]
 
 
+@pytest.mark.parametrize("act_ch_axis", [0, -1])
+def test_process_stats_with_transpose_a_changes_layout(act_ch_axis):
+    activations = [np.random.randn(8).astype(np.float32) for _ in range(10)]
+    stats = WCTensorStatistic(
+        [Tensor(act) for act in activations],
+        [(1, 8) if act_ch_axis == 0 else (10, 8)],  # Dummy shapes for process_stats sampling logic
+    )
+
+    subset_size = 10
+
+    # Case 1: transpose_a=False
+    s_default, X_default = process_stats(
+        stats,
+        subset_size=subset_size,
+        act_ch_axis=act_ch_axis,
+        transpose_a=False,
+    )
+
+    # Case 2: transpose_a=True
+    s_transposed, X_transposed = process_stats(
+        stats,
+        subset_size=subset_size,
+        act_ch_axis=act_ch_axis,
+        transpose_a=True,
+    )
+
+    # Hidden dimensions must be preserved in max magnitude
+    assert s_default.shape == s_transposed.shape
+
+    # Layout must be effectively transposed for X
+    # process_stats returns [HiddenDim, SampleSize] by default
+    # If transpose_a=True, it returns [SampleSize, HiddenDim]
+    assert X_default.shape[0] == X_transposed.shape[1]
+    assert X_default.shape[1] == X_transposed.shape[0]
+
+
+@pytest.mark.parametrize("transpose_a", [False, True])
+@pytest.mark.parametrize("transpose_b", [False, True])
+def test_lora_transpose_a_fix(transpose_a, transpose_b):
+    """
+    Test LoRA compression works correctly with transpose_a and transpose_b configurations.
+    """
+    # Setup LoRA parameters
+    params = LoraParams(adapter_rank=4, use_int8_adapters=False)
+    advanced_parameters = CompressionParams(lora_correction_params=params)
+
+    # Initialize model with given transpose configuration
+    input_shape = [1, 16, 16]  # [batch, seq, hidden]
+    model = LMLinearModel(transpose_b=transpose_b, transpose_a=transpose_a, input_shape=input_shape)
+    ov_model = model.ov_model
+    dataset = Dataset(np.ones(input_shape, dtype=np.float32) for _ in ov_model.inputs)
+
+    # Compress weights with LoRA correction enabled
+    compressed_model = compress_weights(
+        ov_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=8,
+        dataset=dataset,
+        all_layers=True,
+        lora_correction=True,
+        advanced_parameters=advanced_parameters,
+    )
+
+    # Simple assertion: compressed model is returned and has expected nodes
+    assert compressed_model is not None
+    # Verify that LoRA adapters were added (3 MatMuls instead of 1)
+    matmuls = [node for node in compressed_model.get_ops() if node.get_type_name() == "MatMul"]
+    assert len(matmuls) == 3
+
+
 @pytest.mark.parametrize(
-    "params, transpose_b",
-    ((None, True), (LoraParams(adapter_rank=4, use_int8_adapters=False), False)),
+    "params, transpose_a, transpose_b",
+    (
+        (None, False, True),  # original
+        (LoraParams(adapter_rank=4, use_int8_adapters=False), False, False),  # original
+        pytest.param(
+            LoraParams(adapter_rank=4, use_int8_adapters=False),
+            True,
+            False,
+        ),
+        pytest.param(
+            LoraParams(adapter_rank=8, use_int8_adapters=True),
+            True,
+            True,
+        ),
+    ),
 )
-def test_lora_adapters_in_the_graph(params, transpose_b):
+def test_lora_adapters_in_the_graph(params, transpose_a, transpose_b):
     advanced_parameters = CompressionParams() if params is None else CompressionParams(lora_correction_params=params)
-    model = LMLinearModel(transpose_b=transpose_b)
+    model = LMLinearModel(transpose_a=transpose_a, transpose_b=transpose_b)
     ov_model = model.ov_model
     dataset = Dataset(np.ones(inp.shape) for inp in ov_model.inputs)
 
@@ -1795,7 +1890,7 @@ def test_compression_with_lora_with_subset_size(mocker):
 
     get_stats_spy.assert_called_once()
     s, X = get_stats_spy.spy_return
-    assert X.shape == (model.hidden_dim, subset_size)
+    assert X.shape == (subset_size, model.hidden_dim)
     assert s.shape == (model.hidden_dim,)
 
 
@@ -1890,6 +1985,58 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
                 assert op.get_element_type() == ov.Type.u8
             else:
                 assert op.get_element_type() == backup_ov_mode
+    assert act_num == num_compressed
+
+
+@pytest.mark.parametrize(
+    (
+        "compress_mode",
+        "backup_mode",
+        "num_compressed",
+        "scale_type",
+    ),
+    [
+        # FP4
+        (CompressWeightsMode.FP4, BackupMode.NONE, 3, ov.Type.f16),
+        (CompressWeightsMode.FP4, BackupMode.FP8_E4M3, 3, ov.Type.f16),
+        (CompressWeightsMode.FP4, None, 3, ov.Type.f16),
+        # MXFP4
+        (CompressWeightsMode.MXFP4, BackupMode.NONE, 3, ov.Type.f8e8m0),
+        (CompressWeightsMode.MXFP4, BackupMode.MXFP8_E4M3, 3, ov.Type.f8e8m0),
+        (CompressWeightsMode.MXFP4, None, 3, ov.Type.f8e8m0),
+    ],
+)
+def test_fp4_compression_with_backup_mode(
+    compress_mode,
+    backup_mode,
+    num_compressed,
+    scale_type,
+):
+    model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
+
+    compressed_model = compress_weights(
+        model,
+        mode=compress_mode,
+        ratio=0.8,
+        group_size=32,
+        backup_mode=backup_mode,
+    )
+
+    backup_ov_type = ov.Type.f32 if backup_mode == BackupMode.NONE else ov.Type.f8e4m3
+    act_num = 0
+    for op in compressed_model.get_ops():
+        if op.get_type_name() != "Constant":
+            continue
+
+        if op.get_element_type() == ov.Type.f4e2m1:
+            act_num += 1
+        elif "/scale" in op.get_friendly_name():
+            assert op.get_element_type() == scale_type
+        elif "Constant_" in op.get_friendly_name():
+            continue
+        else:
+            assert op.get_element_type() == backup_ov_type
+
     assert act_num == num_compressed
 
 
@@ -2410,7 +2557,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
         return super().test_awq_with_ignored_scope(mocker, is_3d_weights)
 
-    # Transpose inputs does not affect mergable pattern code, skippting (True, False)
+    # Transpose inputs does not affect mergable pattern code
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
     @pytest.mark.parametrize(
         "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
@@ -2608,3 +2755,39 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            dict(scale_estimation=True),
+            dict(
+                gptq=True,
+                advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+            ),
+        ],
+    )
+    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
+        if not transpose_a_supported:
+            pytest.skip("transpose_a is not supported for the current backend")
+        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
+            pytest.skip("Scale estimation is not supported")
+        if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
+            pytest.skip("GPTQ is not supported")
+
+        INPUT_SHAPE = (2, 4)
+        model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
+        input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
+        input = self.to_tensor(input)
+        dataset = Dataset([input] * 2, self.get_transform_func())
+
+        with pytest.raises(nncf.UnsupportedModelError):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=1,
+                subset_size=2,
+                dataset=dataset,
+                all_layers=True,
+                **kwargs,
+            )

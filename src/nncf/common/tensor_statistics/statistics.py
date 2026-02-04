@@ -276,15 +276,13 @@ class WCTensorStatistic(TensorStatistic):
         return mean_values_equal
 
     def _get_serialized_data(self) -> dict[str, Tensor]:
-        backend = self.mean_values[0].backend
-        device = self.mean_values[0].device
         return {
             self.MEAN_STAT: fns.stack(self.mean_values),
             self.SHAPE_STAT: fns.tensor(
                 self.shape_values,
-                backend=backend,
+                backend=self.mean_values[0].backend,
                 dtype=TensorDataType.int32,
-                device=device,
+                device=self.mean_values[0].device,
             ),
         }
 
