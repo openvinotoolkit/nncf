@@ -213,7 +213,6 @@ Here is an example of Accuracy Aware Quantization pipeline where model weights a
 
 ```python
 import nncf
-import nncf.torch
 import torch
 from torchvision import datasets, models
 

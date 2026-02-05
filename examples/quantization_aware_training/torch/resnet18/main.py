@@ -31,7 +31,6 @@ from rich.progress import track
 from torch.jit import TracerWarning
 
 import nncf
-import nncf.torch
 from nncf.common.utils.helpers import create_table
 
 warnings.filterwarnings("ignore", category=TracerWarning)

@@ -23,7 +23,6 @@ from torch._C import DisableTorchFunction
 
 import nncf
 from nncf.common.graph import NNCFNodeName
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
@@ -34,7 +33,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
-from nncf.torch.functions import clamp
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
 from nncf.torch.layer_utils import COMPRESSION_MODULES
@@ -56,8 +54,6 @@ from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
-from nncf.torch.utils import get_flat_tensor_contents_string
-from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace
 
@@ -464,29 +460,6 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
     def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {}
 
-    def apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
-        """min_values and max_values must have the same shape as specified in self.scale_shape"""
-        if self.initialized:
-            nncf_logger.debug(f"Skipped initializing {log_module_name} - loaded from checkpoint")
-            return
-
-        if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            msg = f"Statistics are not collected for {log_module_name}"
-            raise ValueError(msg)
-
-        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            msg = f"Some of the values in statistics have infinite value for {log_module_name}"
-            raise ValueError(msg)
-
-        own_device = get_model_device(self)
-        min_values = min_values.to(own_device)
-        max_values = max_values.to(own_device)
-        self._apply_minmax_init(min_values, max_values, log_module_name)
-
-    @abstractmethod
-    def _apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
-        pass
-
     @abstractmethod
     def set_levels(self):
         """
@@ -795,26 +768,6 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale}
 
-    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        sign = torch.any(torch.lt(min_values, 0))
-        if self._signedness_to_force is not None and sign != self._signedness_to_force:
-            nncf_logger.debug(f"Forcing signed to {self._signedness_to_force} for module {log_module_name}")
-            sign = self._signedness_to_force
-        self.signed = sign
-
-        abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
-        SCALE_LOWER_THRESHOLD = 0.1
-        mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
-        self._scale_param_storage.data = torch.where(
-            mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_param_storage)
-        )
-        if self._is_using_log_scale_storage:
-            self._scale_param_storage.data.log_()
-
-        nncf_logger.debug(
-            f"Set sign: {self.signed} and scale: {get_flat_tensor_contents_string(self.scale)} for {log_module_name}"
-        )
-
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
         distributed.broadcast(self._scale_param_storage, src=src)
@@ -995,22 +948,6 @@ class AsymmetricQuantizer(BaseQuantizer):
             self.INPUT_LOW_PARAM_NAME: self.input_low,
             self.INPUT_RANGE_PARAM_NAME: self.input_range,
         }
-
-    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        ranges = max_values - min_values
-        max_range = torch.max(max_values - min_values)
-        eps = 1e-2
-        correction = (clamp(ranges, low=eps * max_range, high=max_range) - ranges) * 0.5
-        self._input_range_param_storage.data = (ranges + 2 * correction).data
-        if self._is_using_log_scale_storage:
-            self._input_range_param_storage.data.log_()
-
-        self.input_low.data = (min_values - correction).data
-
-        nncf_logger.debug(
-            f"Set input_low: {get_flat_tensor_contents_string(self.input_low)} "
-            f"and input_range: {get_flat_tensor_contents_string(self.input_range)} for {log_module_name}"
-        )
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
