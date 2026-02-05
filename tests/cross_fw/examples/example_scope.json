@@ -39,20 +39,20 @@
             "model_compression_rate": 3.30478637393306
         }
     },
-    "post_training_quantization_openvino_yolo8_quantize": {
+    "post_training_quantization_openvino_yolo26_quantize": {
         "backend": "openvino",
-        "requirements": "examples/post_training_quantization/openvino/yolov8/requirements.txt",
+        "requirements": "examples/post_training_quantization/openvino/yolo26/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.3,
         "accuracy_metrics": {
-            "fp32_mAP": 0.4521154302569843,
-            "int8_mAP": 0.4599022156047055,
-            "accuracy_drop": -0.0077867853477212035
+            "fp32_mAP": 0.4796109388386565,
+            "int8_mAP": 0.47337998186573793,
+            "accuracy_drop": 0.006230956972918589
         },
         "performance_metrics": {
-            "fp32_fps": 170.69,
-            "int8_fps": 444.15,
-            "performance_speed_up": 2.6020856523522173
+            "fp32_fps": 201.03,
+            "int8_fps": 423.12,
+            "performance_speed_up": 2.20937173556
         }
     },
     "post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control": {
@@ -301,6 +301,19 @@
                 "Mont Blanc.",
                 "Montauin.",
                 "Fukuoka."
+            ]
+        }
+    },
+    "adaptive_codebook_llm_compression": {
+        "backend": "openvino",
+        "requirements": "examples/llm_compression/openvino/smollm2_360m_adaptive_codebook/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "answers": [
+                "Paris.",
+                "Mont Blanc in the Alps.",
+                "Toronto in Ontario.",
+                "Osaka in Japan."
             ]
         }
     },

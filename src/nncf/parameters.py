@@ -95,6 +95,7 @@ class CompressWeightsMode(StrEnum):
     :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
     :param FP4: A FP4 format with E2M1 values sharing group-level fp16 scale.
     :param CODEBOOK: Codebook (LUT) quantization format.
+    :param ADAPTIVE_CODEBOOK: Adaptive codebook (LUT) quantization format.
     :param CB4: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
 
@@ -110,6 +111,7 @@ class CompressWeightsMode(StrEnum):
     FP8_E4M3 = "fp8_e4m3"
     FP4 = "fp4"
     CODEBOOK = "codebook"
+    ADAPTIVE_CODEBOOK = "adaptive_codebook"
 
 
 @api(canonical_alias="nncf.CompressionFormat")

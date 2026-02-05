@@ -16,6 +16,7 @@ from nncf.tensor.functions.numeric import all as all
 from nncf.tensor.functions.numeric import allclose as allclose
 from nncf.tensor.functions.numeric import any as any
 from nncf.tensor.functions.numeric import arange as arange
+from nncf.tensor.functions.numeric import argmin as argmin
 from nncf.tensor.functions.numeric import argsort as argsort
 from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
@@ -53,6 +54,7 @@ from nncf.tensor.functions.numeric import min as min
 from nncf.tensor.functions.numeric import minimum as minimum
 from nncf.tensor.functions.numeric import moveaxis as moveaxis
 from nncf.tensor.functions.numeric import multiply as multiply
+from nncf.tensor.functions.numeric import nonzero as nonzero
 from nncf.tensor.functions.numeric import ones_like as ones_like
 from nncf.tensor.functions.numeric import percentile as percentile
 from nncf.tensor.functions.numeric import power as power

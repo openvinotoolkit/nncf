@@ -67,10 +67,10 @@ def format_results(results: tuple[float]) -> dict[str, float]:
     }
 
 
-def post_training_quantization_openvino_yolo8_quantize() -> dict[str, float]:
-    from examples.post_training_quantization.openvino.yolov8.main import main as yolo8_main
+def post_training_quantization_openvino_yolo26_quantize() -> dict[str, float]:
+    from examples.post_training_quantization.openvino.yolo26.main import main as yolo26_main
 
-    results = yolo8_main()
+    results = yolo26_main()
 
     return format_results(results)
 
@@ -211,6 +211,14 @@ def codebook_llm_compression() -> list[str]:
     from examples.llm_compression.openvino.smollm2_360m_codebook.main import main as codebook_llm_compression_main
 
     return {"answers": codebook_llm_compression_main()}
+
+
+def adaptive_codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_adaptive_codebook.main import (
+        main as adaptive_codebook_llm_compression_main,
+    )
+
+    return {"answers": adaptive_codebook_llm_compression_main()}
 
 
 def llm_compression_distillation_qat_with_lora() -> float:

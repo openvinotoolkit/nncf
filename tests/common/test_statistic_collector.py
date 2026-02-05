@@ -150,7 +150,7 @@ def test_duplicated_statistics_are_merged():
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
 
-    # Check aggregators recieved inputs as expected
+    # Check aggregators received inputs as expected
     assert aggregators[0]._collected_samples == 1
     for aggregator in aggregators[1:]:
         assert aggregator._collected_samples == 0
@@ -160,7 +160,7 @@ def test_duplicated_statistics_are_merged():
 
     statistics = collector.get_statistics()
 
-    # Check aggregators recieved correct inputs
+    # Check aggregators received correct inputs
     assert len(statistics) == 6
     for k in "ABC":
         assert statistics[k] == Tensor(np.array(5))

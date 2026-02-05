@@ -226,7 +226,7 @@ def get_arc(name: str = "ARC-Easy") -> list[str]:
 
     :return: A list of processed prompts from the ARC dataset.
     """
-    train_dataset = datasets.load_dataset("ai2_arc", name, split="train")
+    train_dataset = datasets.load_dataset("allenai/ai2_arc", name, split="train")
     processed_train_dataset = []
     for sample in train_dataset:
         # Map numeric answer keys to letter representations.
