@@ -37,7 +37,7 @@ def convert_linear_module(linear: nn.Linear, decompressor: T_INT8_DECOMPRESSOR) 
     Replaces the linear layer weights with compressed INT8 weights to GPTQ format.
 
     :param linear: The linear layer with compressed weight.
-    :param decompressor_module: The decompressor module.
+    :param decompressor: The decompressor module.
     :return: The converted GPTQModel linear layer with compressed weights.
     """
     num_bits = 8
@@ -65,8 +65,6 @@ def convert_linear_module(linear: nn.Linear, decompressor: T_INT8_DECOMPRESSOR) 
         tmp_linear.bias = deepcopy(linear.bias)
 
     tmp_linear.cpu()
-
-    g_idx = torch.zeros((unpacked_w.shape[1],), device="cpu", dtype=torch.int32)
 
     triton = TritonV2QuantLinear(
         num_bits,
