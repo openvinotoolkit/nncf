@@ -1,0 +1,59 @@
+name: gptqmodel
+permissions: read-all
+
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - .github/workflows/gptqmodel.yml
+      - src/nncf/experimental/torch/gptqmodel/**
+      - tests/integration/gptq_model/**
+
+jobs:
+  pytorch-cuda:
+    timeout-minutes: 40
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          export PATH=/usr/local/cuda-12.6/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          nvidia-smi
+          cat /proc/cpuinfo
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          lfs: true
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: "3.10.14"
+      - name: Install uv
+        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
+      - name: Install NNCF and test requirements
+        run: uv pip install --system . -r tests/integration/gptq_model/requirements.txt
+      - name: Install extra requirements
+        run: uv pip install --system -r tests/integration/gptq_model/requirements_extra.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Check CUDA
+        run: |
+          python -c "import torch; print(torch.cuda.is_available())"
+      - name: Run PyTorch precommit test scope
+        run: |
+          export PATH=/usr/local/cuda-12.6/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          pytest -ra --durations=30 tests/integration/gptq_model/
