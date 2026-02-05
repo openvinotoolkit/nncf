@@ -361,7 +361,14 @@ def check_fp4(op: ov.Node):
 
 
 def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
-    mapping = {node_name: check_int8_node for node_name in list_layers}
+    if primary_fn in (check_fp8, check_fp4):
+        backup_fn = check_fp8
+    elif primary_fn in (check_mxfp4, check_mxfp8):
+        backup_fn = check_mxfp8
+    else:
+        backup_fn = check_int8_node
+
+    mapping = {node_name: backup_fn for node_name in list_layers}
     primary_node_name = TEST_MODELS[IntegerModel][0]
     mapping[primary_node_name] = primary_fn
     return mapping
@@ -385,7 +392,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     model = IntegerModel(
         dim2=group_size if group_size > 0 else 3,
-        dim3=1 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3) else 6,
+        dim3=32 if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3) else 6,
         positive_w=False,
     ).ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
@@ -1232,6 +1239,7 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
         all_layers=all_layers,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        backup_mode=nncf.BackupMode.INT8_ASYM,
         **kwargs,
     )
     ops = []
@@ -1295,6 +1303,7 @@ def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode
         all_layers=all_layers,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        backup_mode=nncf.BackupMode.INT8_SYM,
         **kwargs,
     )
     ops = []

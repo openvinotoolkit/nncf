@@ -581,7 +581,7 @@ class WeightCompression(Algorithm):
             group_size = self._group_size
         elif self._backup_mode == BackupMode.MXFP8_E4M3:
             mode = CompressWeightsMode.MXFP8_E4M3
-            group_size = self._group_size
+            group_size = 32
         elif self._backup_mode == BackupMode.INT8_SYM:
             mode = CompressWeightsMode.INT8_SYM
             group_size = -1

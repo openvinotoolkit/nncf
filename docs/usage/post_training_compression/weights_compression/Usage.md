@@ -38,7 +38,7 @@ By default, NNCF assigns backup precision to **special** quantization-sensitive 
 
 Default backup precision:
 
-- **MXFP8** for **MXFP4** and **MXFP8** primary compression modes, the same `group_size` as the primary precision.
+- **MXFP8** for **MXFP4** and **MXFP8** primary compression modes, with `group_size=32`.
 - **FP8** for **FP4** and **FP8** primary compression modes, the same `group_size` as the primary precision.
 - For all other compression modes, **INT8_ASYM** is used as the default backup precision, with `group_size=-1`.
 
