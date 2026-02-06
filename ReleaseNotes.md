@@ -17,7 +17,7 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - [Post-Training Optimization of Wan2.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/notebooks/wan2.2-text-image-to-video/wan2.2-text-image-to-video.ipynb)
+  - [Post-Training Optimization of Wan2.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.2-text-image-to-video/wan2.2-text-image-to-video.ipynb)
   - [Post-Training Optimization of DeepSeek-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/deepseek-ocr/deepseek-ocr.ipynb)
   - [Post-Training Optimization of Z-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/z-image-turbo/z-image-turbo.ipynb)
   - [Post-Training Optimization of Qwen-Image Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen-image/qwen-image.ipynb)
