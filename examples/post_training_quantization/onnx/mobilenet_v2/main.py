@@ -16,9 +16,8 @@ from pathlib import Path
 import numpy as np
 import onnx
 import openvino as ov
+import pooch
 import torch
-from fastdownload import FastDownload
-from fastdownload import download_url
 from rich.progress import track
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
@@ -30,18 +29,25 @@ ROOT = Path(__file__).parent.resolve()
 MODEL_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/mobilenet_v2_imagenette.onnx"
 DATASET_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+EXTRACTED_DATASET_PATH = DATASET_PATH / "extracted"
 MODEL_PATH = Path().home() / ".cache" / "nncf" / "models"
 DATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH.as_posix(), archive="downloaded", data="extracted")
-    return downloader.get(DATASET_URL)
+    files = pooch.retrieve(
+        url=DATASET_URL,
+        path=DATASET_PATH / "downloaded",
+        processor=pooch.Untar(extract_dir=EXTRACTED_DATASET_PATH),
+    )
+    # pooch.Untar returns a list of extracted files
+    dataset_root = EXTRACTED_DATASET_PATH / Path(files[0]).relative_to(EXTRACTED_DATASET_PATH).parts[0]
+    return dataset_root
 
 
 def download_model() -> Path:
-    MODEL_PATH.mkdir(exist_ok=True, parents=True)
-    return download_url(MODEL_URL, MODEL_PATH.resolve())
+    model_file = pooch.retrieve(url=MODEL_URL, path=MODEL_PATH)
+    return Path(model_file)
 
 
 def validate(path_to_model: Path, validation_loader: torch.utils.data.DataLoader) -> float:

@@ -14,9 +14,9 @@ from pathlib import Path
 import numpy as np
 import onnx
 import openvino as ov
+import pooch
 import pytest
 import torch
-from fastdownload import FastDownload
 from onnx import version_converter
 from openvino import Core
 from sklearn.metrics import accuracy_score
@@ -83,13 +83,17 @@ def models(request, tmp_path):
 
 
 def download_dataset(dataset_path: Path) -> Path:
-    downloader = FastDownload(base=dataset_path, archive="downloaded", data="extracted")
-    return downloader.get(DATASET_URL)
+    files = pooch.retrieve(
+        url=DATASET_URL,
+        path=dataset_path / "downloaded",
+        processor=pooch.Untar(extract_dir=dataset_path / "extracted"),
+    )
+    return dataset_path / "extracted" / Path(files[0]).relative_to(dataset_path / "extracted").parts[0]
 
 
 def download_model(model_url, tmp_path) -> Path:
-    downloader = FastDownload(base=tmp_path)
-    return downloader.download(model_url)
+    model_file = pooch.retrieve(url=model_url, path=tmp_path, known_hash=None)
+    return Path(model_file)
 
 
 def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoader) -> float:

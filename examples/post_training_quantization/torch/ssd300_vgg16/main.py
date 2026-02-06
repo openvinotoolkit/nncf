@@ -19,9 +19,9 @@ import nncf
 from nncf.torch import disable_tracing
 
 import openvino as ov
+import pooch
 import torch
 import torchvision
-from fastdownload import FastDownload
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
@@ -32,11 +32,18 @@ from functools import partial
 ROOT = Path(__file__).parent.resolve()
 DATASET_URL = "https://ultralytics.com/assets/coco128.zip"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+EXTRACTED_DATASET_PATH = DATASET_PATH / "extracted"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
-    return downloader.get(DATASET_URL)
+    files = pooch.retrieve(
+        url=DATASET_URL,
+        path=DATASET_PATH / "downloaded",
+        processor=pooch.Untar(extract_dir=EXTRACTED_DATASET_PATH),
+    )
+    # pooch.Untar returns a list of extracted files
+    dataset_root = EXTRACTED_DATASET_PATH / Path(files[0]).relative_to(EXTRACTED_DATASET_PATH).parts[0]
+    return dataset_root
 
 
 def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:

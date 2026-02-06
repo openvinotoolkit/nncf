@@ -12,6 +12,7 @@
 from pathlib import Path
 from typing import Union
 
+import pooch
 import torch.fx
 import torch.nn.parallel
 import torch.optim
@@ -19,7 +20,6 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from fastdownload import FastDownload
 from torch.fx.passes.graph_drawer import FxGraphDrawer
 
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
@@ -43,8 +43,13 @@ class TinyImagenetDatasetManager:
 
     @staticmethod
     def download_dataset() -> Path:
-        downloader = FastDownload(base=TinyImagenetDatasetManager.DATASET_PATH, archive="downloaded", data="extracted")
-        return downloader.get(TinyImagenetDatasetManager.DATASET_URL)
+        files = pooch.retrieve(
+            url=TinyImagenetDatasetManager.DATASET_URL,
+            path=Path(TinyImagenetDatasetManager.DATASET_PATH).expanduser() / "downloaded",
+            processor=pooch.Unzip(extract_dir=Path(TinyImagenetDatasetManager.DATASET_PATH).expanduser() / "extracted"),
+        )
+        extracted_path = Path(TinyImagenetDatasetManager.DATASET_PATH).expanduser() / "extracted"
+        return extracted_path / Path(files[0]).relative_to(extracted_path).parts[0]
 
     @staticmethod
     def prepare_tiny_imagenet_200(dataset_dir: Path):

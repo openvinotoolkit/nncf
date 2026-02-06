@@ -16,8 +16,8 @@ from pathlib import Path
 
 import numpy as np
 import openvino as ov
+import pooch
 import torch
-from fastdownload import FastDownload
 from rich.progress import track
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
@@ -30,12 +30,19 @@ ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin"
 DATASET_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+EXTRACTED_DATASET_PATH = DATASET_PATH / "extracted"
 DATASET_CLASSES = 10
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
-    return downloader.get(DATASET_URL)
+    files = pooch.retrieve(
+        url=DATASET_URL,
+        path=DATASET_PATH / "downloaded",
+        processor=pooch.Untar(extract_dir=EXTRACTED_DATASET_PATH),
+    )
+    # pooch.Untar returns a list of extracted files
+    dataset_root = EXTRACTED_DATASET_PATH / Path(files[0]).relative_to(EXTRACTED_DATASET_PATH).parts[0]
+    return dataset_root
 
 
 def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:

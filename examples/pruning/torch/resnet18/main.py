@@ -16,8 +16,8 @@ from argparse import RawTextHelpFormatter
 from pathlib import Path
 
 import openvino as ov
+import pooch
 import torch
-from fastdownload import FastDownload
 from rich.progress import track
 from torch import nn
 from torch.jit import TracerWarning
@@ -46,6 +46,7 @@ CHECKPOINT_URL = (
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+EXTRACTED_DATASET_PATH = DATASET_PATH / "extracted"
 
 
 def get_argument_parser() -> ArgumentParser:
@@ -66,8 +67,14 @@ def get_argument_parser() -> ArgumentParser:
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
-    return downloader.get(DATASET_URL)
+    files = pooch.retrieve(
+        url=DATASET_URL,
+        path=DATASET_PATH / "downloaded",
+        processor=pooch.Untar(extract_dir=EXTRACTED_DATASET_PATH),
+    )
+    # pooch.Untar returns a list of extracted files
+    dataset_root = EXTRACTED_DATASET_PATH / Path(files[0]).relative_to(EXTRACTED_DATASET_PATH).parts[0]
+    return dataset_root
 
 
 def load_checkpoint(model: nn.Module) -> tuple[nn.Module, float]:
