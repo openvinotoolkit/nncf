@@ -2,6 +2,7 @@ name: Weight compression
 permissions: read-all
 
 on:
+  pull_request:
   workflow_call:
   workflow_dispatch:
     inputs:
@@ -70,8 +71,28 @@ jobs:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv
           if-no-files-found: ignore
-      - name: Test Summary
+      - name: Upload test results
         if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: weight-compression-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
+
+  weight-compression-summary:
+    name: Weight Compression Summary
+    runs-on: ubuntu-latest
+    if: ${{ always() && !cancelled() && needs.examples-cpu.result != 'cancelled' }}
+    needs: examples-cpu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: weight-compression-pytest-results-*
+          path: test-results
+      - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
