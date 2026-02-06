@@ -70,7 +70,7 @@ DATASET_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 def data(request):
     option = request.config.getoption("--data")
     if option is None:
-        return Path("~/.cache/nncf/datasets")
+        return Path.home() / ".cache" / "nncf" / "datasets"
     return Path(option)
 
 
@@ -124,8 +124,10 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
         predictions[userdata] = [pred_class]
 
     infer_queue.set_callback(res_callback)
-
+    print("Validate")
+    print(len(data_loader))
     for i, (images, target) in tqdm(enumerate(data_loader)):
+        print(i, target)
         infer_queue.start_async(images, userdata=i)
         references[i] = target
     infer_queue.wait_all()
@@ -136,7 +138,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
 
 
 @pytest.mark.parametrize("test_model", MODELS, ids=str)
-def test_compression(tmp_path, model_dir, data_dir, test_model):
+def test_compression(tmp_path, model_dir, data_dir, test_model: TestModel):
     original_model_path = download_model(test_model.model_url, model_dir)
     dataset_path = download_dataset(data_dir)
 
@@ -179,4 +181,4 @@ def test_compression(tmp_path, model_dir, data_dir, test_model):
     onnx.save_model(quantized_model, str(int8_model_path))
     int8_top1 = validate(int8_model_path, val_loader)
     print(f"INT8 metrics = {int8_top1}")
-    assert abs(int8_top1 - test_model.int8_ref_top1) < 3e-3  # 0.03 deviations
+    assert int8_top1 == pytest.approx(test_model.int8_ref_top1, abs=3e-3)  # 0.03 deviations

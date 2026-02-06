@@ -48,7 +48,7 @@ DATASET_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 def data(request):
     option = request.config.getoption("--data")
     if option is None:
-        return Path("~/.cache/nncf/datasets")
+        return Path.home() / ".cache" / "nncf" / "datasets"
     return Path(option)
 
 
