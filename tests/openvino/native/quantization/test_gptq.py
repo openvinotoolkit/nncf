@@ -337,7 +337,7 @@ class Linear3DModel(torch.nn.Module):
 
 
 def _create_ov_model(weights: np.ndarray, input_shape: tuple, is_3d_weights: bool = False):
-    import openvino.runtime.opset13 as opset
+    import openvino.opset13 as opset
 
     param = opset.parameter(input_shape, dtype=np.float32, name="input")
     const = opset.constant(weights, dtype=np.float32, name="self.weight")

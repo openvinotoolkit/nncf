@@ -1,6 +1,7 @@
 anomalib==2.2.0
 torch==2.9.0
-openvino==2025.3.0
+openvino==2026.0.0rc2
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 requests==2.32.5
 matplotlib==3.10.7
 numpy==2.2.6

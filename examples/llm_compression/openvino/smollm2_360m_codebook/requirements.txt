@@ -1,4 +1,5 @@
-openvino==2025.4.1
+openvino==2026.0.0rc2
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 optimum-intel[openvino]==1.27.0
 optimum-onnx==0.1.0
 optimum==2.1.0
