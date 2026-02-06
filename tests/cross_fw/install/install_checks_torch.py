@@ -61,6 +61,7 @@ EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.onnx.*",
     "nncf\\.experimental\\.openvino.*",
     "nncf\\.experimental\\.onnx.*",
+    "nncf\\.experimental\\.torch\\.gptqmodel.*",
     "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?openvino_[^\\.]*",
     "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?onnx_[^\\.]*",
 )

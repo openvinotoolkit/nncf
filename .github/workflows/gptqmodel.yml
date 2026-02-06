@@ -31,8 +31,6 @@ jobs:
       - name: Runner info
         continue-on-error: true
         run: |
-          export PATH=/usr/local/cuda-12.6/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -54,6 +52,4 @@ jobs:
           python -c "import torch; print(torch.cuda.is_available())"
       - name: Run PyTorch precommit test scope
         run: |
-          export PATH=/usr/local/cuda-12.6/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           pytest -ra --durations=30 tests/integration/gptq_model/
