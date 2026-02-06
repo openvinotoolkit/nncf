@@ -159,6 +159,8 @@ Functions
        https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
    :param INT8_ASYM: Stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
        https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
+   :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
+   :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
 
 
 .. py:class:: CompressionFormat
@@ -407,6 +409,8 @@ Functions
            In this mode, weights are retained in their original precision without any quantization.
        INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
        INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+       MXFP8_E4M3 stands for MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale.
+       FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.
    :type backup_mode: nncf.BackupMode
    :param compression_format: Describes the format in which the model is saved after weight compression.
        Defaults to nncf.CompressionFormat.DQ.

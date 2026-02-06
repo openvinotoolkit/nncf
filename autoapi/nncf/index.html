@@ -512,6 +512,8 @@ the transformation function was applied.</p>
 <a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization</a></p></li>
 <li><p><strong>INT8_ASYM</strong> – Stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
 <a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization</a></p></li>
+<li><p><strong>MXFP8_E4M3</strong> – MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
+<li><p><strong>FP8_E4M3</strong> – A FP8 format with E4M3 values sharing group-level fp16 scale.</p></li>
 </ul>
 </dd>
 </dl>
@@ -832,7 +834,9 @@ NONE stands for original floating-point precision of the model weights.</p>
 <div><p>In this mode, weights are retained in their original precision without any quantization.</p>
 </div></blockquote>
 <p>INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
-INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.</p>
+INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+MXFP8_E4M3 stands for MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale.
+FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.</p>
 </p></li>
 <li><p><strong>compression_format</strong> (<a class="reference internal" href="#nncf.CompressionFormat" title="nncf.CompressionFormat"><em>nncf.CompressionFormat</em></a>) – Describes the format in which the model is saved after weight compression.
 Defaults to nncf.CompressionFormat.DQ.</p></li>
