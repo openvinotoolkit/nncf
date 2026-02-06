@@ -311,9 +311,9 @@
         "accuracy_metrics": {
             "answers": [
                 "Paris.",
-                "Mont Blanc in the Alps.",
-                "Toronto in Ontario.",
-                "Osaka in Japan."
+                "Mount Blanc.",
+                "Toronto.",
+                "Fukuoka."
             ]
         }
     },

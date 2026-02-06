@@ -170,6 +170,7 @@ class CodebookEstimation(Algorithm):
 
             codebook = self.calculate_codebook(stats, weight, wp.reduction_axes, config, wp)
             res[weight_name] = CompressedWeight(None, None, None, codebook)
+            config.codebook_values = codebook
 
         return res
 
