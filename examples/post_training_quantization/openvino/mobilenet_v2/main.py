@@ -33,12 +33,16 @@ DATASET_CLASSES = 10
 
 
 def download(url: str, path: Path) -> Path:
+    extracted_dir = path / "extracted"
     files = pooch.retrieve(
         url=url,
         path=path / "downloaded",
-        processor=pooch.Untar(extract_dir=path / "extracted"),
+        processor=pooch.Untar(extract_dir=extracted_dir),
     )
-    return path / "extracted" / Path(files[0]).relative_to(path / "extracted").parts[0]
+    first_file_relative = Path(files[0]).relative_to(extracted_dir)
+    if len(first_file_relative.parts) == 1:
+        return extracted_dir
+    return extracted_dir / first_file_relative.parts[0]
 
 
 def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
