@@ -81,7 +81,6 @@ def test_examples(
     data: str,
     reuse_venv: bool,
 ):
-    return 0
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
     python_version = sys.version_info
