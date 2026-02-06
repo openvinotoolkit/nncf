@@ -9,6 +9,7 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
+  - (OpenVINO) Introduced new experimental compression data type ADAPTIVE_CODEBOOK. This compression type calculates a unique codebook for each MatMul or block of identical MatMuls (for example, all down_proj could have the same codebook). This approach reduces quality degradation in the case of per-channel weight compression.
   - (TorchFX) Preview support for the new `compress_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer`. Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the OpenVINO backend via the nncf `compress_pt2e` employing Scale Estimation and AWQ.
 - Fixes:
   - ...
