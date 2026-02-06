@@ -70,10 +70,6 @@ def parse_xml_report(xml_file) -> list[TestInfo]:
         else:
             status = "Ok"
 
-        # Append each row to the table
-        if message:
-            message = message.splitlines()[0][:60]
-
         test_info.append(
             TestInfo(
                 name=test_name,
