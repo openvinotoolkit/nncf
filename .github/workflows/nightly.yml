@@ -14,6 +14,9 @@ jobs:
   examples:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/examples.yml
+    with:
+      skip_windows: false
+      skip_gpu: false
 
   md-dead-link-check:
     runs-on: ubuntu-latest

@@ -3,6 +3,15 @@ permissions: read-all
 
 on:
   workflow_call:
+    inputs:
+      skip_windows:
+        description: 'Skip tests on Windows'
+        type: boolean
+        default: false
+      skip_gpu:
+        description: 'Skip tests on gpu'
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -81,7 +90,7 @@ jobs:
     name: Test examples CUDA [${{ matrix.group }}/1]
     runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
     timeout-minutes: 40
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_gpu == 'false' }}
+    if: ${{ inputs.skip_gpu == false }}
     strategy:
       fail-fast: false
       matrix:
@@ -151,7 +160,7 @@ jobs:
     timeout-minutes: 80
     name: Test examples CPU Windows [${{ matrix.group }}/6]
     runs-on: windows-2025-16-core
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
+    if: ${{ inputs.skip_windows == false }}
     strategy:
       fail-fast: false
       matrix:
