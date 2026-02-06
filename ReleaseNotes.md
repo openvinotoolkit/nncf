@@ -13,7 +13,7 @@ Post-training Quantization:
 - Fixes:
   - ...
 - Improvements:
-  - Add Support for compression of 3D weights in AWQ, Scale Estimation and GPTQ Algorithms. Models with MoE can be compressed now.
+  - Add Support for compression of 3D weights in AWQ, Scale Estimation and GPTQ Algorithms. Models with MoE (Mixture of Experts) can be compressed now.
 - Deprecations/Removals:
   - ...
 - Tutorials:
