@@ -202,7 +202,7 @@ def load_model_and_tokenizer(model_id: str, export=True) -> tuple[OVModelForCaus
 
 
 def codebook_example(
-    model_id: str, compressed_model_id: str, adaptive_codebook: bool = False, num_elements: int = 10
+    model_id: str, compressed_model_id: str, adaptive_codebook: bool = False, num_elements: int = 12
 ) -> list[str]:
     """
     Example of using the adaptive codebook compression.

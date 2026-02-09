@@ -460,6 +460,8 @@ class EmptyModel(torch.nn.Module):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"backup_mode": BackupMode.MXFP8_E4M3},
+        {"backup_mode": BackupMode.FP8_E4M3},
         {"compression_format": CompressionFormat.FQ, "group_size": 64},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),

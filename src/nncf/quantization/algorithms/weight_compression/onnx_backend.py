@@ -494,11 +494,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the MatMulNBits node before the consumer nodes
         insert_index = len(model.graph.node)
 
+        old_output = original_matmul.output[0]
+        new_output = matmul_n_bits.output[0]
         for node in model.graph.node:
             for j, input_name in enumerate(node.input):
-                if input_name == original_matmul.name:
+                if input_name == old_output:
                     insert_index = min(insert_index, get_node_index(model, node.name))
-                    node.input[j] = matmul_n_bits
+                    node.input[j] = new_output
 
         # Insert the MatMulNBits node before the first consumer node
         model.graph.node.insert(insert_index, matmul_n_bits)
