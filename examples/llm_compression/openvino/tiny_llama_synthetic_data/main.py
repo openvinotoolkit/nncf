@@ -41,9 +41,22 @@ def transform_func(text, tokenizer):
 
 def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    ov_config = {
+        "PERFORMANCE_HINT": "LATENCY",
+        "NUM_STREAMS": "1",
+        "CACHE_DIR": "",
+        "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
+        "KV_CACHE_PRECISION": "f16",
+    }
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    hf_model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False)
+    hf_model = OVModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        export=True,
+        load_in_8bit=False,
+        compile=False,
+        ov_config=ov_config,
+    )
 
     dataset_size = 100
 
