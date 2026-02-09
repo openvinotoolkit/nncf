@@ -62,6 +62,7 @@ Deprecations/Removals:
 Requirements:
 
 - Dropped `jsonschema`, `natsort`, and `pymoo` from dependencies as they are no longer required.
+- Updated `numpy` to `>=1.24.0, <2.5.0`.
 
 ## New in Release 2.19.0
 
