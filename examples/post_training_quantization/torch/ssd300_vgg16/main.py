@@ -39,7 +39,7 @@ def download_dataset() -> Path:
     files = pooch.retrieve(
         url=DATASET_URL,
         path=DATASET_PATH / "downloaded",
-        processor=pooch.Untar(extract_dir=EXTRACTED_DATASET_PATH),
+        processor=pooch.Unzip(extract_dir=EXTRACTED_DATASET_PATH),
     )
     # pooch.Untar returns a list of extracted files
     dataset_root = EXTRACTED_DATASET_PATH / Path(files[0]).relative_to(EXTRACTED_DATASET_PATH).parts[0]
