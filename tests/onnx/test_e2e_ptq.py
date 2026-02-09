@@ -21,7 +21,6 @@ from typing import Optional
 
 import pandas as pd
 import pytest
-from pytest_dependency import depends
 from yattag import Doc
 from yattag import indent
 
@@ -390,7 +389,7 @@ class TestBenchmark:
     @pytest.mark.e2e_eval_reference_model
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_reference_model_accuracy(
-        self, task_type, model_name, model_names_to_test, model_dir, data_dir, anno_dir, output_dir, eval_size
+        self, task_type, model_name, model_dir, data_dir, anno_dir, output_dir, eval_size
     ):
         # Reference accuracy validation is performed on CPUExecutionProvider
         command = self.get_onnx_rt_ac_command(
@@ -412,10 +411,8 @@ class TestBenchmark:
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_onnx_rt_quantized_model_accuracy(
         self,
-        request,
         task_type,
         model_name,
-        model_names_to_test,
         data_dir,
         anno_dir,
         output_dir,
@@ -426,14 +423,6 @@ class TestBenchmark:
         if not (is_ov_ep or is_cpu_ep):
             pytest.skip("Skip accuracy validation on ONNXRuntime.")
         # Run PTQ first
-
-        depends(
-            request,
-            [
-                "TestPTQ::test_ptq_model"
-                + remove_prefix_if_exist(request.node.name, "test_onnx_rt_quantized_model_accuracy")
-            ],
-        )
 
         command = self.get_onnx_rt_ac_command(
             task_type,
@@ -452,16 +441,9 @@ class TestBenchmark:
 
     @pytest.mark.e2e_ptq
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_ov_quantized_model_accuracy(
-        self, request, task_type, model_name, model_names_to_test, data_dir, anno_dir, output_dir, eval_size, is_ov
-    ):
+    def test_ov_quantized_model_accuracy(self, task_type, model_name, data_dir, anno_dir, output_dir, eval_size, is_ov):
         if not is_ov:
             pytest.skip("Skip accuracy validation on OpenVINO.")
-        # Run PTQ first
-        depends(
-            request,
-            ["TestPTQ::test_ptq_model" + remove_prefix_if_exist(request.node.name, "test_ov_quantized_model_accuracy")],
-        )
 
         command = self.get_ov_ac_command(
             task_type,
