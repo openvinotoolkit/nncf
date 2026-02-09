@@ -35,7 +35,8 @@ Compression-aware training:
 - Features:
   - ...
 - Fixes:
-  - ...
+  - (ONNX) Fixed `compress_quantize_weights_transformation()` method by removing names of deleted initializers from graph inputs.
+  - (ONNX) Fixed incorrect insertion of MatMulNBits nodes.
 - Improvements:
   - ...
 - Deprecations/Removals:
