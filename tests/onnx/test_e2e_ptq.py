@@ -441,9 +441,21 @@ class TestBenchmark:
 
     @pytest.mark.e2e_ptq
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
-    def test_ov_quantized_model_accuracy(self, task_type, model_name, data_dir, anno_dir, output_dir, eval_size, is_ov):
+    def test_ov_quantized_model_accuracy(
+        self,
+        task_type,
+        model_name,
+        model_names_to_test,
+        data_dir,
+        anno_dir,
+        output_dir,
+        eval_size,
+        is_ov,
+    ):
         if not is_ov:
             pytest.skip("Skip accuracy validation on OpenVINO.")
+
+        check_skip_model(model_name, model_names_to_test)
 
         command = self.get_ov_ac_command(
             task_type,
