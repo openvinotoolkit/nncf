@@ -3,7 +3,6 @@ onnx
 onnxruntime
 openvino
 pytest-cov
-pytest-dependency
 pytest-mock
 pytest-ordering
 pytest-xdist

@@ -272,7 +272,6 @@ def configure_paths(
 @pytest.mark.e2e_ptq
 @pytest.mark.run(order=1)
 class TestPTQ:
-    @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_ptq_model(
         self,
@@ -410,7 +409,6 @@ class TestBenchmark:
         run_command(command)
 
     @pytest.mark.e2e_ptq
-    @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_onnx_rt_quantized_model_accuracy(
         self,
@@ -453,7 +451,6 @@ class TestBenchmark:
         run_command(command)
 
     @pytest.mark.e2e_ptq
-    @pytest.mark.dependency()
     @pytest.mark.parametrize("task_type, model_name", E2E_MODELS)
     def test_ov_quantized_model_accuracy(
         self, request, task_type, model_name, model_names_to_test, data_dir, anno_dir, output_dir, eval_size, is_ov

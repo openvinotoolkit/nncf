@@ -5,7 +5,6 @@ onnxscript
 openvino
 pytest
 pytest-cov
-pytest-dependency
 pytest-mock
 pytest-xdist
 torch
