@@ -5,13 +5,22 @@
 Post-training Quantization:
 
 - Breaking changes:
-  - ...
+  - (TensorFlow) Removed support for TensorFlow backend.
+  - (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
+  - (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`, e.g. NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization.
+  - Renamed `nncf.CompressWeightsMode.CB4_F8E4M3` mode option to `nncf.CompressWeightsMode.CB4`.
 - General:
-  - ...
+  - Added `nncf.prune` API function, which provides a unified interface for pruning algorithms. Currently available for PyTorch backend and supports Magnitude Pruning.
+    More details about the new API can be found in the [documentation](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage/training_time_compression/pruning/Usage.md).
+  - Added `nncf.build_graph` API function for building `NNCFGraph` from a model.
+  - Added [documentation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/IgnoredScope.md) about using `nncf.IgnoredScope`.
+  - Reworked `HWConfig`, now using Python-style definition of hardware configuration instead of JSON files.
 - Features:
   - Models containing MatMul operations with transposed activation inputs was supported in Weight Compression and AWQ algorithms.
   - (OpenVINO) Introduced new experimental compression data type ADAPTIVE_CODEBOOK. This compression type calculates a unique codebook for each MatMul or block of identical MatMuls (for example, all down_proj could have the same codebook). This approach reduces quality degradation in the case of per-channel weight compression.
   - (TorchFX) Preview support for the new `compress_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer`. Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the OpenVINO backend via the nncf `compress_pt2e` employing Scale Estimation and AWQ.
+  - (PyTorch) Added support for linear functions for the Fast Bias Correction algorithm.
+  - (OpenVINO) Added [activation profiler](https://github.com/openvinotoolkit/nncf/tree/develop/tools/activation_profiler) tool to collect and visualize tensor statistics.
 - Fixes:
   - (ONNX) Fixed `compress_quantize_weights_transformation()` method by removing names of deleted initializers from graph inputs.
   - (ONNX) Fixed incorrect insertion of MatMulNBits nodes.
@@ -52,7 +61,7 @@ Deprecations/Removals:
 
 Requirements:
 
-- ...
+- Dropped `jsonschema`, `natsort`, and `pymoo` from dependencies as they are no longer required.
 
 ## New in Release 2.19.0
 
