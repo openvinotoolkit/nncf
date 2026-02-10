@@ -48,7 +48,7 @@ from __future__ import annotations
 import contextlib
 import os
 import re
-import subprocess
+import subprocess   # nosec B404
 from pathlib import Path
 
 NNCF_VERSION_FILE = "src/nncf/version.py"
