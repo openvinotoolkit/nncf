@@ -20,6 +20,9 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
 class PTNNCFGraph(NNCFGraph):
+    """
+    Docstring for PTNNCFGraph
+    """
     def get_output_shapes_for_node(self, node_name: NNCFNodeName) -> list[tuple]:
         node = self.get_node_by_name(node_name)
         node_key = self.get_node_key_by_id(node.node_id)

@@ -1,5 +1,7 @@
 # Release Notes
 
+CHANGE TO TRIGGER PRE-COMMIT JOBS
+
 ## New in Release 2.19.0
 
 Post-training Quantization:
