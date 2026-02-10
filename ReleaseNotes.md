@@ -25,7 +25,7 @@ Post-training Quantization:
   - (ONNX) Fixed `compress_quantize_weights_transformation()` method by removing names of deleted initializers from graph inputs.
   - (ONNX) Fixed incorrect insertion of MatMulNBits nodes.
 - Improvements:
-  - Add Support for compression of 3D weights in AWQ, Scale Estimation and GPTQ Algorithms. Models with MoE (Mixture of Experts) can be compressed now.
+  - Added support for the compression of 3D weights in AWQ, Scale Estimation, and GPTQ algorithms. Models with MoE (Mixture of Experts), such as GPT-OSS-20B and Qwen3-30B-A3B, can be compressed with data-aware methods now.
 - Deprecations/Removals:
   - ...
 - Tutorials:
