@@ -25,7 +25,7 @@ def print_ignored_scope_by_model_name(model_name: str, xml_path: str, bin_path: 
     is_names = MODEL_ID_TO_IGNORED_SCOPE_BUILDER_MAP[model_name](ov_model)
     print(f"Ignored scope for the model {model_name}")
     if is_names is None:
-        print("Error occured during ignored scope colletion")
+        print("Error occurred during ignored scope collection")
         return
 
     for name in is_names:
