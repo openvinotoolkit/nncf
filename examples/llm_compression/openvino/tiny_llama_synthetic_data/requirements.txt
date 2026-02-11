@@ -1,4 +1,4 @@
-torch==2.9.0
+torch==2.10.0
 datasets==4.5.0
 numpy>=1.23.5,<2
 openvino==2025.4.1
