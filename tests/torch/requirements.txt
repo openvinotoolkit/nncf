@@ -1,6 +1,7 @@
 -c ../../constraints.txt
 onnx
 onnxruntime
+onnx-ir
 onnxscript
 openvino
 pytest
