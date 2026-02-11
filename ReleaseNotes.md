@@ -33,6 +33,8 @@ Post-training Quantization:
   - [Post-Training Optimization of DeepSeek-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/deepseek-ocr/deepseek-ocr.ipynb)
   - [Post-Training Optimization of Z-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/z-image-turbo/z-image-turbo.ipynb)
   - [Post-Training Optimization of Qwen-Image Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen-image/qwen-image.ipynb)
+  - [Post-Training Optimization of Qwen3-TTS Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-tts/qwen3-tts.ipynb)
+  - [Post-Training Optimization of Qwen3-ASR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-asr/qwen3-asr.ipynb)
   - [Post-Training Optimization of Fun-ASR-Nano Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/funasr-nano/funasr-nano.ipynb)
   - [Post-Training Optimization of Fun-CosyVoice 3.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/cosyvoice3-tts/cosyvoice3-tts.ipynb)
 - Known issues:
