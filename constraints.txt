@@ -10,7 +10,7 @@ onnx==1.17.0; python_version < '3.13'
 onnx==1.18.0; python_version >= '3.13'
 onnx-ir==0.1.15
 onnxruntime==1.21.1
-onnxscript==0.5.7
+onnxscript==0.6.2
 
 # Tests and examples
 pytest==8.0.2
