@@ -5,9 +5,6 @@
 Post-training Quantization:
 
 - Breaking changes:
-  - (TensorFlow) Removed support for TensorFlow backend.
-  - (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
-  - (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, and Movement Sparsity.
   - Renamed `nncf.CompressWeightsMode.CB4_F8E4M3` mode option to `nncf.CompressWeightsMode.CB4`.
 - General:
   - Added `nncf.prune` API function, which provides a unified interface for pruning algorithms. Currently available for PyTorch backend and supports Magnitude Pruning.
@@ -38,31 +35,12 @@ Post-training Quantization:
   - [Post-Training Optimization of Qwen3-ASR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-asr/qwen3-asr.ipynb)
   - [Post-Training Optimization of Fun-ASR-Nano Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/funasr-nano/funasr-nano.ipynb)
   - [Post-Training Optimization of Fun-CosyVoice 3.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/cosyvoice3-tts/cosyvoice3-tts.ipynb)
-- Known issues:
-  - ...
-
-Compression-aware training:
-
-- Breaking changes:
-  - ...
-- General:
-  - ...
-- Features:
-  - ...
-- Fixes:
-  - ...
-- Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - 
-- Known issues:
-  - ...
 
 Deprecations/Removals:
 
-- ...
+  - (TensorFlow) Removed support for TensorFlow backend.
+  - (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
+  - (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, and Movement Sparsity.
 
 Requirements:
 
