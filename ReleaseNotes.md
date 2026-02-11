@@ -16,7 +16,7 @@ Post-training Quantization:
   - Added [documentation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/IgnoredScope.md) about using `nncf.IgnoredScope`.
   - Reworked `HWConfig`, now using Python-style definition of hardware configuration instead of JSON files.
 - Features:
-  - Models containing MatMul operations with transposed activation inputs was supported in Weight Compression and AWQ algorithms.
+  - Added support for models containing MatMul operations with transposed activation inputs in data-free Weight Compression and data-aware AWQ algorithms.
   - (OpenVINO) Introduced new experimental compression data type ADAPTIVE_CODEBOOK. This compression type calculates a unique codebook for each MatMul or block of identical MatMuls (for example, all down_proj could have the same codebook). This approach reduces quality degradation in the case of per-channel weight compression.
   - (TorchFX) Preview support for the new `compress_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer`. Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the OpenVINO backend via the nncf `compress_pt2e` employing Scale Estimation and AWQ.
   - (PyTorch) Added support for linear functions for the Fast Bias Correction algorithm.
@@ -29,6 +29,7 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
+  - [Post-Training Quantization of YOLO26 OpenVINO Model](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/openvino/yolo26)
   - [Post-Training Optimization of Wan2.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.2-text-image-to-video/wan2.2-text-image-to-video.ipynb)
   - [Post-Training Optimization of DeepSeek-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/deepseek-ocr/deepseek-ocr.ipynb)
   - [Post-Training Optimization of Z-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/z-image-turbo/z-image-turbo.ipynb)
@@ -55,7 +56,7 @@ Compression-aware training:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - [Post-Training Quantization of YOLO26 OpenVINO Model](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/openvino/yolo26)
+  - 
 - Known issues:
   - ...
 
