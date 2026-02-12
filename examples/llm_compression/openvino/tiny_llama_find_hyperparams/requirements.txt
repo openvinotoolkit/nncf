@@ -7,4 +7,3 @@ optimum==2.1.0
 transformers==4.53.0
 onnx==1.17.0
 torch==2.9.0
-pillow==12.1.1
