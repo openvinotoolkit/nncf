@@ -8,4 +8,3 @@ optimum==2.1.0
 onnx==1.17.0
 onnxruntime==1.21.1
 datasets==4.5.0
-pillow==12.0.0
