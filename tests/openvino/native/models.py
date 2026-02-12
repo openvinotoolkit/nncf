@@ -1320,7 +1320,7 @@ class UnifiedScalesModel(OVReferenceModel):
 
 
 class RoPEModel(OVReferenceModel):
-    def _create_ov_model(self):
+    def _create_ov_model(self, with_transpose: bool = True):
         position_ids = opset.parameter([1, 10], name="position_ids")
 
         unsqueeze = opset.unsqueeze(position_ids, 0, name="unsqueeze")
@@ -1331,7 +1331,10 @@ class RoPEModel(OVReferenceModel):
         broadcast = opset.broadcast(broadcast_data, broadcast_shape, name="broadcast")
 
         matmul = opset.matmul(broadcast, convert, transpose_a=False, transpose_b=False, name="MatMul")
-        transpose = opset.transpose(matmul, [0, 2, 1], name="transpose")
+        if with_transpose:
+            transpose = opset.transpose(matmul, [0, 2, 1], name="transpose")
+        else:
+            transpose = matmul
         concat = opset.concat([transpose], axis=0, name="concat")
         sin = opset.sin(concat, name="sin")
         cos = opset.cos(concat, name="cos")

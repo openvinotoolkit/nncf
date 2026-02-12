@@ -328,8 +328,8 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_RoPE_model() -> torch.fx.GraphModule:
-        model = RoPEModel()
+    def get_RoPE_model(with_transpose: bool = True) -> torch.fx.GraphModule:
+        model = RoPEModel(with_transpose=with_transpose)
         ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model

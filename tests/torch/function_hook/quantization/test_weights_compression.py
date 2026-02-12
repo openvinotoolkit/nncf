@@ -573,8 +573,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return MatMulModel(255 * torch.eye(3, dtype=torch.float32))
 
     @staticmethod
-    def get_RoPE_model() -> torch.nn.Module:
-        return RoPEModel()
+    def get_RoPE_model(with_transpose: bool = True) -> torch.nn.Module:
+        return RoPEModel(with_transpose=with_transpose)
 
     @staticmethod
     def get_SAM_PE_model() -> torch.nn.Module:

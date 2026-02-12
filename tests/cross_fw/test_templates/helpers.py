@@ -494,16 +494,18 @@ class OneDimMM(nn.Module):
 class RoPEModel(nn.Module):
     INPUT_SIZE = [1, 10]
 
-    def __init__(self):
+    def __init__(self, with_transpose: bool = True):
         super().__init__()
         with set_torch_seed():
             self.data = torch.randn([5])
+        self._with_transpose = with_transpose
 
     def forward(self, x):
         x = torch.unsqueeze(x, dim=0)
         reshape = torch.reshape(self.data, [1, 5, 1])
         x = torch.matmul(reshape, x)
-        x = torch.transpose(x, 2, 1)
+        if self._with_transpose:
+            x = torch.transpose(x, 2, 1)
         x = torch.cat([x], dim=2)
         x1 = x.sin()
         x2 = x.cos()
