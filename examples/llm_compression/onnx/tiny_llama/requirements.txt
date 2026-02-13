@@ -1,5 +1,5 @@
 transformers==4.53.0
-openvino==2026.0.0rc2
+openvino==2026.0.0rc3
 --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 optimum-intel[openvino]==1.27.0
 optimum-onnx==0.1.0

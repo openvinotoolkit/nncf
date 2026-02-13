@@ -2,7 +2,7 @@ fastdownload==0.0.7
 fastprogress==1.0.5
 fastcore==1.11.5
 onnx==1.17.0
-openvino==2026.0.0rc2
+openvino==2026.0.0rc3
 --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 pycocotools==2.0.7
 torch==2.9.0
