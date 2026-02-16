@@ -9,14 +9,14 @@ Post-training Quantization:
 - General:
   - Added `nncf.prune` API function, which provides a unified interface for pruning algorithms. Currently available for PyTorch backend and supports Magnitude Pruning.
     More details about the new API can be found in the [documentation](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage/training_time_compression/pruning/Usage.md).
-  - Added `nncf.build_graph` API function for building `NNCFGraph` from a model.
+  - Added `nncf.build_graph` API function for building `NNCFGraph` from a model. This API can be used to inspect and define [the ignored scope](/docs/usage/IgnoredScope.md).
   - Added [documentation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/IgnoredScope.md) about using `nncf.IgnoredScope`.
   - Reworked `HWConfig`, now using Python-style definition of hardware configuration instead of JSON files.
 - Features:
   - Added support for models containing MatMul operations with transposed activation inputs in data-free Weight Compression and data-aware AWQ algorithms.
   - (OpenVINO) Introduced new experimental compression data type ADAPTIVE_CODEBOOK. This compression type calculates a unique codebook for each MatMul or block of identical MatMuls (for example, all down_proj could have the same codebook). This approach reduces quality degradation in the case of per-channel weight compression. See [example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/smollm2_360m_adaptive_codebook).
   - (TorchFX) Preview support for the new `compress_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer`. Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the OpenVINO backend via the nncf `compress_pt2e` employing Scale Estimation and AWQ.
-  - (PyTorch) Added support for linear functions for the Fast Bias Correction algorithm.
+  - (PyTorch) Added support for linear functions for the Fast Bias Correction algorithm to improve the accuracy of such models after the quantization.
   - (OpenVINO) Added [activation profiler](https://github.com/openvinotoolkit/nncf/tree/develop/tools/activation_profiler) tool to collect and visualize tensor statistics.
 - Fixes:
   - (ONNX) Fixed `compress_quantize_weights_transformation()` method by removing names of deleted initializers from graph inputs.
