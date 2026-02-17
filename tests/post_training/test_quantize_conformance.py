@@ -228,6 +228,7 @@ def run_pipeline(
         }
     )
     pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
+
     try:
         pipeline.run()
     except Exception as e:
@@ -265,7 +266,6 @@ def run_pipeline(
 def test_ptq_quantization(
     ptq_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     result_data: dict[str, RunInfo],
     no_eval: bool,
@@ -284,7 +284,7 @@ def test_ptq_quantization(
         PTQ_TEST_CASES,
         result_data,
         output_dir,
-        data_dir,
+        None,  # data_dir is not used in PTQ, used HF datasets
         no_eval,
         batch_size,
         run_fp32_backend,

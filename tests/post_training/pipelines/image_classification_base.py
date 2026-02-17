@@ -23,11 +23,13 @@ from itertools import islice
 import numpy as np
 import openvino as ov
 import torch
+from datasets import Split
+from datasets import load_dataset_builder
 from sklearn.metrics import accuracy_score
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
-from torchvision import datasets
+from torchvision import transforms
 
 import nncf
 from nncf import AdvancedQuantizationParameters
@@ -36,17 +38,51 @@ from nncf.experimental.torch.fx import OpenVINOQuantizer
 from nncf.experimental.torch.fx import quantize_pt2e
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
+from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
+
+
+def hf_imagenet_1k_val(model_transform):
+    """
+    Download only VAL subset of ImageNet-1k dataset from Hugging Face.
+    load_dataset("imagenet-1k") loads full dataset, which is not needed.
+    """
+
+    builder_instance = load_dataset_builder("ILSVRC/imagenet-1k", revision="49e2ee26f3810fb5a7536bbf732a7b07389a47b5")
+
+    builder_instance.info.splits = {"validation": builder_instance.info.splits["validation"]}
+    builder_instance.config.data_files = {"validation": builder_instance.config.data_files["validation"]}
+
+    builder_instance.download_and_prepare()
+    dataset = builder_instance.as_dataset(split=Split.VALIDATION)
+
+    def transform_fn(examples):
+        def f(image):
+            """If input image grayscale, convert it to RGB"""
+            if len(image.getbands()) < 3:
+                return transforms.Grayscale(num_output_channels=3)(image)
+            return image
+
+        transform = transforms.Compose(
+            [
+                transforms.Lambda(f),
+                model_transform,
+            ]
+        )
+        examples["image"] = [transform(img) for img in examples["image"]]
+        return examples
+
+    dataset.set_transform(transform_fn)
+    return dataset
 
 
 class ImageClassificationBase(PTQTestPipeline):
     """Base pipeline for Image Classification models"""
 
     def prepare_calibration_dataset(self):
-        dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        dataset = hf_imagenet_1k_val(self.transform)
         loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
-
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
     def _validate_ov(
@@ -78,7 +114,9 @@ class ImageClassificationBase(PTQTestPipeline):
 
             infer_queue.set_callback(process_result)
 
-            for i, (images, target) in enumerate(val_loader):
+            for i, data in enumerate(val_loader):
+                images = data["image"]
+                target = data["label"]
                 # W/A for memory leaks when using torch DataLoader and OpenVINO
                 image_copies = copy.deepcopy(images.numpy())
                 infer_queue.start_async(image_copies, userdata=i)
@@ -110,7 +148,7 @@ class ImageClassificationBase(PTQTestPipeline):
         return predictions, references
 
     def _validate(self) -> None:
-        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        val_dataset = hf_imagenet_1k_val(self.transform)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
 
         dataset_size = len(val_loader)
@@ -219,3 +257,19 @@ class ImageClassificationBase(PTQTestPipeline):
         quantizer_kwargs["quantizer_propagation_rule"] = advanced_parameters.quantizer_propagation_rule
 
         return OpenVINOQuantizer(**quantizer_kwargs)
+
+    def get_transform_calibration_fn(self):
+        if self.backend in FX_BACKENDS + PT_BACKENDS:
+            device = torch.device(
+                "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
+            )
+
+            def transform_fn(data_item):
+                return data_item["image"].to(device)
+
+        else:
+
+            def transform_fn(data_item):
+                return {self.input_name: np.array(data_item["image"], dtype=np.float32)}
+
+        return transform_fn
