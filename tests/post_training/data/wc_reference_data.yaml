@@ -4,11 +4,11 @@ tinyllama_data_free_backend_OV:
   num_int8: 84
 tinyllama_data_free_backend_ONNX:
   metric_value: 0.73779
-  num_int4: 264
+  num_int4: 228
   num_int8: 84
 tinyllama_data_free_opset19_backend_ONNX:
   metric_value: 0.73779
-  num_int4: 264
+  num_int4: 228
   num_int8: 84
 tinyllama_data_aware_backend_OV:
   metric_value: 0.85767
@@ -36,7 +36,7 @@ tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_ONNX:
   metric_value: 0.85502
-  num_int4: 230
+  num_int4: 188
   num_int8: 124
 tinyllama_int8_data_free_backend_TORCH:
   metric_value: 0.95624
@@ -132,9 +132,9 @@ tinyllama_data_free_awq_backend_FX_TORCH:
   num_int8: 124
 tinyllama_data_free_awq_backend_ONNX:
   metric_value: 0.8597
-  num_int4: 230
+  num_int4: 188
   num_int8: 124
 tinyllama_data_aware_backend_ONNX:
   metric_value: 0.85807
-  num_int4: 230
+  num_int4: 188
   num_int8: 124

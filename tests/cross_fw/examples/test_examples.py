@@ -110,6 +110,12 @@ def test_examples(
         print(f"Installing requirements: {run_cmd_line}")
         subprocess.run(run_cmd_line, check=True, shell=True)
 
+    extra_requirements = example_params.get("extra_requirements")
+    if extra_requirements:
+        run_cmd_line = f"{pip_with_venv} install -r {PROJECT_ROOT / extra_requirements} --no-build-isolation"
+        print(f"Installing extra_requirements: {run_cmd_line}")
+        subprocess.run(run_cmd_line, check=True, shell=True)
+
     if ov_version_override is not None:
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         uninstall_cmd_line = f"{pip_with_venv} uninstall --yes openvino-genai openvino_tokenizers"

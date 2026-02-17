@@ -14,6 +14,9 @@ jobs:
   examples:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/examples.yml
+    with:
+      skip_windows: false
+      skip_gpu: false
 
   md-dead-link-check:
     runs-on: ubuntu-latest
@@ -21,7 +24,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: AlexanderDokuchaev/md-dead-link-check@d5a37e0b14e5918605d22b34562532762ccb2e47 # v1.2.0
+      - uses: AlexanderDokuchaev/md-dead-link-check@5b5641a92ec95d13a5b04927e0e11de5c3405298 # v1.3.0
 
   weight-compression:
     if: github.repository_owner == 'openvinotoolkit'
@@ -39,3 +42,7 @@ jobs:
     with:
       python_version: "3.10.14"
       gpu_enabled: true
+
+  gptqmodel:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/gptqmodel.yml

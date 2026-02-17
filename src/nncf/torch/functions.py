@@ -13,7 +13,7 @@ from typing import Any
 import torch
 
 
-def clamp(x, low, high):
+def clamp(x: torch.Tensor, low: torch.Tensor, high: torch.Tensor) -> torch.Tensor:
     return torch.max(torch.min(x, high), low)
 
 
@@ -28,5 +28,5 @@ class STThreshold(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx: Any, *grad_outputs: tuple[torch.Tensor, ...]) -> tuple[torch.Tensor, None]:
+    def backward(ctx: Any, *grad_outputs: torch.Tensor) -> tuple[torch.Tensor, None]:
         return grad_outputs[0], None

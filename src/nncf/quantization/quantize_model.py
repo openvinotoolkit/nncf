@@ -483,6 +483,8 @@ def compress_weights(
             In this mode, weights are retained in their original precision without any quantization.
         INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
         INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+        MXFP8_E4M3 stands for MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale.
+        FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.
     :type backup_mode: nncf.BackupMode
     :param compression_format: Describes the format in which the model is saved after weight compression.
         Defaults to nncf.CompressionFormat.DQ.
@@ -511,6 +513,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
         if mode in not_supported_modes:
@@ -559,6 +562,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
         if mode in not_supported_modes:
@@ -567,10 +571,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-        }
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -634,6 +635,7 @@ def compress_weights(
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
             CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
         if mode in not_supported_modes:
@@ -642,10 +644,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-        }
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
