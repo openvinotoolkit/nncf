@@ -37,7 +37,7 @@ def foo(arg1: int, arg2: bool = False) -> int:
 - Constants: `CAPS_WITH_UNDER`
 - Variables: `lower_with_under`
 - Internal/Private: prefix with `_`
-- Avoid single char names (except `i`, `j`, `k`, `v` for loops, `e` for exceptions, `f` for files, `x` for tensors)
+- Avoid single char names (except `i j k v` for loops, `e` for exceptions, `f` for files, `a b x y z` for tensors)
 - Avoid dashes in package/module names
 - Avoid type suffixes in names (e.g., `id_to_name_dict`)
 
