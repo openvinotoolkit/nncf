@@ -309,7 +309,7 @@ class WeightCompressionAlgoBackend(ABC):
         activation_port_id = self.get_activation_port_id(node, graph)
         act_shape = graph.get_input_edge_by_port_id(node, activation_port_id).tensor_shape
         act_ch_axis = self.get_activation_channel_axis(node, activation_port_id, act_shape)
-        return act_ch_axis % len(act_shape), act_shape
+        return act_ch_axis, act_shape
 
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
