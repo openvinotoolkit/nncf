@@ -11,6 +11,7 @@
 
 # Since we are not reading XML, but creating it, the package security message is irrelevant
 import xml.etree.ElementTree as ET  # nosec
+from pathlib import Path
 from typing import Callable, Optional
 
 from nncf.common.graph import NNCFGraph
@@ -240,7 +241,7 @@ def get_graph_desc(
 
 def save_for_netron(
     graph: NNCFGraph,
-    save_path: str,
+    save_path: Path | str,
     graph_name: str = "Graph",
     include_fq_params: bool = False,
     get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None,
@@ -268,5 +269,5 @@ def save_for_netron(
         edges.append(edge.as_xml_element())
 
     # ET.indent(net)  # Only Python 3.9
-    with open(save_path, "wb") as f:
+    with Path(save_path).open("wb") as f:
         f.write(ET.tostring(net))
