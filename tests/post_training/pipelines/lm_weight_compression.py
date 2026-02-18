@@ -43,9 +43,9 @@ from tests.post_training.pipelines.base import StatsFromOutput
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tests.post_training.pipelines.fx_modelling import FXAutoModelForCausalLM
 from tests.post_training.pipelines.fx_modelling import convert_and_export_with_cache
-from tools.memory_monitor import MemoryType
-from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import memory_monitor_context
+from tools.memory_monitor.memory_monitor import MemoryType
+from tools.memory_monitor.memory_monitor import MemoryUnit
+from tools.memory_monitor.memory_monitor import memory_monitor_context
 
 
 @dataclass
