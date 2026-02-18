@@ -34,7 +34,8 @@ from functools import partial
 from pathlib import Path
 from tqdm import tqdm
 
-from memory_monitor import MemoryMonitor, MemoryType
+from memory_monitor import MemoryType
+from memory_monitor import memory_monitor_context
 
 save_dir = Path("memory_logs")
 
@@ -84,7 +85,8 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 
-from memory_monitor import MemoryType, memory_monitor_context
+from memory_monitor import MemoryType
+from memory_monitor import memory_monitor_context
 
 save_dir = Path("memory_logs")
 
@@ -96,10 +98,7 @@ def allocate_memory():
         time.sleep(1)
     return a
 
- with memory_monitor_context(
-    return_max_value=True,
-    save_dir="memory_logs",
- ) as mmc:
+with memory_monitor_context(return_max_value=True, save_dir="memory_logs") as mmc:
     a = allocate_memory()
     del a
     gc.collect()
