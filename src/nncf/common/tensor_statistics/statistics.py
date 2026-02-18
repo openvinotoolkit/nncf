@@ -270,21 +270,16 @@ class WCTensorStatistic(TensorStatistic):
         shapes_equal = all(self.shape_values[i] == other.shape_values[i] for i in range(len(self.mean_values)))
         if not shapes_equal:
             return False
-        mean_values_equal = all(
-            fns.allclose(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
-        )
-        return mean_values_equal
+        return all(fns.allclose(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values)))
 
     def _get_serialized_data(self) -> dict[str, Tensor]:
-        backend = self.mean_values[0].backend
-        device = self.mean_values[0].device
         return {
             self.MEAN_STAT: fns.stack(self.mean_values),
             self.SHAPE_STAT: fns.tensor(
                 self.shape_values,
-                backend=backend,
+                backend=self.mean_values[0].backend,
                 dtype=TensorDataType.int32,
-                device=device,
+                device=self.mean_values[0].device,
             ),
         }
 
