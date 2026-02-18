@@ -9,14 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
-import pathlib
 from collections import defaultdict
-from typing import Union
+from pathlib import Path
 
 import networkx as nx  # type: ignore
 
 
-def write_dot_graph(G: nx.DiGraph, path: Union[pathlib.Path, str]) -> None:
+def write_dot_graph(G: nx.DiGraph, path: Path | str) -> None:
     # NOTE: writing dot files with colons even in labels or other node/edge/graph attributes leads to an
     # error. See https://github.com/networkx/networkx/issues/5962. If `relabel` is True in this function,
     # then the colons (:) will be replaced with (^) symbols.
@@ -24,7 +23,7 @@ def write_dot_graph(G: nx.DiGraph, path: Union[pathlib.Path, str]) -> None:
     nx.nx_pydot.write_dot(relabeled, str(path))
 
 
-def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
+def read_dot_graph(path: Path) -> nx.DiGraph:
     loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)
 

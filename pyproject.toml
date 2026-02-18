@@ -169,6 +169,7 @@ select = [
     "PERF",   # perflint
     "B",      # flake8-bugbear
     "RET",    # flake8-return
+    "PTH",    # flake8-use-pathlib
     "TD",     # flake8-todos
 ]
 extend-select = [
@@ -180,7 +181,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!src/nncf/**.py" = ["INP", "D", "B"]
+"!src/nncf/**.py" = ["INP", "D", "B", "PTH"]
 "*.ipynb" = ["CPY001"]
 
 [tool.ruff.lint.flake8-copyright]

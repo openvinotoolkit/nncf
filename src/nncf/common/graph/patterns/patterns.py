@@ -10,10 +10,9 @@
 # limitations under the License.
 import copy
 import itertools as it
-import os
-import pathlib
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Callable, Hashable, Optional, cast
 
 import networkx as nx  # type: ignore
@@ -55,18 +54,18 @@ class Patterns:
     def get_full_pattern_graph(self) -> "GraphPattern":
         return self._full_pattern_graph
 
-    def visualize_full_pattern_graph(self, path: str) -> None:
+    def visualize_full_pattern_graph(self, path: Path) -> None:
         self._full_pattern_graph.dump_graph(path)
 
-    def visualize_all_patterns(self, dir_path: str) -> None:
+    def visualize_all_patterns(self, dir_path: Path) -> None:
         """
         Dump graphs of all registered patterns to dir_path
         """
         for patten_name, pattern in self._patterns_dict.items():
-            pattern.dump_graph(os.path.join(dir_path, patten_name + ".dot"))
+            pattern.dump_graph(dir_path / f"{patten_name}.dot")
 
-    def visualize_pattern(self, pattern_name: str, path: str) -> None:
-        self._patterns_dict[pattern_name].dump_graph(os.path.join(path))
+    def visualize_pattern(self, pattern_name: str, path: Path) -> None:
+        self._patterns_dict[pattern_name].dump_graph(path)
 
 
 class GraphPattern:
@@ -250,8 +249,8 @@ class GraphPattern:
     def get_weakly_connected_subgraphs(self) -> list[nx.DiGraph]:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]
 
-    def dump_graph(self, path: str) -> None:
-        write_dot_graph(self._graph, pathlib.Path(path))
+    def dump_graph(self, path: Path) -> None:
+        write_dot_graph(self._graph, path)
 
 
 def merge_two_types_of_operations(first_op: dict[str, Any], second_op: dict[str, Any], label: str) -> dict[str, Any]:

@@ -8,10 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pathlib
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -605,12 +605,12 @@ class NNCFGraph:
             )
         ]
 
-    def dump_graph(self, path: str) -> None:
-        write_dot_graph(self.get_graph_for_structure_analysis(), pathlib.Path(path))
+    def dump_graph(self, path: Path | str) -> None:
+        write_dot_graph(self.get_graph_for_structure_analysis(), Path(path))
 
-    def visualize_graph(self, path: str) -> None:
+    def visualize_graph(self, path: Path | str) -> None:
         out_graph = self._get_graph_for_visualization()
-        write_dot_graph(out_graph, pathlib.Path(path))
+        write_dot_graph(out_graph, Path(path))
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """
