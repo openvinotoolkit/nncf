@@ -400,7 +400,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         packed_tensor = decompressor.pack_weight(compressed_weight.tensor.data)
 
         # sets compressed tensor
-        # TODO:(AlexanderDokuchaev): update set_const_data
+        # TODO(AlexanderDokuchaev): update set_const_data
         module_name, weight_attr_name = split_const_name(weight_name)
         module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)

@@ -153,6 +153,7 @@ ignore = [
     "RET502",  # implicit-return-value
     "RET503",  # implicit-return
     "RET504",  # unnecessary-assign
+    "TD003",   # todo-missing-issue
 ]
 select = [
     "CPY001", # copyright check
@@ -168,6 +169,7 @@ select = [
     "PERF",   # perflint
     "B",      # flake8-bugbear
     "RET",    # flake8-return
+    "TD",     # flake8-todos
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify

@@ -319,7 +319,7 @@ class QuantizationConstraints:
 
         constrained_quantizer_config_list = list(filter(self.is_config_compatible, quantizer_config_list))
 
-        # TODO: Make the logic more flexible when the flag "warning as error" is implemented.
+        # TODO(TBD): Make the logic more flexible when the flag "warning as error" is implemented.
         # It means that the qconfig from overrides must be selected as final config
         # even if it is not valid in hw-config.
         if not constrained_quantizer_config_list:

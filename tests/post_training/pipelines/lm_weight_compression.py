@@ -141,7 +141,7 @@ class LMWeightCompression(BaseTestPipeline):
             self.model_hf = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 torch_dtype=torch.float32,
-                device_map="cpu",  # TODO (kshpv): add support of 'cuda', when supported
+                device_map="cpu",  # TODO(AlexanderDokuchaev): add support of 'cuda', when supported
             )
             self.model = self.model_hf
             if self.backend == BackendType.FX_TORCH:
