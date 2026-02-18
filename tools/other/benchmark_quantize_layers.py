@@ -29,9 +29,9 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_per_channel_scale_shape
 from nncf.torch.quantization.reference import ReferenceBackendType
 from nncf.torch.quantization.reference import ReferenceQuantize
-from tools.benchmark import run_profile
-from tools.benchmark import run_wall
-from tools.benchmark import run_worker
+from tools.other.benchmark import run_profile
+from tools.other.benchmark import run_wall
+from tools.other.benchmark import run_worker
 
 TIME_SCALES = {"ms": 1000}
 NBITS = 8
