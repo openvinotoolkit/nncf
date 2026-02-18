@@ -367,9 +367,6 @@ def get_ip_graph_for_test(nncf_graph: NNCFGraph) -> InsertionPointGraph:
             ip = PreHookInsertionPoint(node.node_name, in_edge.input_port_id)
             pre_hooks.append(ip)
 
-        # TODO (vshampor): remove
-        # if issubclass(node.metatype, PTSplitMetatype):
-        #     continue
         ip = PostHookInsertionPoint(node.node_name)
         post_hooks.append(ip)
 

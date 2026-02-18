@@ -369,7 +369,7 @@ class TensorCollector:
         :param config: Aggregated values.
         :return: TensorStatistic instance.
         """
-        if not self._stat_container:  # TODO(kshpv): need to remove an ability to return a Dict.
+        if not self._stat_container:  # TODO(dlyakhov): need to remove an ability to return a Dict.
             return config
         return self._stat_container.from_config(config)
 
@@ -929,7 +929,7 @@ class HAWQAggregator(AggregatorBase):
     def _register_reduced_input_impl(self, x: Tensor) -> None:
         trace = fns.sum(fns.multiply(x, x))
         # NOTE: average trace?? divide by number of diagonal elements
-        # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
+        # TODO(dlyakhov): revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
         self._container = (self._container + trace) / x.size
 
     def _aggregate_impl(self) -> Tensor:

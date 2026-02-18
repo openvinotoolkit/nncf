@@ -432,7 +432,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
     def _forward_impl(self, x: torch.Tensor):
         if is_debug():
             self.call_count += 1
-        # TODO: refactor to get rid of extra if's and calls on each forward
+        # TODO(AlexanderDokuchaev): refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
         is_exporting = is_tracing_state()
@@ -757,7 +757,7 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -928,7 +928,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1099,7 +1099,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1144,7 +1144,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA_NLS)
 class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1178,7 +1178,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1222,7 +1222,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
 class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)

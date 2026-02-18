@@ -121,12 +121,12 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         if node.metatype == om.PTLinearMetatype:
             return -1
-        # TODO: Add activation axis calculation when MatMul will be supported
+        # TODO(dlyakhov): Add activation axis calculation when MatMul will be supported
         return 1
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode) -> int:
-        # TODO: Add activation axis calculation when MatMul will be supported
+        # TODO(dlyakhov): Add activation axis calculation when MatMul will be supported
         return 1
 
     @staticmethod

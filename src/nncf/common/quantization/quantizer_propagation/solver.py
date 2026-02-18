@@ -129,7 +129,6 @@ class QuantizationProposal:
         if not all(qc in prior_list for qc in constrained_config_list):
             msg = "Constrained config list is incompatible with the result of the quantizer propagation!"
             raise nncf.InternalError(msg)
-        # TODO (vshampor): only allow to constrain 'input-group'-wise?
         self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs = constrained_config_list
 
         if quantization_point_id in self._quantization_point_id_vs_prop_quantizer:
@@ -386,7 +385,7 @@ class QuantizerPropagationSolver:
             self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = (
             propagation_strategy if propagation_strategy else QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY
-        )  # TODO (vshampor): determine from config
+        )  # TODO(N/A): determine from config
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
         self._quantize_outputs = quantize_outputs
@@ -706,8 +705,8 @@ class QuantizerPropagationSolver:
         prop_quantizers_to_process: list[PropagatingQuantizer] = []
         did_clone = False
 
-        # TODO (vshampor): include information on unified scale type in grouping; for now assuming that
-        # only concat unified scale groups appear here
+        # TODO(N/A): include information on unified scale type in grouping;
+        # for now assuming that only concat unified scale groups appear here
         unified_scale_grouped_paths = (
             quant_prop_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
                 curr_node_key, self._unified_scales_operation_set, self._scales_unification_map
@@ -733,7 +732,6 @@ class QuantizerPropagationSolver:
 
         for pq_group in unified_scale_path_groups_vs_pqs.values():
             primary_pq = pq_group[0]
-            # TODO (vshampor): smarter type assignment
             primary_pq.unified_scale_type = UnifiedScaleType.UNIFY_ONLY_PER_TENSOR
             for pq in pq_group[1:]:
                 quant_prop_graph.unify_pq_scales(primary_pq, pq)
@@ -826,8 +824,6 @@ class QuantizerPropagationSolver:
         """
         :return: A mapping of operator metatypes to the quantization traits to be assigned to such operations.
         """
-        # TODO (vshampor): ensure that there are no name collisions between ops in different torch subpackages with
-        #  the same name
         retval: dict[type[OperatorMetatype], QuantizationTrait] = {}
         if self._hw_config is None:
             for trait, meta_list in self._default_trait_to_metatype_map.items():
@@ -873,8 +869,6 @@ class QuantizerPropagationSolver:
         return trait
 
     def _get_operator_qconfigs_map(self) -> dict[type[OperatorMetatype], Optional[list[QuantizerConfig]]]:
-        # TODO (vshampor): ensure that there are no name collisions between ops in different torch subpackages
-        #  with the same name
         # Metas not in retval will correspond to wildcard quantization
         retval: dict[type[OperatorMetatype], Optional[list[QuantizerConfig]]] = {}
         if self._hw_config is None:
@@ -1068,7 +1062,7 @@ class QuantizerPropagationSolver:
         preds = list(sorted(quant_prop_graph.predecessors(operator_node_key)))
 
         if not preds:
-            return  # TODO (vshampor): remove this once module insertion points are included in the IP graph
+            return  # TODO(N/A): remove this once module insertion points are included in the IP graph
 
         metatype = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         if not self._quantize_outputs and metatype in OUTPUT_NOOP_METATYPES:
@@ -1108,7 +1102,8 @@ class QuantizerPropagationSolver:
             # operation such as `view` or `transpose`, and the linked unified quantizer does not do
             # so due to one or the other reason; the per-channel scale shapes to be applied therefore
             # will be different.
-            # TODO (vshampor): What possibly needs to be done in this direction:
+
+            # TODO(N/A): What possibly needs to be done in this direction:
             # 1. keep ForwardTraceOnly ops in graph after all, to be able to track shape changes
             # 2. transpose input tensors to the quantization modules on the fly to accommodate scale,
             #    or vice versa, transpose scale to accommodate shape; need to handle exporting as well

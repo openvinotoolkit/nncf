@@ -142,7 +142,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                     self.ignored_node_keys[node_key] = ignored_scopes.get(
                         primary_node.node_name, IgnoreReason.USER_REQUESTED
                     )
-                    # TODO (vshampor): do we need here NoopMetatype
+                    # TODO(N/A): do we need here NoopMetatype?
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = NoopMetatype
                 else:
                     qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = nncf_node_ref.metatype
@@ -1434,7 +1434,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 )
 
             # Do further filtering for per-tensor quantizations only.
-            # TODO: relax the requirement to allow the scale shape of the weight-as-output quantizer
+            # TODO(N/A): relax the requirement to allow the scale shape of the weight-as-output quantizer
             # matching the scale shape of the output quantizer (which may, in theory, end up being per-channel
             curr_intersection_of_qconfigs = list(filter(lambda x: not x.per_channel, curr_intersection_of_qconfigs))
 

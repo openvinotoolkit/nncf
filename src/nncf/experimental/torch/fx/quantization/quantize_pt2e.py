@@ -200,7 +200,7 @@ def compress_pt2e(
         quantizer = OpenVINOQuantizerAdapter(quantizer)
         compression_format = nncf.CompressionFormat.DQ
     else:
-        # TODO Support Third party quantizers here.
+        # TODO(anzr299): Support Third party quantizers here.
         msg = "Only OpenVINO Quantizer is supported currently."
         raise nncf.InternalError(msg)
 

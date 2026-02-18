@@ -69,10 +69,7 @@ class LinearModel(OVReferenceModel):
         matmul = opset.matmul(reshape, data, transpose_a=False, transpose_b=False, name="MatMul")
         add = opset.add(reshape, self._rng.random(add_shape).astype(np.float32), name="Add")
         r1 = opset.result(matmul, name="Result_MatMul")
-        # TODO(KodiaqQ): Remove this after fix - CVS-100010
-        r1.get_output_tensor(0).set_names(set(["Result_MatMul"]))
         r2 = opset.result(add, name="Result_Add")
-        r2.get_output_tensor(0).set_names(set(["Result_Add"]))
         model = ov.Model([r1, r2], [input_1])
         return model
 
