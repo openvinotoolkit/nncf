@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import os.path
-import subprocess
+import subprocess   # nosec B404
 
 import torch
 
