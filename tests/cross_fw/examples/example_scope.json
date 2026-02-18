@@ -311,9 +311,9 @@
         "accuracy_metrics": {
             "answers": [
                 "Paris.",
-                "Mont Blanc in the Alps.",
-                "Toronto in Ontario.",
-                "Osaka in Japan."
+                "Mount Blanc.",
+                "Toronto.",
+                "Fukuoka."
             ]
         }
     },
@@ -345,6 +345,15 @@
         "accuracy_tolerance": 0.2,
         "accuracy_metrics": {
             "acc1": 54.96
+        }
+    },
+    "llm_compression_torch_gptqmodel_convertor": {
+        "backend": "torch",
+        "device": "cuda",
+        "requirements": "examples/llm_compression/torch/gptq_model_convertor/requirements.txt",
+        "extra_requirements": "examples/llm_compression/torch/gptq_model_convertor/requirements_extra.txt",
+        "accuracy_metrics": {
+            "word_count": 28
         }
     }
 }

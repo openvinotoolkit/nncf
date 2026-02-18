@@ -3,6 +3,15 @@ permissions: read-all
 
 on:
   workflow_call:
+    inputs:
+      skip_windows:
+        description: 'Skip tests on Windows'
+        type: boolean
+        default: false
+      skip_gpu:
+        description: 'Skip tests on GPU'
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -16,7 +25,7 @@ on:
         type: boolean
         default: false
       skip_gpu:
-        description: 'Skip tests on gpu'
+        description: 'Skip tests on GPU'
         type: boolean
         default: false
 
@@ -62,7 +71,7 @@ jobs:
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
-            --durations-path=tests/cross_fw/examples/.test_durations \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
@@ -81,7 +90,7 @@ jobs:
     name: Test examples CUDA [${{ matrix.group }}/1]
     runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
     timeout-minutes: 40
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_gpu == 'false' }}
+    if: ${{ !inputs.skip_gpu }}
     strategy:
       fail-fast: false
       matrix:
@@ -103,8 +112,6 @@ jobs:
       - name: Runner info
         continue-on-error: true
         run: |
-          export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -132,7 +139,7 @@ jobs:
           python -m pytest -s -ra tests/cross_fw/examples \
             -m cuda \
             --junit-xml=pytest-results.xml \
-            --durations-path=tests/cross_fw/examples/.test_durations \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 1 \
             --group ${{ matrix.group }} \
@@ -151,7 +158,7 @@ jobs:
     timeout-minutes: 80
     name: Test examples CPU Windows [${{ matrix.group }}/6]
     runs-on: windows-2025-16-core
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
+    if: ${{ !inputs.skip_windows }}
     strategy:
       fail-fast: false
       matrix:
@@ -194,7 +201,7 @@ jobs:
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
-            --durations-path=tests/cross_fw/examples/.test_durations \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \

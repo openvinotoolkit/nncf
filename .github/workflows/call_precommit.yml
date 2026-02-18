@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
@@ -89,7 +89,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
@@ -117,7 +117,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Install test requirements
         run: uv pip install --system . -r tests/tools/requirements.txt
       - name: Print installed modules
@@ -139,7 +139,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
@@ -172,8 +172,6 @@ jobs:
       - name: Runner info
         continue-on-error: true
         run: |
-          export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -183,7 +181,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41 # v7.2.1
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
@@ -197,6 +195,4 @@ jobs:
           python -c "import torch; print(torch.cuda.is_available())"
       - name: Run PyTorch precommit test scope
         run: |
-          export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           pytest -ra --durations=30 tests/torch -m cuda

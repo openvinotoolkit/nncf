@@ -54,9 +54,9 @@ def generate_text_data(
         raise nncf.ModuleNotFoundError(msg) from exc
 
     try:
-        from transformers import GenerationMixin  # type: ignore
+        from transformers import GenerationMixin
         from transformers import PreTrainedTokenizerBase
-        from transformers.utils import logging  # type: ignore
+        from transformers.utils import logging
 
         logging.set_verbosity_error()
     except ImportError as exc:
