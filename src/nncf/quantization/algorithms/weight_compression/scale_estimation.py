@@ -184,7 +184,7 @@ class ScaleEstimation:
         :param weight: The weight tensor that is being quantized.
         :param reduction_axes: Tuple specifying the axes along which the reduction is performed for quantization.
         :param config: Configuration parameters for the weight compression, including quantization settings.
-        :param act_ch_axis: The activation channel axis.
+        :param act_ch_axis: The activation channel axis. Defaults to -1.
         :param subset_size: The number of samples to use for scale estimation. Defaults to 32.
         :param initial_steps: The number of steps for initial scale rectification using activation statistics.
             Defaults to 5.
