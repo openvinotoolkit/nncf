@@ -4,5 +4,5 @@ scikit-learn
 fastdownload==0.0.7
 fastprogress==1.0.5
 fastcore==1.11.5
-openvino==2026.0.0rc3
+openvino==2026.0.0rc4
 --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
