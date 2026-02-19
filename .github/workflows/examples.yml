@@ -82,7 +82,7 @@ jobs:
           TQDM_DISABLE: 1
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: examples-cpu-pytest-results-${{ matrix.group }}
           path: pytest-results.xml
@@ -152,7 +152,7 @@ jobs:
           TQDM_DISABLE: 1
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: examples-cuda-pytest-results-${{ matrix.group }}
           path: pytest-results.xml
@@ -217,7 +217,7 @@ jobs:
           NNCF_EXTENSION_LOAD_TIMEOUT: 180
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: examples-win-cpu-pytest-results-${{ matrix.group }}
           path: pytest-results.xml
