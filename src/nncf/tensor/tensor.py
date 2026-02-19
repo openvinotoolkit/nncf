@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Iterator, Optional, Union, cast
+from typing import Any, Iterator, Union, cast
 
 import nncf
 from nncf.common.utils.backend import BackendType
@@ -30,7 +30,7 @@ class Tensor:
     An interface to framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, data: Optional[TTensor]):
+    def __init__(self, data: TTensor | None):
         self._data = data.data if isinstance(data, Tensor) else data
 
     @property
@@ -196,10 +196,10 @@ class Tensor:
     def flatten(self) -> Tensor:
         return cast(Tensor, _call_function("flatten", self))
 
-    def max(self, axis: T_AXIS = None, keepdims: Optional[bool] = False) -> Tensor:
+    def max(self, axis: T_AXIS = None, keepdims: bool | None = False) -> Tensor:
         return cast(Tensor, _call_function("max", self, axis, keepdims))
 
-    def min(self, axis: T_AXIS = None, keepdims: Optional[bool] = False) -> Tensor:
+    def min(self, axis: T_AXIS = None, keepdims: bool | None = False) -> Tensor:
         return cast(Tensor, _call_function("min", self, axis, keepdims))
 
     def abs(self) -> Tensor:

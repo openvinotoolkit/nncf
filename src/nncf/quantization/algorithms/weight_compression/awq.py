@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf import nncf_logger
@@ -92,9 +92,7 @@ class AWQ(Algorithm):
     def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.ONNX]
 
-    def _set_backend_entity(
-        self, model: TModel, wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None
-    ) -> None:
+    def _set_backend_entity(self, model: TModel, wc_backend_entity: WeightCompressionAlgoBackend | None = None) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
@@ -128,8 +126,8 @@ class AWQ(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
-        statistics: Optional[dict[str, WCTensorStatistic]] = None,
-        wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        statistics: dict[str, WCTensorStatistic] | None = None,
+        wc_backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> TModel:
         """
         Applies the algorithm to the model.

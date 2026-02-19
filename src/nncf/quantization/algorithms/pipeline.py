@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar, Union
+from typing import TypeVar, Union
 
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.factory import build_graph
@@ -124,9 +124,9 @@ class Pipeline:
         self,
         model: TModel,
         dataset: Dataset,
-        graph: Optional[NNCFGraph] = None,
+        graph: NNCFGraph | None = None,
         start_step_index: int = 0,
-        step_index_to_statistics: Optional[dict[int, StatisticPointsContainer]] = None,
+        step_index_to_statistics: dict[int, StatisticPointsContainer] | None = None,
     ) -> TModel:
         """
         Executes the pipeline from the specified pipeline step to the end.

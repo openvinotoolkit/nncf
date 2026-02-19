@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, TypeVar, Union
+from typing import Any, Callable, Iterable, TypeVar, Union
 
 import openvino as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -63,14 +63,14 @@ TTensor = TypeVar("TTensor")
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
@@ -144,14 +144,14 @@ def native_quantize_if_op_impl(
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
@@ -195,14 +195,14 @@ def quantize_with_accuracy_control_impl(
     validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: Optional[QuantizationPreset] = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
+    advanced_accuracy_restorer_parameters: AdvancedAccuracyRestorerParameters | None = None,
 ) -> ov.Model:
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
@@ -330,14 +330,14 @@ def quantize_with_accuracy_control_impl(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
@@ -364,7 +364,7 @@ def quantize_impl(
 
 def compress_weights_impl(
     model: ov.Model,
-    dataset: Optional[Dataset],
+    dataset: Dataset | None,
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
@@ -378,7 +378,7 @@ def compress_weights_impl(
     lora_correction: bool,
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
-    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+    advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> ov.Model:
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.

@@ -12,7 +12,6 @@
 import weakref
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional
 
 from torch import nn
 
@@ -40,7 +39,7 @@ class _BaseMagnitudePruningScheduler(ABC):
         self.epoch = 0
         self.current_ratio = 0.0
 
-    def step(self, epoch: Optional[int] = None) -> None:
+    def step(self, epoch: int | None = None) -> None:
         """
         Updates the pruning schedule for the model based on the current epoch.
 

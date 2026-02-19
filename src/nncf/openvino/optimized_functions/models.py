@@ -13,7 +13,7 @@ import copy
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
-from typing import Callable, Optional, Union
+from typing import Callable, Union
 
 import numpy as np
 import openvino as ov
@@ -174,10 +174,10 @@ def _infer_ov_model(
 def _prepare_quantization_model_inputs(
     ov_model_params,
     weight_shape: tuple,
-    scale_shape: Optional[tuple],
-    zero_point_shape: Optional[tuple],
-    reduction_axes: Optional[ReductionAxes],
-) -> tuple[tuple, Optional[tuple], Optional[tuple]]:
+    scale_shape: tuple | None,
+    zero_point_shape: tuple | None,
+    reduction_axes: ReductionAxes | None,
+) -> tuple[tuple, tuple | None, tuple | None]:
     """
     Do some input checks and convert static shapes to dynamic shapes if needed.
     """
@@ -203,10 +203,10 @@ def _prepare_quantization_model_inputs(
 
 def _validate_input_dtypes(
     weight_dtype: TensorDataType,
-    scale_shape: Optional[tuple] = None,
-    input_scale_dtype: Optional[TensorDataType] = None,
-    zero_point_shape: Optional[tuple] = None,
-    input_zero_point_dtype: Optional[TensorDataType] = None,
+    scale_shape: tuple | None = None,
+    input_scale_dtype: TensorDataType | None = None,
+    zero_point_shape: tuple | None = None,
+    input_zero_point_dtype: TensorDataType | None = None,
 ):
     """
     Validates the input data types for the quantization model.
@@ -245,9 +245,9 @@ def get_integer_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights using the given configuration.
@@ -283,8 +283,8 @@ def get_float_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights to float destination type using the given configuration.
@@ -314,9 +314,9 @@ def get_float_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
 ) -> ModelCallable:
     """
     Get a model that performs float compression and decompression of the given weight.
@@ -350,10 +350,10 @@ def get_integer_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
 ) -> ModelCallable:
     """
     Get a model that performs compression and decompression of the given weight.
@@ -430,9 +430,9 @@ def _build_integer_quantization_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     is_asym_mode = config.is_asym_mode
@@ -576,8 +576,8 @@ def _build_float_quantization_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     default_input_dtypes = {"scale": TensorDataType.float32}
@@ -668,11 +668,11 @@ def _build_integer_quantize_dequantize_weight_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
-    return_nodes: Optional[bool] = False,
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
+    return_nodes: bool | None = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
@@ -728,10 +728,10 @@ def _build_float_quantize_dequantize_weight_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
-    return_nodes: Optional[bool] = False,
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
+    return_nodes: bool | None = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:

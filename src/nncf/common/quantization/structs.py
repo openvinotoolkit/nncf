@@ -12,7 +12,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import nncf
 from nncf.common.graph import NNCFNode
@@ -65,7 +65,7 @@ class QuantizerConfig:
         self,
         num_bits: int = QUANTIZATION_BITS,
         mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
-        signedness_to_force: Optional[bool] = None,
+        signedness_to_force: bool | None = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
         narrow_range: bool = QUANTIZATION_NARROW_RANGE,
     ):
@@ -233,8 +233,8 @@ class QuantizerSpec:
         self,
         num_bits: int,
         mode: QuantizationScheme,
-        signedness_to_force: Optional[bool],
-        narrow_range: Optional[bool],
+        signedness_to_force: bool | None,
+        narrow_range: bool | None,
         half_range: bool,
     ):
         """
@@ -312,7 +312,7 @@ class QuantizationConstraints:
     def constrain_qconfig_list(
         self,
         node_name: NNCFNodeName,
-        target_device: Optional[TargetDevice],
+        target_device: TargetDevice | None,
         quantizer_config_list: list[QuantizerConfig],
     ) -> list[QuantizerConfig]:
         assert quantizer_config_list is not None
@@ -385,7 +385,7 @@ class NonWeightQuantizerId(QuantizerId):
     ordinary activation, function and input
     """
 
-    def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
+    def __init__(self, target_node_name: NNCFNodeName, input_port_id: int | None = None):
         self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
@@ -436,7 +436,7 @@ class TypedQuantizerConfig(QuantizerConfig):
         self,
         num_bits: int = QUANTIZATION_BITS,
         mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
-        signedness_to_force: Optional[bool] = None,
+        signedness_to_force: bool | None = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
         narrow_range: bool = QUANTIZATION_NARROW_RANGE,
         dest_dtype: IntDtype = TensorDataType.int8,

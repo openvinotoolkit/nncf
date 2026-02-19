@@ -14,7 +14,7 @@ import dataclasses
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Iterable, Mapping, Optional, TypeVar, Union
+from typing import Any, Callable, Iterable, Mapping, TypeVar, Union
 
 from nncf.common.factory import build_graph
 from nncf.common.graph.graph import NNCFGraph
@@ -112,9 +112,7 @@ def apply_combination(init_params: dict[str, Any], combination: Combination) -> 
     return params
 
 
-def print_combination_and_score(
-    title: str, combination: Combination, combination_score: Optional[float] = None
-) -> None:
+def print_combination_and_score(title: str, combination: Combination, combination_score: float | None = None) -> None:
     """
     Prints combination and score.
 

@@ -10,7 +10,7 @@
 # limitations under the License.
 import os
 from contextlib import contextmanager
-from typing import Any, Hashable, Iterable, Iterator, Optional, TypeVar, Union
+from typing import Any, Hashable, Iterable, Iterator, TypeVar, Union
 
 from tabulate import tabulate
 
@@ -23,7 +23,7 @@ def create_table(
     header: list[str],
     rows: list[list[Any]],
     table_fmt: str = "mixed_grid",
-    max_col_widths: Optional[Union[int, Iterable[int]]] = None,
+    max_col_widths: Union[int, Iterable[int]] | None = None,
 ) -> str:
     """
     Returns a string which represents a table with a header and rows.

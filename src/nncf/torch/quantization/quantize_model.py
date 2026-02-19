@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Union
 
 import torch
 
@@ -41,14 +41,14 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.
@@ -88,7 +88,7 @@ def quantize_impl(
 
 def compress_weights_impl(
     model: Union[GraphModelWrapper, torch.nn.Module],
-    dataset: Optional[Dataset],
+    dataset: Dataset | None,
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
@@ -102,7 +102,7 @@ def compress_weights_impl(
     lora_correction: bool,
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
-    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+    advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.

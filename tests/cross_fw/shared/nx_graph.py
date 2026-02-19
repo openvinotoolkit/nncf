@@ -13,7 +13,7 @@ import os
 import re
 from functools import total_ordering
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import networkx as nx
 
@@ -39,7 +39,7 @@ def sort_dot(path):
         first."""
 
         def __init__(
-            self, node_id: Optional[int] = None, edge_start_id: Optional[int] = None, edge_end_id: Optional[int] = None
+            self, node_id: int | None = None, edge_start_id: int | None = None, edge_end_id: int | None = None
         ):
             if node_id is not None:
                 if edge_start_id is not None or edge_end_id is not None:

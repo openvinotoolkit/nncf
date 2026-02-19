@@ -123,8 +123,6 @@ ignore = [
     "NPY002",  # numpy-legacy-random
     "UP007",   # non-pep604-annotation-union
     "UP035",   # deprecated-import
-    "UP038",   # non-pep604-isinstance
-    "UP045",   # non-pep604-annotation-optional
     "D100",    # undocumented-public-module
     "D101",    # undocumented-public-class
     "D102",    # undocumented-public-method

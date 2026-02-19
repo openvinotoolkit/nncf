@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Optional
 
 import torch
 from safetensors.torch import load_file as pt_load_file
@@ -22,7 +21,7 @@ from nncf.tensor.functions import io as io
 from nncf.tensor.functions.torch_numeric import convert_to_torch_device
 
 
-def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> dict[str, torch.Tensor]:
+def load_file(file_path: str, *, device: TensorDeviceType | None = None) -> dict[str, torch.Tensor]:
     pt_device = convert_to_torch_device(device)
     if pt_device is None:
         pt_device = "cpu"

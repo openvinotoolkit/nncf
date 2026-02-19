@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Optional, Union, cast
+from typing import Any, Union, cast
 
 import networkx as nx  # type: ignore
 import torch
@@ -92,7 +92,7 @@ def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     node_metatype = cast(
         type[om.PTOperatorMetatype], om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
     )
-    node_sub_meta_type: Optional[type[om.PTOperatorMetatype]] = None
+    node_sub_meta_type: type[om.PTOperatorMetatype] | None = None
     if node_metatype.get_subtypes() and isinstance(meta, FunctionMeta):
         node_sub_meta_type = node_metatype.determine_subtype(function_args=meta.args, functions_kwargs=meta.kwargs)
     return node_sub_meta_type or node_metatype
@@ -146,7 +146,7 @@ def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> set[int]:
 
 def get_layer_attributes(
     nx_graph: nx.MultiDiGraph, node: int, meta: Union[ConstMeta, FunctionMeta, InOutMeta]
-) -> Optional[BaseLayerAttributes]:
+) -> BaseLayerAttributes | None:
     """
     Get the layer attributes of a node in the graph.
 
@@ -243,7 +243,7 @@ class GraphModelWrapper:
         """
         self.model = model
         self.example_input = example_input
-        self.graph: Optional[PTNNCFGraph] = None
+        self.graph: PTNNCFGraph | None = None
 
     def build_graph(self) -> PTNNCFGraph:
         """

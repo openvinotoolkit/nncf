@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Literal, Optional, Sequence, Union
+from typing import Any, Callable, Literal, Sequence, Union
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -44,13 +44,13 @@ DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def validate_device(device: Optional[TensorDeviceType]) -> None:
+def validate_device(device: TensorDeviceType | None) -> None:
     if device is not None and device != TensorDeviceType.CPU:
         msg = "numpy_numeric only supports CPU device."
         raise ValueError(msg)
 
 
-def convert_to_numpy_dtype(dtype: Optional[TensorDataType]) -> Optional[DTypeLike]:
+def convert_to_numpy_dtype(dtype: TensorDataType | None) -> DTypeLike | None:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
@@ -65,7 +65,7 @@ def _(a: T_NUMPY) -> TensorBackend:
 
 
 @numeric.bincount.register
-def _(a: T_NUMPY, *, weights: Optional[T_NUMPY], minlength: int = 0) -> T_NUMPY:
+def _(a: T_NUMPY, *, weights: T_NUMPY | None, minlength: int = 0) -> T_NUMPY:
     return np.bincount(a, weights=weights, minlength=minlength)
 
 
@@ -110,7 +110,7 @@ def _(a: T_NUMPY) -> TensorDataType:
 
 
 @numeric.repeat.register
-def _(a: T_NUMPY, repeats: Union[int, T_NUMPY_ARRAY], *, axis: Optional[int] = None) -> T_NUMPY:
+def _(a: T_NUMPY, repeats: Union[int, T_NUMPY_ARRAY], *, axis: int | None = None) -> T_NUMPY:
     return np.repeat(a, repeats=repeats, axis=axis)
 
 
@@ -155,7 +155,7 @@ def _(
     a: T_NUMPY,
     bins: int,
     *,
-    range: Optional[tuple[float, float]] = None,
+    range: tuple[float, float] | None = None,
 ) -> T_NUMPY:
     return np.histogram(a=a, bins=bins, range=range)[0]
 
@@ -242,7 +242,7 @@ def _(
     a: T_NUMPY,
     axis: T_AXIS = None,
     keepdims: bool = False,
-    dtype: Optional[TensorDataType] = None,
+    dtype: TensorDataType | None = None,
 ) -> T_NUMPY_ARRAY:
     np_dtype = convert_to_numpy_dtype(dtype)
     return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=np_dtype))  # type: ignore [arg-type]
@@ -251,7 +251,7 @@ def _(
 @numeric.median.register
 def _(
     a: T_NUMPY,
-    axis: Optional[T_SHAPE] = None,
+    axis: T_SHAPE | None = None,
     keepdims: bool = False,
 ) -> T_NUMPY_ARRAY:
     return np.array(np.median(a, axis=axis, keepdims=keepdims))  # type: ignore [arg-type]
@@ -374,7 +374,7 @@ def _(a: T_NUMPY, axis: int) -> T_NUMPY:
 
 
 @numeric.transpose.register
-def _(a: T_NUMPY, axes: Optional[T_SHAPE_ARRAY] = None) -> T_NUMPY:
+def _(a: T_NUMPY, axes: T_SHAPE_ARRAY | None = None) -> T_NUMPY:
     return np.transpose(a, axes=axes)
 
 
@@ -405,7 +405,7 @@ def _(x1: T_NUMPY_ARRAY, x2: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
 @numeric.masked_mean.register
 def _(
     x: T_NUMPY_ARRAY,
-    mask: Optional[T_NUMPY_ARRAY],
+    mask: T_NUMPY_ARRAY | None,
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> T_NUMPY_ARRAY:
@@ -419,7 +419,7 @@ def _(
 
 
 @numeric.masked_median.register
-def _(x: T_NUMPY_ARRAY, mask: Optional[T_NUMPY_ARRAY], axis: T_AXIS, keepdims: bool = False) -> T_NUMPY_ARRAY:
+def _(x: T_NUMPY_ARRAY, mask: T_NUMPY_ARRAY | None, axis: T_AXIS, keepdims: bool = False) -> T_NUMPY_ARRAY:
     if mask is None:
         return np.median(x, axis=axis, keepdims=keepdims)
     masked_x = np.ma.array(x, mask=mask)  # type: ignore[no-untyped-call]
@@ -441,7 +441,7 @@ def _(a: T_NUMPY) -> T_NUMPY:
 
 @numeric.searchsorted.register
 def _(
-    a: T_NUMPY_ARRAY, v: T_NUMPY_ARRAY, side: Literal["left", "right"] = "left", sorter: Optional[T_NUMPY_ARRAY] = None
+    a: T_NUMPY_ARRAY, v: T_NUMPY_ARRAY, side: Literal["left", "right"] = "left", sorter: T_NUMPY_ARRAY | None = None
 ) -> T_NUMPY_ARRAY:
     return np.searchsorted(a, v, side, sorter)
 
@@ -454,8 +454,8 @@ def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
 def zeros(
     shape: tuple[int, ...],
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> T_NUMPY_ARRAY:
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
@@ -464,10 +464,10 @@ def zeros(
 
 def eye(
     n: int,
-    m: Optional[int] = None,
+    m: int | None = None,
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> T_NUMPY_ARRAY:
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
@@ -479,8 +479,8 @@ def linspace(
     end: float,
     num: int,
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> T_NUMPY_ARRAY:
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
@@ -492,8 +492,8 @@ def arange(
     end: float,
     step: float,
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> T_NUMPY_ARRAY:
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)
@@ -513,8 +513,8 @@ def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
 def tensor(
     data: Union[TTensor, list[float]],
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> T_NUMPY_ARRAY:
     validate_device(device)
     np_dtype = convert_to_numpy_dtype(dtype)

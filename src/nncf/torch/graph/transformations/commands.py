@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 import torch
 
@@ -43,7 +43,7 @@ class PTTargetPoint(TargetPoint):
 
     _state_names = PTTargetPointStateNames
 
-    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: Optional[int] = None):
+    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: int | None = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.target_type = target_type

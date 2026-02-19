@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Optional
 
 import onnx
 
@@ -43,7 +42,7 @@ class ONNXOpMetatype(OperatorMetatype):
         return node.op_type in cls.op_names
 
     @classmethod
-    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[type[OperatorMetatype]]:
+    def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> type[OperatorMetatype] | None:
         matches = []
         subtypes_list = deque(cls.get_subtypes())
         while subtypes_list:
@@ -68,7 +67,7 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
 
     weight_channel_axis: int
     weight_port_ids: list[int] = []
-    bias_port_id: Optional[int] = None
+    bias_port_id: int | None = None
     possible_weight_ports: list[int] = []
 
 
@@ -731,7 +730,7 @@ def get_tensor_edge_name(
     node: onnx.NodeProto,
     port_id: int,
     parents_node_mapping: dict[str, onnx.NodeProto],
-) -> Optional[str]:
+) -> str | None:
     """
     Returns an edge name associated with a weight of a node laying on  an input port_id.
 

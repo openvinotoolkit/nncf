@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Iterable, Optional, TypedDict, TypeVar, Union
+from typing import Any, Callable, Iterable, TypedDict, TypeVar, Union
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
@@ -57,8 +57,8 @@ BATCHWISE_STATISTICS_WARNING = (
 
 def warning_model_no_batchwise_support(
     graph: NNCFGraph,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
-    model_type: Optional[ModelType],
+    advanced_quantization_parameters: AdvancedQuantizationParameters | None,
+    model_type: ModelType | None,
     no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> None:
     """
@@ -77,8 +77,8 @@ def warning_model_no_batchwise_support(
 
 def is_model_no_batchwise_support(
     graph: NNCFGraph,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
-    model_type: Optional[ModelType],
+    advanced_quantization_parameters: AdvancedQuantizationParameters | None,
+    model_type: ModelType | None,
     no_batchwise_support_metatypes: Iterable[type[OperatorMetatype]],
 ) -> bool:
     """
@@ -97,8 +97,8 @@ def is_model_no_batchwise_support(
 
 
 def _update_advanced_quantization_parameters(
-    advanced_parameters: Optional[AdvancedQuantizationParameters], calibration_dataset: Dataset
-) -> Optional[AdvancedQuantizationParameters]:
+    advanced_parameters: AdvancedQuantizationParameters | None, calibration_dataset: Dataset
+) -> AdvancedQuantizationParameters | None:
     """
     Updates AdvancedQuantizationParameters depending on batch_size.
 
@@ -130,14 +130,14 @@ def quantize(
     model: TModel,
     calibration_dataset: Dataset,
     *,
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> TModel:
     """
     Applies post-training quantization to the provided model.
@@ -286,14 +286,14 @@ def quantize_with_accuracy_control(
     *,
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: Optional[QuantizationPreset] = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
+    advanced_accuracy_restorer_parameters: AdvancedAccuracyRestorerParameters | None = None,
 ) -> TModel:
     """
     Applies post-training quantization algorithm with accuracy control to provided model.
@@ -411,20 +411,20 @@ def compress_weights(
     model: TModel,
     *,
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
-    ratio: Optional[float] = None,
-    group_size: Optional[int] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    all_layers: Optional[bool] = None,
-    dataset: Optional[Dataset] = None,
-    sensitivity_metric: Optional[SensitivityMetric] = None,
+    ratio: float | None = None,
+    group_size: int | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    all_layers: bool | None = None,
+    dataset: Dataset | None = None,
+    sensitivity_metric: SensitivityMetric | None = None,
     subset_size: int = 128,
-    awq: Optional[bool] = None,
-    scale_estimation: Optional[bool] = None,
-    gptq: Optional[bool] = None,
-    lora_correction: Optional[bool] = None,
-    backup_mode: Optional[BackupMode] = None,
+    awq: bool | None = None,
+    scale_estimation: bool | None = None,
+    gptq: bool | None = None,
+    lora_correction: bool | None = None,
+    backup_mode: BackupMode | None = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
-    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+    advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -500,7 +500,7 @@ def compress_weights(
         mode = CompressWeightsMode.INT8_ASYM
 
     backend = get_backend(model)
-    compression_weights_impl: Optional[Callable[..., Any]] = None
+    compression_weights_impl: Callable[..., Any] | None = None
 
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
@@ -701,13 +701,13 @@ def compress_weights(
 
 
 class InitQuantizationParameters(TypedDict):
-    preset: Optional[QuantizationPreset]
+    preset: QuantizationPreset | None
     target_device: TargetDevice
     subset_size: int
     fast_bias_correction: bool
-    model_type: Optional[ModelType]
-    ignored_scope: Optional[IgnoredScope]
-    advanced_parameters: Optional[AdvancedQuantizationParameters]
+    model_type: ModelType | None
+    ignored_scope: IgnoredScope | None
+    advanced_parameters: AdvancedQuantizationParameters | None
 
 
 def quantize_with_tune_hyperparams(
@@ -718,13 +718,13 @@ def quantize_with_tune_hyperparams(
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,
-    preset: Optional[QuantizationPreset] = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
 ) -> TModel:
     """
     Applies post-training quantization algorithm with tune hyperparameters to provided model.

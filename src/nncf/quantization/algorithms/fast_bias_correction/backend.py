@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, TypeVar, Union
+from typing import TypeVar, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -75,8 +75,8 @@ class FastBiasCorrectionAlgoBackend(ABC):
     def mean_statistic_collector(
         channel_axis: int,
         inplace: bool,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ) -> TensorCollector:
         """
         Returns backend-specific mean statistic collector.

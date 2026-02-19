@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Union
 
 import nncf
 from nncf.common.utils.caching import disable_results_caching
@@ -35,7 +35,7 @@ ReductionAxes = Union[int, tuple[int, ...]]
 def do_integer_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
+    reduction_axes: ReductionAxes | None = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
 ) -> tuple[Tensor, Tensor, Tensor]:
@@ -107,8 +107,8 @@ def do_integer_quantization(
 def do_float_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
 ) -> tuple[Tensor, Tensor, Tensor]:
     """
     Computes quantization scale if not provided, and performs corresponding float weight quantization.
@@ -160,10 +160,10 @@ def do_float_quantization(
 def integer_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-    precomputed_zero_point: Optional[Tensor] = None,
-    return_compressed_weight: Optional[bool] = False,
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+    precomputed_zero_point: Tensor | None = None,
+    return_compressed_weight: bool | None = False,
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     Quantizes the given weight tensor to an integer data type and then dequantizes it back to obtain float32 values.
@@ -225,9 +225,9 @@ def integer_quantize_dequantize_weight(
 def float_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-    return_compressed_weight: Optional[bool] = False,
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+    return_compressed_weight: bool | None = False,
 ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.

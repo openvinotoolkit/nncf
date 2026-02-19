@@ -15,7 +15,7 @@ import inspect
 from collections import OrderedDict
 from functools import partial
 from functools import partialmethod
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 
 class Patcher:
@@ -218,7 +218,7 @@ class Patcher:
         setattr(obj_cls, fn_name, partialmethod(helper, __wrapper=wrapper, __fn=fn).__get__(obj_cls))
         self._patched[key].append((fn, wrapper))
 
-    def _initialize(self, key: tuple[int, str], force: bool) -> Optional[Any]:
+    def _initialize(self, key: tuple[int, str], force: bool) -> Any | None:
         fn = None
         if key not in self._patched:
             self._patched[key] = []

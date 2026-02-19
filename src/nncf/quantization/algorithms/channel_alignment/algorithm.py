@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import numpy as np
 
@@ -95,8 +95,8 @@ class ChannelAlignment(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self._set_backend_entity(model)
         model_transformer = ModelTransformerFactory.create(model)
@@ -217,7 +217,7 @@ class ChannelAlignment(Algorithm):
     def _align_scales(
         conv_in_value: np.ndarray,
         conv_out_value: np.ndarray,
-        bias_in_value: Optional[np.ndarray],
+        bias_in_value: np.ndarray | None,
         ascale: np.ndarray,
         conv_in_descr: LayoutDescriptor,
         conv_out_descr: LayoutDescriptor,
@@ -354,7 +354,7 @@ class ChannelAlignment(Algorithm):
         pattern.add_pattern_alternative(get_conv_add_conv_pattern())
         return pattern
 
-    def _get_node_pairs(self, nncf_graph: NNCFGraph) -> list[tuple[NNCFNode, Optional[NNCFNode], NNCFNode]]:
+    def _get_node_pairs(self, nncf_graph: NNCFGraph) -> list[tuple[NNCFNode, NNCFNode | None, NNCFNode]]:
         pairs = []
         patterns = self._get_target_patterns()
         for subgraph in nncf_graph.find_matching_subgraphs(patterns):

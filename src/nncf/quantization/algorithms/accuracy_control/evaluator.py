@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Optional, TypeVar, Union
+from typing import Any, Callable, Iterable, TypeVar, Union
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -101,7 +101,7 @@ class Evaluator:
         """
         self._enable_iteration_count = False
 
-    def is_metric_mode(self) -> Optional[bool]:
+    def is_metric_mode(self) -> bool | None:
         """
         Returns mode of `Evaluator`.
 
@@ -134,7 +134,7 @@ class Evaluator:
         raise NotImplementedError(msg)
 
     def validate_prepared_model(
-        self, prepared_model: PreparedModel, dataset: Dataset, indices: Optional[list[int]] = None
+        self, prepared_model: PreparedModel, dataset: Dataset, indices: list[int] | None = None
     ):
         """
         Validates prepared model for inference.
@@ -176,7 +176,7 @@ class Evaluator:
         return float(metric), values_for_each_item
 
     def validate(
-        self, model: TModel, dataset: Dataset, indices: Optional[list[int]] = None
+        self, model: TModel, dataset: Dataset, indices: list[int] | None = None
     ) -> tuple[float, Union[None, list[float], list[list[TTensor]]]]:
         """
         Validates model.
@@ -267,7 +267,7 @@ class Evaluator:
         return metric_mode
 
     def collect_values_for_each_item_using_prepared_model(
-        self, prepared_model: PreparedModel, dataset: Dataset, indices: Optional[list[int]] = None
+        self, prepared_model: PreparedModel, dataset: Dataset, indices: list[int] | None = None
     ) -> Union[list[float], list[list[TTensor]]]:
         """
         Collects value for each item from the dataset using prepared model for inference.
@@ -298,7 +298,7 @@ class Evaluator:
         return values_for_each_item
 
     def collect_values_for_each_item(
-        self, model: TModel, dataset: Dataset, indices: Optional[list[int]] = None
+        self, model: TModel, dataset: Dataset, indices: list[int] | None = None
     ) -> Union[list[float], list[list[TTensor]]]:
         """
         Collects value for each item from the dataset. If `is_metric_mode()`

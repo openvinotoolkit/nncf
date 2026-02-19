@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from torch import nn
 
@@ -47,9 +47,9 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
 def prune(
     model: TModel,
     mode: PruneMode,
-    ratio: Optional[float] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    examples_inputs: Optional[Any] = None,
+    ratio: float | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    examples_inputs: Any | None = None,
 ) -> TModel:
     if examples_inputs is None:
         msg = "`sparsity` function requires `examples_inputs` argument to be specified for Torch backend"

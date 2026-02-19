@@ -12,7 +12,7 @@
 # Since we are not reading XML, but creating it, the package security message is irrelevant
 import xml.etree.ElementTree as ET  # nosec
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -37,7 +37,7 @@ class PortDesc:
     Represents a port description in the computational graph.
     """
 
-    def __init__(self, port_id: str, precision: str, shape: Optional[list[int]] = None):
+    def __init__(self, port_id: str, precision: str, shape: list[int] | None = None):
         """
         :param port_id: The identifier of the port.
         :param precision: Precision of the tensor corresponding to the port, either "fp32" or "i32".
@@ -74,9 +74,9 @@ class NodeDesc:
         node_id: str,
         name: str,
         node_type: str,
-        attrs: Optional[dict[str, str]] = None,
-        inputs: Optional[list[PortDesc]] = None,
-        outputs: Optional[list[PortDesc]] = None,
+        attrs: dict[str, str] | None = None,
+        inputs: list[PortDesc] | None = None,
+        outputs: list[PortDesc] | None = None,
     ):
         """
         :param node_id: The identifier of the node.
@@ -166,7 +166,7 @@ def convert_nncf_dtype_to_ov_dtype(dtype: Dtype) -> str:
 
 
 def get_graph_desc(
-    graph: NNCFGraph, include_fq_params: bool = False, get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None
+    graph: NNCFGraph, include_fq_params: bool = False, get_attributes_fn: GET_ATTRIBUTES_FN_TYPE | None = None
 ) -> tuple[list[NodeDesc], list[EdgeDesc]]:
     """
     Retrieves descriptions of nodes and edges from an NNCFGraph.
@@ -244,7 +244,7 @@ def save_for_netron(
     save_path: Path | str,
     graph_name: str = "Graph",
     include_fq_params: bool = False,
-    get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None,
+    get_attributes_fn: GET_ATTRIBUTES_FN_TYPE | None = None,
 ):
     """
     Save the NNCFGraph information in an XML file suitable for visualization with Netron.

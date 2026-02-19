@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from nncf.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.common.tensor_statistics.collectors import MeanAggregator
@@ -24,7 +23,7 @@ from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 
 
 def get_mean_statistic_collector(
-    num_samples: int, channel_axis: int, window_size: Optional[int] = None
+    num_samples: int, channel_axis: int, window_size: int | None = None
 ) -> TensorCollector:
     """
     Mean statistic collector builder.

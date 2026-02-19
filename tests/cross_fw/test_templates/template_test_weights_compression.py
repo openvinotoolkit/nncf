@@ -14,7 +14,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, TypeVar
 from unittest.mock import patch
 
 import numpy as np
@@ -703,7 +703,7 @@ class TemplateWeightCompression(ABC):
         assert collect_spy.call_count == n_awq, f"Statistics should be collected {n_awq_target} times."
 
     @staticmethod
-    def get_transform_func() -> Optional[Callable[..., Any]]:
+    def get_transform_func() -> Callable[..., Any] | None:
         return None
 
     @staticmethod
@@ -717,7 +717,7 @@ class TemplateWeightCompression(ABC):
         subset_size: int
         ref_s: np.ndarray
         ref_X: np.ndarray
-        act_ch_axis: Optional[int] = None
+        act_ch_axis: int | None = None
 
     @pytest.mark.parametrize(
         "case",

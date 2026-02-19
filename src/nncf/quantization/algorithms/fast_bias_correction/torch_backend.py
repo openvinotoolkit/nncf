@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import torch
@@ -66,13 +66,13 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def mean_statistic_collector(
         channel_axis: int,
         inplace: bool,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ) -> TensorCollector:
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: nn.Module) -> tuple[Optional[str], Optional[str]]:
+    def get_sub_input_output_names(subgraph: nn.Module) -> tuple[str | None, str | None]:
         # Pytorch does not have name for extracted node
         return None, None
 
@@ -96,7 +96,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: dict, output_name: Optional[str]) -> Tensor:
+    def process_model_output(raw_data: dict, output_name: str | None) -> Tensor:
         return Tensor(raw_data)
 
     @staticmethod

@@ -12,7 +12,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 
 class Dtype(Enum):
@@ -31,7 +31,7 @@ class BaseLayerAttributes(ABC):  # noqa: B024
 
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, axis: int, num_inputs: Optional[int] = None):
+    def __init__(self, axis: int, num_inputs: int | None = None):
         """
 
         :param axis: the dimension over which the inputs are combined (e.g. concatenated).
@@ -124,7 +124,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         transpose: bool,
         padding_values: Union[tuple[int, ...], int],
         with_bias: bool = False,
-        output_padding_values: Optional[Union[tuple[int, ...], int]] = None,
+        output_padding_values: Union[tuple[int, ...], int] | None = None,
     ):
         """
 

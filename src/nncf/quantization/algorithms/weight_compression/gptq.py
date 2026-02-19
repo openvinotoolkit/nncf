@@ -12,7 +12,7 @@
 import math
 from functools import reduce
 from operator import mul
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf import Dataset
@@ -84,8 +84,8 @@ class GPTQ:
         graph: NNCFGraph,
         dataset: Dataset,
         weight_compression_parameters: list[WeightCompressionParameters],
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> tuple[TModel, dict[str, CompressedWeight]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
@@ -174,7 +174,7 @@ class GPTQ:
         model: TModel,
         graph: NNCFGraph,
         target_nodes: list[NNCFNode],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.

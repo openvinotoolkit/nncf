@@ -11,7 +11,7 @@
 
 import operator
 from copy import copy
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 import torch
 import torch.fx
@@ -47,7 +47,7 @@ BaseArgumentTypes = Union[
     torch.layout,
     torch._ops.OpOverload,
 ]
-Argument = Optional[Union[tuple[Any, ...], list[Any], dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes]]
+Argument = Union[tuple[Any, ...], list[Any], dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes, None]
 
 QUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
@@ -225,7 +225,7 @@ def constant_update(
     node: torch.fx.Node,
     value: torch.Tensor,
     input_port_id: int = 1,
-    updated_node_name: Optional[str] = None,
+    updated_node_name: str | None = None,
 ):
     """
     Updates constant of given node on the given input port id with given value.
@@ -384,7 +384,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
     # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
-    quantize_op: Optional[Callable] = None
+    quantize_op: Callable | None = None
 
     dtype = torch.int8 if quantizer.quant_min < 0 else torch.uint8
     if quantizer.is_per_channel:
@@ -607,7 +607,7 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
         _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
 
 
-def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[tuple[Union[torch.Tensor, int]]]:
+def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[Union[torch.Tensor, int]] | None:
     """
     Gets the inputs for the Quantize node which quantize the weights. Otherwise returns None.
 
@@ -625,7 +625,7 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
 
 
 def _get_value(
-    arg: Optional[Union[torch.fx.Node, float, int]], model: torch.fx.GraphModule
+    arg: Union[torch.fx.Node, float, int] | None, model: torch.fx.GraphModule
 ) -> Union[torch.nn.Parameter, float, int]:
     """
     Retrieves value from the given argument. It can be either torch.fx.Node or float/int value.

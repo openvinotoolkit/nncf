@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Union
 
 import torch
 from torch import Tensor
@@ -87,7 +87,7 @@ def create_pt_insertion_command(
     target_type: TargetType,
     target_node_name: str,
     priority: int,
-    input_port_id: Optional[int],
+    input_port_id: int | None,
 ) -> PTInsertionCommand:
     """
     Creates a PTInsertionCommand.

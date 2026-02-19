@@ -12,7 +12,7 @@
 
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import pytest
 import torch
@@ -36,7 +36,7 @@ from tests.torch.function_hook.helpers import SharedParamModel
 class NormalizedOpNameTestCase:
     model_name: str
     fn_name: str
-    call_id: Optional[str]
+    call_id: str | None
     ref: str
 
 

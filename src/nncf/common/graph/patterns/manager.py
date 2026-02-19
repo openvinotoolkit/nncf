@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Optional, Union, cast
+from typing import Callable, Union, cast
 
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import HWFusedPatternNames
@@ -90,7 +90,7 @@ class PatternsManager:
     def _filter_patterns(
         patterns_to_filter: dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
-        model_type: Optional[ModelType] = None,
+        model_type: ModelType | None = None,
     ) -> dict[PatternNames, Callable[[], GraphPattern]]:
         """
         Returns all patterns from patterns_to_filter that are satisfied device and model_type parameters.
@@ -114,7 +114,7 @@ class PatternsManager:
     def _get_full_pattern_graph(
         backend_patterns_map: dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
-        model_type: Optional[ModelType] = None,
+        model_type: ModelType | None = None,
     ) -> GraphPattern:
         """
         Filters patterns and returns GraphPattern with registered filtered patterns.
@@ -132,7 +132,7 @@ class PatternsManager:
 
     @staticmethod
     def get_full_hw_pattern_graph(
-        backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
+        backend: BackendType, device: TargetDevice, model_type: ModelType | None = None
     ) -> GraphPattern:
         """
         Returns a GraphPattern containing all registered hardware patterns specifically
@@ -150,7 +150,7 @@ class PatternsManager:
 
     @staticmethod
     def get_full_ignored_pattern_graph(
-        backend: BackendType, device: TargetDevice, model_type: Optional[ModelType] = None
+        backend: BackendType, device: TargetDevice, model_type: ModelType | None = None
     ) -> GraphPattern:
         """
         Returns a GraphPattern containing all registered ignored patterns specifically

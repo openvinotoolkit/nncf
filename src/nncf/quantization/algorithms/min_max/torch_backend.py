@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Union
 
 import torch
 from torch import nn
@@ -143,7 +143,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        input_port_id: Optional[int] = port_id
+        input_port_id: int | None = port_id
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             input_port_id = None
         return PTTargetPoint(target_type, target_node_name, input_port_id=input_port_id)
@@ -165,7 +165,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_weight_channel_axes(node.metatype, ndims, target_point.input_port_id)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[int | None]:
         return get_weight_tensor_port_ids(node, graph)
 
     @staticmethod

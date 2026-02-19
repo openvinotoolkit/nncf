@@ -12,7 +12,6 @@
 from dataclasses import dataclass
 from dataclasses import field
 from enum import Enum
-from typing import Optional
 
 from nncf.common.utils.api_marker import api
 
@@ -85,9 +84,9 @@ class StatisticsCollectorParameters:
     :type quantile_outlier_prob: float
     """
 
-    statistics_type: Optional[StatisticsType] = None
-    aggregator_type: Optional[AggregatorType] = None
-    clipping_value: Optional[float] = None
+    statistics_type: StatisticsType | None = None
+    aggregator_type: AggregatorType | None = None
+    clipping_value: float | None = None
     quantile_outlier_prob: float = 1e-4
 
 

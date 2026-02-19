@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Any
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 
@@ -22,8 +22,8 @@ class OVLayerAttributes(BaseLayerAttributes):
     def __init__(
         self,
         constant_attributes: dict[int, Any],
-        layer_attributes: Optional[BaseLayerAttributes] = None,
-        inputs_attributes: Optional[dict[Any, Any]] = None,
+        layer_attributes: BaseLayerAttributes | None = None,
+        inputs_attributes: dict[Any, Any] | None = None,
     ):
         """
         :param constant_attributes: Map of weights port ID to corresponding const attributes.
@@ -39,11 +39,11 @@ class OVLayerAttributes(BaseLayerAttributes):
         return self._constant_attributes
 
     @property
-    def layer_attributes(self) -> Optional[BaseLayerAttributes]:
+    def layer_attributes(self) -> BaseLayerAttributes | None:
         return self._layer_attributes
 
     @property
-    def input_attributes(self) -> Optional[dict[Any, Any]]:
+    def input_attributes(self) -> dict[Any, Any] | None:
         return self._inputs_attributes
 
     def get_const_port_ids(self) -> list[int]:

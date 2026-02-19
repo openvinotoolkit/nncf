@@ -12,7 +12,7 @@
 import inspect
 import os
 from collections import defaultdict
-from typing import Callable, Optional
+from typing import Callable
 from unittest.mock import patch
 
 import numpy as np
@@ -107,7 +107,7 @@ class LMLinearModel(OVReferenceModel):
     INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
     def _create_ov_model(
-        self, transpose_b: bool = True, transpose_a: bool = False, input_shape: Optional[list[int]] = None
+        self, transpose_b: bool = True, transpose_a: bool = False, input_shape: list[int] | None = None
     ):
         self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
         hdim_axis = -2 if transpose_a else -1

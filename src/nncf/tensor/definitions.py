@@ -12,13 +12,13 @@
 from dataclasses import dataclass
 from enum import Enum
 from enum import auto
-from typing import Optional, Union
+from typing import Union
 
 from nncf.parameters import StrEnum
 
 T_SHAPE_ARRAY = tuple[int, ...]
 T_SHAPE = Union[int, T_SHAPE_ARRAY]
-T_AXIS = Optional[T_SHAPE]
+T_AXIS = T_SHAPE | None
 T_NUMBER = Union[int, float, bool]
 
 

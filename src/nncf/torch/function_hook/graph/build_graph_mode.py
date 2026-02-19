@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 import networkx as nx  # type: ignore[import-untyped]
 import torch
@@ -186,7 +186,7 @@ class GraphBuilderMode(FunctionHookMode):
         :param output: The output tensor.
         :param op_meta: Metadata about the operation.
         """
-        func: Optional[Callable[..., Any]] = None
+        func: Callable[..., Any] | None = None
         fn_kwargs = None
 
         if output.grad_fn is not None:

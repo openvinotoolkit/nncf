@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable, Union
 
 import numpy as np
 import torch
@@ -83,13 +83,13 @@ class PTQuantizerSpec(QuantizerSpec):
         self,
         num_bits: int,
         mode: QuantizationMode,
-        signedness_to_force: Optional[bool],
+        signedness_to_force: bool | None,
         narrow_range: bool,
         half_range: bool,
         scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
-        compression_lr_multiplier: Optional[float] = None,
+        compression_lr_multiplier: float | None = None,
     ):
         """
         :param num_bits: Bitwidth of the quantization.
@@ -123,7 +123,7 @@ class PTQuantizerSpec(QuantizerSpec):
         scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
-        compression_lr_multiplier: Optional[float],
+        compression_lr_multiplier: float | None,
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
@@ -1247,7 +1247,7 @@ class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
         return cls(qspec, lspec)
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> list[int]:
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int | None = None) -> list[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1259,7 +1259,7 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[i
 
 
 def get_scale_shape(
-    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
+    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: int | None = None
 ) -> list[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
@@ -1314,7 +1314,7 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies asymmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: torch.dtype | None = None):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme
@@ -1349,7 +1349,7 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies symmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, result_dtype: torch.dtype | None = None):
         """
         :param scale: A scale in quantization scheme
         :param result_dtype: (Optional) A data type that result should be cast to
@@ -1380,8 +1380,8 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         scale: torch.Tensor,
         zero_point: torch.Tensor,
         compressed_weight_shape: tuple[int, ...],
-        result_shape: Optional[tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
     ):
         """
         :param scale: A scale in quantization scheme
@@ -1428,8 +1428,8 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         self,
         scale: torch.Tensor,
         compressed_weight_shape: tuple[int, ...],
-        result_shape: Optional[tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
     ):
         """
         :param scale: A scale in quantization scheme

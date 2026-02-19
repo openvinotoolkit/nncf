@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -70,7 +70,7 @@ class BiasCorrection(Algorithm):
         threshold: float = BIAS_CORRECTION_THRESHOLD,
         apply_for_all_nodes: bool = False,
         inplace_statistics: bool = True,
-        backend_params: Optional[dict[str, Any]] = None,
+        backend_params: dict[str, Any] | None = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -135,8 +135,8 @@ class BiasCorrection(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self._set_backend_entity(model)
         main_transformations_layout = TransformationLayout()

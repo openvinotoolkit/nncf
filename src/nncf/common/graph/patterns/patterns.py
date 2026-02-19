@@ -13,7 +13,7 @@ import itertools as it
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Hashable, Optional, cast
+from typing import Any, Callable, Hashable, cast
 
 import networkx as nx  # type: ignore
 import networkx.algorithms.isomorphism as ism  # type: ignore
@@ -191,7 +191,7 @@ class GraphPattern:
         """
         self._unite_with_copy_of_graph(other.graph)
 
-    def join_patterns(self, other: "GraphPattern", edges: Optional[list[tuple[Hashable, Hashable]]] = None) -> None:
+    def join_patterns(self, other: "GraphPattern", edges: list[tuple[Hashable, Hashable]] | None = None) -> None:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
 
@@ -278,8 +278,8 @@ class PatternDesc:
     """
 
     name: str
-    devices: Optional[list[TargetDevice]] = None
-    model_types: Optional[list[ModelType]] = None
+    devices: list[TargetDevice] | None = None
+    model_types: list[ModelType] | None = None
 
 
 class HWFusedPatternNames(Enum):

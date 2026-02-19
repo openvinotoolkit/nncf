@@ -13,7 +13,7 @@ import operator
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, TypeVar, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -63,7 +63,7 @@ class Ranker:
         algo_backend: AccuracyControlAlgoBackend,
         evaluator: Evaluator,
         num_workers: int = 1,
-        ranking_fn: Optional[Callable[[Any, Any], float]] = None,
+        ranking_fn: Callable[[Any, Any], float] | None = None,
         restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS,
     ):
         """

@@ -14,7 +14,7 @@ import operator
 from collections import OrderedDict
 from collections import defaultdict
 from functools import reduce
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -73,18 +73,18 @@ SUPPORTED_DATA_TYPES = [
 
 def get_weight_compression_configuration(
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
-    dataset: Optional[Dataset] = None,
-    ratio: Optional[float] = None,
-    group_size: Optional[int] = None,
-    all_layers: Optional[bool] = None,
-    awq: Optional[bool] = None,
-    scale_estimation: Optional[bool] = None,
-    gptq: Optional[bool] = None,
-    lora_correction: Optional[bool] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    sensitivity_metric: Optional[SensitivityMetric] = None,
-    backup_mode: Optional[BackupMode] = None,
-    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+    dataset: Dataset | None = None,
+    ratio: float | None = None,
+    group_size: int | None = None,
+    all_layers: bool | None = None,
+    awq: bool | None = None,
+    scale_estimation: bool | None = None,
+    gptq: bool | None = None,
+    lora_correction: bool | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    sensitivity_metric: SensitivityMetric | None = None,
+    backup_mode: BackupMode | None = None,
+    advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> dict[str, Any]:
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
@@ -138,19 +138,19 @@ def get_weight_compression_configuration(
 def check_user_compression_configuration(
     mode: CompressWeightsMode,
     subset_size: int,
-    dataset: Optional[Dataset],
-    ratio: Optional[float],
-    group_size: Optional[int],
-    all_layers: Optional[bool],
-    awq: Optional[bool],
-    scale_estimation: Optional[bool],
-    gptq: Optional[bool],
-    lora_correction: Optional[bool],
-    ignored_scope: Optional[IgnoredScope],
-    sensitivity_metric: Optional[SensitivityMetric],
-    backup_mode: Optional[BackupMode],
-    compression_format: Optional[CompressionFormat],
-    advanced_parameters: Optional[AdvancedCompressionParameters],
+    dataset: Dataset | None,
+    ratio: float | None,
+    group_size: int | None,
+    all_layers: bool | None,
+    awq: bool | None,
+    scale_estimation: bool | None,
+    gptq: bool | None,
+    lora_correction: bool | None,
+    ignored_scope: IgnoredScope | None,
+    sensitivity_metric: SensitivityMetric | None,
+    backup_mode: BackupMode | None,
+    compression_format: CompressionFormat | None,
+    advanced_parameters: AdvancedCompressionParameters | None,
 ) -> None:
     """
     Validates the user's weight compression configuration for correctness.
@@ -312,7 +312,7 @@ class WeightCompression(Algorithm):
         lora_correction: bool,
         backup_mode: BackupMode,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+        advanced_parameters: AdvancedCompressionParameters | None = None,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -565,7 +565,7 @@ class WeightCompression(Algorithm):
 
         return ratio_defining_params
 
-    def _get_backup_config(self, weight_dtype: TensorDataType) -> Optional[WeightCompressionConfig]:
+    def _get_backup_config(self, weight_dtype: TensorDataType) -> WeightCompressionConfig | None:
         """
         Returns the backup weight compression configuration based on the algorithm's backup mode.
 
@@ -896,11 +896,11 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer],
+        statistic_points: StatisticPointsContainer | None,
         dataset: Dataset,
         ratio_defining_params: list[WeightCompressionParameters],
         all_weight_params: list[WeightCompressionParameters],
-    ) -> tuple[Optional[dict[str, WCTensorStatistic]], StatisticPointsContainer]:
+    ) -> tuple[dict[str, WCTensorStatistic] | None, StatisticPointsContainer]:
         """
         Collects and computes statistics required for weight compression.
 
@@ -928,7 +928,7 @@ class WeightCompression(Algorithm):
         return statistics, statistic_points
 
     @staticmethod
-    def _maybe_get_ov_version() -> Optional[tuple]:
+    def _maybe_get_ov_version() -> tuple | None:
         """
         Parse OpenVINO version strings like:
             '2026.0.0-20595-5d95073296d'
@@ -1079,8 +1079,8 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self.set_backend_entity(model)
 
@@ -1117,7 +1117,7 @@ class WeightCompression(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         dataset: Dataset,
-        statistics: Optional[dict[str, WCTensorStatistic]],
+        statistics: dict[str, WCTensorStatistic] | None,
         all_weight_params: list[WeightCompressionParameters],
     ) -> TModel:
         """

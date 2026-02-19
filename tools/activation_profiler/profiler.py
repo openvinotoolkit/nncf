@@ -19,7 +19,7 @@ This profiler can collect raw activations at specific layers matching regex patt
 import re
 from collections import defaultdict
 from re import Pattern
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import numpy as np
 import openvino.runtime as ov
@@ -227,9 +227,9 @@ class NNCFProfiler:
     def collect_activations(
         self,
         model: ov.Model,
-        dataset: Optional[Any] = None,
-        pattern: Optional[Union[str, Pattern[str]]] = None,
-        num_samples: Optional[int] = None,
+        dataset: Any | None = None,
+        pattern: Union[str, Pattern[str]] | None = None,
+        num_samples: int | None = None,
     ) -> ActivationData:
         """
         Collect activation statistics from layers matching the specified pattern.
@@ -300,7 +300,7 @@ class NNCFProfiler:
 
         return result
 
-    def calculate_stats(self, data: ActivationData, statistics: Optional[list[str]] = None) -> pd.DataFrame:
+    def calculate_stats(self, data: ActivationData, statistics: list[str] | None = None) -> pd.DataFrame:
         """
         Calculate custom statistics for collected activations using registered statistic functions.
 
@@ -359,8 +359,8 @@ class NNCFProfiler:
         self,
         data1: ActivationData,
         data2: ActivationData,
-        metrics: Optional[list[str]] = None,
-        statistics: Optional[list[str]] = None,
+        metrics: list[str] | None = None,
+        statistics: list[str] | None = None,
     ) -> pd.DataFrame:
         """
         Compare activations between two model variants using specified metrics and statistics.
@@ -546,7 +546,7 @@ def _stat_abs_mean(vals: np.ndarray) -> float:
 def _compare_detailed_plot(
     data1: ActivationData,
     data2: ActivationData,
-    activation_type: Optional[str] = None,
+    activation_type: str | None = None,
     bins: int = 100,
     show_histograms: bool = True,
     show_summary: bool = True,

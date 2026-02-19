@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import openvino as ov
 
@@ -34,7 +33,7 @@ class OVLayerwiseEngineBackend(LayerwiseEngineBackend):
         schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
+        cache: dict[NodeOutputPort, list[Tensor]] | None = None,
     ) -> OVLayerwiseIterator:
         return OVLayerwiseIterator(model, graph, schedule, dataset, subset_size, cache)
 
@@ -43,5 +42,5 @@ class OVLayerwiseEngineBackend(LayerwiseEngineBackend):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
+    def raw_statistic_collector(num_samples: int | None = None) -> TensorCollector:
         return get_raw_stat_collector(num_samples)
