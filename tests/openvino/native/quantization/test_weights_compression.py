@@ -2610,7 +2610,3 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                 ),
             },
         ]
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return True

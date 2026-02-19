@@ -943,7 +943,3 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_reduction_axes() -> int:
         return 0
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return True
