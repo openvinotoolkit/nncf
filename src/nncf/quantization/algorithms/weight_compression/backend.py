@@ -304,13 +304,14 @@ class WeightCompressionAlgoBackend(ABC):
 
         :param graph: NNCF graph containing the model structure and tensor metadata.
         :param node: NNCF node with weights instance.
-        :return: A tuple consisting of activation channel axis and activation tensor shape.
+        :return: A tuple consisting of activation channel axis (always positive) and activation tensor shape.
         """
         activation_port_id = self.get_activation_port_id(node, graph)
         act_shape = graph.get_input_edge_by_port_id(node, activation_port_id).tensor_shape
         act_ch_axis = self.get_activation_channel_axis(node, activation_port_id, act_shape)
-        # Mod the activation axis by the length of the activation shape
-        # to ensure the activation axis stays within a positive range.
+        # Normalize negative axis to positive for downstream code that compares axis indices
+        # with positive dimension indices (e.g., AWQ scale reshaping, activation stats processing).
+        # Backend implementations may return negative axes (e.g., -1, -2), which need conversion.
         return act_ch_axis % len(act_shape), act_shape
 
 
