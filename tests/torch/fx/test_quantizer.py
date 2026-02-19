@@ -18,9 +18,6 @@ import pytest
 import torch
 import torch.fx
 import torch.nn.parallel
-import torch.optim
-import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.models as models
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.quantize_pt2e import convert_pt2e

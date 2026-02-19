@@ -15,7 +15,6 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -54,10 +53,10 @@ class WCTimeStats(StatsFromOutput):
     Contains statistics that are parsed from the stdout of Weight Compression tests.
     """
 
-    time_stat_collection: Optional[str] = None
-    time_mixed_precision: Optional[str] = None
-    time_awq: Optional[str] = None
-    time_apply_compression: Optional[str] = None
+    time_stat_collection: str | None = None
+    time_mixed_precision: str | None = None
+    time_awq: str | None = None
+    time_apply_compression: str | None = None
 
     STAT_NAMES = ["Stat. collection time", "Mixed-Precision search time", "AWQ time", "Apply Compression time"]
     VAR_NAMES = ["time_stat_collection", "time_mixed_precision", "time_awq", "time_apply_compression"]
@@ -84,7 +83,7 @@ class WCTimeStats(StatsFromOutput):
 
 @dataclass
 class WCNumCompressNodes(NumCompressNodes):
-    num_int4: Optional[int] = None
+    num_int4: int | None = None
 
     def get_data(self):
         data = super().get_data()

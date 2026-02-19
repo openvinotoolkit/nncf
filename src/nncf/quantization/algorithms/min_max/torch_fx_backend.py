@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
@@ -152,7 +151,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return (0,)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[int | None]:
         return get_weight_tensor_port_ids(node, graph)
 
     @staticmethod

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import ABC
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pytest
@@ -34,7 +34,7 @@ from tests.common.test_reducers_and_aggregators import TemplateTestReducersAggre
 
 
 class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
-    def _get_torch_tensor(self, x: np.ndarray, dtype: Optional[Dtype] = None):
+    def _get_torch_tensor(self, x: np.ndarray, dtype: Dtype | None = None):
         torch_tensor = torch.tensor(x)
         if dtype == Dtype.FLOAT:
             torch_tensor = torch_tensor.float()
@@ -62,7 +62,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
         ref_ = torch.tensor(ref).to(val_.device)
         return torch.allclose(val_, ref_) and val_.shape == ref_.shape
 
-    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: tuple[int] | None = None):
         if axes is None:
             return torch.tensor(ref_tensor).squeeze()
         return torch.tensor(ref_tensor).squeeze(axes)
@@ -78,7 +78,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
 
 
 class TestCPUReducersAggregators(BaseTestReducersAggregators):
-    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+    def get_nncf_tensor(self, x: np.array, dtype: Dtype | None = None):
         return Tensor(self._get_torch_tensor(x, dtype=dtype).cpu())
 
     def all_close(self, val: torch.Tensor, ref) -> bool:
@@ -89,7 +89,7 @@ class TestCPUReducersAggregators(BaseTestReducersAggregators):
 @pytest.mark.cuda
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Cuda is not available in current environment")
 class TestCudaReducersAggregators(BaseTestReducersAggregators):
-    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+    def get_nncf_tensor(self, x: np.array, dtype: Dtype | None = None):
         return Tensor(self._get_torch_tensor(x, dtype=dtype).cuda())
 
     def all_close(self, val: torch.Tensor, ref) -> bool:

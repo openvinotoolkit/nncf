@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -163,7 +162,7 @@ def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
 
 def _get_activation_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[tuple[int, ...]]:
+) -> tuple[int, ...] | None:
     """
     Returns shape of an activation tensor which is correspond to the target point and node.
     ONNX model can not have a shape of a edge, even after shape inference.
@@ -204,7 +203,7 @@ def _get_activation_tensor_shape(
 
 def get_quantized_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[tuple[int, ...]]:
+) -> tuple[int, ...] | None:
     """
     Returns quantized tensor shape corresponding to a target point with a node if shape - info is existed.
     If there is no shape info - returns None.

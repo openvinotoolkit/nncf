@@ -11,7 +11,7 @@
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, BinaryIO, Iterator, TextIO, Union
+from typing import IO, Any, BinaryIO, Iterator, TextIO
 
 import psutil
 
@@ -25,7 +25,7 @@ def fail_if_symlink(file: Path) -> None:
 
 
 @contextmanager
-def safe_open(file: Path, *args, **kwargs) -> Iterator[Union[TextIO, BinaryIO, IO[Any]]]:  # type: ignore
+def safe_open(file: Path, *args, **kwargs) -> Iterator[TextIO | BinaryIO | IO[Any]]:  # type: ignore
     """
     Safe function to open file and return a stream.
 

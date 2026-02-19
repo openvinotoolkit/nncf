@@ -13,7 +13,7 @@ from abc import ABC
 from collections import Counter
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -93,7 +93,7 @@ class AQIPointStateNames:
 class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
     _state_names = AQIPointStateNames  # type: ignore[assignment]
 
-    def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
+    def __init__(self, target_node_name: NNCFNodeName, input_port_id: int | None = None):
         super().__init__(target_node_name)
         self.input_port_id = input_port_id
 
@@ -313,13 +313,13 @@ class QuantizerSetupBase:
                         self.__discard_independent(additional_id)
                     del self.shared_input_operation_set_groups[idx]
 
-    def get_unified_scale_group_id(self, qp_id: QuantizationPointId) -> Optional[int]:
+    def get_unified_scale_group_id(self, qp_id: QuantizationPointId) -> int | None:
         for gid, unified_scale_group in self.unified_scale_groups.items():
             if qp_id in unified_scale_group:
                 return gid
         return None
 
-    def get_shared_inputs_group_id(self, qp_id: QuantizationPointId) -> Optional[int]:
+    def get_shared_inputs_group_id(self, qp_id: QuantizationPointId) -> int | None:
         for gid, shared_inputs_group in self.shared_input_operation_set_groups.items():
             if qp_id in shared_inputs_group:
                 return gid

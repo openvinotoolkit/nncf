@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -30,8 +30,8 @@ class MinMaxRangeEstimator(Algorithm):
         subset_size: int = 300,
         inplace_statistics: bool = True,
         batchwise_statistics: bool = False,
-        activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-        weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        activations_range_estimator_params: RangeEstimatorParameters | None = None,
+        weights_range_estimator_params: RangeEstimatorParameters | None = None,
     ):
         """
         :param quantizer: Instance of Quantizer to retrieve a quantization config
@@ -65,8 +65,8 @@ class MinMaxRangeEstimator(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         if self._min_max_algo._quantization_target_points_to_qconfig is None:
             msg = (

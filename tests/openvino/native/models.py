@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 import openvino as ov
@@ -863,7 +863,7 @@ class DifferentChannelSizeMatmulModel(OVReferenceModel):
 
 
 class IdentityMatmul(OVReferenceModel):
-    def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
+    def _create_ov_model(self, weights_dtype: ov.Type | None = None, activation_dtype: ov.Type | None = None):
         """
         :param: weights_dtype: precision of weights
         :param: activation_dtype: precision of activations
@@ -898,7 +898,7 @@ class GatherWithTwoReductionAxes(OVReferenceModel):
 
 
 class GatherAndMatmulShareData(OVReferenceModel):
-    def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
+    def _create_ov_model(self, weights_dtype: ov.Type | None = None, activation_dtype: ov.Type | None = None):
         """
         :param: weights_dtype: precision of weights
         :param: activation_dtype: precision of activations
@@ -1115,7 +1115,7 @@ class AWQModel(OVReferenceModel):
         self,
         transpose_a: bool = False,
         transpose_b: bool = True,
-        input_shape: Optional[list[int]] = None,
+        input_shape: list[int] | None = None,
         is_int8=False,
         is_3d_weights: bool = False,
     ):

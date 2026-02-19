@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -142,7 +141,7 @@ class LoraCorrectionAlgorithm:
         reduction_axes: tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
-        is_debug: Optional[bool] = False,
+        is_debug: bool | None = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.

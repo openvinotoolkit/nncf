@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Generator, Iterable, Iterator, Optional, cast
+from typing import Any, Callable, Generator, Iterable, Iterator, cast
 
 from nncf.common.utils.api_marker import api
 
@@ -43,11 +43,11 @@ class Dataset:
         will be passed into the model as-is.
     """
 
-    def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):
+    def __init__(self, data_source: Iterable[Any], transform_func: Callable[..., Any] | None = None):
         self._data_source = data_source
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
+    def get_data(self, indices: list[int] | None = None) -> Iterable[Any]:
         """
         Returns the iterable object that contains selected data items from the data source as-is.
 
@@ -58,7 +58,7 @@ class Dataset:
         """
         return DataProvider(self._data_source, None, indices)
 
-    def get_inference_data(self, indices: Optional[list[int]] = None) -> Iterable[Any]:
+    def get_inference_data(self, indices: list[int] | None = None) -> Iterable[Any]:
         """
         Returns the iterable object that contains selected data items from the data source, for which
         the transformation function was applied. The item, which was returned per iteration from this
@@ -72,7 +72,7 @@ class Dataset:
         """
         return DataProvider(self._data_source, self._transform_func, indices)
 
-    def get_length(self) -> Optional[int]:
+    def get_length(self) -> int | None:
         """
         Tries to fetch length of the underlying dataset.
         :return: The length of the data_source if __len__() is implemented for it, and None otherwise.
@@ -81,7 +81,7 @@ class Dataset:
             return cast(int, self._data_source.__len__())
         return None
 
-    def get_batch_size(self) -> Optional[int]:
+    def get_batch_size(self) -> int | None:
         """
         Tries to fetch batch size of the underlying dataset.
         :return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.
@@ -95,8 +95,8 @@ class DataProvider:
     def __init__(
         self,
         data_source: Iterable[Any],
-        transform_func: Optional[Callable[..., Any]],
-        indices: Optional[list[int]] = None,
+        transform_func: Callable[..., Any] | None,
+        indices: list[int] | None = None,
     ):
         self._data_source = data_source
         if transform_func is None:

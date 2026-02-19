@@ -14,7 +14,7 @@ from collections import Counter
 from collections import namedtuple
 from dataclasses import dataclass
 from itertools import permutations
-from typing import Callable, Optional
+from typing import Callable
 
 import networkx as nx
 import pytest
@@ -200,7 +200,7 @@ class RunOnIpGraphTestStruct:
         retval_shared_input_operation_set_groups: list[set[QuantizationPointId]],
         expected_count_finished_quant: int,
         expected_count_active_quant: int,
-        ignored_scopes: Optional[list[str]],
+        ignored_scopes: list[str] | None,
     ):
         self.base_graph = get_nncf_graph_from_mock_nx_graph(base_nx_graph)
         self.retval_unified_scale_qp_groups = retval_unified_scale_qp_groups
@@ -1848,7 +1848,7 @@ class TestQuantizerPropagationSolver:
         def __init__(
             self,
             initial_node_name: str,
-            target_node_name: Optional[str],
+            target_node_name: str | None,
             path_to_propagate: PropagationPath,
             expected_status: TransitionStatus,
         ):

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import torch
 from torch import nn
@@ -40,7 +39,7 @@ CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype]
 AVAILABLE_NODE_TYPES_FOR_WEIGHT_SUBGRAPH = om.QUANTIZE_NODE_TYPES + om.PRUNING_NODE_TYPES
 
 
-def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
+def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> NNCFNode | None:
     """
     Finds a constant node within a constant subgraph, recursively traversing noop and quantize nodes.
 
@@ -58,7 +57,7 @@ def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Op
     return None
 
 
-def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[NNCFNode]:
+def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> NNCFNode | None:
     """
     Retrieves the constant node providing the input to a specific port of a given node in the NNCF graph.
 
@@ -159,7 +158,7 @@ def get_const_data_on_port(model: nn.Module, graph: NNCFGraph, node: NNCFNode, p
     return get_const_data(const_node, model)
 
 
-def get_potential_fused_node(node_name: str, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+def get_potential_fused_node(node_name: str, nncf_graph: NNCFGraph) -> NNCFNode | None:
     """
     Retrieves the next node in the NNCF graph that could be fused with the provided node during runtime optimization.
 
@@ -197,7 +196,7 @@ def is_node_with_fused_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return bias is not None
 
 
-def get_fused_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> Optional[torch.Tensor]:
+def get_fused_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> torch.Tensor | None:
     """
     Returns the bias tensor for the node or for potential fused node.
 

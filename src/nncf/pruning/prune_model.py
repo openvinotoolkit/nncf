@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import nncf
 from nncf.common.utils.api_marker import api
@@ -29,9 +29,9 @@ def prune(
     model: TModel,
     mode: PruneMode,
     *,
-    ratio: Optional[float] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    examples_inputs: Optional[Any] = None,
+    ratio: float | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    examples_inputs: Any | None = None,
 ) -> TModel:
     """
     Prunes the given model based on the specified mode and ratio.
@@ -56,9 +56,7 @@ def prune(
 
 
 @api(canonical_alias="nncf.batch_norm_adaptation")
-def batch_norm_adaptation(
-    model: TModel, calibration_dataset: Dataset, *, num_iterations: Optional[int] = None
-) -> TModel:
+def batch_norm_adaptation(model: TModel, calibration_dataset: Dataset, *, num_iterations: int | None = None) -> TModel:
     """
     Adapt the batch normalization layers of the given model using the provided dataset.
     This function runs a specified number of iterations through the model

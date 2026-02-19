@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -34,14 +33,14 @@ class ModelBuilder:
         self._outputs = []
         self._graph_name = "onnx-graph"
 
-    def add_shape(self, data: str, output: Optional[str] = None) -> str:
+    def add_shape(self, data: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Shape_{i}_output" if output is None else output
         self._nodes.append(onnx.helper.make_node(op_type="Shape", inputs=[data], outputs=[output], name=f"Shape_{i}"))
         return output
 
-    def add_gather(self, data: str, indices: str, axis: int = 0, output: Optional[str] = None) -> str:
+    def add_gather(self, data: str, indices: str, axis: int = 0, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Gather_{i}_output" if output is None else output
@@ -52,7 +51,7 @@ class ModelBuilder:
         )
         return output
 
-    def add_reshape(self, data: str, shape: str, output: Optional[str] = None) -> str:
+    def add_reshape(self, data: str, shape: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Reshape_{i}_output" if output is None else output
@@ -68,7 +67,7 @@ class ModelBuilder:
         return name
 
     def add_matmul(
-        self, input: str, shape: tuple[int], output: Optional[str] = None, data: Optional[np.ndarray] = None
+        self, input: str, shape: tuple[int], output: str | None = None, data: np.ndarray | None = None
     ) -> str:
         i = len(self._nodes)
 
@@ -103,9 +102,9 @@ class ModelBuilder:
         self,
         input: str,
         shape: tuple[int],
-        output: Optional[str] = None,
-        weight_data: Optional[np.ndarray] = None,
-        bias_data: Optional[np.ndarray] = None,
+        output: str | None = None,
+        weight_data: np.ndarray | None = None,
+        bias_data: np.ndarray | None = None,
         trans_a: int = 0,
         trans_b: int = 0,
     ) -> str:
@@ -147,7 +146,7 @@ class ModelBuilder:
         )
         return output
 
-    def add_mul(self, input_a: str, input_b: str, output: Optional[str] = None) -> str:
+    def add_mul(self, input_a: str, input_b: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Mul_{i}_output" if output is None else output
@@ -156,7 +155,7 @@ class ModelBuilder:
         )
         return output
 
-    def add_add(self, input_a: str, input_b: str, output: Optional[str] = None) -> str:
+    def add_add(self, input_a: str, input_b: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Add_{i}_output" if output is None else output
@@ -166,7 +165,7 @@ class ModelBuilder:
         return output
 
     def add_mul_const(
-        self, input: str, shape: tuple[int], output: Optional[str] = None, data: Optional[np.ndarray] = None
+        self, input: str, shape: tuple[int], output: str | None = None, data: np.ndarray | None = None
     ) -> str:
         i = len(self._nodes)
 
@@ -186,21 +185,21 @@ class ModelBuilder:
         )
         return output
 
-    def add_relu(self, input: str, output: Optional[str] = None) -> str:
+    def add_relu(self, input: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Relu_{i}_output" if output is None else output
         self._nodes.append(onnx.helper.make_node(op_type="Relu", inputs=[input], outputs=[output], name=f"Relu_{i}"))
         return output
 
-    def add_selu(self, input: str, output: Optional[str] = None) -> str:
+    def add_selu(self, input: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Selu_{i}_output" if output is None else output
         self._nodes.append(onnx.helper.make_node(op_type="Selu", inputs=[input], outputs=[output], name=f"Selu_{i}"))
         return output
 
-    def add_constant(self, data: np.ndarray, output: Optional[str] = None) -> str:
+    def add_constant(self, data: np.ndarray, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Constant_{i}_output" if output is None else output
@@ -223,7 +222,7 @@ class ModelBuilder:
 
         return output
 
-    def add_unsqueeze(self, input: str, axes: tuple[int, ...], output: Optional[str] = None) -> str:
+    def add_unsqueeze(self, input: str, axes: tuple[int, ...], output: str | None = None) -> str:
         i = len(self._nodes)
 
         axes_name = f"Unsqueeze_{i}_axes"
@@ -245,21 +244,21 @@ class ModelBuilder:
         )
         return output
 
-    def add_cos(self, input: str, output: Optional[str] = None) -> str:
+    def add_cos(self, input: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Cos_{i}_output" if output is None else output
         self._nodes.append(onnx.helper.make_node(op_type="Cos", inputs=[input], outputs=[output], name=f"Cos_{i}"))
         return output
 
-    def add_sin(self, input: str, output: Optional[str] = None) -> str:
+    def add_sin(self, input: str, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Sin_{i}_output" if output is None else output
         self._nodes.append(onnx.helper.make_node(op_type="Sin", inputs=[input], outputs=[output], name=f"Sin_{i}"))
         return output
 
-    def add_transpose(self, input: str, perm: list[int], output: Optional[str] = None) -> str:
+    def add_transpose(self, input: str, perm: list[int], output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Transpose_{i}_output" if output is None else output
@@ -270,7 +269,7 @@ class ModelBuilder:
         )
         return output
 
-    def add_concat(self, inputs: list[str], axis: int, output: Optional[str] = None) -> str:
+    def add_concat(self, inputs: list[str], axis: int, output: str | None = None) -> str:
         i = len(self._nodes)
 
         output = f"Concat_{i}_output" if output is None else output
