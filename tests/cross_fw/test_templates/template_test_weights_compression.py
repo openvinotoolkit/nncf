@@ -266,7 +266,9 @@ class TemplateWeightCompression(ABC):
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    @pytest.mark.parametrize("transpose_a", [False, True])
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
     @pytest.mark.parametrize("is_moe", [False, True])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
     def test_scale_estimation(
