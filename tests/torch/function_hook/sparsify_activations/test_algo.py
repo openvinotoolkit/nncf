@@ -20,7 +20,6 @@ import torch.nn as nn
 from networkx.drawing.nx_pydot import to_pydot
 
 import nncf
-import nncf.experimental
 import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgorithm
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import TargetScope

@@ -16,7 +16,6 @@ from abc import abstractmethod
 from torch import nn
 
 import nncf
-import nncf.errors
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.pruning.magnitude.algo import update_pruning_ratio
 from nncf.torch.function_hook.pruning.scheduler_fns import exponential_ratio_scheduler

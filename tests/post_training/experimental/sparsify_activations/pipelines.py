@@ -16,7 +16,6 @@ from pathlib import Path
 import numpy as np
 import openvino as ov
 import torch
-import torch.utils
 import torch.utils.data
 import torchvision
 from datasets import load_dataset

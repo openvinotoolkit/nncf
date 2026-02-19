@@ -13,9 +13,7 @@ from pathlib import Path
 
 import torch.fx
 import torch.nn.parallel
-import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload

@@ -11,7 +11,6 @@
 
 from copy import deepcopy
 
-import torch
 import torch.fx
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train

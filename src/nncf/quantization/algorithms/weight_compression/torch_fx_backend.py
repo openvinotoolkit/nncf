@@ -15,8 +15,6 @@ import torch
 import torch.fx
 
 import nncf
-import nncf.errors
-import nncf.tensor
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype

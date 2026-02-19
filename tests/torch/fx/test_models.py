@@ -19,11 +19,7 @@ from typing import Callable
 import openvino.torch  # noqa
 import pytest
 import torch
-import torch.fx
 import torch.nn.parallel
-import torch.optim
-import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.models as models
 from torch.export.dynamic_shapes import Dim
 
