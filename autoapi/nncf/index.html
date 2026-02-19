@@ -179,14 +179,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="experimental/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3 has-children"><a class="reference internal" href="experimental/torch/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="experimental/torch/fx/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch.fx</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
 </ul>
@@ -254,13 +247,6 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="experimental/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="experimental/torch/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch</span></code></a><ul>
-<li class="toctree-l3"><a class="reference internal" href="experimental/torch/fx/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch.fx</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><ul>
 <li class="toctree-l2"><a class="reference internal" href="quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
@@ -387,7 +373,7 @@ model ready for deployment. The functionality of the model object is still prese
 <li><p><strong>do_copy</strong> (<em>bool</em>) – If True (default), will return a copy of the currently associated model object. If False,
 will return the currently associated model object “stripped” in-place.</p></li>
 <li><p><strong>format</strong> (<em>strip</em>) – Describes the format in which model is saved after strip.</p></li>
-<li><p><strong>example_input</strong> (<em>Optional</em><em>[</em><em>Any</em><em>]</em>) – An example input tensor to be used for tracing the model.</p></li>
+<li><p><strong>example_input</strong> (<em>Any</em><em> | </em><em>None</em>) – An example input tensor to be used for tracing the model.</p></li>
 <li><p><strong>strip_format</strong> (<em>nncf.parameters.StripFormat</em>) – </p></li>
 </ul>
 </dd>
@@ -421,7 +407,7 @@ on the corresponding sample, and with <cite>False</cite> the state will not be r
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_source</strong> (<em>Iterable</em><em>[</em><em>Any</em><em>]</em>) – The iterable object serving as the source of data items.</p></li>
-<li><p><strong>transform_func</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>Ellipsis</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – The function that is used to extract the model’s input
+<li><p><strong>transform_func</strong> (<em>Callable</em><em>[</em><em>...</em><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em>) – The function that is used to extract the model’s input
 from the data item. The data item here is the data item that is returned from
 the data source per iteration. This function should be passed when
 the data item cannot be directly used as model’s input. If this is not specified, then the data item
@@ -435,7 +421,7 @@ will be passed into the model as-is.</p></li>
 <dd><p>Returns the iterable object that contains selected data items from the data source as-is.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>indices</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>int</em><em>]</em><em>]</em>) – The zero-based indices of data items that should be selected from
+<dd class="field-odd"><p><strong>indices</strong> (<em>list</em><em>[</em><em>int</em><em>] </em><em>| </em><em>None</em>) – The zero-based indices of data items that should be selected from
 the data source. The indices should be sorted in ascending order. If indices are
 not passed all data items are selected from the data source.</p>
 </dd>
@@ -456,7 +442,7 @@ the transformation function was applied. The item, which was returned per iterat
 iterable, can be used as the model’s input for model inference.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>indices</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>int</em><em>]</em><em>]</em>) – The zero-based indices of data items that should be selected from
+<dd class="field-odd"><p><strong>indices</strong> (<em>list</em><em>[</em><em>int</em><em>] </em><em>| </em><em>None</em>) – The zero-based indices of data items that should be selected from
 the data source. The indices should be sorted in ascending order. If indices are
 not passed all data items are selected from the data source.</p>
 </dd>
@@ -477,7 +463,7 @@ the transformation function was applied.</p>
 :return: The length of the data_source if __len__() is implemented for it, and None otherwise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Optional[int]</p>
+<dd class="field-odd"><p>int | None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -489,7 +475,7 @@ the transformation function was applied.</p>
 :return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Optional[int]</p>
+<dd class="field-odd"><p>int | None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -720,7 +706,7 @@ to update the running statistics of the batch normalization layers.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>TModel</em>) – The model to adapt.</p></li>
 <li><p><strong>calibration_dataset</strong> (<em>nncf.data.dataset.Dataset</em>) – The dataset to use for the adaptation.</p></li>
-<li><p><strong>num_iterations</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – The number of iterations to use for adaptation.
+<li><p><strong>num_iterations</strong> (<em>int</em><em> | </em><em>None</em>) – The number of iterations to use for adaptation.
 If set to None, the adaptation will run for the entire dataset.</p></li>
 </ul>
 </dd>
@@ -740,9 +726,9 @@ Insert binary masks for the parameters and calculate the initial masks by the gi
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>TModel</em>) – The model to be pruned.</p></li>
 <li><p><strong>mode</strong> (<em>nncf.parameters.PruneMode</em>) – The mode of pruning to be applied.</p></li>
-<li><p><strong>ratio</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – The ratio of parameters to prune from the model.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.scopes.IgnoredScope</em><em>]</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
-<li><p><strong>examples_inputs</strong> (<em>Optional</em><em>[</em><em>Any</em><em>]</em>) – Example inputs to guide the pruning process. Defaults to None.</p></li>
+<li><p><strong>ratio</strong> (<em>float</em><em> | </em><em>None</em>) – The ratio of parameters to prune from the model.</p></li>
+<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>IgnoredScope</em></a><em> | </em><em>None</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
+<li><p><strong>examples_inputs</strong> (<em>Any</em><em> | </em><em>None</em>) – Example inputs to guide the pruning process. Defaults to None.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -881,7 +867,7 @@ more time but requires less memory.</p></li>
 in the model. Supported only <cite>transformer</cite> now.</p></li>
 <li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a><em>]</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>advanced_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em>]</em>) – Advanced quantization parameters for
+<li><p><strong>advanced_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
 </ul>
 </dd>
@@ -904,7 +890,7 @@ fine-tuning the quantization algorithm.</p></li>
 <li><p><strong>model</strong> (<em>TModel</em>) – A model to be quantized.</p></li>
 <li><p><strong>calibration_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A representative dataset for the calibration process.</p></li>
 <li><p><strong>validation_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A dataset for the validation process.</p></li>
-<li><p><strong>validation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Iterable</em><em>[</em><em>Any</em><em>]</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>Union</em><em>[</em><em>None</em><em>, </em><em>list</em><em>[</em><em>float</em><em>]</em><em>, </em><em>list</em><em>[</em><em>list</em><em>[</em><em>TTensor</em><em>]</em><em>]</em><em>]</em><em>]</em><em>]</em>) – <p>A validation function to validate the model. It should take two arguments:
+<li><p><strong>validation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Iterable</em><em>[</em><em>Any</em><em>]</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>None</em><em> | </em><em>list</em><em>[</em><em>float</em><em>] </em><em>| </em><em>list</em><em>[</em><em>list</em><em>[</em><em>TTensor</em><em>]</em><em>]</em><em>]</em><em>]</em>) – <p>A validation function to validate the model. It should take two arguments:
 - <cite>model</cite>: model to be validate.
 - <cite>validation_dataset</cite>: dataset that provides data items to</p>
 <blockquote>
@@ -934,7 +920,7 @@ more time but requires less memory.</p></li>
 in the model. Supported only <cite>transformer</cite> now.</p></li>
 <li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>advanced_quantization_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em>]</em>) – Advanced quantization parameters for
+<li><p><strong>advanced_quantization_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
 <li><p><strong>advanced_accuracy_restorer_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><em>AdvancedAccuracyRestorerParameters</em></a><em>]</em>) – Advanced parameters for fine-tuning
 the accuracy restorer algorithm.</p></li>

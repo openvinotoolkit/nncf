@@ -18,7 +18,6 @@ Subpackages
    api/index.rst
    common/index.rst
    data/index.rst
-   experimental/index.rst
    quantization/index.rst
    torch/index.rst
 

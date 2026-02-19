@@ -3,7 +3,7 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
-<link rel="index" title="Index" href="../../../../../genindex.html" /><link rel="search" title="Search" href="../../../../../search.html" /><link rel="next" title="nncf.quantization" href="../../../quantization/index.html" /><link rel="prev" title="nncf.experimental.torch" href="../index.html" />
+<link rel="index" title="Index" href="../../../../../genindex.html" /><link rel="search" title="Search" href="../../../../../search.html" />
 
     <!-- Generated with Sphinx 6.1.3 and Furo 2023.03.27 -->
         <title>nncf.experimental.torch.fx - NNCF</title>
@@ -135,7 +135,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -156,8 +156,8 @@
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="../../../index.html">API Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></a></li>
 </ul>
@@ -179,14 +179,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../../data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental</span></code></a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l3 current has-children"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch</span></code></a><input checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l4 current current-page"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch.fx</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../../../quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
 </ul>
@@ -223,7 +216,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -231,218 +224,6 @@
         <article role="main">
           <section id="module-nncf.experimental.torch.fx">
 <span id="nncf-experimental-torch-fx"></span><h1><a class="reference internal" href="#module-nncf.experimental.torch.fx" title="nncf.experimental.torch.fx"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch.fx</span></code></a><a class="headerlink" href="#module-nncf.experimental.torch.fx" title="Permalink to this heading">#</a></h1>
-<section id="classes">
-<h2>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">#</a></h2>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.experimental.torch.fx.OpenVINOQuantizer" title="nncf.experimental.torch.fx.OpenVINOQuantizer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OpenVINOQuantizer</span></code></a></p></td>
-<td><p>Implementation of the Torch AO quantizer which annotates models with quantization annotations</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="functions">
-<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h2>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.experimental.torch.fx.compress_pt2e" title="nncf.experimental.torch.fx.compress_pt2e"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_pt2e</span></code></a>(model, quantizer, *[, dataset, awq, ...])</p></td>
-<td><p>Applies Weight Compression to the torch.fx.GraphModule model using provided torch.ao quantizer.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.experimental.torch.fx.quantize_pt2e" title="nncf.experimental.torch.fx.quantize_pt2e"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_pt2e</span></code></a>(model, quantizer, calibration_dataset[, ...])</p></td>
-<td><p>Applies post-training quantization to the torch.fx.GraphModule provided model</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<dl class="py function">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.compress_pt2e">
-<span class="sig-prename descclassname"><span class="pre">nncf.experimental.torch.fx.</span></span><span class="sig-name descname"><span class="pre">compress_pt2e</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">awq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_estimation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gptq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensitivity_metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantize_pt2e.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.compress_pt2e" title="Permalink to this definition">#</a></dt>
-<dd><p>Applies Weight Compression to the torch.fx.GraphModule model using provided torch.ao quantizer.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<em>torch.fx.GraphModule</em>) – A torch.fx.GraphModule instance to be quantized.</p></li>
-<li><p><strong>quantizer</strong> (<em>torch.ao.quantization.quantizer.Quantizer</em>) – Torch ao quantizer to annotate nodes in the graph with quantization setups
-to convey the desired way of quantization.</p></li>
-<li><p><strong>dataset</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a><em>]</em>) – A representative dataset for the calibration process.</p></li>
-<li><p><strong>awq</strong> (<em>bool</em>) – Determines whether to use or not the modified AWQ algorithm.</p></li>
-<li><p><strong>scale_estimation</strong> (<em>bool</em>) – Determines whether to use or not scale estimation for 4-bit layers.</p></li>
-<li><p><strong>gptq</strong> (<em>bool</em>) – Determines whether to use or not GPTQ algorithm.</p></li>
-<li><p><strong>lora_correction</strong> (<em>bool</em>) – Determines whether to use or not LoRA Correction algorithm.</p></li>
-<li><p><strong>subset_size</strong> (<em>int</em>) – Number of data samples to calculate activation statistics used for assigning different
-quantization precision.</p></li>
-<li><p><strong>ratio</strong> (<em>int</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-and the rest to INT8_ASYM).</p></li>
-<li><p><strong>sensitivity_metric</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.SensitivityMetric" title="nncf.SensitivityMetric"><em>nncf.SensitivityMetric</em></a><em>]</em>) – The sensitivity metric for assigning quantization precision to layers. In order to
-preserve the accuracy of the model, the more sensitive layers receive a higher precision.</p></li>
-<li><p><strong>advanced_parameters</strong> (<em>Optional</em><em>[</em><em>nncf.AdvancedCompressionParameters</em><em>]</em>) – Advanced parameters for algorithms in the compression pipeline.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>torch.fx.GraphModule</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.quantize_pt2e">
-<span class="sig-prename descclassname"><span class="pre">nncf.experimental.torch.fx.</span></span><span class="sig-name descname"><span class="pre">quantize_pt2e</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_quant</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_correction_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_quant_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activations_range_estimator_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights_range_estimator_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batchwise_statistics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fold_quantize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantize_pt2e.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.quantize_pt2e" title="Permalink to this definition">#</a></dt>
-<dd><p>Applies post-training quantization to the torch.fx.GraphModule provided model
-using provided torch.ao quantizer.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<em>torch.fx.GraphModule</em>) – A torch.fx.GraphModule instance to be quantized.</p></li>
-<li><p><strong>quantizer</strong> (<em>torch.ao.quantization.quantizer.Quantizer</em>) – Torch ao quantizer to annotate nodes in the graph with quantization setups
-to convey the desired way of quantization.</p></li>
-<li><p><strong>calibration_dataset</strong> (<a class="reference internal" href="../../../index.html#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A representative dataset for the
-calibration process.</p></li>
-<li><p><strong>subset_size</strong> (<em>int</em>) – Size of a subset to calculate activations
-statistics used for quantization.</p></li>
-<li><p><strong>fast_bias_correction</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Setting this option to <cite>False</cite> enables a different
-bias correction method which is more accurate, in general, and takes
-more time but requires less memory. None disables the bias correction algorithm.</p></li>
-<li><p><strong>smooth_quant</strong> (<em>bool</em>) – Setting this option to <cite>True</cite> enables the SmoothQuant algorithm.</p></li>
-<li><p><strong>bias_correction_params</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><em>nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters</em></a><em>]</em>) – Contains advanced parameters for fine-tuning bias correction algorithm.</p></li>
-<li><p><strong>smooth_quant_params</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters" title="nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters"><em>nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters</em></a><em>]</em>) – Contains advanced alpha parameters for SmoothQuant algorithm.</p></li>
-<li><p><strong>activations_range_estimator_params</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../quantization/range_estimator/index.html#nncf.quantization.range_estimator.RangeEstimatorParameters" title="nncf.quantization.range_estimator.RangeEstimatorParameters"><em>nncf.quantization.range_estimator.RangeEstimatorParameters</em></a><em>]</em>) – Contains parameters for estimating the range
-of activations of the model.</p></li>
-<li><p><strong>weights_range_estimator_params</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../quantization/range_estimator/index.html#nncf.quantization.range_estimator.RangeEstimatorParameters" title="nncf.quantization.range_estimator.RangeEstimatorParameters"><em>nncf.quantization.range_estimator.RangeEstimatorParameters</em></a><em>]</em>) – Contains parameters for estimating the range
-of weights of the model.</p></li>
-<li><p><strong>batchwise_statistics</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Determines whether quantizer statistics should be calculated
-for each item of the batch or for the entire batch, default is None, which means
-it set True if batch_size &gt; 1 otherwise False.</p></li>
-<li><p><strong>fold_quantize</strong> (<em>bool</em>) – Boolean flag for whether fold the quantize op or not. The value is True by default.</p></li>
-<li><p><strong>do_copy</strong> (<em>bool</em>) – The copy of the given model is being quantized if do_copy == True,
-otherwise the model is quantized inplace. Default value is False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The quantized torch.fx.GraphModule instance.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>torch.fx.GraphModule</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.OpenVINOQuantizer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.experimental.torch.fx.</span></span><span class="sig-name descname"><span class="pre">OpenVINOQuantizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overflow_fix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantize_outputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activations_quantization_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights_quantization_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quantizer_propagation_rule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">QuantizerPropagationRule.MERGE_ALL_IN_ONE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantizer/openvino_quantizer.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.OpenVINOQuantizer" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">torch.ao.quantization.quantizer.quantizer.Quantizer</span></code></p>
-<p>Implementation of the Torch AO quantizer which annotates models with quantization annotations
-optimally for the inference via OpenVINO.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.QuantizationMode" title="nncf.QuantizationMode"><em>nncf.QuantizationMode</em></a><em>]</em>) – Defines optimization mode for the algorithm. None by default.</p></li>
-<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><em>nncf.QuantizationPreset</em></a><em>]</em>) – A preset controls the quantization mode (symmetric and asymmetric).
-It can take the following values:
-- <cite>performance</cite>: Symmetric quantization of weights and activations.
-- <cite>mixed</cite>: Symmetric quantization of weights and asymmetric quantization of activations.
-Default value is None. In this case, <cite>mixed</cite> preset is used for <cite>transformer</cite>
-model type otherwise <cite>performance</cite>.</p></li>
-<li><p><strong>target_device</strong> (<a class="reference internal" href="../../../index.html#nncf.TargetDevice" title="nncf.TargetDevice"><em>nncf.TargetDevice</em></a>) – A target device the specificity of which will be taken
-into account while compressing in order to obtain the best performance
-for this type of device, defaults to TargetDevice.ANY.</p></li>
-<li><p><strong>model_type</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.ModelType" title="nncf.ModelType"><em>nncf.ModelType</em></a><em>]</em>) – Model type is needed to specify additional patterns
-in the model. Supported only <cite>transformer</cite> now.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a><em>]</em>) – An ignored scope that defined the list of model control
-flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>overflow_fix</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../../../index.html#nncf.OverflowFix" title="nncf.OverflowFix"><em>nncf.OverflowFix</em></a><em>]</em>) – This option controls whether to apply the overflow issue
-fix for the 8-bit quantization.</p></li>
-<li><p><strong>quantize_outputs</strong> (<em>bool</em>) – Whether to insert additional quantizers right before
-each of the model outputs.</p></li>
-<li><p><strong>activations_quantization_params</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference internal" href="../../../quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a><em>, </em><a class="reference internal" href="../../../quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.FP8QuantizationParameters" title="nncf.quantization.advanced_parameters.FP8QuantizationParameters"><em>nncf.quantization.advanced_parameters.FP8QuantizationParameters</em></a><em>]</em><em>]</em>) – Quantization parameters for model
-activations.</p></li>
-<li><p><strong>weights_quantization_params</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference internal" href="../../../quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a><em>, </em><a class="reference internal" href="../../../quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.FP8QuantizationParameters" title="nncf.quantization.advanced_parameters.FP8QuantizationParameters"><em>nncf.quantization.advanced_parameters.FP8QuantizationParameters</em></a><em>]</em><em>]</em>) – Quantization parameters for model weights.</p></li>
-<li><p><strong>quantizer_propagation_rule</strong> (<a class="reference internal" href="../../../common/quantization/quantizer_propagation/structs/index.html#nncf.common.quantization.quantizer_propagation.structs.QuantizerPropagationRule" title="nncf.common.quantization.quantizer_propagation.structs.QuantizerPropagationRule"><em>nncf.common.quantization.quantizer_propagation.structs.QuantizerPropagationRule</em></a>) – The strategy to be used while propagating and merging quantizers.
-MERGE_ALL_IN_ONE by default.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.OpenVINOQuantizer.set_ignored_scope">
-<span class="sig-name descname"><span class="pre">set_ignored_scope</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patterns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subgraphs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantizer/openvino_quantizer.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.set_ignored_scope" title="Permalink to this definition">#</a></dt>
-<dd><p>Provides an option to specify portions of model to be excluded from compression.
-The ignored scope defines model sub-graphs that should be excluded from the quantization process.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>names</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of ignored node names.</p></li>
-<li><p><strong>patterns</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of regular expressions that define patterns for names of ignored nodes.</p></li>
-<li><p><strong>types</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of ignored operation types.</p></li>
-<li><p><strong>subgraphs</strong> (<em>Optional</em><em>[</em><em>list</em><em>[</em><em>tuple</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>list</em><em>[</em><em>str</em><em>]</em><em>]</em><em>]</em><em>]</em>) – List of ignored subgraphs.</p></li>
-<li><p><strong>validate</strong> (<em>bool</em>) – If set to True, then a RuntimeError will be raised if any ignored scope does not match
-in the model graph.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.OpenVINOQuantizer.annotate">
-<span class="sig-name descname"><span class="pre">annotate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantizer/openvino_quantizer.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.annotate" title="Permalink to this definition">#</a></dt>
-<dd><p>Adds quantization annotations to the nodes in the model graph in-place.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>model</strong> (<em>torch.fx.GraphModule</em>) – A torch.fx.GraphModule to annotate.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The torch.fx.GraphModule with updated annotations.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>torch.fx.GraphModule</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.OpenVINOQuantizer.validate">
-<span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantizer/openvino_quantizer.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.validate" title="Permalink to this definition">#</a></dt>
-<dd><p>Validates the annotated model before the insertion of FakeQuantizers / observers.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>model</strong> (<em>torch.fx.GraphModule</em>) – Annotated torch.fx.GraphModule to validate after the  annotation.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nncf.experimental.torch.fx.OpenVINOQuantizer.transform_for_annotation">
-<span class="sig-name descname"><span class="pre">transform_for_annotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/experimental/torch/fx/quantization/quantizer/openvino_quantizer.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.transform_for_annotation" title="Permalink to this definition">#</a></dt>
-<dd><p>Allows for user defined transforms to run before annotating the graph.
-This allows quantizer to allow quantizing part of the model that are otherwise not quantizable.
-For example quantizer can
-a) decompose a compound operator like scaled dot product attention,
-into bmm and softmax if quantizer knows how to quantize bmm/softmax but not sdpa
-or b) transform scalars to tensor to allow quantizing scalars.</p>
-<p>Note: this is an optional method</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>model</strong> (<em>torch.fx.GraphModule</em>) – Given torch.fx.GraphModule to transform before the annotation.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The transformed torch.fx.GraphModule ready for the annotation.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>torch.fx.GraphModule</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-</section>
 </section>
 
         </article>
@@ -450,26 +231,8 @@ or b) transform scalars to tensor to allow quantizing scalars.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../../../quantization/index.html">
-              <div class="page-info">
-                <div class="context">
-                  <span>Next</span>
-                </div>
-                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></div>
-              </div>
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-            </a>
-          <a class="prev-page" href="../index.html">
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-              <div class="page-info">
-                <div class="context">
-                  <span>Previous</span>
-                </div>
-                
-                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch</span></code></div>
-                
-              </div>
-            </a>
+          
+          
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -487,39 +250,8 @@ or b) transform scalars to tensor to allow quantizing scalars.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.torch.fx</span></code></a><ul>
-<li><a class="reference internal" href="#classes">Classes</a></li>
-<li><a class="reference internal" href="#functions">Functions</a><ul>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.compress_pt2e"><code class="docutils literal notranslate"><span class="pre">compress_pt2e()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.quantize_pt2e"><code class="docutils literal notranslate"><span class="pre">quantize_pt2e()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.OpenVINOQuantizer"><code class="docutils literal notranslate"><span class="pre">OpenVINOQuantizer</span></code></a><ul>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.set_ignored_scope"><code class="docutils literal notranslate"><span class="pre">OpenVINOQuantizer.set_ignored_scope()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.annotate"><code class="docutils literal notranslate"><span class="pre">OpenVINOQuantizer.annotate()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.validate"><code class="docutils literal notranslate"><span class="pre">OpenVINOQuantizer.validate()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.experimental.torch.fx.OpenVINOQuantizer.transform_for_annotation"><code class="docutils literal notranslate"><span class="pre">OpenVINOQuantizer.transform_for_annotation()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
