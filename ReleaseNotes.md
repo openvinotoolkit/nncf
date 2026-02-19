@@ -23,8 +23,6 @@ Post-training Quantization:
   - (ONNX) Fixed incorrect insertion of MatMulNBits nodes.
 - Improvements:
   - Added support for the compression of 3D weights in AWQ, Scale Estimation, and GPTQ algorithms. Models with MoE (Mixture of Experts), such as GPT-OSS-20B and Qwen3-30B-A3B, can be compressed with data-aware methods now.
-- Deprecations/Removals:
-  - ...
 - Tutorials:
   - [Post-Training Quantization of YOLO26 OpenVINO Model](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/openvino/yolo26)
   - [Post-Training Optimization of Wan2.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.2-text-image-to-video/wan2.2-text-image-to-video.ipynb)
@@ -38,9 +36,9 @@ Post-training Quantization:
 
 Deprecations/Removals:
 
-  - (TensorFlow) Removed support for TensorFlow backend.
-  - (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
-  - (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, and Movement Sparsity.
+- (TensorFlow) Removed support for TensorFlow backend.
+- (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
+- (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, and Movement Sparsity.
 
 Requirements:
 
