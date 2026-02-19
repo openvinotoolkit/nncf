@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
 
 import torch
 from torch import nn
@@ -263,7 +262,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+    ) -> PTInsertionCommand | PTSharedFnInsertionCommand:
         scale_shape = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config.per_channel)
 
         quantizer = PTMinMaxAlgoBackend._create_quantizer(

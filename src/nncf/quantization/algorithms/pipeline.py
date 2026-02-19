@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar, Union
+from typing import TypeVar
 
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.factory import build_graph
@@ -26,7 +26,7 @@ PipelineStep = list[Algorithm]
 
 
 def collect_statistics(
-    containers: Union[StatisticPointsContainer, list[StatisticPointsContainer]],
+    containers: StatisticPointsContainer | list[StatisticPointsContainer],
     model: TModel,
     graph: NNCFGraph,
     dataset: Dataset,

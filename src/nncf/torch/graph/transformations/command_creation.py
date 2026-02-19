@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
 
 import torch
 from torch import Tensor
@@ -53,7 +52,7 @@ def create_command_to_update_weight(node: NNCFNode, weight_value: Tensor) -> PTW
 
 def create_quantizer_insertion_command(
     target_point: PTTargetPoint, quantizer: BaseQuantizer
-) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+) -> PTInsertionCommand | PTSharedFnInsertionCommand:
     quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
     storage_key = str(quantizer_id)
     return PTSharedFnInsertionCommand(

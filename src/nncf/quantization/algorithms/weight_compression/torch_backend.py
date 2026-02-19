@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Iterable, Union
+from typing import Callable, Iterable
 
 import torch
 from torch import nn
@@ -161,7 +161,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self,
         node_with_weight: NNCFNode,
         weight_port_id: int,
-        model: Union[GraphModelWrapper, torch.nn.Module],
+        model: GraphModelWrapper | torch.nn.Module,
         graph: NNCFGraph,
     ) -> Tensor:
         if isinstance(model, GraphModelWrapper):
@@ -181,7 +181,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self,
         node_with_weight: NNCFNode,
         weight_port_id: int,
-        model: Union[GraphModelWrapper, torch.nn.Module],
+        model: GraphModelWrapper | torch.nn.Module,
         graph: NNCFGraph,
     ) -> TensorDataType:
         return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype

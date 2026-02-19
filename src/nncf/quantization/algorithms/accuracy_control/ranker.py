@@ -13,7 +13,7 @@ import operator
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Callable, TypeVar, Union
+from typing import Any, Callable, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -140,8 +140,8 @@ class Ranker:
         groups_to_rank: list[GroupToRank],
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
-        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
-        approximate_values_for_each_item: Union[list[float], list[list[TTensor]]],
+        reference_values_for_each_item: list[float] | list[list[TTensor]],
+        approximate_values_for_each_item: list[float] | list[list[TTensor]],
     ) -> list[GroupToRank]:
         """
         Ranks groups of quantizers by their contribution to accuracy drop. Returns a list of
@@ -196,7 +196,7 @@ class Ranker:
         quantized_model_graph: NNCFGraph,
         groups_to_rank: list[GroupToRank],
         ranking_subset_indices: list[int],
-        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
+        reference_values_for_each_item: list[float] | list[list[TTensor]],
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         for current_group in track(groups_to_rank, description="Calculating ranking scores"):
@@ -225,7 +225,7 @@ class Ranker:
         quantized_model_graph: NNCFGraph,
         groups_to_rank: list[GroupToRank],
         ranking_subset_indices: list[int],
-        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
+        reference_values_for_each_item: list[float] | list[list[TTensor]],
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         prepared_model_queue = []
@@ -265,7 +265,7 @@ class Ranker:
         self,
         prepared_model: TPModel,
         ranking_subset_indices: list[int],
-        reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
+        reference_values_for_each_item: list[float] | list[list[TTensor]],
     ) -> float:
         """
         Calculates the ranking score for the current group of quantizers.

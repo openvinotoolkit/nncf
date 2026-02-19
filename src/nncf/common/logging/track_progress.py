@@ -10,7 +10,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, Iterable, Iterator, Sequence, Union
+from typing import Any, Callable, Generic, Iterable, Iterator, Sequence
 
 from rich.console import Console
 from rich.progress import BarColumn
@@ -125,7 +125,7 @@ class WeightedProgress(Progress):
 class track(Generic[ProgressType]):
     def __init__(
         self,
-        sequence: Union[Sequence[ProgressType], Iterable[ProgressType], None] = None,
+        sequence: Sequence[ProgressType] | Iterable[ProgressType] | None = None,
         description: str = "Working...",
         total: float | None = None,
         auto_refresh: bool = True,

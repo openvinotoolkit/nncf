@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, TypeVar, Union
+from typing import Any, Callable, Iterable, TypeVar
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -57,7 +57,7 @@ class MetricResults:
     """
 
     metric_value: float
-    values_for_each_item: Union[list[float], list[list[TTensor]]]
+    values_for_each_item: list[float] | list[list[TTensor]]
     preparation_time: float
     validation_time: float
 
@@ -70,7 +70,7 @@ class Evaluator:
     """
 
     def __init__(
-        self, validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]]
+        self, validation_fn: Callable[[Any, Iterable[Any]], tuple[float, None | list[float] | list[list[TTensor]]]]
     ):
         """
         :param validation_fn: Validation function to validate model.
@@ -177,7 +177,7 @@ class Evaluator:
 
     def validate(
         self, model: TModel, dataset: Dataset, indices: list[int] | None = None
-    ) -> tuple[float, Union[None, list[float], list[list[TTensor]]]]:
+    ) -> tuple[float, None | list[float] | list[list[TTensor]]]:
         """
         Validates model.
 
@@ -199,7 +199,7 @@ class Evaluator:
     def determine_mode(
         prepared_model: PreparedModel,
         dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+        validation_fn: Callable[[Any, Iterable[Any]], tuple[float, None | list[float] | list[list[TTensor]]]],
     ) -> bool:
         """
         Determines mode based on the type of returned value from the
@@ -268,7 +268,7 @@ class Evaluator:
 
     def collect_values_for_each_item_using_prepared_model(
         self, prepared_model: PreparedModel, dataset: Dataset, indices: list[int] | None = None
-    ) -> Union[list[float], list[list[TTensor]]]:
+    ) -> list[float] | list[list[TTensor]]:
         """
         Collects value for each item from the dataset using prepared model for inference.
         If `is_metric_mode()` returns `True` then i-th value is a metric for i-th data item.
@@ -299,7 +299,7 @@ class Evaluator:
 
     def collect_values_for_each_item(
         self, model: TModel, dataset: Dataset, indices: list[int] | None = None
-    ) -> Union[list[float], list[list[TTensor]]]:
+    ) -> list[float] | list[list[TTensor]]:
         """
         Collects value for each item from the dataset. If `is_metric_mode()`
         returns `True` then i-th value is a metric for i-th data item. It

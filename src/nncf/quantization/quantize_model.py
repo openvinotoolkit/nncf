@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Iterable, TypedDict, TypeVar, Union
+from typing import Any, Callable, Iterable, TypedDict, TypeVar
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
@@ -282,7 +282,7 @@ def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, None | list[float] | list[list[TTensor]]]],
     *,
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
@@ -714,7 +714,7 @@ def quantize_with_tune_hyperparams(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, None | list[float] | list[list[TTensor]]]],
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,

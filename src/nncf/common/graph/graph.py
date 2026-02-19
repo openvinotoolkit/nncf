@@ -18,7 +18,6 @@ from typing import (
     Generator,
     Iterable,
     KeysView,
-    Union,
     ValuesView,
     cast,
 )
@@ -547,7 +546,7 @@ class NNCFGraph:
         self,
         from_node_id: int,
         to_node_id: int,
-        tensor_shape: Union[tuple[int, ...], list[int]],
+        tensor_shape: tuple[int, ...] | list[int],
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,

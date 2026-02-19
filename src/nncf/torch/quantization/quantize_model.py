@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Union
 
 import torch
 
@@ -87,7 +86,7 @@ def quantize_impl(
 
 
 def compress_weights_impl(
-    model: Union[GraphModelWrapper, torch.nn.Module],
+    model: GraphModelWrapper | torch.nn.Module,
     dataset: Dataset | None,
     mode: CompressWeightsMode,
     ratio: float,

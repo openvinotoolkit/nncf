@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Union
+from typing import Callable
 
 import openvino.torch  # noqa
 import pytest
@@ -97,10 +97,10 @@ def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str
 
 def get_ref_from_json(
     model_name: str,
-    model_metatypes: dict[NNCFNodeName, Union[type[OperatorMetatype], bool]],
+    model_metatypes: dict[NNCFNodeName, type[OperatorMetatype] | bool],
     regen_ref_data: bool,
     attributes=False,
-) -> dict[NNCFNodeName, Union[type[OperatorMetatype], bool]]:
+) -> dict[NNCFNodeName, type[OperatorMetatype] | bool]:
     model_json_name = get_json_filename(model_name)
     complete_path = get_full_path_to_json(model_json_name, attributes)
 

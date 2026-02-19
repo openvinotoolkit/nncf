@@ -11,7 +11,7 @@
 
 import operator
 from copy import copy
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 import torch
 import torch.fx
@@ -34,20 +34,20 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
 # Copied from torch.fx.Node
-BaseArgumentTypes = Union[
-    str,
-    int,
-    float,
-    bool,
-    complex,
-    torch.dtype,
-    torch.Tensor,
-    torch.device,
-    torch.memory_format,
-    torch.layout,
-    torch._ops.OpOverload,
-]
-Argument = Union[tuple[Any, ...], list[Any], dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes, None]
+BaseArgumentTypes = (
+    str
+    | int
+    | float
+    | bool
+    | complex
+    | torch.dtype
+    | torch.Tensor
+    | torch.device
+    | torch.memory_format
+    | torch.layout
+    | torch._ops.OpOverload
+)
+Argument = tuple[Any, ...] | list[Any] | dict[str, Any] | slice | range | torch.fx.Node | BaseArgumentTypes | None
 
 QUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
@@ -607,7 +607,7 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
         _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
 
 
-def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[Union[torch.Tensor, int]] | None:
+def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[torch.Tensor | int] | None:
     """
     Gets the inputs for the Quantize node which quantize the weights. Otherwise returns None.
 
@@ -625,8 +625,8 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[
 
 
 def _get_value(
-    arg: Union[torch.fx.Node, float, int] | None, model: torch.fx.GraphModule
-) -> Union[torch.nn.Parameter, float, int]:
+    arg: torch.fx.Node | float | int | None, model: torch.fx.GraphModule
+) -> torch.nn.Parameter | float | int:
     """
     Retrieves value from the given argument. It can be either torch.fx.Node or float/int value.
 
@@ -672,8 +672,8 @@ def _reshape_scale_zp(
     sub_node: torch.fx.Node,
     mul_node: torch.fx.Node,
     weight: torch.Tensor,
-    scale: Union[torch.Tensor, float],
-    zp: Union[torch.Tensor, float, int],
+    scale: torch.Tensor | float,
+    zp: torch.Tensor | float | int,
     axis: int,
 ) -> None:
     """

@@ -19,7 +19,7 @@ This profiler can collect raw activations at specific layers matching regex patt
 import re
 from collections import defaultdict
 from re import Pattern
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import openvino.runtime as ov
@@ -94,7 +94,7 @@ class NNCFProfiler:
     VISUALIZERS: dict[str, Any] = {}
     STATISTICS: dict[str, Any] = {}
 
-    def __init__(self, pattern: Union[str, Pattern[str]], dataset: Any, num_samples: int) -> None:
+    def __init__(self, pattern: str | Pattern[str], dataset: Any, num_samples: int) -> None:
         """
         Initialize the NNCF Profiler.
 
@@ -106,7 +106,7 @@ class NNCFProfiler:
             Larger values provide more accurate statistics but consume more memory.
         """
         self.dataset: Any = dataset
-        self.pattern: Union[str, Pattern[str]] = pattern
+        self.pattern: str | Pattern[str] = pattern
         self.num_samples: int = num_samples
 
     @classmethod
@@ -228,7 +228,7 @@ class NNCFProfiler:
         self,
         model: ov.Model,
         dataset: Any | None = None,
-        pattern: Union[str, Pattern[str]] | None = None,
+        pattern: str | Pattern[str] | None = None,
         num_samples: int | None = None,
     ) -> ActivationData:
         """

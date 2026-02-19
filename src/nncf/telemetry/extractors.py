@@ -12,9 +12,9 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Union
+from typing import Any
 
-SerializableData = Union[str, Enum, bool]
+SerializableData = str | Enum | bool
 
 
 @dataclass

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import Iterable, Union
+from typing import Iterable
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -22,7 +22,7 @@ from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 
 
-def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, None]) -> bool:
+def matches_any(tested_str: str, strs_to_match_to: Iterable[str] | str | None) -> bool:
     """
     Return True if tested_str matches at least one element in strs_to_match_to.
 
@@ -50,7 +50,7 @@ def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, Non
 
 
 def should_consider_scope(
-    serializable_id: Union[QuantizerId, NNCFNodeName],
+    serializable_id: QuantizerId | NNCFNodeName,
     ignored_scopes: Iterable[str] | None,
     target_scopes: Iterable[str] | None = None,
 ) -> bool:
@@ -72,7 +72,7 @@ def should_consider_scope(
     )
 
 
-def get_not_matched_scopes(scope: Union[list[str], str, IgnoredScope, None], nodes: list[NNCFNode]) -> list[str]:
+def get_not_matched_scopes(scope: list[str] | str | IgnoredScope | None, nodes: list[NNCFNode]) -> list[str]:
     """
     Return list of scope that do not match node list.
 
@@ -104,7 +104,7 @@ def get_not_matched_scopes(scope: Union[list[str], str, IgnoredScope, None], nod
 
 def check_scopes_in_graph(
     graph: NNCFGraph,
-    ignored_scopes: Union[IgnoredScope, list[str]],
+    ignored_scopes: IgnoredScope | list[str],
     target_scopes: list[str] | None = None,
     validate_scopes: bool = True,
 ) -> None:

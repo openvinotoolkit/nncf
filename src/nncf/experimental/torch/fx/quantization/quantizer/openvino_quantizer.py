@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Union
 
 import torch.fx
 from torch.ao.quantization.observer import HistogramObserver
@@ -87,8 +86,8 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         ignored_scope: IgnoredScope | None = None,
         overflow_fix: OverflowFix | None = None,
         quantize_outputs: bool = False,
-        activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] | None = None,
-        weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] | None = None,
+        activations_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None,
+        weights_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None,
         quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
     ):
         self._min_max_algo = MinMaxQuantization(

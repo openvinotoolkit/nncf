@@ -15,7 +15,7 @@ import inspect
 from collections import OrderedDict
 from functools import partial
 from functools import partialmethod
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 
 class Patcher:
@@ -29,7 +29,7 @@ class Patcher:
 
     def patch(  # noqa: C901
         self,
-        obj_cls: Union[Any],
+        obj_cls: Any,
         wrapper: Callable[..., Any],
         *,
         force: bool = True,
@@ -107,7 +107,7 @@ class Patcher:
                 obj, fn_name = self.import_obj(".".join([obj, fn_name]))
             _unpatch(obj, fn_name, key, depth)
 
-    def import_obj(self, obj_cls: Union[str, Any]) -> tuple[Any, str]:  # noqa: C901
+    def import_obj(self, obj_cls: str | Any) -> tuple[Any, str]:  # noqa: C901
         """Object import helper."""
         if isinstance(obj_cls, str):
             fn_name = obj_cls.split(".")[-1]

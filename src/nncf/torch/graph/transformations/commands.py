@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 import torch
 
@@ -140,7 +140,7 @@ class PTInsertionCommand(PTTransformationCommand):
         self,
         point: PTTargetPoint,
         fn: Callable,
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
+        priority: TransformationPriority | int = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, point)
@@ -165,7 +165,7 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         fn: Callable,
         op_unique_name: str,
         compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
+        priority: TransformationPriority | int = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, None)

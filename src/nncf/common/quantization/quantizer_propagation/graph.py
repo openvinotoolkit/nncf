@@ -13,7 +13,7 @@ from collections import deque
 from copy import copy
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Callable, Union, cast
+from typing import Any, Callable, cast
 
 import networkx as nx  # type: ignore[import-untyped]
 
@@ -190,7 +190,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
 
     @staticmethod
     def _insertion_point_to_quant_insertion_point(
-        ip: Union[PreHookInsertionPoint, PostHookInsertionPoint],
+        ip: PreHookInsertionPoint | PostHookInsertionPoint,
     ) -> QuantizationInsertionPointBase:
         if isinstance(ip, PreHookInsertionPoint):
             return ActivationQuantizationInsertionPoint(ip.target_node_name, input_port_id=ip.input_port_id)
@@ -831,7 +831,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
     ) -> dict[int | None, list[PropagationPath]]:
         """Paths are lists of edges."""
         next_group_idx = 0
-        paths: dict[Union[int, None], list[list[tuple[str, str]]]] = {}
+        paths: dict[int | None, list[list[tuple[str, str]]]] = {}
 
         def followed_by_weighted_types(curr_node_key: str, curr_node_metatype: type[OperatorMetatype]) -> bool:
             nodes_queue = deque(self.successors(curr_node_key))
@@ -856,7 +856,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         def recursive_helper(
             curr_edge: tuple[str, str],
             curr_path: list[tuple[str, str]],
-            all_paths: dict[Union[int, None], list[list[tuple[str, str]]]],
+            all_paths: dict[int | None, list[list[tuple[str, str]]]],
             curr_group: int | None,
         ) -> None:
             nonlocal next_group_idx

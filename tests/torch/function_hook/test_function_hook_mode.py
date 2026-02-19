@@ -12,7 +12,7 @@
 
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any
 
 import pytest
 import torch
@@ -97,7 +97,7 @@ NamedTuple = namedtuple("NamedTuple", ["output1", "output2"])
 @pytest.fixture(params=["tensor", "list", "torch_return_type", "named_tuple"])
 def example_outputs(
     request: FixtureRequest,
-) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple]:
+) -> torch.Tensor | list[torch.Tensor] | torch.return_types.max | NamedTuple:
     return {
         "tensor": torch.tensor(1),
         "list": [torch.tensor(1), torch.tensor([2])],
@@ -107,7 +107,7 @@ def example_outputs(
 
 
 def test_execute_post_hooks(
-    example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple],
+    example_outputs: torch.Tensor | list[torch.Tensor] | torch.return_types.max | NamedTuple,
 ):
     op_name = "/relu/0"
     hook_storage = HookStorage()
@@ -129,7 +129,7 @@ def test_execute_post_hooks(
 
 
 def test_process_model_output(
-    example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max, NamedTuple],
+    example_outputs: torch.Tensor | list[torch.Tensor] | torch.return_types.max | NamedTuple,
 ):
     hook_storage = HookStorage()
     hook_output = CallCount()

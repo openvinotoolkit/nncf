@@ -12,7 +12,7 @@
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Iterable, TypeVar, Union
+from typing import Any, Callable, Iterable, TypeVar
 
 import onnx
 from onnx.external_data_helper import ExternalDataInfo
@@ -191,7 +191,7 @@ def quantize_with_accuracy_control_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+    validation_fn: Callable[[Any, Iterable[Any]], tuple[float, None | list[float] | list[list[TTensor]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset | None = None,

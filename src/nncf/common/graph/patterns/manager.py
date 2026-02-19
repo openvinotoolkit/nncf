@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Union, cast
+from typing import Callable, cast
 
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import HWFusedPatternNames
@@ -18,7 +18,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 
-PatternNames = Union[IgnoredPatternNames, HWFusedPatternNames]
+PatternNames = IgnoredPatternNames | HWFusedPatternNames
 
 
 class PatternsManager:

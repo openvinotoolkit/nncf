@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, OrderedDict, TypeVar, Union
+from typing import Any, OrderedDict, TypeVar
 
 import numpy as np
 
@@ -85,10 +85,10 @@ class ModeBasedDefaults:
     """
 
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
-    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+    activations_quantization_params: QuantizationParameters | FP8QuantizationParameters = dataclasses.field(
         default_factory=QuantizationParameters
     )
-    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+    weights_quantization_params: QuantizationParameters | FP8QuantizationParameters = dataclasses.field(
         default_factory=QuantizationParameters
     )
 
@@ -149,8 +149,8 @@ class MinMaxQuantization(Algorithm):
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
         batchwise_statistics: bool = False,
-        activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
-        weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
+        activations_quantization_params: QuantizationParameters | FP8QuantizationParameters = None,
+        weights_quantization_params: QuantizationParameters | FP8QuantizationParameters = None,
         activations_range_estimator_params: RangeEstimatorParameters | None = None,
         weights_range_estimator_params: RangeEstimatorParameters | None = None,
         quantizer_propagation_rule: QuantizerPropagationRule | None = None,
@@ -348,7 +348,7 @@ class MinMaxQuantization(Algorithm):
         self,
         group: QuantizerGroup,
         preset: QuantizationPreset,
-        quantization_params: Union[QuantizationParameters, FP8QuantizationParameters],
+        quantization_params: QuantizationParameters | FP8QuantizationParameters,
     ) -> QuantizationConstraints:
         """
         Returns QuantizationConstraints for the provided quantizer group.

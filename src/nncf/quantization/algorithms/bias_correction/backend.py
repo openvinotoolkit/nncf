@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar, Union
+from typing import TypeVar
 
 import numpy as np
 
@@ -108,7 +108,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> Tensor:
+    def process_model_output(raw_data: OutputType, output_name: str | int) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 

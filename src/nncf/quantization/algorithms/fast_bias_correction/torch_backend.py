@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
 
 import numpy as np
 import torch
@@ -86,7 +85,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return blob
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: Union[nn.Module, GraphModelWrapper]) -> Tensor:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module | GraphModelWrapper) -> Tensor:
         if isinstance(model, GraphModelWrapper):
             model = model.model
         return Tensor(get_fused_bias_value(node, nncf_graph, model))

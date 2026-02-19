@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Union, cast
+from typing import Any, cast
 
 import networkx as nx  # type: ignore
 import torch
@@ -33,7 +33,7 @@ from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttri
 from nncf.torch.graph.graph import PTNNCFGraph
 
 
-def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
+def get_node_type(type: NodeType, meta: ConstMeta | FunctionMeta | InOutMeta) -> str:
     """
     Convert a given NodeType to its corresponding string representation.
 
@@ -53,7 +53,7 @@ def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     raise nncf.InternalError(msg)
 
 
-def get_name_of_node(meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
+def get_name_of_node(meta: ConstMeta | FunctionMeta | InOutMeta) -> str:
     """
     Get the name of a node based on its metadata.
 
@@ -82,7 +82,7 @@ def get_dtype(dtype: torch.dtype) -> Dtype:
     return Dtype.INTEGER
 
 
-def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> type[om.PTOperatorMetatype]:
+def get_meta_type(node_type: str, meta: ConstMeta | FunctionMeta | InOutMeta) -> type[om.PTOperatorMetatype]:
     """
     Converts the node type and metadata into a PTOperatorMetatype object.
     :param node_type: The type of the node.
@@ -145,7 +145,7 @@ def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> set[int]:
 
 
 def get_layer_attributes(
-    nx_graph: nx.MultiDiGraph, node: int, meta: Union[ConstMeta, FunctionMeta, InOutMeta]
+    nx_graph: nx.MultiDiGraph, node: int, meta: ConstMeta | FunctionMeta | InOutMeta
 ) -> BaseLayerAttributes | None:
     """
     Get the layer attributes of a node in the graph.

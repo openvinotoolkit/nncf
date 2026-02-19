@@ -15,7 +15,7 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Union
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -77,7 +77,7 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
 def measure_perplexity(
     optimum_model: OptimizedModel,
     max_length: int | None = None,
-    limit: Union[int, float] | None = None,
+    limit: int | float | None = None,
 ) -> float:
     """
     Measure perplexity on the Wikitext dataset, via rolling loglikelihoods for a given model.

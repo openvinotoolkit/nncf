@@ -18,7 +18,7 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
-from typing import Any, Union
+from typing import Any
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -263,8 +263,8 @@ class AdvancedQuantizationParameters:
     batchwise_statistics: bool | None = None
 
     # Advanced Quantization parameters
-    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] | None = None
-    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] | None = None
+    activations_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None
+    weights_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None
     quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     # Range estimator parameters

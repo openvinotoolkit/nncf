@@ -13,7 +13,7 @@ import copy
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
-from typing import Callable, Union
+from typing import Callable
 
 import numpy as np
 import openvino as ov
@@ -38,7 +38,7 @@ from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = list[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
-ReductionAxes = Union[int, tuple[int, ...]]
+ReductionAxes = int | tuple[int, ...]
 
 
 OV_MODEL_CACHE = ResultsCache()
@@ -248,7 +248,7 @@ def get_integer_quantization_model(
     scale_shape: tuple | None = None,
     zero_point_shape: tuple | None = None,
     reduction_axes: ReductionAxes | None = None,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     """
     Get a model that compresses weights using the given configuration.
 
@@ -285,7 +285,7 @@ def get_float_quantization_model(
     weight_shape: tuple,
     scale_shape: tuple | None = None,
     reduction_axes: ReductionAxes | None = None,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     """
     Get a model that compresses weights to float destination type using the given configuration.
 
@@ -434,7 +434,7 @@ def _build_integer_quantization_model(
     zero_point_shape: tuple | None = None,
     reduction_axes: ReductionAxes | None = None,
     return_nodes: bool = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     is_asym_mode = config.is_asym_mode
 
     default_input_dtypes = {
@@ -579,7 +579,7 @@ def _build_float_quantization_model(
     scale_shape: tuple | None = None,
     reduction_axes: ReductionAxes | None = None,
     return_nodes: bool = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
 
@@ -673,7 +673,7 @@ def _build_integer_quantize_dequantize_weight_model(
     reduction_axes: ReductionAxes | None = None,
     return_compressed_weight: bool | None = False,
     return_nodes: bool | None = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
         # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion
@@ -732,7 +732,7 @@ def _build_float_quantize_dequantize_weight_model(
     reduction_axes: ReductionAxes | None = None,
     return_compressed_weight: bool | None = False,
     return_nodes: bool | None = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
         # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion

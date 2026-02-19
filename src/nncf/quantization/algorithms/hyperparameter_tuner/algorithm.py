@@ -14,7 +14,7 @@ import dataclasses
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Iterable, Mapping, TypeVar, Union
+from typing import Any, Callable, Iterable, Mapping, TypeVar
 
 from nncf.common.factory import build_graph
 from nncf.common.graph.graph import NNCFGraph
@@ -221,7 +221,7 @@ class HyperparameterTuner:
         init_params: Mapping[str, Any],
         param_grids: list[dict[str, list[Any]]],
         calibration_dataset: Dataset,
-        validation_fn: Callable[[Any, Iterable[Any]], tuple[float, Union[None, list[float], list[list[TTensor]]]]],
+        validation_fn: Callable[[Any, Iterable[Any]], tuple[float, None | list[float] | list[list[TTensor]]]],
         subset_size: int,
         initial_metric_results: MetricResults,
         quantized_metric_results: MetricResults,

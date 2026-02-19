@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Union
+from typing import Any
 
 import torch
 import torch.fx
@@ -36,7 +36,7 @@ from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor.definitions import TensorDataType
 
-EdgeOrNode = Union[tuple[torch.fx.Node, torch.fx.Node]]
+EdgeOrNode = tuple[torch.fx.Node, torch.fx.Node]
 
 
 class TorchAOQuantizerAdapter(Quantizer):

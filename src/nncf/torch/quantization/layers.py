@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Iterable, Union
+from typing import Any, Iterable
 
 import numpy as np
 import torch
@@ -420,7 +420,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         self.enabled[0] = 0
         self.disable_gradients()
 
-    def forward(self, x: Union[torch.Tensor, tuple]):
+    def forward(self, x: torch.Tensor | tuple):
         """
         Method that unwraps return types if it is needed
         before actual quantization forward impl

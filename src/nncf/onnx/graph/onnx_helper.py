@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Any, Iterator, Union
+from typing import Any, Iterator
 
 import numpy as np
 import onnx
@@ -217,7 +217,7 @@ def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> n
     return numpy_helper.to_array(tensor, base_dir)
 
 
-def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[int]:
+def get_edge_shape(edge: onnx.ValueInfoProto | onnx.TensorProto) -> list[int]:
     """
     Returns edge shape.
 
@@ -245,7 +245,7 @@ def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[i
     return shape
 
 
-def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
+def get_edge_dtype(edge: onnx.ValueInfoProto | onnx.TensorProto) -> int:
     """
     Returns the data type of the edge.
 

@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar, Union
+from typing import TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -90,7 +90,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_sub_input_output_names(subgraph: TModel) -> tuple[Union[str, int], Union[str]]:
+    def get_sub_input_output_names(subgraph: TModel) -> tuple[str | int, str]:
         """
         Returns tuple of the subgraph's the input & output tensor names respectively.
 
@@ -102,7 +102,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @abstractmethod
     def create_input_data(
         shape: tuple[int], data: list[TTensor], input_name: str, channel_axis: int
-    ) -> Union[dict[str, TTensor], TTensor]:
+    ) -> dict[str, TTensor] | TTensor:
         """
         Creates input data for the bias shift calculation.
 
@@ -151,7 +151,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> Tensor:
+    def process_model_output(raw_data: OutputType, output_name: str | int) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 

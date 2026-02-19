@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Literal, Union
+from typing import Literal
 
 import torch
 
@@ -19,7 +19,7 @@ from nncf.tensor.functions import linalg
 @linalg.norm.register
 def _(
     a: torch.Tensor,
-    ord: Union[Literal["fro", "nuc"], float, None] = None,
+    ord: Literal["fro", "nuc"] | float | None = None,
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:

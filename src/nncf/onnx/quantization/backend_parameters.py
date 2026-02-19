@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
 
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -42,7 +41,7 @@ def is_weight_compression_needed(advanced_parameters: AdvancedQuantizationParame
 
 
 def get_external_data_dir(
-    advanced_parameters: Union[AdvancedQuantizationParameters, AdvancedCompressionParameters] | None,
+    advanced_parameters: AdvancedQuantizationParameters | AdvancedCompressionParameters | None,
 ) -> str | None:
     """
     Returns the value associated with the `BackendParameters.EXTERNAL_DATA_DIR` key from the backend parameters.

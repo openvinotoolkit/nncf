@@ -13,7 +13,6 @@ import os
 import re
 from functools import total_ordering
 from pathlib import Path
-from typing import Union
 
 import networkx as nx
 
@@ -98,10 +97,8 @@ def sort_dot(path):
         f.write(end_line)
 
 
-def _build_node_id_vs_attrs_dict(
-    nx_graph: nx.DiGraph, id_from_attr: bool = False
-) -> dict[Union[int, str], dict[str, str]]:
-    retval: dict[Union[int, str], dict[str, str]] = {}
+def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = False) -> dict[int | str, dict[str, str]]:
+    retval: dict[int | str, dict[str, str]] = {}
     for node_name, node_attrs in nx_graph.nodes.items():
         # When read a dot graph dumped by pydot the extra '\n' symbol appears as a graph node.
         # https://github.com/networkx/networkx/issues/5686
@@ -117,7 +114,7 @@ def _build_node_id_vs_attrs_dict(
 
 def _build_edge_vs_attrs_dict(
     nx_graph: nx.DiGraph, id_from_attr: bool = False
-) -> dict[tuple[Union[int, str], Union[int, str]], dict[str, str]]:
+) -> dict[tuple[int | str, int | str], dict[str, str]]:
     retval = {}
     for edge_tuple, edge_attrs in nx_graph.edges.items():
         from_node_name, to_node_name = edge_tuple

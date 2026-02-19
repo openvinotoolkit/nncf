@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from math import inf
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -302,7 +302,7 @@ class FastBiasCorrection(Algorithm):
     def _get_bias_shift(
         self,
         model: TModel,
-        input_blob: Union[TTensor, dict[str, TTensor]],
+        input_blob: TTensor | dict[str, TTensor],
         output_channel_axis: tuple[int],
         output_fp: list[TTensor],
         output_name: str,

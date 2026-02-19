@@ -18,7 +18,7 @@ from collections import defaultdict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
-from typing import Any, TypeVar, Union, cast
+from typing import Any, TypeVar, cast
 
 import nncf.tensor
 import nncf.tensor.functions as fns
@@ -362,7 +362,7 @@ class TensorCollector:
         self.reset()
         self.disable()
 
-    def create_statistics_container(self, config: dict[str, Any]) -> Union[TensorStatistic, dict[str, Any]]:
+    def create_statistics_container(self, config: dict[str, Any]) -> TensorStatistic | dict[str, Any]:
         """
         Returns a TensorStatistic instance with aggregated values.
 
@@ -379,7 +379,7 @@ class TensorCollector:
         """
         self._cached_statistics = None
 
-    def get_statistics(self) -> Union[TensorStatistic, dict[str, Any]]:
+    def get_statistics(self) -> TensorStatistic | dict[str, Any]:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.
@@ -545,7 +545,7 @@ class QuantileReducerBase(TensorReducerBase):
         self,
         axes: Axes | None = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
-        quantile: Union[list[float], tuple[float, ...]] | None = None,
+        quantile: list[float] | tuple[float, ...] | None = None,
         inplace: bool = False,
     ):
         super().__init__(axes, axes_mode, False)
@@ -582,7 +582,7 @@ class AbsQuantileReducer(QuantileReducerBase):
         self,
         axes: Axes | None = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
-        quantile: Union[list[float], tuple[float, ...]] | None = None,
+        quantile: list[float] | tuple[float, ...] | None = None,
         inplace: bool = False,
     ):
         quantile = (0.99,) if quantile is None else quantile

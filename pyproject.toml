@@ -121,7 +121,6 @@ ignore = [
     "SIM117",  # multiple-with-statements
     "SIM103",  # needless-bool
     "NPY002",  # numpy-legacy-random
-    "UP007",   # non-pep604-annotation-union
     "UP035",   # deprecated-import
     "D100",    # undocumented-public-module
     "D101",    # undocumented-public-class

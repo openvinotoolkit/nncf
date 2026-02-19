@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,7 +24,7 @@ T_NUMPY_ARRAY = NDArray[Any]
 @linalg.norm.register
 def _(
     a: T_NUMPY_ARRAY,
-    ord: Union[Literal["fro", "nuc"], float, None] = None,
+    ord: Literal["fro", "nuc"] | float | None = None,
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY_ARRAY:

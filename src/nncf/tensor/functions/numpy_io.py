@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -23,7 +23,7 @@ from nncf.tensor.functions import io as io
 from nncf.tensor.functions.numpy_numeric import validate_device
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore[type-arg]
+T_NUMPY = T_NUMPY_ARRAY | np.generic  # type: ignore[type-arg]
 
 
 def load_file(file_path: str, *, device: TensorDeviceType | None = None) -> dict[str, T_NUMPY_ARRAY]:

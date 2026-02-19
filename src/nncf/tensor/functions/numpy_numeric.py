@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Literal, Sequence, Union
+from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -27,7 +27,7 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore[type-arg]
+T_NUMPY = T_NUMPY_ARRAY | np.generic  # type: ignore[type-arg]
 
 DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -110,7 +110,7 @@ def _(a: T_NUMPY) -> TensorDataType:
 
 
 @numeric.repeat.register
-def _(a: T_NUMPY, repeats: Union[int, T_NUMPY_ARRAY], *, axis: int | None = None) -> T_NUMPY:
+def _(a: T_NUMPY, repeats: int | T_NUMPY_ARRAY, *, axis: int | None = None) -> T_NUMPY:
     return np.repeat(a, repeats=repeats, axis=axis)
 
 
@@ -132,7 +132,7 @@ def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
 @numeric.allclose.register
 def _(
     a: T_NUMPY,
-    b: Union[T_NUMPY, float],
+    b: T_NUMPY | float,
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
@@ -168,7 +168,7 @@ def _(a: T_NUMPY) -> bool:
 @numeric.isclose.register
 def _(
     a: T_NUMPY,
-    b: Union[T_NUMPY, float],
+    b: T_NUMPY | float,
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
@@ -177,12 +177,12 @@ def _(
 
 
 @numeric.maximum.register
-def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
+def _(x1: T_NUMPY, x2: T_NUMPY | float) -> T_NUMPY_ARRAY:
     return np.maximum(x1, x2)
 
 
 @numeric.minimum.register
-def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
+def _(x1: T_NUMPY, x2: T_NUMPY | float) -> T_NUMPY_ARRAY:
     return np.minimum(x1, x2)
 
 
@@ -194,8 +194,8 @@ def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
 @numeric.where.register
 def _(
     condition: T_NUMPY,
-    x: Union[T_NUMPY, float],
-    y: Union[T_NUMPY, float],
+    x: T_NUMPY | float,
+    y: T_NUMPY | float,
 ) -> T_NUMPY_ARRAY:
     return np.where(condition, x, y)
 
@@ -233,7 +233,7 @@ def _(x: T_NUMPY, axis: int = 0) -> list[T_NUMPY_ARRAY]:
 
 
 @numeric.moveaxis.register
-def _(a: T_NUMPY_ARRAY, source: Union[int, tuple[int, ...]], destination: Union[int, tuple[int, ...]]) -> T_NUMPY_ARRAY:
+def _(a: T_NUMPY_ARRAY, source: int | tuple[int, ...], destination: int | tuple[int, ...]) -> T_NUMPY_ARRAY:
     return np.moveaxis(a, source, destination)
 
 
@@ -268,14 +268,14 @@ def _(a: T_NUMPY, decimals: int = 0) -> T_NUMPY_ARRAY:
 
 
 @numeric.power.register
-def _(a: T_NUMPY, exponent: Union[T_NUMPY, float]) -> T_NUMPY:
+def _(a: T_NUMPY, exponent: T_NUMPY | float) -> T_NUMPY:
     return np.power(a, exponent)
 
 
 @numeric.quantile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, list[float], tuple[float, ...]],
+    q: float | list[float] | tuple[float, ...],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY:
@@ -285,7 +285,7 @@ def _(
 @numeric.percentile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, list[float]],
+    q: float | list[float],
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> T_NUMPY:
@@ -295,14 +295,14 @@ def _(
 
 
 @numeric._binary_op_nowarn.register
-def _(a: T_NUMPY, b: Union[T_NUMPY, float], operator_fn: Callable[..., Any]) -> T_NUMPY:
+def _(a: T_NUMPY, b: T_NUMPY | float, operator_fn: Callable[..., Any]) -> T_NUMPY:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(a, b)
 
 
 @numeric._binary_reverse_op_nowarn.register
-def _(a: T_NUMPY, b: Union[T_NUMPY, float], operator_fn: Callable[..., Any]) -> T_NUMPY:
+def _(a: T_NUMPY, b: T_NUMPY | float, operator_fn: Callable[..., Any]) -> T_NUMPY:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(b, a)
@@ -317,8 +317,8 @@ def _(a: T_NUMPY) -> TypeInfo:
 @numeric.clip.register
 def _(
     a: T_NUMPY,
-    a_min: Union[T_NUMPY, float],
-    a_max: Union[T_NUMPY, float],
+    a_min: T_NUMPY | float,
+    a_max: T_NUMPY | float,
 ) -> T_NUMPY:
     return np.clip(a, a_min, a_max)
 
@@ -344,7 +344,7 @@ def _(a: T_NUMPY, axis: int) -> T_NUMPY:
 
 
 @numeric.multiply.register
-def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
+def _(x1: T_NUMPY, x2: T_NUMPY | float) -> T_NUMPY_ARRAY:
     return np.multiply(x1, x2)
 
 
@@ -364,7 +364,7 @@ def _(a: T_NUMPY) -> int:
 
 
 @numeric.matmul.register
-def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
+def _(x1: T_NUMPY, x2: T_NUMPY | float) -> T_NUMPY_ARRAY:
     return np.matmul(x1, x2)
 
 
@@ -511,7 +511,7 @@ def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
 
 
 def tensor(
-    data: Union[TTensor, list[float]],
+    data: TTensor | list[float],
     *,
     dtype: TensorDataType | None = None,
     device: TensorDeviceType | None = None,

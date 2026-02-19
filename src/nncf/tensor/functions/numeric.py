@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Literal, Sequence, Union
+from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
 
@@ -67,7 +67,7 @@ def bincount(a: Tensor, *, weights: Tensor | None, minlength: int = 0) -> Tensor
 
 
 @tensor_dispatcher
-def squeeze(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None) -> Tensor:
+def squeeze(a: Tensor, axis: int | tuple[int, ...] | None = None) -> Tensor:
     """
     Remove axes of length one from a.
 
@@ -90,7 +90,7 @@ def flatten(a: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
-def max(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bool = False) -> Tensor:
+def max(a: Tensor, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -103,7 +103,7 @@ def max(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bo
 
 
 @tensor_dispatcher
-def min(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bool = False) -> Tensor:
+def min(a: Tensor, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -159,7 +159,7 @@ def dtype(a: Tensor) -> TensorDataType:
 
 
 @tensor_dispatcher
-def repeat(a: Tensor, repeats: Union[int, Tensor], *, axis: int | None = None) -> Tensor:
+def repeat(a: Tensor, repeats: int | Tensor, *, axis: int | None = None) -> Tensor:
     """
     Repeats elements of a tensor along a specified axis.
 
@@ -206,9 +206,7 @@ def all(a: Tensor, axis: T_AXIS = None) -> Tensor:
 
 
 @tensor_dispatcher
-def allclose(
-    a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
-) -> bool:
+def allclose(a: Tensor, b: Tensor | float, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
     """
     Returns True if two arrays are element-wise equal within a tolerance.
 
@@ -274,9 +272,7 @@ def isempty(a: Tensor) -> bool:
 
 
 @tensor_dispatcher
-def isclose(
-    a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
-) -> Tensor:
+def isclose(a: Tensor, b: Tensor | float, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> Tensor:
     """
     Returns a boolean array where two arrays are element-wise equal within a tolerance.
 
@@ -292,7 +288,7 @@ def isclose(
 
 
 @tensor_dispatcher
-def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+def maximum(x1: Tensor, x2: Tensor | float) -> Tensor:
     """
     Element-wise maximum of tensor elements.
 
@@ -303,7 +299,7 @@ def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
 
 
 @tensor_dispatcher
-def minimum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+def minimum(x1: Tensor, x2: Tensor | float) -> Tensor:
     """
     Element-wise minimum of tensor elements.
 
@@ -324,7 +320,7 @@ def ones_like(a: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
-def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -> Tensor:
+def where(condition: Tensor, x: Tensor | float, y: Tensor | float) -> Tensor:
     """
     Return elements chosen from x or y depending on condition.
 
@@ -399,7 +395,7 @@ def unstack(x: Tensor, axis: int = 0) -> list[Tensor]:
 
 
 @tensor_dispatcher
-def moveaxis(a: Tensor, source: Union[int, tuple[int, ...]], destination: Union[int, tuple[int, ...]]) -> Tensor:
+def moveaxis(a: Tensor, source: int | tuple[int, ...], destination: int | tuple[int, ...]) -> Tensor:
     """
     Move axes of an array to new positions.
 
@@ -458,7 +454,7 @@ def round(a: Tensor, decimals: int = 0) -> Tensor:
 
 
 @tensor_dispatcher
-def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
+def power(a: Tensor, exponent: Tensor | float) -> Tensor:
     """
     Takes the power of each element in input with exponent and returns a tensor with the result.
     Exponent can be either a single float number or a broadcastable Tensor. In case exponent is
@@ -474,7 +470,7 @@ def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
 @tensor_dispatcher
 def quantile(
     a: Tensor,
-    q: Union[float, list[float], tuple[float, ...]],
+    q: float | list[float] | tuple[float, ...],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> Tensor:
@@ -495,7 +491,7 @@ def quantile(
 @tensor_dispatcher
 def percentile(
     a: Tensor,
-    q: Union[float, list[float]],
+    q: float | list[float],
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> Tensor:
@@ -513,7 +509,7 @@ def percentile(
 
 
 @tensor_dispatcher
-def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable[..., Any]) -> Tensor:
+def _binary_op_nowarn(a: Tensor, b: Tensor | float, operator_fn: Callable[..., Any]) -> Tensor:
     """
     Applies a binary operation with disable warnings.
 
@@ -525,7 +521,7 @@ def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable[
 
 
 @tensor_dispatcher
-def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable[..., Any]) -> Tensor:
+def _binary_reverse_op_nowarn(a: Tensor, b: Tensor | float, operator_fn: Callable[..., Any]) -> Tensor:
     """
     Applies a binary reverse operation with disable warnings.
 
@@ -547,7 +543,7 @@ def finfo(a: Tensor) -> TypeInfo:
 
 
 @tensor_dispatcher
-def clip(a: Tensor, a_min: Union[Tensor, float], a_max: Union[Tensor, float]) -> Tensor:
+def clip(a: Tensor, a_min: Tensor | float, a_max: Tensor | float) -> Tensor:
     """
     Clips all elements in input into the range [ a_min, a_max ]
 
@@ -573,7 +569,7 @@ def as_tensor_like(a: Tensor, data: Any) -> Tensor:
 
 
 @tensor_dispatcher
-def item(a: Tensor) -> Union[int, float, bool]:
+def item(a: Tensor) -> int | float | bool:
     """
     Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
 
@@ -596,7 +592,7 @@ def cumsum(a: Tensor, axis: int) -> Tensor:
 
 
 @tensor_dispatcher
-def sum(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bool = False) -> Tensor:
+def sum(a: Tensor, axis: int | tuple[int, ...] | None = None, keepdims: bool = False) -> Tensor:
     """
     Sum of tensor elements over a given axis.
 
@@ -610,7 +606,7 @@ def sum(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bo
 
 
 @tensor_dispatcher
-def multiply(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+def multiply(x1: Tensor, x2: Tensor | float) -> Tensor:
     """
     Multiply arguments element-wise.
 
@@ -621,7 +617,7 @@ def multiply(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
 
 
 @tensor_dispatcher
-def var(a: Tensor, axis: Union[int, tuple[int, ...]] | None = None, keepdims: bool = False, ddof: int = 0) -> Tensor:
+def var(a: Tensor, axis: int | tuple[int, ...] | None = None, keepdims: bool = False, ddof: int = 0) -> Tensor:
     """
     Compute the variance along the specified axis.
 
@@ -647,7 +643,7 @@ def size(a: Tensor) -> int:
 
 
 @tensor_dispatcher
-def matmul(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+def matmul(x1: Tensor, x2: Tensor | float) -> Tensor:
     """
     Matrix multiplication.
 
@@ -930,7 +926,7 @@ def ceil(a: Tensor) -> Tensor:
 
 
 def tensor(
-    data: Union[TTensor, Sequence[float]],
+    data: TTensor | Sequence[float],
     *,
     backend: TensorBackend,
     dtype: TensorDataType | None = None,

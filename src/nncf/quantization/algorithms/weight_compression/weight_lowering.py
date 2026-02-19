@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Union
 
 import nncf
 from nncf.common.logging.logger import nncf_logger
@@ -34,7 +33,7 @@ from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 
-ReductionAxes = Union[int, tuple[int, ...]]
+ReductionAxes = int | tuple[int, ...]
 
 
 def get_reduction_channel_size(weight_shape: tuple[int, ...], reduction_axes: ReductionAxes) -> tuple[int, int]:
@@ -206,7 +205,7 @@ def float_quantize_dequantize_weight(
     reduction_axes: ReductionAxes | None = None,
     precomputed_scale: Tensor | None = None,
     return_compressed_weight: bool | None = False,
-) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
+) -> Tensor | tuple[Tensor, Tensor, Tensor]:
     """
     First quantizes the given weight tensor to float dtype and then dequantizes it back to obtain float32 values.
 
@@ -478,7 +477,7 @@ def integer_quantize_dequantize_weight(
     precomputed_scale: Tensor | None = None,
     precomputed_zero_point: Tensor | None = None,
     return_compressed_weight: bool | None = False,
-) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
+) -> Tensor | tuple[Tensor, Tensor, Tensor, Tensor]:
     """
     First quantizes the given weight tensor to integer dtype and then dequantizes it back to obtain float32 values.
 

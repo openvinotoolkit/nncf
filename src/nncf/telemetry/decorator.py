@@ -10,7 +10,7 @@
 # limitations under the License.
 import functools
 import inspect
-from typing import Any, Callable, TypeVar, Union
+from typing import Any, Callable, TypeVar
 
 from nncf.telemetry.events import MODEL_BASED_CATEGORY
 from nncf.telemetry.events import get_current_category
@@ -31,7 +31,7 @@ class tracked_function:
     function execution. The category of the session and events will be determined by parameters to the decorator.
     """
 
-    def __init__(self, category: str = None, extractors: list[Union[str, TelemetryExtractor]] | None = None) -> None:
+    def __init__(self, category: str = None, extractors: list[str | TelemetryExtractor] | None = None) -> None:
         """
         :param category: A category to be attributed to the events. If set to None, no events will be sent.
         :param extractors: Add argument names in this list as string values to send an event with an "action" equal to
