@@ -269,8 +269,6 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
     @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
-    @pytest.mark.parametrize("is_moe", [False, True])
-    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
     def test_scale_estimation(
         self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
     ):
@@ -330,6 +328,46 @@ class TemplateWeightCompression(ABC):
     @abstractmethod
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
+
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a, transpose_a_supported):
+        """Checks that act_ch_axis parameter is passed to calculate_quantization_params."""
+        if transpose_a and not transpose_a_supported:
+            msg = "Transpose a is not supported for the current backend"
+            pytest.skip(msg)
+
+        calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
+
+        model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
+        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+        input = self.to_tensor(input)
+        dataset = Dataset([input], self.get_transform_func())
+
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=8,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
+
+        # Verify calculate_quantization_params was called
+        assert calc_q_params_spy.call_count > 0, "calculate_quantization_params should be called"
+
+        # Get the call arguments - act_ch_axis is the 5th positional argument (index 4)
+        # Signature: calculate_quantization_params(statistics, weight, reduction_axes, config, act_ch_axis, ...)
+        call_args = calc_q_params_spy.call_args[0]
+        assert len(call_args) >= 5, "calculate_quantization_params should have at least 5 positional arguments"
+
+        # Verify act_ch_axis has a valid value (should be an integer)
+        act_ch_axis = call_args[4]
+        if transpose_a:
+            assert act_ch_axis < 2
+        else:
+            assert act_ch_axis == 2
 
     def test_scale_estimation_outlier_channel_has_lowest_error(self, mocker):
         """Checks that outlier channel has a lowest error after quantization."""

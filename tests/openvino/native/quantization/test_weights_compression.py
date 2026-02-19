@@ -2460,9 +2460,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             ),
         )[check_sampling_activation_stats_flow]
 
-    @pytest.mark.parametrize("transpose_a", [False, True])
     @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
-    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
     def test_scale_estimation(
         self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
     ):

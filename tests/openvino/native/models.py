@@ -821,7 +821,7 @@ class SequentialMatmulModel(OVReferenceModel):
 
     def _create_ov_model(self, mm_hidden_dim=4, transpose_a: bool = False):
         # Make 2d inputs for transposed model
-        # to allign with onnx ref model
+        # to align with onnx ref model
         if transpose_a:
             input_node = opset.parameter([4, mm_hidden_dim], name="Input_1")
             last_node = opset.transpose(input_node, input_order=[1, 0])
