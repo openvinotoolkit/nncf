@@ -213,9 +213,7 @@ class TemplateWeightCompression(ABC):
         ),
     )
     @pytest.mark.parametrize("transpose_a", (False, True))
-    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, transpose_a_supported, mocker):
-        if transpose_a and not transpose_a_supported:
-            pytest.skip("transpose_a is not supported for the current backend")
+    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, mocker):
         model = self.get_sequential_matmul_model(transpose_a=transpose_a)
         input_shape = (4, 4) if transpose_a else (1, 4, 4)
         first = self.to_tensor(np.ones(input_shape, dtype=np.float32))
@@ -269,14 +267,8 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
     @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
-    def test_scale_estimation(
-        self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
-    ):
+    def test_scale_estimation(self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
-        if transpose_a and not transpose_a_supported:
-            msg = "Transpose a is not supported for the current backend"
-            pytest.skip(msg)
-
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         if is_moe:
@@ -330,12 +322,8 @@ class TemplateWeightCompression(ABC):
         """Returns decompressed weight"""
 
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
-    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a, transpose_a_supported):
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a):
         """Checks that act_ch_axis parameter is passed to calculate_quantization_params."""
-        if transpose_a and not transpose_a_supported:
-            msg = "Transpose a is not supported for the current backend"
-            pytest.skip(msg)
-
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
@@ -539,11 +527,6 @@ class TemplateWeightCompression(ABC):
     def test_awq_scale_ref() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    @abstractmethod
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        """True if backend supports tranpose for MM activations, False otherwise"""
-
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
     @pytest.mark.parametrize("is_3d_weights", [True, False])
@@ -552,17 +535,12 @@ class TemplateWeightCompression(ABC):
         non_mergable_pattern,
         transpose_a,
         test_awq_scale_ref,
-        transpose_a_supported,
         is_3d_weights,
         monkeypatch,
         mocker,
     ):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
         if transpose_a:
-            if not transpose_a_supported:
-                msg = "Transpose a is not supported for the current backend"
-                pytest.skip(msg)
-
             INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
             model = self.get_transposable_awq_model(
                 transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
@@ -855,9 +833,7 @@ class TemplateWeightCompression(ABC):
             ),
         ],
     )
-    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
-        if not transpose_a_supported:
-            pytest.skip("transpose_a is not supported for the current backend")
+    def test_compression_skipped_with_transposed_activations(self, kwargs):
         if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
             pytest.skip("GPTQ is not supported")
         if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():

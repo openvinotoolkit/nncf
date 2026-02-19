@@ -2461,12 +2461,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         )[check_sampling_activation_stats_flow]
 
     @pytest.mark.parametrize("is_moe", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))])
-    def test_scale_estimation(
-        self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
-    ):
-        return super().test_scale_estimation(
-            mocker, transpose_a, is_moe, check_sampling_activation_stats_flow, transpose_a_supported
-        )
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
+    def test_scale_estimation(self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow):
+        return super().test_scale_estimation(mocker, transpose_a, is_moe, check_sampling_activation_stats_flow)
 
     @pytest.mark.parametrize(
         "is_3d_weights", [False, pytest.param(True, marks=pytest.mark.xfail(reason="Ticket - 176465"))]
@@ -2484,7 +2482,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         non_mergable_pattern,
         transpose_a,
         test_awq_scale_ref,
-        transpose_a_supported,
         is_3d_weights,
         monkeypatch,
         mocker,
@@ -2493,7 +2490,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             non_mergable_pattern,
             transpose_a,
             test_awq_scale_ref,
-            transpose_a_supported,
             is_3d_weights,
             monkeypatch,
             mocker,
@@ -2668,7 +2664,3 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                 ),
             },
         ]
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return True
