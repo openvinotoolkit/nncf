@@ -14,7 +14,7 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 import torch
@@ -29,9 +29,9 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_per_channel_scale_shape
 from nncf.torch.quantization.reference import ReferenceBackendType
 from nncf.torch.quantization.reference import ReferenceQuantize
-from tools.benchmark import run_profile
-from tools.benchmark import run_wall
-from tools.benchmark import run_worker
+from tools.other.benchmark import run_profile
+from tools.other.benchmark import run_wall
+from tools.other.benchmark import run_worker
 
 TIME_SCALES = {"ms": 1000}
 NBITS = 8
@@ -160,7 +160,7 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
         scale_shape: tuple[int, ...],
         num_bits: int = 8,
         mode: QuantizationMode = QuantizationMode.SYMMETRIC,
-        signedness_to_force: Optional[bool] = None,
+        signedness_to_force: bool | None = None,
         narrow_range: bool = False,
         half_range: bool = False,
         logarithm_scale: bool = None,

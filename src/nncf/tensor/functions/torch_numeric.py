@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Literal, Optional, Sequence, Union
+from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
 import torch
@@ -45,11 +45,11 @@ DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
 
 
-def convert_to_torch_device(device: Optional[TensorDeviceType]) -> Optional[str]:
+def convert_to_torch_device(device: TensorDeviceType | None) -> str | None:
     return DEVICE_MAP[device] if device is not None else None
 
 
-def convert_to_torch_dtype(dtype: Optional[TensorDataType]) -> Optional[torch.dtype]:
+def convert_to_torch_dtype(dtype: TensorDataType | None) -> torch.dtype | None:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
@@ -64,7 +64,7 @@ def _(a: torch.Tensor) -> TensorBackend:
 
 
 @numeric.bincount.register
-def _(a: torch.Tensor, *, weights: Optional[torch.Tensor], minlength: int = 0) -> torch.Tensor:
+def _(a: torch.Tensor, *, weights: torch.Tensor | None, minlength: int = 0) -> torch.Tensor:
     return torch.bincount(input=a, weights=weights, minlength=minlength)
 
 
@@ -121,7 +121,7 @@ def _(a: torch.Tensor) -> TensorDataType:
 
 
 @numeric.repeat.register
-def _(a: torch.Tensor, repeats: Union[int, torch.Tensor], *, axis: Optional[int] = None) -> torch.Tensor:
+def _(a: torch.Tensor, repeats: int | torch.Tensor, *, axis: int | None = None) -> torch.Tensor:
     return torch.repeat_interleave(a, repeats=repeats, dim=axis)
 
 
@@ -144,7 +144,7 @@ def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
 
 @numeric.allclose.register
 def _(
-    a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
+    a: torch.Tensor, b: torch.Tensor | float, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> bool:
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device)
@@ -168,7 +168,7 @@ def _(
     a: torch.Tensor,
     bins: int,
     *,
-    range: Optional[tuple[float, float]] = None,
+    range: tuple[float, float] | None = None,
 ) -> torch.Tensor:
     if range is None:
         return torch.histc(input=a, bins=bins)
@@ -182,7 +182,7 @@ def _(a: torch.Tensor) -> bool:
 
 @numeric.isclose.register
 def _(
-    a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
+    a: torch.Tensor, b: torch.Tensor | float, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> torch.Tensor:
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device, dtype=a.dtype)
@@ -190,14 +190,14 @@ def _(
 
 
 @numeric.maximum.register
-def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
+def _(x1: torch.Tensor, x2: torch.Tensor | float) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.maximum(x1, x2)
 
 
 @numeric.minimum.register
-def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
+def _(x1: torch.Tensor, x2: torch.Tensor | float) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.minimum(x1, x2)
@@ -209,10 +209,15 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 
 @numeric.where.register
-def _(
-    condition: torch.Tensor, x: Union[torch.Tensor, float, bool], y: Union[torch.Tensor, float, bool]
-) -> torch.Tensor:
+def _(condition: torch.Tensor, x: torch.Tensor | float | bool, y: torch.Tensor | float | bool) -> torch.Tensor:
     return torch.where(condition, x, y)
+
+
+@numeric.nonzero.register
+def _(
+    condition: torch.Tensor,
+) -> tuple[torch.Tensor, ...]:
+    return torch.nonzero(condition, as_tuple=True)
 
 
 @numeric.zeros_like.register
@@ -249,7 +254,7 @@ def _(
     a: torch.Tensor,
     axis: T_AXIS = None,
     keepdims: bool = False,
-    dtype: Optional[TensorDataType] = None,
+    dtype: TensorDataType | None = None,
 ) -> torch.Tensor:
     pt_dtype = convert_to_torch_dtype(dtype)
     return torch.mean(a, dim=axis, keepdim=keepdims, dtype=pt_dtype)
@@ -280,14 +285,14 @@ def _(a: torch.Tensor, decimals: int = 0) -> torch.Tensor:
 
 
 @numeric.power.register
-def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
+def _(a: torch.Tensor, exponent: torch.Tensor | float) -> torch.Tensor:
     return torch.pow(a, exponent=exponent)
 
 
 @numeric.quantile.register
 def quantile(
     a: torch.Tensor,
-    q: Union[float, list[float], tuple[float, ...]],
+    q: float | list[float] | tuple[float, ...],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -309,7 +314,7 @@ def quantile(
 @numeric.percentile.register
 def _(
     a: torch.Tensor,
-    q: Union[float, list[float]],
+    q: float | list[float],
     axis: T_AXIS,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -318,17 +323,17 @@ def _(
 
 
 @numeric._binary_op_nowarn.register
-def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable[..., Any]) -> torch.Tensor:
+def _(a: torch.Tensor, b: torch.Tensor | float, operator_fn: Callable[..., Any]) -> torch.Tensor:
     return operator_fn(a, b)
 
 
 @numeric._binary_reverse_op_nowarn.register
-def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable[..., Any]) -> torch.Tensor:
+def _(a: torch.Tensor, b: torch.Tensor | float, operator_fn: Callable[..., Any]) -> torch.Tensor:
     return operator_fn(b, a)
 
 
 @numeric.clip.register
-def _(a: torch.Tensor, a_min: Union[torch.Tensor, float], a_max: Union[torch.Tensor, float]) -> torch.Tensor:
+def _(a: torch.Tensor, a_min: torch.Tensor | float, a_max: torch.Tensor | float) -> torch.Tensor:
     return torch.clip(a, a_min, a_max)  # type: ignore[arg-type]
 
 
@@ -348,18 +353,18 @@ def _(a: torch.Tensor) -> T_NUMBER:
     return a.item()
 
 
-@numeric.cumsum.register
-def _(a: torch.Tensor, axis: int) -> torch.Tensor:
-    return torch.cumsum(a, dim=axis)
-
-
 @numeric.sum.register
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     return torch.sum(a, dim=axis, keepdim=keepdims)
 
 
+@numeric.cumsum.register
+def _(a: torch.Tensor, axis: int) -> torch.Tensor:
+    return torch.cumsum(a, dim=axis)
+
+
 @numeric.multiply.register
-def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
+def _(x1: torch.Tensor, x2: torch.Tensor | float) -> torch.Tensor:
     return torch.multiply(x1, x2)
 
 
@@ -384,7 +389,7 @@ def _(a: torch.Tensor, axis: int) -> torch.Tensor:
 
 
 @numeric.transpose.register
-def _(a: torch.Tensor, axes: Optional[T_SHAPE_ARRAY] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axes: T_SHAPE_ARRAY | None = None) -> torch.Tensor:
     if axes is None:
         return a.t()
     return torch.permute(a, axes)
@@ -393,6 +398,11 @@ def _(a: torch.Tensor, axes: Optional[T_SHAPE_ARRAY] = None) -> torch.Tensor:
 @numeric.argsort.register
 def _(a: torch.Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> torch.Tensor:
     return torch.argsort(a, dim=axis, descending=descending, stable=stable)
+
+
+@numeric.argmin.register
+def _(a: torch.Tensor, axis: int = -1) -> torch.Tensor:
+    return torch.argmin(a, dim=axis)
 
 
 @numeric.diag.register
@@ -406,7 +416,7 @@ def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
 
 
 @numeric.masked_mean.register
-def _(x: torch.Tensor, mask: Optional[torch.Tensor], axis: T_AXIS, keepdims: bool = False) -> torch.Tensor:
+def _(x: torch.Tensor, mask: torch.Tensor | None, axis: T_AXIS, keepdims: bool = False) -> torch.Tensor:
     if mask is None:
         return torch.mean(x, dim=axis, keepdim=keepdims)
     masked_x = x.masked_fill(mask, torch.nan)
@@ -415,7 +425,7 @@ def _(x: torch.Tensor, mask: Optional[torch.Tensor], axis: T_AXIS, keepdims: boo
 
 
 @numeric.masked_median.register
-def _(x: torch.Tensor, mask: Optional[torch.Tensor], axis: T_AXIS, keepdims: bool = False) -> torch.Tensor:
+def _(x: torch.Tensor, mask: torch.Tensor | None, axis: T_AXIS, keepdims: bool = False) -> torch.Tensor:
     if mask is None:
         return median(x, axis=axis, keepdims=keepdims)
 
@@ -465,7 +475,7 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 @numeric.searchsorted.register
 def _(
-    a: torch.Tensor, v: torch.Tensor, side: Literal["left", "right"] = "left", sorter: Optional[torch.Tensor] = None
+    a: torch.Tensor, v: torch.Tensor, side: Literal["left", "right"] = "left", sorter: torch.Tensor | None = None
 ) -> torch.Tensor:
     if side not in ["right", "left"]:
         msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
@@ -479,8 +489,8 @@ def _(
 def zeros(
     shape: tuple[int, ...],
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> torch.Tensor:
     pt_device = convert_to_torch_device(device)
     pt_dtype = convert_to_torch_dtype(dtype)
@@ -489,10 +499,10 @@ def zeros(
 
 def eye(
     n: int,
-    m: Optional[int] = None,
+    m: int | None = None,
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> torch.Tensor:
     pt_device = convert_to_torch_device(device)
     pt_dtype = convert_to_torch_dtype(dtype)
@@ -505,8 +515,8 @@ def linspace(
     end: float,
     num: int,
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> torch.Tensor:
     pt_device = convert_to_torch_device(device)
     pt_dtype = convert_to_torch_dtype(dtype)
@@ -518,8 +528,8 @@ def arange(
     end: float,
     step: float,
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> torch.Tensor:
     pt_device = convert_to_torch_device(device)
     pt_dtype = convert_to_torch_dtype(dtype)
@@ -541,10 +551,10 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 
 def tensor(
-    data: Union[TTensor, Sequence[float]],
+    data: TTensor | Sequence[float],
     *,
-    dtype: Optional[TensorDataType] = None,
-    device: Optional[TensorDeviceType] = None,
+    dtype: TensorDataType | None = None,
+    device: TensorDeviceType | None = None,
 ) -> torch.Tensor:
     pt_device = convert_to_torch_device(device)
     pt_dtype = convert_to_torch_dtype(dtype)

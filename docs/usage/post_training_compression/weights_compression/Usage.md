@@ -27,21 +27,27 @@ By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_AS
 
 | Compression Mode | Element type | Scale type | Granularity              | Description                |
 |------------------|--------------|------------|--------------------------|----------------------------|
-| INT8_ASYM        | INT8         | FP16       | Per-channel              | [Asymmetric quantization](/docs/usage/training_time_compression/Quantization.md#asymmetric-quantization) |
-| INT8_SYM         | INT8         | FP16       | Per-channel              | [Symmetric quantization](/docs/usage/training_time_compression/Quantization.md#symmetric-quantization) |
+| INT8_ASYM        | INT8         | FP16       | Per-channel              | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
+| INT8_SYM         | INT8         | FP16       | Per-channel              | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
 
 #### Mixed precision modes
 
-Mixed precision modes offer higher compression rates leading to faster inference, though potentially with greater accuracy loss. These modes utilize two precision types: **primary** and **backup**. The primary precision is determined by the compression mode, while backup precision refers to a higher precision format (default is INT8_ASYM, configurable via the `backup_mode` parameter).
+Mixed precision modes offer higher compression rates leading to faster inference, though potentially with greater accuracy loss. These modes utilize two precision types: **primary** and **backup**. The primary precision is determined by the compression mode, while backup precision refers to a higher precision format, configurable via the `backup_mode` parameter.
 
 By default, NNCF assigns backup precision to **special** quantization-sensitive layers: embeddings, convolutions, and the last linear layer. To compress these special layers using primary precision instead, set `all_layers=True`.
+
+Default backup precision:
+
+- **MXFP8** for **MXFP4** and **MXFP8** primary compression modes, with `group_size=32`.
+- **FP8** for **FP4** and **FP8** primary compression modes, the same `group_size` as the primary precision.
+- For all other compression modes, **INT8_ASYM** is used as the default backup precision, with `group_size=-1`.
 
 NNCF can automatically distribute precision assignments based on quantization sensitivity using the `ratio` parameter. For example, with `ratio=0.9`, layers (excluding special ones) accounting for 90% of model weights receive primary precision, while the remaining layers use backup precision. This distribution minimizes overall quality deterioration by prioritizing less sensitive layers for lower precision.
 
 | Compression Mode | Element type | Scale type | Granularity              | Description |
 |------------------|--------------|------------|--------------------------|-------------|
-| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | [Symmetric quantization](/docs/usage/training_time_compression/Quantization.md#symmetric-quantization) |
-| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | [Asymmetric quantization](/docs/usage/training_time_compression/Quantization.md#asymmetric-quantization) |
+| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | NF4              | FP32         | FP16       | Per-channel / Group-wise | [NormalFloat-4](https://arxiv.org/pdf/2305.14314v1.pdf) lookup table with 16 FP32 values |
 | CODEBOOK         | Any          | FP16       | Per-channel / Group-wise | Arbitrary lookup table (codebook) |
 | CB4              | E4M3         | FP16       | Per-channel / Group-wise | A fixed lookup table with 16 E4M3 values based on NF4 values |

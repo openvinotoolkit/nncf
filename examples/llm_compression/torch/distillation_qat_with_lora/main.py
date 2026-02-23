@@ -15,7 +15,7 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 from pprint import pprint
-from typing import Any, Optional, Union
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -34,7 +34,6 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
-import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat
@@ -61,7 +60,7 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
     :param device: Device to move the tensors to (e.g., 'cpu' or 'cuda').
     :return: A list of tensors containing the tokenized text samples.
     """
-    traindata = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
+    traindata = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train")
     limit = num_samples * seqlen // 4  # ~1k for 128 samples with seqlen=32 to be aligned with optimum
     text = "".join([" \n" if s == "" else s for s in traindata["text"][:limit]])
     trainenc = tokenizer(text, return_tensors="pt")
@@ -77,8 +76,8 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
 
 def measure_perplexity(
     optimum_model: OptimizedModel,
-    max_length: Optional[int] = None,
-    limit: Optional[Union[int, float]] = None,
+    max_length: int | None = None,
+    limit: int | float | None = None,
 ) -> float:
     """
     Measure perplexity on the Wikitext dataset, via rolling loglikelihoods for a given model.

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Optional, Union
 
 import nncf
 from nncf.common.logging.logger import nncf_logger
@@ -34,7 +33,7 @@ from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 
-ReductionAxes = Union[int, tuple[int, ...]]
+ReductionAxes = int | tuple[int, ...]
 
 
 def get_reduction_channel_size(weight_shape: tuple[int, ...], reduction_axes: ReductionAxes) -> tuple[int, int]:
@@ -82,7 +81,7 @@ def reshape_weight_for_grouped_quantization(
 
 
 def calculate_float_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, signed: bool = False
 ) -> Tensor:
     """
     Calculates the scale for nf4 or mxfp8_e4m3/mxfp4/fp8_e4m3/fp4 quantization.
@@ -90,6 +89,7 @@ def calculate_float_quantization_params(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
     :param config: Weight compression configuration.
+    :param signed: Whether to use signed scale for quantization.
     :return: Scale tensor of float32 type for float quantization.
     """
     assert not config.is_integer
@@ -97,7 +97,12 @@ def calculate_float_quantization_params(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
+    if signed:
+        scale_neg = fns.min(weight, axis=reduction_axes, keepdims=True)
+        scale_pos = fns.max(weight, axis=reduction_axes, keepdims=True)
+        scale = fns.where(fns.abs(scale_neg) >= fns.abs(scale_pos), scale_neg, scale_pos)
+    else:
+        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)
     if config.mode != CompressWeightsMode.NF4:
         if config.compression_dtype in FP_MAX_VALUES:
             max_val = FP_MAX_VALUES[config.compression_dtype]
@@ -141,9 +146,9 @@ def do_float_dequantization(compressed_weight: Tensor, scale: Tensor, reduction_
 def do_float_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-) -> tuple[Tensor, Tensor, Optional[Tensor]]:
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+) -> tuple[Tensor, Tensor, Tensor | None]:
     """
     Computes quantization scale if not provided and performs corresponding weight quantization.
     NF4 format uses 16 levels in [-1, 1] range, MXFP4 uses 16 levels in [-6, 6], and MXFP8_E4M3 uses 256 levels
@@ -197,10 +202,10 @@ def do_float_quantization(
 def float_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-    return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+    return_compressed_weight: bool | None = False,
+) -> Tensor | tuple[Tensor, Tensor, Tensor]:
     """
     First quantizes the given weight tensor to float dtype and then dequantizes it back to obtain float32 values.
 
@@ -340,6 +345,13 @@ def compress_weight(
     )
 
     if not config.is_integer:
+        if (
+            precomputed_compressed_weight is not None
+            and precomputed_compressed_weight.tensor is not None
+            and precomputed_compressed_weight.codebook is not None
+        ):
+            return precomputed_compressed_weight
+
         compressed_weight, scale, indexes = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
         if indexes is not None:
             return CompressedWeight(
@@ -374,7 +386,7 @@ def ungroup_weights(weights: Tensor, reduction_axis: int) -> Tensor:
 
 
 def do_integer_dequantization(
-    compressed_weights: Tensor, scale: Tensor, zero_point: Optional[Tensor] = None, reduction_axis: int = -1
+    compressed_weights: Tensor, scale: Tensor, zero_point: Tensor | None = None, reduction_axis: int = -1
 ) -> Tensor:
     """
     The method dequantizes the given integer weights to float point data type in accordance with the scale and
@@ -401,7 +413,7 @@ def do_integer_dequantization(
 def do_integer_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
+    reduction_axes: ReductionAxes | None = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
 ) -> tuple[Tensor, Tensor, Tensor]:
@@ -461,11 +473,11 @@ def do_integer_quantization(
 def integer_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-    precomputed_zero_point: Optional[Tensor] = None,
-    return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+    precomputed_zero_point: Tensor | None = None,
+    return_compressed_weight: bool | None = False,
+) -> Tensor | tuple[Tensor, Tensor, Tensor, Tensor]:
     """
     First quantizes the given weight tensor to integer dtype and then dequantizes it back to obtain float32 values.
 
@@ -606,7 +618,7 @@ def _calculate_integer_quantized_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
     scale: Tensor,
-    zero_point: Optional[Tensor] = None,
+    zero_point: Tensor | None = None,
 ) -> Tensor:
     """
     Quantizes the weight tensor using the provided scale and zero point.

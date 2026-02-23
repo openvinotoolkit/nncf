@@ -22,8 +22,6 @@ from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
-import nncf.common
-import nncf.common.factory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode

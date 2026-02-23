@@ -1,11 +1,11 @@
 -c ../../constraints.txt
 onnx
 onnxruntime
+onnx-ir
 onnxscript
 openvino
 pytest
 pytest-cov
-pytest-dependency
 pytest-mock
 pytest-xdist
 torch

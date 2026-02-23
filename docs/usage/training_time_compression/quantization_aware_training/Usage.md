@@ -3,7 +3,7 @@
 This is a step-by-step tutorial on how to integrate the NNCF package into the existing PyTorch projects.
 The use case implies that the user already has a training pipeline that reproduces training of the model in the floating point precision and pretrained model.
 The task is to prepare this model for accelerated inference by simulating the compression at train time.
-Please refer to this [document](/docs/usage/training_time_compression/Quantization.md) for details of the implementation.
+Please refer to this [document](/docs/usage/Quantization.md) for details of the implementation.
 
 ## Basic usage
 
@@ -47,7 +47,7 @@ The quantized model saving allows to load quantized modules to the target model 
 requires only example input for the target module, corresponding NNCF config and the quantized model state dict.
 
 ```python
-import nncf.torch
+import nncf
 
 # save part
 quantized_model = nncf.quantize(model, calibration_dataset)
@@ -69,27 +69,6 @@ quantized_model.load_state_dict(state_dict)
 ```
 
 You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods.
-
-## Advanced usage
-
-### Compression of custom modules
-
-With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`.
-If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
-
-```python
-import nncf
-
-@nncf.register_module(ignored_algorithms=[...])
-class MyModule(torch.nn.Module):
-    def __init__(self, ...):
-        self.weight = torch.nn.Parameter(...)
-    # ...
-```
-
-If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
-
-In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
 
 ## Examples
 

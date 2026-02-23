@@ -14,7 +14,7 @@ from collections import deque
 from dataclasses import dataclass
 from functools import partial
 from itertools import product
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator
 
 import numpy as np
 import pytest
@@ -66,7 +66,7 @@ default_test_quantile = 0.1
 
 @dataclass
 class OfflineAggregatorTestCase:
-    aggregation_axes: Optional[AggregationAxes]
+    aggregation_axes: AggregationAxes | None
     min_ref: np.ndarray
     max_ref: np.ndarray
 
@@ -155,7 +155,7 @@ def default_test_median_no_outlier(aggregation_axes):
 
 class TemplateTestReducersAggregators:
     @abstractmethod
-    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+    def get_nncf_tensor(self, x: np.array, dtype: Dtype | None = None):
         pass
 
     @pytest.fixture
@@ -173,7 +173,7 @@ class TemplateTestReducersAggregators:
         pass
 
     @abstractmethod
-    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: tuple[int] | None = None):
         pass
 
     @abstractmethod

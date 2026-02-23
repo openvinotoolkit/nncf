@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, TypeVar, Union
+from typing import TypeVar
 
 import numpy as np
 
@@ -82,8 +82,8 @@ class BiasCorrectionAlgoBackend(ABC):
     def mean_statistic_collector(
         channel_axis: int,
         inplace: bool,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ) -> TensorCollector:
         """
         Returns backend-specific mean statistic collector.
@@ -97,7 +97,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
+    def raw_statistic_collector(num_samples: int | None = None) -> TensorCollector:
         """
         Returns backend-specific raw statistic collector.
         This statistic collector is used for raw data calculation, without aggregating.
@@ -108,7 +108,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> Tensor:
+    def process_model_output(raw_data: OutputType, output_name: str | int) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 

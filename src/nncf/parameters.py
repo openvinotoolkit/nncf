@@ -95,6 +95,7 @@ class CompressWeightsMode(StrEnum):
     :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
     :param FP4: A FP4 format with E2M1 values sharing group-level fp16 scale.
     :param CODEBOOK: Codebook (LUT) quantization format.
+    :param ADAPTIVE_CODEBOOK: Adaptive codebook (LUT) quantization format.
     :param CB4: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
     """
 
@@ -110,6 +111,7 @@ class CompressWeightsMode(StrEnum):
     FP8_E4M3 = "fp8_e4m3"
     FP4 = "fp4"
     CODEBOOK = "codebook"
+    ADAPTIVE_CODEBOOK = "adaptive_codebook"
 
 
 @api(canonical_alias="nncf.CompressionFormat")
@@ -168,11 +170,15 @@ class BackupMode(StrEnum):
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
     :param INT8_ASYM: Stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
+    :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
+    :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
     """
 
     NONE = "none"
     INT8_SYM = "int8_sym"
     INT8_ASYM = "int8_asym"
+    MXFP8_E4M3 = "mxfp8_e4m3"
+    FP8_E4M3 = "fp8_e4m3"
 
 
 @api(canonical_alias="nncf.SensitivityMetric")

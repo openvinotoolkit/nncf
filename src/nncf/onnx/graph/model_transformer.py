@@ -10,7 +10,6 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
-from typing import Union
 
 import numpy as np
 import onnx
@@ -55,7 +54,7 @@ class ONNXModelTransformer(ModelTransformer):
         # and is larger than 2GB, this method silently returns an empty model.
         inferred_model = model if inplace else onnx.shape_inference.infer_shapes(model)
         super().__init__(inferred_model)
-        self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
+        self.onnx_model_extractor = None
         self._inplace = inplace
 
     @staticmethod
@@ -163,7 +162,7 @@ class ONNXModelTransformer(ModelTransformer):
         return ONNXModelTransformer._insert_outputs(self._model, outputs=model_outputs)
 
     @staticmethod
-    def _insert_outputs(model: onnx.ModelProto, outputs: Union[list[str], set[str]]) -> onnx.ModelProto:
+    def _insert_outputs(model: onnx.ModelProto, outputs: list[str] | set[str]) -> onnx.ModelProto:
         """
         Creates a new model as a copy of provided model with additional outputs.
 
@@ -425,6 +424,9 @@ class ONNXModelTransformer(ModelTransformer):
 
         if not output_tensor_names:
             output_tensor_names = [n.name for n in self._model.graph.output]
+
+        if self.onnx_model_extractor is None:
+            self.onnx_model_extractor = onnx.utils.Extractor(self._model)
 
         extracted_model = self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
         if self._model.metadata_props:

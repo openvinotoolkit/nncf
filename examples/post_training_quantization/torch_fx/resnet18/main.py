@@ -18,9 +18,7 @@ import openvino.torch  # noqa
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
@@ -29,7 +27,6 @@ from rich.progress import track
 from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
-import nncf.torch
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
 

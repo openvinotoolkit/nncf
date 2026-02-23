@@ -13,7 +13,7 @@ import datetime
 import itertools
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -100,7 +100,7 @@ def evaluate_model(
 
 
 def get_nncf_dataset(
-    data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
+    data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput] | None = None
 ) -> nncf.Dataset:
     """
     Create an NNCF dataset for the weight compression algorithm.
@@ -246,7 +246,7 @@ def main():
         load_in_8bit=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train[:1000]")  # <YOUR_DATASET>
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train[:1000]")  # <YOUR_DATASET>
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 

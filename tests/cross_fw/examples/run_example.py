@@ -15,7 +15,6 @@ import sys
 import tarfile
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Union
 
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
@@ -67,10 +66,10 @@ def format_results(results: tuple[float]) -> dict[str, float]:
     }
 
 
-def post_training_quantization_openvino_yolo8_quantize() -> dict[str, float]:
-    from examples.post_training_quantization.openvino.yolov8.main import main as yolo8_main
+def post_training_quantization_openvino_yolo26_quantize() -> dict[str, float]:
+    from examples.post_training_quantization.openvino.yolo26.main import main as yolo26_main
 
-    results = yolo8_main()
+    results = yolo26_main()
 
     return format_results(results)
 
@@ -213,6 +212,14 @@ def codebook_llm_compression() -> list[str]:
     return {"answers": codebook_llm_compression_main()}
 
 
+def adaptive_codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_adaptive_codebook.main import (
+        main as adaptive_codebook_llm_compression_main,
+    )
+
+    return {"answers": adaptive_codebook_llm_compression_main()}
+
+
 def llm_compression_distillation_qat_with_lora() -> float:
     from examples.llm_compression.torch.distillation_qat_with_lora.main import main as distillation_qat_with_lora_main
 
@@ -262,7 +269,6 @@ def llm_compression_qat_with_nls() -> float:
 def post_training_quantization_torch_fx_resnet18():
     from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     results = resnet18_main()
 
     return {
@@ -277,7 +283,6 @@ def post_training_quantization_torch_fx_resnet18():
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
     results = resnet18_main()
 
@@ -298,7 +303,6 @@ def quantization_aware_training_torch_resnet18():
 def magnitude_pruning_torch_resnet18():
     from examples.pruning.torch.resnet18.main import main as pruning_resnet18_main
 
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
     results = pruning_resnet18_main()
 
@@ -309,9 +313,9 @@ def magnitude_pruning_torch_resnet18():
 
 def set_torch_cuda_seed(seed: int = 42):
     """
-    Sets torch, cuda and python random module to determenistic mode with
+    Sets torch, cuda and python random module to deterministic mode with
     given seed.
-    :param seed: Seed to use for determenistic run.
+    :param seed: Seed to use for deterministic run.
     """
     import random
 
@@ -328,7 +332,7 @@ def set_torch_cuda_seed(seed: int = 42):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def quantization_aware_training_torch_anomalib(data: Union[str, None]):
+def quantization_aware_training_torch_anomalib(data: str | None):
     from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
     from examples.quantization_aware_training.torch.anomalib.main import DOWNLOAD_INFO
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
@@ -339,7 +343,6 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
         with tarfile.open(tar_file_path) as tar_file:
             tar_file.extractall(dataset_path)
 
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
     results = anomalib_main()
 
@@ -355,6 +358,14 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
         "int8_model_size": results[6],
         "model_compression_rate": results[5] / results[6],
     }
+
+
+def llm_compression_torch_gptqmodel_convertor():
+    from examples.llm_compression.torch.gptq_model_convertor.main import main as gptqmodel_convertor_main
+
+    result = gptqmodel_convertor_main()
+
+    return {"word_count": len(result.split())}
 
 
 def main(argv):

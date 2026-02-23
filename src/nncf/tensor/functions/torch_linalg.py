@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import torch
 
@@ -19,7 +19,7 @@ from nncf.tensor.functions import linalg
 @linalg.norm.register
 def _(
     a: torch.Tensor,
-    ord: Union[Literal["fro", "nuc"], float, None] = None,
+    ord: Literal["fro", "nuc"] | float | None = None,
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -51,10 +51,10 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 
 @linalg.lstsq.register
-def _(a: torch.Tensor, b: torch.Tensor, driver: Optional[str] = None) -> torch.Tensor:
+def _(a: torch.Tensor, b: torch.Tensor, driver: str | None = None) -> torch.Tensor:
     return torch.linalg.lstsq(a, b, driver=driver).solution
 
 
 @linalg.svd.register
-def _(a: torch.Tensor, full_matrices: Optional[bool] = True) -> torch.Tensor:
+def _(a: torch.Tensor, full_matrices: bool | None = True) -> torch.Tensor:
     return torch.linalg.svd(a, full_matrices=full_matrices)

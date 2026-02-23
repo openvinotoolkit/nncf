@@ -210,7 +210,7 @@ def _get_register_types(type_alias: Any) -> list[type]:
         Recursively find types.
         """
         origin = get_origin(t)
-        if origin is Union or origin is list or origin is tuple or origin is SequenceABC:
+        if origin is types.UnionType or origin is Union or origin is list or origin is tuple or origin is SequenceABC:
             ret = []
             for tt in get_args(t):
                 ret.extend(_unpack_types(tt))

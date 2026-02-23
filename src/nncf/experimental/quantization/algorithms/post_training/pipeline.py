@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf.experimental.quantization.algorithms.range_estimator.algorithm import MinMaxRangeEstimator
 from nncf.experimental.quantization.quantizer import Quantizer
@@ -29,12 +29,12 @@ TModel = TypeVar("TModel")
 def experimental_create_ptq_pipeline(
     quantizer: Quantizer,
     subset_size: int = 300,
-    fast_bias_correction: Optional[bool] = True,
+    fast_bias_correction: bool | None = True,
     smooth_quant: bool = False,
-    bias_correction_params: Optional[AdvancedBiasCorrectionParameters] = None,
-    smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
-    activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-    weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+    bias_correction_params: AdvancedBiasCorrectionParameters | None = None,
+    smooth_quant_params: AdvancedSmoothQuantParameters | None = None,
+    activations_range_estimator_params: RangeEstimatorParameters | None = None,
+    weights_range_estimator_params: RangeEstimatorParameters | None = None,
     batchwise_statistics: bool = False,
 ) -> Pipeline:
     """

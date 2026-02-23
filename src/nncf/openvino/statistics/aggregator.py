@@ -74,7 +74,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         return transformation_layout
 
     @staticmethod
-    # TODO(dlyakhov) Move this to common part
+    # TODO(dlyakhov): Move this to common part
     def _get_merged_statistic_points(
         statistic_points: StatisticPointsContainer, model: ov.Model, graph: NNCFGraph
     ) -> StatisticPointsContainer:
@@ -95,7 +95,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
                     _target_node_name = target_point.target_node_name
                     port_id = target_point.port_id
 
-                # TODO: Use common target point class instead of tuple
+                # TODO(dlyakhov): Use common target point class instead of tuple
                 key = (_target_node_name, target_type, port_id)
                 for tensor_collectors in statistic_point.algorithm_to_tensor_collectors.values():
                     target_type_to_tensor_collector_map[key]["collectors"].extend(tensor_collectors)

@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable
 
 import numpy as np
 import torch
@@ -23,7 +23,6 @@ from torch._C import DisableTorchFunction
 
 import nncf
 from nncf.common.graph import NNCFNodeName
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
@@ -34,7 +33,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
-from nncf.torch.functions import clamp
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
 from nncf.torch.layer_utils import COMPRESSION_MODULES
@@ -56,8 +54,6 @@ from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
-from nncf.torch.utils import get_flat_tensor_contents_string
-from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tracing_state
 from nncf.torch.utils import no_jit_trace
 
@@ -87,13 +83,13 @@ class PTQuantizerSpec(QuantizerSpec):
         self,
         num_bits: int,
         mode: QuantizationMode,
-        signedness_to_force: Optional[bool],
+        signedness_to_force: bool | None,
         narrow_range: bool,
         half_range: bool,
         scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
-        compression_lr_multiplier: Optional[float] = None,
+        compression_lr_multiplier: float | None = None,
     ):
         """
         :param num_bits: Bitwidth of the quantization.
@@ -127,7 +123,7 @@ class PTQuantizerSpec(QuantizerSpec):
         scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
-        compression_lr_multiplier: Optional[float],
+        compression_lr_multiplier: float | None,
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
@@ -424,7 +420,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         self.enabled[0] = 0
         self.disable_gradients()
 
-    def forward(self, x: Union[torch.Tensor, tuple]):
+    def forward(self, x: torch.Tensor | tuple):
         """
         Method that unwraps return types if it is needed
         before actual quantization forward impl
@@ -436,7 +432,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
     def _forward_impl(self, x: torch.Tensor):
         if is_debug():
             self.call_count += 1
-        # TODO: refactor to get rid of extra if's and calls on each forward
+        # TODO(AlexanderDokuchaev): refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
         is_exporting = is_tracing_state()
@@ -463,29 +459,6 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
 
     def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {}
-
-    def apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
-        """min_values and max_values must have the same shape as specified in self.scale_shape"""
-        if self.initialized:
-            nncf_logger.debug(f"Skipped initializing {log_module_name} - loaded from checkpoint")
-            return
-
-        if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            msg = f"Statistics are not collected for {log_module_name}"
-            raise ValueError(msg)
-
-        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            msg = f"Some of the values in statistics have infinite value for {log_module_name}"
-            raise ValueError(msg)
-
-        own_device = get_model_device(self)
-        min_values = min_values.to(own_device)
-        max_values = max_values.to(own_device)
-        self._apply_minmax_init(min_values, max_values, log_module_name)
-
-    @abstractmethod
-    def _apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
-        pass
 
     @abstractmethod
     def set_levels(self):
@@ -784,7 +757,7 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -794,26 +767,6 @@ class SymmetricQuantizer(BaseQuantizer):
 
     def get_trainable_params(self) -> dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale}
-
-    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        sign = torch.any(torch.lt(min_values, 0))
-        if self._signedness_to_force is not None and sign != self._signedness_to_force:
-            nncf_logger.debug(f"Forcing signed to {self._signedness_to_force} for module {log_module_name}")
-            sign = self._signedness_to_force
-        self.signed = sign
-
-        abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
-        SCALE_LOWER_THRESHOLD = 0.1
-        mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
-        self._scale_param_storage.data = torch.where(
-            mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_param_storage)
-        )
-        if self._is_using_log_scale_storage:
-            self._scale_param_storage.data.log_()
-
-        nncf_logger.debug(
-            f"Set sign: {self.signed} and scale: {get_flat_tensor_contents_string(self.scale)} for {log_module_name}"
-        )
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
@@ -975,7 +928,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -995,22 +948,6 @@ class AsymmetricQuantizer(BaseQuantizer):
             self.INPUT_LOW_PARAM_NAME: self.input_low,
             self.INPUT_RANGE_PARAM_NAME: self.input_range,
         }
-
-    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        ranges = max_values - min_values
-        max_range = torch.max(max_values - min_values)
-        eps = 1e-2
-        correction = (clamp(ranges, low=eps * max_range, high=max_range) - ranges) * 0.5
-        self._input_range_param_storage.data = (ranges + 2 * correction).data
-        if self._is_using_log_scale_storage:
-            self._input_range_param_storage.data.log_()
-
-        self.input_low.data = (min_values - correction).data
-
-        nncf_logger.debug(
-            f"Set input_low: {get_flat_tensor_contents_string(self.input_low)} "
-            f"and input_range: {get_flat_tensor_contents_string(self.input_range)} for {log_module_name}"
-        )
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
@@ -1162,7 +1099,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1207,7 +1144,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA_NLS)
 class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1241,7 +1178,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1285,7 +1222,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
 class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1310,7 +1247,7 @@ class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
         return cls(qspec, lspec)
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> list[int]:
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int | None = None) -> list[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1322,7 +1259,7 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[i
 
 
 def get_scale_shape(
-    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
+    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: int | None = None
 ) -> list[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
@@ -1377,7 +1314,7 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies asymmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: torch.dtype | None = None):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme
@@ -1412,7 +1349,7 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies symmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, result_dtype: torch.dtype | None = None):
         """
         :param scale: A scale in quantization scheme
         :param result_dtype: (Optional) A data type that result should be cast to
@@ -1443,8 +1380,8 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         scale: torch.Tensor,
         zero_point: torch.Tensor,
         compressed_weight_shape: tuple[int, ...],
-        result_shape: Optional[tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
     ):
         """
         :param scale: A scale in quantization scheme
@@ -1491,8 +1428,8 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         self,
         scale: torch.Tensor,
         compressed_weight_shape: tuple[int, ...],
-        result_shape: Optional[tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
     ):
         """
         :param scale: A scale in quantization scheme

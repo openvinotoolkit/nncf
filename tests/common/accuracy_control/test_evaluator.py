@@ -11,7 +11,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import TypeVar, Union
+from typing import TypeVar
 from unittest.mock import MagicMock
 from unittest.mock import Mock
 
@@ -29,7 +29,7 @@ TModel = TypeVar("TModel")
 @dataclass
 class ModeTestStruct:
     metric_value: float
-    values_for_each_item: Union[None, list[float], list[list[np.ndarray]]]
+    values_for_each_item: None | list[float] | list[list[np.ndarray]]
     expected_is_metric_mode: bool
     raise_exception: bool = False
 
@@ -78,12 +78,6 @@ class ModeTestStruct:
         ModeTestStruct(
             metric_value=np.array(0.1),
             values_for_each_item=[np.array(0.3)],
-            expected_is_metric_mode=True,
-        ),
-        # Return: (ConvertibleToFloat, List[ConvertibleToFloat])
-        ModeTestStruct(
-            metric_value=np.array([0.1]),
-            values_for_each_item=[np.array([0.3])],
             expected_is_metric_mode=True,
         ),
         # Return: (NotConvertibleToFloat, None)

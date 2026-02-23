@@ -17,6 +17,7 @@ from typing import Any, Callable
 import pytest
 import torch
 import torch.fx
+import torch.nn.parallel
 import torchvision.models as models
 from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 from executorch.backends.openvino.quantizer.quantizer import QuantizationMode

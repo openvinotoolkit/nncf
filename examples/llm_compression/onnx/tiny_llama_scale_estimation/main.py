@@ -34,11 +34,6 @@ OUTPUT_DIR = ROOT / "tinyllama_compressed"
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 warnings.filterwarnings("ignore", category=OnnxExporterWarning)
 
-# TODO(AlexanderDokuchaev): WA for https://github.com/huggingface/optimum-intel/issues/1498
-from optimum.exporters.tasks import TasksManager  # noqa: E402
-
-TasksManager._TRANSFORMERS_TASKS_TO_MODEL_LOADERS["image-text-to-text"] = "AutoModelForImageTextToText"
-
 
 def tiny_llama_transform_func(
     item: dict[str, str], tokenizer: LlamaTokenizerFast, onnx_model: onnx.ModelProto
@@ -100,7 +95,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
     # Prepare calibration dataset
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train")
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, onnx_model=onnx_model)
     calibration_dataset = nncf.Dataset(dataset, transform_func)
