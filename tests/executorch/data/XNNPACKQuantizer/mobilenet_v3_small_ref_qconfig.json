@@ -264,7 +264,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_13',)_ActivationQuantizationInsertionPoint": {
+        "('adaptive_avg_pool2d_1', 'mul_1')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -272,7 +272,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('adaptive_avg_pool2d_1', 'mul_1')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_13',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -512,7 +512,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_23',)_ActivationQuantizationInsertionPoint": {
+        "('adaptive_avg_pool2d_3', 'mul_3')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -520,7 +520,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('adaptive_avg_pool2d_3', 'mul_3')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_23',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -760,7 +760,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('adaptive_avg_pool2d_5', 'mul_5')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_33',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -768,7 +768,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_33',)_ActivationQuantizationInsertionPoint": {
+        "('adaptive_avg_pool2d_5', 'mul_5')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1008,7 +1008,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_43',)_ActivationQuantizationInsertionPoint": {
+        "('adaptive_avg_pool2d_7', 'mul_7')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1016,7 +1016,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('adaptive_avg_pool2d_7', 'mul_7')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_43',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1136,7 +1136,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('adaptive_avg_pool2d_8', 'mul_8')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_48',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1144,7 +1144,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_48',)_ActivationQuantizationInsertionPoint": {
+        "('adaptive_avg_pool2d_8', 'mul_8')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1248,7 +1248,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('adaptive_avg_pool2d_9',)_ActivationQuantizationInsertionPoint": {
+        "('flatten',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -1256,7 +1256,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('flatten',)_ActivationQuantizationInsertionPoint": {
+        "('adaptive_avg_pool2d_9',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
