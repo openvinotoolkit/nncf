@@ -39,6 +39,7 @@ from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.function_hook import helpers
+from tests.torch.test_models.synthetic import TopKModel
 from tests.torch.utils import compare_with_reference_file
 from tests.torch.utils import to_comparable_nx_graph
 
@@ -138,6 +139,7 @@ TEST_MODELS_DESC = [
     ModelDesc("swin_v2_b", partial(models.swin_v2_b, weights=None), [1, 3, 64, 64]),
     ModelDesc("vgg16", partial(models.vgg16, weights=None), [1, 3, 32, 32]),
     ModelDesc("gru", helpers.ModelGRU, [1, 3, 3]),
+    ModelDesc("topk", TopKModel, TopKModel.INPUT_SHAPE),
 ]
 
 

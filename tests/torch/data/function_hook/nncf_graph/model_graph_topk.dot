@@ -1,0 +1,9 @@
+strict digraph {
+x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"/topk/0" [id=1, type=topk, metatype=PTTopKMetatype];
+output_0 [id=2, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+output_1 [id=3, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+x -> "/topk/0" [dtype=float, shape="(1, 10)", out_port_id=0, in_port_id=0];
+"/topk/0" -> output_0 [dtype=float, shape="(1, 5)", out_port_id=0, in_port_id=0];
+"/topk/0" -> output_1 [dtype=int, shape="(1, 5)", out_port_id=1, in_port_id=0];
+}
