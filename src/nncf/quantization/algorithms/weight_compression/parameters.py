@@ -30,11 +30,4 @@ class CompressedWeight:
     scale: Tensor | None = None
     zero_point: Tensor | None = None
     codebook: Tensor | None = None
-
-    def is_codebook(self):
-        """
-        Check if the compressed weight is a codebook.
-
-        :return: True if the compressed weight is a codebook, False otherwise.
-        """
-        return self.codebook is not None and self.tensor is not None and self.scale is not None
+    second_degree_scale: Tensor | None = None

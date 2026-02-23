@@ -70,6 +70,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.MXFP8_E4M3,
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
+            CompressWeightsMode.NVFP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
@@ -106,6 +107,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.NF4: TensorDataType.nf4,
             CompressWeightsMode.FP4: TensorDataType.f4e2m1,
             CompressWeightsMode.MXFP4: TensorDataType.f4e2m1,
+            CompressWeightsMode.NVFP4: TensorDataType.f4e2m1,
             CompressWeightsMode.FP8_E4M3: TensorDataType.f8e4m3,
             CompressWeightsMode.MXFP8_E4M3: TensorDataType.f8e4m3,
         }

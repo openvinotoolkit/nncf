@@ -224,13 +224,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         should_add_convert_node: bool,
         precomputed_compressed_weight: CompressedWeight | None = None,
     ):
-        compression_dtype = DTYPE_MAP[compression_config.compression_dtype]
-        scale_dtype = (
-            ov.Type.f8e8m0
-            if compression_config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]
-            else ov.Type.f16
-        )
-
         original_shape = weight.shape
 
         with disable_results_caching(OV_MODEL_CACHE):
@@ -240,6 +233,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 compression_config,
                 precomputed_compressed_weight,
             )
+
+        compression_dtype = DTYPE_MAP[compression_config.compression_dtype]
+
+        scale_dtype = ov.Type.f16
+        if compression_config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
+            scale_dtype = ov.Type.f8e8m0
+        elif compression_config.mode == CompressWeightsMode.NVFP4:
+            scale_dtype = ov.Type.f8e4m3
 
         if compression_config.is_codebook:
             converted_const = create_ov_codebook_subgraph(
@@ -266,6 +267,19 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 )
 
         scale_const = create_ov_const_from_tensor(compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale")
+
+        if compressed_weight.second_degree_scale is not None:
+            sec_order_scale = create_ov_const_from_tensor(
+                compressed_weight.second_degree_scale, ov.Type.f32, name=f"{const_node_name}/second_order_scale"
+            )
+            scale_const = convert_op(scale_const, ov.Type.f32)
+
+            scale_const = opset.multiply(
+                scale_const,
+                sec_order_scale,
+                name=f"{const_node_name}/dequantized_scale_{weight_port_id}",
+            )
+
         scale_const = convert_op(scale_const, ov.Type.f16)
 
         mul = opset.multiply(
