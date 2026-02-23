@@ -1,7 +1,6 @@
 transformers==4.53.0
 datasets==4.5.0
-openvino==2026.0.0rc4
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
+openvino==2026.0.0
 optimum==2.1.0
 torch==2.9.0
 torchvision==0.24.0

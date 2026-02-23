@@ -5,6 +5,5 @@ fastprogress==1.0.5
 fastcore==1.11.5
 onnx==1.17.0
 onnxruntime==1.21.1
-openvino==2026.0.0rc4
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
+openvino==2026.0.0
 numpy<2
