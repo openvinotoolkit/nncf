@@ -14,21 +14,30 @@ from nncf.common.graph.patterns.patterns import GraphPattern
 
 
 def create_rope_pattern(
-    mm_metatype: OperatorMetatype,
-    transpose_metatype: OperatorMetatype,
-    concat_metatype: OperatorMetatype,
-    cos_metatype: OperatorMetatype,
-    sin_metatype: OperatorMetatype,
+    mm_metatype: type[OperatorMetatype],
+    transpose_metatype: type[OperatorMetatype],
+    concat_metatype: type[OperatorMetatype],
+    cos_metatype: type[OperatorMetatype],
+    sin_metatype: type[OperatorMetatype],
 ) -> GraphPattern:
     """
-    Creates Rotational Embedding pattern.
+    Creates Rotary Positional Embedding (RoPE) pattern.
+    Scheme:
+
+      (matmul)           (matmul)
+         |                  |
+     (transpose)         (concat)
+         |                /   \
+      (concat)         (cos) (sin)
+       /   \
+    (cos) (sin)
 
     :param mm_metatype: MatMul metatype.
     :param transpose_metatype: Transpose metatype.
     :param concat_metatype: Concat metatype.
     :param cos_metatype: Cos metatype.
     :param sin_metatype: Sin metatype.
-    :return: The Rotational Embedding pattern.
+    :return: The Rotary Positional Embedding (RoPE) pattern.
     """
     ret_pattern = GraphPattern()
     for with_transpose in [True, False]:

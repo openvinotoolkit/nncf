@@ -32,6 +32,7 @@ from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
 from nncf.torch.function_hook import wrap_model
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -573,8 +574,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return MatMulModel(255 * torch.eye(3, dtype=torch.float32))
 
     @staticmethod
-    def get_RoPE_model(with_transpose: bool = True) -> torch.nn.Module:
-        return RoPEModel(with_transpose=with_transpose)
+    def get_RoPE_model(with_transpose: bool) -> torch.nn.Module:
+        return RoPEModel(with_transpose=with_transpose, with_reshape=False)
 
     @staticmethod
     def get_SAM_PE_model() -> torch.nn.Module:
@@ -805,11 +806,19 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             return "linear5/linear/0"
         return "/bmm/4"
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: torch.nn.Module) -> int:
+        return cls._get_num_typed_nodes(model, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: torch.nn.Module) -> int:
+        return cls._get_num_typed_nodes(model, (INT8SymmetricWeightsDecompressor, INT8AsymmetricWeightsDecompressor))
+
     @staticmethod
-    def get_num_int4_nodes(model: torch.nn.Module) -> int:
+    def _get_num_typed_nodes(model: torch.nn.Module, types: tuple[BaseWeightsDecompressor, ...]):
         num = 0
         for op in get_hook_storage(model).modules():
-            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+            num += isinstance(op, types)
         return num
 
     @staticmethod

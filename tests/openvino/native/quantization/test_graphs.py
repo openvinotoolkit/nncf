@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -95,7 +96,11 @@ def test_real_models_fq_placement(model_name_params, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-@pytest.mark.parametrize("model_creator_func", [MatmulSoftmaxMatmulBlock, RoPEModel])
+@pytest.mark.parametrize(
+    "model_creator_func",
+    [MatmulSoftmaxMatmulBlock, partial(RoPEModel, with_transpose=True, with_broadcast=True)],
+    ids=["MatmulSoftmaxMatmulBlock", "RoPEModel"],
+)
 def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     model = model_creator_func()
     quantized_model = quantize_model(
