@@ -34,10 +34,6 @@ def create_rope_pattern(
     for with_transpose in [True, False]:
         pattern = GraphPattern()
         matmul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: mm_metatype})
-        if with_transpose:
-            transpose_node = pattern.add_node(
-                **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: transpose_metatype}
-            )
         concat_node = pattern.add_node(
             **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: concat_metatype}
         )
@@ -45,6 +41,9 @@ def create_rope_pattern(
         sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: sin_metatype})
 
         if with_transpose:
+            transpose_node = pattern.add_node(
+                **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: transpose_metatype}
+            )
             pattern.add_edge(matmul_node, transpose_node)
             pattern.add_edge(transpose_node, concat_node)
         else:
