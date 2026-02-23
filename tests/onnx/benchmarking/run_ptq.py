@@ -11,7 +11,6 @@
 
 import os
 from functools import partial
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -33,7 +32,7 @@ from tests.onnx.opset_converter import convert_opset_version
 from tests.onnx.quantization.common import find_ignored_scopes
 
 
-def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):
+def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: bool | None = False):
     _, batch_annotation, batch_input, _ = data_item
     filled_inputs, _, _ = model_evaluator._get_batch_input(batch_annotation, batch_input)
 
@@ -49,8 +48,8 @@ def run(
     output_model_path: str,
     dataset: nncf.Dataset,
     num_init_samples: int,
-    ignored_scopes: Optional[list[str]] = None,
-    disallowed_op_types: Optional[list[str]] = None,
+    ignored_scopes: list[str] | None = None,
+    disallowed_op_types: list[str] | None = None,
     convert_model_opset: bool = True,
 ):
     print("Post-Training Quantization Parameters:")
@@ -58,7 +57,7 @@ def run(
     original_model = onnx.load(onnx_model_path)
     print(f"The model is loaded from {onnx_model_path}")
     print(f"  number of samples: {num_init_samples}")
-    # TODO(kshpv):: add support of types ignored_scopes
+    # TODO(andrey-churkin): add support of types ignored_scopes
     if ignored_scopes is None:
         ignored_scopes = []
     if disallowed_op_types is not None:

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Sequence
 
 import torch
 from torch import nn
@@ -239,7 +239,7 @@ def extract_linear(
 
 def extract_model(
     model: nn.Module, graph: PTNNCFGraph, input_nodes: list[str], output_nodes: list[str]
-) -> Optional[nn.Module]:
+) -> nn.Module | None:
     """
     Extracts a submodule from a given nn.Module containing only the nodes from the input to the output node.
 

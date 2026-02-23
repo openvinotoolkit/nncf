@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tools.visualize_compression_results import visualize
+from tools.data_visualizer.visualize_compression_results import visualize
 
 
 def test_visualization_of_compression_results(tmp_path):

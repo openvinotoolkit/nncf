@@ -73,11 +73,12 @@ def test_get_arg_type(data, ref):
     "data, ref",
     (
         (float, [float]),
-        (Union[float, str], [float, str]),
+        (float | str, [float, str]),
+        (Union[float, str], [float, str]),  # noqa
         (list[float], [float]),
-        (list[Union[float, str]], [float, str]),
+        (list[float | str], [float, str]),
         (dict[str, int], [int]),
-        (dict[str, Union[float, int]], [float, int]),
+        (dict[str, float | int], [float, int]),
     ),
 )
 def test_get_register_types(data, ref):

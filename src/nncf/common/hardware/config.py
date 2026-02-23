@@ -12,7 +12,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 import nncf
 from nncf import TargetDevice
@@ -71,7 +71,7 @@ class HWConfig(ABC):
 
     def get_metatype_vs_quantizer_configs_map(
         self, for_weights: bool = False
-    ) -> dict[type[OperatorMetatype], Optional[list[QuantizerConfig]]]:
+    ) -> dict[type[OperatorMetatype], list[QuantizerConfig] | None]:
         """
         Retrieves a mapping of operator metatypes to their corresponding quantizer configurations.
 
@@ -79,7 +79,7 @@ class HWConfig(ABC):
         :return: A dictionary mapping operator metatypes to their corresponding quantizer configurations.
         """
         # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
-        retval: dict[type[OperatorMetatype], Optional[list[QuantizerConfig]]] = {
+        retval: dict[type[OperatorMetatype], list[QuantizerConfig] | None] = {
             k: None for k in self._get_available_operator_metatypes_for_matching()
         }
         for op_desc in self.hw_setup:
@@ -114,7 +114,7 @@ class HWConfig(ABC):
         return metatypes
 
     @staticmethod
-    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[list[QuantizerConfig]]) -> bool:
+    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: list[QuantizerConfig] | None) -> bool:
         """
         Check if the provided quantizer configuration list corresponds to an unspecified operation.
 
@@ -127,7 +127,7 @@ class HWConfig(ABC):
         return qconf_list is None
 
     @staticmethod
-    def is_wildcard_quantization(qconf_list: Optional[list[QuantizerConfig]]) -> bool:
+    def is_wildcard_quantization(qconf_list: list[QuantizerConfig] | None) -> bool:
         """
         Determines if the provided list of quantizer configurations represents a wildcard quantization.
 

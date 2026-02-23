@@ -62,7 +62,7 @@ class PTOperatorMetatype(OperatorMetatype):
     """
 
     external_op_names: list[str] = []
-    num_expected_input_edges: Optional[int] = None
+    num_expected_input_edges: int | None = None
     weight_port_ids: list[int] = []
 
     module_to_function_names: dict[NamespaceTarget, list[str]] = {
@@ -95,7 +95,7 @@ class PTOperatorMetatype(OperatorMetatype):
 
     @classmethod
     def determine_subtype(
-        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
+        cls, layer_attributes: BaseLayerAttributes | None = None, function_args=None, functions_kwargs=None
     ) -> Optional["type[PTOperatorSubtype]"]:
         matches = []
         for subtype in cls.get_subtypes():
@@ -121,7 +121,7 @@ class PTOperatorSubtype(PTOperatorMetatype):
 
     @classmethod
     def matches(
-        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
+        cls, layer_attributes: BaseLayerAttributes | None = None, function_args=None, functions_kwargs=None
     ) -> bool:
         raise NotImplementedError
 
@@ -129,7 +129,7 @@ class PTOperatorSubtype(PTOperatorMetatype):
 class PTDepthwiseConvOperatorSubtype(PTOperatorSubtype):
     @classmethod
     def matches(
-        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
+        cls, layer_attributes: BaseLayerAttributes | None = None, function_args=None, functions_kwargs=None
     ) -> bool:
         if layer_attributes is None and function_args is not None and functions_kwargs is not None:
             # Used for torch2

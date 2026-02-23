@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Union
+from typing import Callable
 
 import networkx as nx
 import pytest
@@ -54,7 +54,7 @@ REF_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "nncf_graph"
         [NodeType.output, ConstMeta(torch.float32, (1), "model.bias"), "nncf_model_const"],
     ],
 )
-def test_get_node_type(node_type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta], ref: str):
+def test_get_node_type(node_type: NodeType, meta: ConstMeta | FunctionMeta | InOutMeta, ref: str):
     assert get_node_type(node_type, meta) == ref
 
 
@@ -67,7 +67,7 @@ def test_get_node_type(node_type: NodeType, meta: Union[ConstMeta, FunctionMeta,
         (ConstMeta(torch.float32, (1), "model.bias"), "model.bias"),
     ],
 )
-def test_get_name_of_node(meta: Union[InOutMeta, FunctionMeta, ConstMeta], ref: str):
+def test_get_name_of_node(meta: InOutMeta | FunctionMeta | ConstMeta, ref: str):
     assert get_name_of_node(meta) == ref
 
 
@@ -118,7 +118,7 @@ def test_convert_to_nncf_graph_multi_edges(regen_ref_data: bool):
 class ModelDesc:
     model_name: str
     model_builder: callable
-    inputs_info: Union[list[list[int]], tuple[list[int], ...]]
+    inputs_info: list[list[int]] | tuple[list[int], ...]
 
     def __str__(self):
         return self.model_name

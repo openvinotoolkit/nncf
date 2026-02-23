@@ -15,7 +15,6 @@ import pytest
 import torch
 
 import nncf
-import nncf.experimental
 import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
 from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope

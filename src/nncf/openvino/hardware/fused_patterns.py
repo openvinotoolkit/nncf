@@ -58,7 +58,7 @@ def create_batch_index() -> GraphPattern:
     unsqueeze_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype}
     )
-    # TODO (KodiaqQ): Check the pattern on real case
+    # TODO(l-bat): Check the pattern on real case
     concat_node_1 = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
     )
@@ -297,7 +297,7 @@ def create_input_convert_transpose_reverse_add() -> GraphPattern:
     input_convert_transpose = create_input_convert_transpose()
     pattern = GraphPattern()
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
-    # TODO (KodiaqQ): Check the pattern on real case
+    # TODO(l-bat): Check the pattern on real case
     concat_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
     )
@@ -322,7 +322,7 @@ def create_input_convert_transpose_reverse_scale_shift() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
     )
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
-    # TODO (KodiaqQ): Check the pattern on real case
+    # TODO(l-bat): Check the pattern on real case
     concat_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
     )
@@ -368,7 +368,7 @@ def create_input_reverse_add() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
     )
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
-    # TODO (KodiaqQ): Check the pattern on real case
+    # TODO(l-bat): Check the pattern on real case
     concat_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
     )
@@ -387,7 +387,7 @@ def create_input_reverse_scale_shift() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
     )
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
-    # TODO (KodiaqQ): Check the pattern on real case
+    # TODO(l-bat): Check the pattern on real case
     concat_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
     )
@@ -450,7 +450,7 @@ def create_input_transpose_reverse_add() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
     )
     split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
-    # TODO (KodiaqQ): Check the pattern on real case
+    # TODO(l-bat): Check the pattern on real case
     concat_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
     )

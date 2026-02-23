@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import random
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import MagicMock
 
 import networkx as nx
@@ -49,7 +49,7 @@ class NodeWithType:
         name: str,
         op_metatype: TestMetatype,
         op_type: str = None,
-        layer_attributes: Optional[BaseLayerAttributes] = None,
+        layer_attributes: BaseLayerAttributes | None = None,
     ):
         self.node_name = name
         self.node_op_metatype = op_metatype
@@ -58,7 +58,7 @@ class NodeWithType:
 
 
 def create_mock_graph(
-    nodes: list[NodeWithType], node_edges: list[tuple[str, str]], edges_attrs: Optional[tuple[Any]] = None
+    nodes: list[NodeWithType], node_edges: list[tuple[str, str]], edges_attrs: tuple[Any] | None = None
 ) -> nx.DiGraph:
     mock_graph = nx.DiGraph()
     for node in nodes:
@@ -367,9 +367,6 @@ def get_ip_graph_for_test(nncf_graph: NNCFGraph) -> InsertionPointGraph:
             ip = PreHookInsertionPoint(node.node_name, in_edge.input_port_id)
             pre_hooks.append(ip)
 
-        # TODO (vshampor): remove
-        # if issubclass(node.metatype, PTSplitMetatype):
-        #     continue
         ip = PostHookInsertionPoint(node.node_name)
         post_hooks.append(ip)
 

@@ -18,7 +18,7 @@ from collections import defaultdict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Optional, TypeVar, Union, cast
+from typing import Any, TypeVar, cast
 
 import nncf.tensor
 import nncf.tensor.functions as fns
@@ -51,7 +51,7 @@ class AxesMode(Enum):
 
 
 def determine_reduction_axes(
-    ndim: int, axes: Optional[Axes] = None, axes_mode: AxesMode = AxesMode.REDUCTION
+    ndim: int, axes: Axes | None = None, axes_mode: AxesMode = AxesMode.REDUCTION
 ) -> ReductionAxes:
     """
     Determines the set of axes along which a reduction operation should be performed
@@ -88,7 +88,7 @@ class TensorReducerBase(ABC):
 
     def __init__(
         self,
-        axes: Optional[Axes] = None,
+        axes: Axes | None = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
         inplace: bool = False,
     ):
@@ -128,7 +128,7 @@ class TensorReducerBase(ABC):
         :param x: Tensor to register.
         """
 
-    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+    def get_inplace_fn(self) -> InplaceInsertionFNType | None:
         """
         Returns correspondent inplace operation builder if inplace operations are available in backend.
 
@@ -136,7 +136,7 @@ class TensorReducerBase(ABC):
         """
         return None
 
-    def __call__(self, x: list[Tensor]) -> Optional[list[Tensor]]:
+    def __call__(self, x: list[Tensor]) -> list[Tensor] | None:
         if any(t.isempty() for t in x):
             return None
 
@@ -164,9 +164,9 @@ class AggregatorBase:
 
     def __init__(
         self,
-        aggregation_axes: Optional[AggregationAxes] = None,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        aggregation_axes: AggregationAxes | None = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ):
         """
         :param aggregation_axes: Axes along which to operate.
@@ -186,7 +186,7 @@ class AggregatorBase:
         self._container: deque[Any] = deque(maxlen=window_size)
 
     @property
-    def num_samples(self) -> Optional[int]:
+    def num_samples(self) -> int | None:
         return self._num_samples
 
     def register_reduced_input(self, x: Tensor) -> None:
@@ -243,7 +243,7 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: Optional[type[TensorStatistic]] = None) -> None:
+    def __init__(self, statistic_container: type[TensorStatistic] | None = None) -> None:
         self._reducers: set[TensorReducerBase] = set()
         self._aggregators: dict[tuple[int, int, int], AggregatorBase] = {}
         self._stat_container_kwargs_map: dict[str, tuple[int, int, int]] = {}
@@ -252,7 +252,7 @@ class TensorCollector:
         self.clear_cache()
 
     @property
-    def num_samples(self) -> Optional[int]:
+    def num_samples(self) -> int | None:
         output = None
         for aggregator in self._aggregators.values():
             if aggregator.num_samples and output:
@@ -358,18 +358,18 @@ class TensorCollector:
         Sets cached statistics from given config and disable TensorCollector.
         :param statistics: TensorStatistic.
         """
-        self._cached_statistics: Optional[TensorStatistic] = statistics
+        self._cached_statistics: TensorStatistic | None = statistics
         self.reset()
         self.disable()
 
-    def create_statistics_container(self, config: dict[str, Any]) -> Union[TensorStatistic, dict[str, Any]]:
+    def create_statistics_container(self, config: dict[str, Any]) -> TensorStatistic | dict[str, Any]:
         """
         Returns a TensorStatistic instance with aggregated values.
 
         :param config: Aggregated values.
         :return: TensorStatistic instance.
         """
-        if not self._stat_container:  # TODO(kshpv): need to remove an ability to return a Dict.
+        if not self._stat_container:  # TODO(dlyakhov): need to remove an ability to return a Dict.
             return config
         return self._stat_container.from_config(config)
 
@@ -379,7 +379,7 @@ class TensorCollector:
         """
         self._cached_statistics = None
 
-    def get_statistics(self) -> Union[TensorStatistic, dict[str, Any]]:
+    def get_statistics(self) -> TensorStatistic | dict[str, Any]:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.
@@ -469,7 +469,7 @@ class RawReducer(TensorReducerBase):
     def __init__(self) -> None:
         super().__init__(inplace=False)
 
-    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+    def get_inplace_fn(self) -> InplaceInsertionFNType | None:
         return None
 
     def _reduce_out_of_place(self, x: list[Tensor]) -> list[Tensor]:
@@ -484,7 +484,7 @@ class ShapeReducer(TensorReducerBase):
         # Return as tensor for consistency, because in-place reducer returns a tensor
         return [fns.tensor(x[0].shape, backend=x[0].backend, dtype=TensorDataType.int32, device=x[0].device)]
 
-    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+    def get_inplace_fn(self) -> InplaceInsertionFNType | None:
         return None
 
 
@@ -543,9 +543,9 @@ class MeanAbsMaxReducer(TensorReducerBase):
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
-        axes: Optional[Axes] = None,
+        axes: Axes | None = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
-        quantile: Optional[Union[list[float], tuple[float, ...]]] = None,
+        quantile: list[float] | tuple[float, ...] | None = None,
         inplace: bool = False,
     ):
         super().__init__(axes, axes_mode, False)
@@ -580,9 +580,9 @@ class QuantileReducer(QuantileReducerBase):
 class AbsQuantileReducer(QuantileReducerBase):
     def __init__(
         self,
-        axes: Optional[Axes] = None,
+        axes: Axes | None = None,
         axes_mode: AxesMode = AxesMode.REDUCTION,
-        quantile: Optional[Union[list[float], tuple[float, ...]]] = None,
+        quantile: list[float] | tuple[float, ...] | None = None,
         inplace: bool = False,
     ):
         quantile = (0.99,) if quantile is None else quantile
@@ -629,7 +629,7 @@ class MeanPerChReducer(TensorReducerBase):
 
 
 class NoopAggregator(AggregatorBase):
-    def __init__(self, num_samples: Optional[int], return_first: bool = False):
+    def __init__(self, num_samples: int | None, return_first: bool = False):
         """
         Creates an aggregator that only accumulates data without any additional processing.
         :param num_samples: The number of samples to collect. If None, all samples are collected.
@@ -781,9 +781,9 @@ class MedianAggregator(OfflineAggregatorBase):
 class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     def __init__(
         self,
-        aggregation_axes: Optional[AggregationAxes] = None,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        aggregation_axes: AggregationAxes | None = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
         quantile: float = 0.01,
     ) -> None:
         super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
@@ -834,9 +834,9 @@ class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
 class MedianAbsoluteDeviationAggregator(AggregatorBase):
     def __init__(
         self,
-        aggregation_axes: Optional[AggregationAxes] = None,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        aggregation_axes: AggregationAxes | None = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ):
         super().__init__(
             aggregation_axes=aggregation_axes,
@@ -879,9 +879,9 @@ class PercentileAggregator(AggregatorBase):
     def __init__(
         self,
         percentiles_to_collect: list[float],
-        aggregation_axes: Optional[AggregationAxes] = None,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        aggregation_axes: AggregationAxes | None = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ):
         super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
         if 0 not in self._aggregation_axes:
@@ -922,14 +922,14 @@ class PercentileAggregator(AggregatorBase):
 
 
 class HAWQAggregator(AggregatorBase):
-    def __init__(self, num_samples: Optional[int] = None):
+    def __init__(self, num_samples: int | None = None):
         super().__init__(num_samples=num_samples)
         self._container: Tensor = Tensor(0.0)  # type: ignore[assignment]
 
     def _register_reduced_input_impl(self, x: Tensor) -> None:
         trace = fns.sum(fns.multiply(x, x))
         # NOTE: average trace?? divide by number of diagonal elements
-        # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
+        # TODO(dlyakhov): revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
         self._container = (self._container + trace) / x.size
 
     def _aggregate_impl(self) -> Tensor:
@@ -954,15 +954,15 @@ class HistogramAggregator(AggregatorBase):
     """
 
     histogram: Tensor
-    min_val: Optional[float]
-    max_val: Optional[float]
+    min_val: float | None
+    max_val: float | None
 
     def __init__(
         self,
         bins: int = 2048,
         dist_nbits: int = 8,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ) -> None:
         """
         :param bins: Number of bins to use for the histogram

@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
@@ -32,7 +31,7 @@ class QuantizationTrait(Enum):
 
     # For embeddings, the inputs are integer and are used to index into the weight of the layer,
     # therefore if the weight is already quantized there may be no need to quantize the outgoing tensor.
-    # TODO: unify scales for such operations if they become linked through a downstream op (such as
+    # TODO(N/A): unify scales for such operations if they become linked through a downstream op (such as
     # two embeddings added to each other)
     OUTPUT_QUANTIZATION_AS_WEIGHTS = 2
 
@@ -58,7 +57,7 @@ class PropagatingQuantizer:
         id_: int,
         quant_configs: list[QuantizerConfig],
         init_location_node_key: str,
-        unified_scale_type: Optional[UnifiedScaleType] = None,
+        unified_scale_type: UnifiedScaleType | None = None,
     ):
         """
         :param id_: The unique identifier of the new propagating quantizer.
@@ -73,7 +72,7 @@ class PropagatingQuantizer:
         self.affected_ip_nodes: set[str] = set()
         self.propagation_path: PropagationPath = []
         self.current_location_node_key = init_location_node_key
-        self.last_accepting_location_node_key: Optional[str] = None
+        self.last_accepting_location_node_key: str | None = None
         self.id = id_
         self.unified_scale_type = unified_scale_type
         self.affected_operator_nodes: set[str] = set()

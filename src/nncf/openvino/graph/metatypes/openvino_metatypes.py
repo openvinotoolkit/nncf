@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Optional
 
 import openvino as ov
 
@@ -38,11 +37,11 @@ class OVOpMetatype(OperatorMetatype):
         return cls.subtypes
 
     @classmethod
-    def matches(cls, node: ov.Node) -> Optional[bool]:
+    def matches(cls, node: ov.Node) -> bool | None:
         return node.op_type in cls.op_names
 
     @classmethod
-    def determine_subtype(cls, node: ov.Node) -> Optional[type[OperatorMetatype]]:
+    def determine_subtype(cls, node: ov.Node) -> type[OperatorMetatype] | None:
         matches = []
         for subtype in cls.get_subtypes():
             if subtype.matches(node):
@@ -753,7 +752,7 @@ def get_operator_metatypes() -> list[type[OperatorMetatype]]:
     return list(OV_OPERATOR_METATYPES.registry_dict.values())
 
 
-def get_operation_const_op(operation: ov.Node, const_port_id: int) -> Optional[ov.Node]:
+def get_operation_const_op(operation: ov.Node, const_port_id: int) -> ov.Node | None:
     """
     Returns constant node of given operation placed on given const port id.
 

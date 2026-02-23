@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -100,7 +100,7 @@ class ScaleEstimation:
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates better scale for the int4 nodes in the model.
@@ -400,7 +400,7 @@ class ScaleEstimation:
         return wc_statistics
 
 
-def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> tuple[Tensor, Tensor]:
+def get_target_zero_mask(compressed_weights: Tensor, zp: Tensor | None = None) -> tuple[Tensor, Tensor]:
     """
     Computes the target values and a mask indicating zero values in the target.
 

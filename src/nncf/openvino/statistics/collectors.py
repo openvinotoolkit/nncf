@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from nncf.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.common.tensor_statistics.collectors import AbsQuantileReducer
@@ -73,7 +72,7 @@ class OVMeanAbsMaxReducer(MeanAbsMaxReducer):
 
 
 class OVShapeReducer(ShapeReducer):
-    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+    def get_inplace_fn(self) -> InplaceInsertionFNType | None:
         return get_inplace_shape_op()
 
 
@@ -88,12 +87,12 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
 
 
 class OVQuantileReducer(QuantileReducer):
-    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+    def get_inplace_fn(self) -> InplaceInsertionFNType | None:
         return None
 
 
 class OVAbsQuantileReducer(AbsQuantileReducer):
-    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+    def get_inplace_fn(self) -> InplaceInsertionFNType | None:
         return None
 
 

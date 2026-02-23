@@ -9,10 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from pathlib import Path
 
-NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+NNCF_PACKAGE_ROOT_DIR = Path(__file__).resolve().parent
 HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"
 
 NNCF_CACHE_PATH = Path.home() / Path(".cache/nncf/")

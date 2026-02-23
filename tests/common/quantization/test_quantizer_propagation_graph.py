@@ -13,7 +13,6 @@ from abc import abstractmethod
 from collections import Counter
 from collections import namedtuple
 from copy import deepcopy
-from typing import Optional
 
 import networkx as nx
 import pytest
@@ -216,7 +215,7 @@ class TestQuantizerPropagationStateGraph:
         assert Counter(get_cat_path_list(ref_paths)) == Counter(get_cat_path_list(test_paths))
 
     class DomIPGroupedByUnifiedScalesTestStruct:
-        def __init__(self, start_ip_node_key: str, ref_groups_vs_paths: dict[Optional[int], list[PropagationPath]]):
+        def __init__(self, start_ip_node_key: str, ref_groups_vs_paths: dict[int | None, list[PropagationPath]]):
             self.start_ip_node_key = start_ip_node_key
             self.ref_groups_vs_paths = ref_groups_vs_paths
 
