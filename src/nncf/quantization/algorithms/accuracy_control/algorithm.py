@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@ import sys
 from typing import Iterable, Optional, TypeVar
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.utils import get_number_of_quantized_ops
@@ -252,8 +252,8 @@ class QuantizationAccuracyRestorer:
         :return: The quantized model whose metric `final_metric` is satisfied
             the maximum accuracy drop condition.
         """
-        initial_model_graph = NNCFGraphFactory.create(initial_model)
-        quantized_model_graph = NNCFGraphFactory.create(quantized_model)
+        initial_model_graph = build_graph(initial_model)
+        quantized_model_graph = build_graph(quantized_model)
 
         # Collect original biases and weights because these values are
         # required to undo bias correction and weight correction.

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,7 +19,6 @@ from nncf.common.utils.backend import get_backend
 NNCF_CATEGORY = "nncf"
 
 # Backend categories
-NNCF_TF_CATEGORY = "nncf_tf"
 NNCF_PT_CATEGORY = "nncf_pt"
 NNCF_PT_FX_CATEGORY = "nncf_pt_fx"
 NNCF_ONNX_CATEGORY = "nncf_onnx"
@@ -47,7 +46,6 @@ def get_model_based_category(model: TModel) -> str:
         BackendType.ONNX: NNCF_ONNX_CATEGORY,
         BackendType.OPENVINO: NNCF_OV_CATEGORY,
         BackendType.TORCH: NNCF_PT_CATEGORY,
-        BackendType.TENSORFLOW: NNCF_TF_CATEGORY,
         BackendType.TORCH_FX: NNCF_PT_FX_CATEGORY,
     }
     category = None

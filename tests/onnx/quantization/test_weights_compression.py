@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,8 @@
 
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import reduce
+from operator import mul
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -25,7 +27,7 @@ from packaging import version
 
 from nncf import CompressWeightsMode
 from nncf.common.factory import EngineFactory
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
@@ -121,7 +123,7 @@ def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightType
 )
 def test_numbers_of_quantized_weights(mode, reference_counter):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     counter = calculate_numbers_of_quantized_weights(model)
     assert counter == reference_counter
 
@@ -133,7 +135,7 @@ def test_numbers_of_quantized_weights(mode, reference_counter):
 def test_correct_dequantizelinear_int8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -164,7 +166,7 @@ def test_correct_dequantizelinear_int8(mode_weight_type):
 def test_correct_dequantizelinear_uint8(mode_weight_type):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -204,7 +206,7 @@ def test_correct_dequantizelinear_uint8(mode_weight_type):
 def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -240,7 +242,7 @@ def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
 def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
     mode, expected_weight_type = mode_weight_type
     model = create_model()
-    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+    model = compress_weights(model, mode=mode, group_size=group_size, all_layers=True)
 
     dq_cnt = 0
     for node in model.graph.node:
@@ -281,7 +283,7 @@ def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
 )
 def test_compression_with_inference(mode):
     model = create_model()
-    model = compress_weights(model, mode)
+    model = compress_weights(model, mode=mode)
     onnx.checker.check_model(model)
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())
@@ -414,30 +416,71 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def get_sequential_matmul_model() -> onnx.ModelProto:
+    def get_sequential_matmul_model(transpose_a: bool) -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_mixed_precision() test.
         """
         mb = ModelBuilder()
-        x = mb.add_input("input", (1, 4, 4))
-        output = mb.add_output("output", (1, 4, 4))
+        input_shape = (4, 4) if transpose_a else (1, 4, 4)
+        x = mb.add_input("input", input_shape)
 
         main_values = [10000, 1000, 1, 10, 10000]
+
+        if transpose_a:
+            x = mb.add_transpose(x, [1, 0])
         for i, main_value in enumerate(main_values):
             weights_data = np.arange(0, 16).reshape(4, 4).astype(np.float32)
             weights_data[-1, -1] = main_value
             weights_data = weights_data.T
-            x = mb.add_matmul(x, shape=weights_data.shape, output=output if i == 4 else None, data=weights_data)
+            if transpose_a:
+                x = mb.add_gemm(x, shape=weights_data.shape, weight_data=weights_data)
+                # Without additional output there is no edges between gemms in the graph
+                # for some odd reason
+                mb.add_output(x, input_shape)
+            else:
+                x = mb.add_matmul(x, shape=weights_data.shape, data=weights_data)
+                if i == 4:
+                    mb.add_output(x, input_shape)
 
         return mb.build(opset_version=21)
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
+        mb = ModelBuilder()
+
+        input_shape = input_shape or (2, 3)
+        x = mb.add_input("input", input_shape)
+        output = mb.add_output("output", input_shape)
+
+        inp_ch_idx = -2 if transpose_a else -1
+        w_shape = () if not is_3d_weights else (input_shape[0],)
+        w_shape += (input_shape[inp_ch_idx], input_shape[inp_ch_idx])
+        w_data = 0.1 * np.arange(0, np.prod(w_shape), dtype=np.float32).reshape(w_shape) + 0.05
+        w_data = w_data.T
+
+        relu = mb.add_relu(x)
+        if is_3d_weights:
+            act = mb.add_transpose(relu, perm=(0, 2, 1)) if transpose_a else relu
+            weight = np.transpose(w_data, (0, 2, 1)) if transpose_b else w_data
+            mb.add_matmul(act, shape=weight.shape, output=output, data=weight)
+            return mb.build(opset_version=21)
+
+        mb.add_gemm(
+            relu, w_data.shape, weight_data=w_data, trans_a=int(transpose_a), trans_b=int(transpose_b), output=output
+        )
+        model = mb.build()
+        return model
 
     @staticmethod
     def to_tensor(x: np.ndarray) -> np.ndarray:
         return np.array(x)
 
     @staticmethod
-    def check_weights(model: onnx.ModelProto, ref_ids: list[int]) -> None:
+    def check_weights(model: onnx.ModelProto, ref_ids: list[int], transpose_a: bool = False) -> None:
         names = {i.name for i in model.graph.initializer if i.data_type == onnx.TensorProto.INT4}
+        if transpose_a:
+            # First transpose node increments weights indexes
+            ref_ids = [i + 1 for i in ref_ids]
         low_precision_nodes = {f"W_{i}_quantized" for i in ref_ids}
         assert low_precision_nodes == names
 
@@ -466,27 +509,168 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_scale_estimation_ref():
-        return np.array(
-            [
-                [[0.473328]],
-                [[0.929023]],
-                [[1.446527]],
-                [[1.920595]],
-                [[2.517053]],
-                [[3.030101]],
-                [[3.584278]],
-                [[4.04351]],
-                [[4.620007]],
-                [[5.165322]],
-                [[5.710637]],
-                [[6.122580]],
-                [[6.655914]],
-                [[7.237173]],
-                [[7.722581]],
-                [[8.255914]],
-            ]
-        ).T
+    def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
+        num_experts = 2
+        hidden_dim = 8
+        out_dim = 16
+        seq_len = 4
+
+        mb = ModelBuilder()
+        x = mb.add_input("input", (num_experts, seq_len, hidden_dim))
+        output = mb.add_output("output", (num_experts, seq_len, out_dim))
+
+        weights = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
+        weights = weights.reshape(num_experts, hidden_dim, out_dim)
+
+        mb.add_matmul(x, shape=(num_experts, hidden_dim, out_dim), output=output, data=weights)
+
+        return mb.build(opset_version=21)
+
+    @staticmethod
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            np.array(
+                [
+                    [[0.473328]],
+                    [[0.929023]],
+                    [[1.446527]],
+                    [[1.920595]],
+                    [[2.517054]],
+                    [[3.030102]],
+                    [[3.584279]],
+                    [[4.043509]],
+                    [[4.620008]],
+                    [[5.165322]],
+                    [[5.710637]],
+                    [[6.122581]],
+                    [[6.655914]],
+                    [[7.237174]],
+                    [[7.722580]],
+                    [[8.255914]],
+                ]
+            ).T,
+            np.array(
+                [
+                    [[0.47344488]],
+                    [[0.9287766]],
+                    [[1.4463282]],
+                    [[1.920052]],
+                    [[2.5167778]],
+                    [[3.02987]],
+                    [[3.5842714]],
+                    [[4.0429296]],
+                    [[4.619769]],
+                    [[5.165224]],
+                    [[5.7106786]],
+                    [[6.121212]],
+                    [[6.654546]],
+                    [[7.2366524]],
+                    [[7.7212124]],
+                    [[8.254545]],
+                ]
+            ).T,
+        )[check_sampling_activation_stats_flow]
+
+    @staticmethod
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            np.array(
+                [
+                    [
+                        [
+                            [
+                                7.5732,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.2602,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.3083,
+                                7.8467,
+                                7.2233,
+                                7.2715,
+                                7.4205,
+                                7.4667,
+                            ]
+                        ]
+                    ],
+                    [
+                        [
+                            [
+                                14.8205,
+                                14.9032,
+                                14.9858,
+                                15.0685,
+                                15.1512,
+                                14.3400,
+                                14.4173,
+                                14.4945,
+                                14.5718,
+                                14.6491,
+                                14.7264,
+                                14.8037,
+                                14.8810,
+                                14.9583,
+                                15.0355,
+                                15.1128,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+            np.array(
+                [
+                    [
+                        [
+                            [
+                                7.575118,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.254837,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.495066,
+                                7.850108,
+                                7.219489,
+                                7.2685375,
+                                7.418597,
+                                7.4666667,
+                            ]
+                        ]
+                    ],
+                    [
+                        [
+                            [
+                                14.820066,
+                                14.902746,
+                                14.985427,
+                                15.068108,
+                                15.150787,
+                                14.3391285,
+                                14.416424,
+                                14.493721,
+                                14.571016,
+                                14.648311,
+                                14.725608,
+                                14.802904,
+                                14.8801985,
+                                14.957496,
+                                15.034791,
+                                15.112087,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: onnx.ModelProto) -> Tensor:
@@ -498,7 +682,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_decompressed_weight(compressed_model: onnx.ModelProto, input: np.ndarray):
-        graph = NNCFGraphFactory.create(compressed_model)
+        graph = build_graph(compressed_model)
         mapping = get_input_edges_mapping(graph)
         transformation_layout = TransformationLayout()
 
@@ -517,7 +701,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(outputs["W_0_dequantized"])
 
     @staticmethod
-    def get_awq_act_model(with_multiply: bool, n_layers: int) -> onnx.ModelProto:
+    def get_awq_act_model(is_3d_weights: bool, with_multiply: bool, n_layers: int) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul()
@@ -526,25 +710,30 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         """
         mb = ModelBuilder()
 
-        data = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
+        weight_shape = (8, 8)
+        if is_3d_weights:
+            # The first and last dimension are later transposed
+            weight_shape = (8, 8, 2)
+
+        data = 0.01 * np.arange(0, reduce(mul, weight_shape, 1)).reshape(weight_shape) + 0.05
         data = data.astype(np.float32).T
 
-        x = mb.add_input("input", (1, 8, 8))
-        output = mb.add_output("output", (1, 8, 8))
+        x = mb.add_input("input", (2, 8, 8))
+        output = mb.add_output("output", (2, 8, 8))
 
-        x = mb.add_matmul(x, shape=(8, 8), data=data)
+        x = mb.add_matmul(x, shape=data.shape, data=data)
         for _ in range(n_layers):
-            a = mb.add_matmul(x, shape=(8, 8), data=data)
+            a = mb.add_matmul(x, shape=data.shape, data=data)
             a = mb.add_relu(a)
             if with_multiply:
-                b = mb.add_matmul(x, shape=(8, 8), data=data)
+                b = mb.add_matmul(x, shape=data.shape, data=data)
                 b = mb.add_selu(b)
                 x = mb.add_mul(a, b)
             else:
                 x = a
-        mb.add_matmul(x, shape=(8, 8), output=output, data=data)
+        mb.add_matmul(x, shape=data.shape, output=output, data=data)
 
-        return mb.build()
+        return mb.build(opset_version=21)
 
     @staticmethod
     def get_num_multiply_from_awq(model: onnx.ModelProto) -> int:
@@ -555,7 +744,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_awq_model() -> onnx.ModelProto:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_awq_with_ignored_scope()
@@ -565,20 +754,34 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         """
         mb = ModelBuilder()
 
-        x = mb.add_input("input", (1, None, 8))
-        output = mb.add_output("output", (1, None, 8))
+        weight_shape = (8, 8)
+        opset_version = 13
 
-        w_data = 0.01 * np.arange(0, 64, dtype=np.float32).reshape(8, 8) + 0.05
+        if is_3d_weights:
+            # The first and last dimension are later transposed
+            weight_shape = (8, 8, 2)
+            # 3D weights does not work due to no support in MatMulNBits which is used in opset_version < 21
+            opset_version = 21
+        x = mb.add_input("input", (None, None, 8))
+        output = mb.add_output("output", (None, None, 8))
+
+        w_data = 0.01 * np.arange(0, reduce(mul, weight_shape, 1), dtype=np.float32).reshape(weight_shape) + 0.05
         w_data = w_data.T
 
         num_blocks = 2
-        for i in range(num_blocks):
-            a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-            b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-            x = mb.add_mul(a, b)
-            x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
 
-        return mb.build()
+        for i in range(num_blocks):
+            if non_mergable_pattern:
+                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                b = mb.add_relu(a)
+                x = mb.add_matmul(b, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+            else:
+                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                x = mb.add_mul(a, b)
+                x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+
+        return mb.build(opset_version=opset_version)
 
     @staticmethod
     def get_different_channel_size_model(channel_sizes: list[int]) -> onnx.ModelProto:
@@ -619,19 +822,106 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return num
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "MatMul_3": Tensor(
-                np.array(
-                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
-                    dtype=np.float32,
-                ).T
-            )
-        }
+    @pytest.fixture
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
+        return [
+            {
+                "Gemm_1": Tensor(np.array([[14.299703], [8.364688]], dtype=np.float32)),
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [
+                                1.2264546,
+                                1.2054994,
+                                1.1413404,
+                                1.0974358,
+                                1.0643553,
+                                1.0379708,
+                                1.0161183,
+                                0.9975262,
+                            ]
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [
+                                [
+                                    1.9909902,
+                                    1.8632966,
+                                    1.5759803,
+                                    1.3974594,
+                                    1.2722752,
+                                    1.1779976,
+                                    1.1035581,
+                                    1.042768,
+                                ]
+                            ]
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+            {
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [[1.119726, 1.1012304, 1.0438583, 1.006067, 0.97812414, 0.95607865, 0.9379444, 0.922586]],
+                            [
+                                [
+                                    0.99698645,
+                                    0.9808075,
+                                    0.9307146,
+                                    0.8974796,
+                                    0.87281394,
+                                    0.8533093,
+                                    0.8372402,
+                                    0.82361573,
+                                ]
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [
+                                [
+                                    1.1409731,
+                                    1.1160939,
+                                    1.0581433,
+                                    1.0199243,
+                                    0.9916471,
+                                    0.96932924,
+                                    0.95096624,
+                                    0.93541104,
+                                ]
+                            ],
+                            [
+                                [
+                                    1.0040698,
+                                    0.9826729,
+                                    0.9324939,
+                                    0.8991995,
+                                    0.87448895,
+                                    0.85494846,
+                                    0.83884954,
+                                    0.8251996,
+                                ]
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+        ]
 
     @staticmethod
     def get_transform_func() -> Optional[Callable[..., Any]]:
@@ -643,3 +933,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_reduction_axes() -> int:
         return 0
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return True

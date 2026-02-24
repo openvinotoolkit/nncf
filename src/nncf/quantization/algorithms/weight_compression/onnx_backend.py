@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,12 +25,12 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import ShapeReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.onnx.graph.metatypes import onnx_metatypes
 from nncf.onnx.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
@@ -38,6 +38,7 @@ from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.model_transformer import remove_initializer
 from nncf.onnx.graph.model_transformer import remove_node
 from nncf.onnx.graph.model_transformer import set_initializer
+from nncf.onnx.graph.node_utils import get_act_quantization_axis
 from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
@@ -109,15 +110,16 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         scale = compressed_weight.scale
         zero_point = compressed_weight.zero_point
 
-        axis = 1 if dequantize_block_size else None
+        # For 3D weights, we need to squeeze at the next dimension compared to 2D because of batch dim
+        axis = 1 + len(scale.shape) % 3 if dequantize_block_size else None
         scale = scale.squeeze(axis=axis)
         if zero_point is not None:
             zero_point = zero_point.squeeze(axis=axis)
 
         if apply_transpose:
-            scale = fns.transpose(scale)
+            scale = fns.moveaxis(scale, -1, -2)
             if zero_point is not None:
-                zero_point = fns.transpose(zero_point)
+                zero_point = fns.moveaxis(zero_point, -1, -2)
 
         if zero_point is not None:
             zero_point = zero_point.astype(tensor.dtype)
@@ -144,6 +146,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
+        # Everything remains the same, except when 3D weights, reduce by batch dimension also.
+        if len(const_shape) == 3:
+            channel_axes = (0,) + channel_axes
         return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
@@ -182,6 +187,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_name = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["name"]
         weight_tensor = get_tensor_value(model, weight_name)
         return Tensor(weight_tensor)
+
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, graph: NNCFGraph) -> bool:
+        if matmul.metatype != metatypes.ONNXGemmMetatype:
+            return False
+        act_port_id = self.get_activation_port_id(matmul, graph)
+        trans_attr = "transB" if act_port_id else "transA"
+        return matmul.layer_attributes.node_attrs[trans_attr]
 
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: onnx.ModelProto, graph: NNCFGraph
@@ -256,6 +268,10 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # For opsets earlier than 21, we use the `MatMulNBits` operation from ONNX Runtime contrib operators.
             # See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md
             if opset_version < 21 and dequantize_block_size > 0:
+                if len(weight.shape) == 3:
+                    msg = """ONNX does not support 3D weights for opset version < 21.
+                             Please use a higher opset version or per-channel quantization"""
+                    raise nncf.ParameterNotSupportedError(msg)
                 compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
                     compressed_weight, weight.shape, dequantize_block_size=None, apply_transpose=True
                 )
@@ -297,6 +313,10 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         return filter_func
+
+    @staticmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
+        return get_act_quantization_axis(node, port_id)
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
@@ -474,11 +494,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # Insert the MatMulNBits node before the consumer nodes
         insert_index = len(model.graph.node)
 
+        old_output = original_matmul.output[0]
+        new_output = matmul_n_bits.output[0]
         for node in model.graph.node:
             for j, input_name in enumerate(node.input):
-                if input_name == original_matmul.name:
+                if input_name == old_output:
                     insert_index = min(insert_index, get_node_index(model, node.name))
-                    node.input[j] = matmul_n_bits
+                    node.input[j] = new_output
 
         # Insert the MatMulNBits node before the first consumer node
         model.graph.node.insert(insert_index, matmul_n_bits)
@@ -500,9 +522,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 class ONNXAWQAlgoAlgoBackend(AWQAlgoBackend, ONNXWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns() -> dict[str, Callable]:
-        return get_awq_patterns(
-            onnx_metatypes.ONNXMatMulMetatype, onnx_metatypes.ONNXMulLayerMetatype, ATOMIC_ACTIVATIONS_OPERATIONS
-        )
+        patterns = {}
+        for mm_metatype in (onnx_metatypes.ONNXMatMulMetatype, onnx_metatypes.ONNXGemmMetatype):
+            p = get_awq_patterns(mm_metatype, onnx_metatypes.ONNXMulLayerMetatype, ATOMIC_ACTIVATIONS_OPERATIONS)
+            p = {f"{mm_metatype.__name__}_{k}": v for k, v in p.items()}
+            patterns.update(p)
+
+        return patterns
 
     @staticmethod
     def scale_insertion_command(

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,21 +10,25 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 import nncf
-from nncf.api.compression import TModel
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
+from nncf.data.dataset import Dataset
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
 
+TModel = TypeVar("TModel")
 
+
+@api(canonical_alias="nncf.prune")
 def prune(
     model: TModel,
-    *,
     mode: PruneMode,
+    *,
     ratio: Optional[float] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     examples_inputs: Optional[Any] = None,
@@ -49,6 +53,30 @@ def prune(
         msg = f"Pruning is not supported for the {backend} backend."
         raise nncf.InternalError(msg)
     return model
+
+
+@api(canonical_alias="nncf.batch_norm_adaptation")
+def batch_norm_adaptation(
+    model: TModel, calibration_dataset: Dataset, *, num_iterations: Optional[int] = None
+) -> TModel:
+    """
+    Adapt the batch normalization layers of the given model using the provided dataset.
+    This function runs a specified number of iterations through the model
+    to update the running statistics of the batch normalization layers.
+
+    :param model: The model to adapt.
+    :param calibration_dataset: The dataset to use for the adaptation.
+    :param num_iterations: The number of iterations to use for adaptation.
+        If set to None, the adaptation will run for the entire dataset.
+    """
+    backend = get_backend(model)
+    if backend == BackendType.TORCH:
+        from nncf.torch.function_hook.pruning.batch_norm_adaptation import batch_norm_adaptation
+
+        return batch_norm_adaptation(model, calibration_dataset=calibration_dataset, num_iterations=num_iterations)
+
+    msg = f"Batch norm adaptation is not supported for the {backend} backend."
+    raise nncf.InternalError(msg)
 
 
 @dataclass
@@ -93,6 +121,7 @@ class ModelPruningStatistic:
         return text
 
 
+@api(canonical_alias="nncf.pruning_statistic")
 def pruning_statistic(model: TModel) -> ModelPruningStatistic:
     """
     Collects and returns pruning statistics for the given model.

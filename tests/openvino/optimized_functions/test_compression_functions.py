@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,7 +23,6 @@ import nncf
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import Dataset
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.openvino.cpu_info import is_arm_cpu
@@ -69,11 +68,21 @@ INT4_COMPRESSION_CONFIGS = [
 
 FP4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.NF4),
+    WeightCompressionConfig(CompressWeightsMode.FP4),
     WeightCompressionConfig(CompressWeightsMode.NF4, group_size=2),
+    WeightCompressionConfig(CompressWeightsMode.FP4, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.MXFP4, group_size=32),
 ]
 
-COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
+FP8_COMPRESSION_CONFIGS = [
+    WeightCompressionConfig(CompressWeightsMode.FP8_E4M3),
+    WeightCompressionConfig(CompressWeightsMode.FP8_E4M3, group_size=2),
+    WeightCompressionConfig(CompressWeightsMode.MXFP8_E4M3, group_size=32),
+]
+
+COMPRESSION_CONFIGS = (
+    INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS + FP8_COMPRESSION_CONFIGS
+)
 
 WEIGHT_SHAPE = (10000, 32)
 
@@ -123,10 +132,6 @@ def openvino_available(available: bool):
         yield
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize(
     "weight_shape,is_disabled",
     [
@@ -154,10 +159,6 @@ def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantizati
             mock.assert_called_once()
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
@@ -277,15 +278,12 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
     _check_values(results)
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
 @pytest.mark.parametrize("dtype", SUPPORTED_WEIGHT_DTYPES)
-def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype):
+@pytest.mark.parametrize("reduction", ["max_mean", "frobenius"])
+def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype, reduction):
     results = defaultdict(dict)
     # Iterate over two implementations
     for cb in [ComputationBackend.NumPy, ComputationBackend.OV]:
@@ -300,22 +298,29 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
             fn_to_patch = opt_fns.get_integer_quantization_error
             patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
-                results[cb]["quantization_error"] = get_integer_quantization_error(weight, REDUCTION_AXES, config)
+                results[cb]["quantization_error"] = get_integer_quantization_error(
+                    weight, REDUCTION_AXES, config, reduction=reduction
+                )
 
             if cb == ComputationBackend.NumPy:
                 mock.assert_not_called()
             else:
                 mock.assert_called_once()
 
-    # It seems like numpy and openvino summate elements in different order during reduce_sum / reduce_mean computation.
-    # This results in small numerical differences.
-    _check_values(results, atol=1e-6)
+    # For "max_mean", it seems like numpy and openvino summate elements in different order during
+    # reduce_sum / reduce_mean computation. This results in small numerical differences.
+    # For "frobenius", there is a bit larger error, possibly because np.linalg.norm relies on BLAS/LAPACK
+    # implementations.
+    atol = 0
+    rtol = 0
+    if reduction == "max_mean":
+        atol = 1e-6
+    if reduction == "frobenius":
+        rtol = 1e-3 if is_arm_cpu() else 1e-4
+
+    _check_values(results, atol=atol, rtol=rtol)
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("weight_dtype", SUPPORTED_WEIGHT_DTYPES)
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
@@ -377,14 +382,18 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
         or compression_kwargs.get("lora_correction")
     )
 
-    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM, CompressWeightsMode.MXFP4]:
-        if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM] and weight_dtype in [
-            TensorDataType.f8e4m3,
-            TensorDataType.f8e5m2,
-        ]:
+    if is_data_aware and config.mode in [
+        CompressWeightsMode.INT8_ASYM,
+        CompressWeightsMode.INT8_SYM,
+        CompressWeightsMode.MXFP4,
+        CompressWeightsMode.FP4,
+        CompressWeightsMode.FP8_E4M3,
+        CompressWeightsMode.MXFP8_E4M3,
+    ]:
+        pytest.skip("Data-aware compression is not supported for INT8, MXFP4, FP4, MXFP8, FP8 modes.")
+    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+        if weight_dtype in [TensorDataType.f8e4m3, TensorDataType.f8e5m2]:
             pytest.skip("INT8 compression is not supported for f8 dtypes.")
-        if is_data_aware:
-            pytest.skip("Data-aware compression is not supported for INT8 or MXFP4 modes.")
     else:
         compression_kwargs["all_layers"] = True
 
@@ -402,7 +411,7 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
                 if is_data_aware:
                     compression_kwargs["dataset"] = create_dataset(model)
 
-                nncf.compress_weights(model, config.mode, group_size=config.group_size, **compression_kwargs)
+                nncf.compress_weights(model, mode=config.mode, group_size=config.group_size, **compression_kwargs)
 
                 if cb == ComputationBackend.NumPy:
                     mock.assert_not_called()
@@ -410,7 +419,7 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
                     mock.assert_called()
 
                 ov_nodes = {node.get_friendly_name(): node for node in model.get_ops()}
-                nncf_graph = NNCFGraphFactory.create(model)
+                nncf_graph = nncf.build_graph(model)
                 for i, nncf_node in enumerate(nncf_graph.topological_sort()):
                     node_name = nncf_node.node_name
                     node = ov_nodes[node_name]
@@ -478,29 +487,24 @@ def _check_backends_and_dtypes(
         # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
         # zero point must be in ov backend and have (u)int4/nf4/f4e2m1 dtypes in order to be able to insert them into
         # OV model without re-packing
-        if config.is_integer:
-            ref_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
-        else:
-            ref_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
         assert compressed_weight.backend == TensorBackend.ov
-        assert compressed_weight.dtype == ref_dtype
+        assert compressed_weight.dtype == config.compression_dtype
         if config.is_asym_mode and not precompute_s_zp:
             assert zero_point.backend == TensorBackend.ov
             assert zero_point.dtype == TensorDataType.uint4
     else:
         if quantization_task != QuantizationTask.Q_DQ:
             # Otherwise, for integer compression, compressed weight and zero point must be returned in numpy backend,
-            # compressed weight must be of (u)int8, zero point -- in int32; for nf4/f4e2m1 compression, the resulting
+            # compressed weight must be of (u)int8, zero point -- in int32; for float compression, the resulting
             # data type and backend depends on the input tensor backend.
             if config.is_integer:
                 ref_backend = TensorBackend.numpy
                 ref_dtype = TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8
             else:
                 ref_backend = weight_tensor_backend
-                if weight_tensor_backend == TensorBackend.ov:
-                    ref_dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
-                else:
-                    ref_dtype = TensorDataType.float32
+                ref_dtype = (
+                    config.compression_dtype if weight_tensor_backend == TensorBackend.ov else TensorDataType.float32
+                )
             assert compressed_weight.backend == ref_backend
             assert compressed_weight.dtype == ref_dtype
             if config.is_asym_mode and not precompute_s_zp:
@@ -511,9 +515,9 @@ def _check_backends_and_dtypes(
             assert decompressed_weight.dtype == TensorDataType.float32
 
 
-def _check_values(results, atol=0.0):
-    def format_list_of_floats(lst):
-        return ", ".join(f"{x:.10f}" for x in lst)
+def _check_values(results, atol=0.0, rtol=0.0):
+    def format_list_of_floats(lst, n_first=32):
+        return ", ".join(f"{x:.10f}" for x in lst[:n_first])
 
     # Check that the computed tensors are equal between implementations
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
@@ -529,22 +533,24 @@ def _check_values(results, atol=0.0):
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
         try:
-            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=0)
+            np.testing.assert_allclose(ov_result.data, numpy_result.data, atol=atol, rtol=rtol)
         except AssertionError:
             not_equal_mask = np.not_equal(ov_result.data, numpy_result.data)
             msg = (
                 f"Results do not align for {key} with "
                 f"{not_equal_mask.sum() / ov_result.data.size * 100:.2f} % misalignment ratio.\n"
-                f"OV result:    {format_list_of_floats(ov_result.data[not_equal_mask])}\n"
-                f"NumPy result: {format_list_of_floats(numpy_result.data[not_equal_mask])}\n"
+                f"OV result (first 32 values):    {format_list_of_floats(ov_result.data[not_equal_mask])}\n"
+                f"NumPy result (first 32 values): {format_list_of_floats(numpy_result.data[not_equal_mask])}\n"
             )
             if "input" in results[ComputationBackend.OV] and "input" in results[ComputationBackend.NumPy]:
                 numpy_input = results[ComputationBackend.NumPy]["input"].data
                 ov_input = results[ComputationBackend.OV]["input"].data
                 np.testing.assert_allclose(numpy_input, ov_input, atol=0, rtol=0)
-                msg += f"Input values   : {format_list_of_floats(numpy_input[not_equal_mask])}\n"
+                if "weight" in key:
+                    msg += f"Input values (first 32 values)    : {format_list_of_floats(numpy_input[not_equal_mask])}\n"
                 misaligned_groups_mask = np.any(not_equal_mask, axis=-1)
                 misaligned_groups = numpy_input[misaligned_groups_mask, ...]
                 misaligned_groups = np.reshape(misaligned_groups, (-1, misaligned_groups.shape[-1]))
-                msg += f"First 10 misaligned groups: {[it for it in misaligned_groups][:10]}\n"
+                msg += "First 10 misaligned groups:\n"
+                msg += "\n".join(format_list_of_floats(it, misaligned_groups.shape[1]) for it in misaligned_groups[:10])
             raise AssertionError(msg)

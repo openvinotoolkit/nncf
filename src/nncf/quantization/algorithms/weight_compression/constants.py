@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,9 @@
 # limitations under the License.
 
 import numpy as np
+
+from nncf.parameters import CompressWeightsMode
+from nncf.tensor import TensorDataType
 
 NF4_QUANTILES = np.array(
     [
@@ -33,7 +36,7 @@ NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
-MXFP4_QUANTILES = np.array(
+F4E2M1_QUANTILES = np.array(
     [
         -6.0,
         -4.0,
@@ -100,4 +103,34 @@ CENTER_OF_NF4_QUANTILES = np.array(
 )
 
 
-CENTER_OF_MXFP4_QUANTILES = (MXFP4_QUANTILES[1:] + MXFP4_QUANTILES[:-1]) / 2
+CENTER_OF_F4E2M1_QUANTILES = (F4E2M1_QUANTILES[1:] + F4E2M1_QUANTILES[:-1]) / 2
+
+
+FP_MAX_VALUES = {
+    TensorDataType.nf4: 1.0,
+    TensorDataType.f4e2m1: 6.0,
+    TensorDataType.f8e4m3: 448.0,
+}
+
+
+MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 10000
+
+OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES = (
+    CompressWeightsMode.INT8_ASYM,
+    CompressWeightsMode.INT8_SYM,
+    CompressWeightsMode.INT4_ASYM,
+    CompressWeightsMode.INT4_SYM,
+)
+
+OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES = (
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.MXFP4,
+    CompressWeightsMode.FP4,
+    CompressWeightsMode.FP8_E4M3,
+    CompressWeightsMode.MXFP8_E4M3,
+)
+
+OPTIMIZED_COMPRESSION_COMPATIBLE_MODES = (
+    *OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES,
+    *OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES,
+)

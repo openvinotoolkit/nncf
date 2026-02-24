@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,3 +23,9 @@ CACHE_MODELS_PATH = NNCF_CACHE_PATH / Path("models")
 # debug dumps, are performed or not performed
 NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
 NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines
+
+# This is a special input key used by OpenVINO backend to control resetting of internal model state
+# between model inferences. This key can be added to a dataset sample input dictionary with either
+# `True` or `False` value. With `True` value, the model state will be reset before inference on the corresponding
+# sample, and with `False` the state will not be reset.
+NNCF_DATASET_RESET_STATE_KEY = "nncf_reset_state"

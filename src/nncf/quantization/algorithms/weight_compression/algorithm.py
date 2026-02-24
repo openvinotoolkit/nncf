@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import operator
 from collections import OrderedDict
 from collections import defaultdict
 from functools import reduce
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -28,10 +28,11 @@ from nncf.common.logging.track_progress import track
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation import CodebookEstimation
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -93,7 +94,11 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
-        elif mode in [CompressWeightsMode.CODEBOOK, CompressWeightsMode.CB4_F8E4M3]:
+        elif mode in [
+            CompressWeightsMode.CODEBOOK,
+            CompressWeightsMode.CB4,
+            CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        ]:
             group_size = -1
         else:
             group_size = 128
@@ -201,6 +206,27 @@ def check_user_compression_configuration(
             elif fns.any(np_codebook[:-1] >= np_codebook[1:]):
                 msg = "The codebook must be a sorted 1D array with unique elements, but an unsorted array is given."
             if msg:
+                raise nncf.ValidationError(msg)
+
+        if (
+            advanced_parameters.adaptive_codebook_params is not None
+            and codebook is not None
+            and mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
+        ):
+            cb_params = advanced_parameters.adaptive_codebook_params
+            if cb_params.num_elements is not None and cb_params.num_elements != np_codebook.size:
+                msg = (
+                    "The 'num_elements' parameter in Adaptive Codebook parameters "
+                    "must match the size of the provided codebook. "
+                    f"Expected {np_codebook.size}, but got {cb_params.num_elements}."
+                )
+                raise nncf.ValidationError(msg)
+
+            if cb_params.across_blocks and (group_size and group_size != -1):
+                msg = (
+                    "When 'across_blocks' is set to True in Adaptive Codebook parameters, "
+                    "the 'group_size' must be -1 (no grouping) or None."
+                )
                 raise nncf.ValidationError(msg)
 
     for size in values_to_check:
@@ -337,6 +363,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
+        self._codebook_estimation = mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
         self._backup_mode = backup_mode
         self._compression_format = compression_format
         self._advanced_parameters = (
@@ -377,6 +404,14 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
 
+        if self._codebook_estimation:
+            codebook_estimation_params = self._advanced_parameters.adaptive_codebook_params
+            self._codebook_estimation_algo = CodebookEstimation(
+                codebook_estimation_params.value_type,
+                codebook_estimation_params.across_blocks,
+                codebook_estimation_params.num_elements,
+            )
+
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
@@ -385,11 +420,28 @@ class WeightCompression(Algorithm):
             or self._scale_estimation
             or self._lora_correction
             or self._gptq
+            or self._codebook_estimation
         )
 
     @property
     def available_backends(self) -> list[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.ONNX]
+
+    @property
+    def mode(self) -> CompressWeightsMode:
+        return self._mode
+
+    @property
+    def group_size(self) -> int:
+        return self._group_size
+
+    @property
+    def all_layers(self) -> bool:
+        return self._all_layers
+
+    @property
+    def backup_mode(self) -> CompressWeightsMode:
+        return self._backup_mode
 
     def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
         """
@@ -503,13 +555,34 @@ class WeightCompression(Algorithm):
 
         return ratio_defining_params
 
+    def _get_backup_config(self, weight_dtype: TensorDataType) -> Optional[WeightCompressionConfig]:
+        """
+        Returns the backup weight compression configuration based on the algorithm's backup mode.
+
+        :param weight_dtype: Data type of the weight tensor.
+        :return: A WeightCompressionConfig object for the backup precision, or None if backup is
+        disabled or unsupported.
+        """
+        if self._backup_mode == BackupMode.NONE:
+            return None
+        mode = (
+            CompressWeightsMode.INT8_ASYM if self._backup_mode == BackupMode.INT8_ASYM else CompressWeightsMode.INT8_SYM
+        )
+        if not self.is_weight_compression_supported(weight_dtype, mode):
+            return None
+        return WeightCompressionConfig(mode=mode)
+
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
 
-        if self._mode == CompressWeightsMode.CB4_F8E4M3:
+        if self._mode == CompressWeightsMode.CB4:
             codebook_values = Tensor(CB4_QUANTILES)
         elif self._mode == CompressWeightsMode.CODEBOOK:
             codebook_values = Tensor(self._advanced_parameters.codebook)
+        elif self._mode == CompressWeightsMode.ADAPTIVE_CODEBOOK:
+            codebook_values = Tensor(
+                self._advanced_parameters.codebook if self._advanced_parameters.codebook is not None else CB4_QUANTILES
+            )
 
         return WeightCompressionConfig(
             mode=self._mode,
@@ -517,34 +590,46 @@ class WeightCompression(Algorithm):
             codebook_values=codebook_values,
         )
 
-    def _set_weight_compression_config(
+    def apply_mixed_precision(
         self,
         ratio_defining_params: list[WeightCompressionParameters],
         model: TModel,
         graph: NNCFGraph,
         statistics_points: StatisticPointsContainer,
-        group_size_values: dict[str, int],
     ) -> None:
         """
-        Sets the appropriate compression configuration for weights based on some criteria.
+        Applies mixed precision compression by selecting weights for primary precision based on the
+        configured ratio, and assigning backup precision to the remaining weights.
 
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
         :param model: The model.
         :param graph: The model graph associated with the model.
         :param statistics_points: Statistics points.
-        :param group_size_values: A dictionary mapping weight names to their group size values.
         """
         if self._ratio < 1 and len(ratio_defining_params) > 0:
             primary_precision_weight_params = self._mixed_precision_algo.apply(
                 model, graph, statistics_points, weight_params=ratio_defining_params
             )
-        else:
-            primary_precision_weight_params = ratio_defining_params
+            # At this point ratio_defining_params are all in primary precision. Below we update parameters
+            # which need to be set to the backup precision.
+            primary_precision_node_names = set(
+                param.node_with_weight.node_name for param in primary_precision_weight_params
+            )
+            for weight_param in ratio_defining_params:
+                if weight_param.node_with_weight.node_name not in primary_precision_node_names:
+                    weight_param.compression_config = self._get_backup_config(weight_param.weight_dtype)
 
-        for weight_param in primary_precision_weight_params:
-            weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
+    def validate_group_size(
+        self,
+        ratio_defining_params: list[WeightCompressionParameters],
+    ) -> None:
+        """
+        Validates that the configured group size is divisible by the reduction channel size for all weights.
 
+        :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
+            backup precisions.
+        """
         # Check if group size is valid for each weight in ratio_defining_params
         failed_nodes = []
         for w_params in ratio_defining_params:
@@ -665,7 +750,7 @@ class WeightCompression(Algorithm):
         percentage = sum(num_weights_list) / max(total_num_weights, 1) * 100
         return f"{percentage:.0f}% ({len(num_weights_list)} / {total_num_params})"
 
-    def _get_bitwidth_distribution_str(
+    def get_bitwidth_distribution_str(
         self,
         all_params: list[WeightCompressionParameters],
         ratio_defining_params: list[WeightCompressionParameters],
@@ -786,27 +871,89 @@ class WeightCompression(Algorithm):
 
         return is_supported_dtype and not no_bit_reduction
 
+    def collect_statistics_and_statistic_points(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer],
+        dataset: Dataset,
+        ratio_defining_params: list[WeightCompressionParameters],
+        all_weight_params: list[WeightCompressionParameters],
+    ) -> tuple[Optional[dict[str, WCTensorStatistic]], StatisticPointsContainer]:
+        """
+        Collects and computes statistics required for weight compression.
+
+        :param model: Backend-specific model instance.
+        :param graph: Corresponding NNCFGraph of the model.
+        :param statistic_points: Container with pre-collected statistics, if available.
+        :param dataset: Dataset used for collecting statistics when not provided.
+        :param ratio_defining_params: List of parameters defining compression ratios.
+        :param all_weight_params: List of all weight compression parameters.
+        :return: A tuple containing collected statistics for weight compression and the updated statistic_points.
+        """
+        if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
+            return None, statistic_points
+        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+        matmul_nodes_to_compress = [
+            wp.node_with_weight
+            for wp in weight_params
+            if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+        ]
+        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
+        if statistic_points is None:
+            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map)
+            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
+        statistics = self._get_statistics_for_weights_compression(matmul_input_to_output_nodes_map, statistic_points)
+        return statistics, statistic_points
+
+    @staticmethod
+    def _maybe_get_ov_version() -> Optional[tuple]:
+        """
+        Parse OpenVINO version strings like:
+            '2026.0.0-20595-5d95073296d'
+        into a tuple:
+            (2026, 0, 0, 20595)
+        """
+        try:
+            import re
+
+            import openvino as ov
+
+            base, rest = ov.__version__.split("-", 1)
+            major, minor, patch = map(int, base.split("."))
+
+            m = re.match(r"(\d+)", rest)
+            build = int(m.group(1))
+
+            return major, minor, patch, build
+        except Exception:
+            return None
+
     def get_weight_compression_parameters(
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
-    ) -> tuple[list[WeightCompressionParameters], Optional[dict[str, WCTensorStatistic]]]:
+    ) -> tuple[
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+    ]:
         """
-        Generates a list of weight compression parameters based on the Weight Compression algorithm
-        configuration. Determines the appropriate quantization parameters for each node eligible for
-        weight compression. Also, Generates a mapping of target node names to the collected statistics
-        based on the provided statistic_points. If statistic_points is None, collects required
-        compression statistics on the given dataset.
+        This function does the following:
+
+        * Generates a list of weight compression parameters based on the algorithm configuration.
+        * Determines the appropriate quantization parameters for each node eligible for weight compression.
+        * Generates a subset of parameters that can be compressed in both primary and backup precisions,
+        called ratio-defining parameters. All ratio-defining parameters are set to the primary precision.
+        * Generates a subset of parameters that will not be compressed, based on the ignored scope or
+        compression configuration restrictions.
 
         :param model: Backend-specific input model.
         :param graph: NNCFGraph instance.
-        :param statistic_points: Optional pre-collected statistic points.
-        :param dataset: Optional dataset for statistics collection.
-        :return: A tuple consisting of a list of weight compression parameters, based on the Weight
-            Compression algorithm configuration, and a mapping of target node names to the
-            collected statistics.
+        :return: A tuple consisting of:
+            1. a list of all weight compression parameters that can be compressed,
+            2. a list of ratio-defining parameters, which can be set to either primary or backup precisions,
+            3. and a list of weight compression parameters that can not be compressed.
         """
         nodes_to_compress = self.get_nodes_to_compress(graph)
 
@@ -851,15 +998,30 @@ class WeightCompression(Algorithm):
                             f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                         )
 
-                    if self._backup_mode != BackupMode.NONE:
-                        mode = (
-                            CompressWeightsMode.INT8_ASYM
-                            if self._backup_mode == BackupMode.INT8_ASYM
-                            else CompressWeightsMode.INT8_SYM
+                    model_backend = get_backend(model)
+                    ov_version = self._maybe_get_ov_version()
+                    if (
+                        model_backend == BackendType.OPENVINO
+                        and len(weight_shape) == 3
+                        and ov_version
+                        and ov_version < (2026, 0, 0, 20483)
+                        and node.metatype in self._backend_entity.matmul_metatypes
+                        and (
+                            self._data_aware_compression
+                            or self._awq
+                            or self._sensitivity_metric == SensitivityMetric.HESSIAN_INPUT_ACTIVATION
                         )
-                        if self.is_weight_compression_supported(weight_dtype, mode):
-                            wc_config = WeightCompressionConfig(mode=mode)
+                    ):
+                        # MoE operations are usually matmuls, so the check for matmul metatype is done
+                        # This is to avoid raising the error for non-MoE cases with 3D weights.
+                        parsed_ov_version = f"{ov_version[0]}.{ov_version[1]}.{ov_version[2]}-{ov_version[3]}"
+                        msg = f"""NNCF compression algorithms do not support 3D weights with current version of
+                                OpenVINO {parsed_ov_version} due to a known issue in statistics collection
+                                Ticket - 176465. Please update to the latest OpenVINO nightly version.
+                                Node with weight: {node.node_name}."""
+                        raise nncf.UnsupportedModelError(msg)
 
+                    wc_config = self._get_backup_config(weight_dtype)
                     weight_params = WeightCompressionParameters(
                         weight_name, node, weight_port_id, weight_dtype, weight_shape, reduction_axes, wc_config
                     )
@@ -886,37 +1048,11 @@ class WeightCompression(Algorithm):
         else:
             group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
 
-        # Collect statistics for the weights compression
-        statistics = None
-        if (self._data_aware_mixed_precision or self._data_aware_compression) and dataset:
-            weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
-            matmul_nodes_to_compress = [
-                wp.node_with_weight
-                for wp in weight_params
-                if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
-            ]
-            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
-                matmul_nodes_to_compress, graph
-            )
-            if statistic_points is None:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-            statistics = self._get_statistics_for_weights_compression(
-                matmul_input_to_output_nodes_map, statistic_points
-            )
+        # Set each ratio defining parameter to primary config
+        for weight_param in ratio_defining_params:
+            weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
 
-        # Set weight compression configuration
-        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points, group_size_values)
-
-        # Print statistics
-        nncf_logger.info(
-            self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
-        )
-
-        # Filter all_weight_params and by excluding nodes that should remain in their original floating-point precision
-        all_weight_params = list(filter(lambda w_params: w_params.compression_config is not None, all_weight_params))
-
-        return all_weight_params, statistics
+        return all_weight_params, ratio_defining_params, skipped_weight_params
 
     def apply(
         self,
@@ -928,8 +1064,54 @@ class WeightCompression(Algorithm):
         self.set_backend_entity(model)
 
         # Get processed weight compression parameters ready for compression
-        all_weight_params, statistics = self.get_weight_compression_parameters(model, graph, statistic_points, dataset)
+        all_weight_params, ratio_defining_params, skipped_weight_params = self.get_weight_compression_parameters(
+            model, graph
+        )
+        # Collect statistics for the weights compression
+        statistics, statistic_points = self.collect_statistics_and_statistic_points(
+            model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
+        )
+        # Apply Mixed precision algorithm to ratio defining parameters
+        self.apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
+        self.validate_group_size(ratio_defining_params)
 
+        # Print statistics
+        nncf_logger.info(
+            self.get_bitwidth_distribution_str(all_weight_params, ratio_defining_params, skipped_weight_params)
+        )
+
+        # Filter all_weight_params by excluding nodes that should remain in their original floating-point precision
+        all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
+
+        return self.apply_with_parameters(
+            model,
+            graph,
+            dataset,
+            statistics,
+            all_weight_params,
+        )
+
+    def apply_with_parameters(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        dataset: Dataset,
+        statistics: Optional[dict[str, WCTensorStatistic]],
+        all_weight_params: list[WeightCompressionParameters],
+    ) -> TModel:
+        """
+        Applies the Weight Compression algorithm using precomputed parameters and optional
+        advanced algorithms (AWQ, GPTQ, scale estimation, LoRA correction). The method collects
+        statistics, optimizes compression parameters using advanced algorithms,
+        and performs the model transformation with appropriate decompression operations
+
+        :param model: Backend-specific model to be compressed.
+        :param graph: NNCFGraph instance.
+        :param dataset: Dataset to collect statistics.
+        :param statistics: Input activation statistics for each node.
+        :param all_weight_params: List of all weight parameters.
+        :return: Transformed model with compressed weights and inserted backend-specific decompressor.
+        """
         if self._awq:
             model = self.awq_algo.apply(model, graph, all_weight_params, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
@@ -940,6 +1122,15 @@ class WeightCompression(Algorithm):
         precomputed_compressed_weights = None
         lora_correction_algo = None
         description = "Applying Weight Compression"
+
+        if self._codebook_estimation:
+            precomputed_compressed_weights = self._codebook_estimation_algo.apply(
+                model=model,
+                graph=graph,
+                all_weight_params=all_weight_params,
+                statistics=statistics,
+                backend_entity=self._backend_entity,
+            )
 
         if self._gptq:
             del statistics
@@ -961,6 +1152,11 @@ class WeightCompression(Algorithm):
                 )
 
             if self._lora_correction:
+                for wc_params in all_weight_params:
+                    if self._backend_entity.matmul_has_transposed_activations(wc_params.node_with_weight, graph):
+                        msg = "Transposed activations are not supported yet for the LoRa correction algorithm"
+                        raise nncf.UnsupportedModelError(msg)
+
                 lora_correction_params = self._advanced_parameters.lora_correction_params
                 lora_correction_algo = LoraCorrectionAlgorithm(statistics, lora_correction_params)
                 description += " with correction of low-rank adapters"
@@ -1002,19 +1198,21 @@ class WeightCompression(Algorithm):
         )
         return transformed_model
 
-    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int]:
+    def _get_activation_node_port_and_channel(self, node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[NNCFNode, int, int]:
         """
-        This method returns the activation layer and corresponding port id for the node.
+        This method returns the activation layer, corresponding port id and channel axis for the given node.
 
         :param node: NNCFGraph node for which the activation is sought.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: Tuple with the activation node and port id.
+        :return: Tuple with the activation node, port id and channel axis.
         """
         activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
         activation_edge = nncf_graph.get_input_edge_by_port_id(node, activation_port)
         activation_node = activation_edge.from_node
-        port_id = activation_edge.output_port_id
-        return activation_node, port_id
+        activation_channel_axis = self._backend_entity.get_activation_channel_axis(
+            node, activation_edge.input_port_id, activation_edge.tensor_shape
+        )
+        return activation_node, activation_edge.output_port_id, activation_channel_axis
 
     def get_matmul_input_to_output_nodes_map(
         self, matmul_nodes: list[NNCFNode], graph: NNCFGraph
@@ -1035,8 +1233,8 @@ class WeightCompression(Algorithm):
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
-            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
-            matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
+            act_node, output_port_id, act_channel_axis = self._get_activation_node_port_and_channel(node, graph)
+            matmul_input_to_output_nodes_map[(act_node, output_port_id, act_channel_axis)].append(node)
         return matmul_input_to_output_nodes_map
 
     def get_compression_nodes_info(
@@ -1089,28 +1287,53 @@ class WeightCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        nodes_and_port_ids: Iterable[tuple[NNCFNode, int]],
+        matmul_input_to_output_nodes_map: dict[tuple[NNCFNode, int], list[NNCFNode]],
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
         :param model: Model for statistics collection.
         :param graph: Model graph.
-        :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
+        :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
+            nodes which accept this activation as an input.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
         statistic_container = StatisticPointsContainer()
+
         # Statistics for data aware algorithms
         if self._data_aware_compression:
-            for node, output_port_id in nodes_and_port_ids:
+            for (
+                node,
+                output_port_id,
+                input_channel_axis,
+            ), node_with_weights in matmul_input_to_output_nodes_map.items():
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
-                # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
-                # size dimension.
+                all_weight_dims = []
+                for node_with_weight in node_with_weights:
+                    _, weight_port_ids = zip(
+                        *self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
+                    )
+                    weight_dims = [
+                        len(self._backend_entity.get_weight_shape(node_with_weight, weight_port_id, graph))
+                        for weight_port_id in weight_port_ids
+                    ]
+                    all_weight_dims.extend(weight_dims)
+
+                # Reduce activations across all but the hidden dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
+                # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
+                input_channel_axis = input_channel_axis % n_dims
+                reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
+
+                # For 3D weights, keep the batch dimention
+                if any(weight_dim == 3 for weight_dim in all_weight_dims):
+                    assert len(reduction_axes) == 2
+                    reduction_axes = reduction_axes[1:]
+
                 stat_collector = self._backend_entity.mean_statistic_collector(
-                    reduction_axes=tuple(range(n_dims - 1)), subset_size=self._subset_size
+                    reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
                 statistic_container.add_statistic_point(
                     StatisticPoint(
@@ -1120,7 +1343,7 @@ class WeightCompression(Algorithm):
         # Statistics for mixed precision algorithm
         if self._data_aware_mixed_precision:
             mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
-                model, graph, nodes_and_port_ids
+                model, graph, matmul_input_to_output_nodes_map.keys()
             )
             for points in mixed_precision_statistics.values():
                 for point in points:
@@ -1147,7 +1370,7 @@ class WeightCompression(Algorithm):
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
-        for (act_node, output_port_id), matmul_nodes in matmul_input_to_output_nodes_map.items():
+        for (act_node, output_port_id, _), matmul_nodes in matmul_input_to_output_nodes_map.items():
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(
                     act_node.node_name,

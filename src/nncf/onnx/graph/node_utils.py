@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -138,6 +138,8 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
         transpose = node.layer_attributes.node_attrs[trans_attr]
         # 0 - (M, K), 1 - (K, N)
         weight_channel_axis = -1 - port_id if transpose else -2 + port_id
+    if node.metatype == om.ONNXMatMulMetatype:
+        weight_channel_axis = -1 - port_id if port_id == 0 else -2 + port_id
     return weight_channel_axis
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from collections import Counter
+from typing import Any, Union
 
 import torch.fx
 
@@ -21,7 +22,6 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -75,10 +75,15 @@ class GraphConverter:
         :param model: Target GraphModule instance.
         :return: Correct FX metatype of the given node if it is exist or the original node metatype otherwise.
         """
-        if metatype in [om.PTEmbeddingMetatype]:
-            weight_node = node.args[0]
+        PT_METATYPE_TO_FX_METATYPE_MAPPING = {
+            om.PTEmbeddingMetatype: om.PTAtenEmbeddingMetatype,
+            om.PTEmbeddingBagMetatype: om.PTAtenEmbeddingBagMetatype,
+        }
+        if metatype in PT_METATYPE_TO_FX_METATYPE_MAPPING:
+            fx_metatype = PT_METATYPE_TO_FX_METATYPE_MAPPING[metatype]
+            weight_node = node.args[fx_metatype.weight_port_ids[0]]
             if weight_node.op == "get_attr":
-                return om.PTAtenEmbeddingMetatype
+                return fx_metatype
 
         return metatype
 
@@ -137,6 +142,7 @@ class GraphConverter:
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter.get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
+
             is_shared_node = source_node.op in ("get_attr",) and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )
@@ -190,7 +196,16 @@ class GraphConverter:
                 source_node.meta["val"], (tuple, list)
             ):
                 tensor = source_node.meta["val"][0]
-            elif source_nncf_node.metatype in [om.PTSplitMetatype, om.PTMaxMetatype, om.PTMinMetatype]:
+            elif source_nncf_node.metatype in [
+                om.PTSplitMetatype,
+                om.PTMaxMetatype,
+                om.PTMinMetatype,
+                om.PTMedianMetatype,
+                om.PTAdaptiveMaxPool1dMetatype,
+                om.PTAdaptiveMaxPool2dMetatype,
+                om.PTAdaptiveMaxPool3dMetatype,
+                om.PTAtenEmbeddingBagMetatype,
+            ] and isinstance(source_node.meta["val"], (tuple, list)):
                 tensor = source_node.meta["val"][output_idx]
                 # Assume every outputs corresponds to an unique output_port_id
                 output_port_id = output_idx
@@ -207,3 +222,46 @@ class GraphConverter:
 
         input_port_id = dist_node.all_input_nodes.index(source_node)
         return input_port_id, output_port_id, tensor_shape
+
+
+def apply_args_defaults(
+    args: list[Any], kwargs: dict[str, Any], args_signature=list[Union[str, tuple[str, Any]]]
+) -> dict[str, Any]:
+    """
+    Combines positional arguments (`args`) and keyword arguments (`kwargs`)
+    according to the provided `args_signature`.
+
+    The `args_signature` is a list that defines the expected arguments.
+    Each element in the list can be either:
+
+    - string: This represents the name of an argument expected to be a positional argument.
+    - tuple: This represents the name and default value of an argument.
+        - The first element in the tuple is the argument name.
+        - The second element in the tuple is the default value.
+
+    :param args: List of positional arguments.
+    :param kwargs: Dictionary of keyword arguments.
+    :param args_signature: List defining the expected arguments as described above.
+
+    :return: A dictionary combining arguments from `args` and `kwargs` according to the `args_signature`.
+    """
+    # Manual defines function signature necessary because inspection of torch function is not available
+    # https://github.com/pytorch/pytorch/issues/74539
+
+    args_dict: dict[str, Any] = dict()
+    for idx, arg_desc in enumerate(args_signature):
+        if isinstance(arg_desc, str):
+            if arg_desc in kwargs:
+                args_dict[arg_desc] = kwargs[arg_desc]
+            elif idx < len(args):
+                args_dict[arg_desc] = args[idx]
+            else:
+                msg = "Incorrect args_signature, can not by applied to function arguments."
+                raise ValueError(msg)
+        elif isinstance(arg_desc, tuple):
+            arg_name, default = arg_desc
+            args_dict[arg_name] = kwargs.get(arg_name, args[idx] if idx < len(args) else default)
+        else:
+            msg = "Incorrect args_signature, element of list should be str or tuple."
+            raise ValueError(msg)
+    return args_dict

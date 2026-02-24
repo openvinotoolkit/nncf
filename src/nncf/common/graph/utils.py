@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Union
+from typing import Callable, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -21,7 +21,31 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
-from nncf.common.pruning.utils import traverse_function
+
+
+def traverse_function(
+    node: NNCFNode, output: list[NNCFNode], type_check_fn: Callable[[str], bool], visited: dict[int, bool]
+) -> tuple[bool, list[NNCFNode]]:
+    """
+    Traverses a graph starting from the given node, checking the node type
+    against a provided type-checking function and keeping track of visited nodes.
+
+    :param node: The starting node for the traversal.
+    :param output: A list that accumulates nodes that pass the type check.
+    :param type_check_fn: A function that checks if a node type is valid.
+    :param visited: A dictionary that tracks whether a node has been visited.
+    :return: A tuple containing a boolean indicating if the traversal was successful
+        and the list of nodes that passed the type check.
+    """
+    if visited[node.node_id]:
+        return True, output
+    visited[node.node_id] = True
+
+    if not type_check_fn(node.node_type):
+        return False, output
+
+    output.append(node)
+    return True, output
 
 
 def get_concat_axis(input_shapes: list[list[int]], output_shapes: list[list[int]]) -> int:
@@ -142,7 +166,7 @@ def get_reduction_axes(
 def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> list[int]:
     """
     Returns hard-coded weights shape layout for the given layer attributes.
-    Applicable only for eager PyTorch and Tensorflow models.
+    Applicable only for eager PyTorch models.
 
     :param layer_attributes: Layer attributes of a NNCFNode.
     :return: Weights shape layout.
@@ -173,7 +197,7 @@ def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> list[i
 def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
     Returns hard-coded target dim for compression for the given layer attributes.
-    Applicable only for eager PyTorch and Tensorflow models.
+    Applicable only for eager PyTorch models.
 
     :param layer_attributes: Layer attributes of a NNCFNode.
     :return: Target dim for compression.
@@ -191,7 +215,7 @@ def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttribu
 def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
     Returns hard-coded bias shape for the given linear layer attributes.
-    Applicable only for eager PyTorch and Tensorflow models.
+    Applicable only for eager PyTorch models.
 
     :param layer_attributes: Linear layer attributes of a NNCFNode.
     :return: Correspondent bias shape.
@@ -203,7 +227,7 @@ def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
 def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
     Returns hard-coded number of filters for the given layer attributes.
-    Applicable only for eager PyTorch and Tensorflow models.
+    Applicable only for eager PyTorch models.
 
     :param layer_attributes: Layer attributes of a NNCFNode.
     :return: Correspondent number of filters.

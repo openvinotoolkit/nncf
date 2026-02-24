@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,7 +19,10 @@ from tests.onnx.quantization.common import min_max_quantize_model
 from tests.onnx.quantization.common import mock_collect_statistics
 
 
-@pytest.mark.parametrize("model_cls_to_test", ALL_SYNTHETIC_MODELS.values())
+@pytest.mark.parametrize(
+    "model_cls_to_test",
+    [pytest.param(mod, marks=mod.get_pytest_marks()) for mod in ALL_SYNTHETIC_MODELS.values()],
+)
 def test_synthetic_models_graph(model_cls_to_test, mocker):
     mock_collect_statistics(mocker)
     model_to_test = model_cls_to_test()

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 import os
 import warnings
 from argparse import ArgumentParser
+from argparse import RawTextHelpFormatter
 from pathlib import Path
 
 import openvino as ov
@@ -48,13 +49,18 @@ DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def get_argument_parser() -> ArgumentParser:
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["magnitude", "rb"],
-        default="magnitude",
-        help="Pruning mode to use. Choices are: magnitude, rb. Default is magnitude.",
+        choices=["mag", "mag_bn", "rb"],
+        default="mag",
+        help=(
+            "Pruning mode to use. Choices are:\n"
+            " - mag: Magnitude-based pruning with fine-tuning (default).\n"
+            " - mag_bn: Magnitude-based pruning with BatchNorm adaptation without fine-tuning.\n"
+            " - rb: Regularization-based pruning with fine-tuning.\n"
+        ),
     )
     return parser
 
@@ -82,13 +88,12 @@ def get_resnet18_model(device: torch.device) -> nn.Module:
 def train_epoch(
     train_loader: DataLoader,
     model: nn.Module,
-    criterion: nn.Module,
     rb_loss: RBLoss,
     optimizer: torch.optim.Optimizer,
     device: torch.device,
 ):
-    # Switch to train mode.
     model.train()
+    criterion = nn.CrossEntropyLoss().to(device)
 
     for images, target in track(train_loader, total=len(train_loader), description="Fine tuning:"):
         images = images.to(device)
@@ -107,7 +112,6 @@ def train_epoch(
 
 @torch.no_grad()
 def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, device: torch.device) -> float:
-    # Switch to evaluate mode.
     model.eval()
 
     correct = 0
@@ -201,14 +205,20 @@ def main() -> float:
 
     ###############################################################################
     # Step 2: Prune model
-    print(os.linesep + "[Step 2]: Prune model and specify training parameters")
+    print(os.linesep + "[Step 2] Prune model and specify training parameters")
 
-    if pruning_mode == "magnitude":
+    if pruning_mode == "mag_bn":
+        pruned_model = nncf.prune(
+            model,
+            mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
+            ratio=0.6,
+            examples_inputs=example_input,
+        )
+    elif pruning_mode == "mag":
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL,
             ratio=0.7,
-            ignored_scope=nncf.IgnoredScope(),
             examples_inputs=example_input,
         )
         num_epochs = 2
@@ -217,11 +227,10 @@ def main() -> float:
             model=model, mode=PruneMode.UNSTRUCTURED_MAGNITUDE_GLOBAL, steps={0: 0.5, 1: 0.7}
         )
         optimizer = torch.optim.Adam(pruned_model.parameters(), lr=1e-5)
-    else:
+    elif pruning_mode == "rb":
         pruned_model = nncf.prune(
             model,
             mode=PruneMode.UNSTRUCTURED_REGULARIZATION_BASED,
-            ignored_scope=nncf.IgnoredScope(),
             examples_inputs=example_input,
         )
         num_epochs = 30
@@ -237,32 +246,52 @@ def main() -> float:
                 {"params": mask_params, "lr": 1e-2, "weight_decay": 0.0},
             ]
         )
-
-    criterion = nn.CrossEntropyLoss().to(device)
+    else:
+        msg = f"Unsupported pruning mode: {pruning_mode}, please choose from ['mag', 'mag_bn', 'rb']"
+        raise ValueError(msg)
 
     ###############################################################################
     # Step 3: Fine tune
     print(os.linesep + "[Step 3] Fine tune with multi step pruning ratio scheduler")
 
-    for epoch in range(num_epochs):
-        print(os.linesep + f"Train epoch: {epoch}")
-        scheduler.step()
-        train_epoch(train_loader, pruned_model, criterion, rb_loss, optimizer, device=device)
+    if pruning_mode == "mag_bn":
+        acc1_before = validate(val_loader, pruned_model, device)
+        print(f"Accuracy@1 of pruned model before BatchNorm adaptation: {acc1_before:.3f}")
+
+        def transform_fn(batch: tuple[torch.Tensor, int]) -> torch.Tensor:
+            inputs, _ = batch
+            return inputs.to(device=device)
+
+        calibration_dataset = nncf.Dataset(train_loader, transform_func=transform_fn)
+
+        pruned_model = nncf.batch_norm_adaptation(
+            pruned_model,
+            calibration_dataset=calibration_dataset,
+            num_iterations=200,
+        )
 
         acc1 = validate(val_loader, pruned_model, device)
-        print(f"Current pruning ratio: {scheduler.current_ratio:.3f}")
-        print(f"Accuracy@1 of pruned model after {epoch} epoch: {acc1:.3f}")
+        print(f"Accuracy@1 of pruned model after BatchNorm adaptation: {acc1:.3f}")
+    else:
+        for epoch in range(num_epochs):
+            print(os.linesep + f"Train epoch: {epoch}")
+            scheduler.step()
+            train_epoch(train_loader, pruned_model, rb_loss, optimizer, device=device)
+
+            acc1 = validate(val_loader, pruned_model, device)
+            print(f"Current pruning ratio: {scheduler.current_ratio:.3f}")
+            print(f"Accuracy@1 of pruned model after {epoch} epoch: {acc1:.3f}")
 
     ###############################################################################
     # Step 4: Print per tensor pruning statistics
-    print(os.linesep + "[Step 4]: Pruning statistics")
+    print(os.linesep + "[Step 4] Pruning statistics")
 
     pruning_stat = nncf.pruning_statistic(pruned_model)
     print(pruning_stat)
 
     ###############################################################################
     # Step 5: Export models
-    print(os.linesep + "[Step 5]: Export models")
+    print(os.linesep + "[Step 5] Export models")
     ir_path = ROOT / f"{BASE_MODEL_NAME}_pruned.xml"
     ov_model = ov.convert_model(pruned_model.cpu(), example_input=example_input.cpu(), input=tuple(example_input.shape))
     ov.save_model(ov_model, ir_path, compress_to_fp16=False)

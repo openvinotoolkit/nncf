@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,8 +16,8 @@ from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 import openvino as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
+from nncf.common.factory import build_graph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -87,7 +87,7 @@ def native_quantize_if_op_impl(
         :param model: Model.
         :param current_id: Current graph id.
         """
-        graphs[current_id] = NNCFGraphFactory.create(model)
+        graphs[current_id] = build_graph(model)
         for op in model.get_ops():
             if get_node_metatype(op) == OVIfMetatype:
                 _extract_all_subgraphs(op.get_function(0), op.get_friendly_name() + "_then")
@@ -384,7 +384,7 @@ def compress_weights_impl(
     Implementation of the `compress_weights()` method for the OpenVINO backend.
     """
     model = remove_friendly_name_duplicates(model)
-    graph = NNCFGraphFactory.create(model)
+    graph = build_graph(model)
     compression_algorithm = WeightCompression(
         mode,
         ratio,

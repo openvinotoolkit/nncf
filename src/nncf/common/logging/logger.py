@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -91,11 +91,3 @@ def disable_logging() -> None:
 
 
 NNCFDeprecationWarning = FutureWarning
-
-
-def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: str) -> None:
-    nncf_logger.warning(
-        f"NNCF provides best results with {backend}{bkc_version}, "
-        f"while current {backend} version is {current_version}. "
-        f"If you encounter issues, consider switching to {backend}{bkc_version}"
-    )

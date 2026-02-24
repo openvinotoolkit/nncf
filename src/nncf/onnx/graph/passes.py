@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -95,6 +95,7 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
     """
     initializer = {x.name: x for x in model.graph.initializer}
     nodes_to_remove = []
+    removed_initializers = []
 
     version = max(model.opset_import[0].version, 19)
     QuantizeLinear = load_op("", "QuantizeLinear", version)
@@ -129,11 +130,19 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto):
             block_size = get_node_attr_value(node, "block_size")
             y = QuantizeLinear.eval(x, y_scale, y_zero_point, axis=axis, block_size=block_size)
 
-        # Update an existing initializer. The new name is the name of the `QuantizeLinear` output.
+        # Create a new initializer with the `QuantizeLinear` output name
         tensor_proto = onnx.numpy_helper.from_array(y, name=node.output[0])
-        initializer[x_name].CopyFrom(tensor_proto)
+        # Remove the old initializer
+        model.graph.initializer.remove(initializer[x_name])
+        removed_initializers.append(x_name)
+        # Add the new initializer
+        model.graph.initializer.append(tensor_proto)
 
     # `QuantizeLinear` and `DequantizeLinear` nodes share initializers on ports 1 and 2,
     # so these initializers should not be removed.
     for x in nodes_to_remove:
         model.graph.node.remove(x)
+
+    for inp in list(model.graph.input):
+        if inp.name in removed_initializers:
+            model.graph.input.remove(inp)

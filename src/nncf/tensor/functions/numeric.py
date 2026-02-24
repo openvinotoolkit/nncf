@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -134,6 +134,17 @@ def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
     :param dtype: Type code or data type to which the tensor is cast.
 
     :return: Copy of the tensor in specified type.
+    """
+
+
+@tensor_dispatcher
+def view(a: Tensor, dtype: TensorDataType) -> Tensor:
+    """
+    Returns a view of the tensor with the specified data type.
+
+    :param a: The input tensor.
+    :param dtype: The desired data type.
+    :return: A view of the tensor with the specified data type.
     """
 
 
@@ -325,6 +336,26 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
 
 
 @tensor_dispatcher
+def nonzero(condition: Tensor) -> tuple[Tensor, ...]:
+    """
+    Return the indices of the elements that are non-zero.
+
+    :param condition: The input tensor.
+    :return: A tensor containing the indices of the non-zero elements.
+    """
+
+
+@tensor_dispatcher
+def sign(a: Tensor) -> Tensor:
+    """
+    Returns an element-wise indication of the sign of a number.
+
+    :param a: The input tensor.
+    :return: A tensor with the same shape as a, containing the sign of each element.
+    """
+
+
+@tensor_dispatcher
 def zeros_like(a: Tensor) -> Tensor:
     """
     Return an tensor of zeros with the same shape and type as a given tensor.
@@ -443,7 +474,7 @@ def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
 @tensor_dispatcher
 def quantile(
     a: Tensor,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> Tensor:
@@ -659,6 +690,17 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
     :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
         If False, the relative order of values which compare equal is not guaranteed. True is slower.
     :return: A tensor of indices that sort a along the specified axis.
+    """
+
+
+@tensor_dispatcher
+def argmin(a: Tensor, axis: int = -1) -> Tensor:
+    """
+    Returns the indices of the minimum values along an axis.
+
+    :param a: The tensor for which to find the minimum values.
+    :param axis: Axis along which to find the minimum values. If None, the index is into the flattened array.
+    :return: Indices of the minimum values along an axis.
     """
 
 

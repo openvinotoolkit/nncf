@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.tensor.functions.torch_numeric import quantile
@@ -29,7 +30,6 @@ from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWra
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.utils import training_mode_switcher
 
 ACTIVATIONS_SPARSIFIER_PREFIX = "activations_sparsifier"
@@ -147,7 +147,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         graph: NNCFGraph,
         target_sparsity_by_node: dict[NNCFNode, float],
     ) -> GraphModelWrapper:
-        transformation_layout = PTTransformationLayout()
+        transformation_layout = TransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():
             activation_port_id = self._get_activation_port_id(node, graph)
             sparsifier = ActivationsSparsifier(target_sparsity=target_sparsity)

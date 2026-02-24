@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,10 +17,10 @@ from typing import Any, Literal, Optional
 import nncf
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.quantization.defaults import QUANTIZATION_BITS
+from nncf.common.quantization.defaults import QUANTIZATION_NARROW_RANGE
+from nncf.common.quantization.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.common.utils.api_marker import api
-from nncf.config.schemata.defaults import QUANTIZATION_BITS
-from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
-from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.parameters import StrEnum
 from nncf.parameters import TargetDevice
 from nncf.tensor.definitions import TensorDataType

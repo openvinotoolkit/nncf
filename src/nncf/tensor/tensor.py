@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -67,10 +67,10 @@ class Tensor:
     def __iter__(self) -> Iterator[Tensor]:
         return TensorIterator(self)
 
-    def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]]) -> Tensor:
+    def __getitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...], slice]) -> Tensor:
         return Tensor(self.data[unwrap_index(index)])
 
-    def __setitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...]], value: Any) -> None:
+    def __setitem__(self, index: Union[Tensor, int, tuple[Union[Tensor, int], ...], slice], value: Any) -> None:
         self.data[unwrap_index(index)] = unwrap_tensor_data(value)
 
     def __str__(self) -> str:
@@ -159,6 +159,15 @@ class Tensor:
     def __neg__(self) -> Tensor:
         return Tensor(-self.data)
 
+    def __invert__(self) -> Tensor:
+        return Tensor(~self.data)
+
+    def __rshift__(self, other: T_NUMBER) -> Tensor:
+        return Tensor(self.data >> unwrap_tensor_data(other))
+
+    def __lshift__(self, other: T_NUMBER) -> Tensor:
+        return Tensor(self.data << unwrap_tensor_data(other))
+
     # Comparison operators
 
     def __lt__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
@@ -201,6 +210,9 @@ class Tensor:
 
     def astype(self, dtype: TensorDataType) -> Tensor:
         return cast(Tensor, _call_function("astype", self, dtype))
+
+    def view(self, dtype: TensorDataType) -> Tensor:
+        return cast(Tensor, _call_function("view", self, dtype))
 
     def reshape(self, shape: T_SHAPE) -> Tensor:
         return cast(Tensor, _call_function("reshape", self, shape))

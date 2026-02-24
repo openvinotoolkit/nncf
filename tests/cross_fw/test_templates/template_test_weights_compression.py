@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,9 @@
 import math
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
+from functools import reduce
+from operator import mul
 from typing import Any, Callable, Optional, TypeVar
 from unittest.mock import patch
 
@@ -28,6 +31,9 @@ from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
+from nncf.quantization.algorithms.weight_compression.activation_stats import WCTensorStatistic
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -158,7 +164,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_sequential_matmul_model() -> TModel:
+    def get_sequential_matmul_model(transpose_a: bool) -> TModel:
         """Returns a backend model for test_mixed_precision."""
 
     @staticmethod
@@ -168,7 +174,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def check_weights(model: TModel, ref_ids: list[int]) -> None:
+    def check_weights(model: TModel, ref_ids: list[int], transpose_a=False) -> None:
         """Checks that only weights with specified ids are compressed in int4 format."""
 
     @staticmethod
@@ -206,10 +212,14 @@ class TemplateWeightCompression(ABC):
             (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
         ),
     )
-    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, mocker):
-        model = self.get_sequential_matmul_model()
-        first = self.to_tensor(np.ones([1, 4, 4], dtype=np.float32))
-        second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(1, 4, 4)
+    @pytest.mark.parametrize("transpose_a", (False, True))
+    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, transpose_a_supported, mocker):
+        if transpose_a and not transpose_a_supported:
+            pytest.skip("transpose_a is not supported for the current backend")
+        model = self.get_sequential_matmul_model(transpose_a=transpose_a)
+        input_shape = (4, 4) if transpose_a else (1, 4, 4)
+        first = self.to_tensor(np.ones(input_shape, dtype=np.float32))
+        second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(input_shape)
         dataset = Dataset([first, second], self.get_transform_func())
         compressed_model = compress_weights(
             model,
@@ -220,7 +230,7 @@ class TemplateWeightCompression(ABC):
             sensitivity_metric=mode,
             dataset=dataset,
         )
-        self.check_weights(compressed_model, ref_ids)
+        self.check_weights(compressed_model, ref_ids, transpose_a)
 
     # Scale Estimation Tests
 
@@ -233,20 +243,51 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_scale_estimation_ref() -> TTensor:
+    def get_moe_model_for_test_scale_estimation() -> TModel:
         """
+        Returns a backend MoE model for test_scale_estimation with 3D weights.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
+        """
+        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
+            activation statistics
+        Returns the reference output of calculate_quantization_params for MoE model.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
+        """
+        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
+            activation statistics
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    def test_scale_estimation(self, mocker):
+    @pytest.mark.parametrize("is_moe", [False, True])
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
+    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
-        model = self.get_model_for_test_scale_estimation()
 
-        # prepare dataset with one input tensor
-        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+        if is_moe:
+            model = self.get_moe_model_for_test_scale_estimation()
+            input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
+        else:
+            model = self.get_model_for_test_scale_estimation()
+            input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+
+        # prepare dataset of size subset_size with input tensors
+        subset_size = 2 if check_sampling_activation_stats_flow else 1
+        # make sure that subset size for SE < subset size for statistics collection.
+        # This is to test the Optimized statistics processing flow which samples only a few data
+        # points in nncf/quantization/algorithms/weight_compression/activation_stats.py
+        se_subset_size = subset_size // 2 if check_sampling_activation_stats_flow else subset_size
         input = self.to_tensor(input)
-        dataset = Dataset([input], self.get_transform_func())
+
+        dataset = Dataset([input + i for i in range(subset_size)], self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -257,9 +298,19 @@ class TemplateWeightCompression(ABC):
                 scale_estimation=True,
                 all_layers=True,
                 dataset=dataset,
+                subset_size=subset_size,
+                advanced_parameters=nncf.AdvancedCompressionParameters(
+                    scale_estimation_params=nncf.AdvancedScaleEstimationParameters(subset_size=se_subset_size)
+                ),
             )
-        reference = self.get_scale_estimation_ref()
-        assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
+
+        computed_scale = calc_q_params_spy.spy_return[0]
+
+        if is_moe:
+            reference = self.get_moe_scale_estimation_ref(check_sampling_activation_stats_flow)
+        else:
+            reference = self.get_scale_estimation_ref(check_sampling_activation_stats_flow)
+        assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
     @abstractmethod
@@ -309,7 +360,7 @@ class TemplateWeightCompression(ABC):
     # AWQ Tests
     @staticmethod
     @abstractmethod
-    def get_awq_act_model(with_multiply, n_layers):
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
 
     @staticmethod
@@ -321,13 +372,17 @@ class TemplateWeightCompression(ABC):
     def int4_mode(self, request):
         return None
 
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("with_multiply", (True, False))
-    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply, mocker):
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
+        self, int4_mode, with_multiply, is_3d_weights, mocker
+    ):
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_model(with_multiply, n_layers)
+        model = self.get_awq_act_model(is_3d_weights, with_multiply, n_layers)
 
-        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))], self.get_transform_func())
+        dataset = Dataset([self.to_tensor(np.ones([2, 8, 8], dtype=np.float32))], self.get_transform_func())
+
         with SpyWeightCompressionStatisticsContext(mocker):
             model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -336,8 +391,11 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_awq_model() -> TModel:
-        "Returns a backend model for test_awq_with_ignored_scope."
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> TModel:
+        """
+        Returns a backend model for test_awq_with_ignored_scope."
+        :param is_3d_weights: The model has 3d weights
+        """
 
     @staticmethod
     @abstractmethod
@@ -356,16 +414,19 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope_name() -> str:
+    def get_ignored_scope_name(is_3d_weights) -> str:
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
-    def test_awq_with_ignored_scope(self, mocker):
-        model = self.get_awq_model()
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
+        model = self.get_awq_model(non_mergable_pattern=False, is_3d_weights=is_3d_weights)
         sz = 8
         n_samples = 10
 
+        input_shape = [2, 8, sz]
+
         dataset = Dataset(
-            [self.to_tensor(np.ones([1, 8, sz], dtype=np.float32)) for i in range(n_samples)],
+            [self.to_tensor(np.ones(input_shape, dtype=np.float32)) for i in range(n_samples)],
             self.get_transform_func(),
         )
 
@@ -377,12 +438,12 @@ class TemplateWeightCompression(ABC):
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
-                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
+                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name(is_3d_weights)]),
             )
 
         int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
-        assert int4_num_nodes == int4_ref_num_compressed
+        assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
     def test_rope_weight_compression(self):
         model = self.get_RoPE_model()
@@ -427,29 +488,61 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
+    @pytest.fixture
+    def test_awq_scale_ref() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    def test_awq_scale_reference(self, monkeypatch, mocker):
-        monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
-        model = self.get_awq_model()
+    @abstractmethod
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        """True if backend supports tranpose for MM activations, False otherwise"""
 
-        input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
+    # Transpose inputs does not affect mergable pattern code, skippting (True, False)
+    @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    def test_awq_scale_reference(
+        self,
+        non_mergable_pattern,
+        transpose_a,
+        test_awq_scale_ref,
+        transpose_a_supported,
+        is_3d_weights,
+        monkeypatch,
+        mocker,
+    ):
+        monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
+        if transpose_a:
+            if not transpose_a_supported:
+                msg = "Transpose a is not supported for the current backend"
+                pytest.skip(msg)
+
+            INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
+            model = self.get_transposable_awq_model(
+                transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
+            )
+        else:
+            batch_size = 1 if not is_3d_weights else 2
+            INPUT_SHAPE = (batch_size, 4, 8)
+            model = self.get_awq_model(non_mergable_pattern, is_3d_weights)
+        input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
         input = self.to_tensor(input)
-        dataset = Dataset([input], self.get_transform_func())
+        dataset = Dataset([input] * 2, self.get_transform_func())
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
                 model,
                 mode=CompressWeightsMode.INT4_SYM,
                 ratio=1.0,
+                all_layers=transpose_a,
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
             )
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
+            ref = test_awq_scale_ref[is_3d_weights][node_name]
+            assert fns.allclose(scales, ref)
+            assert scales.shape == ref.shape
 
     @pytest.mark.parametrize(
         ["group_size", "fallback_mode", "min_adjusted_group_size", "expected_outcome"],
@@ -573,14 +666,15 @@ class TemplateWeightCompression(ABC):
             f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
         )
 
-    @pytest.mark.parametrize("dataset", [None, np.ones([1, 8, 8], dtype=np.float32)])
+    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
     @pytest.mark.parametrize("prefer_data_aware_scaling", [True, False])
-    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, mocker):
-        input_data = np.ones([1, 8, 8], dtype=np.float32)
+    def test_data_free_awq(self, dataset, prefer_data_aware_scaling, is_3d_weights, mocker):
+        input_data = np.ones([2, 8, 8], dtype=np.float32)
 
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_model(True, n_layers)
+        model = self.get_awq_act_model(is_3d_weights, True, n_layers)
         model = self.wrap_model(model, input_data)
 
         if dataset is not None:
@@ -615,3 +709,130 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     def get_reduction_axes() -> int:
         return 1
+
+    @dataclass
+    class ProcessStatsTestCase:
+        reduced_shape: tuple[int, ...]
+        activation_shapes: list[tuple[int, ...]]
+        subset_size: int
+        ref_s: np.ndarray
+        ref_X: np.ndarray
+        act_ch_axis: Optional[int] = None
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            # 2D Activations
+            ProcessStatsTestCase(
+                reduced_shape=(2,),
+                activation_shapes=[(1, 2), (3, 2), (5, 2), (10, 2)],
+                subset_size=2,
+                ref_s=np.array([6, 7]),
+                ref_X=np.array([6, 2, 7, 3]).reshape(2, 2),
+            ),
+            ProcessStatsTestCase(
+                reduced_shape=(2,),
+                activation_shapes=[(2, 1), (2, 3), (2, 5), (2, 10)],
+                subset_size=2,
+                act_ch_axis=0,
+                ref_s=np.array([6, 7]),
+                ref_X=np.array([6, 2, 7, 3]).reshape(2, 2),
+            ),
+            ProcessStatsTestCase(
+                reduced_shape=(2,),
+                activation_shapes=[(5, 2), (5, 2)],
+                subset_size=2,
+                ref_s=np.array([2, 3]),
+                ref_X=np.array([0, 2, 1, 3]).reshape(2, 2),
+            ),
+            # 3D Activations
+            ProcessStatsTestCase(
+                reduced_shape=(2, 4),
+                activation_shapes=[(1, 2, 4), (3, 2, 4), (5, 2, 4), (10, 2, 4)],
+                subset_size=2,
+                ref_s=np.array(list(range(24, 32))).reshape(2, 4),
+                ref_X=np.array([24, 8, 25, 9, 26, 10, 27, 11, 28, 12, 29, 13, 30, 14, 31, 15]).reshape(2, 4, 2),
+            ),
+            ProcessStatsTestCase(
+                reduced_shape=(2, 4),
+                activation_shapes=[(1, 100000, 2, 4), (3, 10000, 2, 4), (5, 1000, 2, 4), (10, 5, 2, 4)],
+                subset_size=2,
+                act_ch_axis=1,
+                ref_s=np.array(list(range(24, 32))).reshape(2, 4),
+                ref_X=np.array([24, 8, 25, 9, 26, 10, 27, 11, 28, 12, 29, 13, 30, 14, 31, 15]).reshape(2, 4, 2),
+            ),
+            ProcessStatsTestCase(
+                reduced_shape=(2, 4),
+                activation_shapes=[(1, 2, 4), (1, 2, 4)],
+                subset_size=2,
+                ref_s=np.array(list(range(8, 16))).reshape(2, 4),
+                ref_X=np.array([0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15]).reshape(2, 4, 2),
+            ),
+        ],
+    )
+    def test_process_stats(self, case: ProcessStatsTestCase):
+        total_elements = reduce(mul, case.reduced_shape, 1)
+        mean_values = [
+            Tensor(
+                np.arange(i * total_elements, (i + 1) * total_elements, dtype=np.float32).reshape(case.reduced_shape)
+            )
+            for i in range(len(case.activation_shapes))
+        ]
+
+        stats = WCTensorStatistic(mean_values=mean_values, shape_values=case.activation_shapes)
+
+        if case.act_ch_axis is None:
+            s, X = process_stats(stats, case.subset_size)
+        else:
+            s, X = process_stats(stats, case.subset_size, case.act_ch_axis)
+
+        assert s.shape == case.ref_s.shape
+        assert fns.allclose(s, self.to_tensor(case.ref_s))
+        assert X.shape == case.ref_X.shape
+        assert fns.allclose(X, self.to_tensor(case.ref_X))
+
+    @staticmethod
+    @abstractmethod
+    def get_transposable_awq_model(
+        transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False
+    ) -> TModel:
+        "Returns a backend model for test_compression_with_transpose."
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            dict(scale_estimation=True),
+            dict(lora_correction=True),
+            dict(
+                gptq=True,
+                advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+            ),
+        ],
+    )
+    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
+        if not transpose_a_supported:
+            pytest.skip("transpose_a is not supported for the current backend")
+        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
+            pytest.skip("Scale estimation is not supported")
+        if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
+            pytest.skip("GPTQ is not supported")
+        if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():
+            pytest.skip("lora_correction is not supported")
+
+        INPUT_SHAPE = (2, 4)
+        model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
+        input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
+        input = self.to_tensor(input)
+        dataset = Dataset([input] * 2, self.get_transform_func())
+
+        with pytest.raises(nncf.UnsupportedModelError):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=1,
+                subset_size=2,
+                dataset=dataset,
+                all_layers=True,
+                **kwargs,
+            )

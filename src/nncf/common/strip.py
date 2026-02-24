@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -28,6 +28,7 @@ TModel = TypeVar("TModel")
 @tracked_function(category=MODEL_BASED_CATEGORY, extractors=[FunctionCallTelemetryExtractor("nncf.strip")])
 def strip(
     model: TModel,
+    *,
     do_copy: bool = True,
     strip_format: StripFormat = StripFormat.NATIVE,
     example_input: Optional[Any] = None,
@@ -48,10 +49,6 @@ def strip(
         from nncf.torch.strip import strip as strip_pt
 
         return strip_pt(model, do_copy, strip_format, example_input)  # type: ignore
-    if model_backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow.strip import strip as strip_tf
-
-        return strip_tf(model, do_copy, strip_format)  # type: ignore
 
     msg = f"Method `strip` does not support {model_backend.value} backend."
     raise nncf.UnsupportedBackendError(msg)

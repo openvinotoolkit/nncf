@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -673,6 +673,14 @@ class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
 class ONNXErfMetatype(ONNXOpMetatype):
     name = "ErfOp"
     op_names = ["Erf"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXAttentionMetatype(ONNXOpMetatype):
+    name = "AttentionOp"
+    op_names = ["Attention"]
+    hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
+    target_input_ports = [0, 1]
 
 
 @ONNX_OPERATION_METATYPES.register()

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,9 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
@@ -27,8 +29,6 @@ from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateComman
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import get_mean_statistic_collector
-from nncf.onnx.statistics.collectors import get_raw_stat_collector
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 
@@ -65,7 +65,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> TensorCollector:
-        return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
     def raw_statistic_collector(num_samples: int = None) -> TensorCollector:

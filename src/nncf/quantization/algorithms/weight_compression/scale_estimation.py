@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,9 +15,9 @@ from typing import Optional, TypeVar
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -139,6 +139,10 @@ class ScaleEstimation:
                 continue
             _, weight_port_id = weight_data[0]
 
+            if self._backend_entity.matmul_has_transposed_activations(wp.node_with_weight, graph):
+                msg = "Transposed activations are not supported yet for the Scale Estimation algorithm"
+                raise nncf.UnsupportedModelError(msg)
+
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
             scale, zero_point = self.calculate_quantization_params(
@@ -196,88 +200,92 @@ class ScaleEstimation:
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
+        is_3d_weight = len(weight.shape) == 3
 
         was_transposed = False
-        if reduction_axis == 0:
-            weight = fns.transpose(weight)
-            reduction_axis = 1
+        if reduction_axis == 0 or (reduction_axis == 1 and is_3d_weight):
+            # Weights
+            # 3D: [num_experts, hidden_dimension, out_features] -> [num_experts, out_features, hidden_dimension]
+            # 2D: [hidden_dimension, out_features] -> [out_features, hidden_dimension]
+            weight = fns.moveaxis(weight, -1, -2)
+            reduction_axis = weight.ndim - 1
             was_transposed = True
 
         group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
         cur_config = deepcopy(config)
         cur_config.group_size = group_size
 
-        original_weight = fns.zeros_like(weight) + weight
         if not config.is_integer:
             q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
-                original_weight, cur_config, reduction_axis, return_compressed_weight=True
+                weight, cur_config, reduction_axis, return_compressed_weight=True
             )
             zp = None
         else:
             q_weights, compressed_weights, scale, zp = integer_quantize_dequantize_weight(
-                original_weight, cur_config, reduction_axis, return_compressed_weight=True
+                weight, cur_config, reduction_axis, return_compressed_weight=True
             )
             if zp is not None:
                 zp = zp.astype(scale.dtype)
 
-        s = fns.unsqueeze(s, 0)
+        s = fns.unsqueeze(s, -2)
         s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
 
-        original_weight, _ = reshape_weight_for_grouped_quantization(original_weight, reduction_axis, group_size)
+        weight, _ = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
 
         # all weight in group has importance based on corresponding input activations
-        importance = fns.ones_like(original_weight)
+        importance = fns.ones_like(weight)
         importance = importance * s
 
         target, zero_mask = get_target_zero_mask(compressed_weights, zp)
         importance = fns.where(zero_mask, 0.0, importance)
 
         # normalize importances for every group of weights to make sum of them equal to 1.0
-        denum = fns.sum(importance, axis=2, keepdims=True)
+        denum = fns.sum(importance, axis=-1, keepdims=True)
         importance = importance / (denum + eps)
 
-        X, _ = reshape_weight_for_grouped_quantization(X, 0, group_size)
+        X, _ = reshape_weight_for_grouped_quantization(X, -2, group_size)
         best_diffs = None
         result_scale = None
-        fp_outs = fns.matmul(fns.transpose(original_weight, (1, 0, 2)), X)
-        q_outs = fns.matmul(fns.transpose(q_weights, (1, 0, 2)), X)
+        fp_outs = fns.matmul(fns.moveaxis(weight, -2, -3), X)
+        q_outs = fns.matmul(fns.moveaxis(q_weights, -2, -3), X)
 
         # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
+        # For 3D weights, it is [Batch Size, C_OUT, N_GROUPS]
         min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-        min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
+        min_max_scale_diffs = fns.moveaxis(min_max_scale_diffs, -1, -2)
+
         if weight_penalty > 0.0:
-            min_max_scale_diffs += weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
+            min_max_scale_diffs += weight_penalty * fns.mean((q_weights - weight) ** 2, axis=-1)
 
         scale_sign = scale / fns.abs(scale)
         zero_scale = 0.001
-        zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
+        zero_mask = zero_scale * zero_mask.astype(weight.dtype)
 
         # iterative rectification of initial scale
         for i in range(initial_steps):
-            near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
+            near_to_ideal_scale = estimate_scales(weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if not config.is_integer:
-                out = float_quantize_dequantize_weight(
-                    original_weight,
+                q_weights_ = float_quantize_dequantize_weight(
+                    weight,
                     config,
                     precomputed_scale=near_to_ideal_scale,
                 )
             else:
-                out = integer_quantize_dequantize_weight(
-                    original_weight,
+                q_weights_ = integer_quantize_dequantize_weight(
+                    weight,
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
                 )
 
-            q_weights_ = fns.zeros_like(original_weight) + out
-            q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
+            q_outs = fns.matmul(fns.moveaxis(q_weights_, -2, -3), X)
 
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+            ideal_scale_diffs = fns.moveaxis(ideal_scale_diffs, -1, -2)
             if weight_penalty > 0.0:
-                ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
+                ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - weight) ** 2, axis=-1)
 
             if best_diffs is None:
                 best_diffs = min_max_scale_diffs
@@ -286,7 +294,7 @@ class ScaleEstimation:
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
-            mask = fns.unsqueeze(mask, axis=2)
+            mask = fns.unsqueeze(mask, axis=-1)
 
             if result_scale is None:
                 near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
@@ -296,17 +304,18 @@ class ScaleEstimation:
 
             if i < initial_steps - 1:
                 if not config.is_integer:
-                    out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
+                    compressed_weights, _, _ = do_float_quantization(
+                        weight, config, precomputed_scale=near_to_ideal_scale
+                    )
                 else:
-                    out, _, _ = do_integer_quantization(
-                        original_weight,
+                    compressed_weights, _, _ = do_integer_quantization(
+                        weight,
                         config,
                         precomputed_scale=near_to_ideal_scale,
                         precomputed_zero_point=zp,
                     )
-                compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
-                zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
+                zero_mask = zero_scale * zero_mask.astype(weight.dtype)
 
         # iterative rectification of scale based on grid search
         for scale_step in range(scale_steps):
@@ -314,43 +323,41 @@ class ScaleEstimation:
             scaled_scale = factor * scale
 
             if not config.is_integer:
-                out, _, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
+                compressed_weights, _, _ = do_float_quantization(weight, config, precomputed_scale=scaled_scale)
             else:
-                out, _, _ = do_integer_quantization(
-                    original_weight,
+                compressed_weights, _, _ = do_integer_quantization(
+                    weight,
                     config,
                     precomputed_scale=scaled_scale,
                     precomputed_zero_point=zp,
                 )
-            compressed_weights = fns.zeros_like(original_weight) + out
 
             target, zero_mask = get_target_zero_mask(compressed_weights, zp)
-            zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
-            near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
+            zero_mask = zero_scale * zero_mask.astype(weight.dtype)
+            near_to_ideal_scale = estimate_scales(weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if not config.is_integer:
-                out = float_quantize_dequantize_weight(original_weight, config, precomputed_scale=near_to_ideal_scale)
+                q_weights_ = float_quantize_dequantize_weight(weight, config, precomputed_scale=near_to_ideal_scale)
             else:
-                out = integer_quantize_dequantize_weight(
-                    original_weight,
+                q_weights_ = integer_quantize_dequantize_weight(
+                    weight,
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
                 )
-            q_weights_ = fns.zeros_like(original_weight) + out
 
-            q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
+            q_outs = fns.matmul(fns.moveaxis(q_weights_, -2, -3), X)
             ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
-            ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+            ideal_scale_diffs = fns.moveaxis(ideal_scale_diffs, -1, -2)
             if weight_penalty > 0.0:
-                ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
+                ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - weight) ** 2, axis=-1)
 
             mask = (ideal_scale_diffs > best_diffs).astype(best_diffs.dtype)
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
-            mask = fns.unsqueeze(mask, axis=2)
+            mask = fns.unsqueeze(mask, axis=-1)
 
             if result_scale is None:
                 near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
@@ -359,19 +366,19 @@ class ScaleEstimation:
             result_scale = near_to_ideal_scale
 
         if config.group_size == -1:
-            result_scale = fns.squeeze(result_scale, axis=1)
+            result_scale = fns.squeeze(result_scale, axis=-2)
         if zp is not None and config.group_size == -1:
-            zp = fns.squeeze(zp, axis=1)
+            zp = fns.squeeze(zp, axis=-2)
 
         if was_transposed:
             if config.group_size == -1:
-                result_scale = fns.transpose(result_scale)
+                result_scale = fns.moveaxis(result_scale, -1, -2)
                 if zp is not None:
-                    zp = fns.transpose(zp)
+                    zp = fns.moveaxis(zp, -1, -2)
             else:
-                result_scale = fns.transpose(result_scale, axes=(1, 2, 0))
+                result_scale = fns.moveaxis(result_scale, (-1, -2, -3), (-2, -3, -1))
                 if zp is not None:
-                    zp = fns.transpose(zp, axes=(1, 2, 0))
+                    zp = fns.moveaxis(zp, (-1, -2, -3), (-2, -3, -1))
 
         return result_scale, zp
 
@@ -421,5 +428,5 @@ def estimate_scales(weight: Tensor, target: Tensor, zero_mask: Tensor, importanc
     """
     ideal_scale = fns.abs(weight) / (fns.abs(target) + zero_mask)
     weighted_scale = ideal_scale * importance
-    near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
+    near_to_ideal_scale = fns.sum(weighted_scale, axis=-1, keepdims=True)
     return near_to_ideal_scale

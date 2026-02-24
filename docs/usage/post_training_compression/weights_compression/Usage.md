@@ -27,8 +27,8 @@ By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_AS
 
 | Compression Mode | Element type | Scale type | Granularity              | Description                |
 |------------------|--------------|------------|--------------------------|----------------------------|
-| INT8_ASYM        | INT8         | FP16       | Per-channel              | [Asymmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) |
-| INT8_SYM         | INT8         | FP16       | Per-channel              | [Symmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) |
+| INT8_ASYM        | INT8         | FP16       | Per-channel              | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
+| INT8_SYM         | INT8         | FP16       | Per-channel              | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
 
 #### Mixed precision modes
 
@@ -40,15 +40,15 @@ NNCF can automatically distribute precision assignments based on quantization se
 
 | Compression Mode | Element type | Scale type | Granularity              | Description |
 |------------------|--------------|------------|--------------------------|-------------|
-| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | [Symmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) |
-| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | [Asymmetric quantization](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) |
+| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | NF4              | FP32         | FP16       | Per-channel / Group-wise | [NormalFloat-4](https://arxiv.org/pdf/2305.14314v1.pdf) lookup table with 16 FP32 values |
 | CODEBOOK         | Any          | FP16       | Per-channel / Group-wise | Arbitrary lookup table (codebook) |
-| CB4_F8E4M3       | E4M3         | FP16       | Per-channel / Group-wise | A fixed lookup table with 16 E4M3 values based on NF4 values |
+| CB4              | E4M3         | FP16       | Per-channel / Group-wise | A fixed lookup table with 16 E4M3 values based on NF4 values |
 | MXFP4            | E2M1         | E8M0       | Group-wise (32)          | [MX-compliant FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 | MXFP8_E4M3       | E4M3         | E8M0       | Group-wise (32)          | [MX-compliant FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 |   FP8_E4M3       | E4M3         | FP16       | Per-channel / Group-wise | [FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
-|   FP4       | E2M1         | FP16       | Per-channel / Group-wise | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+|   FP4            | E2M1         | FP16       | Per-channel / Group-wise | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 
 **Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
 

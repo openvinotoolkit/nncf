@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,7 +27,6 @@ from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.events import NNCF_PT_FX_CATEGORY
-from nncf.telemetry.events import NNCF_TF_CATEGORY
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.wrapper import NNCFTelemetryStub
 from nncf.telemetry.wrapper import skip_if_raised
@@ -217,7 +216,6 @@ def test_skip_if_raised():
     "backend_type, reference_category",
     [
         (BackendType.OPENVINO, NNCF_OV_CATEGORY),
-        (BackendType.TENSORFLOW, NNCF_TF_CATEGORY),
         (BackendType.ONNX, NNCF_ONNX_CATEGORY),
         (BackendType.TORCH, NNCF_PT_CATEGORY),
         (BackendType.TORCH_FX, NNCF_PT_FX_CATEGORY),

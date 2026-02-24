@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import numpy as np
 import onnx
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -55,7 +55,7 @@ class ONNXModelTransformer(ModelTransformer):
         # and is larger than 2GB, this method silently returns an empty model.
         inferred_model = model if inplace else onnx.shape_inference.infer_shapes(model)
         super().__init__(inferred_model)
-        self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
+        self.onnx_model_extractor = None
         self._inplace = inplace
 
     @staticmethod
@@ -426,6 +426,9 @@ class ONNXModelTransformer(ModelTransformer):
         if not output_tensor_names:
             output_tensor_names = [n.name for n in self._model.graph.output]
 
+        if self.onnx_model_extractor is None:
+            self.onnx_model_extractor = onnx.utils.Extractor(self._model)
+
         extracted_model = self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
         if self._model.metadata_props:
             values = {p.key: p.value for p in self._model.metadata_props}
@@ -503,7 +506,7 @@ class ONNXModelTransformer(ModelTransformer):
         """
         node_name_to_node = get_name_to_node_map(model)
         # TODO(andrey-churkin): Optimize it
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         input_edges_mapping = get_input_edges_mapping(graph)
 
         for transformation in transformations:

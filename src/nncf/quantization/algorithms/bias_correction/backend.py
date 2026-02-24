@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,8 +20,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
@@ -85,7 +84,7 @@ class BiasCorrectionAlgoBackend(ABC):
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Returns backend-specific mean statistic collector.
 
@@ -93,29 +92,29 @@ class BiasCorrectionAlgoBackend(ABC):
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        :return: Backend-specific TensorCollector for the statistics calculation.
         """
 
     @staticmethod
     @abstractmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorStatisticCollectorBase:
+    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
         """
         Returns backend-specific raw statistic collector.
         This statistic collector is used for raw data calculation, without aggregating.
 
         :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        :return: Backend-specific TensorCollector for the statistics calculation.
         """
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> NNCFTensor:
+    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 
         :param raw_data: Backend-specific output from the model.
         :param output_name: Name of the output layer or tensor name.
-        :return: Processed output as NNCFTensor.
+        :return: Processed output as an nncf Tensor.
         """
 
     @staticmethod

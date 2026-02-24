@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -55,10 +55,10 @@ from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import RestoreMode
-from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")

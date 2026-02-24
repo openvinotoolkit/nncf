@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,7 +23,7 @@ from nncf.tensor.functions import io as io
 from nncf.tensor.functions.numpy_numeric import validate_device
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore[type-arg]
 
 
 def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> dict[str, T_NUMPY_ARRAY]:

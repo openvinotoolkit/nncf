@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from typing import Callable
 
 import torch
+from torch import nn
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -30,7 +31,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import SQMultiply
 
@@ -76,7 +76,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return 0
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: nn.Module, nncf_graph: NNCFGraph) -> Tensor:
         if isinstance(model, GraphModelWrapper):
             model = model.model
 

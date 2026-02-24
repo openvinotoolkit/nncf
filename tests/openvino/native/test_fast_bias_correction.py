@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import numpy as np
 import openvino as ov
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -55,7 +55,7 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def check_bias(model: ov.Model, ref_bias: list):
         ref_bias = np.array(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = build_graph(model)
 
         atol = 0.0001 if not is_macos() else 0.01
 

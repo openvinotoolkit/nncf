@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,7 +26,7 @@ def _are_nodes_matched(node_1, node_2) -> bool:  # type:ignore
             # are matched to any node type.
             if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr] or GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]:
                 continue
-            # Torch and TF pattern mapping based on 'type' section,
+            # Torch pattern mapping based on 'type' section,
             # While ONNX mapping based on metatypes -
             # to support all of them, we need to check the existence of the attributes
             if GraphPattern.NODE_TYPE_ATTR in node_1 and node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:

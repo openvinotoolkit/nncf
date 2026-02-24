@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -29,6 +29,11 @@ class Dataset:
     model's input from this data item. For example, in supervised learning, the data item
     usually contains both examples and labels. So transformation function should extract
     the examples from the data item.
+
+    A special input key nncf.definitions.NNCF_DATASET_RESET_STATE_KEY can be used by OpenVINO backend to control
+    resetting of internal model state between model inferences. This key can be added to a dataset sample input
+    dictionary with either `True` or `False` value. With `True` value, the model state will be reset before inference
+    on the corresponding sample, and with `False` the state will not be reset.
 
     :param data_source: The iterable object serving as the source of data items.
     :param transform_func: The function that is used to extract the model's input
@@ -83,8 +88,6 @@ class Dataset:
         """
         if hasattr(self._data_source, "batch_size"):  # Torch dataloader
             return cast(int, self._data_source.batch_size)
-        if hasattr(self._data_source, "_batch_size"):  # TF dataloader
-            return cast(int, self._data_source._batch_size)
         return None
 
 

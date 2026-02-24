@@ -203,6 +203,7 @@ inproceedings
 inputless
 interp
 ioff
+ipynb
 iterval
 jinjie
 junitxml
@@ -275,7 +276,6 @@ mxfp
 namedtuples
 nanmean
 nanquantile
-natsorted
 nbytes
 nccl
 ncdhw
@@ -360,7 +360,6 @@ ptselu
 ptsilu
 ptwc
 pymodules
-pymoo
 pyopenvino
 pythonpath
 qconf

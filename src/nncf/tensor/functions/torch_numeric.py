@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -35,6 +35,8 @@ DTYPE_MAP = {
     TensorDataType.int32: torch.int32,
     TensorDataType.int64: torch.int64,
     TensorDataType.uint8: torch.uint8,
+    TensorDataType.uint16: torch.uint16,
+    TensorDataType.uint32: torch.uint32,
 }
 
 DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}
@@ -106,6 +108,11 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.astype.register
 def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
     return a.type(DTYPE_MAP[dtype])
+
+
+@numeric.view.register
+def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
+    return a.view(DTYPE_MAP[dtype])
 
 
 @numeric.dtype.register
@@ -208,6 +215,13 @@ def _(
     return torch.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: torch.Tensor,
+) -> tuple[torch.Tensor, ...]:
+    return torch.nonzero(condition, as_tuple=True)
+
+
 @numeric.zeros_like.register
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
@@ -280,7 +294,7 @@ def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
 @numeric.quantile.register
 def quantile(
     a: torch.Tensor,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> torch.Tensor:
@@ -341,14 +355,14 @@ def _(a: torch.Tensor) -> T_NUMBER:
     return a.item()
 
 
-@numeric.cumsum.register
-def _(a: torch.Tensor, axis: int) -> torch.Tensor:
-    return torch.cumsum(a, dim=axis)
-
-
 @numeric.sum.register
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     return torch.sum(a, dim=axis, keepdim=keepdims)
+
+
+@numeric.cumsum.register
+def _(a: torch.Tensor, axis: int) -> torch.Tensor:
+    return torch.cumsum(a, dim=axis)
 
 
 @numeric.multiply.register
@@ -386,6 +400,11 @@ def _(a: torch.Tensor, axes: Optional[T_SHAPE_ARRAY] = None) -> torch.Tensor:
 @numeric.argsort.register
 def _(a: torch.Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> torch.Tensor:
     return torch.argsort(a, dim=axis, descending=descending, stable=stable)
+
+
+@numeric.argmin.register
+def _(a: torch.Tensor, axis: int = -1) -> torch.Tensor:
+    return torch.argmin(a, dim=axis)
 
 
 @numeric.diag.register
@@ -444,6 +463,11 @@ def _(a: torch.Tensor, axis: T_SHAPE) -> torch.Tensor:
     shape_it = iter(a.shape)
     shape = [1 if ax in norm_axis else next(shape_it) for ax in range(out_ndim)]
     return a.reshape(shape)
+
+
+@numeric.sign.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.sign(a)
 
 
 @numeric.clone.register

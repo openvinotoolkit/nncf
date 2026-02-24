@@ -1,4 +1,0 @@
-tensorflow==2.15.1
-tensorflow-datasets
-tqdm
-openvino==2025.4.0

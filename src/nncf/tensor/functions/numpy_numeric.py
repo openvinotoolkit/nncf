@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,7 +27,7 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore[type-arg]
 
 DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -37,6 +37,8 @@ DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.int32: np.dtype(np.int32),
     TensorDataType.int64: np.dtype(np.int64),
     TensorDataType.uint8: np.dtype(np.uint8),
+    TensorDataType.uint16: np.dtype(np.uint16),
+    TensorDataType.uint32: np.dtype(np.uint32),
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
@@ -95,6 +97,11 @@ def _(a: T_NUMPY) -> T_NUMPY:
 @numeric.astype.register
 def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
     return a.astype(DTYPE_MAP[dtype])
+
+
+@numeric.view.register
+def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
+    return a.view(DTYPE_MAP[dtype])
 
 
 @numeric.dtype.register
@@ -193,6 +200,18 @@ def _(
     return np.where(condition, x, y)
 
 
+@numeric.nonzero.register
+def _(
+    condition: T_NUMPY,
+) -> tuple[T_NUMPY_ARRAY, ...]:
+    return np.nonzero(condition)
+
+
+@numeric.sign.register
+def _(a: T_NUMPY) -> T_NUMPY:
+    return np.sign(a)
+
+
 @numeric.zeros_like.register
 def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.zeros_like(a)
@@ -256,7 +275,7 @@ def _(a: T_NUMPY, exponent: Union[T_NUMPY, float]) -> T_NUMPY:
 @numeric.quantile.register
 def _(
     a: T_NUMPY,
-    q: Union[float, list[float]],
+    q: Union[float, list[float], tuple[float, ...]],
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY:
@@ -314,14 +333,14 @@ def _(a: T_NUMPY) -> T_NUMBER:
     return a.item()
 
 
-@numeric.cumsum.register
-def _(a: T_NUMPY, axis: int) -> T_NUMPY:
-    return np.cumsum(a, axis=axis)
-
-
 @numeric.sum.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))
+
+
+@numeric.cumsum.register
+def _(a: T_NUMPY, axis: int) -> T_NUMPY:
+    return np.cumsum(a, axis=axis)
 
 
 @numeric.multiply.register
@@ -366,6 +385,11 @@ def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False
     if descending and not stable:
         return np.flip(np.argsort(a, axis=axis), axis)
     return np.argsort(a, axis=axis, kind="stable" if stable else None)
+
+
+@numeric.argmin.register
+def _(a: T_NUMPY, axis: int = -1) -> T_NUMPY:
+    return np.argmin(a, axis=axis)
 
 
 @numeric.diag.register

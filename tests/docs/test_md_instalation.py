@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -57,6 +57,7 @@ def _parse_last_versions_from_md() -> dict[str, str]:
     headers = [h.strip().lower() for h in table[0].strip("|").split("|")]
     first_data_row = [cell.strip(" `") for cell in table[2].strip("|").split("|")]
     version_dict = dict(zip(headers[1:], first_data_row[1:]))
+    version_dict.pop("tensorflow", None)
     return version_dict
 
 
@@ -71,7 +72,6 @@ def _parse_versions_from_constraints_file() -> dict[str, str]:
         "openvino": _parse(r"openvino==(\d+\.\d+.\d+)"),
         "pytorch": _parse(r"torch==(\d+\.\d+.\d+)"),
         "onnx": _parse(r"onnx==(\d+\.\d+.\d+)"),
-        "tensorflow": _parse(r"tensorflow==(\d+\.\d+.\d+)"),
     }
 
 
@@ -108,8 +108,7 @@ def test_test_environment():
     md_content = MD_INSTALLATION.read_text(encoding="utf-8")
     pattern = (
         r"This repository is tested on Python\* (\d+\.\d+\.\d+), "
-        r"PyTorch\* (\d+\.\d+\.\d+) \(NVidia CUDA\\\* Toolkit (\d+\.\d+)\) "
-        r"and TensorFlow\* (\d+\.\d+.\d+) \(NVidia CUDA\\\* Toolkit (\d+\.\d+)\)"
+        r"PyTorch\* (\d+\.\d+\.\d+) \(NVidia CUDA\\\* Toolkit (\d+\.\d+)\)"
     )
     match = re.search(pattern, md_content)
 
@@ -117,8 +116,6 @@ def test_test_environment():
         "python": match.group(1),
         "pytorch": match.group(2),
         "cuda_torch": match.group(3),
-        "tensorflow": match.group(4),
-        # "tf_cuda": match.group(5) # tests on Jenkins
     }
 
     actual_versions = _parse_versions_from_constraints_file()
@@ -126,8 +123,7 @@ def test_test_environment():
     ref = {
         "python": _parse_python_version_from_precommit_workflow(True),
         "pytorch": actual_versions["pytorch"],
-        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch2-cuda"),
-        "tensorflow": actual_versions["tensorflow"],
+        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch-cuda"),
     }
     print(md_versions, ref)
     assert md_versions == ref, (

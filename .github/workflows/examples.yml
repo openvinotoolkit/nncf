@@ -37,7 +37,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -46,7 +46,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.10.14
       - name: cpuinfo
@@ -75,7 +75,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
 
   examples-cuda:
     name: Test examples CUDA [${{ matrix.group }}/1]
@@ -107,7 +107,7 @@ jobs:
           export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -116,7 +116,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.10.14
       - name: cpuinfo
@@ -145,7 +145,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
 
   examples-win-cpu:
     timeout-minutes: 80
@@ -162,7 +162,7 @@ jobs:
     env:
       PYTHONIOENCODING: utf-8
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -171,7 +171,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.10"
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
@@ -183,9 +183,14 @@ jobs:
       - name: Run examples test scope
         run: |
           set +e
-          export LIB="${LIB};$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
-          export LIB="${LIB};$(python -c "import sys; print(sys.prefix + '/libs')")"
-          export INCLUDE="${INCLUDE};$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
+          prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
+          include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          export LIB="${LIB};${sys_lib};${prefix_lib}"
+          export INCLUDE="${INCLUDE};${include_dir}"
+
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
@@ -194,7 +199,7 @@ jobs:
             --splits 6 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
-          ret=$?
+          ret="$?"
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
@@ -203,4 +208,4 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"

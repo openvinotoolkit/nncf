@@ -1,0 +1,38 @@
+# Openvino
+openvino==2025.3.0
+
+# ONNX
+onnx==1.17.0; python_version < '3.13'
+onnx==1.18.0; python_version >= '3.13'
+onnxruntime==1.21.1
+
+# Copied from https://github.com/pytorch/executorch/blob/main/requirements-dev.txt
+cmake>=3.29, <4.0.0  # For building binary targets in the wheel.
+packaging>=24.2 # Lower bound required by setuptools
+pyyaml  # Imported by the kernel codegen tools.
+setuptools>=77.0.3  # For building the pip package contents.
+wheel  # For building the pip package archive.
+zstd  # Imported by resolve_buck.py.
+certifi  # Imported by resolve_buck.py.
+
+# Copied from tests/torch2/requirements.txt
+addict>=2.4.0
+efficientnet_pytorch==0.7.1
+transformers==4.53.0
+
+sentence-transformers==4.1.0
+optimum-intel==1.24.0
+optimum==1.26.0
+accelerate==1.9.0
+fastdownload==0.0.7
+
+
+# Tests and examples
+pytest==8.0.2
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-dependency==0.6.0
+pytest-ordering==0.6
+pytest-xdist==3.5.0
+pytest-forked==1.6.0
+pytest-split==0.9.0

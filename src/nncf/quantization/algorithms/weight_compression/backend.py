@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,19 +19,18 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
+from nncf.common.tensor_statistics.collectors import RawReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import RawReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
+from nncf.common.tensor_statistics.statistics import HessianTensorStatistic
+from nncf.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.parameters import CompressionFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -109,6 +108,17 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: The model.
         :param graph: The model graph associated with the model.
         :return: The weight tensor.
+        """
+
+    @abstractmethod
+    def matmul_has_transposed_activations(self, matmul: NNCFNode, int, graph: NNCFGraph) -> bool:
+        """
+        Checks whether the activation input of a MatMul operation is transposed.
+
+        :param matmul: MatMul NNCFGraph node.
+        :param graph: The model graph associated with the model.
+        :return: True if the node is a matmul node and activation input is transposed,
+            False otherwise.
         """
 
     @abstractmethod
@@ -220,7 +230,7 @@ class WeightCompressionAlgoBackend(ABC):
     @abstractmethod
     def mean_statistic_collector(
         self, reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Return mean statistic collector
 
@@ -272,6 +282,18 @@ class WeightCompressionAlgoBackend(ABC):
         Return backend-specific ignored patterns.
 
         :return: backend-specific ignored patterns.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple[int]) -> int:
+        """
+        Returns axis number of the activation tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Port ID for input.
+        :param input_shape: Shape of the input.
+        :return: Channel axis number.
         """
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from typing import TypeVar
 
 import torch
 from torch import nn
@@ -20,13 +22,15 @@ from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.model_graph_manager import get_const_data_by_name
 
+TModel = TypeVar("TModel", bound=nn.Module)
+
 
 def apply_magnitude_pruning(
-    model: nn.Module,
+    model: TModel,
     parameters: list[str],
     mode: PruneMode,
     ratio: float,
-) -> nn.Module:
+) -> TModel:
     """
     Prunes the specified parameters of the given model using unstructured pruning.
 
