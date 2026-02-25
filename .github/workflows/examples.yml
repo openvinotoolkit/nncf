@@ -255,16 +255,16 @@ jobs:
         with:
           pattern: examples-cuda-pytest-results-*
           path: test-results
-      - name: Test Summary
-        run: |
-          ls -la .
-          ls -la test-results
-          ls -la test-results/*/
-          echo "pupupu"
+      # - name: Test Summary
+      #   run: |
+      #     ls -la .
+      #     ls -la test-results
+      #     ls -la test-results/*/
+      #     echo "pupupu"
       - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
 
   # examples-win-cpu-summary:
   #   name: Examples Windows CPU Summary
