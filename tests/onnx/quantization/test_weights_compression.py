@@ -493,23 +493,33 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_model_for_test_scale_estimation() -> onnx.ModelProto:
+    def get_model_for_test_scale_estimation(transpose_a) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_scale_estimation()
             - TemplateWeightCompression.test_scale_estimation_outlier_channel_has_lowest_error()
         tests.
         """
+
         mb = ModelBuilder()
         x = mb.add_input("input", (1, 4, 8))
         output = mb.add_output("output", (1, 4, 16))
         weights = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8).T
-        mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
+        if transpose_a:
+            squeeze = mb.add_squeeze(x)
+            transpose = mb.add_transpose(squeeze, (1, 0))
+            mb.add_gemm(transpose, shape=(8, 16), output=output, weight_data=weights, trans_a=1)
+        else:
+            mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
 
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> onnx.ModelProto:
+        if transpose_a:
+            msg = "ONNX does not support transpose_a + MoE"
+            pytest.skip(msg)
+
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
@@ -933,7 +943,3 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_reduction_axes() -> int:
         return 0
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return True

@@ -222,6 +222,15 @@ class ModelBuilder:
 
         return output
 
+    def add_squeeze(self, input: str, output: str | None = None) -> str:
+        i = len(self._nodes)
+
+        output = f"Squeeze_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Squeeze", inputs=[input], outputs=[output], name=f"Squeeze_{i}")
+        )
+        return output
+
     def add_unsqueeze(self, input: str, axes: tuple[int, ...], output: str | None = None) -> str:
         i = len(self._nodes)
 
