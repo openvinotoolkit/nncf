@@ -30,64 +30,64 @@ on:
         type: boolean
         default: false
 
-# concurrency:
-#   group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
-#   cancel-in-progress: false
+concurrency:
+  group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
+  cancel-in-progress: false
 
 jobs:
-  # examples-cpu:
-  #   name: Test examples CPU [${{ matrix.group }}/6]
-  #   runs-on: ubuntu-latest-16-cores
-  #   timeout-minutes: 80
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       group: [1, 2, 3, 4, 5, 6]
-  #   defaults:
-  #     run:
-  #       shell: bash
-  #   steps:
-  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-  #       with:
-  #           lfs: true
-  #           fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-  #     - name: Fetch and Checkout the Pull Request Branch
-  #       if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-  #       run: |
-  #         git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-  #         git checkout pr-${{ github.event.inputs.pull_request_number }}
-  #     - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-  #       with:
-  #         python-version: 3.10.14
-  #     - name: cpuinfo
-  #       run: cat /proc/cpuinfo
-  #     - name: Install test requirements
-  #       run: |
-  #         pip install -r tests/cross_fw/examples/requirements.txt
-  #     - name: Print installed modules
-  #       run: pip list
-  #     - name: Run examples test scope
-  #       run: |
-  #         set +e
-  #         python -m pytest -s -ra tests/cross_fw/examples \
-  #           -m 'not cuda' \
-  #           --junit-xml=pytest-results.xml \
-  #           --durations-path=tests/cross_fw/examples/test_durations.json \
-  #           --splitting-algorithm=least_duration \
-  #           --splits 6 \
-  #           --group ${{ matrix.group }} \
-  #           ${{ github.event.inputs.pytest_args || '' }}
-  #         ret=$?
-  #         [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
-  #       env:
-  #         TQDM_DISABLE: 1
-  #     - name: Upload test results
-  #       if: ${{ !cancelled() }}
-  #       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-  #       with:
-  #         name: examples-cpu-pytest-results-${{ matrix.group }}
-  #         path: pytest-results.xml
-  #         retention-days: 1
+  examples-cpu:
+    name: Test examples CPU [${{ matrix.group }}/6]
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+            lfs: true
+            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
+      - name: Fetch and Checkout the Pull Request Branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        run: |
+          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
+          git checkout pr-${{ github.event.inputs.pull_request_number }}
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.10.14
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install test requirements
+        run: |
+          pip install -r tests/cross_fw/examples/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          set +e
+          python -m pytest -s -ra tests/cross_fw/examples \
+            -m 'not cuda' \
+            --junit-xml=pytest-results.xml \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 6 \
+            --group ${{ matrix.group }} \
+            ${{ github.event.inputs.pytest_args || '' }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+        env:
+          TQDM_DISABLE: 1
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: examples-cpu-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
 
   examples-cuda:
     name: Test examples CUDA [${{ matrix.group }}/1]
@@ -104,14 +104,14 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
-      # - name: Install dependencies
-      #   run : |
-      #     sudo apt-get update
-      #     sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
-      # - name: Download CUDA
-      #   run: |
-      #     wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-      #     sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
@@ -159,88 +159,88 @@ jobs:
           path: pytest-results.xml
           retention-days: 1
 
-  # examples-win-cpu:
-  #   timeout-minutes: 80
-  #   name: Test examples CPU Windows [${{ matrix.group }}/6]
-  #   runs-on: windows-2025-16-core
-  #   if: ${{ !inputs.skip_windows }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       group: [1, 2, 3, 4, 5, 6]
-  #   defaults:
-  #     run:
-  #       shell: bash
-  #   env:
-  #     PYTHONIOENCODING: utf-8
-  #   steps:
-  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-  #       with:
-  #           lfs: true
-  #           fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-  #     - name: Fetch and Checkout the Pull Request Branch
-  #       if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-  #       run: |
-  #         git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-  #         git checkout pr-${{ github.event.inputs.pull_request_number }}
-  #     - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-  #       with:
-  #         python-version: "3.10"
-  #     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-  #     - name: Install NNCF and test requirements
-  #       run: |
-  #         pip install -r tests/cross_fw/examples/requirements.txt
-  #     - name: Print installed modules
-  #       run: pip list
-  #     - name: Run examples test scope
-  #       run: |
-  #         set +e
+  examples-win-cpu:
+    timeout-minutes: 80
+    name: Test examples CPU Windows [${{ matrix.group }}/6]
+    runs-on: windows-2025-16-core
+    if: ${{ !inputs.skip_windows }}
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+            lfs: true
+            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
+      - name: Fetch and Checkout the Pull Request Branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        run: |
+          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
+          git checkout pr-${{ github.event.inputs.pull_request_number }}
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.10"
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Install NNCF and test requirements
+        run: |
+          pip install -r tests/cross_fw/examples/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          set +e
 
-  #         sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
-  #         prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
-  #         include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+          sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
+          prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
+          include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
 
-  #         export LIB="${LIB};${sys_lib};${prefix_lib}"
-  #         export INCLUDE="${INCLUDE};${include_dir}"
+          export LIB="${LIB};${sys_lib};${prefix_lib}"
+          export INCLUDE="${INCLUDE};${include_dir}"
 
-  #         python -m pytest -s -ra tests/cross_fw/examples \
-  #           -m 'not cuda' \
-  #           --junit-xml=pytest-results.xml \
-  #           --durations-path=tests/cross_fw/examples/test_durations.json \
-  #           --splitting-algorithm=least_duration \
-  #           --splits 6 \
-  #           --group ${{ matrix.group }} \
-  #           ${{ github.event.inputs.pytest_args || '' }}
-  #         ret="$?"
-  #         [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
-  #       env:
-  #         TQDM_DISABLE: 1
-  #         NNCF_EXTENSION_LOAD_TIMEOUT: 180
-  #     - name: Upload test results
-  #       if: ${{ !cancelled() }}
-  #       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-  #       with:
-  #         name: examples-win-cpu-pytest-results-${{ matrix.group }}
-  #         path: pytest-results.xml
-  #         retention-days: 1
+          python -m pytest -s -ra tests/cross_fw/examples \
+            -m 'not cuda' \
+            --junit-xml=pytest-results.xml \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 6 \
+            --group ${{ matrix.group }} \
+            ${{ github.event.inputs.pytest_args || '' }}
+          ret="$?"
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+        env:
+          TQDM_DISABLE: 1
+          NNCF_EXTENSION_LOAD_TIMEOUT: 180
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: examples-win-cpu-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
 
-  # examples-cpu-summary:
-  #   name: Examples CPU Summary
-  #   runs-on: ubuntu-latest
-  #   if: ${{ !cancelled() }}
-  #   needs: examples-cpu
-  #   steps:
-  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-  #       with:
-  #         sparse-checkout: .github/scripts/pytest_md_summary.py
-  #     - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-  #       with:
-  #         pattern: examples-cpu-pytest-results-*
-  #         path: test-results
-  #     - name: Test Summary
-  #       run: |
-  #         pip install defusedxml==0.7.1
-  #         python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+  examples-cpu-summary:
+    name: Examples CPU Summary
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: examples-cpu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: examples-cpu-pytest-results-*
+          path: test-results
+      - name: Test Summary
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
 
   examples-cuda-summary:
     name: Examples CUDA Summary
@@ -255,31 +255,25 @@ jobs:
         with:
           pattern: examples-cuda-pytest-results-*
           path: test-results
-      # - name: Test Summary
-      #   run: |
-      #     ls -la .
-      #     ls -la test-results
-      #     ls -la test-results/*/
-      #     echo "pupupu"
       - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py test-results/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
 
-  # examples-win-cpu-summary:
-  #   name: Examples Windows CPU Summary
-  #   runs-on: ubuntu-latest
-  #   if: ${{ !cancelled() }}
-  #   needs: examples-win-cpu
-  #   steps:
-  #     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-  #       with:
-  #         sparse-checkout: .github/scripts/pytest_md_summary.py
-  #     - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-  #       with:
-  #         pattern: examples-win-cpu-pytest-results-*
-  #         path: test-results
-  #     - name: Test Summary
-  #       run: |
-  #         pip install defusedxml==0.7.1
-  #         python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+  examples-win-cpu-summary:
+    name: Examples Windows CPU Summary
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: examples-win-cpu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: examples-win-cpu-pytest-results-*
+          path: test-results
+      - name: Test Summary
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
