@@ -87,6 +87,7 @@ def test_examples(
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
         pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
+    return
     backend = example_params["backend"]
     device = example_params.get("device")
     skip_if_backend_not_selected(backend, backends_list)

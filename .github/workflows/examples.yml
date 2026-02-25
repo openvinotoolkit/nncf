@@ -104,14 +104,14 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Install dependencies
-        run : |
-          sudo apt-get update
-          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
-      - name: Download CUDA
-        run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      # - name: Install dependencies
+      #   run : |
+      #     sudo apt-get update
+      #     sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+      # - name: Download CUDA
+      #   run: |
+      #     wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+      #     sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
@@ -255,6 +255,12 @@ jobs:
         with:
           pattern: examples-cuda-pytest-results-*
           path: test-results
+      - name: Test Summary
+        run: |
+          ls -la .
+          ls -la test-results
+          ls -la test-results/*/
+          echo "pupupu"
       - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
