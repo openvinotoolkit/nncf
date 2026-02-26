@@ -12,11 +12,11 @@
 from copy import deepcopy
 
 import torch.fx
+from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
+from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
+from torch.ao.quantization.pt2e.utils import _disallow_eval_train
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
-from torchao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
-from torchao.quantization.pt2e.quantizer import PortNodeMetaForQDQ
-from torchao.quantization.pt2e.utils import _disallow_eval_train
 
 import nncf
 from nncf.common.factory import build_graph

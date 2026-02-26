@@ -15,12 +15,12 @@ from typing import Any, Callable
 
 import torch
 import torch.fx
+from torch.ao.quantization.fx.utils import create_getattr_from_value
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx.node import map_arg
 from torch.fx.passes.infra.pass_base import PassBase
 from torch.fx.passes.infra.pass_base import PassResult
 from torch.quantization.fake_quantize import FakeQuantize
-from torchao.quantization.pt2e.utils import _fuse_conv_bn_
-from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
 from nncf.common.graph.graph import NNCFNode

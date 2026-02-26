@@ -938,7 +938,7 @@ class HAWQAggregator(AggregatorBase):
 
 class HistogramAggregator(AggregatorBase):
     """
-    NNCF implementation of the torchao.quantization.pt2e.observer.HistogramObserver.
+    NNCF implementation of the torch.ao.quantization.observer.HistogramObserver.
     Intended to be combined with a single RawReducer.
     The aggregator records the running histogram of the input tensor values along with
     min/max values. Only the reduction_axis==None is supported.

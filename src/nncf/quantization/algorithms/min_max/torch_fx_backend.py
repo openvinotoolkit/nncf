@@ -11,9 +11,9 @@
 
 
 import torch
+from torch.ao.quantization.observer import MinMaxObserver
+from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
-from torchao.quantization.pt2e.observer import MinMaxObserver
-from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
