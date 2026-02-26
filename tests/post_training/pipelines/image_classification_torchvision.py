@@ -99,8 +99,7 @@ class ImageClassificationTorchvision(ImageClassificationBase):
                 self.dummy_tensor,
                 onnx_path,
                 export_params=True,
-                opset_version=13,
-                dynamo=False,
+                opset_version=18,
                 **additional_kwargs,
             )
             self.model = onnx.load(onnx_path)

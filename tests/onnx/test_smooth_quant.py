@@ -28,39 +28,39 @@ from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearM
 from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 ONNX_LINEAR_MODEL_MM_OP_MAP = {
-    "MatMul1": "/MatMul",
-    "MatMul2": "/MatMul_1",
-    "MatMul3": "/MatMul_2",
-    "MatMul4": "/MatMul_4",
-    "MatMul5": "/MatMul_3",
-    "MatMul6": "/MatMul_5",
-    "MatMul7": "/MatMul_6",
-    "MatMul8": "/MatMul_7",
-    "Linear1": "/linear_2/MatMul",
-    "Linear2": "/linear_1/MatMul",
-    "Linear3": "/linear_3/MatMul",
-    "Linear4": "/linear_4/MatMul",
+    "MatMul1": "node_matmul",
+    "MatMul2": "node_matmul_1",
+    "MatMul3": "node_matmul_2",
+    "MatMul4": "node_matmul_4",
+    "MatMul5": "node_matmul_3",
+    "MatMul6": "node_matmul_5",
+    "MatMul7": "node_matmul_6",
+    "MatMul8": "node_matmul_7",
+    "Linear1": "node_MatMul_33",
+    "Linear2": "node_MatMul_25",
+    "Linear3": "node_MatMul_7",
+    "Linear4": "node_MatMul_9",
 }
 
 
 ONNX_LINEAR_MODEL_SQ_OP_MAP = {
-    "MatMul1": "/Reshape_0_0/nncf_smooth_quant",
-    "MatMul2": "/Reshape_0_0/nncf_smooth_quant",
-    "MatMul3": "/Reshape_1_0_0/nncf_smooth_quant",
-    "MatMul4": "/Reshape_1_0_1/nncf_smooth_quant",
-    "MatMul5": "/Reshape_2_0_0/nncf_smooth_quant",
-    "MatMul6": "/ReduceMax_0_0/nncf_smooth_quant",
-    "MatMul7": "/Reshape_3_0_0/nncf_smooth_quant",
-    "MatMul8": "/Reshape_4_0_0/nncf_smooth_quant",
-    "Linear1": "/Split_1_0/nncf_smooth_quant",
-    "Linear2": "/Split_0_0/nncf_smooth_quant",
-    "Linear3": "/Add_0_0/nncf_smooth_quant",
-    "Linear4": "/Add_0_0/nncf_smooth_quant",
+    "MatMul1": "node_view_0_0/nncf_smooth_quant",
+    "MatMul2": "node_view_0_0/nncf_smooth_quant",
+    "MatMul3": "node_view_1_0_0/nncf_smooth_quant",
+    "MatMul4": "node_view_1_0_1/nncf_smooth_quant",
+    "MatMul5": "node_view_2_0_0/nncf_smooth_quant",
+    "MatMul6": "node_max_1__0_0_0/nncf_smooth_quant",
+    "MatMul7": "node_view_3_0_0/nncf_smooth_quant",
+    "MatMul8": "node_view_4_0_0/nncf_smooth_quant",
+    "Linear1": "node_Split_40_1_0/nncf_smooth_quant",
+    "Linear2": "node_Split_40_0_0/nncf_smooth_quant",
+    "Linear3": "node_add_0_0/nncf_smooth_quant",
+    "Linear4": "node_add_0_0/nncf_smooth_quant",
 }
 
 
 ONNX_CONV_MODEL_MM_OP_MAP = {
-    "Conv1": "/conv/Conv",
+    "Conv1": "node_conv2d",
 }
 ONNX_CONV_MODEL_SQ_OP_MAP = {
     "Conv1": "nncf_model_input_0_0_0/nncf_smooth_quant",
@@ -101,7 +101,7 @@ class TestONNXSQAlgorithm(TemplateTestSQAlgorithm):
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
         dummy_input = torch.rand(model.INPUT_SIZE)
         model_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model.cpu(), dummy_input, model_path, input_names=["input"], opset_version=13, dynamo=False)
+        torch.onnx.export(model.cpu(), dummy_input, model_path, input_names=["input"], opset_version=18)
         onnx_model = onnx.load(model_path)
         onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
         return onnx_model

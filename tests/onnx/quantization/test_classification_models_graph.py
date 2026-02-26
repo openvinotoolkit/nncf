@@ -73,9 +73,10 @@ TORCHVISION_TEST_DATA = [
 def test_min_max_quantization_graph_torchvision_models(tmp_path, mocker, model_to_test, quantization_parameters):
     mock_collect_statistics(mocker)
     model = model_builder(model_to_test.model_name)
+    model.eval()
     onnx_model_path = tmp_path / (model_to_test.model_name + ".onnx")
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path, opset_version=13, dynamo=False)
+    torch.onnx.export(model, x, onnx_model_path, opset_version=18)
 
     original_model = onnx.load(onnx_model_path)
     quantized_model = min_max_quantize_model(original_model, quantization_params=quantization_parameters)

@@ -54,6 +54,7 @@ CONVOLUTION_METATYPES = [
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
     onnx_metatypes.ONNXConvolutionTransposeMetatype,
     onnx_metatypes.ONNXDeformableConvolutionMetatype,
+    onnx_metatypes.ONNXGroupConvolutionMetatype,
 ]
 
 LINEAR_OPERATIONS = [*CONVOLUTION_METATYPES, *MATMUL_METATYPES]
