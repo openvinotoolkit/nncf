@@ -63,4 +63,7 @@ Please refrain from adding huge binary files into the repository. If binary file
       ```python
       # Modification Notes: This file was taken as is from lm-eval-harness:
       # https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/wikitext/preprocess_wikitext.py
-      ```
+
+## AI Policy
+
+Please review and follow the [AI Policy](./AI_POLICY.md) when using AI-generated code in your contributions to NNCF.
