@@ -122,7 +122,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_RoPE_model() -> TModel:
+    def get_RoPE_model(with_transpose: bool) -> TModel:
         """Returns a backend model for test_rope_weight_compression."""
 
     @staticmethod
@@ -409,6 +409,11 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_num_int8_nodes(model: TModel):
+        "Returns number of int4 nodes."
+
+    @staticmethod
+    @abstractmethod
     def get_num_int4_group_sizes(model: TModel) -> dict[int, int]:
         "Returns number of int4 nodes for each group size."
 
@@ -445,8 +450,9 @@ class TemplateWeightCompression(ABC):
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
-    def test_rope_weight_compression(self):
-        model = self.get_RoPE_model()
+    @pytest.mark.parametrize("with_transpose", [True, False])
+    def test_rope_weight_compression(self, with_transpose):
+        model = self.get_RoPE_model(with_transpose=with_transpose)
         sz = 8
         n_samples = 10
 
@@ -454,6 +460,10 @@ class TemplateWeightCompression(ABC):
             [self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)],
             self.get_transform_func(),
         )
+        # First matmul is always compressed in INT8 format,
+        # as there is only one matmul in the target model
+        # the check int8 num ref == 0 checks that the
+        # ignored ROPE pattern is being applied
         compressed_model = compress_weights(
             model,
             mode=CompressWeightsMode.INT4_SYM,
@@ -462,9 +472,9 @@ class TemplateWeightCompression(ABC):
             dataset=dataset,
         )
 
-        int4_ref_num_compressed = 0
-        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
-        assert int4_num_nodes == int4_ref_num_compressed
+        int8_ref_num_compressed = 0
+        int8_num_nodes = self.get_num_int8_nodes(compressed_model)
+        assert int8_num_nodes == int8_ref_num_compressed
 
     def test_sam_pe_weight_compression(self):
         model = self.get_SAM_PE_model()

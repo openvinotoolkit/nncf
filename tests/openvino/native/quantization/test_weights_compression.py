@@ -2248,8 +2248,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return IdentityMatmul().ov_model
 
     @staticmethod
-    def get_RoPE_model() -> ov.Model:
-        return RoPEModel().ov_model
+    def get_RoPE_model(with_transpose: bool) -> ov.Model:
+        return RoPEModel(with_transpose=with_transpose, with_broadcast=False).ov_model
 
     @staticmethod
     def get_SAM_PE_model() -> ov.Model:
@@ -2537,11 +2537,19 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_ignored_scope_name(is_3d_weights) -> str:
         return "MatMul_5"
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: ov.Model) -> int:
+        return cls._get_num_typed_nodes(model, [ov.Type.i4, ov.Type.u4])
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: ov.Model) -> int:
+        return cls._get_num_typed_nodes(model, [ov.Type.i8, ov.Type.u8])
+
     @staticmethod
-    def get_num_int4_nodes(model: ov.Model) -> int:
+    def _get_num_typed_nodes(model: ov.Model, types: list[ov.Type]):
         num = 0
         for op in model.get_ops():
-            if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
+            if op.get_type_name() == "Constant" and op.get_element_type() in types:
                 num += 1
         return num
 

@@ -378,7 +378,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def get_RoPE_model() -> onnx.ModelProto:
+    def get_RoPE_model(with_transpose: bool) -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_rope_weight_compression() test.
         """
@@ -387,13 +387,15 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_input("input", (1, 10))
         x = mb.add_unsqueeze(x, axes=(2,))
         x = mb.add_matmul(x, shape=(1, 5))
-        x = mb.add_transpose(x, perm=[0, 2, 1])
+        if with_transpose:
+            x = mb.add_transpose(x, perm=[0, 2, 1])
         x = mb.add_concat([x], axis=-1)
         x1 = mb.add_sin(x)
         x2 = mb.add_cos(x)
 
-        mb.add_output(x1, (1, 5, 10))
-        mb.add_output(x2, (1, 5, 10))
+        output_shape = (1, 5, 10) if with_transpose else (1, 10, 5)
+        mb.add_output(x1, output_shape)
+        mb.add_output(x2, output_shape)
 
         return mb.build()
 
@@ -804,11 +806,19 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         return mb.build(opset_version=21)
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: onnx.ModelProto) -> int:
+        return cls._get_num_typed_nodes(model, [onnx.TensorProto.UINT4, onnx.TensorProto.INT4])
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: onnx.ModelProto) -> int:
+        return cls._get_num_typed_nodes(model, [onnx.TensorProto.UINT8, onnx.TensorProto.INT8])
+
     @staticmethod
-    def get_num_int4_nodes(model: onnx.ModelProto) -> int:
+    def _get_num_typed_nodes(model: onnx.ModelProto, types: list[onnx.TensorProto]):
         num = 0
         for i in model.graph.initializer:
-            if i.data_type in [onnx.TensorProto.UINT4, onnx.TensorProto.INT4]:
+            if i.data_type in types:
                 num += 1
         return num
 
