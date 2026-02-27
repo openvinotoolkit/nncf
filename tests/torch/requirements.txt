@@ -20,4 +20,4 @@ optimum-intel==1.27.0
 optimum-onnx==0.1.0
 optimum==2.1.0
 accelerate==1.9.0
-fastdownload==0.0.7
+pooch

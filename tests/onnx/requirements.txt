@@ -9,7 +9,7 @@ pytest-xdist
 torch
 torchvision
 
-fastdownload==0.0.7
+pooch
 scikit-learn>=1.2.2,<=1.5.0
 tqdm>=4.54.1
 yattag>=1.14.0

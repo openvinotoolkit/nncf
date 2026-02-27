@@ -15,8 +15,8 @@ from pathlib import Path
 
 import numpy as np
 import openvino as ov
+import pooch
 import torch
-from fastdownload import FastDownload
 from rich.progress import track
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
@@ -33,8 +33,16 @@ DATASET_CLASSES = 10
 
 
 def download(url: str, path: Path) -> Path:
-    downloader = FastDownload(base=path.resolve(), archive="downloaded", data="extracted")
-    return downloader.get(url)
+    extracted_dir = path / "extracted"
+    files = pooch.retrieve(
+        url=url,
+        path=path / "downloaded",
+        processor=pooch.Untar(extract_dir=extracted_dir),
+    )
+    first_file_relative = Path(files[0]).relative_to(extracted_dir)
+    if len(first_file_relative.parts) == 1:
+        return extracted_dir
+    return extracted_dir / first_file_relative.parts[0]
 
 
 def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:

@@ -17,6 +17,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import openvino as ov
+import pooch
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -25,7 +26,6 @@ import torch.utils.data
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
-from fastdownload import FastDownload
 from rich.progress import track
 from torch.jit import TracerWarning
 
@@ -49,11 +49,18 @@ CHECKPOINT_URL = (
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+EXTRACTED_DATASET_PATH = DATASET_PATH / "extracted"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
-    return downloader.get(DATASET_URL)
+    files = pooch.retrieve(
+        url=DATASET_URL,
+        path=DATASET_PATH / "downloaded",
+        processor=pooch.Unzip(extract_dir=EXTRACTED_DATASET_PATH),
+    )
+    # pooch.Untar returns a list of extracted files
+    dataset_root = EXTRACTED_DATASET_PATH / Path(files[0]).relative_to(EXTRACTED_DATASET_PATH).parts[0]
+    return dataset_root
 
 
 def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:
