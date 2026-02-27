@@ -239,7 +239,7 @@ jobs:
       - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
 
   examples-cuda-summary:
     name: Examples CUDA Summary
@@ -257,7 +257,7 @@ jobs:
       - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
 
   examples-win-cpu-summary:
     name: Examples Windows CPU Summary
@@ -275,4 +275,4 @@ jobs:
       - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py test-results/*/pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
