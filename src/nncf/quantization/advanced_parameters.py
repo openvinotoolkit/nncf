@@ -18,7 +18,7 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -128,11 +128,11 @@ class QuantizationParameters:
     :type narrow_range: Optional[bool]
     """
 
-    num_bits: Optional[int] = None
-    mode: Optional[QuantizationMode] = None
-    signedness_to_force: Optional[bool] = None
-    per_channel: Optional[bool] = None
-    narrow_range: Optional[bool] = None
+    num_bits: int | None = None
+    mode: QuantizationMode | None = None
+    signedness_to_force: bool | None = None
+    per_channel: bool | None = None
+    narrow_range: bool | None = None
 
 
 @api()
@@ -145,7 +145,7 @@ class FP8QuantizationParameters:
     :type destination_type: FP8Type
     """
 
-    destination_type: Optional[FP8Type] = None
+    destination_type: FP8Type | None = None
 
 
 @api()
@@ -163,7 +163,7 @@ class AdvancedBiasCorrectionParameters:
     """
 
     apply_for_all_nodes: bool = False
-    threshold: Optional[float] = None
+    threshold: float | None = None
 
 
 @api()
@@ -255,16 +255,16 @@ class AdvancedQuantizationParameters:
     """
 
     # General parameters
-    overflow_fix: Optional[OverflowFix] = None
+    overflow_fix: OverflowFix | None = None
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
-    batchwise_statistics: Optional[bool] = None
+    batchwise_statistics: bool | None = None
 
     # Advanced Quantization parameters
-    activations_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None
-    weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None
+    activations_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None
+    weights_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None
     quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     # Range estimator parameters
@@ -277,7 +277,7 @@ class AdvancedQuantizationParameters:
     # Advanced SmoothQuant algorithm parameters
     smooth_quant_alphas: AdvancedSmoothQuantParameters = field(default_factory=AdvancedSmoothQuantParameters)
     # Deprecated parameter
-    smooth_quant_alpha: Optional[float] = None
+    smooth_quant_alpha: float | None = None
 
     # Backend specific parameters
     backend_params: dict[str, Any] = field(default_factory=dict)
@@ -434,7 +434,7 @@ class AdvancedCompressionParameters:
     :type adaptive_codebook_params: AdvancedAdaptiveCodebookParameters
     """
 
-    statistics_path: Optional[str] = None
+    statistics_path: str | None = None
     lora_adapter_rank: int = 256
     group_size_fallback_mode: GroupSizeFallbackMode = GroupSizeFallbackMode.ERROR
     min_adjusted_group_size: int = 32
@@ -445,7 +445,7 @@ class AdvancedCompressionParameters:
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
-    codebook: Optional[TTensor] = None
+    codebook: TTensor | None = None
     adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
         default_factory=AdvancedAdaptiveCodebookParameters
     )
@@ -482,9 +482,9 @@ class AdvancedAccuracyRestorerParameters:
 
     max_num_iterations: int = sys.maxsize
     tune_hyperparams: bool = False
-    ranking_subset_size: Optional[int] = None
-    num_ranking_workers: Optional[int] = None
-    intermediate_model_dir: Optional[str] = None
+    ranking_subset_size: int | None = None
+    num_ranking_workers: int | None = None
+    intermediate_model_dir: str | None = None
     restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS
 
 

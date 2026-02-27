@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from contextlib import contextmanager
-from typing import Generator, Optional, TypeVar
+from typing import Generator, TypeVar
 
 import torch
 from torch import nn
@@ -22,9 +22,7 @@ TModel = TypeVar("TModel", bound=nn.Module)
 
 
 @torch.no_grad()
-def batch_norm_adaptation(
-    model: TModel, calibration_dataset: Dataset, *, num_iterations: Optional[int] = None
-) -> TModel:
+def batch_norm_adaptation(model: TModel, calibration_dataset: Dataset, *, num_iterations: int | None = None) -> TModel:
     """
     Adapt the batch normalization layers of the given model using the provided dataset.
 

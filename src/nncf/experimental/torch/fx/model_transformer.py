@@ -11,7 +11,6 @@
 
 from collections import defaultdict
 
-import torch
 import torch.fx
 
 from nncf.common.graph.model_transformer import ModelTransformer

@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Optional, Union
 
 import torch.fx
 from torchao.quantization.pt2e.observer import HistogramObserver
@@ -80,15 +79,15 @@ class OpenVINOQuantizer(TorchAOQuantizer):
     def __init__(
         self,
         *,
-        mode: Optional[QuantizationMode] = None,
-        preset: Optional[QuantizationPreset] = None,
+        mode: QuantizationMode | None = None,
+        preset: QuantizationPreset | None = None,
         target_device: TargetDevice = TargetDevice.ANY,
-        model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None,
-        overflow_fix: Optional[OverflowFix] = None,
+        model_type: ModelType | None = None,
+        ignored_scope: IgnoredScope | None = None,
+        overflow_fix: OverflowFix | None = None,
         quantize_outputs: bool = False,
-        activations_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None,
-        weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None,
+        activations_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None,
+        weights_quantization_params: QuantizationParameters | FP8QuantizationParameters | None = None,
         quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
     ):
         self._min_max_algo = MinMaxQuantization(
@@ -106,10 +105,10 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
     def set_ignored_scope(
         self,
-        names: Optional[list[str]] = None,
-        patterns: Optional[list[str]] = None,
-        types: Optional[list[str]] = None,
-        subgraphs: Optional[list[tuple[list[str], list[str]]]] = None,
+        names: list[str] | None = None,
+        patterns: list[str] | None = None,
+        types: list[str] | None = None,
+        subgraphs: list[tuple[list[str], list[str]]] | None = None,
         validate: bool = True,
     ) -> None:
         """

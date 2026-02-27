@@ -10,7 +10,6 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
-from typing import Union
 
 import numpy as np
 import onnx
@@ -163,7 +162,7 @@ class ONNXModelTransformer(ModelTransformer):
         return ONNXModelTransformer._insert_outputs(self._model, outputs=model_outputs)
 
     @staticmethod
-    def _insert_outputs(model: onnx.ModelProto, outputs: Union[list[str], set[str]]) -> onnx.ModelProto:
+    def _insert_outputs(model: onnx.ModelProto, outputs: list[str] | set[str]) -> onnx.ModelProto:
         """
         Creates a new model as a copy of provided model with additional outputs.
 

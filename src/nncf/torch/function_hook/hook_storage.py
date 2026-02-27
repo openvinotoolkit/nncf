@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import weakref
-from typing import Any, Iterator, Optional, cast
+from typing import Any, Iterator, cast
 
 from torch import nn
 
@@ -42,7 +42,7 @@ class RemovableHookHandle:
         - If hook exists, hook will be removed.
         - If no hooks left under the key, the key is also removed from the storage.
         """
-        storage: Optional[nn.ModuleDict] = self.storage_ref()
+        storage: nn.ModuleDict | None = self.storage_ref()
         if storage is None or self.key not in storage:
             # hook storage has been garbage collected or key is not present
             return

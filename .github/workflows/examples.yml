@@ -80,11 +80,13 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
-      - name: Test Summary
+      - name: Upload test results
         if: ${{ !cancelled() }}
-        run: |
-          pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: examples-cpu-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
 
   examples-cuda:
     name: Test examples CUDA [${{ matrix.group }}/1]
@@ -148,11 +150,13 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
-      - name: Test Summary
+      - name: Upload test results
         if: ${{ !cancelled() }}
-        run: |
-          pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: examples-cuda-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
 
   examples-win-cpu:
     timeout-minutes: 80
@@ -211,8 +215,64 @@ jobs:
         env:
           TQDM_DISABLE: 1
           NNCF_EXTENSION_LOAD_TIMEOUT: 180
-      - name: Test Summary
+      - name: Upload test results
         if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: examples-win-cpu-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
+
+  examples-cpu-summary:
+    name: Examples CPU Summary
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: examples-cpu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: examples-cpu-pytest-results-*
+          path: test-results
+      - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
+
+  examples-cuda-summary:
+    name: Examples CUDA Summary
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: examples-cuda
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: examples-cuda-pytest-results-*
+          path: test-results
+      - name: Test Summary
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
+
+  examples-win-cpu-summary:
+    name: Examples Windows CPU Summary
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: examples-win-cpu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: examples-win-cpu-pytest-results-*
+          path: test-results
+      - name: Test Summary
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"

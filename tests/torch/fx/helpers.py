@@ -10,13 +10,10 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Union
 
 import torch.fx
 import torch.nn.parallel
-import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
@@ -123,7 +120,7 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
 
 
 def get_torch_fx_model(
-    model: torch.nn.Module, ex_input: Union[torch.Tensor, tuple[torch.Tensor, ...]], dynamic_shapes=None
+    model: torch.nn.Module, ex_input: torch.Tensor | tuple[torch.Tensor, ...], dynamic_shapes=None
 ) -> torch.fx.GraphModule:
     """
     Converts given module to GraphModule.
