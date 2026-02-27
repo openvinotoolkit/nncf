@@ -9,15 +9,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import torch.fx
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
-from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+
+if TYPE_CHECKING:
+    from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 
 
 class OpenVINOQuantizerAdapter(Quantizer):

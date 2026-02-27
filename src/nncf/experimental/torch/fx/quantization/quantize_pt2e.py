@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from copy import deepcopy
 
 import torch.fx
@@ -30,7 +29,6 @@ from nncf.experimental.quantization.algorithms.post_training.algorithm import Ex
 from nncf.experimental.quantization.algorithms.weight_compression.algorithm import WeightsCompression
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
-from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
@@ -58,7 +56,7 @@ def quantize_pt2e(
 ) -> torch.fx.GraphModule:
     """
     Applies post-training quantization to the torch.fx.GraphModule provided model
-    using provided torch.ao quantizer.
+    using provided torchao quantizer.
 
     :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
@@ -101,7 +99,7 @@ def quantize_pt2e(
         model = deepcopy(model)
 
     _fuse_conv_bn_(model)
-    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
+    if hasattr(quantizer, "get_nncf_quantization_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
     else:
         quantizer = TorchAOQuantizerAdapter(quantizer)
@@ -176,7 +174,7 @@ def compress_pt2e(
     advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> torch.fx.GraphModule:
     """
-    Applies Weight Compression to the torch.fx.GraphModule model using provided torch.ao quantizer.
+    Applies Weight Compression to the torch.fx.GraphModule model using provided torchao quantizer.
 
     :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
@@ -194,7 +192,7 @@ def compress_pt2e(
         preserve the accuracy of the model, the more sensitive layers receive a higher precision.
     :param advanced_parameters: Advanced parameters for algorithms in the compression pipeline.
     """
-    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_weight_compression_parameters"):
+    if hasattr(quantizer, "get_nncf_weight_compression_parameters"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
         compression_format = nncf.CompressionFormat.DQ
     else:

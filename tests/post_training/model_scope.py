@@ -614,6 +614,30 @@ WEIGHT_COMPRESSION_MODELS = [
 ]
 
 
+def add_quantizer_compression_params(models_list: list[dict]) -> list[dict]:
+    from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
+
+    for test_model_param in models_list:
+        # We need all the compression params for the OVQuantizer except mode, preset and model_type
+        quantizer_params = {}
+        compression_params = test_model_param.get("compression_params")
+        quantizer_params = copy.deepcopy(compression_params)
+        preset = quantizer_params.pop("preset", None)
+        model_type = quantizer_params.pop("model_type", None)
+
+        # This logic is copied and inverted from OVQuantizer code
+        # https://github.com/pytorch/executorch/blob/3b162950a516242da722c790cb466feb05cb299e/backends/openvino/quantizer/quantizer.py#L105
+        quantizer_mode = QuantizationMode.INT8_TRANSFORMER
+        if preset == QuantizationPreset.PERFORMANCE and model_type is None:
+            quantizer_mode = QuantizationMode.INT8_SYM
+        elif preset == QuantizationPreset.MIXED and model_type is None:
+            quantizer_mode = QuantizationMode.INT8_MIXED
+        quantizer_params["mode"] = quantizer_mode
+        test_model_param["quantizer_params"] = quantizer_params
+
+    return models_list
+
+
 def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
@@ -643,6 +667,9 @@ def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
             tests_scope[test_case_name] = model_param
     return tests_scope
 
+
+QUANTIZATION_MODELS = add_quantizer_compression_params(QUANTIZATION_MODELS)
+WEIGHT_COMPRESSION_MODELS = add_quantizer_compression_params(WEIGHT_COMPRESSION_MODELS)
 
 PTQ_TEST_CASES = generate_tests_scope(QUANTIZATION_MODELS)
 WC_TEST_CASES = generate_tests_scope(WEIGHT_COMPRESSION_MODELS)

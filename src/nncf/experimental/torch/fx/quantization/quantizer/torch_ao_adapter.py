@@ -9,17 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, TypeVar
 
 import torch
 import torch.fx
 from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
 from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
 from torch.ao.quantization.quantizer import Quantizer as TorchAOQuantizer
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec
-from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -37,6 +36,15 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = tuple[torch.fx.Node, torch.fx.Node]
+QuantizationSpec = TypeVar("QuantizationSpec")
+
+
+def is_shared_quantization_spec(qspec):
+    return hasattr(qspec, "edge_or_node")
+
+
+def is_quantization_spec(qspec):
+    return hasattr(qspec, "qscheme") and hasattr(qspec, "quant_min") and hasattr(qspec, "quant_max")
 
 
 class TorchAOQuantizerAdapter(Quantizer):
@@ -138,7 +146,7 @@ class TorchAOQuantizerAdapter(Quantizer):
             qspec = group_id_vs_qspec[group_id]
             if qspec is None:
                 continue
-            if not isinstance(qspec, QuantizationSpec):
+            if not is_quantization_spec(qspec):
                 msg = f"Unknown torch.ao quantization spec: {qspec}"
                 raise nncf.InternalError(msg)
 
@@ -220,7 +228,7 @@ def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: di
     MAX_DEPTH = 1000
     i = 0
     visited = []
-    while i < MAX_DEPTH and isinstance(qspec, SharedQuantizationSpec):
+    while i < MAX_DEPTH and is_shared_quantization_spec(qspec):
         if qspec.edge_or_node in visited:
             msg = f"A cycled dependency of the quantization spec is detected {visited + [qspec.edge_or_node]}"
             raise RuntimeError(msg)

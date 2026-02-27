@@ -23,16 +23,17 @@ from itertools import islice
 import numpy as np
 import openvino as ov
 import torch
+from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
 from sklearn.metrics import accuracy_score
-from torch.ao.quantization.quantize_pt2e import convert_pt2e
-from torch.ao.quantization.quantize_pt2e import prepare_pt2e
-from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
+from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
+from torchao.quantization.pt2e.quantizer import Quantizer as TorchAOQuantizer
 from torchvision import datasets
 
 import nncf
 from nncf import AdvancedQuantizationParameters
+from nncf import ModelType
 from nncf.common.logging.track_progress import track
-from nncf.experimental.torch.fx import OpenVINOQuantizer
 from nncf.experimental.torch.fx import quantize_pt2e
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
@@ -166,7 +167,7 @@ class ImageClassificationBase(PTQTestPipeline):
 
         smooth_quant = False
         if self.compression_params.get("model_type", False):
-            smooth_quant = self.compression_params["model_type"] == nncf.ModelType.TRANSFORMER
+            smooth_quant = self.compression_params["model_type"] == ModelType.TRANSFORMER
 
         with torch.no_grad():
             self.compressed_model = quantize_pt2e(
@@ -202,14 +203,13 @@ class ImageClassificationBase(PTQTestPipeline):
         quantizer_kwargs = {}
         for key in (
             "mode",
-            "preset",
             "target_device",
-            "model_type",
             "ignored_scope",
         ):
-            if key in self.compression_params:
-                quantizer_kwargs[key] = self.compression_params[key]
-        advanced_parameters: AdvancedQuantizationParameters = self.compression_params.get(
+            if key in self.quantizer_params:
+                quantizer_kwargs[key] = self.quantizer_params[key]
+
+        advanced_parameters: AdvancedQuantizationParameters = self.quantizer_params.get(
             "advanced_parameters", AdvancedQuantizationParameters()
         )
         quantizer_kwargs["overflow_fix"] = advanced_parameters.overflow_fix

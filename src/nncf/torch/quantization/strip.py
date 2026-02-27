@@ -12,6 +12,8 @@
 
 import numpy as np
 import torch
+from torch.ao.quantization.observer import MinMaxObserver
+from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -49,9 +51,9 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
 
     if per_channel:
-        observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+        observer = PerChannelMinMaxObserver
     else:
-        observer = torch.ao.quantization.observer.MinMaxObserver
+        observer = MinMaxObserver
 
     if isinstance(nncf_quantizer, SymmetricQuantizer):
         qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
