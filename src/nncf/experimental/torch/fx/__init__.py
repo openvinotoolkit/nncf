@@ -9,6 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from importlib.util import find_spec
+
+from nncf.errors import ModuleNotFoundError
+
+# The torchao backend is mainly used in executorch which depends on torchao
+# It is expected that the users of this backend will have torchao installed.
+if find_spec("torchao") is None:
+    msg = """torchao is required for the TorchFX backend.
+        Please install it with 'pip install torchao'."""
+    raise ModuleNotFoundError(msg)
+
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import compress_pt2e as compress_pt2e
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e as quantize_pt2e
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer as OpenVINOQuantizer

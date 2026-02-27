@@ -9,10 +9,9 @@ pytest-cov
 pytest-mock
 pytest-xdist
 torch
-torchao
 torchvision
 
-executorch==1.0.1
+torchao==0.15.0
 addict>=2.4.0
 efficientnet_pytorch==0.7.1
 transformers==4.53.0
