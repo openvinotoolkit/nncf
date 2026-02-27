@@ -17,7 +17,6 @@ from typing import Any, Callable
 import pytest
 import torch
 import torch.fx
-import torch.nn.parallel
 import torchvision.models as models
 from executorch.backends.xnnpack.quantizer import xnnpack_quantizer
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
