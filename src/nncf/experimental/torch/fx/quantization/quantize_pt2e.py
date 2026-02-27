@@ -12,12 +12,12 @@
 from copy import deepcopy
 
 import torch.fx
-from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
-from torch.ao.quantization.pt2e.utils import _disallow_eval_train
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
-from torch.ao.quantization.quantizer import Quantizer
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
+from torchao.quantization.pt2e.quantizer import PortNodeMetaForQDQ
+from torchao.quantization.pt2e.quantizer.quantizer import Quantizer
+from torchao.quantization.pt2e.utils import _disallow_eval_train
+from torchao.quantization.pt2e.utils import _fuse_conv_bn_
 
 import nncf
 from nncf import AdvancedCompressionParameters
@@ -58,7 +58,7 @@ def quantize_pt2e(
 ) -> torch.fx.GraphModule:
     """
     Applies post-training quantization to the torch.fx.GraphModule provided model
-    using provided torch.ao quantizer.
+    using provided torchao quantizer.
 
     :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
@@ -176,7 +176,7 @@ def compress_pt2e(
     advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> torch.fx.GraphModule:
     """
-    Applies Weight Compression to the torch.fx.GraphModule model using provided torch.ao quantizer.
+    Applies Weight Compression to the torch.fx.GraphModule model using provided torchao quantizer.
 
     :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups

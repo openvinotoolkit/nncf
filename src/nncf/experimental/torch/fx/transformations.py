@@ -15,12 +15,12 @@ from typing import Any, Callable
 
 import torch
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx.node import map_arg
 from torch.fx.passes.infra.pass_base import PassBase
 from torch.fx.passes.infra.pass_base import PassResult
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.utils import _fuse_conv_bn_
+from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
 from nncf.common.graph.graph import NNCFNode
@@ -70,6 +70,17 @@ QDQ_PAIR = {
         for quantize_node, dequantize_node in zip(QUANTIZE_NODE_TARGETS, DEQUANTIZE_NODE_TARGETS)
     },
 }
+
+
+# Referenced from: https://github.com/pytorch/pytorch/blob/9105d54c6b37099575c0059ef274c86c4dc80c57/torch/ao/quantization/utils.py#L711
+def _get_model_device(model: torch.fx.GraphModule) -> Any:
+    """
+    Copied from torchao.quantization.pt2e.utils
+    Returns the device for a module.
+    """
+    devices = {p.device for p in model.parameters()} | {p.device for p in model.buffers()}
+    device = next(iter(devices))
+    return device
 
 
 def _set_new_node_meta(
@@ -250,9 +261,12 @@ def constant_update(
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     sorted_consumer_nodes = [node for node in graph.nodes if node in consumer_nodes]
+    model_device = _get_model_device(model)
+    tensor_device = value.device if isinstance(value, torch.Tensor) else model_device
 
     with graph.inserting_before(sorted_consumer_nodes[0]):
-        new_const = create_getattr_from_value(model, graph, node_name, value)
+        # Passing device is neccesary to avoid large models to be cached by torchao.
+        new_const = create_getattr_from_value(model, graph, node_name, value, device=tensor_device)
 
     old_const.replace_all_uses_with(new_const, propagate_meta=True)
     graph.eliminate_dead_code()
@@ -381,7 +395,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         target node.
     :param quantizer: Quantizer module to inherit quantization parameters from.
     """
-    # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
+    # Copied from torchao.quantization.pt2e.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
     quantize_op: Callable | None = None
@@ -430,7 +444,11 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 # With extra check of scale and zero_point being scalar, it makes
                 # sure that the default overload can be used.
                 # TODO(dlyakhov): maybe need more complex attr name here
-                qparam_node = create_getattr_from_value(model, graph, target_node.name + key, value_or_node)
+                tensor_device = value_or_node.device
+                # Passing device is neccesary to avoid large models to be cached by torchao.
+                qparam_node = create_getattr_from_value(
+                    model, graph, target_node.name + key, value_or_node, device=tensor_device
+                )
                 quantize_op_inputs.append(qparam_node)
             else:
                 # for qparams that are not scale/zero_point (like axis, dtype) we store

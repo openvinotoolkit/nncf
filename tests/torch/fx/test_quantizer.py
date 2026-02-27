@@ -19,17 +19,17 @@ import torch
 import torch.fx
 import torch.nn.parallel
 import torchvision.models as models
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
-from torch.ao.quantization.quantize_pt2e import convert_pt2e
-from torch.ao.quantization.quantize_pt2e import prepare_pt2e
-from torch.ao.quantization.quantizer import xnnpack_quantizer
-from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
-from torch.ao.quantization.quantizer.quantizer import Quantizer
-from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
-from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
-from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
-from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
+from executorch.backends.xnnpack.quantizer import xnnpack_quantizer
+from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
+from torchao.quantization.pt2e.quantizer import QuantizationAnnotation
+from torchao.quantization.pt2e.quantizer import QuantizationSpec as TorchAOQuantizationSpec
+from torchao.quantization.pt2e.quantizer import Quantizer
+from torchao.quantization.pt2e.quantizer import Quantizer as TorchAOQuantizer
+from torchao.quantization.pt2e.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
+from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import X86InductorQuantizer
+from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
+from torchao.quantization.pt2e.utils import _fuse_conv_bn_
 
 import nncf
 from nncf.common.graph import NNCFGraph
