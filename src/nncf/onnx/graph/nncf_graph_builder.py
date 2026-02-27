@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
+from collections import defaultdict
 from typing import Any
 
 import onnx
@@ -35,7 +36,7 @@ from nncf.onnx.graph.onnx_helper import get_children_node_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_shape
-from nncf.onnx.graph.onnx_helper import get_input_port_id_for_node_after_input
+from nncf.onnx.graph.onnx_helper import get_input_port_ids_for_node_after_input
 from nncf.onnx.graph.onnx_helper import get_model_inputs
 from nncf.onnx.graph.onnx_helper import get_output_port_id_for_node_before_output
 from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
@@ -306,9 +307,12 @@ class GraphConverter:
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
             output_port_id = 0
 
+            parallel_idx_vs_node = defaultdict(lambda: -1)
             for node in to_nodes:
+                parallel_idx_vs_node[node.name] += 1
                 to_node_id = nncf_graph.get_node_by_name(node.name).node_id
-                input_port_id = get_input_port_id_for_node_after_input(input_name, node)
+                input_port_ids = get_input_port_ids_for_node_after_input(input_name, node)
+                input_port_id = input_port_ids[parallel_idx_vs_node[node.name]]
                 nncf_graph.add_edge_between_nncf_nodes(
                     from_node_id=input_node_node_id,
                     to_node_id=to_node_id,
@@ -423,14 +427,18 @@ class GraphConverter:
 
         for node in onnx_model.graph.node:
             for output_port_id, output_edge_name in enumerate(node.output):
+                output_edge_parallel_idx_vs_node = defaultdict(lambda: -1)
                 for consumed_node in children_node_mapping[output_edge_name]:
+                    output_edge_parallel_idx_vs_node[consumed_node.name] += 1
                     edge = edge_info_mapping.get(output_edge_name)
                     if edge is None:
                         # If the edge is None it means that the edge was not added during shape inference of ONNX model.
                         # BatchNorm exported in Training mode has unused outputs edges:
                         # mean, var, saved_mean, saved_var. NNCFGraph should not contain such edges.
                         continue
-                    input_port_id = get_input_port_id_for_node_after_input(output_edge_name, consumed_node)
+
+                    input_port_ids = get_input_port_ids_for_node_after_input(output_edge_name, consumed_node)
+                    input_port_id = input_port_ids[output_edge_parallel_idx_vs_node[consumed_node.name]]
 
                     in_node_id = nncf_graph.get_node_by_name(node.name).node_id
                     output_node_id = nncf_graph.get_node_by_name(consumed_node.name).node_id

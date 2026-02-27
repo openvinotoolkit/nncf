@@ -143,3 +143,25 @@ def test_unknown_shape(opset_version: int, ref_shape: tuple[int, ...]):
 
     for e in graph.get_input_edges(matmul):
         assert e.tensor_shape == ref_shape
+
+
+def test_multiedge_nncf_graph():
+    """
+    Check multiedge ONNX models are converting correctly
+    """
+    opset_version = 13
+    mb = ModelBuilder()
+
+    x = mb.add_input("x", ("input", 2, 2))
+    a, b = mb.add_split(x, axis=1, num_outputs=2)
+    add = mb.add_add(a, b)
+    mb.add_output(add, ("output", 2, 2))
+
+    model = mb.build(opset_version, ir_version=9)
+
+    graph = GraphConverter.create_nncf_graph(model)
+    split_node = graph.get_node_by_name("0_split")
+    edges = graph.get_output_edges(split_node)
+    assert len(edges) == 2
+    assert edges[0].to_node.node_id == edges[1].to_node.node_id
+    assert edges[0].input_port_id != edges[1].input_port_id

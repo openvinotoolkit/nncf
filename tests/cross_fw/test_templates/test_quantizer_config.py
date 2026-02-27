@@ -42,6 +42,7 @@ from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -88,7 +89,17 @@ class TemplateTestQuantizerConfig:
 
     @abstractmethod
     @pytest.fixture
+    def single_conv_arithmetic_degree2_nncf_graph(self) -> NNCFGraphArithmeticDegree2:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
     def transformer_nncf_graph(self) -> NNCFGraphToTest:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
+    def split_transformer_nncf_graph(self) -> NNCFGraphToTest:
         pass
 
     @abstractmethod
@@ -476,6 +487,127 @@ class TemplateTestQuantizerConfig:
         return min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         ).get_state()
+
+    REF_CONV_ARITHMETIC_DEGREE_2_STATE = {
+        "quantization_points": {
+            1: {
+                "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_1_0"],
+            },
+            3: {
+                "qip": {"target_node_name": "/Conv_1_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_1_0"],
+            },
+        },
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {0: [1, 3]},
+    }
+
+    def test_conv_arithmetic_with_degree2(self, single_conv_arithmetic_degree2_nncf_graph):
+        min_max_algo = MinMaxQuantization()
+        min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = single_conv_arithmetic_degree2_nncf_graph.nncf_graph
+        inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
+        hw_patterns = PatternsManager.get_full_hw_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY
+        )
+        ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY
+        )
+        q_setup = min_max_algo._get_quantizer_setup(
+            nncf_graph, inference_nncf_graph, hw_patterns=hw_patterns, ignored_patterns=ignored_patterns
+        )
+
+        assert q_setup.get_state() == self.REF_CONV_ARITHMETIC_DEGREE_2_STATE
+
+    REF_SPLIT_TRANSFORMER_STATE = {
+        "quantization_points": {
+            1: {
+                "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "asymmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/QKV_0"],
+            },
+            2: {
+                "qip": {"target_node_name": "/KQ_0", "input_port_id": 0},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/KQ_0"],
+            },
+            3: {
+                "qip": {"target_node_name": "/KQ_0", "input_port_id": 1},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/KQ_0"],
+            },
+            5: {
+                "qip": {"target_node_name": "/QKV_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
+                "directly_quantized_operator_node_names": ["/QKV_0"],
+            },
+        },
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {0: [1, 5], 1: [2, 3]},
+    }
+
+    def test_split_transformer(self, split_transformer_nncf_graph):
+        min_max_algo = MinMaxQuantization(model_type=ModelType.TRANSFORMER)
+        min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = split_transformer_nncf_graph.nncf_graph
+        inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
+        hw_patterns = PatternsManager.get_full_hw_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=ModelType.TRANSFORMER
+        )
+        ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=ModelType.TRANSFORMER
+        )
+        q_setup = min_max_algo._get_quantizer_setup(
+            nncf_graph, inference_nncf_graph, hw_patterns=hw_patterns, ignored_patterns=ignored_patterns
+        )
+        min_max_algo._apply_model_type_pass(ModelType.TRANSFORMER, q_setup, nncf_graph)
+
+        assert q_setup.get_state() == self.REF_SPLIT_TRANSFORMER_STATE
 
     @pytest.mark.parametrize(
         "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX]

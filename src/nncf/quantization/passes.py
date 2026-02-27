@@ -146,20 +146,18 @@ def remove_nodes_and_reconnect_graph(
 
     nodes_to_drop = []
     for node in nncf_graph.get_nodes_by_metatypes(metatypes):
-        if node.metatype in metatypes:
-            nodes_to_drop.append(node)
+        if node.metatype not in metatypes:
+            continue
+        nodes_to_drop.append(node)
 
-            prev_nodes = nncf_graph.get_previous_nodes(node)
-            input_edges = nncf_graph.get_input_edges(node)
-            assert len(prev_nodes) == len(input_edges) == 1
-            prev_node = prev_nodes[0]
-            input_edge = input_edges[0]
-            assert not input_edge.parallel_input_port_ids
+        prev_nodes = nncf_graph.get_previous_nodes(node)
+        input_edges = nncf_graph.get_input_edges(node)
+        assert len(prev_nodes) == len(input_edges) == 1
+        prev_node = prev_nodes[0]
+        input_edge = input_edges[0]
 
-            # nncf_graph.get_next_edges is not used to preserve
-            # parallel_input_port_ids
-            for output_node in nncf_graph.get_next_nodes(node):
-                output_edge = nncf_graph.get_edge(node, output_node)
+        for output_node in nncf_graph.get_next_nodes(node):
+            for output_edge in nncf_graph.get_edges(node, output_node):
                 # Connects previous node with all next nodes
                 # to keep NNCFGraph connected.
                 assert input_edge.dtype == output_edge.dtype
@@ -171,7 +169,6 @@ def remove_nodes_and_reconnect_graph(
                     input_port_id=output_edge.input_port_id,
                     output_port_id=input_edge.output_port_id,
                     dtype=input_edge.dtype,
-                    parallel_input_port_ids=output_edge.parallel_input_port_ids,
                 )
     nncf_graph.remove_nodes_from(nodes_to_drop)
     return nncf_graph

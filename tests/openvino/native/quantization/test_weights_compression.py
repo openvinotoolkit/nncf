@@ -2248,8 +2248,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return IdentityMatmul().ov_model
 
     @staticmethod
-    def get_RoPE_model() -> ov.Model:
-        return RoPEModel().ov_model
+    def get_RoPE_model(degree: int) -> ov.Model:
+        return RoPEModel(degree=degree).ov_model
 
     @staticmethod
     def get_SAM_PE_model() -> ov.Model:

@@ -183,10 +183,10 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         """
         activation_ports = []
         for prev_node in graph.get_previous_nodes(node):
-            edge = graph.get_edge(prev_node, node)
-            if prev_node.metatype in CONST_NOOP_METATYPES or edge.input_port_id in node.metatype.weight_port_ids:
-                continue
-            activation_ports.append(edge.input_port_id)
+            for edge in graph.get_edges(prev_node, node):
+                if prev_node.metatype in CONST_NOOP_METATYPES or edge.input_port_id in node.metatype.weight_port_ids:
+                    continue
+                activation_ports.append(edge.input_port_id)
         if len(activation_ports) != 1:
             msg = f'Cannot find activation port for node "{node}".'
             raise nncf.InternalError(msg)

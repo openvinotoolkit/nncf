@@ -125,7 +125,7 @@ def test_compress_weights_graph_edge(mode):
     for node in nncf_graph.get_all_nodes():
         if "weights_decompressor" in node.node_name and node.node_type == "call_module":
             decompressor_node_edge = nncf_graph.get_input_edges(node)[0]
-            decompressor_constant_edge = nncf_graph.get_edge(node, nncf_graph.get_next_nodes(node)[0])
+            decompressor_constant_edge = nncf_graph.get_edges(node, nncf_graph.get_next_nodes(node)[0])[0]
             assert decompressor_node_edge.tensor_shape == decompressor_constant_edge.tensor_shape
 
 
@@ -328,8 +328,8 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_RoPE_model() -> torch.fx.GraphModule:
-        model = RoPEModel()
+    def get_RoPE_model(degree: int) -> torch.fx.GraphModule:
+        model = RoPEModel(degree)
         ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model

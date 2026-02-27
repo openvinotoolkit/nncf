@@ -1,4 +1,4 @@
-strict digraph {
+digraph {
 input_ids [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "wte.weight" [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
 "__nncf_hooks.post_hooks.wte:weight__0.0.lora_A" [id=2, type="nncf_model_const", metatype=PTConstNoopMetatype];
@@ -16,21 +16,21 @@ input_ids [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "lm_head.bias" [id=14, type="nncf_model_const", metatype=PTConstNoopMetatype];
 "lm_head/linear/0" [id=15, type=linear, metatype=PTLinearMetatype];
 output [id=16, type="nncf_model_output", metatype=PTOutputNoopMetatype];
-input_ids -> "wte/embedding/0" [dtype=int, shape="(8,)", out_port_id=0, in_port_id=0];
-"wte.weight" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(16, 8)", out_port_id=0, in_port_id=0];
-"__nncf_hooks.post_hooks.wte:weight__0.0.lora_A" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(4, 8)", out_port_id=0, in_port_id=2];
-"__nncf_hooks.post_hooks.wte:weight__0.0.lora_B" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(16, 4)", out_port_id=0, in_port_id=3];
-"__nncf_hooks.post_hooks.wte:weight__0.0._scale_param_storage" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(16, 2, 1)", out_port_id=0, in_port_id=4];
-"wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" -> "wte/embedding/0" [dtype=float, shape="(16, 8)", out_port_id=0, in_port_id=1];
-"wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" -> "lm_head/linear/0" [dtype=float, shape="(16, 8)", out_port_id=0, in_port_id=1];
-"wte/embedding/0" -> "linear/linear/0" [dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=0];
-"linear.weight" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=0];
-"__nncf_hooks.post_hooks.linear:weight__0.0.lora_A" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(4, 8)", out_port_id=0, in_port_id=2];
-"__nncf_hooks.post_hooks.linear:weight__0.0.lora_B" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(8, 4)", out_port_id=0, in_port_id=3];
-"__nncf_hooks.post_hooks.linear:weight__0.0._scale_param_storage" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [dtype=float, shape="(8, 2, 1)", out_port_id=0, in_port_id=4];
-"linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" -> "linear/linear/0" [dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=1];
-"linear.bias" -> "linear/linear/0" [dtype=float, shape="(8,)", out_port_id=0, in_port_id=2];
-"linear/linear/0" -> "lm_head/linear/0" [dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=0];
-"lm_head.bias" -> "lm_head/linear/0" [dtype=float, shape="(16,)", out_port_id=0, in_port_id=2];
-"lm_head/linear/0" -> output [dtype=float, shape="(8, 16)", out_port_id=0, in_port_id=0];
+input_ids -> "wte/embedding/0" [key=0, dtype=int, shape="(8,)", out_port_id=0, in_port_id=0];
+"wte.weight" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(16, 8)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.wte:weight__0.0.lora_A" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(4, 8)", out_port_id=0, in_port_id=2];
+"__nncf_hooks.post_hooks.wte:weight__0.0.lora_B" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(16, 4)", out_port_id=0, in_port_id=3];
+"__nncf_hooks.post_hooks.wte:weight__0.0._scale_param_storage" -> "wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(16, 2, 1)", out_port_id=0, in_port_id=4];
+"wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" -> "wte/embedding/0" [key=0, dtype=float, shape="(16, 8)", out_port_id=0, in_port_id=1];
+"wte/post_hook__wte:weight__0[0]/symmetric_quantize_lora/0" -> "lm_head/linear/0" [key=0, dtype=float, shape="(16, 8)", out_port_id=0, in_port_id=1];
+"wte/embedding/0" -> "linear/linear/0" [key=0, dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=0];
+"linear.weight" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.linear:weight__0.0.lora_A" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(4, 8)", out_port_id=0, in_port_id=2];
+"__nncf_hooks.post_hooks.linear:weight__0.0.lora_B" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(8, 4)", out_port_id=0, in_port_id=3];
+"__nncf_hooks.post_hooks.linear:weight__0.0._scale_param_storage" -> "linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" [key=0, dtype=float, shape="(8, 2, 1)", out_port_id=0, in_port_id=4];
+"linear/post_hook__linear:weight__0[0]/symmetric_quantize_lora/0" -> "linear/linear/0" [key=0, dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=1];
+"linear.bias" -> "linear/linear/0" [key=0, dtype=float, shape="(8,)", out_port_id=0, in_port_id=2];
+"linear/linear/0" -> "lm_head/linear/0" [key=0, dtype=float, shape="(8, 8)", out_port_id=0, in_port_id=0];
+"lm_head.bias" -> "lm_head/linear/0" [key=0, dtype=float, shape="(16,)", out_port_id=0, in_port_id=2];
+"lm_head/linear/0" -> output [key=0, dtype=float, shape="(8, 16)", out_port_id=0, in_port_id=0];
 }

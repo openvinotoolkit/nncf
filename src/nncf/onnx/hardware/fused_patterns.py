@@ -350,10 +350,13 @@ def create_scale_shift_activations() -> GraphPattern:
 
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)
 def create_linear_arithmetic() -> GraphPattern:
-    linear = linear_operations()
-    arithmetic = arithmetic_operations()
-    linear.join_patterns(arithmetic)
-    return linear
+    pattern = GraphPattern()
+    for degree in [1, 2]:
+        linear = linear_operations()
+        arithmetic = arithmetic_operations()
+        linear.join_patterns_parallel(arithmetic, degree=degree)
+        pattern.add_pattern_alternative(linear)
+    return pattern
 
 
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_NORM)

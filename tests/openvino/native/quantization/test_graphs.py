@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,7 @@ import openvino as ov
 import pytest
 
 from nncf import Dataset
+from nncf import IgnoredScope
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.quantize_model import quantize_impl
@@ -25,7 +27,6 @@ from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
-from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import dump_model
@@ -39,6 +40,7 @@ from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import IfModel_2
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
+from tests.openvino.native.models import ParallelEdgesOutputPortIdModel
 from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import get_torch_model_info
@@ -52,6 +54,21 @@ def test_synthetic_models_fq_placement(model_creator_func):
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model, {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": True}
+    )
+
+    path_ref_graph = get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name)
+    compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
+def test_parallel_edges_output_port_id():
+    model = ParallelEdgesOutputPortIdModel()
+    quantized_model = quantize_model(
+        model.ov_model,
+        {
+            "preset": QuantizationPreset.PERFORMANCE,
+            "inplace_statistics": True,
+            "ignored_scope": IgnoredScope(types=["Split"]),
+        },
     )
 
     path_ref_graph = get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / model.ref_graph_name)
@@ -95,7 +112,11 @@ def test_real_models_fq_placement(model_name_params, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-@pytest.mark.parametrize("model_creator_func", [MatmulSoftmaxMatmulBlock, RoPEModel])
+@pytest.mark.parametrize(
+    "model_creator_func",
+    [MatmulSoftmaxMatmulBlock, partial(RoPEModel, degree=2)],
+    ids=["MatmulSoftmaxMatmulBlock", "RoPeModel"],
+)
 def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     model = model_creator_func()
     quantized_model = quantize_model(

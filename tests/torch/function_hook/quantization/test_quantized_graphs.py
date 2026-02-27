@@ -24,9 +24,11 @@ from nncf.parameters import ModelType
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import EmbeddingModel
+from tests.cross_fw.test_templates.helpers import ParallelEdgesModel
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
 from tests.cross_fw.test_templates.helpers import UnbindScaledDotProductAttentionModel
+from tests.cross_fw.test_templates.helpers import YOLO26AttentionBlock
 from tests.torch import test_models
 from tests.torch.function_hook.helpers import SharedLayersModel
 from tests.torch.utils import compare_with_reference_file
@@ -44,7 +46,7 @@ class ModelDesc:
 
 TEST_MODELS_DESC = [
     (ModelDesc("embedding_model", EmbeddingModel, [1, 10]), {}),
-    (ModelDesc("rope_model", RoPEModel, [1, 10]), {"model_type": ModelType.TRANSFORMER}),
+    (ModelDesc("rope_model", partial(RoPEModel, degree=2), [1, 10]), {"model_type": ModelType.TRANSFORMER}),
     (
         ModelDesc(
             "scaled_dot_product_attention_model",
@@ -62,6 +64,26 @@ TEST_MODELS_DESC = [
         {},
     ),
     (ModelDesc("shared_model", SharedLayersModel, [1, 1, 5, 6]), {}),
+    (
+        ModelDesc(
+            "parallel_edges_model",
+            partial(ParallelEdgesModel, different_output_ports=False),
+            ParallelEdgesModel.INPUT_SIZE,
+        ),
+        {},
+    ),
+    (
+        ModelDesc(
+            "parallel_edges_model_is",
+            partial(ParallelEdgesModel, different_output_ports=True),
+            ParallelEdgesModel.INPUT_SIZE,
+        ),
+        {"ignored_scope": nncf.IgnoredScope(types=["split"])},
+    ),
+    (
+        ModelDesc("yolo26_attn_block", YOLO26AttentionBlock, YOLO26AttentionBlock.INPUT_SIZE),
+        {"model_type": ModelType.TRANSFORMER},
+    ),
     (ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]), {}),
     (ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]), {}),
     (ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]), {}),

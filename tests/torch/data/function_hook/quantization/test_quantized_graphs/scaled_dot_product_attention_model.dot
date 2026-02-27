@@ -1,4 +1,4 @@
-strict digraph {
+digraph {
 query [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "__nncf_hooks.post_hooks.query__0.0._scale_param_storage" [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
 "post_hook__query__0[0]/symmetric_quantize/0" [id=2, type="symmetric_quantize", metatype=UnknownMetatype];
@@ -8,12 +8,12 @@ key [id=3, type="nncf_model_input", metatype=PTInputNoopMetatype];
 value [id=6, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "/scaled_dot_product_attention/0" [id=7, type="scaled_dot_product_attention", metatype=PTScaledDotProductAttentionMetatype];
 output [id=8, type="nncf_model_output", metatype=PTOutputNoopMetatype];
-query -> "post_hook__query__0[0]/symmetric_quantize/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
-"__nncf_hooks.post_hooks.query__0.0._scale_param_storage" -> "post_hook__query__0[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
-"post_hook__query__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
-key -> "post_hook__key__0[0]/symmetric_quantize/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
-"__nncf_hooks.post_hooks.key__0.0._scale_param_storage" -> "post_hook__key__0[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
-"post_hook__key__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=1];
-value -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=2];
-"/scaled_dot_product_attention/0" -> output [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+query -> "post_hook__query__0[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.query__0.0._scale_param_storage" -> "post_hook__query__0[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"post_hook__query__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+key -> "post_hook__key__0[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.key__0.0._scale_param_storage" -> "post_hook__key__0[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"post_hook__key__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=1];
+value -> "/scaled_dot_product_attention/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=2];
+"/scaled_dot_product_attention/0" -> output [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
 }

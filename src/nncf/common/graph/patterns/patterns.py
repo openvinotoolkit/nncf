@@ -85,7 +85,7 @@ class GraphPattern:
     PATTERN_NODE_TO_EXCLUDE = "PATTERN_NODE_TO_EXCLUDE"
 
     def __init__(self) -> None:
-        self._graph = nx.DiGraph()
+        self._graph = nx.MultiDiGraph()
         self._node_counter = 0
 
     def __add__(self, other: "GraphPattern") -> "GraphPattern":
@@ -191,6 +191,18 @@ class GraphPattern:
         """
         self._unite_with_copy_of_graph(other.graph)
 
+    def join_patterns_parallel(self, other: "GraphPattern", degree: int) -> None:
+        """
+        Joins two single-node graph patterns in parallel by creating multiple identical edges
+        between their nodes.
+
+        :param other: Another graph pattern consisting of a single node.
+        :param degree: The number of parallel edges to create between the two nodes.
+        """
+        assert len(self.graph.nodes) == len(other.graph.nodes) == 1
+        edge = (list(self.graph.nodes)[0], list(other.graph.nodes)[0])
+        self.join_patterns(other, edges=[edge] * degree)
+
     def join_patterns(self, other: "GraphPattern", edges: list[tuple[Hashable, Hashable]] | None = None) -> None:
         """
         Adds 'other' pattern to 'self' pattern and connect nodes from self to other specified by 'edges'.
@@ -233,14 +245,14 @@ class GraphPattern:
                 remapped_edges.append(new_edge)
             self._graph.add_edges_from(remapped_edges)
 
-    def add_node(self, **attrs: dict[str, Any]) -> int:
+    def add_node(self, **attrs: Any) -> int:
         if GraphPattern.METATYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
             attrs[GraphPattern.METATYPE_ATTR] = cast(Any, [attrs[GraphPattern.METATYPE_ATTR]])
         self._graph.add_node(self._node_counter, **attrs)
         self._node_counter += 1
         return self._node_counter - 1
 
-    def add_edge(self, u_name: str, v_name: str) -> None:
+    def add_edge(self, u_name: str | int, v_name: str | int) -> None:
         self._graph.add_edge(u_name, v_name)
 
     def add_edges_from(self, ebunch_to_add: list[Any], **attr: dict[str, Any]) -> None:

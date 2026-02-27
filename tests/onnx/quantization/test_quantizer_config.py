@@ -21,9 +21,11 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSplitMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
@@ -31,6 +33,7 @@ from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.cross_fw.test_templates.models import NNCFGraphTransformer
+from tests.cross_fw.test_templates.models import NNCFSplitGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 
@@ -47,6 +50,19 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         return NNCFGraphToTest(
             ONNXConvolutionMetatype,
             conv_layer_attrs,
+            input_layer_attrs=ONNXLayerAttributes(),
+            output_layer_attrs=ONNXLayerAttributes(),
+            const_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @pytest.fixture
+    def single_conv_arithmetic_degree2_nncf_graph(self) -> NNCFGraphArithmeticDegree2:
+        conv_layer_attrs = ONNXLayerAttributes(weight_attrs={1: {"shape": [4, 4, 4, 4]}}, bias_attrs={})
+        return NNCFGraphArithmeticDegree2(
+            ONNXConvolutionMetatype,
+            ONNXAddLayerMetatype,
+            conv_layer_attrs,
+            arithmetic_layer_attrs=ONNXLayerAttributes(),
             input_layer_attrs=ONNXLayerAttributes(),
             output_layer_attrs=ONNXLayerAttributes(),
             const_layer_attrs=ONNXLayerAttributes(),
@@ -84,6 +100,21 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             const_metatype=ONNXConstantMetatype,
             transpose_metatype=ONNXTransposeMetatype,
             matmul_layer_weighted_attrs=ONNXLayerAttributes({"name": "edge_name", "shape": (1, 1, 1, 1)}),
+            matmul_layer_non_weighted_attrs=ONNXLayerAttributes(),
+            default_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @pytest.fixture
+    def split_transformer_nncf_graph(self) -> NNCFSplitGraphTransformer:
+        conv_layer_attrs = ONNXLayerAttributes(weight_attrs={1: {"shape": [4, 4, 4, 4]}}, bias_attrs={})
+        return NNCFSplitGraphTransformer(
+            matmul_metatype=ONNXMatMulMetatype,
+            conv_metatype=ONNXConvolutionMetatype,
+            split_metatype=ONNXSplitMetatype,
+            softmax_metatype=ONNXSoftmaxMetatype,
+            const_metatype=ONNXConstantMetatype,
+            mul_metatype=ONNXMulLayerMetatype,
+            conv_layer_weighted_attrs=conv_layer_attrs,
             matmul_layer_non_weighted_attrs=ONNXLayerAttributes(),
             default_layer_attrs=ONNXLayerAttributes(),
         )

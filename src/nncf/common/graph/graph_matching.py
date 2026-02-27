@@ -126,7 +126,7 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: dict[str, str], pattern_
 
 
 def find_subgraphs_matching_pattern(
-    graph: nx.DiGraph, pattern_graph: GraphPattern, strict: bool = True
+    graph: nx.MultiDiGraph, pattern_graph: GraphPattern, strict: bool = True
 ) -> list[list[str]]:
     """
     Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
@@ -142,7 +142,7 @@ def find_subgraphs_matching_pattern(
     patterns = pattern_graph.get_weakly_connected_subgraphs()
     patterns = sorted(patterns, key=_sort_patterns_by_len, reverse=True)
     for pattern in patterns:
-        matcher = ism.DiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
+        matcher = ism.MultiDiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
         for subgraph in matcher.subgraph_isomorphisms_iter():
             if strict and not _is_subgraph_matching_strict(graph, pattern, subgraph):
                 continue

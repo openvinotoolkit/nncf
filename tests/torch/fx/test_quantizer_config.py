@@ -14,13 +14,16 @@ import pytest
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.cross_fw.test_templates.models import NNCFGraphTransformer
+from tests.cross_fw.test_templates.models import NNCFSplitGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
+from tests.torch.function_hook.quantization.helper import get_single_conv_arithmetic_degree2_nncf_graph
 from tests.torch.fx.helpers import get_depthwise_conv_nncf_graph
 from tests.torch.fx.helpers import get_single_conv_nncf_graph
 from tests.torch.fx.helpers import get_sum_aggregation_nncf_graph
@@ -38,6 +41,10 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         return get_single_conv_nncf_graph()
 
     @pytest.fixture
+    def single_conv_arithmetic_degree2_nncf_graph(self) -> NNCFGraphArithmeticDegree2:
+        return get_single_conv_arithmetic_degree2_nncf_graph()
+
+    @pytest.fixture
     def depthwise_conv_nncf_graph(self) -> NNCFGraphToTestDepthwiseConv:
         return get_depthwise_conv_nncf_graph()
 
@@ -53,6 +60,17 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             mul_metatype=om.PTMulMetatype,
             const_metatype=om.PTConstNoopMetatype,
             transpose_metatype=om.PTTransposeMetatype,
+        )
+
+    @pytest.fixture
+    def split_transformer_nncf_graph(self) -> NNCFSplitGraphTransformer:
+        return NNCFSplitGraphTransformer(
+            matmul_metatype=om.PTMatMulMetatype,
+            conv_metatype=om.PTConv2dMetatype,
+            split_metatype=om.PTSplitMetatype,
+            softmax_metatype=om.PTSoftmaxMetatype,
+            const_metatype=om.PTConstNoopMetatype,
+            mul_metatype=om.PTMulMetatype,
         )
 
     @pytest.fixture

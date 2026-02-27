@@ -28,9 +28,9 @@ def main(argv):
     parser.add_argument("-o", "--output_file", help="Output .dot file", required=True)
     args = parser.parse_args(args=argv)
 
-    graph = nx.DiGraph(read_dot_graph(args.input_file))
+    graph = nx.MultiDiGraph(read_dot_graph(args.input_file))
 
-    new_graph = nx.DiGraph()
+    new_graph = nx.MultiDiGraph()
 
     start_key = None
     for node_key in nx.lexicographical_topological_sort(graph):
