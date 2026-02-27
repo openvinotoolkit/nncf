@@ -46,7 +46,7 @@ tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
   metric_value: 0.86503
   num_int4: 94
   num_int8: 124
-  metrics_xfail_reason: "Issue-148819"
+  metrics_xfail_reason: "Issue-180624"
 tinyllama_scale_estimation_per_channel_backend_OV:
   metric_value: 0.80873
   num_int4: 188
@@ -64,7 +64,6 @@ tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
   metric_value: 0.88663
   num_int4: 11
   num_int8: 290
-  metrics_xfail_reason: "Issue-148819"
 tinyllama_awq_backup_mode_none_backend_OV:
   metric_value: 0.84783
   num_int4: 208
@@ -77,34 +76,18 @@ tinyllama_int8_data_free_backend_FX_TORCH:
   metric_value: 0.95624
   num_int4: 0
   num_int8: 312
-  exception_xfail_reason:
-    type: "InternalError"
-    error_message: "Graph break encountered in torch compile!"
-    message: "Issue-165013"
 tinyllama_int4_data_free_backend_FX_TORCH:
   metric_value: 0.73873
   num_int4: 114
   num_int8: 84
-  exception_xfail_reason:
-    type: "FileNotFoundError"
-    error_message: "Openvino Model Files Not Found!"
-    message: "Issue-165013"
 tinyllama_data_aware_backend_FX_TORCH:
   metric_value: 0.85767
   num_int4: 94
   num_int8: 124
-  exception_xfail_reason:
-    type: "FileNotFoundError"
-    error_message: "Openvino Model Files Not Found!"
-    message: "Issue-165013"
 tinyllama_scale_estimation_per_channel_backend_FX_TORCH:
   metric_value: 0.80873
   num_int4: 188
   num_int8: 124
-  exception_xfail_reason:
-    type: "FileNotFoundError"
-    error_message: "Openvino Model Files Not Found!"
-    message: "Issue-165013"
   atol: 0.006 # difference across devices: 0.80873 vs 0.81389
 tinyllama_scale_estimation_per_channel_backend_ONNX:
   metric_value: 0.80878
@@ -114,10 +97,6 @@ tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH:
   metric_value: 0.85502
   num_int4: 94
   num_int8: 124
-  exception_xfail_reason:
-    type: "FileNotFoundError"
-    error_message: "Openvino Model Files Not Found!"
-    message: "Issue-165013"
 tinyllama_data_free_awq_backend_OV:
   metric_value: 0.85466
   num_int4: 94
