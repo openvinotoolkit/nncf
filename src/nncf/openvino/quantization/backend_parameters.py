@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 
@@ -24,7 +23,7 @@ class BackendParameters:
     LEVEL_HIGH = "level_high"
 
 
-def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
+def is_weight_compression_needed(advanced_parameters: AdvancedQuantizationParameters | None) -> bool:
     """
     Determines whether weight compression is needed based on the provided
     advanced quantization parameters.

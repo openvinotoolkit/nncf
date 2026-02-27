@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from contextlib import contextmanager
-from typing import Generator, Optional, TypeVar
+from typing import Generator, TypeVar
 
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -27,17 +27,17 @@ NNCF_OV_CATEGORY = "nncf_ov"
 # Dynamic categories
 MODEL_BASED_CATEGORY = "model_based"
 
-CURRENT_CATEGORY: Optional[str] = None
+CURRENT_CATEGORY: str | None = None
 
 TModel = TypeVar("TModel")
 
 
-def _set_current_category(category: Optional[str]) -> None:
+def _set_current_category(category: str | None) -> None:
     global CURRENT_CATEGORY
     CURRENT_CATEGORY = category
 
 
-def get_current_category() -> Optional[str]:
+def get_current_category() -> str | None:
     return CURRENT_CATEGORY
 
 
@@ -57,7 +57,7 @@ def get_model_based_category(model: TModel) -> str:
 
 
 @contextmanager
-def telemetry_category(category: Optional[str]) -> Generator[Optional[str], None, None]:
+def telemetry_category(category: str | None) -> Generator[str | None, None, None]:
     previous_category = get_current_category()
     _set_current_category(category)
     yield category

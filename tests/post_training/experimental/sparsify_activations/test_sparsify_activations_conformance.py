@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Optional
 
 import pytest
 import yaml
@@ -42,7 +41,7 @@ def test_sparsify_activations(
     batch_size: int,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
-    subset_size: Optional[int],
+    subset_size: int | None,
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,

@@ -91,6 +91,8 @@ files = [
     "src/nncf/telemetry/",
     "src/nncf/tensor/",
     "src/nncf/*py",
+    "src/nncf/experimental/torch/gptqmodel/",
+    "examples/llm_compression/torch/gptq_model_convertor/main.py",
 ]
 disable_error_code = ["import-untyped"]
 
@@ -98,6 +100,9 @@ disable_error_code = ["import-untyped"]
 module = "nncf.tensor.functions.*"
 disable_error_code = ["empty-body", "no-any-return"]
 
+[[tool.mypy.overrides]]
+module = ["transformers.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
@@ -106,9 +111,7 @@ exclude = ["src/nncf/torch/function_hook/handle_inner_functions.py"]
 [tool.ruff.lint]
 preview = true
 ignore = [
-    "E201",    # whitespace-after-open-bracket
     "E203",    # whitespace-before-punctuation
-    "E231",    # missing-whitespace
     "E251",    # unexpected-spaces-around-keyword-parameter-equals
     "E731",    # lambda-assignment
     "SIM108",  # if-else-block-instead-of-if-exp
@@ -116,10 +119,7 @@ ignore = [
     "SIM117",  # multiple-with-statements
     "SIM103",  # needless-bool
     "NPY002",  # numpy-legacy-random
-    "UP007",   # non-pep604-annotation-union
     "UP035",   # deprecated-import
-    "UP038",   # non-pep604-isinstance
-    "UP045",   # non-pep604-annotation-optional
     "D100",    # undocumented-public-module
     "D101",    # undocumented-public-class
     "D102",    # undocumented-public-method
@@ -142,12 +142,11 @@ ignore = [
     "PERF203", # try-except-in-loop
     "PERF401", # manual-list-comprehension
     "PERF403", # manual-dict-comprehension
-    "B009",    # get-attr-with-constant
-    "B010",    # set-attr-with-constant
     "B905",    # zip-without-explicit-strict
     "RET502",  # implicit-return-value
     "RET503",  # implicit-return
     "RET504",  # unnecessary-assign
+    "TD003",   # todo-missing-issue
 ]
 select = [
     "CPY001", # copyright check
@@ -163,6 +162,8 @@ select = [
     "PERF",   # perflint
     "B",      # flake8-bugbear
     "RET",    # flake8-return
+    "PTH",    # flake8-use-pathlib
+    "TD",     # flake8-todos
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -173,7 +174,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!src/nncf/**.py" = ["INP", "D", "B"]
+"!src/nncf/**.py" = ["INP", "D", "B", "PTH"]
 "*.ipynb" = ["CPY001"]
 
 [tool.ruff.lint.flake8-copyright]

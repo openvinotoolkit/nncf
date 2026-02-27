@@ -10,7 +10,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, Iterable, Iterator, Optional, Sequence, Union
+from typing import Any, Callable, Generic, Iterable, Iterator, Sequence
 
 from rich.console import Console
 from rich.progress import BarColumn
@@ -39,7 +39,7 @@ class IterationsColumn(ProgressColumn):
 
 
 class SeparatorColumn(ProgressColumn):
-    def __init__(self, table_column: Optional[Column] = None, disable_if_no_total: bool = False) -> None:
+    def __init__(self, table_column: Column | None = None, disable_if_no_total: bool = False) -> None:
         super().__init__(table_column)
         self.disable_if_no_total = disable_if_no_total
 
@@ -125,13 +125,13 @@ class WeightedProgress(Progress):
 class track(Generic[ProgressType]):
     def __init__(
         self,
-        sequence: Union[Sequence[ProgressType], Iterable[ProgressType], None] = None,
+        sequence: Sequence[ProgressType] | Iterable[ProgressType] | None = None,
         description: str = "Working...",
-        total: Optional[float] = None,
+        total: float | None = None,
         auto_refresh: bool = True,
-        console: Optional[Console] = None,
+        console: Console | None = None,
         transient: bool = False,
-        get_time: Optional[Callable[[], float]] = None,
+        get_time: Callable[[], float] | None = None,
         refresh_per_second: float = 10,
         style: StyleType = "bar.back",
         complete_style: StyleType = "bar.complete",
@@ -140,7 +140,7 @@ class track(Generic[ProgressType]):
         update_period: float = 0.1,
         disable: bool = False,
         show_speed: bool = True,
-        weights: Optional[list[float]] = None,
+        weights: list[float] | None = None,
     ):
         """
         Track progress by iterating over a sequence.
@@ -184,7 +184,7 @@ class track(Generic[ProgressType]):
         self.total = sum(self.weights) if self.weights is not None else total
         self.description = description
         self.update_period = update_period
-        self.task: Optional[TaskID] = None
+        self.task: TaskID | None = None
 
         self.columns: list[ProgressColumn] = (
             [TextColumn("[progress.description]{task.description}")] if description else []

@@ -10,8 +10,6 @@
 # limitations under the License.
 
 
-from typing import Union
-
 import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
@@ -87,7 +85,7 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
 
 def asym_fq_to_decompressor(
     quantizer: AsymmetricQuantizer, weight: torch.Tensor
-) -> tuple[Union[INT8AsymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor], torch.Tensor]:
+) -> tuple[INT8AsymmetricWeightsDecompressor | INT4AsymmetricWeightsDecompressor, torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 
@@ -145,7 +143,7 @@ def asym_fq_to_decompressor(
 
 def sym_fq_to_decompressor(
     quantizer: SymmetricQuantizer, weight: torch.Tensor
-) -> tuple[Union[INT8SymmetricWeightsDecompressor, INT4SymmetricWeightsDecompressor], torch.Tensor]:
+) -> tuple[INT8SymmetricWeightsDecompressor | INT4SymmetricWeightsDecompressor, torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 

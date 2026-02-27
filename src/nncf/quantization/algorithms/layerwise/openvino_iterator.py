@@ -11,7 +11,6 @@
 
 from collections import defaultdict
 from itertools import islice
-from typing import Optional
 
 import openvino as ov
 
@@ -42,7 +41,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
         schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
+        cache: dict[NodeOutputPort, list[Tensor]] | None = None,
     ):
         """
         :param model: The OpenVINO model to iterate over.

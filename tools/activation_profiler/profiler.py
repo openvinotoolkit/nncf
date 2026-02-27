@@ -19,10 +19,10 @@ This profiler can collect raw activations at specific layers matching regex patt
 import re
 from collections import defaultdict
 from re import Pattern
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pandas as pd
 
 from nncf.common.tensor_statistics.builders import get_raw_stat_collector
@@ -56,7 +56,7 @@ class NNCFProfiler:
     Example
     -------
     ```python
-    import openvino.runtime as ov
+    import openvino as ov
     from nncf import Dataset
 
     model = ov.Core().read_model("model.xml")
@@ -94,7 +94,7 @@ class NNCFProfiler:
     VISUALIZERS: dict[str, Any] = {}
     STATISTICS: dict[str, Any] = {}
 
-    def __init__(self, pattern: Union[str, Pattern[str]], dataset: Any, num_samples: int) -> None:
+    def __init__(self, pattern: str | Pattern[str], dataset: Any, num_samples: int) -> None:
         """
         Initialize the NNCF Profiler.
 
@@ -106,7 +106,7 @@ class NNCFProfiler:
             Larger values provide more accurate statistics but consume more memory.
         """
         self.dataset: Any = dataset
-        self.pattern: Union[str, Pattern[str]] = pattern
+        self.pattern: str | Pattern[str] = pattern
         self.num_samples: int = num_samples
 
     @classmethod
@@ -227,9 +227,9 @@ class NNCFProfiler:
     def collect_activations(
         self,
         model: ov.Model,
-        dataset: Optional[Any] = None,
-        pattern: Optional[Union[str, Pattern[str]]] = None,
-        num_samples: Optional[int] = None,
+        dataset: Any | None = None,
+        pattern: str | Pattern[str] | None = None,
+        num_samples: int | None = None,
     ) -> ActivationData:
         """
         Collect activation statistics from layers matching the specified pattern.
@@ -300,7 +300,7 @@ class NNCFProfiler:
 
         return result
 
-    def calculate_stats(self, data: ActivationData, statistics: Optional[list[str]] = None) -> pd.DataFrame:
+    def calculate_stats(self, data: ActivationData, statistics: list[str] | None = None) -> pd.DataFrame:
         """
         Calculate custom statistics for collected activations using registered statistic functions.
 
@@ -359,8 +359,8 @@ class NNCFProfiler:
         self,
         data1: ActivationData,
         data2: ActivationData,
-        metrics: Optional[list[str]] = None,
-        statistics: Optional[list[str]] = None,
+        metrics: list[str] | None = None,
+        statistics: list[str] | None = None,
     ) -> pd.DataFrame:
         """
         Compare activations between two model variants using specified metrics and statistics.
@@ -546,7 +546,7 @@ def _stat_abs_mean(vals: np.ndarray) -> float:
 def _compare_detailed_plot(
     data1: ActivationData,
     data2: ActivationData,
-    activation_type: Optional[str] = None,
+    activation_type: str | None = None,
     bins: int = 100,
     show_histograms: bool = True,
     show_summary: bool = True,

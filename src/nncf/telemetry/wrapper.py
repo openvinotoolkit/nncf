@@ -13,7 +13,7 @@ import os
 import sys
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from unittest.mock import MagicMock
 
 from nncf.common.logging import nncf_logger
@@ -44,7 +44,7 @@ class ITelemetry(ABC):
         event_category: str,
         event_action: str,
         event_label: str,
-        event_value: Optional[int] = None,
+        event_value: int | None = None,
         force_send: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -117,7 +117,7 @@ class NNCFTelemetry(ITelemetry):
         event_category: str,
         event_action: str,
         event_label: str,
-        event_value: Optional[int] = None,
+        event_value: int | None = None,
         force_send: bool = False,
         **kwargs: Any,
     ) -> None:

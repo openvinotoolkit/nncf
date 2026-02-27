@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 import openvino as ov
 import pytest
@@ -20,7 +20,6 @@ import torch.nn as nn
 from networkx.drawing.nx_pydot import to_pydot
 
 import nncf
-import nncf.experimental
 import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgorithm
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import TargetScope
@@ -45,7 +44,7 @@ class SparsifyActivationsAlgorithmTestDesc:
     model_getter: Callable[[], nn.Module]
     dataset_getter: Callable[[torch.device], nncf.Dataset]
     target_sparsity_by_scope: dict[TargetScope, float]
-    ignored_scope: Optional[nncf.IgnoredScope]
+    ignored_scope: nncf.IgnoredScope | None
     ref_sparsifier_target_sparsity: dict[str, float]
     ref_num_batches_tracked: int
     ref_num_patterns_in_ov: int
@@ -214,8 +213,8 @@ class TestSparsifyActivationsAlgorithm:
 class TargetSparsityByNodeTestDesc:
     target_sparsity_by_scope: dict[TargetScope, float]
     ignored_scope: IgnoredScope
-    ref_target_sparsity_by_node_name: Optional[dict[str, float]] = None
-    raised_error_message: Optional[str] = None
+    ref_target_sparsity_by_node_name: dict[str, float] | None = None
+    raised_error_message: str | None = None
 
 
 @pytest.mark.parametrize(

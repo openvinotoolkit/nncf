@@ -13,7 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import onnx
@@ -924,7 +924,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         ]
 
     @staticmethod
-    def get_transform_func() -> Optional[Callable[..., Any]]:
+    def get_transform_func() -> Callable[..., Any] | None:
         def transform_func(x):
             return {"input": x}
 

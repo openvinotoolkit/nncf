@@ -149,6 +149,14 @@ class MultiBranchesModel(nn.Module):
         return xa, xb, xc, xd
 
 
+class TopKModel(nn.Module):
+    INPUT_SHAPE = (1, 10)
+
+    def forward(self, x):
+        values, indices = torch.topk(x, k=5, dim=-1)
+        return values, indices
+
+
 class PartlyNonDifferentialOutputsModel(nn.Module):
     def __init__(self, input_size=None):
         super().__init__()

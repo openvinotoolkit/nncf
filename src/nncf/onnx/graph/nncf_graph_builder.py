@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from typing import Any, Optional
+from typing import Any
 
 import onnx
 
@@ -53,9 +53,9 @@ class ONNXLayerAttributes(BaseLayerAttributes):
 
     def __init__(
         self,
-        weight_attrs: Optional[dict[int, dict]] = None,
-        bias_attrs: Optional[dict[str, Any]] = None,
-        node_attrs: Optional[dict[str, Any]] = None,
+        weight_attrs: dict[int, dict] | None = None,
+        bias_attrs: dict[str, Any] | None = None,
+        node_attrs: dict[str, Any] | None = None,
     ):
         """
         :param weight_attrs: Maps input port id associated with weight to a weight description.
@@ -101,7 +101,7 @@ def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> list[int]:
     return []
 
 
-def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int]:
+def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> int | None:
     """
     Returns input port id, where a bias tensor should output.
 

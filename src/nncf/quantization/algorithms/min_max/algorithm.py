@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Optional, OrderedDict, TypeVar, Union
+from typing import Any, OrderedDict, TypeVar
 
 import numpy as np
 
@@ -85,10 +85,10 @@ class ModeBasedDefaults:
     """
 
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
-    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+    activations_quantization_params: QuantizationParameters | FP8QuantizationParameters = dataclasses.field(
         default_factory=QuantizationParameters
     )
-    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+    weights_quantization_params: QuantizationParameters | FP8QuantizationParameters = dataclasses.field(
         default_factory=QuantizationParameters
     )
 
@@ -139,22 +139,22 @@ class MinMaxQuantization(Algorithm):
 
     def __init__(
         self,
-        mode: Optional[QuantizationMode] = None,
-        preset: Optional[QuantizationPreset] = None,
+        mode: QuantizationMode | None = None,
+        preset: QuantizationPreset | None = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
-        model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None,
-        overflow_fix: Optional[OverflowFix] = None,
+        model_type: ModelType | None = None,
+        ignored_scope: IgnoredScope | None = None,
+        overflow_fix: OverflowFix | None = None,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
         batchwise_statistics: bool = False,
-        activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
-        weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
-        activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-        weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = None,
-        backend_params: Optional[dict[str, Any]] = None,
+        activations_quantization_params: QuantizationParameters | FP8QuantizationParameters = None,
+        weights_quantization_params: QuantizationParameters | FP8QuantizationParameters = None,
+        activations_range_estimator_params: RangeEstimatorParameters | None = None,
+        weights_range_estimator_params: RangeEstimatorParameters | None = None,
+        quantizer_propagation_rule: QuantizerPropagationRule | None = None,
+        backend_params: dict[str, Any] | None = None,
     ):
         """
         :param mode: Defines optimization mode for the algorithm. None by default.
@@ -348,7 +348,7 @@ class MinMaxQuantization(Algorithm):
         self,
         group: QuantizerGroup,
         preset: QuantizationPreset,
-        quantization_params: Union[QuantizationParameters, FP8QuantizationParameters],
+        quantization_params: QuantizationParameters | FP8QuantizationParameters,
     ) -> QuantizationConstraints:
         """
         Returns QuantizationConstraints for the provided quantizer group.
@@ -526,10 +526,10 @@ class MinMaxQuantization(Algorithm):
         self,
         range_estimator_params: RangeEstimatorParameters,
         use_abs_max: bool,
-        reduction_axes: Optional[tuple[int, ...]],
-        aggregation_axes: Optional[tuple[int, ...]],
+        reduction_axes: tuple[int, ...] | None,
+        aggregation_axes: tuple[int, ...] | None,
         inplace: bool,
-        num_samples: Optional[int] = None,
+        num_samples: int | None = None,
     ) -> TensorCollector:
         """
         Returns statistic collector.
@@ -991,8 +991,8 @@ class MinMaxQuantization(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model)
@@ -1132,7 +1132,7 @@ class MinMaxQuantization(Algorithm):
         return output
 
     def _apply_model_type_pass(
-        self, model_type: Optional[ModelType], quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+        self, model_type: ModelType | None, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
     ) -> None:
         """
         Applies changes in-place into quantizer setup based on model_type and device parameters.

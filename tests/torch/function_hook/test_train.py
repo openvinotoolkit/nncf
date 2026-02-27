@@ -14,7 +14,6 @@ import pytest
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-import torch.utils
 from torch import nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 

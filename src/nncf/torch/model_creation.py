@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from torch import nn
 
@@ -77,7 +77,7 @@ def is_wrapped_model(model: Any) -> bool:
         FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
-def load_from_config(model: nn.Module, config: dict[str, Any], example_input: Optional[Any] = None) -> nn.Module:
+def load_from_config(model: nn.Module, config: dict[str, Any], example_input: Any | None = None) -> nn.Module:
     """
     Wraps given model and recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded state_dict.
