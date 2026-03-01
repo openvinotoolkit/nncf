@@ -606,25 +606,26 @@ class QuantizersSwitcher:
     """Enables/disables quantizers with saving and restoring original state"""
 
     def __init__(self, quantizers: list[BaseQuantizer]):
-        self.originally_disabled: list[BaseQuantizer] = []
-        self.originally_enabled: list[BaseQuantizer] = []
+        self._original_state: dict[BaseQuantizer, bool] = {}
         self._quantizers = quantizers
 
+    def _save_original_state(self) -> None:
+        if not self._original_state:
+            self._original_state = {module: module.is_enabled_quantization() for module in self._quantizers}
+
     def disable_quantizers(self):
+        self._save_original_state()
         for module in self._quantizers:
-            if not module.is_enabled_quantization():
-                self.originally_disabled.append(module)
-            if module not in self.originally_enabled:
-                module.disable_quantization()
-        self.originally_enabled = []
+            module.disable_quantization()
 
     def enable_quantizers(self):
+        self._save_original_state()
         for module in self._quantizers:
-            if module.is_enabled_quantization():
-                self.originally_enabled.append(module)
-            if module not in self.originally_disabled:
+            if self._original_state[module]:
                 module.enable_quantization()
-        self.originally_disabled = []
+            else:
+                module.disable_quantization()
+        self._original_state = {}
 
 
 class StorageRedirectingLoadStateDictHook:
