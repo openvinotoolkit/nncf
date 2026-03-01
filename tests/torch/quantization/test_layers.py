@@ -17,6 +17,7 @@ from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import PTLoraNLSSpec
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import QuantizersSwitcher
 
 
 @pytest.mark.parametrize("registred", list(QUANTIZATION_MODULES.registry_dict.items()))
@@ -58,3 +59,39 @@ def test_quantizer_layers_accepts_return_type(registred):
     quantizer._forward_impl = check_types(quantizer._forward_impl)
     quantizer(input_)
     assert visited
+
+
+class MockQuantizer:
+    def __init__(self, is_enabled: bool):
+        self._is_enabled = is_enabled
+
+    def is_enabled_quantization(self) -> bool:
+        return self._is_enabled
+
+    def enable_quantization(self) -> None:
+        self._is_enabled = True
+
+    def disable_quantization(self) -> None:
+        self._is_enabled = False
+
+
+def test_quantizers_switcher_restores_state_after_repeated_disable_calls():
+    quantizers = [MockQuantizer(True), MockQuantizer(True)]
+    switcher = QuantizersSwitcher(quantizers)
+
+    switcher.disable_quantizers()
+    switcher.disable_quantizers()
+    switcher.enable_quantizers()
+
+    assert all(quantizer.is_enabled_quantization() for quantizer in quantizers)
+
+
+def test_quantizers_switcher_restores_state_after_repeated_enable_calls():
+    quantizers = [MockQuantizer(False), MockQuantizer(False)]
+    switcher = QuantizersSwitcher(quantizers)
+
+    switcher.enable_quantizers()
+    switcher.enable_quantizers()
+    switcher.disable_quantizers()
+
+    assert all(not quantizer.is_enabled_quantization() for quantizer in quantizers)
