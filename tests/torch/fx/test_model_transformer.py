@@ -31,7 +31,6 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-from nncf.experimental.torch.fx.transformations import _get_model_device
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
@@ -43,6 +42,7 @@ from nncf.experimental.torch.fx.transformations import output_insertion_transfor
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.fx.helpers import get_torch_fx_model
@@ -470,7 +470,7 @@ def insert_qdq_nodes(
         dequantize_op = torch.ops.quantized_decomposed.dequantize_per_tensor.default
 
     conv_node = get_graph_node_by_name(model.graph, node_name)
-    model_device = _get_model_device(model)
+    model_device = get_model_device(model)
     if per_channel:
         with model.graph.inserting_before(conv_node):
             # Passing device is neccesary to avoid large models to be cached by torchao.
