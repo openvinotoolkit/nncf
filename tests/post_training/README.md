@@ -23,17 +23,13 @@ pip install -r requirements.txt
 
 ## Data preparation
 
-## Imagenet
+Using datasets from huggingface, required set HF_TOKEN environment variable.
+For using imagenet-1k need to sign licence https://huggingface.co/datasets/mlx-vision/imagenet-1k.
 
-<data>/imagenet/val - name of path
-Since Torchvision `ImageFolder` class is used to work with data the ImageNet validation dataset should be structured accordingly. Below is an example of the `val` folder:
-
-```text
-n01440764
-n01695060
-n01843383
-...
-```
+> [!IMPORTANT]
+> Used modified version of loader imagenet-1k to download only validation subset.
+> To avoid any conflict with full dataset set another cache directory for this test.
+> https://huggingface.co/docs/datasets/en/cache#cache-directory
 
 ## Usage
 
