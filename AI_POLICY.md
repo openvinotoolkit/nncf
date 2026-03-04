@@ -2,7 +2,7 @@
 
 ## Purpose
 
-OpenVINO welcomes responsible use of AI tools in open-source collaboration. This policy exists to protect maintainer
+NNCF welcomes responsible use of AI tools in open-source collaboration. This policy exists to protect maintainer
 time, keep review quality high, and ensure long-term maintainability of the project.
 
 The key principle is simple: contributions are evaluated by quality, accountability, and maintainability.
