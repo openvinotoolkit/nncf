@@ -24,6 +24,7 @@ class CompressedWeight:
     :param zero_point: The zero-point, it is the value of the compression type corresponding to the value 0
         in the non-compression realm. Applicable for INT quantization.
     :param codebook: The codebook (LUT) for the weight compression. Applicable for vector quantization
+    :param second_degree_scale: The second degree scale used when the decompression scale itself is compressed.
     """
 
     tensor: Tensor | None = None

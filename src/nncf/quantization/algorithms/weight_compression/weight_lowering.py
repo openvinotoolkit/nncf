@@ -132,15 +132,15 @@ def do_float_dequantization(compressed_weight: CompressedWeight, reduction_axis:
     """
     Dequantize the float-quantized weight tensor.
 
-    :param compressed_weight: Tensor with floating-point values.
-    :param scale: Scale tensor used for decompression.
+    :param compressed_weight: CompressedWeight instance.
     :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
         original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
     :return: Decompressed weight tensor.
     """
-    scale = compressed_weight.scale
     if compressed_weight.second_degree_scale is not None:
-        scale *= compressed_weight.second_degree_scale
+        scale = compressed_weight.scale * compressed_weight.second_degree_scale
+    else:
+        scale = compressed_weight.scale
 
     decompressed_weight = compressed_weight.tensor * scale
     if reduction_axis != -1:
@@ -164,8 +164,8 @@ def do_float_quantization(
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized (for codebook normalized) weight tensor and corresponding scale tensor,
-        optional second degree scale and optional indexes for codebook.
+    :return: CompressedWeight instance containing the compressed weight tensor, scale,
+        and optionally second degree scale or codebook with indexes.
     """
     if config.mode != CompressWeightsMode.NVFP4:
         return _do_float_quantization_single_scale(
@@ -246,8 +246,9 @@ def float_quantize_dequantize_weight(
     :param config: Compression configuration.
     :param reduction_axes: Axes along which to reduce statistics. Not required if precomputed scale are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
-    :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
-    :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
+    :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight.
+    :return: Dequantized weight tensor, or a tuple of the dequantized weight tensor and CompressedWeight instance
+        if return_compressed_weight is True.
     """
     # Optimized implementation
     if _can_run_optimized(weight, config.mode):
@@ -412,9 +413,7 @@ def do_integer_dequantization(compressed_weights: CompressedWeight, reduction_ax
     The method dequantizes the given integer weights to float point data type in accordance with the scale and
     zero_point data type.
 
-    :param compressed_weights: compressed weights.
-    :param scale: scale in compression/quantization.
-    :param zero_point: zero point in compression/quantization.
+    :param compressed_weights: CompressedWeight instance.
     :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
         original shapes. If equals to -1: weights are not reshaped, assumed not a group quantization. Default to -1.
     :return: dequantized/decompressed weights.
@@ -448,7 +447,7 @@ def do_integer_quantization(
         precomputed scale (and zero point) are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param precomputed_zero_point: Optional precomputed zero point tensor.
-    :return: A tuple containing the compressed weights, scale, and zero point tensors.
+    :return: CompressedWeight instance containing the compressed weight, scale, and zero point tensors.
     """
     if not config.is_integer:
         msg = "The function supports integer quantization only"
@@ -509,10 +508,9 @@ def integer_quantize_dequantize_weight(
         precomputed scale (and zero point) are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param precomputed_zero_point: Optional precomputed zero point tensor.
-    :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight, scale,
-        (and zero point).
-    :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight, scale,
-        (and zero point).
+    :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight.
+    :return: Dequantized weight tensor, or a tuple of the dequantized weight tensor and CompressedWeight instance
+        if return_compressed_weight is True.
     """
     # Optimized implementation
     if _can_run_optimized(weight, config.mode):
