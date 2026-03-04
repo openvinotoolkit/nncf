@@ -253,7 +253,7 @@ def constant_update(
 
     with graph.inserting_before(sorted_consumer_nodes[0]):
         tensor_device = value.device
-        # Passing device is neccesary to avoid large models to be cached by torchao.
+        # Passing device is necessary to avoid large models to be cached by torchao.
         new_const = create_getattr_from_value(model, graph, node_name, value, device=tensor_device)
 
     old_const.replace_all_uses_with(new_const, propagate_meta=True)
