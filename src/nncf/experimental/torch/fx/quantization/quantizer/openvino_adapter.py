@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any, TypeAlias
 
 import torch.fx
 
@@ -20,8 +20,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 
-if TYPE_CHECKING:
-    from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+OpenVINOQuantizer: TypeAlias = Any
 
 
 class OpenVINOQuantizerAdapter(Quantizer):
