@@ -190,8 +190,6 @@ class TestSparsifyActivationsAlgorithm:
         compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)
 
     def test_export_openvino(self):
-        if self.desc.name == "dummy_llama" and self.compress_weights:
-            pytest.xfail("Disabled until ticket 165186 is resolved.")
         model = self.model
         example_input = next(iter(self.dataset.get_inference_data()))
         with torch.no_grad():

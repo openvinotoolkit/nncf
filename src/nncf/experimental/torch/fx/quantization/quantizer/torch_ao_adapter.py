@@ -12,13 +12,15 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, TypeVar
+from typing import Any
 
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
-from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
-from torch.ao.quantization.quantizer import Quantizer as TorchAOQuantizer
+from torchao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
+from torchao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
+from torchao.quantization.pt2e.quantizer import Quantizer as TorchAOQuantizer
+from torchao.quantization.pt2e.quantizer.quantizer import QuantizationSpec
+from torchao.quantization.pt2e.quantizer.quantizer import SharedQuantizationSpec
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -36,20 +38,11 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.tensor.definitions import TensorDataType
 
 EdgeOrNode = tuple[torch.fx.Node, torch.fx.Node]
-QuantizationSpec = TypeVar("QuantizationSpec")
-
-
-def is_shared_quantization_spec(qspec):
-    return hasattr(qspec, "edge_or_node")
-
-
-def is_quantization_spec(qspec):
-    return hasattr(qspec, "qscheme") and hasattr(qspec, "quant_min") and hasattr(qspec, "quant_max")
 
 
 class TorchAOQuantizerAdapter(Quantizer):
     """
-    Implementation of the NNCF Quantizer interface for any given torch.ao quantizer.
+    Implementation of the NNCF Quantizer interface for any given torchao quantizer.
     """
 
     def __init__(self, quantizer: TorchAOQuantizer):
@@ -118,7 +111,7 @@ class TorchAOQuantizerAdapter(Quantizer):
     def get_quantizer_config_from_annotated_model(annotated: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
         """
         Process a torch.fx.GraphModule annotated with quantization specifications
-        (e.g., via torch.ao observers) and generates a corresponding NNCF quantization setup object,
+        (e.g., via torchao observers) and generates a corresponding NNCF quantization setup object,
         which maps quantization configurations to graph edges.
 
         :param annotated: A torch.fx.GraphModule that has been annotated with Torch quantization observers.
@@ -146,8 +139,8 @@ class TorchAOQuantizerAdapter(Quantizer):
             qspec = group_id_vs_qspec[group_id]
             if qspec is None:
                 continue
-            if not is_quantization_spec(qspec):
-                msg = f"Unknown torch.ao quantization spec: {qspec}"
+            if not isinstance(qspec, QuantizationSpec):
+                msg = f"Unknown torchao quantization spec: {qspec}"
                 raise nncf.InternalError(msg)
 
             if qspec.qscheme in [torch.per_channel_affine, torch.per_channel_symmetric]:
@@ -164,9 +157,8 @@ class TorchAOQuantizerAdapter(Quantizer):
                 if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
                 else QuantizationMode.ASYMMETRIC
             )
-
             # QuantizationSpec may have quant_min and quant_max attributes set to None.
-            # torch.ao.prepare_pt2e treats such occurrences as a signal
+            # torchao.prepare_pt2e treats such occurrences as a signal
             # that the full range of values should be used for quant_min and quant_max.
             # Therefore, the narrow_range parameter is set to False in this case.
             if qspec.quant_min is None or qspec.quant_max is None:
@@ -228,7 +220,7 @@ def _unwrap_shared_qspec_safe(qspec: QuantizationSpec, edge_or_node_to_qspec: di
     MAX_DEPTH = 1000
     i = 0
     visited = []
-    while i < MAX_DEPTH and is_shared_quantization_spec(qspec):
+    while i < MAX_DEPTH and isinstance(qspec, SharedQuantizationSpec):
         if qspec.edge_or_node in visited:
             msg = f"A cycled dependency of the quantization spec is detected {visited + [qspec.edge_or_node]}"
             raise RuntimeError(msg)

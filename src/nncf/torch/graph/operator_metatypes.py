@@ -980,6 +980,12 @@ class PTSinMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH: ["sin"]}
 
 
+@PT_OPERATOR_METATYPES.register()
+class PTTopKMetatype(PTOperatorMetatype):
+    name = "TopKOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["topk"]}
+
+
 def get_operator_metatypes() -> list[type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.

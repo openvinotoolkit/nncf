@@ -41,6 +41,7 @@ from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_models.synthetic import EmbeddingSumModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_models.synthetic import TopKModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_DIR_NAME = TEST_ROOT / "torch" / "data" / "fx"
@@ -73,6 +74,7 @@ TEST_MODELS = (
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
     ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
     ModelCase(EmbeddingSumModel, "embedding_bag_model", [1, 1]),
+    ModelCase(TopKModel, "topk_model", TopKModel.INPUT_SHAPE),
 )
 
 

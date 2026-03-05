@@ -22,7 +22,7 @@ from re import Pattern
 from typing import Any
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pandas as pd
 
 from nncf.common.tensor_statistics.builders import get_raw_stat_collector
@@ -56,7 +56,7 @@ class NNCFProfiler:
     Example
     -------
     ```python
-    import openvino.runtime as ov
+    import openvino as ov
     from nncf import Dataset
 
     model = ov.Core().read_model("model.xml")

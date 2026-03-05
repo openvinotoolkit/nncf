@@ -205,6 +205,7 @@ class GraphConverter:
                 om.PTAdaptiveMaxPool2dMetatype,
                 om.PTAdaptiveMaxPool3dMetatype,
                 om.PTAtenEmbeddingBagMetatype,
+                om.PTTopKMetatype,
             ] and isinstance(source_node.meta["val"], (tuple, list)):
                 tensor = source_node.meta["val"][output_idx]
                 # Assume every outputs corresponds to an unique output_port_id

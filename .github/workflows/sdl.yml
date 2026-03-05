@@ -39,11 +39,11 @@ jobs:
         with:
           lfs: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9e907b5e64f6b83e7804b09294d44122997950d6 # v4.32.3
+        uses: github/codeql-action/init@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4.32.4
         with:
           languages: python
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@9e907b5e64f6b83e7804b09294d44122997950d6 # v4.32.3
+        uses: github/codeql-action/analyze@89a39a4e59826350b863aa6b6252a07ad50cf83e # v4.32.4
         with:
           category: "/language:python"
 
@@ -63,7 +63,7 @@ jobs:
           mv "report.pdf" "codeql_nncf_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.pdf"
       - name: Upload CodeQL Artifacts
         if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         with:
           name: codeql-scan-results
           path: "./codeql*.pdf"
@@ -78,7 +78,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run trivy
-        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # v0.34.0
+        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # v0.34.2
         with:
           scan-type: "fs"
           scan-ref: .
@@ -98,7 +98,7 @@ jobs:
           mv "trivy_report.html" "trivy_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.html"
       - name: Upload Scan Results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         with:
           name: trivy-report
           path: "./trivy_report*.html"
@@ -152,7 +152,7 @@ jobs:
           mv "clamav_report.txt" "clamav_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.txt"
       - name: Upload Scan Results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         with:
           name: clamav-report
           path: "./clamav_report*.txt"

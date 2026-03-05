@@ -11,6 +11,8 @@
 
 import copy
 
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
+
 import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
@@ -615,8 +617,6 @@ WEIGHT_COMPRESSION_MODELS = [
 
 
 def add_quantizer_compression_params(models_list: list[dict]) -> list[dict]:
-    from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
-
     for test_model_param in models_list:
         # We need all the compression params for the OVQuantizer except mode, preset and model_type
         quantizer_params = {}
