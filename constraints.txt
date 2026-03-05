@@ -23,5 +23,6 @@ pytest-split==0.11.0
 
 datasets==4.6.1
 matplotlib==3.10.8
+pandas==2.3.3
 fastprogress==1.0.5
 fastcore==1.11.5

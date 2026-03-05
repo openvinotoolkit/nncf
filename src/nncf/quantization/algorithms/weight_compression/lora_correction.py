@@ -10,8 +10,6 @@
 # limitations under the License.
 from pathlib import Path
 
-import pandas as pd
-
 import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistics import WCTensorStatistic
@@ -42,9 +40,10 @@ class DebugInterface:
     def add_noises(self, layer_name: str, value: float):
         self._noise_per_layer[layer_name] = value
 
-    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot", "pandas"])
     def dump_data(self):
         import matplotlib.pyplot as plt
+        import pandas as pd
 
         if not self._noise_per_layer:
             return
