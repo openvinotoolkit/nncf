@@ -10,8 +10,6 @@
 # limitations under the License.
 
 import os
-import re
-import subprocess
 import tarfile
 import warnings
 from copy import deepcopy
@@ -27,6 +25,7 @@ from anomalib.engine import Engine
 from anomalib.models import Stfpm
 
 import nncf
+from examples import execute_benchmark_on_cpu
 
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 
@@ -91,21 +90,6 @@ def create_dataset(root: Path) -> MVTecAD:
     data = MVTecAD(root, category="bottle")
     data.setup()
     return data
-
-
-def run_benchmark(model_path: Path, shape: list[int]) -> float:
-    command = [
-        "benchmark_app",
-        "-m", model_path.as_posix(),
-        "-d", "CPU",
-        "-api", "async",
-        "-t", "15",
-        "-shape", str(shape),
-    ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    print(*cmd_output.splitlines()[-8:], sep="\n")
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
 
 
 def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
@@ -209,10 +193,10 @@ def main():
     print(os.linesep + "[Step 5] Run benchmarks")
 
     print("Run benchmark for FP32 model (IR)...")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 256, 256])
+    fp32_fps = execute_benchmark_on_cpu(fp32_ir_path, time=15, shape=[1, 3, 256, 256])
 
     print("Run benchmark for INT8 model (IR)...")
-    int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256])
+    int8_fps = execute_benchmark_on_cpu(int8_ir_path, time=15, shape=[1, 3, 256, 256])
 
     ###############################################################################
     # Step 6: Summary

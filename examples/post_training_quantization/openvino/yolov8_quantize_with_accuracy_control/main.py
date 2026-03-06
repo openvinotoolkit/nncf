@@ -8,8 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
-import subprocess
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -28,6 +26,7 @@ from ultralytics.utils import ops
 from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
+from examples import execute_benchmark_on_cpu
 
 MODEL_NAME = "yolov8n-seg"
 
@@ -107,20 +106,6 @@ def prepare_validation(model: YOLO, args: Any) -> tuple[SegmentationValidator, t
     data_loader = validator.get_dataloader(coco_data_path.as_posix(), 1)
 
     return validator, data_loader
-
-
-def benchmark_performance(model_path, config) -> float:
-    command = [
-        "benchmark_app",
-        "-m", model_path.as_posix(),
-        "-d", "CPU",
-        "-api", "async",
-        "-t", "30",
-        "-shape", str([1, 3, config.imgsz, config.imgsz]),
-    ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
 
 
 def prepare_openvino_model(model: YOLO, model_name: str) -> tuple[ov.Model, Path]:
@@ -235,11 +220,11 @@ def main():
     print_statistics(q_stats, total_images, total_objects)
 
     # Benchmark performance of FP32 model
-    fp_model_perf = benchmark_performance(ov_model_path, args)
+    fp_model_perf = execute_benchmark_on_cpu(ov_model_path, time=30, shape=[1, 3, args.imgsz, args.imgsz])
     print(f"Floating-point model performance: {fp_model_perf} FPS")
 
     # Benchmark performance of quantized model
-    quantized_model_perf = benchmark_performance(quantized_model_path, args)
+    quantized_model_perf = execute_benchmark_on_cpu(quantized_model_path, time=30, shape=[1, 3, args.imgsz, args.imgsz])
     print(f"Quantized model performance: {quantized_model_perf} FPS")
 
     return fp_stats["metrics/mAP50-95(B)"], q_stats["metrics/mAP50-95(B)"], fp_model_perf, quantized_model_perf
