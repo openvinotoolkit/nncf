@@ -53,6 +53,7 @@ class TensorDataType(StrEnum):
     uint8 = auto()
     uint4 = auto()
     int4 = auto()
+    int2 = auto()
 
     def is_float(self) -> bool:
         """
@@ -78,6 +79,7 @@ class TensorDataType(StrEnum):
             TensorDataType.nf4: 4,
             TensorDataType.uint4: 4,
             TensorDataType.int4: 4,
+            TensorDataType.int2: 2,
             TensorDataType.f8e4m3: 8,
             TensorDataType.f8e5m2: 8,
             TensorDataType.int8: 8,

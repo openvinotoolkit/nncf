@@ -126,7 +126,7 @@ def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel) -> T
         msg = ""
         if hook_module._qspec.half_range or hook_module._qspec.narrow_range:
             msg += "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False.\n"
-        if hook_module.num_bits not in [4, 8]:
+        if hook_module.num_bits not in [2, 4, 8]:
             msg += f"Unsupported number of bits {hook_module.num_bits} for the quantizer {hook_module}.\n"
         if msg:
             raise nncf.ValidationError(msg)
