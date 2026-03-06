@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from subprocess import CalledProcessError   # nosec B404: imported only for CalledProcessError exception handling; no subprocess commands are executed in this module
+from subprocess import (
+    CalledProcessError,  # nosec B404: imported only for CalledProcessError exception handling; no subprocess commands are executed in this module
+)
 
 import torch
 

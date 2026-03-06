@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # isort: off
-import re
-import subprocess
 from pathlib import Path
 from typing import Callable
 
@@ -21,6 +19,7 @@ from nncf.torch import disable_tracing
 import openvino as ov
 import torch
 import torchvision
+from examples import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -52,14 +51,6 @@ def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
     print(f"Model weights (bin): {bin_size:.3f} {m_type}")
     print(f"Model size:          {model_size:.3f} {m_type}")
     return model_size
-
-
-def run_benchmark(model_path: Path) -> float:
-    command = ["benchmark_app", "-m", model_path.as_posix(), "-d", "CPU", "-api", "async", "-t", "15"]
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    print(*cmd_output.splitlines()[-8:], sep="\n")
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
 
 
 class COCO128Dataset(torch.utils.data.Dataset):
@@ -169,9 +160,10 @@ def main():
     int8_model_size = get_model_size(int8_ir_path)
 
     print("[3/7] Benchmark FP32 model:")
-    fp32_fps = run_benchmark(fp32_ir_path)
+    fp32_fps = execute_benchmark_on_cpu(fp32_ir_path, time=15)
+
     print("[4/7] Benchmark INT8 model:")
-    int8_fps = run_benchmark(int8_ir_path)
+    int8_fps = execute_benchmark_on_cpu(int8_ir_path, time=15)
 
     print("[5/7] Validate FP32 model:")
     torch.backends.cudnn.deterministic = True
