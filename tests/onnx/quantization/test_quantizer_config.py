@@ -13,13 +13,16 @@ import pytest
 
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXCosMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXEmbeddingMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSinMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
@@ -27,6 +30,7 @@ from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBack
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
+from tests.cross_fw.test_templates.models import NNCFGraphRoPE
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -120,5 +124,19 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             conv_metatype=ONNXConvolutionMetatype,
             add_metatype=ONNXAddLayerMetatype,
             conv_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 1, 1, 1]}}, bias_attrs={}),
+            default_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @staticmethod
+    def get_rope_nncf_graph(with_transpose: bool) -> NNCFGraphRoPE:
+        return NNCFGraphRoPE(
+            matmul_metatype=ONNXMatMulMetatype,
+            concat_metatype=ONNXConcatMetatype,
+            sin_metatype=ONNXSinMetatype,
+            cos_metatype=ONNXCosMetatype,
+            const_metatype=ONNXConstantMetatype,
+            transpose_metatype=ONNXTransposeMetatype,
+            with_transpose=with_transpose,
+            matmul_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 5, 1]}}, bias_attrs={}),
             default_layer_attrs=ONNXLayerAttributes(),
         )

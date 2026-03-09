@@ -17,6 +17,7 @@ from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBacke
 from nncf.torch.graph.graph import PTNNCFGraph
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
+from tests.cross_fw.test_templates.models import NNCFGraphRoPE
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -81,5 +82,18 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             const_metatype=om.PTConstNoopMetatype,
             conv_metatype=om.PTConv2dMetatype,
             add_metatype=om.PTAddMetatype,
+            nncf_graph_cls=PTNNCFGraph,
+        )
+
+    @staticmethod
+    def get_rope_nncf_graph(with_transpose: bool) -> NNCFGraphRoPE:
+        return NNCFGraphRoPE(
+            matmul_metatype=om.PTMatMulMetatype,
+            concat_metatype=om.PTCatMetatype,
+            sin_metatype=om.PTSinMetatype,
+            cos_metatype=om.PTCosMetatype,
+            const_metatype=om.PTConstNoopMetatype,
+            transpose_metatype=om.PTTransposeMetatype,
+            with_transpose=with_transpose,
             nncf_graph_cls=PTNNCFGraph,
         )
