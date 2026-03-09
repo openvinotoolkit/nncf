@@ -2005,6 +2005,55 @@ def test_fp4_compression_with_backup_mode(
     assert act_num == num_compressed
 
 
+NVFP4_MatMul_REFERENCE_OUTPUT = np.array(
+    [
+        [
+            [
+                1.1840625,
+                3.8781247,
+                6.0718746,
+                9.1375,
+                12.570938,
+                14.572499,
+                17.49,
+                20.4,
+                23.31,
+                26.234999,
+                29.144999,
+                29.144999,
+                32.07,
+                34.98,
+                37.89,
+                40.8,
+            ]
+        ]
+    ]
+)
+
+
+def test_nvfp4_openvino_compilation_sanity():
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    input_data = np.ones([1, 1, 16], dtype=np.float32) * 0.01
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.NVFP4,
+        ratio=1.0,
+        all_layers=True,
+    )
+
+    has_nvfp4_weights = any(
+        op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.f4e2m1
+        for op in compressed_model.get_ops()
+    )
+    assert has_nvfp4_weights
+
+    compressed_compiled_model = ov.compile_model(compressed_model, device_name="CPU")
+    compressed_output = compressed_compiled_model(input_data)[0]
+
+    assert np.allclose(compressed_output, NVFP4_MatMul_REFERENCE_OUTPUT)
+
+
 def test_awq_fp16_overflow_fix(mocker):
     """
     Special model with low magnitude activations for testing the fix for overflow in AWQ fp16 quantization.
