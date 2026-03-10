@@ -1961,7 +1961,10 @@ def build_matmul_model() -> onnx.ModelProto:
     )
 
     graph = onnx.helper.make_graph([matmul], "matmul-model", [X], [A], [W_initializer])
-    model = onnx.helper.make_model(graph)
+
+    op = onnx.OperatorSetIdProto()
+    op.version = 19
+    model = onnx.helper.make_model(graph, opset_imports=[op], ir_version=11)
     return model
 
 
