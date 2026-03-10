@@ -137,8 +137,8 @@ def do_float_dequantization(compressed_weight: CompressedWeight, reduction_axis:
         original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
     :return: Decompressed weight tensor.
     """
-    if compressed_weight.second_degree_scale is not None:
-        scale = compressed_weight.scale * compressed_weight.second_degree_scale
+    if compressed_weight.global_scale is not None:
+        scale = compressed_weight.scale * compressed_weight.global_scale
     else:
         scale = compressed_weight.scale
 
@@ -165,7 +165,7 @@ def do_float_quantization(
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
     :param precomputed_scale: Optional precomputed scale.
     :return: CompressedWeight instance containing the compressed weight tensor, scale,
-        and optionally second degree scale or codebook with indexes.
+        and optionally global scale (for NVFP4 two-level scaling) or codebook with indexes.
     """
     if config.mode != CompressWeightsMode.NVFP4:
         return _do_float_quantization_single_scale(
@@ -183,7 +183,7 @@ def do_float_quantization(
     scale_config = WeightCompressionConfig(mode=CompressWeightsMode.FP8_E4M3)
     compressed_scale = _do_float_quantization_single_scale(compressed_weight.scale, scale_config)
     return CompressedWeight(
-        tensor=compressed_weight.tensor, scale=compressed_scale.tensor, second_degree_scale=compressed_scale.scale
+        tensor=compressed_weight.tensor, scale=compressed_scale.tensor, global_scale=compressed_scale.scale
     )
 
 
@@ -193,6 +193,18 @@ def _do_float_quantization_single_scale(
     reduction_axes: ReductionAxes | None = None,
     precomputed_scale: Tensor | None = None,
 ) -> CompressedWeight:
+    """
+    Computes quantization scale if not provided and performs corresponding weight quantization
+    for non-compound compression types that use a single level of scaling (as opposed to NVFP4
+    two-level scaling with global scale).
+
+    :param weight: Weight array to compress.
+    :param config: Weight compression configuration.
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics.
+    :param precomputed_scale: Optional precomputed scale tensor.
+    :return: CompressedWeight instance containing the compressed weight tensor and scale,
+        or codebook with indexes for CODEBOOK mode.
+    """
     assert not config.is_integer
 
     if config.group_size != -1 and reduction_axes is not None:

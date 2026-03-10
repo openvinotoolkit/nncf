@@ -268,9 +268,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         scale_const = create_ov_const_from_tensor(compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale")
 
-        if compressed_weight.second_degree_scale is not None:
+        if compressed_weight.global_scale is not None:
             sec_order_scale = create_ov_const_from_tensor(
-                compressed_weight.second_degree_scale, ov.Type.f32, name=f"{const_node_name}/second_order_scale"
+                compressed_weight.global_scale, ov.Type.f32, name=f"{const_node_name}/second_order_scale"
             )
             scale_const = convert_op(scale_const, ov.Type.f32)
 
