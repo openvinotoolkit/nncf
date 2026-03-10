@@ -13,7 +13,6 @@
 # https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py
 
 import math
-from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -117,7 +116,7 @@ class LlamaDecoderOnly(nn.Module):
         self.mlp_norm = LlamaRMSNorm(dim)
         self.mlp = LlamaMLP(dim)
 
-    def _attn(self, x: torch.Tensor, pos: torch.Tensor, past_kv: Optional[tuple[torch.Tensor, torch.Tensor]]):
+    def _attn(self, x: torch.Tensor, pos: torch.Tensor, past_kv: tuple[torch.Tensor, torch.Tensor] | None):
         """
         Code from LlamaAttention forward method. SDPA implementation similar to model.config._attn_implementation="SDPA"
         """
@@ -147,7 +146,7 @@ class LlamaDecoderOnly(nn.Module):
     def forward(
         self,
         x_embed: torch.Tensor,  # (B, T_new, C) embeddings only
-        past_kv: Optional[tuple[torch.Tensor, torch.Tensor]] = None,  # (B,H,Tpast,Hd)
+        past_kv: tuple[torch.Tensor, torch.Tensor] | None = None,  # (B,H,Tpast,Hd)
     ):
         # positions for the *new* tokens only
         past_len = 0 if past_kv is None else past_kv[0].size(2)

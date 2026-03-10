@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Any
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -70,7 +70,7 @@ class AABackendForTests(AccuracyControlAlgoBackend):
         return None
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int | None]:
         return None
 
     @staticmethod

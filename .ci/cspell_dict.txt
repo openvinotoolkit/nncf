@@ -72,6 +72,7 @@ ckpt
 clusterization
 cmap
 cnode
+codeofconduct
 coeffs
 concr
 confs

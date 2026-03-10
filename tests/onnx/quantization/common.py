@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import onnx
@@ -63,7 +63,7 @@ def _get_input_keys(original_model: onnx.ModelProto) -> str:
     return input_keys
 
 
-def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, length: Optional[int] = 10):
+def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, length: int | None = 10):
     keys = _get_input_keys(model)
     edge_info_mapping = get_edge_info_mapping(model)
 
@@ -94,7 +94,7 @@ def get_dataset_for_test(samples: list[tuple[np.ndarray, int]], input_name: str)
 
 
 class ModelToTest:
-    def __init__(self, model_name: str, input_shape: Optional[list[int]] = None):
+    def __init__(self, model_name: str, input_shape: list[int] | None = None):
         self.model_name = model_name
         self.path_ref_graph = self.model_name + ".dot"
         self.input_shape = input_shape

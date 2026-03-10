@@ -12,7 +12,6 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 import openvino as ov
 import torch
@@ -38,7 +37,7 @@ def validate_ov_model(
     ov_model: ov.Model,
     data_loader: torch.utils.data.DataLoader,
     validator: SegmentationValidator,
-    num_samples: Optional[int] = None,
+    num_samples: int | None = None,
 ) -> tuple[dict, int, int]:
     validator.seen = 0
     validator.jdict = []

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 
@@ -178,7 +177,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return (get_weight_quantization_axis(node, target_point.port_id),)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[int | None]:
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod

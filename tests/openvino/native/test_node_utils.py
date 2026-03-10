@@ -99,7 +99,7 @@ def test_get_const_value(precisions, as_ov_tensor):
     [
         [ConvNotBiasModel, True, "Conv"],
         [ConvModel, True, "Conv"],
-        # TODO: add group conv to node with bias
+        # TODO(l-bat): add group conv to node with bias
         # [DepthwiseConv3DModel, True, 'Conv3D'],
         # [DepthwiseConv4DModel, True, 'Conv4D'],
         # [DepthwiseConv5DModel, True, 'Conv5D'],

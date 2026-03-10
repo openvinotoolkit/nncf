@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -147,7 +147,7 @@ class LayerwiseEngine:
         graph: NNCFGraph,
         target_nodes: list[NNCFNode],
         dataset: Dataset,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer | None = None,
     ) -> LayerwiseIterator:
         """
         Create the iterator through the target nodes of the model.

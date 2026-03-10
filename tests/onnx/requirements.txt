@@ -2,8 +2,8 @@
 onnx
 onnxruntime
 openvino
+pandas
 pytest-cov
-pytest-dependency
 pytest-mock
 pytest-ordering
 pytest-xdist

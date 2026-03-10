@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import openvino as ov
@@ -44,7 +44,7 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         (OVMeanAbsMaxReducer, None, np.array([94.0])),
     ]
 
-    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+    def get_nncf_tensor(self, x: np.array, dtype: Dtype | None = None):
         if dtype is Dtype.INTEGER:
             x = x.astype(np.int64)
         if dtype is Dtype.FLOAT:
@@ -71,7 +71,7 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         ref_ = np.array(ref)
         return np.allclose(val_, ref_) and val_.shape == ref_.shape
 
-    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: tuple[int] | None = None):
         return np.squeeze(np.array(ref_tensor), axes)
 
     def cast_tensor(self, tensor, dtype: Dtype):

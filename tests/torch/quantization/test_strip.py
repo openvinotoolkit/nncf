@@ -164,7 +164,7 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
     levels = get_num_levels(level_low, level_high)
 
     ######################################################################
-    # TODO: Workaround for issue 105241 (remove after fix)
+    # TODO(AlexanderDokuchaev): Workaround for issue 105241 (remove after fix)
     get_quant_len = get_quant_len_by_range(input_range=input_range, levels=levels)
     input_low[(input_low > -get_quant_len / 2) & (input_low < 0)] = 0
     ######################################################################

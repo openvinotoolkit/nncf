@@ -7,7 +7,8 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
       time: "09:00"
       timezone: "Asia/Dubai"
     assignees:
@@ -18,7 +19,8 @@ updates:
   - package-ecosystem: pip
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
       time: "09:00"
       timezone: "Asia/Dubai"
     open-pull-requests-limit: 10
@@ -29,6 +31,8 @@ updates:
       # Frameworks
       - dependency-name: "onnx"
       - dependency-name: "onnxruntime"
+      - dependency-name: "onnx-ir"
+      - dependency-name: "onnxscript"
       - dependency-name: "openvino"
       - dependency-name: "torch"
       - dependency-name: "torchvision"

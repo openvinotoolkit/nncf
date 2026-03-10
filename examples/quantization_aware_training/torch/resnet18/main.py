@@ -22,7 +22,6 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms

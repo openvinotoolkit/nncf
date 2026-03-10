@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import openvino as ov
@@ -49,7 +49,7 @@ from nncf.tensor import TensorDataType
 InplaceInsertionFnType = Callable[[ov.Node, int, str], ov.Node]
 
 
-def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode | None:
     """
     Returns Add node which stores bias for node.
 
@@ -66,7 +66,7 @@ def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNod
 
 
 def is_node_with_bias(
-    node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[list[OVOpMetatype]] = None
+    node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: list[OVOpMetatype] | None = None
 ) -> bool:
     """
     Checks if the node has a bias or not.
@@ -171,7 +171,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     return weight_tensor
 
 
-def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> NNCFNode | None:
     """
     Returns node that represents bias constant in the NNCF graph, if it exists.
 
@@ -229,7 +229,7 @@ def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_
 
 def get_inplace_reduce_op(
     op: type[ov.Node],
-    reduction_axes: Optional[ReductionAxes],
+    reduction_axes: ReductionAxes | None,
     use_abs: bool,
     keep_dims: bool = True,
 ) -> InplaceInsertionFnType:
@@ -266,7 +266,7 @@ def get_inplace_reduce_op(
     return get_reduce_op
 
 
-def get_inplace_min_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
+def get_inplace_min_op(reduction_axes: ReductionAxes | None) -> InplaceInsertionFnType:
     """
     Returns inplace min function that adds reduce min node to a passed node.
 
@@ -278,7 +278,7 @@ def get_inplace_min_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsert
 
 
 def get_inplace_max_op(
-    reduction_axes: Optional[ReductionAxes], use_abs_max: bool, keep_dims: bool = True
+    reduction_axes: ReductionAxes | None, use_abs_max: bool, keep_dims: bool = True
 ) -> InplaceInsertionFnType:
     """
     Returns inplace max function that adds reduce max node to a passed node.
@@ -292,7 +292,7 @@ def get_inplace_max_op(
     return get_inplace_reduce_op(opset.reduce_max, reduction_axes, use_abs_max, keep_dims)
 
 
-def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
+def get_inplace_mean_op(reduction_axes: ReductionAxes | None) -> InplaceInsertionFnType:
     """
     Returns inplace mean function that adds reduce mean node to a passed node.
 
@@ -304,7 +304,7 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
 
 
 def var_op(
-    op_input: ov.Output, output_node_name: str, reduction_axes: Optional[np.ndarray] = None, keep_dims: bool = True
+    op_input: ov.Output, output_node_name: str, reduction_axes: np.ndarray | None = None, keep_dims: bool = True
 ) -> ov.Node:
     """
     Return a subgraph computing variance on a given output.
@@ -330,7 +330,7 @@ def var_op(
     return variance
 
 
-def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+def get_inplace_mean_var_op(reduction_axes: ReductionAxes | None = None) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes variance across given axes and then mean-reduces the result across
     the remaining axes.
@@ -359,7 +359,7 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
     return get_mean_var_reduce_op
 
 
-def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+def get_inplace_max_var_op(reduction_axes: ReductionAxes | None = None) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes variance across given axes and then max-reduces the result across
     the remaining axes.
@@ -388,7 +388,7 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
     return get_max_var_reduce_op
 
 
-def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max: bool) -> InplaceInsertionFnType:
+def get_inplace_mean_max_op(reduction_axes: ReductionAxes | None, use_abs_max: bool) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes maximum across given axes and then mean-reduces the result across
     the remaining axes.
@@ -588,7 +588,7 @@ def get_weighted_layer_attributes(
             "stride": tuple(node_attrs["strides"]),
             "dilations": node_attrs["dilations"],
             "transpose": ov_metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype],
-            # TODO: ticket 114378: unify pad attribute
+            # TODO(dlyakhov): ticket 114378: unify pad attribute
             "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
         }
         weights_shape = attrs["shape"]
@@ -672,7 +672,7 @@ def non_convertable_divide_op(a: ov.Node, b: ov.Node) -> ov.Node:
     return divide_node
 
 
-def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> op.Constant:
+def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: str | None = None) -> op.Constant:
     """
     Create an OpenVINO Constant node from the given tensor.
     :param x: Data tensor. Supports NumPy and OV tensor backends. If x backend is OV, the constant node is created
@@ -689,7 +689,7 @@ def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] =
 
 
 def create_ov_codebook_subgraph(
-    codebook: Tensor, indexes: Tensor, dtype: ov.Type, name: Optional[str] = None
+    codebook: Tensor, indexes: Tensor, dtype: ov.Type, name: str | None = None
 ) -> op.Constant:
     """
     Create an OpenVINO subgraph with gather from the given codebook and indexes tensors.

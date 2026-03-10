@@ -15,7 +15,6 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -43,9 +42,9 @@ from tests.post_training.pipelines.base import StatsFromOutput
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tests.post_training.pipelines.fx_modelling import FXAutoModelForCausalLM
 from tests.post_training.pipelines.fx_modelling import convert_and_export_with_cache
-from tools.memory_monitor import MemoryType
-from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import memory_monitor_context
+from tools.memory_monitor.memory_monitor import MemoryType
+from tools.memory_monitor.memory_monitor import MemoryUnit
+from tools.memory_monitor.memory_monitor import memory_monitor_context
 
 
 @dataclass
@@ -54,10 +53,10 @@ class WCTimeStats(StatsFromOutput):
     Contains statistics that are parsed from the stdout of Weight Compression tests.
     """
 
-    time_stat_collection: Optional[str] = None
-    time_mixed_precision: Optional[str] = None
-    time_awq: Optional[str] = None
-    time_apply_compression: Optional[str] = None
+    time_stat_collection: str | None = None
+    time_mixed_precision: str | None = None
+    time_awq: str | None = None
+    time_apply_compression: str | None = None
 
     STAT_NAMES = ["Stat. collection time", "Mixed-Precision search time", "AWQ time", "Apply Compression time"]
     VAR_NAMES = ["time_stat_collection", "time_mixed_precision", "time_awq", "time_apply_compression"]
@@ -84,7 +83,7 @@ class WCTimeStats(StatsFromOutput):
 
 @dataclass
 class WCNumCompressNodes(NumCompressNodes):
-    num_int4: Optional[int] = None
+    num_int4: int | None = None
 
     def get_data(self):
         data = super().get_data()
@@ -141,7 +140,7 @@ class LMWeightCompression(BaseTestPipeline):
             self.model_hf = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 torch_dtype=torch.float32,
-                device_map="cpu",  # TODO (kshpv): add support of 'cuda', when supported
+                device_map="cpu",  # TODO(AlexanderDokuchaev): add support of 'cuda', when supported
             )
             self.model = self.model_hf
             if self.backend == BackendType.FX_TORCH:

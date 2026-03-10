@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from itertools import islice
-from typing import Optional
 
 import openvino as ov
 
@@ -138,7 +137,7 @@ def apply_algorithm_if_bodies(
     parent_dataset: Dataset,
     subset_size: int,
     current_model_num: int,
-    parent_statistic_points: Optional[StatisticPointsContainer] = None,
+    parent_statistic_points: StatisticPointsContainer | None = None,
 ) -> tuple[ov.Model, int]:
     """
     Applies an algorithm recursively to each bodies of If node.

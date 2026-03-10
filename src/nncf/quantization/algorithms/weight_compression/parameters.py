@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional
 
 from nncf.tensor import Tensor
 
@@ -27,10 +26,10 @@ class CompressedWeight:
     :param codebook: The codebook (LUT) for the weight compression. Applicable for vector quantization
     """
 
-    tensor: Optional[Tensor] = None
-    scale: Optional[Tensor] = None
-    zero_point: Optional[Tensor] = None
-    codebook: Optional[Tensor] = None
+    tensor: Tensor | None = None
+    scale: Tensor | None = None
+    zero_point: Tensor | None = None
+    codebook: Tensor | None = None
 
     def is_codebook(self):
         """

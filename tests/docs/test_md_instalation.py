@@ -47,7 +47,7 @@ def _parse_last_versions_from_md() -> dict[str, str]:
 
     | NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
     |-----------|------------|----------|----------|------------|--------|
-    | `develop` | `2025.2.0` | `2.7.1`  | `1.17.0` | `2.15.1`   | `3.10` |
+    | `develop` | `2025.2.0` | `2.7.1`  | `1.20.1` | `2.15.1`   | `3.10` |
 
     :return: dict with versions for frameworks and python
     """

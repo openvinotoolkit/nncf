@@ -9,9 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from typing import Optional
-
-import pandas as pd
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -43,9 +40,10 @@ class DebugInterface:
     def add_noises(self, layer_name: str, value: float):
         self._noise_per_layer[layer_name] = value
 
-    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot", "pandas"])
     def dump_data(self):
         import matplotlib.pyplot as plt
+        import pandas as pd
 
         if not self._noise_per_layer:
             return
@@ -142,7 +140,7 @@ class LoraCorrectionAlgorithm:
         reduction_axes: tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
-        is_debug: Optional[bool] = False,
+        is_debug: bool | None = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.

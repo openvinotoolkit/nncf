@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import torch
 
@@ -95,7 +94,7 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
     )
 
 
-def get_nncf_network(model: torch.nn.Module, input_shape: Optional[list[int]] = None):
+def get_nncf_network(model: torch.nn.Module, input_shape: list[int] | None = None):
     if input_shape is None:
         input_shape = [1, 3, 32, 32]
     model = model.eval()

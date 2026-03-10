@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 import numpy as np
 import torch
@@ -55,7 +55,7 @@ class StaticDatasetMock:
 
 
 def get_static_dataset(
-    input_size: tuple, transform_fn: Callable, fn_to_type: Optional[Callable] = None, length: int = 1
+    input_size: tuple, transform_fn: Callable, fn_to_type: Callable | None = None, length: int = 1
 ) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.

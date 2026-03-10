@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: 3.10.14
       - name: Install uv
-        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
@@ -65,13 +65,33 @@ jobs:
         run: column -s, -t < tmp/results.csv || echo "no file"
       - name: Upload artifact
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv
           if-no-files-found: ignore
-      - name: Test Summary
+      - name: Upload test results
         if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: weight-compression-pytest-results-${{ matrix.group }}
+          path: pytest-results.xml
+          retention-days: 1
+
+  weight-compression-summary:
+    name: Weight Compression Summary
+    runs-on: ubuntu-latest
+    if: ${{ always() && !cancelled() && needs.examples-cpu.result != 'cancelled' }}
+    needs: examples-cpu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/scripts/pytest_md_summary.py
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          pattern: weight-compression-pytest-results-*
+          path: test-results
+      - name: Test Summary
         run: |
           pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py pytest-results.xml >> "$GITHUB_STEP_SUMMARY"
+          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"

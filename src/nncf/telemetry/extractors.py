@@ -12,9 +12,9 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
-SerializableData = Union[str, Enum, bool]
+SerializableData = str | Enum | bool
 
 
 @dataclass
@@ -26,8 +26,8 @@ class CollectedEvent:
     """
 
     name: str
-    data: Optional[SerializableData] = None  # GA limitations
-    int_data: Optional[int] = None
+    data: SerializableData | None = None  # GA limitations
+    int_data: int | None = None
 
 
 class TelemetryExtractor(ABC):
@@ -39,7 +39,7 @@ class TelemetryExtractor(ABC):
         self._argname = argname
 
     @property
-    def argname(self) -> Optional[str]:
+    def argname(self) -> str | None:
         return self._argname
 
     @abstractmethod

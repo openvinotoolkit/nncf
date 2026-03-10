@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, TypeVar, Union
+from typing import Any, Callable, TypeVar
 
-TObj = TypeVar("TObj", bound=Union[Callable[..., Any], type])
+TObj = TypeVar("TObj", bound=Callable[..., Any] | type)
 
 API_MARKER_ATTR = "_nncf_api_marker"
 CANONICAL_ALIAS_ATTR = "_nncf_canonical_alias"

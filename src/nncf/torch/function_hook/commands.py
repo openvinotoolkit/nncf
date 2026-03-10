@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import torch
 from torch import nn
@@ -31,7 +30,7 @@ class PT2InsertionCommand(Command):
         target_points: list[PTTargetPoint],
         hook_module: nn.Module,
         *,
-        handle_storage: Optional[list[RemovableHookHandle]] = None,
+        handle_storage: list[RemovableHookHandle] | None = None,
     ):
         """
         :param target_points: The list of target points for the command.

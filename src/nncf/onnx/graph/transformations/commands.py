@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 
@@ -22,7 +21,7 @@ from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParame
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, port_id: Optional[int] = None):
+    def __init__(self, target_type: TargetType, target_node_name: str, port_id: int | None = None):
         """
         Constructor.
 

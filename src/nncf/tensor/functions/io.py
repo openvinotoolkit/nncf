@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Optional
 
 from nncf.common.utils.os import fail_if_symlink
 from nncf.tensor import Tensor
@@ -24,7 +23,7 @@ def load_file(
     file_path: Path,
     *,
     backend: TensorBackend,
-    device: Optional[TensorDeviceType] = None,
+    device: TensorDeviceType | None = None,
 ) -> dict[str, Tensor]:
     """
     Loads a file containing tensor data and returns a dictionary of tensors.

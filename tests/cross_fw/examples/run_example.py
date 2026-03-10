@@ -15,7 +15,6 @@ import sys
 import tarfile
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Union
 
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
@@ -333,7 +332,7 @@ def set_torch_cuda_seed(seed: int = 42):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def quantization_aware_training_torch_anomalib(data: Union[str, None]):
+def quantization_aware_training_torch_anomalib(data: str | None):
     from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
     from examples.quantization_aware_training.torch.anomalib.main import DOWNLOAD_INFO
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
