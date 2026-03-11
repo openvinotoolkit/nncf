@@ -182,17 +182,19 @@ class TemplateTestBCAlgorithm:
         collected_stat_inputs_map = getattr(bc_algo, "_collected_stat_inputs_map")
         assert collected_stat_inputs_map == ref_stat_inputs_map
 
-    def test_update_bias_concat_with_input(self, tmpdir):
+    @pytest.mark.parametrize("mode", ["cat", "add"])
+    def test_update_bias_concat_with_input(self, mode, tmpdir):
         """
-        Test bias correction on a model where conv output is concatenated with
-        the original model input. This exposes a bug where the subgraph extraction
-        does not properly handle Concat nodes whose inputs come from outside the
-        subgraph boundary, resulting in an extracted model with more inputs than
-        the feed_dicts provides.
+        Test bias correction on a model where conv output is combined with the
+        original model input via a multi-input node (Concat or elementwise Add).
+        This exposes a bug where the subgraph extraction does not properly handle
+        multi-activation-input nodes whose inputs come from outside the subgraph
+        boundary, resulting in an extracted model with more inputs than the
+        feed_dicts provides.
         """
-        model_cls = ConvConcatWithInputModel
-        model = self.backend_specific_model(model_cls(), tmpdir)
-        dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
+        model = ConvConcatWithInputModel(mode=mode)
+        model = self.backend_specific_model(model, tmpdir)
+        dataset = Dataset(self.get_dataset(ConvConcatWithInputModel.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
         graph = build_graph(model)
