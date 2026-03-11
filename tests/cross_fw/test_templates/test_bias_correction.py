@@ -21,6 +21,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModel
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
@@ -180,3 +181,19 @@ class TemplateTestBCAlgorithm:
 
         collected_stat_inputs_map = getattr(bc_algo, "_collected_stat_inputs_map")
         assert collected_stat_inputs_map == ref_stat_inputs_map
+
+    def test_update_bias_concat_with_input(self, tmpdir):
+        """
+        Test bias correction on a model where conv output is concatenated with
+        the original model input. This exposes a bug where the subgraph extraction
+        does not properly handle Concat nodes whose inputs come from outside the
+        subgraph boundary, resulting in an extracted model with more inputs than
+        the feed_dicts provides.
+        """
+        model_cls = ConvConcatWithInputModel
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
+
+        quantization_algorithm = self.get_quantization_algorithm()
+        graph = build_graph(model)
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)

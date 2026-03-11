@@ -207,6 +207,38 @@ class MultipleConvTestModel(nn.Module):
         return self.conv_6(x)
 
 
+class ConvConcatWithInputModel(nn.Module):
+    """
+    Model where conv output is concatenated with the original model input.
+    This triggers a bug in bias correction subgraph extraction when the Concat node
+    has an input from outside the subgraph that is not properly handled.
+
+    Graph structure:
+        input ──→ conv1 ──→ relu ──→ cat([relu_out, input], dim=1) ──→ conv2
+                                        ↑                                 |
+        input ──────────────────────────┘                                 ↓
+                                                                       output
+    """
+
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.conv_1 = create_conv(1, 2, 1)
+            self.conv_1.weight.data = torch.randn([2, 1, 1, 1])
+            self.conv_1.bias.data = torch.randn([2])
+            self.conv_2 = create_conv(3, 2, 1)
+            self.conv_2.weight.data = torch.randn([2, 3, 1, 1])
+            self.conv_2.bias.data = torch.randn([2])
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_cat = torch.cat([x_1, x], dim=1)
+        return self.conv_2(x_cat)
+
+
 class LinearMultiShapeModel(nn.Module):
     INPUT_SIZE = [1, 3, 4, 2]
 

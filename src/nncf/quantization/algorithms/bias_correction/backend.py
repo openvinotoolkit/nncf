@@ -202,3 +202,17 @@ class BiasCorrectionAlgoBackend(ABC):
         :param target_point: TargetPoint instance.
         :return: Port id from the given backend-specific target point
         """
+
+    @staticmethod
+    def is_node_with_multiple_activation_inputs(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        """
+        Checks whether the node has more than one activation (non-const) input.
+        This is used during subgraph output collection to detect nodes like Concat
+        or elementwise ops (Add/Mul) with two activation operands that cannot be
+        safely included in the extracted subgraph.
+
+        :param node: NNCFNode to check.
+        :param nncf_graph: NNCFGraph instance.
+        :return: True if the node has multiple activation inputs, False otherwise.
+        """
+        return False

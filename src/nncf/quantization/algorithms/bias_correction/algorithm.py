@@ -243,6 +243,16 @@ class BiasCorrection(Algorithm):
                 continue
             visited_nodes.add(node)
 
+            # If the node has multiple activation (non-const) inputs, including
+            # it in the subgraph would require handling external edges during model
+            # extraction. For example, a Concat node receiving both the subgraph
+            # output and the model input directly, or an elementwise Add/Mul whose
+            # both operands are activations.
+            # Stop traversal entirely and return an empty list so the caller falls
+            # back to the simple next-node based recovery logic.
+            if self._backend_entity.is_node_with_multiple_activation_inputs(node, nncf_graph):
+                return []
+
             input_id = (node.node_name, edge.input_port_id)
             output_id = (edge.from_node.node_name, edge.output_port_id)
 
@@ -306,6 +316,13 @@ class BiasCorrection(Algorithm):
             if node in visited_nodes:
                 continue
             visited_nodes.add(node)
+
+            # Do not propagate upward through nodes with multiple activation
+            # inputs (e.g. Concat, elementwise with two activations) — they
+            # cannot be safely included in the extracted subgraph.
+            # if self._backend_entity.is_node_with_multiple_activation_inputs(node, nncf_graph):
+            #    continue
+
             edges_queue.extend(nncf_graph.get_input_edges(node))
         return subgraph_input_ids
 
