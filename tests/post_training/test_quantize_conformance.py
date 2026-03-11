@@ -21,6 +21,7 @@ import pandas as pd
 import pytest
 import yaml
 from packaging import version
+from torchao import utils as utils_ao
 
 import nncf
 from tests.cross_fw.shared.openvino_version import get_openvino_version
@@ -31,6 +32,9 @@ from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import ErrorReason
 from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import RunInfo
+
+# Fix memory leak in utils_ao._assert_and_get_unique_device
+utils_ao._assert_and_get_unique_device = utils_ao._assert_and_get_unique_device.__wrapped__
 
 DATA_ROOT = Path(__file__).parent / "data"
 
