@@ -69,7 +69,7 @@ torchvision/vit_b_16_backend_CUDA_FX_TORCH:
 torchvision/vit_b_16_backend_OV_QUANTIZER_NNCF:
   metric_value: 0.80922
 torchvision/vit_b_16_backend_OV_QUANTIZER_AO:
-  metric_value: 0.2429
+  metric_value: 0.24638
 torchvision/swin_v2_s_backend_FP32:
   metric_value: 0.83712
 torchvision/swin_v2_s_backend_OV:
