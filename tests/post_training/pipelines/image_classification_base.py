@@ -45,7 +45,7 @@ class ImageClassificationBase(PTQTestPipeline):
 
     def prepare_calibration_dataset(self):
         dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=0, shuffle=False)
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
@@ -111,7 +111,7 @@ class ImageClassificationBase(PTQTestPipeline):
 
     def _validate(self) -> None:
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=0, shuffle=False)
 
         dataset_size = len(val_loader)
 

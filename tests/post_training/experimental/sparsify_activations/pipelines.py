@@ -289,7 +289,7 @@ class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassific
         )
         indices = np.random.default_rng(42).choice(len(val_dataset), size=subset_size, replace=False)
         subset = torch.utils.data.Subset(val_dataset, indices=indices)
-        loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)
+        loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=0, shuffle=False)
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
     def save_compressed_model(self):
