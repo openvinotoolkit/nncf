@@ -221,5 +221,3 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
         return super().test_verify_collected_stat_inputs_map(model_cls, ref_stat_inputs_map, tmpdir)
 
-    def test_update_bias_concat_with_input(self, mode, tmpdir):
-        return super().test_update_bias_concat_with_input(mode, tmpdir)
