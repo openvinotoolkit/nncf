@@ -52,7 +52,7 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def model_extraction_command(
         input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> PTModelExtractionCommand:
-        return PTModelExtractionCommand([inp_id[0] for inp_id in input_ids], [out_id[0] for out_id in output_ids])
+        return PTModelExtractionCommand(list(input_ids), list(output_ids))
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> FXApplyTransformationCommand:

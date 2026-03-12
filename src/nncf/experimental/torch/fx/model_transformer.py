@@ -102,21 +102,23 @@ class FXModelTransformer(ModelTransformer):
         :return: Returns a submodel extracted from the given model by the given transformation.
         """
         transformation = transformations[-1]
-        stop_nodes = set(transformation.input_node_names + transformation.output_node_names)
+        input_node_names = [name for name, _ in transformation.input_ids]
+        output_node_names = [name for name, _ in transformation.output_ids]
+        stop_nodes = set(input_node_names + output_node_names)
         visited = set()
 
-        for node_name in transformation.input_node_names:
+        for node_name in input_node_names:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
             target_inputs = node.all_input_nodes[1:]
-            if node.name not in transformation.output_node_names:
+            if node.name not in output_node_names:
                 target_inputs += list(node.users)
             FXModelTransformer._traverse_graph(target_inputs, stop_nodes, visited)
 
-        for node_name in transformation.output_node_names:
+        for node_name in output_node_names:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
-            if node.name not in transformation.input_node_names:
+            if node.name not in input_node_names:
                 FXModelTransformer._traverse_graph(node.all_input_nodes, stop_nodes, visited)
 
         extracted_graph = torch.fx.Graph()
@@ -134,7 +136,7 @@ class FXModelTransformer(ModelTransformer):
                 continue
             value_remap[node] = extracted_graph.node_copy(node, remap_fn)
 
-        for input_name in transformation.input_node_names:
+        for input_name, _ in transformation.input_ids:
             node_with_input = get_graph_node_by_name(extracted_graph, input_name)
             with extracted_graph.inserting_before(node_with_input):
                 graph_input_name = input_name + "_input"
@@ -151,7 +153,7 @@ class FXModelTransformer(ModelTransformer):
         # Merge new output with the original output in case
         # the original output is requested in the extracted graph.
         nodes_with_output = []
-        for name in transformation.output_node_names:
+        for name, _ in transformation.output_ids:
             nodes_with_output.append(
                 name if name in visited_outputs_names else get_graph_node_by_name(extracted_graph, name)
             )

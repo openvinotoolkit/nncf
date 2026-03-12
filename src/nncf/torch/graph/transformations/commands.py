@@ -182,16 +182,19 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
 
 class PTModelExtractionCommand(PTCommand):
     """
-    Extracts submodel based on the sub-model input and output names
+    Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, input_node_names: list[str], output_node_names: list[str]):
+    def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
         """
-        :param node_name: Node name that will be extracted.
+        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.input_node_names = input_node_names
-        self.output_node_names = output_node_names
+        self.input_ids = input_ids
+        self.output_ids = output_ids
 
 
 class PTBiasCorrectionCommand(PTTransformationCommand):
