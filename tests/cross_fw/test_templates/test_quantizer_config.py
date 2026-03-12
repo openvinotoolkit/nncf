@@ -42,6 +42,7 @@ from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from tests.cross_fw.test_templates.models import NNCFGraphRoPE
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -469,12 +470,34 @@ class TemplateTestQuantizerConfig:
         state = self._get_q_setup(constant_branch_nncf_graph.nncf_graph)
         assert state == self.REF_CONSTANT_BRANCH_SETUP_STATE
 
-    def _get_q_setup(self, nncf_graph):
-        min_max_algo = MinMaxQuantization()
+    @staticmethod
+    @abstractmethod
+    def get_rope_nncf_graph(with_transpose: bool) -> NNCFGraphRoPE:
+        pass
+
+    REF_ROPE_SETUP_STATE = {
+        "quantization_points": {},
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {},
+    }
+
+    @pytest.mark.parametrize("with_transpose", [True, False])
+    def test_rope_model_qconfig(self, with_transpose):
+        rope_nncf_graph = self.get_rope_nncf_graph(with_transpose)
+        state = self._get_q_setup(rope_nncf_graph.nncf_graph, model_type=ModelType.TRANSFORMER)
+        assert state == self.REF_ROPE_SETUP_STATE
+
+    def _get_q_setup(self, nncf_graph, model_type=None):
+        min_max_algo = MinMaxQuantization(model_type=model_type) if model_type is not None else MinMaxQuantization()
         min_max_algo._backend_entity = self.get_algo_backend()
         inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
+        ignored_patterns = GraphPattern()
+        if model_type is not None:
+            ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
+                backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=model_type
+            )
         return min_max_algo._get_quantizer_setup(
-            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=ignored_patterns
         ).get_state()
 
     @pytest.mark.parametrize(

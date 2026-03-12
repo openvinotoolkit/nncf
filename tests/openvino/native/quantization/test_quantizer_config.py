@@ -14,14 +14,17 @@ import pytest
 from nncf.common.utils.backend import BackendType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVCosMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSinMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVTransposeMetatype
@@ -29,6 +32,7 @@ from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBa
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
+from tests.cross_fw.test_templates.models import NNCFGraphRoPE
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -98,6 +102,19 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             conv_metatype=OVConvolutionMetatype,
             add_metatype=OVAddMetatype,
             conv_layer_attrs=OVLayerAttributes({}),
+        )
+
+    @staticmethod
+    def get_rope_nncf_graph(with_transpose: bool) -> NNCFGraphRoPE:
+        return NNCFGraphRoPE(
+            matmul_metatype=OVMatMulMetatype,
+            concat_metatype=OVConcatMetatype,
+            sin_metatype=OVSinMetatype,
+            cos_metatype=OVCosMetatype,
+            const_metatype=OVConstantMetatype,
+            transpose_metatype=OVTransposeMetatype,
+            with_transpose=with_transpose,
+            matmul_layer_attrs=OVLayerAttributes({}),
         )
 
     def test_self_attn_output_with_read_value(self):

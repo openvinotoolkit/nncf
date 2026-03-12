@@ -590,3 +590,65 @@ class NNCFGraphConstantBranchWithWeightedNode:
         ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)
+
+
+class NNCFGraphRoPE:
+    #       Original graph
+    #          Input_1  Const_1
+    #             |    /
+    #           MatMul_1
+    #             |
+    #        [Transpose_1]
+    #             |
+    #           Concat_1
+    #           /     \
+    #        Sin_1   Cos_1
+    #          |       |
+    #       Output_1 Output_2
+
+    def __init__(
+        self,
+        matmul_metatype,
+        concat_metatype,
+        sin_metatype,
+        cos_metatype,
+        const_metatype,
+        transpose_metatype=None,
+        with_transpose: bool = False,
+        matmul_layer_attrs=None,
+        default_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Const_1", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("MatMul_1", matmul_metatype, layer_attributes=matmul_layer_attrs),
+            NodeWithType("Concat_1", concat_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Sin_1", sin_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Cos_1", cos_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Output_2", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Input_1", "MatMul_1"),
+            ("Const_1", "MatMul_1"),
+        ]
+
+        if with_transpose:
+            assert transpose_metatype is not None
+            nodes.append(NodeWithType("Transpose_1", transpose_metatype, layer_attributes=default_layer_attrs))
+            node_edges += [
+                ("MatMul_1", "Transpose_1"),
+                ("Transpose_1", "Concat_1"),
+            ]
+        else:
+            node_edges.append(("MatMul_1", "Concat_1"))
+
+        node_edges += [
+            ("Concat_1", "Sin_1"),
+            ("Concat_1", "Cos_1"),
+            ("Sin_1", "Output_1"),
+            ("Cos_1", "Output_2"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)
