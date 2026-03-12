@@ -243,7 +243,6 @@ class BiasCorrection(Algorithm):
                 continue
             visited_nodes.add(node)
 
-
             input_id = (node.node_name, edge.input_port_id)
             output_id = (edge.from_node.node_name, edge.output_port_id)
 
@@ -262,7 +261,7 @@ class BiasCorrection(Algorithm):
             # both operands are activations.
             # Stop traversal entirely and return an empty list so the caller falls
             # back to the simple next-node based recovery logic.
-            #if self._backend_entity.is_node_with_multiple_activation_inputs(node, nncf_graph):
+            # if self._backend_entity.is_node_with_multiple_activation_inputs(node, nncf_graph):
             #    return []
 
             edges_queue.extend(nncf_graph.get_output_edges(node))

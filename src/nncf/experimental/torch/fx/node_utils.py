@@ -102,3 +102,16 @@ def get_node_args(node: torch.fx.Node) -> tuple[Any, ...]:
     if node.target == torch.ops.aten.cat.default:
         return node.args[0]
     return node.args
+
+
+def set_node_args(node: torch.fx.Node, args: tuple[Any, ...]) -> None:
+    """
+    Correctly sets arguments of the given node.
+
+    :param node: The given node.
+    :param args: The arguments to set.
+    """
+    if node.target == torch.ops.aten.cat.default:
+        node.args = (list(args),) + node.args[1:]
+    else:
+        node.args = args

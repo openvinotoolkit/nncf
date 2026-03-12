@@ -17,6 +17,8 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_node_args
+from nncf.experimental.torch.fx.node_utils import set_node_args
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 
 
@@ -136,19 +138,19 @@ class FXModelTransformer(ModelTransformer):
                 continue
             value_remap[node] = extracted_graph.node_copy(node, remap_fn)
 
-        for input_name, _ in transformation.input_ids:
+        for input_name, input_port_id in transformation.input_ids:
             node_with_input = get_graph_node_by_name(extracted_graph, input_name)
             with extracted_graph.inserting_before(node_with_input):
-                graph_input_name = input_name + "_input"
+                graph_input_name = f"{input_name}_input_{input_port_id}"
                 graph_input = extracted_graph.create_node(
                     op="placeholder",
                     target=graph_input_name,
                     name=graph_input_name,
                 )
 
-            args = list(node_with_input.args)
-            args[0] = graph_input
-            node_with_input.args = tuple(args)
+            args = list(get_node_args(node_with_input))
+            args[input_port_id] = graph_input
+            set_node_args(node_with_input, tuple(args))
 
         # Merge new output with the original output in case
         # the original output is requested in the extracted graph.

@@ -28,7 +28,8 @@ from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
-#from whowhatbench import Evaluator
+
+# from whowhatbench import Evaluator
 Evaluator = None
 
 import nncf
