@@ -191,14 +191,14 @@ $$
 FQ(x) = \frac{\left\lfloor (x - \mathrm{input\\_low}) \cdot s - ZP \right\rceil}{s}
 $$
 
-where $ZP = \lfloor -input\_low \cdot s \rceil$. The STE treats each rounding as identity plus a constant residual: $\lfloor u \rceil = u + \epsilon$ where $\epsilon = \lfloor u \rceil - u$ is held constant during differentiation. Applying this to $ZP$ and then to the outer rounding, the two $input\_low \cdot s$ contributions cancel and we obtain:
+where $ZP = \lfloor -input\\_low \cdot s \rceil$. The STE treats each rounding as identity plus a constant residual: $\lfloor u \rceil = u + \epsilon$ where $\epsilon = \lfloor u \rceil - u$ is held constant during differentiation. Applying this to $ZP$ and then to the outer rounding, the two $input\\_low \cdot s$ contributions cancel and we obtain:
 
 $$
 FQ(x) \approx \frac{x \cdot s + \epsilon}{s}
 = x + \frac{\epsilon}{s}
 $$
 
-where $\epsilon$ is the combined residual from both rounding operations. The $x$ term is independent of $input\_range$; the $\epsilon / s$ term depends on it through $1/s = input\_range / (levels - 1)$, with $\epsilon$ treated as constant:
+where $\epsilon$ is the combined residual from both rounding operations. The $x$ term is independent of $input\\_range$; the $\epsilon / s$ term depends on it through $1/s = input\\_range / (levels - 1)$, with $\epsilon$ treated as constant:
 
 $$
 \frac{\partial FQ}{\partial \mathrm{input\\_range}}
