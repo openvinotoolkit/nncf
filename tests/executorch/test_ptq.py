@@ -18,6 +18,8 @@ import pytest
 import torch
 import torch.fx
 import torchvision.models as models
+from executorch.backends.openvino.quantizer.quantizer import OpenVINOQuantizer
+from executorch.backends.openvino.quantizer.quantizer import QuantizationMode
 from executorch.backends.xnnpack.quantizer import xnnpack_quantizer
 from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
 from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
@@ -37,7 +39,6 @@ from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
-from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from nncf.tensor.definitions import TensorDataType
@@ -51,7 +52,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
-FX_QUANTIZED_DIR_NAME = TEST_ROOT / "torch" / "data" / "fx"
+FX_QUANTIZED_DIR_NAME = TEST_ROOT / "executorch" / "data"
 
 
 @dataclass
@@ -96,22 +97,22 @@ TEST_MODELS_QUANIZED = (
     (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}, {}),
     (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
     (
         torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
-        {"model_type": nncf.ModelType.TRANSFORMER},
+        {"mode": QuantizationMode.INT8_TRANSFORMER},
         {"smooth_quant": True},
     ),
 )
@@ -167,7 +168,7 @@ def test_quantized_model(
     )
 
     # Uncomment to visualize torch fx graph
-    # from tests.torch.fx.helpers import visualize_fx_model
+    # from tests.torch2.fx.helpers import visualize_fx_model
     # visualize_fx_model(quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
@@ -177,9 +178,9 @@ def test_quantized_model(
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     # Uncomment to visualize reference graphs
-    # from torch.ao.quantization.quantize_pt2e import convert_pt2e
-    # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
-    # from tests.torch.fx.helpers import visualize_fx_model
+    # from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
+    # from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
+    # from tests.torch2.fx.helpers import visualize_fx_model
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)
     # ao_quantized_model = convert_pt2e(prepared_model)
