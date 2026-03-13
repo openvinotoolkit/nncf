@@ -384,6 +384,21 @@ class AdvancedLoraCorrectionParameters:
 
 @api()
 @dataclass
+class AdvancedHQQParameters:
+    """
+    Contains advanced parameters for the HQQ (Half-Quadratic Quantization) algorithm.
+
+    :param num_iterations: Number of alternating optimization iterations used to jointly
+        refine scale and zero point. More iterations improve quality at the cost of runtime.
+        Defaults to 20.
+    :type num_iterations: int
+    """
+
+    num_iterations: int = 20
+
+
+@api()
+@dataclass
 class AdvancedAdaptiveCodebookParameters:
     """
     Contains advanced parameters for adaptive codebook estimation.
@@ -423,6 +438,8 @@ class AdvancedCompressionParameters:
     :type scale_estimation_params: AdvancedScaleEstimationParameters
     :param gptq_params: Advanced parameters for GPTQ algorithm.
     :type gptq_params: AdvancedGPTQParameters
+    :param hqq_params: Advanced parameters for HQQ algorithm.
+    :type hqq_params: AdvancedHQQParameters
     :param lora_correction_params: Advanced parameters for Lora Correction algorithm.
     :type lora_correction_params: AdvancedLoraCorrectionParameters
     :param backend_params: Backend-specific parameters.
@@ -443,6 +460,7 @@ class AdvancedCompressionParameters:
         default_factory=AdvancedScaleEstimationParameters
     )
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
+    hqq_params: AdvancedHQQParameters = field(default_factory=AdvancedHQQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
     codebook: TTensor | None = None

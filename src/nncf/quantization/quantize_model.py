@@ -422,6 +422,7 @@ def compress_weights(
     scale_estimation: bool | None = None,
     gptq: bool | None = None,
     lora_correction: bool | None = None,
+    hqq: bool | None = None,
     backup_mode: BackupMode | None = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: AdvancedCompressionParameters | None = None,
@@ -478,6 +479,11 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
+    :param hqq: Indicates whether to use the HQQ (Half-Quadratic Quantization) algorithm.
+        HQQ is a data-free method that optimizes scale and zero-point via alternating least-squares,
+        producing lower quantization error than standard min-max initialization.
+        Currently supported for OpenVINO backend only.
+    :type hqq: bool
     :param backup_mode: Defines a backup mode for mixed-precision weight compression.
         NONE stands for original floating-point precision of the model weights.
             In this mode, weights are retained in their original precision without any quantization.
@@ -522,7 +528,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {"gptq": gptq, "lora_correction": lora_correction}
+        options = {"gptq": gptq, "lora_correction": lora_correction, "hqq": hqq}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -571,7 +577,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {"gptq": gptq, "lora_correction": lora_correction}
+        options = {"gptq": gptq, "lora_correction": lora_correction, "hqq": hqq}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -644,7 +650,7 @@ def compress_weights(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {"gptq": gptq, "lora_correction": lora_correction}
+        options = {"gptq": gptq, "lora_correction": lora_correction, "hqq": hqq}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"ONNX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
@@ -669,6 +675,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
+        hqq,
         ignored_scope,
         sensitivity_metric,
         backup_mode,
@@ -685,6 +692,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
+        hqq,
         ignored_scope,
         sensitivity_metric,
         backup_mode,

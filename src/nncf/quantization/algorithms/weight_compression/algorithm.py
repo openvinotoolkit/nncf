@@ -45,6 +45,7 @@ from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
+from nncf.quantization.algorithms.weight_compression.hqq import HQQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
@@ -81,6 +82,7 @@ def get_weight_compression_configuration(
     scale_estimation: bool | None = None,
     gptq: bool | None = None,
     lora_correction: bool | None = None,
+    hqq: bool | None = None,
     ignored_scope: IgnoredScope | None = None,
     sensitivity_metric: SensitivityMetric | None = None,
     backup_mode: BackupMode | None = None,
@@ -120,6 +122,7 @@ def get_weight_compression_configuration(
         "scale_estimation": scale_estimation or False,
         "gptq": gptq or False,
         "lora_correction": lora_correction or False,
+        "hqq": hqq or False,
         "ignored_scope": ignored_scope or IgnoredScope(),
         "sensitivity_metric": (
             (
@@ -146,6 +149,7 @@ def check_user_compression_configuration(
     scale_estimation: bool | None,
     gptq: bool | None,
     lora_correction: bool | None,
+    hqq: bool | None,
     ignored_scope: IgnoredScope | None,
     sensitivity_metric: SensitivityMetric | None,
     backup_mode: BackupMode | None,
@@ -175,6 +179,7 @@ def check_user_compression_configuration(
             "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
+            "hqq": hqq,
             "backup_mode": backup_mode,
         }
         unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
@@ -257,6 +262,10 @@ def check_user_compression_configuration(
             requires a dataset, but it's not provided."
         raise nncf.ValidationError(msg)
 
+    if hqq and gptq:
+        msg = "Simultaneous use of HQQ and GPTQ algorithms is not supported. Select one of them."
+        raise nncf.ParameterNotSupportedError(msg)
+
     if lora_correction and compression_format in [
         CompressionFormat.FQ,
         CompressionFormat.FQ_LORA,
@@ -311,6 +320,7 @@ class WeightCompression(Algorithm):
         gptq: bool,
         lora_correction: bool,
         backup_mode: BackupMode,
+        hqq: bool = False,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters | None = None,
     ):
@@ -355,6 +365,10 @@ class WeightCompression(Algorithm):
             INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
             MXFP8_E4M3 stands for MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale.
             FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.
+        :param hqq: determines whether to use the HQQ (Half-Quadratic Quantization) algorithm.
+            HQQ is a data-free method that optimizes scale and zero-point jointly via alternating
+            least-squares, typically producing lower quantization error than standard min-max
+            initialization, especially for 4-bit group-wise compression.
         :param compression_format: Describes the format in which the model is saved after weight compression.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
@@ -376,6 +390,7 @@ class WeightCompression(Algorithm):
         self._codebook_estimation = mode == CompressWeightsMode.ADAPTIVE_CODEBOOK
         self._backup_mode = backup_mode
         self._compression_format = compression_format
+        self._hqq = hqq
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
@@ -405,6 +420,9 @@ class WeightCompression(Algorithm):
                 subset_size=gptq_params.subset_size,
                 scale_estimation=self._scale_estimation,
             )
+        if self._hqq:
+            hqq_params = self._advanced_parameters.hqq_params
+            self._hqq_algo = HQQ(num_iterations=hqq_params.num_iterations)
         if self._scale_estimation:
             scale_estimation_params = self._advanced_parameters.scale_estimation_params
             self._scale_estimation_algo = ScaleEstimation(
@@ -1163,6 +1181,14 @@ class WeightCompression(Algorithm):
                 backend_entity=self._backend_entity,
             )
         else:
+            if self._hqq:
+                precomputed_compressed_weights = self._hqq_algo.apply(
+                    model=model,
+                    graph=graph,
+                    all_weight_params=all_weight_params,
+                    backend_entity=self._backend_entity,
+                )
+
             if self._scale_estimation:
                 precomputed_compressed_weights = self._scale_estimation_algo.apply(
                     model=model,
@@ -1211,6 +1237,7 @@ class WeightCompression(Algorithm):
                 "scale_estimation": self._scale_estimation,
                 "gptq": self._gptq,
                 "lora_correction": self._lora_correction,
+                "hqq": self._hqq,
                 "backup_mode": self._backup_mode.value,
                 "compression_format": self._compression_format.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
