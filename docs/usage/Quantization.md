@@ -176,10 +176,10 @@ $$
 The gradient with respect to $input\\_range$ depends on which region the input falls in. Per-element gradients are summed to match the shape of $input\\_range$ (scalar for per-tensor quantization, or per-channel).
 
 $$
-\frac{\partial \mathcal{L}}{\partial input\_range} = \begin{cases}
-\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{FQ(x) - x}{input\_range} & \text{in range} \\
+\frac{\partial \mathcal{L}}{\partial \text{input\_range}} = \begin{cases}
+\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{FQ(x) - x}{\text{input\_range}} & \text{in range} \\
 \dfrac{\partial \mathcal{L}}{\partial FQ} & \text{above range} \\
-\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{level\_low}{level\_high} & \text{below range}
+\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{\text{level\_low}}{\text{level\_high}} & \text{below range}
 \end{cases}
 $$
 
@@ -188,29 +188,29 @@ $$
 For in-range $x$, the forward pass is:
 
 $$
-FQ(x) = \frac{\left\lfloor (x - input\_low) \cdot s \;-\; ZP \right\rceil}{s}
+FQ(x) = \frac{\left\lfloor (x - \text{input\_low}) \cdot s - ZP \right\rceil}{s}
 $$
 
-where $ZP = \lfloor -input\_low \cdot s \rceil$. The STE treats each rounding as identity plus a constant residual: $\lfloor u \rceil = u + \epsilon$ where $\epsilon = \lfloor u \rceil - u$ is held constant during differentiation. Applying this to $ZP$ and then to the outer rounding, the two $input\_low \cdot s$ contributions cancel and we obtain:
+where $ZP = \lfloor -\text{input\_low} \cdot s \rceil$. The STE treats each rounding as identity plus a constant residual: $\lfloor u \rceil = u + \epsilon$ where $\epsilon = \lfloor u \rceil - u$ is held constant during differentiation. Applying this to $ZP$ and then to the outer rounding, the two $\text{input\_low} \cdot s$ contributions cancel and we obtain:
 
 $$
-FQ(x) \;\approx\; \frac{x \cdot s \;+\; \epsilon}{s}
-\;=\; x \;+\; \frac{\epsilon}{s}
+FQ(x) \approx \frac{x \cdot s + \epsilon}{s}
+= x + \frac{\epsilon}{s}
 $$
 
-where $\epsilon$ is the combined residual from both rounding operations. The $x$ term is independent of $input\_range$; the $\epsilon / s$ term depends on it through $1/s = input\_range / (levels - 1)$, with $\epsilon$ treated as constant:
+where $\epsilon$ is the combined residual from both rounding operations. The $x$ term is independent of $\text{input\_range}$; the $\epsilon / s$ term depends on it through $1/s = \text{input\_range} / (levels - 1)$, with $\epsilon$ treated as constant:
 
 $$
-\frac{\partial FQ}{\partial input\_range}
+\frac{\partial FQ}{\partial \text{input\_range}}
 = \frac{\epsilon}{levels - 1}
 $$
 
 To re-express $\epsilon$ in terms of knowable quantities: from the STE expansion above, $\epsilon = (FQ(x) - x) \cdot s$. Substituting:
 
 $$
-\frac{\partial FQ}{\partial input\_range}
+\frac{\partial FQ}{\partial \text{input\_range}}
 = \frac{(FQ(x) - x) \cdot s}{levels - 1}
-= \frac{FQ(x) - x}{input\_range}
+= \frac{FQ(x) - x}{\text{input\_range}}
 $$
 
 This gradient nudges $input\\_range$ to reduce quantization error: if $FQ(x) > x$, the gradient encourages shrinking $input\\_range$ (finer step size), and vice versa.
@@ -226,7 +226,7 @@ For $x < input\\_low$, the output is clamped to $input\\_low$, which does not de
 ### Gradient w.r.t. $input\\_low$
 
 $$
-\frac{\partial \mathcal{L}}{\partial input\_low} = \begin{cases}
+\frac{\partial \mathcal{L}}{\partial \text{input\_low}} = \begin{cases}
 0 & \text{in range} \\
 \dfrac{\partial \mathcal{L}}{\partial FQ} & \text{below or above range}
 \end{cases}
