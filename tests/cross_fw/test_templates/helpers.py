@@ -253,6 +253,18 @@ class ConvConcatWithInputModel(nn.Module):
         return self.conv_2(x_combined)
 
 
+class ConvConcatWithLongPathToOrigInputs(ConvConcatWithInputModel):
+    def forward(self, x):
+        x_2 = F.relu(x)
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        if self.mode == "add":
+            x_combined = x_1 + x_2
+        else:
+            x_combined = torch.cat([x_1, x_2], dim=1)
+        return self.conv_2(x_combined)
+
+
 class LinearMultiShapeModel(nn.Module):
     INPUT_SIZE = [1, 3, 4, 2]
 

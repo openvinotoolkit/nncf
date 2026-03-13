@@ -63,13 +63,13 @@ class FXModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _traverse_graph(
+    def _traverse_graph_up(
         input_nodes: list[torch.fx.Node],
         stop_nodes: set[torch.fx.Node],
         visited: set[torch.fx.Node],
     ) -> None:
         """
-        Traverses through the graph starting with the input nodes and
+        Traverses through the graph in backward direction starting with the input nodes and
         stopping for the stop nodes and the visited nodes. As the result,
         it modifies the visited container with all nodes visited during the traverse.
 
@@ -87,7 +87,6 @@ class FXModelTransformer(ModelTransformer):
             if in_node.op == "get_attr":
                 continue
             input_nodes.extend(in_node.all_input_nodes)
-            input_nodes.extend(list(in_node.users))
 
     @staticmethod
     def _apply_model_extraction(
@@ -109,19 +108,18 @@ class FXModelTransformer(ModelTransformer):
         stop_nodes = set(input_node_names + output_node_names)
         visited = set()
 
-        for node_name in input_node_names:
+        for node_name, input_port_id in transformation.input_ids:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
-            target_inputs = node.all_input_nodes[1:]
-            if node.name not in output_node_names:
-                target_inputs += list(node.users)
-            FXModelTransformer._traverse_graph(target_inputs, stop_nodes, visited)
+            target_inputs = node.all_input_nodes
+            del target_inputs[input_port_id]
+            FXModelTransformer._traverse_graph_up(target_inputs, stop_nodes, visited)
 
         for node_name in output_node_names:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
             if node.name not in input_node_names:
-                FXModelTransformer._traverse_graph(node.all_input_nodes, stop_nodes, visited)
+                FXModelTransformer._traverse_graph_up(node.all_input_nodes, stop_nodes, visited)
 
         extracted_graph = torch.fx.Graph()
         value_remap = {}
@@ -131,7 +129,7 @@ class FXModelTransformer(ModelTransformer):
 
         visited_outputs_names = []
         for node in model.graph.nodes:
-            if node.name not in visited:
+            if node.name not in visited or node.op == "placeholder":
                 continue
             if node.op == "output":
                 visited_outputs_names.append(node.name)

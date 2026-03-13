@@ -46,6 +46,7 @@ from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModel
+from tests.cross_fw.test_templates.helpers import ConvConcatWithLongPathToOrigInputs
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
@@ -95,7 +96,12 @@ MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
         ConvConcatWithInputModel(mode="cat"),
         ConvConcatWithInputModel.INPUT_SIZE,
-        PTModelExtractionCommand([("cat", 1)], [("conv2d_1", 0)]),
+        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
+    ),
+    ModelExtractionTestCase(
+        ConvConcatWithLongPathToOrigInputs(mode="cat"),
+        ConvConcatWithLongPathToOrigInputs.INPUT_SIZE,
+        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
 )
 
