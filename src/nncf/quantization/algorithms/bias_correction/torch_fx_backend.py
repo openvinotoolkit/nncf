@@ -29,6 +29,8 @@ from nncf.experimental.torch.fx.transformations import constant_update_transform
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import is_quantized_weights
@@ -51,7 +53,7 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def model_extraction_command(
         input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> PTModelExtractionCommand:
-        return PTModelExtractionCommand([inp_id[0] for inp_id in input_ids], [out_id[0] for out_id in output_ids])
+        return PTModelExtractionCommand(list(input_ids), list(output_ids))
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> FXApplyTransformationCommand:
@@ -109,6 +111,18 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_quantized_weights(node, nncf_graph)
+
+    @staticmethod
+    def is_node_with_multiple_activation_inputs(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        # Concat always merges multiple activation streams.
+        if node.metatype is PTCatMetatype:
+            return True
+        # For other multi-input nodes (e.g. elementwise Add/Mul), check whether
+        # more than one input is an activation (non-const).
+        activation_count = sum(
+            1 for edge in nncf_graph.get_input_edges(node) if edge.from_node.metatype is not PTConstNoopMetatype
+        )
+        return activation_count > 1
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

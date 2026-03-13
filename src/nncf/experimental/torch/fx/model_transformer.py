@@ -17,6 +17,8 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_node_args
+from nncf.experimental.torch.fx.node_utils import set_node_args
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 
 
@@ -61,13 +63,13 @@ class FXModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _traverse_graph(
+    def _traverse_graph_up(
         input_nodes: list[torch.fx.Node],
         stop_nodes: set[torch.fx.Node],
         visited: set[torch.fx.Node],
     ) -> None:
         """
-        Traverses through the graph starting with the input nodes and
+        Traverses through the graph in backward direction starting with the input nodes and
         stopping for the stop nodes and the visited nodes. As the result,
         it modifies the visited container with all nodes visited during the traverse.
 
@@ -85,7 +87,6 @@ class FXModelTransformer(ModelTransformer):
             if in_node.op == "get_attr":
                 continue
             input_nodes.extend(in_node.all_input_nodes)
-            input_nodes.extend(list(in_node.users))
 
     @staticmethod
     def _apply_model_extraction(
@@ -102,22 +103,23 @@ class FXModelTransformer(ModelTransformer):
         :return: Returns a submodel extracted from the given model by the given transformation.
         """
         transformation = transformations[-1]
-        stop_nodes = set(transformation.input_node_names + transformation.output_node_names)
+        input_node_names = [name for name, _ in transformation.input_ids]
+        output_node_names = [name for name, _ in transformation.output_ids]
+        stop_nodes = set(input_node_names + output_node_names)
         visited = set()
 
-        for node_name in transformation.input_node_names:
+        for node_name, input_port_id in transformation.input_ids:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
-            target_inputs = node.all_input_nodes[1:]
-            if node.name not in transformation.output_node_names:
-                target_inputs += list(node.users)
-            FXModelTransformer._traverse_graph(target_inputs, stop_nodes, visited)
+            target_inputs = node.all_input_nodes
+            del target_inputs[input_port_id]
+            FXModelTransformer._traverse_graph_up(target_inputs, stop_nodes, visited)
 
-        for node_name in transformation.output_node_names:
+        for node_name in output_node_names:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
-            if node.name not in transformation.input_node_names:
-                FXModelTransformer._traverse_graph(node.all_input_nodes, stop_nodes, visited)
+            if node.name not in input_node_names:
+                FXModelTransformer._traverse_graph_up(node.all_input_nodes, stop_nodes, visited)
 
         extracted_graph = torch.fx.Graph()
         value_remap = {}
@@ -127,31 +129,31 @@ class FXModelTransformer(ModelTransformer):
 
         visited_outputs_names = []
         for node in model.graph.nodes:
-            if node.name not in visited:
+            if node.name not in visited or node.op == "placeholder":
                 continue
             if node.op == "output":
                 visited_outputs_names.append(node.name)
                 continue
             value_remap[node] = extracted_graph.node_copy(node, remap_fn)
 
-        for input_name in transformation.input_node_names:
+        for input_name, input_port_id in transformation.input_ids:
             node_with_input = get_graph_node_by_name(extracted_graph, input_name)
             with extracted_graph.inserting_before(node_with_input):
-                graph_input_name = input_name + "_input"
+                graph_input_name = f"{input_name}_input_{input_port_id}"
                 graph_input = extracted_graph.create_node(
                     op="placeholder",
                     target=graph_input_name,
                     name=graph_input_name,
                 )
 
-            args = list(node_with_input.args)
-            args[0] = graph_input
-            node_with_input.args = tuple(args)
+            args = list(get_node_args(node_with_input))
+            args[input_port_id] = graph_input
+            set_node_args(node_with_input, tuple(args))
 
         # Merge new output with the original output in case
         # the original output is requested in the extracted graph.
         nodes_with_output = []
-        for name in transformation.output_node_names:
+        for name, _ in transformation.output_ids:
             nodes_with_output.append(
                 name if name in visited_outputs_names else get_graph_node_by_name(extracted_graph, name)
             )
