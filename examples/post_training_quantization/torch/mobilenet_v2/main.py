@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-import subprocess
 from functools import partial
 from pathlib import Path
 
@@ -25,6 +23,7 @@ from torchvision import models
 from torchvision import transforms
 
 import nncf
+from examples import execute_benchmark_on_cpu
 
 ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin"
@@ -59,21 +58,6 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     predictions = np.concatenate(predictions, axis=0)
     references = np.concatenate(references, axis=0)
     return accuracy_score(predictions, references)
-
-
-def run_benchmark(model_path: Path, shape: list[int]) -> float:
-    command = [
-        "benchmark_app",
-        "-m", model_path.as_posix(),
-        "-d", "CPU",
-        "-api", "async",
-        "-t", "15",
-        "-shape", str(shape),
-    ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    print(*cmd_output.splitlines()[-8:], sep="\n")
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
 
 
 def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
@@ -165,9 +149,10 @@ print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_model_size = get_model_size(int8_ir_path)
 
 print("[3/7] Benchmark FP32 model:")
-fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 224, 224])
+fp32_fps = execute_benchmark_on_cpu(fp32_ir_path, time=15, shape=[1, 3, 224, 224])
+
 print("[4/7] Benchmark INT8 model:")
-int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 224, 224])
+int8_fps = execute_benchmark_on_cpu(int8_ir_path, time=15, shape=[1, 3, 224, 224])
 
 print("[5/7] Validate OpenVINO FP32 model:")
 fp32_top1 = validate(ov_model, val_data_loader)
