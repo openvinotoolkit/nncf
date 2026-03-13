@@ -122,7 +122,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_RoPE_model() -> TModel:
+    def get_RoPE_model(degree: int) -> TModel:
         """Returns a backend model for test_rope_weight_compression."""
 
     @staticmethod
@@ -445,8 +445,9 @@ class TemplateWeightCompression(ABC):
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
-    def test_rope_weight_compression(self):
-        model = self.get_RoPE_model()
+    @pytest.mark.parametrize("degree", [1, 2])
+    def test_rope_weight_compression(self, degree):
+        model = self.get_RoPE_model(degree)
         sz = 8
         n_samples = 10
 
