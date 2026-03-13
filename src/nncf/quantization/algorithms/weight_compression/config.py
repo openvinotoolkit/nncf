@@ -46,18 +46,26 @@ class WeightCompressionConfig:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
-        if self.mode in [
-            CompressWeightsMode.INT8_SYM,
-            CompressWeightsMode.INT8_ASYM,
-            CompressWeightsMode.FP8_E4M3,
-            CompressWeightsMode.MXFP8_E4M3,
-        ]:
-            return 8
-        return 4
+        return {
+            CompressWeightsMode.INT8_SYM: 8,
+            CompressWeightsMode.INT8_ASYM: 8,
+            CompressWeightsMode.FP8_E4M3: 8,
+            CompressWeightsMode.MXFP8_E4M3: 8,
+            CompressWeightsMode.INT4_SYM: 4,
+            CompressWeightsMode.INT4_ASYM: 4,
+            CompressWeightsMode.NF4: 4,
+            CompressWeightsMode.MXFP4: 4,
+            CompressWeightsMode.FP4: 4,
+            CompressWeightsMode.CB4: 4,
+            CompressWeightsMode.INT2_SYM: 2,
+        }.get(self.mode, 4)
 
     @property
     def is_asym_mode(self):
-        return self.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+        return self.mode in [
+            CompressWeightsMode.INT4_ASYM,
+            CompressWeightsMode.INT8_ASYM,
+        ]
 
     @property
     def is_integer(self):
@@ -101,6 +109,7 @@ class WeightCompressionConfig:
         dtype_per_mode = {
             CompressWeightsMode.INT4_SYM: TensorDataType.int4,
             CompressWeightsMode.INT4_ASYM: TensorDataType.uint4,
+            CompressWeightsMode.INT2_SYM: TensorDataType.int2,
             CompressWeightsMode.INT8_ASYM: TensorDataType.uint8,
             CompressWeightsMode.INT8_SYM: TensorDataType.int8,
             CompressWeightsMode.NF4: TensorDataType.nf4,

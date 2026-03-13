@@ -121,10 +121,12 @@ class QuantizeAsymmetric(torch.autograd.Function):
 class QuantizeSymmetricTorch(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, input_shape, scale, level_low, level_high, levels):
-        # range: [-scale, 7/8 * scale] if scale > 0 else [7/8 * scale, -scale]
+        # Signed-scale formula: scale sign selects which side gets more quants.
+        #   scale > 0  →  range [-scale, level_high/|level_low| * scale]  (more quants for negatives)
+        #   scale < 0  →  range [level_high/|level_low| * scale, -scale]  (more quants for positives)
+        # Works for any bit-width (2, 4, 8, …).
         input_low = torch.where(scale > 0, -scale, -scale / level_low * level_high)
-        # 15/8 * scale or (2-1/8) * scale
-        input_range = torch.abs((2 + 1 / level_low) * scale)
+        input_range = (levels - 1) * torch.abs(scale) / (-level_low)
         dtype = input_.dtype
         original_shape = input_.shape
         input_ = input_.reshape(input_shape)
@@ -471,3 +473,45 @@ def unpack_int4(packed_tensor: torch.Tensor) -> torch.Tensor:
     """
     t = unpack_uint4(packed_tensor)
     return t.type(torch.int8) - 8
+
+
+def pack_uint2(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Packs a tensor containing uint2 values (in the range [0, 3]) into a tensor with uint8 values,
+    where each element stores four uint2 values.
+
+    :param tensor: A tensor of dtype `torch.uint8` where each element represents a uint2 value.
+        The tensor should contain values in the range [0, 3].
+    :return: A packed tensor of dtype `torch.uint8` where each element packs four uint2 values.
+    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
+    """
+    if tensor.dtype != torch.uint8:
+        msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
+        raise ValidationError(msg)
+    packed_tensor = tensor.contiguous().reshape(-1, 4)
+    packed_tensor = (
+        torch.bitwise_and(packed_tensor[..., 0], 3)
+        | (torch.bitwise_and(packed_tensor[..., 1], 3) << 2)
+        | (torch.bitwise_and(packed_tensor[..., 2], 3) << 4)
+        | (torch.bitwise_and(packed_tensor[..., 3], 3) << 6)
+    )
+    return packed_tensor
+
+
+def unpack_uint2(packed_tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Unpacks a tensor, where each uint8 element stores four uint2 values, back into a tensor with
+    individual uint2 values.
+
+    :param packed_tensor: A tensor of dtype `torch.uint8` where each element packs four uint2 values.
+    :return: A tensor of dtype `torch.uint8` where each element represents a uint2 value.
+    """
+    return torch.stack(
+        (
+            torch.bitwise_and(packed_tensor, 3),
+            torch.bitwise_and(torch.bitwise_right_shift(packed_tensor, 2), 3),
+            torch.bitwise_and(torch.bitwise_right_shift(packed_tensor, 4), 3),
+            torch.bitwise_and(torch.bitwise_right_shift(packed_tensor, 6), 3),
+        ),
+        dim=-1,
+    )

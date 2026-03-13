@@ -32,13 +32,16 @@ from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
 from nncf.torch.function_hook import wrap_model
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.quantization.layers import INT2SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from nncf.torch.quantization.quantize_functions import pack_int4
+from nncf.torch.quantization.quantize_functions import pack_uint2
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
+from nncf.torch.quantization.quantize_functions import unpack_uint2
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
@@ -565,6 +568,52 @@ def test_pack_int4():
     assert packed_w.numel() * 2 == w_int8.numel()
     unpacked_w = unpack_int4(packed_w).reshape(w_int8.shape)
     assert torch.all(unpacked_w == w_int8)
+
+
+def test_pack_uint2():
+    w_uint8 = torch.randint(0, 4, (4, 4), dtype=torch.uint8)
+    packed_w = pack_uint2(w_uint8)
+    assert packed_w.dtype == torch.uint8
+    assert packed_w.numel() * 4 == w_uint8.numel()
+    unpacked_w = unpack_uint2(packed_w).reshape(w_uint8.shape)
+    assert torch.all(unpacked_w == w_uint8)
+
+
+def test_pack_uint2_single_value():
+    """pack_uint2 requires multiples of 4 elements (4 uint2 per uint8 byte).
+    A single u2 value cannot be packed alone — verify that 4 identical values
+    round-trip correctly through pack/unpack."""
+    # 4 copies of the value 2 (the minimum packable unit)
+    w_uint8 = torch.tensor([2, 2, 2, 2], dtype=torch.uint8)
+    packed_w = pack_uint2(w_uint8)
+    assert packed_w.shape == (1,)  # 4 uint2 -> 1 uint8
+    # Expected: 2 | (2<<2) | (2<<4) | (2<<6) = 2 + 8 + 32 + 128 = 170 = 0xAA
+    assert packed_w.item() == 0xAA
+    unpacked_w = unpack_uint2(packed_w).reshape(w_uint8.shape)
+    assert torch.all(unpacked_w == w_uint8)
+
+
+def test_pack_uint2_all_values():
+    """Verify all four possible uint2 values [0, 1, 2, 3] pack and unpack correctly."""
+    w_uint8 = torch.tensor([0, 1, 2, 3], dtype=torch.uint8)
+    packed_w = pack_uint2(w_uint8)
+    assert packed_w.shape == (1,)
+    # Expected: 0 | (1<<2) | (2<<4) | (3<<6) = 0 + 4 + 32 + 192 = 228 = 0xE4
+    assert packed_w.item() == 0xE4
+    unpacked_w = unpack_uint2(packed_w).reshape(w_uint8.shape)
+    assert torch.all(unpacked_w == w_uint8)
+
+
+def test_int2_symmetric_weights_decompressor():
+    scale = torch.tensor([[0.5], [1.0]], dtype=torch.float32)
+    weight_signed = torch.tensor([[-2, -1, 0, 1], [-1, 0, 1, -2]], dtype=torch.int8)
+    weight_unsigned = (weight_signed + 2).to(torch.uint8)
+
+    decompressor = INT2SymmetricWeightsDecompressor(scale, compressed_weight_shape=(2, 4), result_dtype=torch.float32)
+    packed_w = decompressor.pack_weight(weight_unsigned)
+    result = decompressor(packed_w)
+    expected = weight_signed.float() * scale.float()
+    assert torch.allclose(result, expected, atol=1e-3)
 
 
 class TestPTTemplateWeightCompression(TemplateWeightCompression):

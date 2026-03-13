@@ -47,10 +47,12 @@ from nncf.torch.quantization.quantize_functions import decompress_asymmetric
 from nncf.torch.quantization.quantize_functions import decompress_symmetric
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import pack_int4
+from nncf.torch.quantization.quantize_functions import pack_uint2
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.quantization.quantize_functions import symmetric_quantize_lora
 from nncf.torch.quantization.quantize_functions import unpack_int4
+from nncf.torch.quantization.quantize_functions import unpack_uint2
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
@@ -1460,6 +1462,62 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     def forward(self, x):
         x = unpack_int4(x)
         x = x.reshape(self.compressed_weight_shape)
+
+        result = decompress_symmetric(x, self._scale)
+        result = result.reshape(self.result_shape) if self.result_shape is not None else result
+        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        return result
+
+
+class INT2SymmetricWeightsDecompressor(BaseWeightsDecompressor):
+    """
+    Applies symmetric decompression of 2-bit compressed weights in the forward pass.
+
+    Weights with values in [-2, -1, 0, 1] are stored as uint2 [0, 1, 2, 3] using
+    a hardcoded zero point of 2. Four uint2 values are packed into each uint8 byte.
+    """
+
+    ZERO_POINT_VALUE = 2
+
+    def __init__(
+        self,
+        scale: torch.Tensor,
+        compressed_weight_shape: tuple[int, ...],
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
+    ):
+        """
+        :param scale: A scale in quantization scheme
+        :param compressed_weight_shape: A compressed weight shape
+        :param result_shape: (Optional) A shape that result should be reshaped to
+        :param result_dtype: (Optional) A data type that result should be cast to
+        """
+        super().__init__()
+        self.register_buffer("_scale", scale.type(dtype=torch.float16))
+        self.register_buffer(
+            "_zero_point",
+            torch.tensor(self.ZERO_POINT_VALUE, dtype=torch.uint8),
+        )
+
+        self.compressed_weight_shape = compressed_weight_shape
+        self.result_shape = result_shape
+        self.result_dtype = result_dtype
+
+    @property
+    def quantization_mode(self) -> QuantizationMode:
+        return QuantizationMode.SYMMETRIC
+
+    def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
+        if torch.any((weight < 0) | (weight > 3)):
+            msg = "Weight values are not in [0, 3]."
+            raise ValueError(msg)
+        return pack_uint2(weight.type(dtype=torch.uint8))
+
+    def forward(self, x):
+        x = unpack_uint2(x)
+        x = x.reshape(self.compressed_weight_shape)
+
+        x = x.type(dtype=self.result_dtype) - self._zero_point.type(dtype=self.result_dtype)
 
         result = decompress_symmetric(x, self._scale)
         result = result.reshape(self.result_shape) if self.result_shape is not None else result
