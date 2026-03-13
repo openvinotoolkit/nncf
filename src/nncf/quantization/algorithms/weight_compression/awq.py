@@ -165,7 +165,9 @@ class AWQ(Algorithm):
             weight_dtype = weight.dtype
             weight = weight.astype(TensorDataType.float32)
 
-            act_ch_axis, act_shape = self._get_activation_channel_axis_and_shape(graph, wp)
+            act_ch_axis, act_shape = self._backend_entity.get_activation_channel_axis_and_shape(
+                graph, wp.node_with_weight
+            )
 
             is_mergeable = False
             if self._backend_entity.is_node_with_weights(merge_node, graph):
@@ -353,16 +355,6 @@ class AWQ(Algorithm):
             scale = fns.squeeze(scale, 0)  # [1, hidden_dim] -> [hidden_dim]
 
         return scale
-
-    def _get_activation_channel_axis_and_shape(
-        self, graph: NNCFGraph, wp: WeightCompressionParameters
-    ) -> tuple[int, tuple[int, ...]]:
-        activation_port_id = self._backend_entity.get_activation_port_id(wp.node_with_weight, graph)
-        act_shape = graph.get_input_edge_by_port_id(wp.node_with_weight, activation_port_id).tensor_shape
-        act_ch_axis = self._backend_entity.get_activation_channel_axis(
-            wp.node_with_weight, activation_port_id, act_shape
-        )
-        return act_ch_axis % len(act_shape), act_shape
 
     @staticmethod
     def _clamp_scale(magnitudes, threshold, scale, clamped_scale):

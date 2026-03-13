@@ -139,17 +139,15 @@ class ScaleEstimation:
                 continue
             _, weight_port_id = weight_data[0]
 
-            if self._backend_entity.matmul_has_transposed_activations(wp.node_with_weight, graph):
-                msg = "Transposed activations are not supported yet for the Scale Estimation algorithm"
-                raise nncf.UnsupportedModelError(msg)
-
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
+            act_ch_axis, _ = self._backend_entity.get_activation_channel_axis_and_shape(graph, wp.node_with_weight)
 
             scale, zero_point = self.calculate_quantization_params(
                 stats,
                 weight,
                 wp.reduction_axes,
                 config,
+                act_ch_axis,
                 self._subset_size,
                 self._initial_steps,
                 self._scale_steps,
@@ -165,6 +163,7 @@ class ScaleEstimation:
         weight: Tensor,
         reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
+        act_ch_axis: int = -1,
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
@@ -185,6 +184,7 @@ class ScaleEstimation:
         :param weight: The weight tensor that is being quantized.
         :param reduction_axes: Tuple specifying the axes along which the reduction is performed for quantization.
         :param config: Configuration parameters for the weight compression, including quantization settings.
+        :param act_ch_axis: The activation channel axis. Defaults to -1.
         :param subset_size: The number of samples to use for scale estimation. Defaults to 32.
         :param initial_steps: The number of steps for initial scale rectification using activation statistics.
             Defaults to 5.
@@ -195,7 +195,7 @@ class ScaleEstimation:
         """
         reduction_axis = reduction_axes[0]
 
-        s, X = process_stats(statistics, subset_size)
+        s, X = process_stats(statistics, subset_size, act_ch_axis=act_ch_axis)
 
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
@@ -381,23 +381,6 @@ class ScaleEstimation:
                     zp = fns.moveaxis(zp, (-1, -2, -3), (-2, -3, -1))
 
         return result_scale, zp
-
-    @staticmethod
-    def activations_to_wc_statistics(activations: list[Tensor]) -> WCTensorStatistic:
-        """
-        Mimic the activation reducing logic from WeightCompression.get_statistic_points.
-
-        :param activations: List of raw activations.
-        :return: Instance of WCTensorStatistic class containing reduced activations and shapes.
-        """
-        mean_values = []
-        shapes = []
-        for act in activations:
-            shapes.append(act.shape)
-            reduction_shape = tuple(range(act.ndim - 1))
-            mean_values.append(fns.mean(act, axis=reduction_shape))
-        wc_statistics = WCTensorStatistic(mean_values, shapes)
-        return wc_statistics
 
 
 def get_target_zero_mask(compressed_weights: Tensor, zp: Tensor | None = None) -> tuple[Tensor, Tensor]:

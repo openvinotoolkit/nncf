@@ -2260,12 +2260,12 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SequentialMatmulModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
-        return MatMul().ov_model
+    def get_model_for_test_scale_estimation(transpose_a: bool):
+        return MatMul(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation():
-        return SimpleMoEModel().ov_model
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+        return SimpleMoEModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
     def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> ov.Model:
@@ -2610,7 +2610,3 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                 ),
             },
         ]
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return True

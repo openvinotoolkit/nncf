@@ -343,20 +343,26 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_sequential_matmul_model(transpose_a: bool) -> torch.fx.GraphModule:
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for FX backend")
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
+    def get_model_for_test_scale_estimation(transpose_a: bool):
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for FX backend")
         model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation():
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for FX backend")
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
@@ -727,9 +733,5 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         ]
 
     @staticmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, is_3d_weights: bool = False):
-        pass
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return False
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
+        pytest.skip("Transposable models are not supported")
