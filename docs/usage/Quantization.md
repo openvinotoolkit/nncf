@@ -166,7 +166,7 @@ The upstream gradient is passed through unchanged when $x$ is within the quantiz
 
 $$
 \frac{\partial \mathcal{L}}{\partial x} = \begin{cases}
-\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{in range} \\[6pt]
+\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{in range} \\
 0 & \text{below or above range}
 \end{cases}
 $$
@@ -177,8 +177,8 @@ The gradient with respect to $input\\_range$ depends on which region the input f
 
 $$
 \frac{\partial \mathcal{L}}{\partial input\_range} = \begin{cases}
-\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{FQ(x) - x}{input\_range} & \text{in range} \\[10pt]
-\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{above range} \\[10pt]
+\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{FQ(x) - x}{input\_range} & \text{in range} \\
+\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{above range} \\
 \dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{level\_low}{level\_high} & \text{below range}
 \end{cases}
 $$
@@ -227,7 +227,7 @@ For $x < input\\_low$, the output is clamped to $input\\_low$, which does not de
 
 $$
 \frac{\partial \mathcal{L}}{\partial input\_low} = \begin{cases}
-0 & \text{in range} \\[6pt]
+0 & \text{in range} \\
 \dfrac{\partial \mathcal{L}}{\partial FQ} & \text{below or above range}
 \end{cases}
 $$
