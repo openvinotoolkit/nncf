@@ -144,6 +144,102 @@ $input\\_range^{*} = scale$
 
 The most common case of applying quantization is 8-bit uniform quantization.
 
+## Gradient Computation for Quantization-Aware Training
+
+The forward quantization formula contains two non-differentiable operations: clamping and rounding. To enable gradient-based optimization of the quantization parameters during QAT, NNCF defines custom surrogate gradients using a **Straight-Through Estimator (STE)** for rounding and piecewise-defined surrogate gradients for the clamp boundaries.
+
+This approach is a form of **learned-range fake quantization** — it is related to [Learned Step Size Quantization (LSQ)](https://arxiv.org/abs/1902.08153), but uses a different parameterization (`input_low`, `input_range`) instead of (step size, zero point), and omits LSQ's gradient scaling factor.
+
+In this section, $x$ denotes an element of the input tensor and $FQ(x)$ denotes the corresponding fake-quantized output. The quantization parameters $input\\_low$ and $input\\_range$ are the values that enter the forward kernel (i.e. after the absolute-value and range-tuning steps described above), so $input\\_range > 0$. We write $s = (levels - 1) / input\\_range$ for the scale factor.
+
+### Input Partitioning
+
+The input tensor is partitioned element-wise into three regions based on the quantization range:
+
+- **Below range**: $x < input\\_low$
+- **In range**: $input\\_low \le x \le input\\_low + input\\_range$
+- **Above range**: $x > input\\_low + input\\_range$
+
+### Gradient w.r.t. $x$ (STE)
+
+The upstream gradient is passed through unchanged when $x$ is within the quantization range, and zeroed out otherwise:
+
+$$
+\frac{\partial \mathcal{L}}{\partial x} = \begin{cases}
+\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{in range} \\[6pt]
+0 & \text{below or above range}
+\end{cases}
+$$
+
+### Gradient w.r.t. $input\\_range$
+
+The gradient with respect to $input\\_range$ depends on which region the input falls in. Per-element gradients are summed to match the shape of $input\\_range$ (scalar for per-tensor quantization, or per-channel).
+
+$$
+\frac{\partial \mathcal{L}}{\partial input\_range} = \begin{cases}
+\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{FQ(x) - x}{input\_range} & \text{in range} \\[10pt]
+\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{above range} \\[10pt]
+\dfrac{\partial \mathcal{L}}{\partial FQ} \cdot \dfrac{level\_low}{level\_high} & \text{below range}
+\end{cases}
+$$
+
+#### Derivation of the in-range term
+
+For in-range $x$, the forward pass is:
+
+$$
+FQ(x) = \frac{\left\lfloor (x - input\_low) \cdot s \;-\; ZP \right\rceil}{s}
+$$
+
+where $ZP = \lfloor -input\_low \cdot s \rceil$. The STE treats each rounding as identity plus a constant residual: $\lfloor u \rceil = u + \epsilon$ where $\epsilon = \lfloor u \rceil - u$ is held constant during differentiation. Applying this to $ZP$ and then to the outer rounding, the two $input\_low \cdot s$ contributions cancel and we obtain:
+
+$$
+FQ(x) \;\approx\; \frac{x \cdot s \;+\; \epsilon}{s}
+\;=\; x \;+\; \frac{\epsilon}{s}
+$$
+
+where $\epsilon$ is the combined residual from both rounding operations. The $x$ term is independent of $input\_range$; the $\epsilon / s$ term depends on it through $1/s = input\_range / (levels - 1)$, with $\epsilon$ treated as constant:
+
+$$
+\frac{\partial FQ}{\partial input\_range}
+= \frac{\epsilon}{levels - 1}
+$$
+
+To re-express $\epsilon$ in terms of knowable quantities: from the STE expansion above, $\epsilon = (FQ(x) - x) \cdot s$. Substituting:
+
+$$
+\frac{\partial FQ}{\partial input\_range}
+= \frac{(FQ(x) - x) \cdot s}{levels - 1}
+= \frac{FQ(x) - x}{input\_range}
+$$
+
+This gradient nudges $input\\_range$ to reduce quantization error: if $FQ(x) > x$, the gradient encourages shrinking $input\\_range$ (finer step size), and vice versa.
+
+#### Above-range term
+
+For $x > input\\_low + input\\_range$, the output is clamped: $FQ(x) = input\\_low + input\\_range$, so $\partial FQ / \partial input\\_range = 1$.
+
+#### Below-range term
+
+For $x < input\\_low$, the output is clamped to $input\\_low$, which does not depend on $input\\_range$ (in asymmetric mode). The code uses the surrogate gradient $\alpha = level\\_low / level\\_high$ rather than the analytic derivative (which would be $0$). For asymmetric quantization ($level\\_low = 0$), this gives $\alpha = 0$. For symmetric quantization with signed range ($level\\_low < 0$), the non-zero $\alpha$ matches the analytic derivative of $input\\_low$ with respect to the $scale$ parameter, since $input\\_low = scale \cdot level\\_low / level\\_high$ in symmetric mode.
+
+### Gradient w.r.t. $input\\_low$
+
+$$
+\frac{\partial \mathcal{L}}{\partial input\_low} = \begin{cases}
+0 & \text{in range} \\[6pt]
+\dfrac{\partial \mathcal{L}}{\partial FQ} & \text{below or above range}
+\end{cases}
+$$
+
+Per-element gradients are summed to match the shape of $input\\_low$.
+
+**In-range term.** Under the STE, shifting $input\\_low$ moves the quantization grid, but the zero-point $ZP = \lfloor -input\\_low \cdot s \rceil \approx -input\\_low \cdot s$ shifts to compensate. In the STE expansion above, these two contributions cancel (the $-input\\_low \cdot s$ and $+input\\_low \cdot s$ terms), making $FQ(x) \approx x + \epsilon/s$ with no dependence on $input\\_low$. This is unlike $input\\_range$, which affects the step size $1/s$ and therefore scales the rounding residual $\epsilon$.
+
+**Below- and above-range terms.** Outside the range, the clamped output is either $input\\_low$ (below) or $input\\_low + input\\_range$ (above), both of which have $\partial / \partial input\\_low = 1$.
+
+**Note:** In symmetric quantization mode, $input\\_low$ is derived from $input\\_range$ (i.e. $scale$) and is not an independent learnable parameter, so its gradient is not used directly.
+
 ---
 
 **NOTE**
