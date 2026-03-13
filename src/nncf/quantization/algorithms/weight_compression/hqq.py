@@ -37,8 +37,9 @@ class HQQ:
 
     HQQ is a data-free weight quantization algorithm that minimizes quantization error
     without requiring calibration data. It uses alternating least-squares optimization
-    to jointly find optimal scale and zero-point parameters, producing floating-point
-    zero points for asymmetric quantization.
+    to find optimal scale and zero-point parameters. For asymmetric quantization, HQQ
+    optimizes the zero-point as a continuous float during iterations, then rounds it to
+    the nearest integer before returning so that quantization and dequantization agree.
 
     Reference: "Half-Quadratic Quantization of Large Machine Learning Models"
     (https://mobiusml.github.io/hqq_blog/)
@@ -154,19 +155,23 @@ class HQQ:
         Computes HQQ-optimized scale and zero point for integer quantization.
 
         The algorithm alternates between two steps until convergence:
-          - Quantization step: Q = clamp(round(W / s + z), q_min, q_max)
+          - Quantization step: Q = clamp(round(W * inv_s + z), q_min, q_max)
           - Parameter update:
-            * Asymmetric (W ≈ s * (Q - z)): joint closed-form least-squares for s and z.
-            * Symmetric (W ≈ s * Q): closed-form update for s alone.
+            * Asymmetric: scale is fixed (min-max init); only z is updated via
+              closed-form `z = mean(Q - W * inv_s)` (per the paper).
+            * Symmetric: z = None; scale is updated via `s = sum(W*Q) / sum(Q²)`.
 
-        For the asymmetric case the zero point z is float-valued (not rounded to an integer),
-        which gives HQQ better reconstruction quality than standard min-max initialization.
+        For the asymmetric case the zero point z is optimized as a continuous float during
+        iterations (giving better reconstruction than integer-only search), then rounded and
+        clipped to the valid integer range before being returned. This ensures consistency
+        between quantization (which uses the returned z) and dequantization (which loads z
+        as a stored integer, e.g. uint4).
 
         :param weight: Weight tensor in float32.
         :param config: Weight compression configuration.
         :param reduction_axes: Reduction axes for the weight tensor.
-        :return: Tuple of (scale, zero_point). zero_point is float for asymmetric mode,
-            None for symmetric mode.
+        :return: Tuple of (scale, zero_point). zero_point is an integer-valued float32
+            tensor for asymmetric mode, None for symmetric mode.
         """
         group_size = config.group_size
         group_reduction_axes = reduction_axes
@@ -199,42 +204,52 @@ class HQQ:
         if zero_point is not None:
             zero_point = fns.astype(zero_point, TensorDataType.float32)
 
+        # Pre-compute inv_scale once; scale is fixed for asymmetric iterations.
+        inv_scale = 1.0 / fns.where(fns.abs(scale) < eps, eps, scale)
+
         for _ in range(self._num_iterations):
-            # Quantization step: Q = clamp(round(W / s + z), q_min, q_max)
-            q_float = weight / scale
+            # Quantization step: Q = clamp(round(W * inv_s + z), q_min, q_max)
+            q_float = weight * inv_scale
             if zero_point is not None:
                 q_float = q_float + zero_point
             q_float = fns.round(q_float)
             q_float = fns.clip(q_float, level_low, level_high)
 
             if is_asym:
-                # Asymmetric least-squares update for (s, z): minimize ||W - s*(Q - z)||^2.
-                # Letting b = s*z, normal equations give:
-                #   det = n * sum_QQ - sum_Q^2
-                #   s   = (n * sum_QW - sum_Q * sum_W) / det
-                #   z   = (sum_Q * sum_QW - sum_QQ * sum_W) / (det * s)
-                sum_q = fns.sum(q_float, axis=group_reduction_axes, keepdims=True)
-                sum_w = fns.sum(weight, axis=group_reduction_axes, keepdims=True)
-                sum_qq = fns.sum(q_float * q_float, axis=group_reduction_axes, keepdims=True)
-                sum_qw = fns.sum(q_float * weight, axis=group_reduction_axes, keepdims=True)
-
-                det = n * sum_qq - sum_q * sum_q
-                safe_det = fns.where(fns.abs(det) < eps, eps, det)
-
-                new_scale = (n * sum_qw - sum_q * sum_w) / safe_det
-                new_scale = fns.where(fns.abs(new_scale) < eps, eps, new_scale)
-                new_zero_point = (sum_q * sum_qw - sum_qq * sum_w) / (safe_det * new_scale)
-
-                scale = new_scale
-                zero_point = new_zero_point
-
+                # Asymmetric: fix scale, update zero_point only (per the paper).
+                # Minimizing ||W - s*(Q - z)||² w.r.t. z gives:
+                #   z = mean(Q - W/s) = sum(Q - W*inv_s) / n
+                zero_point = fns.sum(q_float - weight * inv_scale, axis=group_reduction_axes, keepdims=True)
+                zero_point = zero_point / n
             else:
-                # Symmetric least-squares update for s: minimize ||W - s*Q||^2.
-                #   s = sum(W*Q) / sum(Q^2)
+                # Symmetric OLS update for scale: minimize ||W - s*Q||².
+                #   s = sum(W*Q) / sum(Q²)
                 sum_qw = fns.sum(q_float * weight, axis=group_reduction_axes, keepdims=True)
                 sum_qq = fns.sum(q_float * q_float, axis=group_reduction_axes, keepdims=True)
                 denom = fns.where(fns.abs(sum_qq) < eps, eps, sum_qq)
                 scale = sum_qw / denom
                 scale = fns.where(fns.abs(scale) < eps, eps, scale)
+                inv_scale = 1.0 / scale
+
+        # Round and clip zero_point to the valid integer range so that quantization
+        # and dequantization (which stores zp as uint4) use the exact same value.
+        if zero_point is not None:
+            zero_point = self._round_zero_point(zero_point, level_low, level_high)
 
         return scale, zero_point
+
+    @staticmethod
+    def _round_zero_point(zero_point: Tensor, level_low: int, level_high: int) -> Tensor:
+        """
+        Rounds the float zero_point to the nearest integer and clips it to the valid quantization range.
+
+        HQQ optimizes z as a continuous value during iterations, but the OV backend stores
+        zero_point as integer (uint4 for INT4). To ensure that quantization and dequantization
+        use the same z, the final float z is rounded and clipped before returning.
+
+        :param zero_point: Float zero_point tensor from HQQ iterations.
+        :param level_low: Minimum valid zero_point value.
+        :param level_high: Maximum valid zero_point value.
+        :return: Rounded and clipped zero_point.
+        """
+        return fns.clip(fns.round(zero_point), level_low, level_high)

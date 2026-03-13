@@ -90,8 +90,13 @@ def test_hqq_reduces_quantization_error(mode, group_size, reduction_axes):
     )
 
 
-def test_hqq_asymmetric_float_zero_point():
-    """For asymmetric modes HQQ should return a float-valued (non-integer) zero point."""
+def test_hqq_asymmetric_zero_point_rounded():
+    """HQQ should return an integer-valued zero point for use with uint4 storage.
+
+    HQQ optimizes z as a continuous float during iterations, but the final value is
+    rounded and clipped so that quantization and dequantization use the same integer z.
+    The tensor dtype stays float32 (no cast), but all values should be integer-valued.
+    """
     weight = _make_weight((32, 64), seed=13, scale=5.0)
     config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=16)
 
@@ -101,11 +106,11 @@ def test_hqq_asymmetric_float_zero_point():
     assert zero_point is not None, "Expected non-None zero_point for asymmetric mode"
 
     zp_np = zero_point.data
-    # The zero point should be float32
+    # dtype remains float32 (no explicit cast); values are integer-valued after rounding.
     assert zp_np.dtype == np.float32, f"Expected float32 zero point, got {zp_np.dtype}"
-    # At least some values should be non-integer (HQQ doesn't round to integers)
-    is_integer_valued = np.allclose(zp_np, np.round(zp_np), atol=1e-3)
-    assert not is_integer_valued, "HQQ zero point should be float-valued, not integer-valued"
+    assert np.allclose(zp_np, np.round(zp_np), atol=1e-5), (
+        "HQQ zero point should be integer-valued after rounding for consistent uint4 storage"
+    )
 
 
 def test_hqq_symmetric_no_zero_point():
