@@ -106,7 +106,11 @@ class LoraCorrectionAlgorithm:
         return wc_params.compression_config.num_bits == 4
 
     def calculate_adapters(
-        self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
+        self,
+        weight: Tensor,
+        compressed_weight: CompressedWeight,
+        wc_params: WeightCompressionParameters,
+        act_ch_axis: int,
     ) -> tuple[Tensor, Tensor, list[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -114,11 +118,13 @@ class LoraCorrectionAlgorithm:
         :param weight: original floating-point weight matrix.
         :param compressed_weight: compressed weight matrix.
         :param wc_params: parameters of weight compression.
+        :param act_ch_axis: axis number of the activation tensor which correspond to it channel.
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
         layer_name = wc_params.node_with_weight.node_name
         layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
+        transpose_a_flag = getattr(wc_params.node_with_weight, "transpose_a", False)
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,
             compressed_weight,
@@ -126,7 +132,9 @@ class LoraCorrectionAlgorithm:
             wc_params.reduction_axes,
             self._lora_correction_params,
             layer_statistics,
+            act_ch_axis,
             is_debug,
+            transpose_a=transpose_a_flag,
         )
         if is_debug:
             self._debug_interface.add_noises(layer_name, mean_noises)
@@ -140,7 +148,9 @@ class LoraCorrectionAlgorithm:
         reduction_axes: tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
         layer_statistics: WCTensorStatistic,
+        act_ch_axis: int,
         is_debug: bool | None = False,
+        transpose_a: bool = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -155,6 +165,7 @@ class LoraCorrectionAlgorithm:
         :param reduction_axes: axes along which different statistics reduced.
         :param lora_correction_params: parameters to configure the algorithm.
         :param layer_statistics: an object containing statistics for the layer.
+        :param act_ch_axis: axis number of the activation tensor which correspond to it channel.
         :param is_debug: whether to collect debug information, defaults to False.
         :return: two low rank matrices in the order of execution of corresponding linear layers and list of mean noises.
             Noises are collected from each step of the algorithm if debug was enabled.
@@ -168,7 +179,15 @@ class LoraCorrectionAlgorithm:
         )
         mode = compression_config.mode
         assert len(reduction_axes) == 1, "Assumed a single reduction axis"
-        reduction_axis = reduction_axes[0] if compression_config.group_size != -1 else -1
+
+        if compression_config.group_size != -1:
+            reduction_axis = reduction_axes[0]
+        else:
+            reduction_axis = -1
+
+        if transpose_a and reduction_axis != -1:
+            reduction_axis = 1
+
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
             fq_weights = do_integer_dequantization(
                 compressed_weight.tensor,
@@ -192,8 +211,8 @@ class LoraCorrectionAlgorithm:
             svd_residual = fns.transpose(svd_residual)
         residual = svd_residual.clone()  # [H, O]
 
-        s, X = process_stats(layer_statistics, subset_size)  # [H], [H, SS]
-        X = fns.transpose(X)  # [SS, H]
+        # Pass it to process_stats with transpose_a=True to get [SS, H] layout
+        s, X = process_stats(layer_statistics, subset_size, act_ch_axis, transpose_a=True)
         if compression_config.group_size > 0:
             # Multiply residual of weights by maximum channel magnitude of activations normalized per quantization
             # group. As a consequence, weights corresponding to a "noisy" activations has a higher error to correct.
