@@ -9,14 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable
 
 import torch
 import torch.fx
 
 import nncf
-import nncf.errors
-import nncf.tensor
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -89,7 +87,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_name_port_ids
 
     @staticmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple[int] | None:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
         node_with_weight_metatype = node_with_weight.metatype
@@ -102,9 +100,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return PTWeightCompressionAlgoBackend.target_point(target_type, target_node_name, port_id)
 
-    def mean_statistic_collector(
-        self, reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
+    def mean_statistic_collector(self, reduction_axes: tuple[int], subset_size: int | None = None) -> TensorCollector:
         mean_reducer = MeanReducer(reduction_axes)
         shape_reducer = ShapeReducer()
         collector = TensorCollector(WCTensorStatistic)
@@ -173,10 +169,10 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: torch.fx.GraphModule,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
+        precomputed_compressed_weights: dict[str, CompressedWeight] | None = None,
+        lora_correction_algo: LoraCorrectionAlgorithm | None = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+        advanced_parameters: AdvancedCompressionParameters | None = None,
     ) -> torch.fx.GraphModule:
         transformation_layout = TransformationLayout()
         for wc_params in weight_compression_parameters:

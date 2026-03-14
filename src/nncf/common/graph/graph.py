@@ -8,18 +8,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pathlib
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     Any,
     Callable,
     Generator,
     Iterable,
     KeysView,
-    Optional,
-    Union,
     ValuesView,
     cast,
 )
@@ -87,7 +85,7 @@ class NNCFNode:
         return cast(str, self._attributes[NNCFNode.NODE_TYPE_ATTR])
 
     @property
-    def layer_name(self) -> Optional[LayerName]:
+    def layer_name(self) -> LayerName | None:
         return self._attributes.get(NNCFNode.LAYER_NAME_ATTR)
 
     @layer_name.setter
@@ -95,7 +93,7 @@ class NNCFNode:
         self._attributes[NNCFNode.LAYER_NAME_ATTR] = value
 
     @property
-    def layer_attributes(self) -> Optional[BaseLayerAttributes]:
+    def layer_attributes(self) -> BaseLayerAttributes | None:
         return self._attributes.get(NNCFNode.LAYER_ATTRIBUTES)
 
     @layer_attributes.setter
@@ -456,10 +454,10 @@ class NNCFGraph:
         node_name: str,
         node_type: str,
         node_metatype: type[OperatorMetatype],
-        layer_attributes: Optional[BaseLayerAttributes] = None,
-        node_id_override: Optional[int] = None,
-        layer_name: Optional[LayerName] = None,
-        ignored_algorithms: Optional[list[str]] = None,
+        layer_attributes: BaseLayerAttributes | None = None,
+        node_id_override: int | None = None,
+        layer_name: LayerName | None = None,
+        ignored_algorithms: list[str] | None = None,
         is_in_iteration_scope: bool = False,
         is_integer_input: bool = False,
         is_shared: bool = False,
@@ -548,11 +546,11 @@ class NNCFGraph:
         self,
         from_node_id: int,
         to_node_id: int,
-        tensor_shape: Union[tuple[int, ...], list[int]],
+        tensor_shape: tuple[int, ...] | list[int],
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
-        parallel_input_port_ids: Optional[list[int]] = None,
+        parallel_input_port_ids: list[int] | None = None,
     ) -> None:
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
@@ -605,12 +603,12 @@ class NNCFGraph:
             )
         ]
 
-    def dump_graph(self, path: str) -> None:
-        write_dot_graph(self.get_graph_for_structure_analysis(), pathlib.Path(path))
+    def dump_graph(self, path: Path | str) -> None:
+        write_dot_graph(self.get_graph_for_structure_analysis(), Path(path))
 
-    def visualize_graph(self, path: str) -> None:
+    def visualize_graph(self, path: Path | str) -> None:
         out_graph = self._get_graph_for_visualization()
-        write_dot_graph(out_graph, pathlib.Path(path))
+        write_dot_graph(out_graph, Path(path))
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """

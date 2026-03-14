@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import Counter
-from typing import Any, Union
+from typing import Any
 
 import torch.fx
 
@@ -205,6 +205,7 @@ class GraphConverter:
                 om.PTAdaptiveMaxPool2dMetatype,
                 om.PTAdaptiveMaxPool3dMetatype,
                 om.PTAtenEmbeddingBagMetatype,
+                om.PTTopKMetatype,
             ] and isinstance(source_node.meta["val"], (tuple, list)):
                 tensor = source_node.meta["val"][output_idx]
                 # Assume every outputs corresponds to an unique output_port_id
@@ -225,7 +226,7 @@ class GraphConverter:
 
 
 def apply_args_defaults(
-    args: list[Any], kwargs: dict[str, Any], args_signature=list[Union[str, tuple[str, Any]]]
+    args: list[Any], kwargs: dict[str, Any], args_signature=list[str | tuple[str, Any]]
 ) -> dict[str, Any]:
     """
     Combines positional arguments (`args`) and keyword arguments (`kwargs`)

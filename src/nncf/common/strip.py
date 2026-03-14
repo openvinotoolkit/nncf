@@ -10,7 +10,7 @@
 # limitations under the License.
 
 
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import nncf
 from nncf.common.utils.api_marker import api
@@ -31,7 +31,7 @@ def strip(
     *,
     do_copy: bool = True,
     strip_format: StripFormat = StripFormat.NATIVE,
-    example_input: Optional[Any] = None,
+    example_input: Any | None = None,
 ) -> TModel:
     """
     Removes auxiliary layers and operations added during the compression process, resulting in a clean

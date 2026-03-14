@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os.path
 import subprocess
 
 import torch
@@ -25,20 +24,20 @@ from nncf.torch.extensions import ExtensionNamespace
 from nncf.torch.extensions import ExtensionsType
 from nncf.torch.quantization.reference import ReferenceQuantizedFunctions
 
-BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/quantization")
+BASE_EXT_DIR = NNCF_PACKAGE_ROOT_DIR / "torch" / "extensions" / "src" / "quantization"
 
 EXT_INCLUDE_DIRS = [
-    os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/include"),
+    (NNCF_PACKAGE_ROOT_DIR / "torch" / "extensions" / "include").as_posix(),
 ]
 
 CPU_EXT_SRC_LIST = [
-    os.path.join(BASE_EXT_DIR, "cpu/functions_cpu.cpp"),
-    os.path.join(NNCF_PACKAGE_ROOT_DIR, "torch/extensions/src/common/cpu/tensor_funcs.cpp"),
+    (BASE_EXT_DIR / "cpu" / "functions_cpu.cpp").as_posix(),
+    (NNCF_PACKAGE_ROOT_DIR / "torch" / "extensions" / "src" / "common" / "cpu" / "tensor_funcs.cpp").as_posix(),
 ]
 
 CUDA_EXT_SRC_LIST = [
-    os.path.join(BASE_EXT_DIR, "cuda/functions_cuda.cpp"),
-    os.path.join(BASE_EXT_DIR, "cuda/functions_cuda_impl.cu"),
+    (BASE_EXT_DIR / "cuda" / "functions_cuda.cpp").as_posix(),
+    (BASE_EXT_DIR / "cuda" / "functions_cuda_impl.cu").as_posix(),
 ]
 
 

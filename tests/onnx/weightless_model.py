@@ -11,7 +11,6 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 import onnx
@@ -19,7 +18,7 @@ from onnx import TensorProto
 from onnx.external_data_helper import uses_external_data
 
 
-def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx.ModelProto:
+def load_model_topology_with_zeros_weights(model_path: str | Path) -> onnx.ModelProto:
     """
     Loads onnx model and fills the all external tensors by zeros values.
 

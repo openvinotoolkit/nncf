@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import sys
-from typing import Iterable, Optional, TypeVar
+from typing import Iterable, TypeVar
 
 import nncf
 from nncf.common.factory import build_graph
@@ -66,7 +66,7 @@ def _create_message(nodes: Iterable[NNCFNode]) -> str:
 
 def calculate_accuracy_drop(
     initial_metric: float, quantized_metric: float, max_drop: float, drop_type: DropType
-) -> tuple[bool, Optional[float]]:
+) -> tuple[bool, float | None]:
     """
     Calculates accuracy drop and termination boolean flag.
 
@@ -150,7 +150,7 @@ class QuantizationAccuracyRestorer:
         max_num_iterations: int = sys.maxsize,
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
-        num_ranking_workers: Optional[int] = None,
+        num_ranking_workers: int | None = None,
         restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS,
     ):
         """

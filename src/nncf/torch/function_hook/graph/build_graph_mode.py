@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable
 
 import networkx as nx  # type: ignore[import-untyped]
 import torch
@@ -55,9 +55,7 @@ class GraphBuilderMode(FunctionHookMode):
         super().__init__(model=model, hook_storage=hook_storage)
         self.next_node_id: int = 0
         self.graph: nx.MultiDiGraph = nx.MultiDiGraph()
-        self.tensor_info: WeakUnhashableKeyMap[Union[torch.Tensor, torch.nn.Parameter], TensorInfo] = (
-            WeakUnhashableKeyMap()
-        )
+        self.tensor_info: WeakUnhashableKeyMap[torch.Tensor | torch.nn.Parameter, TensorInfo] = WeakUnhashableKeyMap()
 
         for name, parameter in self.model.named_parameters():
             self.tensor_info[parameter] = TensorInfo(
@@ -186,7 +184,7 @@ class GraphBuilderMode(FunctionHookMode):
         :param output: The output tensor.
         :param op_meta: Metadata about the operation.
         """
-        func: Optional[Callable[..., Any]] = None
+        func: Callable[..., Any] | None = None
         fn_kwargs = None
 
         if output.grad_fn is not None:

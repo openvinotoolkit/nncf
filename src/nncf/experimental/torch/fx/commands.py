@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Union
+from typing import Callable
 
 import torch.fx
 
@@ -26,7 +26,7 @@ class FXApplyTransformationCommand(Command):
     def __init__(
         self,
         transformation_fn: Callable[[torch.fx.GraphModule], None],
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
+        priority: TransformationPriority | int = TransformationPriority.DEFAULT_PRIORITY,
     ):
         """
         :param transformation_fn: Target transformation function.

@@ -274,7 +274,6 @@ Ready-to-run Jupyter* notebook tutorials and demos are available to explain and 
 | [MONAI Segmentation Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/ct-segmentation-quantize)<br>[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openvinotoolkit/openvino_notebooks/HEAD?filepath=notebooks%2Fct-segmentation-quantize%2Fct-scan-live-inference.ipynb)     |                               Post-Training Quantization                                |  OpenVINO  |            Segmentation             |
 | [PyTorch Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-post-training-quantization-nncf)                                                                                                                                                                                                      |                               Post-Training Quantization                                |  PyTorch   |        Image Classification         |
 | [YOLOv11 Quantization with Accuracy Control](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov11-quantization-with-accuracy-control)                                                                                                                                                                                               |                    Post-Training Quantization with Accuracy Control                     |  OpenVINO  | Speech-to-Text,<br>Object Detection |
-| [PyTorch Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-quantization-aware-training)                                                                                                                                                                                                   |                                Training-Time Compression                                |  PyTorch   |        Image Classification         |
 
 A list of notebooks demonstrating OpenVINO conversion and inference together with NNCF compression for models from various domains:
 
@@ -287,11 +286,9 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/clip-zero-shot-image-classification)                                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [BLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/blip-visual-language-processing)                                                                                                                                                                                                                               |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/latent-consistency-models-image-generation)                                                                                                                                                                                                |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
-| [SDXL-turbo](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/sdxl-turbo)                                                                                                                                                                                                                                              |            Post-Training Quantization             | OpenVINO  |                   Text-to-Image,<br>Image-to-Image                   |
 | [Distil-Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/distil-whisper-asr)                                                                                                                                                                                                                                  |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/whisper-subtitles-generation)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-subtitles-generation/whisper-convert.ipynb) |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [MMS Speech Recognition](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mms-massively-multilingual-speech)                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
-| [Grammar Error Correction](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/grammar-correction)                                                                                                                                                                                                                        |            Post-Training Quantization             | OpenVINO  |                       NLP, Grammar Correction                        |
 | [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)                                                                                                                                                                                                                   |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)                                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 
@@ -349,7 +346,7 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
-  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2026/openvino-workflow/torch-compile.html).
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
@@ -405,7 +402,7 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
 - [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
-- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
+- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2026/about-openvino/performance-benchmarks.html)
 
 ## Telemetry
 
@@ -414,4 +411,4 @@ You can opt-out at any time by running the following command in the Python envir
 
 `opt_in_out --opt_out`
 
-More information available on [OpenVINO telemetry](https://docs.openvino.ai/2025/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/2026/about-openvino/additional-resources/telemetry.html).

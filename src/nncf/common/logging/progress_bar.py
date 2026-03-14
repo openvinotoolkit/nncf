@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from logging import Logger
-from typing import Generic, Iterable, Iterator, Optional, TypeVar
+from typing import Generic, Iterable, Iterator, TypeVar
 
 from nncf.common.logging import nncf_logger
 
@@ -35,7 +35,7 @@ class ProgressBar(Generic[TObj]):
         logger: Logger = nncf_logger,
         desc: str = "",
         num_lines: int = 10,
-        total: Optional[int] = None,
+        total: int | None = None,
     ):
         self._logger = logger
         self._iterable = iterable

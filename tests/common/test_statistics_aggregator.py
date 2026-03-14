@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pytest
@@ -138,8 +138,8 @@ class TemplateTestStatisticsAggregator:
         target_type: TargetType
         quantization_mode: QuantizationMode
         per_channel: bool
-        ref_max_val: Union[np.ndarray, float]
-        ref_min_val: Union[np.ndarray, float]
+        ref_max_val: np.ndarray | float
+        ref_min_val: np.ndarray | float
 
     TEST_MEAN_QUANTILE = RangeEstimatorParameters(
         min=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN, quantile_outlier_prob=0.01),

@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Iterable, Optional, TypeVar
+from typing import Iterable, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -43,7 +43,7 @@ class MixedPrecisionCriterion(Algorithm):
     for weights based on some criteria.
     """
 
-    def __init__(self, ratio: float, subset_size: Optional[int] = None):
+    def __init__(self, ratio: float, subset_size: int | None = None):
         """
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
@@ -60,7 +60,7 @@ class MixedPrecisionCriterion(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         weight_params: list[WeightCompressionParameters],
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer | None = None,
     ) -> list[float]:
         """
         Calculates sensitivity of each layer according to a criterion.
@@ -72,8 +72,8 @@ class MixedPrecisionCriterion(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
         weight_params: list[WeightCompressionParameters] = None,
     ) -> list[WeightCompressionParameters]:
         """
@@ -181,7 +181,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         weight_param: WeightCompressionParameters,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer | None = None,
     ) -> float:
         weight_score = self._calc_weight_sensitivity(weight_param, model, graph)
         return weight_score
@@ -191,7 +191,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         model: TModel,
         graph: NNCFGraph,
         weight_params: list[WeightCompressionParameters],
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer | None = None,
     ) -> list[float]:
         scores = []
         for weight_param in track(weight_params, description="Mixed-Precision assignment"):
@@ -256,7 +256,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         weight_param: WeightCompressionParameters,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer | None = None,
     ):
         """
         NOTE: Data-based criteria for assigning 4-bit/8-bit precisions are valid for Matmul operations only.

@@ -45,7 +45,7 @@ def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
     if model_to_test.model_name == "MaskRCNN-12":
         # The problem with convert function - convert_opset_version.
         convert_opset_version = False
-        # TODO: need to investigate disallowed_op_types for Mask RCNN
+        # TODO(andrey-churkin): need to investigate disallowed_op_types for Mask RCNN
         ignored_scopes = IgnoredScope(types=["Resize", "Div", "RoiAlign", "ScatterElements"])
     if model_to_test.model_name == "ssd_mobilenet_v1_12":
         ignored_scopes = IgnoredScope(

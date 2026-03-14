@@ -12,7 +12,7 @@
 from collections import Counter
 from collections import defaultdict
 from copy import deepcopy
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf import Dataset
@@ -110,8 +110,8 @@ class SmoothQuant(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self._set_backend_entity(model)
         alpha_map = self._get_alpha_map()
@@ -191,7 +191,7 @@ class SmoothQuant(Algorithm):
 
     @staticmethod
     def _calculate_scale_and_ratio(
-        activations: Tensor, weights: Tensor, alpha: float, quantile: Optional[float] = 0.1
+        activations: Tensor, weights: Tensor, alpha: float, quantile: float | None = 0.1
     ) -> tuple[Tensor, float]:
         """
         Calculates base scale value and it's ratio.
@@ -314,7 +314,7 @@ class SmoothQuant(Algorithm):
     def _create_tensor_collector(
         self,
         num_samples: int,
-        axes: Optional[tuple[int, ...]],
+        axes: tuple[int, ...] | None,
         axes_mode: AxesMode,
     ) -> TensorCollector:
         """

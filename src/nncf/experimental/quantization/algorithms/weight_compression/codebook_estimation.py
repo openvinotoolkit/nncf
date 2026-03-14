@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -125,7 +125,7 @@ class CodebookEstimation(Algorithm):
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates optimal codebook for weight compression.
@@ -170,6 +170,7 @@ class CodebookEstimation(Algorithm):
 
             codebook = self.calculate_codebook(stats, weight, wp.reduction_axes, config, wp)
             res[weight_name] = CompressedWeight(None, None, None, codebook)
+            config.codebook_values = codebook
 
         return res
 
@@ -179,7 +180,7 @@ class CodebookEstimation(Algorithm):
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates optimal codebook for a group of weights grouped by name (e.g., down_proj, up_proj).

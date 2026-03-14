@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, Optional, TypeVar
+from typing import Iterable, TypeVar
 
 from nncf import AdvancedCompressionParameters
 from nncf import CompressionFormat
@@ -48,7 +48,7 @@ class WeightsCompression(Algorithm):
         lora_correction: bool,
         sensitivity_metric: SensitivityMetric,
         compression_format: CompressionFormat,
-        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+        advanced_parameters: AdvancedCompressionParameters | None = None,
     ) -> TModel:
         """
         :param quantizer: Quantizer to use in WeightCompression algorithm.
@@ -98,8 +98,8 @@ class WeightsCompression(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self._algo.set_backend_entity(model)
 

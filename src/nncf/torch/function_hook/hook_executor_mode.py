@@ -20,7 +20,7 @@ from dataclasses import field
 from itertools import chain
 from types import MethodType
 from types import TracebackType
-from typing import Any, Callable, Iterator, Optional, cast
+from typing import Any, Callable, Iterator, cast
 
 import torch
 from torch import Tensor
@@ -61,7 +61,7 @@ class OpMeta:
     extra_info: dict[str, Any] = field(default_factory=lambda: dict())
 
 
-def generate_normalized_op_name(module_name: str, fn_name: str, call_id: Optional[int] = None) -> str:
+def generate_normalized_op_name(module_name: str, fn_name: str, call_id: int | None = None) -> str:
     """
     Returns a normalized name of operation.
 
@@ -175,7 +175,7 @@ class FunctionHookMode(TorchFunctionMode):
         return self
 
     def __exit__(
-        self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
     ) -> None:
         """
         Exit the context manager, unwrapping the _call_impl function of each module.
@@ -197,7 +197,7 @@ class FunctionHookMode(TorchFunctionMode):
         func: Callable[..., Any],
         types: list[type[Any]],
         args: tuple[Any, ...] = (),
-        kwargs: Optional[dict[str, Any]] = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> Any:
         """
         Override the __torch_function__ method to add pre- and post-hook execution.

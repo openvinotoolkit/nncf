@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
@@ -171,7 +171,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int | None]:
         """
         Returns node's input port indices with weights tensors.
 

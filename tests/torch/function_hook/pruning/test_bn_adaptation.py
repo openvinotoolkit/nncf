@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Optional
 
 import pytest
 import torch
@@ -60,7 +59,7 @@ def test_set_batchnorm_train_only():
 
 
 @pytest.mark.parametrize("num,ref", ((None, 5), (2, 2)))
-def test_batch_norm_adaptation(mocker: MockerFixture, num: Optional[int], ref: int):
+def test_batch_norm_adaptation(mocker: MockerFixture, num: int | None, ref: int):
     model = ModelBN()
 
     dataloader = torch.utils.data.DataLoader([(torch.randn((3, 3, 3)), 1)] * 10, batch_size=2)

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import weakref
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 _K = TypeVar("_K")
 _V = TypeVar("_V")
@@ -63,7 +63,7 @@ class WeakUnhashableKeyMap(Generic[_K, _V]):
 
             self._data[key] = weakref.ref(obj, on_destroy), value
 
-    def get(self, obj: _K, default: Optional[Any] = None) -> Optional[_V]:
+    def get(self, obj: _K, default: Any | None = None) -> _V | None:
         """
         Get the value associated with the given object, or a default value if the object is not in the map.
 

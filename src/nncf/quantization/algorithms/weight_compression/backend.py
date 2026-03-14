@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Iterable, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -77,7 +77,7 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple[int] | None:
         """
         Returns reduction axes without axes that corresponds to weight channels of the node with weight.
 
@@ -167,10 +167,10 @@ class WeightCompressionAlgoBackend(ABC):
         model: TModel,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
+        precomputed_compressed_weights: dict[str, CompressedWeight] | None = None,
+        lora_correction_algo: LoraCorrectionAlgorithm | None = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+        advanced_parameters: AdvancedCompressionParameters | None = None,
     ) -> TModel:
         """
         Applies weight compression transformations to the model.
@@ -228,9 +228,7 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def mean_statistic_collector(
-        self, reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
+    def mean_statistic_collector(self, reduction_axes: tuple[int], subset_size: int | None = None) -> TensorCollector:
         """
         Return mean statistic collector
 
@@ -252,7 +250,7 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     def dump_parameters(
-        model: TModel, parameters: dict, algo_name: Optional[str] = "quantization", path: Optional[list] = None
+        model: TModel, parameters: dict, algo_name: str | None = "quantization", path: list | None = None
     ) -> None:
         """
         Dumps the given parameters into Model's meta section.
@@ -313,7 +311,7 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
 
 class MixedPrecisionAlgoBackend:
     @staticmethod
-    def hawq_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
+    def hawq_statistic_collector(subset_size: int | None = None) -> TensorCollector:
         reducer = RawReducer()
         aggregator = HAWQAggregator(num_samples=subset_size)
         collector = TensorCollector(HessianTensorStatistic)
@@ -322,7 +320,7 @@ class MixedPrecisionAlgoBackend:
 
     @staticmethod
     def mean_variance_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
+        reduction_axes: tuple[int], subset_size: int | None = None
     ) -> TensorCollector:
         reducer = MeanVarianceReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
@@ -331,9 +329,7 @@ class MixedPrecisionAlgoBackend:
         return collector
 
     @staticmethod
-    def max_variance_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
+    def max_variance_statistic_collector(reduction_axes: tuple[int], subset_size: int | None = None) -> TensorCollector:
         reducer = MaxVarianceReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
         collector = TensorCollector(MaxVarianceTensorStatistic)
@@ -341,9 +337,7 @@ class MixedPrecisionAlgoBackend:
         return collector
 
     @staticmethod
-    def mean_abs_max_statistic_collector(
-        reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
+    def mean_abs_max_statistic_collector(reduction_axes: tuple[int], subset_size: int | None = None) -> TensorCollector:
         reducer = MeanAbsMaxReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
         collector = TensorCollector(MeanMagnitudeTensorStatistic)

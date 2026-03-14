@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,7 +24,7 @@ T_NUMPY_ARRAY = NDArray[Any]
 @linalg.norm.register
 def _(
     a: T_NUMPY_ARRAY,
-    ord: Union[Literal["fro", "nuc"], float, None] = None,
+    ord: Literal["fro", "nuc"] | float | None = None,
     axis: T_AXIS = None,
     keepdims: bool = False,
 ) -> T_NUMPY_ARRAY:
@@ -59,10 +59,10 @@ def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
 
 
 @linalg.lstsq.register
-def _(a: T_NUMPY_ARRAY, b: T_NUMPY_ARRAY, driver: Optional[str] = None) -> T_NUMPY_ARRAY:
+def _(a: T_NUMPY_ARRAY, b: T_NUMPY_ARRAY, driver: str | None = None) -> T_NUMPY_ARRAY:
     return lstsq(a, b, lapack_driver=driver)[0]
 
 
 @linalg.svd.register
-def _(a: T_NUMPY_ARRAY, full_matrices: Optional[bool] = True) -> T_NUMPY_ARRAY:
+def _(a: T_NUMPY_ARRAY, full_matrices: bool | None = True) -> T_NUMPY_ARRAY:
     return np.linalg.svd(a, compute_uv=True, full_matrices=full_matrices)  # type: ignore[call-overload]

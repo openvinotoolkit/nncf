@@ -240,6 +240,8 @@ def test_compress_weights_functional_model(mode):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"backup_mode": BackupMode.MXFP8_E4M3},
+        {"backup_mode": BackupMode.FP8_E4M3},
         {"compression_format": CompressionFormat.FQ},
         {"compression_format": CompressionFormat.FQ_LORA},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},

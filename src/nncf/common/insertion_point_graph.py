@@ -130,7 +130,7 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
 
         node_keys_working_set = [deepcopy(node_key) for node_key in nx.lexicographical_topological_sort(self)]
 
-        # TODO (vshampor): Add insertion points for module pre- and post-ops.
+        # TODO(N/A): Add insertion points for module pre- and post-ops.
         # Should roughly look so: first, determine subsets of nodes belonging to each
         # separate NNCF module (via scope analysis), then for each subset find input/output
         # edges using a corresponding NNCFGraph function; add a pre-op insertion point node as the
@@ -195,12 +195,12 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
                     if original_edge_attrs[self.IS_INTEGER_PATH_EDGE_ATTR]:
                         has_integer_outputs = True
 
-                    # TODO (vshampor): introduce separate insertion points for operator outputs if
+                    # TODO(N/A): introduce separate insertion points for operator outputs if
                     # the outputs are semantically different
 
-                # TODO (vshampor): in multi-output case, some outputs may be integer and some float;
-                #  need to switch to using output ports to cover this correctly. For safety, mark
-                #  the edge from op to post-hook as integer if at least one output edge of the op was integer
+                # TODO(N/A): in multi-output case, some outputs may be integer and some float;
+                # need to switch to using output ports to cover this correctly. For safety, mark
+                # the edge from op to post-hook as integer if at least one output edge of the op was integer
                 is_integer_attrs = {InsertionPointGraph.IS_INTEGER_PATH_EDGE_ATTR: has_integer_outputs}
                 self.add_edge(operator_node_key, ip_node_key, **is_integer_attrs)
                 operator_node = self.nodes[operator_node_key]

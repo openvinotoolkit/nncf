@@ -20,7 +20,7 @@ from enum import Enum
 from functools import lru_cache
 from functools import partial
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 import matplotlib.pyplot as plt
 import psutil
@@ -55,10 +55,10 @@ def system_memory_warning():
 class MemoryMonitor:
     def __init__(
         self,
-        interval: Optional[float] = 0.1,
-        memory_type: Optional[MemoryType] = MemoryType.RSS,
-        memory_unit: Optional[MemoryUnit] = MemoryUnit.MiB,
-        include_child_processes: Optional[bool] = None,
+        interval: float | None = 0.1,
+        memory_type: MemoryType | None = MemoryType.RSS,
+        memory_unit: MemoryUnit | None = MemoryUnit.MiB,
+        include_child_processes: bool | None = None,
     ):
         """
         Memory monitoring utility to measure python process memory footprint. After start() is called, it
@@ -109,7 +109,7 @@ class MemoryMonitor:
         self._memory_values_queue = None
         self._stop_logging_atexit_fn = None
 
-    def start(self, at_exit_fn: Optional[Callable] = None) -> "MemoryMonitor":
+    def start(self, at_exit_fn: Callable | None = None) -> "MemoryMonitor":
         """
         Start memory monitoring.
 
@@ -150,7 +150,7 @@ class MemoryMonitor:
             atexit.unregister(self._stop_logging_atexit_fn)
             self._stop_logging_atexit_fn = None
 
-    def get_data(self, memory_from_zero: Optional[bool] = False) -> tuple[list, list]:
+    def get_data(self, memory_from_zero: bool | None = False) -> tuple[list, list]:
         """
         :param memory_from_zero: Whether to normalize memory measurements by subtracting the first value. This way
             the measurements will start with 0. Hence, is not very reliable and may actually result in negative values.
@@ -175,8 +175,8 @@ class MemoryMonitor:
         time_values: list[float],
         memory_values: list[float],
         save_dir: Path,
-        plot_title: Optional[str] = "",
-        filename_suffix: Optional[str] = "",
+        plot_title: str | None = "",
+        filename_suffix: str | None = "",
     ):
         """
         Save memory logs as a text file and a 2D plot.
@@ -210,7 +210,7 @@ class MemoryMonitor:
         # Save measurements plot
         self.save_memory_plot(log_filepath, plot_title)
 
-    def save_memory_plot(self, log_filepath: Path, plot_title: Optional[str] = "", filename_suffix: Optional[str] = ""):
+    def save_memory_plot(self, log_filepath: Path, plot_title: str | None = "", filename_suffix: str | None = ""):
         """
         Parse pre-saved txt file logs and plot a new figure based on this data. May be useful for re-plotting with
         different title.
@@ -265,10 +265,10 @@ class MemoryMonitor:
 class memory_monitor_context:
     def __init__(
         self,
-        interval: Optional[float] = 0.1,
-        memory_unit: Optional[MemoryUnit] = MemoryUnit.MiB,
-        return_max_value: Optional[bool] = True,
-        save_dir: Optional[Path] = None,
+        interval: float | None = 0.1,
+        memory_unit: MemoryUnit | None = MemoryUnit.MiB,
+        return_max_value: bool | None = True,
+        save_dir: Path | None = None,
     ):
         """
         A memory monitor context manager which monitors both RSS and SYSTEM memory types. After, it stores the

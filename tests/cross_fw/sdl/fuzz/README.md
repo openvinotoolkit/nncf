@@ -9,5 +9,5 @@
 2. Run the fuzz test
 
     ```bash
-    python fuzz_target.py -runs=10000
+    python fuzz_target.py -runs=10000 1>fuzz_log.log 2>&1
     ```
