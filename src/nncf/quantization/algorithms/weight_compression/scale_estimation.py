@@ -139,9 +139,11 @@ class ScaleEstimation:
                 continue
             _, weight_port_id = weight_data[0]
 
-            if self._backend_entity.matmul_has_transposed_activations(wp.node_with_weight, graph):
-                msg = "Transposed activations are not supported yet for the Scale Estimation algorithm"
-                raise nncf.UnsupportedModelError(msg)
+            activation_port = self._backend_entity.get_activation_port_id(wp.node_with_weight, graph)
+            activation_edge = graph.get_input_edge_by_port_id(wp.node_with_weight, activation_port)
+            act_ch_axis = self._backend_entity.get_activation_channel_axis(
+                wp.node_with_weight, activation_edge.input_port_id, activation_edge.tensor_shape
+            )
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
@@ -154,6 +156,7 @@ class ScaleEstimation:
                 self._initial_steps,
                 self._scale_steps,
                 self._weight_penalty,
+                act_ch_axis,
             )
             res[weight_name] = CompressedWeight(None, scale, zero_point, None)
 
@@ -169,6 +172,7 @@ class ScaleEstimation:
         initial_steps: int = 5,
         scale_steps: int = 10,
         weight_penalty: float = -1.0,
+        act_ch_axis:int =-1,
     ) -> Tensor:
         """
         Calculates the quantization parameters for a given set of weights and activations.
@@ -195,7 +199,7 @@ class ScaleEstimation:
         """
         reduction_axis = reduction_axes[0]
 
-        s, X = process_stats(statistics, subset_size)
+        s, X = process_stats(statistics, subset_size,act_ch_axis)
 
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)

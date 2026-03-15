@@ -73,12 +73,6 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
     transpose = constant_layer_attrs.get("transpose", False)
     input_shape = constant_layer_attrs["shape"]
 
-    # Detect transpose via layer_attributes metadata if present
-    if hasattr(layer_attributes, "input_attributes"):
-        input_attrs = layer_attributes.input_attributes.get(port_id, {})
-        if input_attrs.get("transpose", False):
-            transpose = not transpose
-
     return get_linear_input_layout(
         input_shape=input_shape,
         transpose=transpose,
