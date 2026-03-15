@@ -4,10 +4,12 @@ datasets
 matplotlib # required for the memory monitor tool
 
 torch
+torchao
 torchvision
 onnx
 onnxruntime
 openvino
+pandas
 pytest
 pytest-forked
 pytest-split
