@@ -22,7 +22,7 @@ pytest-xdist==3.5.0
 pytest-forked==1.6.0
 pytest-split==0.11.0
 
-datasets==4.6.1
+datasets==4.7.0
 matplotlib==3.10.8
 pandas==2.3.3
 fastprogress==1.0.5
