@@ -181,7 +181,12 @@ def do_float_quantization(
     compressed_weight = _do_float_quantization_single_scale(weight, weight_config, reduction_axes)
 
     scale_config = WeightCompressionConfig(mode=CompressWeightsMode.FP8_E4M3)
-    compressed_scale = _do_float_quantization_single_scale(compressed_weight.scale, scale_config)
+    # Explicit reduction_axes are required for the optimized OV path,
+    # which does not support reduction_axes=None.
+    scale_reduction_axes = tuple(range(compressed_weight.scale.ndim))
+    compressed_scale = _do_float_quantization_single_scale(
+        compressed_weight.scale, scale_config, reduction_axes=scale_reduction_axes
+    )
     return CompressedWeight(
         tensor=compressed_weight.tensor, scale=compressed_scale.tensor, global_scale=compressed_scale.scale
     )

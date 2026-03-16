@@ -114,9 +114,13 @@ def do_float_quantization(
     Computes quantization scale if not provided, and performs corresponding float weight quantization.
     NF4 format uses 16 levels in [-1, 1] range, while FP4/MXFP4 uses 16 levels in [-6, 6].
 
+    Either `precomputed_scale` or `reduction_axes` must be provided. When `precomputed_scale` is None,
+    the scale is computed internally using `reduction_axes`, which must not be None in that case.
+
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
+        Required when precomputed_scale is not provided.
     :param precomputed_scale: Optional precomputed scale.
     :return: A CompressedWeight object containing the quantized weights and scale.
     """

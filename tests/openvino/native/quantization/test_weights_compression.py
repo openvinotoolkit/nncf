@@ -944,6 +944,34 @@ def test_nvfp4_precomputed_scales():
         )
 
 
+def test_nvfp4_optimized_scale_compression():
+    """
+    Reproduces the ValueError that occurs when NVFP4 compression hits the optimized OV path
+    for the second-level scale quantization (FP8_E4M3). In NVFP4, the weight is first compressed
+    to FP4, producing a group-level scale. That scale is then quantized to FP8_E4M3 with
+    reduction_axes=None (per-tensor). When this second call takes the optimized OV path,
+    get_float_quantization_model receives scale_shape=None and reduction_axes=None, which triggers:
+        ValueError: Reduction axes must be provided if scale shape is not provided.
+    in _prepare_quantization_model_inputs.
+
+    The optimized path is forced via patching to avoid needing a large weight tensor.
+    """
+    weight = Tensor(np.random.randn(2, 16).astype(np.float32))
+    config = WeightCompressionConfig(mode=CompressWeightsMode.NVFP4)
+    reduction_axes = -1
+
+    # Force the optimized OV path for all tensors regardless of size
+    with patch(
+        "nncf.quantization.algorithms.weight_compression.weight_lowering._can_run_optimized",
+        return_value=True,
+    ):
+        result = do_float_quantization(weight, config, reduction_axes)
+
+    assert result.tensor is not None
+    assert result.scale is not None
+    assert result.global_scale is not None
+
+
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "algo",
