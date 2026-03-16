@@ -197,8 +197,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self, node_with_weight: NNCFNode, weight_port_id: int, model: onnx.ModelProto, graph: NNCFGraph
     ) -> TensorDataType:
         weight_name = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["name"]
-        weight_tensor = get_tensor(model, weight_name)
-        return ONNX_DTYPE_TO_NNCF_DTYPE[weight_tensor.data_type]
+        try:
+            weight_tensor = get_tensor(model, weight_name)
+            data_type = weight_tensor.data_type
+        except nncf.ValidationError:
+            data_type = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["dtype"]
+
+        return ONNX_DTYPE_TO_NNCF_DTYPE[data_type]
 
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:
