@@ -409,6 +409,11 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_num_int8_nodes(model: TModel):
+        "Returns number of int8 nodes."
+
+    @staticmethod
+    @abstractmethod
     def get_num_int4_group_sizes(model: TModel) -> dict[int, int]:
         "Returns number of int4 nodes for each group size."
 
@@ -445,9 +450,8 @@ class TemplateWeightCompression(ABC):
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
-    @pytest.mark.parametrize("degree", [1, 2])
-    def test_rope_weight_compression(self, degree):
-        model = self.get_RoPE_model(degree)
+    def test_rope_weight_compression(self):
+        model = self.get_RoPE_model(degree=2)
         sz = 8
         n_samples = 10
 
@@ -463,9 +467,7 @@ class TemplateWeightCompression(ABC):
             dataset=dataset,
         )
 
-        int4_ref_num_compressed = 0
-        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
-        assert int4_num_nodes == int4_ref_num_compressed
+        assert self.get_num_int8_nodes(compressed_model) == 0
 
     def test_sam_pe_weight_compression(self):
         model = self.get_SAM_PE_model()

@@ -1342,6 +1342,47 @@ class RoPEModel(OVReferenceModel):
         return model
 
 
+class RoPEModelWC(OVReferenceModel):
+    def _create_ov_model(self, degree: int):
+        position_ids = opset.parameter([1, 10], name="position_ids")
+
+        unsqueeze = opset.unsqueeze(position_ids, 0, name="unsqueeze")
+        convert = opset.convert(unsqueeze, ov.Type.f32, name="convert")
+
+        data = self._rng.random((1, 5, 1)).astype(np.float32)
+
+        matmul = opset.matmul(data, convert, transpose_a=False, transpose_b=False, name="MatMul")
+        transpose = opset.transpose(matmul, [0, 2, 1], name="transpose")
+        concat = opset.concat([transpose] * degree, axis=0, name="concat")
+        sin = opset.sin(concat, name="sin")
+        cos = opset.cos(concat, name="cos")
+        sin_result = opset.result(sin, name="sin_result")
+        cos_result = opset.result(cos, name="cos_result")
+
+        model = ov.Model([sin_result, cos_result], [position_ids])
+        return model
+
+
+class Phi3dot5RoPEModel(OVReferenceModel):
+    def _create_ov_model(self):
+        position_ids = opset.parameter([1, 10], name="position_ids")
+
+        unsqueeze = opset.unsqueeze(position_ids, 0, name="unsqueeze")
+        convert = opset.convert(unsqueeze, ov.Type.f32, name="convert")
+
+        data = self._rng.random((1, 5, 1)).astype(np.float32)
+
+        matmul = opset.matmul(data, convert, transpose_a=False, transpose_b=False, name="MatMul")
+        concat = opset.concat([matmul, matmul], axis=0, name="concat")
+        sin = opset.sin(concat, name="sin")
+        cos = opset.cos(concat, name="cos")
+        sin_result = opset.result(sin, name="sin_result")
+        cos_result = opset.result(cos, name="cos_result")
+
+        model = ov.Model([sin_result, cos_result], [position_ids])
+        return model
+
+
 class SAMPEModel(OVReferenceModel):
     """
     Positional Embedding from Segment Anything Model (SAM).

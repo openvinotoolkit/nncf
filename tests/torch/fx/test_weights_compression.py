@@ -25,9 +25,12 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
-from tests.cross_fw.test_templates.helpers import RoPEModel
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
+from tests.cross_fw.test_templates.helpers import RoPEWCModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.function_hook.quantization.test_weights_compression import ALL_SENSITIVITY_METRICS
@@ -329,8 +332,8 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_RoPE_model(degree: int) -> torch.fx.GraphModule:
-        model = RoPEModel(degree)
-        ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
+        model = RoPEWCModel(degree)
+        ex_input = torch.ones(RoPEWCModel.INPUT_SIZE, dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
@@ -587,14 +590,22 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
             return "linear_4"
         return "bmm_4"
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: torch.fx.GraphModule) -> int:
+        return cls._get_num_typed_nodes(model, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: torch.fx.GraphModule) -> int:
+        return cls._get_num_typed_nodes(model, (INT8SymmetricWeightsDecompressor, INT8AsymmetricWeightsDecompressor))
+
     @staticmethod
-    def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
+    def _get_num_typed_nodes(model: torch.fx.GraphModule, types: tuple[BaseWeightsDecompressor, ...]) -> int:
         num = 0
         for node in model.graph.nodes:
             if node.op != "call_module":
                 continue
             op = getattr(model, node.target)
-            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+            num += isinstance(op, types)
         return num
 
     @staticmethod

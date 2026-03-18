@@ -511,6 +511,25 @@ class RoPEModel(nn.Module):
         return x1, x2
 
 
+class RoPEWCModel(nn.Module):
+    INPUT_SIZE = [1, 10]
+
+    def __init__(self, degree: int):
+        super().__init__()
+        self._degree = degree
+        with set_torch_seed():
+            self.data = torch.nn.Parameter(torch.randn([1, 5, 1]))
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, dim=0)
+        x = torch.matmul(self.data, x)
+        x = torch.transpose(x, 2, 1)
+        x = torch.cat([x] * self._degree, dim=2)
+        x1 = x.sin()
+        x2 = x.cos()
+        return x1, x2
+
+
 class SAMPEModel(nn.Module):
     """
     Positional Embedding from Segment Anything Model (SAM).

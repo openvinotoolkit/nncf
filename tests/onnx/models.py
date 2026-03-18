@@ -1986,7 +1986,7 @@ class RoPEModel(ONNXReferenceModel):
         concat_node = onnx.helper.make_node(
             name="concat",
             op_type="Concat",
-            inputs=[transpose_out_name],
+            inputs=[transpose_out_name, transpose_out_name],
             outputs=[concat_out_name],
             axis=-1,
         )

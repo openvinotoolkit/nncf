@@ -39,9 +39,12 @@ from tests.cross_fw.test_templates.helpers import YOLO26AttentionBlock
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.fx.test_sanity import count_q_dq
+from tests.torch.test_models.synthetic import ConcatSameTensorModel
+from tests.torch.test_models.synthetic import ConvReluBranchModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_models.synthetic import SplitCatModel
 from tests.torch.test_models.synthetic import TopKModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
@@ -77,6 +80,9 @@ TEST_MODELS = (
     ModelCase(YOLO26AttentionBlock, "yolo26_attn_block", YOLO26AttentionBlock.INPUT_SIZE),
     ModelCase(EmbeddingSumModel, "embedding_bag_model", [1, 1]),
     ModelCase(TopKModel, "topk_model", TopKModel.INPUT_SHAPE),
+    ModelCase(ConcatSameTensorModel, "concat_same_tensor_model", ConcatSameTensorModel.INPUT_SHAPE),
+    ModelCase(SplitCatModel, "split_cat_model", SplitCatModel.INPUT_SHAPE),
+    ModelCase(ConvReluBranchModel, "conv_relu_branch_model", ConvReluBranchModel.INPUT_SHAPE),
 )
 
 
@@ -131,7 +137,8 @@ def test_model(test_case: ModelCase, regen_ref_data: bool):
     # Check NNCFGrpah
     dot_file_name = get_dot_filename(model_name)
     path_to_dot = FX_DIR_NAME / dot_file_name
-    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    keep_port_ids = model_name in ["split_cat_model", "concat_same_tensor_model", "conv_relu_branch_model"]
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True, port_ids=keep_port_ids)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
 
     # Check metatypes

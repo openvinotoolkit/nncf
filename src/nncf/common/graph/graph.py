@@ -596,7 +596,7 @@ class NNCFGraph:
         out_graph = self._get_graph_for_visualization()
         write_dot_graph(out_graph, Path(path))
 
-    def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.MultiDiGraph:
+    def get_graph_for_structure_analysis(self, extended: bool = False, port_ids: bool = False) -> nx.MultiDiGraph:
         """
         Returns the nx.Digraph, which is built based on self._nx_graph.
         The new graph has certain node attributes omitted, compared to the graph stored inside NNCFGraph.
@@ -624,12 +624,16 @@ class NNCFGraph:
                 else:
                     attrs_edge["style"] = "solid"
                 label["shape"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+                if port_ids:
+                    label["ids"] = (
+                        f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} -> {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
+                    )
 
             if label:
                 if "shape" in label and len(label) == 1:
                     attrs_edge["label"] = label["shape"]
                 else:
-                    attrs_edge["label"] = ", ".join((f"{k} {v}" for k, v in label.items()))
+                    attrs_edge["label"] = "\\n".join((f"{k} {v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 

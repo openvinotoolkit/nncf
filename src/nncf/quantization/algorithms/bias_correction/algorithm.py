@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistical_functions import mean_per_channel
@@ -599,7 +600,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, edge.from_node.node_name, port_id=edge.output_port_id
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
+            stat_collector = get_raw_stat_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -620,7 +621,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=OUTPUT_PORT_OF_NODE
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
+            stat_collector = get_raw_stat_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key

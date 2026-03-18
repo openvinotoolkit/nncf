@@ -17,7 +17,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
-from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
@@ -65,10 +64,6 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         window_size: int | None = None,
     ) -> TensorCollector:
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
-
-    @staticmethod
-    def raw_statistic_collector(num_samples: int | None = None) -> TensorCollector:
-        return get_raw_stat_collector(num_samples)
 
     @staticmethod
     def process_model_output(raw_data: dict, output_name: int) -> Tensor:
