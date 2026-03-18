@@ -75,6 +75,7 @@ from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import MatMul
 from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
+from tests.openvino.native.models import Phi3dot5RoPEModel
 from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import SAMPEModel
 from tests.openvino.native.models import SequentialMatmulModel
@@ -2482,11 +2483,19 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_ignored_scope_name(is_3d_weights) -> str:
         return "MatMul_5"
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: ov.Model) -> int:
+        return cls._get_num_typed_nodes(model, [ov.Type.i4, ov.Type.u4])
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: ov.Model) -> int:
+        return cls._get_num_typed_nodes(model, [ov.Type.i8, ov.Type.u8])
+
     @staticmethod
-    def get_num_int4_nodes(model: ov.Model) -> int:
+    def _get_num_typed_nodes(model: ov.Model, types: list[ov.Type]) -> int:
         num = 0
         for op in model.get_ops():
-            if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
+            if op.get_type_name() == "Constant" and op.get_element_type() in types:
                 num += 1
         return num
 
@@ -2614,3 +2623,12 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+    def test_phi_rope_model(self):
+        model = Phi3dot5RoPEModel().ov_model
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT8_SYM,
+            group_size=-1,
+        )
+        assert self.get_num_int8_nodes(compressed_model) == 0
