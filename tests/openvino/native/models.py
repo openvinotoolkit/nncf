@@ -1383,10 +1383,12 @@ class SAMPEModel(OVReferenceModel):
 
 
 class MatMul(OVReferenceModel):
-    def _create_ov_model(self):
-        input_node = opset.parameter([1, 4, 8], name="Input")
+    def _create_ov_model(self, input_shape: list[int] | None = None, output_dim: int = 16):
+        input_shape = [1, 4, 8] if input_shape is None else input_shape
+        input_node = opset.parameter(input_shape, name="Input")
 
-        weights_data = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8)
+        input_dim = input_shape[-1]
+        weights_data = np.arange(0, output_dim * input_dim, dtype=np.float32).reshape(output_dim, input_dim)
         weights_node = opset.constant(weights_data, dtype=np.float32, name="Weights")
 
         matmul_node = opset.matmul(input_node, weights_node, transpose_a=False, transpose_b=True, name="MatMul")

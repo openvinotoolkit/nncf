@@ -310,6 +310,7 @@ nsamples
 nsga
 numels
 nvcc
+nvfp
 objwalk
 odict
 oimp
