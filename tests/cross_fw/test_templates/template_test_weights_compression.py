@@ -39,6 +39,9 @@ from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
@@ -362,6 +365,41 @@ class TemplateWeightCompression(ABC):
     @abstractmethod
     def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
+
+    @pytest.mark.parametrize("mode", [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK])
+    def test_codebook_float_quantize_dequantize_weight(self, mode: CompressWeightsMode) -> None:
+        """Verifies that codebook quantize-dequantize roundtrip recovers weights close to original.
+        """
+        rng = np.random.default_rng(42)
+        codebook = np.array([-1.0, -0.5, 0.0, 0.5, 1.0], dtype=np.float32)
+        weight_data = rng.uniform(-5.0, 5.0, size=(4, 8)).astype(np.float32)
+        weight = Tensor(weight_data)
+        codebook_tensor = Tensor(codebook)
+
+        config = WeightCompressionConfig(mode=mode, codebook_values=codebook_tensor)
+        reduction_axes = (1,)
+
+        # Test 1: do_float_quantization + do_float_dequantization roundtrip
+        compressed_weight = do_float_quantization(weight, config, reduction_axes)
+        decompressed_weight = do_float_dequantization(compressed_weight)
+
+        # Decompressed weight must be close to original (within codebook quantization error)
+        # With 5 codebook levels and scale, max relative error per element should be bounded.
+        # If indexes were used instead of codebook values, the result would be completely wrong.
+        max_abs_error = fns.max(fns.abs(weight - decompressed_weight)).data
+        max_abs_weight = fns.max(fns.abs(weight)).data
+        relative_error = max_abs_error / max_abs_weight
+        assert relative_error < 0.5, (
+            f"Codebook roundtrip error too large: {relative_error:.4f}. "
+            "Dequantization may be using indexes instead of codebook values."
+        )
+
+        # Test 2: float_quantize_dequantize_weight (combined function)
+        dequantized = float_quantize_dequantize_weight(weight, config, reduction_axes)
+        assert fns.allclose(dequantized, decompressed_weight), (
+            "float_quantize_dequantize_weight result differs from manual do_float_quantization + "
+            "do_float_dequantization roundtrip."
+        )
 
     @staticmethod
     @abstractmethod

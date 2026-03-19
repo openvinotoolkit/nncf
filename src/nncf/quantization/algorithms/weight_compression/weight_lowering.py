@@ -142,7 +142,7 @@ def do_float_dequantization(compressed_weight: CompressedWeight, reduction_axis:
     else:
         scale = compressed_weight.scale
 
-    decompressed_weight = compressed_weight.tensor * scale
+    decompressed_weight = compressed_weight.quantized_tensor * scale
     if reduction_axis != -1:
         decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
     return decompressed_weight
