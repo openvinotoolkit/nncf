@@ -443,11 +443,13 @@ class TemplateWeightCompression(ABC):
         """Verifies that scale estimation produces correct scales for all 4-bit compression modes."""
         rng = np.random.default_rng(42)
         weight_data = rng.uniform(-2.0, 2.0, size=(8, 8)).astype(np.float32)
-        weight = Tensor(weight_data)
+        weight = Tensor(self.to_tensor(weight_data))
         reduction_axes = (1,)
 
         # Build synthetic activation statistics: 2 samples, shape (1, 4, 8)
-        activations = [Tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32)) for _ in range(2)]
+        activations = [
+            Tensor(self.to_tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32))) for _ in range(2)
+        ]
         statistics = ScaleEstimation.activations_to_wc_statistics(activations)
 
         scale, zp = ScaleEstimation.calculate_quantization_params(

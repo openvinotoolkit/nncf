@@ -605,7 +605,7 @@ def _calculate_codebook_quantized_weight(
 
     if center_of_quantiles is None:
         center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
-    center_of_quantiles = fns.from_numpy(center_of_quantiles, backend=norm_weight.backend)
+    center_of_quantiles = fns.from_numpy(center_of_quantiles.data, backend=norm_weight.backend)
     return fns.searchsorted(center_of_quantiles, norm_weight)
 
 
