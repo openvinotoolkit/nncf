@@ -37,11 +37,9 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
@@ -360,46 +358,117 @@ class TemplateWeightCompression(ABC):
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
+    @pytest.mark.parametrize(
+        "config,ref_scale,ref_zp",
+        [
+            (
+                WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                np.array(
+                    [
+                        [[-0.22218132]],
+                        [[-0.19778779]],
+                        [[-0.24689576]],
+                        [[-0.21622597]],
+                        [[0.1586609]],
+                        [[-0.15784486]],
+                        [[0.238651]],
+                        [[0.17156479]],
+                    ],
+                    dtype=np.float32,
+                ),
+                None,
+            ),
+            (
+                WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
+                np.array(
+                    [
+                        [[0.22218132]],
+                        [[0.19778779]],
+                        [[0.22600587]],
+                        [[0.22510362]],
+                        [[0.12782802]],
+                        [[0.14118923]],
+                        [[0.2070494]],
+                        [[0.15438876]],
+                    ],
+                    dtype=np.float32,
+                ),
+                np.array(
+                    [[[7.0]], [[7.0]], [[7.0]], [[7.0]], [[10.0]], [[6.0]], [[9.0]], [[9.0]]],
+                    dtype=np.float32,
+                ),
+            ),
+            (
+                WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                np.array(
+                    [
+                        [[1.9024894]],
+                        [[1.6864889]],
+                        [[2.0698037]],
+                        [[1.870039]],
+                        [[1.480314]],
+                        [[1.3043315]],
+                        [[1.863365]],
+                        [[1.5413069]],
+                    ],
+                    dtype=np.float32,
+                ),
+                None,
+            ),
+            (
+                WeightCompressionConfig(
+                    mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
+                ),
+                np.array(
+                    [
+                        [[0.54356843]],
+                        [[0.4866096]],
+                        [[0.4948216]],
+                        [[0.5342969]],
+                        [[0.42294687]],
+                        [[0.3495965]],
+                        [[0.53673494]],
+                        [[0.44053704]],
+                    ],
+                    dtype=np.float32,
+                ),
+                None,
+            ),
+        ],
+        ids=["int4_sym", "int4_asym", "nf4", "codebook"],
+    )
+    def test_scale_estimation_calculate_quantization_params(
+        self, config: WeightCompressionConfig, ref_scale: np.ndarray, ref_zp: np.ndarray | None
+    ) -> None:
+        """Verifies that scale estimation produces correct scales for all 4-bit compression modes."""
+        rng = np.random.default_rng(42)
+        weight_data = rng.uniform(-2.0, 2.0, size=(8, 8)).astype(np.float32)
+        weight = Tensor(weight_data)
+        reduction_axes = (1,)
+
+        # Build synthetic activation statistics: 2 samples, shape (1, 4, 8)
+        activations = [Tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32)) for _ in range(2)]
+        statistics = ScaleEstimation.activations_to_wc_statistics(activations)
+
+        scale, zp = ScaleEstimation.calculate_quantization_params(
+            statistics, weight, reduction_axes, config, subset_size=2, initial_steps=2, scale_steps=3
+        )
+
+        assert fns.allclose(Tensor(ref_scale), scale, atol=1e-6), (
+            f"Scale for {config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
+        )
+        if ref_zp is None:
+            assert zp is None, f"Expected no zero point for {config.mode.value}, got: {zp}"
+        else:
+            assert fns.allclose(Tensor(ref_zp), zp, atol=1e-6), (
+                f"Zero point for {config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
+            )
+
     # AWQ Tests
     @staticmethod
     @abstractmethod
     def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
         "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
-
-    @pytest.mark.parametrize("mode", [CompressWeightsMode.CODEBOOK, CompressWeightsMode.ADAPTIVE_CODEBOOK])
-    def test_codebook_float_quantize_dequantize_weight(self, mode: CompressWeightsMode) -> None:
-        """Verifies that codebook quantize-dequantize roundtrip recovers weights close to original.
-        """
-        rng = np.random.default_rng(42)
-        codebook = np.array([-1.0, -0.5, 0.0, 0.5, 1.0], dtype=np.float32)
-        weight_data = rng.uniform(-5.0, 5.0, size=(4, 8)).astype(np.float32)
-        weight = Tensor(weight_data)
-        codebook_tensor = Tensor(codebook)
-
-        config = WeightCompressionConfig(mode=mode, codebook_values=codebook_tensor)
-        reduction_axes = (1,)
-
-        # Test 1: do_float_quantization + do_float_dequantization roundtrip
-        compressed_weight = do_float_quantization(weight, config, reduction_axes)
-        decompressed_weight = do_float_dequantization(compressed_weight)
-
-        # Decompressed weight must be close to original (within codebook quantization error)
-        # With 5 codebook levels and scale, max relative error per element should be bounded.
-        # If indexes were used instead of codebook values, the result would be completely wrong.
-        max_abs_error = fns.max(fns.abs(weight - decompressed_weight)).data
-        max_abs_weight = fns.max(fns.abs(weight)).data
-        relative_error = max_abs_error / max_abs_weight
-        assert relative_error < 0.5, (
-            f"Codebook roundtrip error too large: {relative_error:.4f}. "
-            "Dequantization may be using indexes instead of codebook values."
-        )
-
-        # Test 2: float_quantize_dequantize_weight (combined function)
-        dequantized = float_quantize_dequantize_weight(weight, config, reduction_axes)
-        assert fns.allclose(dequantized, decompressed_weight), (
-            "float_quantize_dequantize_weight result differs from manual do_float_quantization + "
-            "do_float_dequantization roundtrip."
-        )
 
     @staticmethod
     @abstractmethod

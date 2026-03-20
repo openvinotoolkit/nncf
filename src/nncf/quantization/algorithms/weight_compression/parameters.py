@@ -12,7 +12,6 @@
 from dataclasses import dataclass
 
 from nncf.tensor import Tensor
-from nncf.tensor.definitions import TensorBackend
 
 
 @dataclass
@@ -37,15 +36,11 @@ class CompressedWeight:
     @property
     def quantized_tensor(self) -> Tensor:
         """
-        Returns the quantized weight values. For codebook compression, `tensor` stores indexes into the
-        codebook, so this property resolves them to actual quantized values via codebook lookup.
-        For all other modes, returns `tensor` as-is.
+        The quantized weight values before scaling. For non-codebook compression, equals the tensor as-is.
+        For codebook compression, returns the codebook values indexed by the tensor.
 
         :return: Tensor with quantized weight values.
         """
         if self.codebook is not None:
-            codebook = self.codebook
-            if codebook.backend == TensorBackend.ov:
-                codebook = codebook.as_numpy_tensor()
-            return codebook[self.tensor]
+            return self.codebook[self.tensor]
         return self.tensor
