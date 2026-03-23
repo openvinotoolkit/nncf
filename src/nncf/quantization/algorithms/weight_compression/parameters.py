@@ -24,17 +24,11 @@ class CompressedWeight:
     :param zero_point: The zero-point, it is the value of the compression type corresponding to the value 0
         in the non-compression realm. Applicable for INT quantization.
     :param codebook: The codebook (LUT) for the weight compression. Applicable for vector quantization
+    :param global_scale: The tensor-wide (global) scaling factor used in two-level scaling schemes such as NVFP4.
     """
 
     tensor: Tensor | None = None
     scale: Tensor | None = None
     zero_point: Tensor | None = None
     codebook: Tensor | None = None
-
-    def is_codebook(self):
-        """
-        Check if the compressed weight is a codebook.
-
-        :return: True if the compressed weight is a codebook, False otherwise.
-        """
-        return self.codebook is not None and self.tensor is not None and self.scale is not None
+    global_scale: Tensor | None = None
