@@ -30,7 +30,7 @@ from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
-from tests.cross_fw.test_templates.helpers import RoPEWCModel
+from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.function_hook.quantization.test_weights_compression import ALL_SENSITIVITY_METRICS
@@ -332,8 +332,8 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_RoPE_model(degree: int) -> torch.fx.GraphModule:
-        model = RoPEWCModel(degree)
-        ex_input = torch.ones(RoPEWCModel.INPUT_SIZE, dtype=torch.float32)
+        model = RoPEModel()
+        ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
@@ -744,3 +744,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return False
+
+    @pytest.mark.skip("RoPE pattern is invalid for the TorchFX backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass

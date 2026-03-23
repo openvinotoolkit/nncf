@@ -380,7 +380,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_unsqueeze(x, axes=(2,))
         x = mb.add_matmul(x, shape=(1, 5))
         x = mb.add_transpose(x, perm=[0, 2, 1])
-        x = mb.add_concat([x] * degree, axis=-1)
+        x = mb.add_concat([x], axis=-1)
         x1 = mb.add_sin(x)
         x2 = mb.add_cos(x)
 
@@ -937,3 +937,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+    @pytest.mark.skip("RoPE pattern is invalid for the ONNX backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass

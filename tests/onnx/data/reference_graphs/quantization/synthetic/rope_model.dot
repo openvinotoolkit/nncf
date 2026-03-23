@@ -15,9 +15,8 @@ digraph {
 "2 reshape" -> "3 matmul" [key=0, style=solid, label="[1, 5]"];
 "3 matmul" -> "4 transpose" [key=0, style=solid, label="[1, 10, 5]"];
 "4 transpose" -> "5 concat" [key=0, style=solid, label="[1, 5, 10]"];
-"4 transpose" -> "5 concat" [key=1, style=solid, label="[1, 5, 10]"];
-"5 concat" -> "6 sin" [key=0, style=solid, label="[1, 5, 20]"];
-"5 concat" -> "7 cos" [key=0, style=solid, label="[1, 5, 20]"];
+"5 concat" -> "6 sin" [key=0, style=solid, label="[1, 5, 10]"];
+"5 concat" -> "7 cos" [key=0, style=solid, label="[1, 5, 10]"];
 "6 sin" -> "9 nncf_model_output_0" [key=0, style=solid, label="[1, 5, 10]"];
 "7 cos" -> "10 nncf_model_output_1" [key=0, style=solid, label="[1, 5, 10]"];
 "8 nncf_model_input_0" -> "0 unsqueeze" [key=0, style=dashed, label="[1, 10]"];

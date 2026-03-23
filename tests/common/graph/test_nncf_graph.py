@@ -116,15 +116,7 @@ def test_raise_error_for_duplicated_edge():
     for node in "abc":
         nodes.append(nncf_graph.add_nncf_node(node, f"type_{node}", f"metatype_{node}"))
 
-    nncf_graph.add_edge_between_nncf_nodes(
-        nodes[0].node_id,
-        nodes[1].node_id,
-        input_port_id=0,
-        output_port_id=0,
-        tensor_shape=(1, 2, 3),
-        dtype="dummy",
-    )
-    # Second edge from port 1 to port 1 - OK
+    # First edge from port 1 to port 1 - OK
     nncf_graph.add_edge_between_nncf_nodes(
         nodes[0].node_id,
         nodes[1].node_id,
@@ -133,6 +125,7 @@ def test_raise_error_for_duplicated_edge():
         tensor_shape=(1, 2, 3),
         dtype="dummy",
     )
+    # Second edge from port 1 to port 1 - ValueError
     with pytest.raises(ValueError):
         nncf_graph.add_edge_between_nncf_nodes(
             nodes[0].node_id,

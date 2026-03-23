@@ -47,7 +47,7 @@ def main(argv):
         raise nncf.InternalError(msg)
 
     for edge in nx.edge_bfs(graph, start_key, orientation="ignore"):
-        from_key, to_key, _ = edge
+        from_key, to_key, edge_key, _ = edge
         id_portion = from_key.split()[0]
         has_id = id_portion.isdigit()
         if has_id:
@@ -56,7 +56,7 @@ def main(argv):
                 break
         node_data = graph.nodes[from_key]
         new_graph.add_node(from_key, **node_data)
-        edge_data = graph.edges[from_key, to_key]
+        edge_data = graph.edges[from_key, to_key, edge_key]
         new_graph.add_edge(from_key, to_key, **edge_data)
 
     # for edge in nx.edge_bfs(graph, end_key, reverse=True):

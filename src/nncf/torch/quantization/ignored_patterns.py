@@ -234,7 +234,6 @@ def create_se_block() -> GraphPattern:
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.ROPE)
 def create_rope() -> GraphPattern:
-    cat_degree = 2
     pattern = GraphPattern()
     matmul_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.PTMatMulMetatype}
@@ -247,8 +246,7 @@ def create_rope() -> GraphPattern:
     sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.PTSinMetatype})
 
     pattern.add_edge(matmul_node, transpose_node)
-    for _ in range(cat_degree):
-        pattern.add_edge(transpose_node, concat_node)
+    pattern.add_edge(transpose_node, concat_node)
     pattern.add_edge(concat_node, cos_node)
     pattern.add_edge(concat_node, sin_node)
     return pattern

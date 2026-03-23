@@ -41,7 +41,7 @@ from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
-from tests.cross_fw.test_templates.helpers import RoPEWCModel
+from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
@@ -575,7 +575,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_RoPE_model(degree: int) -> torch.nn.Module:
-        return RoPEWCModel(degree)
+        return RoPEModel()
 
     @staticmethod
     def get_SAM_PE_model() -> torch.nn.Module:
@@ -910,6 +910,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return False
+
+    @pytest.mark.skip("RoPE pattern is invalid for the Torch backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass
 
 
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])

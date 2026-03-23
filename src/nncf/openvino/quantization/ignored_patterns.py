@@ -185,7 +185,6 @@ def create_rope() -> GraphPattern:
     :return: The Rotary Positional Embedding (RoPE) pattern.
     """
     ret_pattern = GraphPattern()
-    cat_degree = 2
     for with_transpose in [True, False]:
         pattern = GraphPattern()
         matmul_node = pattern.add_node(
@@ -205,8 +204,8 @@ def create_rope() -> GraphPattern:
         else:
             transpose_node = matmul_node
 
-        for _ in range(cat_degree):
-            pattern.add_edge(transpose_node, concat_node)
+        pattern.add_edge(transpose_node, concat_node)
+        pattern.add_edge(transpose_node, concat_node)
 
         pattern.add_edge(concat_node, cos_node)
         pattern.add_edge(concat_node, sin_node)

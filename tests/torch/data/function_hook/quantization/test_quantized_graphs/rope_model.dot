@@ -14,9 +14,8 @@ x -> "/unsqueeze/0" [key=0, dtype=float, shape="(1, 10)", out_port_id=0, in_port
 "/reshape/0" -> "/matmul/0" [key=0, dtype=float, shape="(1, 5, 1)", out_port_id=0, in_port_id=0];
 "/matmul/0" -> "/transpose/0" [key=0, dtype=float, shape="(1, 5, 10)", out_port_id=0, in_port_id=0];
 "/transpose/0" -> "/cat/0" [key=0, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
-"/transpose/0" -> "/cat/0" [key=1, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=1];
-"/cat/0" -> "/sin/0" [key=0, dtype=float, shape="(1, 10, 10)", out_port_id=0, in_port_id=0];
-"/cat/0" -> "/cos/0" [key=0, dtype=float, shape="(1, 10, 10)", out_port_id=0, in_port_id=0];
-"/sin/0" -> output_0 [key=0, dtype=float, shape="(1, 10, 10)", out_port_id=0, in_port_id=0];
-"/cos/0" -> output_1 [key=0, dtype=float, shape="(1, 10, 10)", out_port_id=0, in_port_id=0];
+"/cat/0" -> "/sin/0" [key=0, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
+"/cat/0" -> "/cos/0" [key=0, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
+"/sin/0" -> output_0 [key=0, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
+"/cos/0" -> output_1 [key=0, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
 }

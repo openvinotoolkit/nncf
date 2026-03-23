@@ -46,7 +46,7 @@ class ModelDesc:
 
 TEST_MODELS_DESC = [
     (ModelDesc("embedding_model", EmbeddingModel, [1, 10]), {}),
-    (ModelDesc("rope_model", partial(RoPEModel, degree=2), [1, 10]), {"model_type": ModelType.TRANSFORMER}),
+    (ModelDesc("rope_model", RoPEModel, [1, 10]), {"model_type": ModelType.TRANSFORMER}),
     (
         ModelDesc(
             "scaled_dot_product_attention_model",
