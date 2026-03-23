@@ -31,6 +31,7 @@ from nncf.common.tensor_statistics.collectors import AggregatorBase
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.optimized_functions import astype
@@ -2060,6 +2061,10 @@ NVFP4_MatMul_REFERENCE_OUTPUT = np.array(
 )
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Ticket: 176785.",
+)
 def test_nvfp4_openvino_compilation_sanity():
     model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
     input_data = np.ones([1, 1, 16], dtype=np.float32) * 0.01
