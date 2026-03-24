@@ -71,4 +71,4 @@ as well as the supported versions of Python:
 
 > (*) Python 3.9 or higher is required for TensorFlow 2.15.1
 
-This repository is tested on Python* 3.10.14, PyTorch* 2.10.0 (NVidia CUDA\* Toolkit 12.6).
+This repository is tested on Python* 3.10.14, PyTorch* 2.11.0 (NVidia CUDA\* Toolkit 13.0).
