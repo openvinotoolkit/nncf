@@ -24,9 +24,11 @@ from nncf.common.quantization.structs import QuantizationScheme
 
 @pytest.fixture(scope="session", autouse=True)
 def disable_tf32_precision():
-    if torch:
-        torch.backends.cuda.matmul.fp32_precision = "ieee"
-        torch.backends.cudnn.conv.fp32_precision = "ieee"
+    torch.backends.fp32_precision = "ieee"
+    torch.backends.cuda.matmul.fp32_precision = "ieee"
+    torch.backends.cudnn.fp32_precision = "ieee"
+    torch.backends.cudnn.conv.fp32_precision = "tf32"
+    torch.backends.cudnn.rnn.fp32_precision = "tf32"
 
 
 def pytest_addoption(parser: Parser):
