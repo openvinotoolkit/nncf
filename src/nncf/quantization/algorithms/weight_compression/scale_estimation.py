@@ -248,7 +248,7 @@ class ScaleEstimation:
 
         X, _ = reshape_weight_for_grouped_quantization(X, -2, group_size)
         best_diffs = None
-        result_scale = None
+        result_scale = scale
         fp_outs = fns.matmul(fns.moveaxis(weight, -2, -3), X)
         q_outs = fns.matmul(fns.moveaxis(q_weights, -2, -3), X)
 
