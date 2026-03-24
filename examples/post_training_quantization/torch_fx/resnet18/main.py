@@ -188,7 +188,7 @@ def main():
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
     example_input = torch.ones(*input_shape).to(device)
 
-    fx_model = torch.export.export_for_training(model.eval(), args=(example_input,)).module()
+    fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
     quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
     quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
 
