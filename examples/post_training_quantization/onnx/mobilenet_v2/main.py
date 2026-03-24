@@ -15,6 +15,7 @@ import numpy as np
 import onnx
 import openvino as ov
 import torch
+from __init__ import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from fastdownload import download_url
 from rich.progress import track
@@ -23,7 +24,6 @@ from torchvision import datasets
 from torchvision import transforms
 
 import nncf
-from examples import execute_benchmark_on_cpu
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/mobilenet_v2_imagenette.onnx"
