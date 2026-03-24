@@ -21,7 +21,8 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModel
+from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModelAdd
+from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModelCat
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
@@ -146,6 +147,20 @@ class TemplateTestBCAlgorithm:
             (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
             (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
             (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
+            (
+                ConvConcatWithInputModelCat,
+                {
+                    "/conv_1/Conv": [0.3741747, -0.1846924],
+                    "/conv_2/Conv": [-0.3246909, 0.7989437],
+                },
+            ),
+            (
+                ConvConcatWithInputModelAdd,
+                {
+                    "/conv_1/Conv": [0.3741747, -0.1846924],
+                    "/conv_2/Conv": [1.3330431, 0.8172832],
+                },
+            ),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
@@ -181,21 +196,3 @@ class TemplateTestBCAlgorithm:
 
         collected_stat_inputs_map = getattr(bc_algo, "_collected_stat_inputs_map")
         assert collected_stat_inputs_map == ref_stat_inputs_map
-
-    @pytest.mark.parametrize("mode", ["cat", "add"])
-    def test_update_bias_concat_with_input(self, mode, tmpdir):
-        """
-        Test bias correction on a model where conv output is combined with the
-        original model input via a multi-input node (Concat or elementwise Add).
-        This exposes a bug where the subgraph extraction does not properly handle
-        multi-activation-input nodes whose inputs come from outside the subgraph
-        boundary, resulting in an extracted model with more inputs than the
-        feed_dicts provides.
-        """
-        model = ConvConcatWithInputModel(mode=mode)
-        model = self.backend_specific_model(model, tmpdir)
-        dataset = Dataset(self.get_dataset(ConvConcatWithInputModel.INPUT_SIZE), self.get_transform_fn())
-
-        quantization_algorithm = self.get_quantization_algorithm()
-        graph = build_graph(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)

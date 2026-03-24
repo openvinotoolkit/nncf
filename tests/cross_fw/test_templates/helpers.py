@@ -253,6 +253,16 @@ class ConvConcatWithInputModel(nn.Module):
         return self.conv_2(x_combined)
 
 
+class ConvConcatWithInputModelCat(ConvConcatWithInputModel):
+    def __init__(self):
+        super().__init__(mode="cat")
+
+
+class ConvConcatWithInputModelAdd(ConvConcatWithInputModel):
+    def __init__(self):
+        super().__init__(mode="add")
+
+
 class ConvConcatWithLongPathToOrigInputs(ConvConcatWithInputModel):
     def forward(self, x):
         x_2 = F.relu(x)

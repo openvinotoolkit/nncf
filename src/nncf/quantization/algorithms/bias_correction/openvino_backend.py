@@ -17,8 +17,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_parameter_node_name
@@ -97,18 +95,6 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         assert len(const_port_ids) == 1
         weight_node = nncf_graph.get_input_edge_by_port_id(node, const_port_ids[0]).from_node
         return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
-
-    @staticmethod
-    def is_node_with_multiple_activation_inputs(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        # Concat always merges multiple activation streams.
-        if node.metatype is OVConcatMetatype:
-            return True
-        # For other multi-input nodes (e.g. elementwise Add/Mul), check whether
-        # more than one input is an activation (non-const).
-        activation_count = sum(
-            1 for edge in nncf_graph.get_input_edges(node) if edge.from_node.metatype is not OVConstantMetatype
-        )
-        return activation_count > 1
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

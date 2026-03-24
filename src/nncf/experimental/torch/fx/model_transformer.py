@@ -153,7 +153,7 @@ class FXModelTransformer(ModelTransformer):
         # Merge new output with the original output in case
         # the original output is requested in the extracted graph.
         nodes_with_output = []
-        for name, _ in transformation.output_ids:
+        for name in output_node_names:
             nodes_with_output.append(
                 name if name in visited_outputs_names else get_graph_node_by_name(extracted_graph, name)
             )

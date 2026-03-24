@@ -9,4 +9,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "3.1.0.dev0+08be297bfdirty"
+__version__ = "3.1.0"
