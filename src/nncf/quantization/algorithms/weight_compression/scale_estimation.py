@@ -228,7 +228,7 @@ class ScaleEstimation:
             if zp is not None:
                 zp = zp.astype(compressed_weight.scale.dtype)
         scale = compressed_weight.scale
-        compressed_weight = compressed_weight.quantized_tensor
+        compressed_weight = compressed_weight.get_unscaled_tensor()
 
         s = fns.unsqueeze(s, -2)
         s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
@@ -315,7 +315,7 @@ class ScaleEstimation:
                         precomputed_scale=near_to_ideal_scale,
                         precomputed_zero_point=zp,
                     )
-                compressed_weight = compressed_weight.quantized_tensor
+                compressed_weight = compressed_weight.get_unscaled_tensor()
                 target, zero_mask = get_target_zero_mask(compressed_weight, zp)
                 zero_mask = zero_scale * zero_mask.astype(weight.dtype)
 
@@ -333,7 +333,7 @@ class ScaleEstimation:
                     precomputed_scale=scaled_scale,
                     precomputed_zero_point=zp,
                 )
-            compressed_weight = compressed_weight.quantized_tensor
+            compressed_weight = compressed_weight.get_unscaled_tensor()
 
             target, zero_mask = get_target_zero_mask(compressed_weight, zp)
             zero_mask = zero_scale * zero_mask.astype(weight.dtype)

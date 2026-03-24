@@ -142,7 +142,7 @@ def do_float_dequantization(compressed_weight: CompressedWeight, reduction_axis:
     else:
         scale = compressed_weight.scale
 
-    decompressed_weight = compressed_weight.quantized_tensor * scale
+    decompressed_weight = compressed_weight.get_unscaled_tensor() * scale
     if reduction_axis != -1:
         decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
     return decompressed_weight
@@ -233,7 +233,7 @@ def _do_float_quantization_single_scale(
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.is_codebook:
-        indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=config.get_numpy_codebook())
+        indexes = _calculate_codebook_indexes(norm_weight, quantiles=config.get_numpy_codebook())
         return CompressedWeight(
             indexes,
             scale,
@@ -586,12 +586,13 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, compression_dtype: Te
     return quantized_weight
 
 
-def _calculate_codebook_quantized_weight(
+def _calculate_codebook_indexes(
     norm_weight: Tensor, quantiles: Tensor = None, center_of_quantiles: Tensor = None
 ) -> Tensor:
     """
     Quantizes the normalized weight by finding the closest codebook entry for each element.
     Uses searchsorted on the midpoints between adjacent quantiles to assign each value to an index.
+    Returns the assigned indexes.
 
     :param norm_weight: Weight tensor to quantize, already normalized to the codebook range.
     :param quantiles: Codebook values (quantization levels). If None, center_of_quantiles must be provided.
