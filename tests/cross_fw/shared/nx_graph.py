@@ -120,8 +120,7 @@ def _build_edge_vs_attrs_dict(
     nx_graph: nx.DiGraph, id_from_attr: bool = False
 ) -> dict[tuple[int | str, int | str], dict[str, str]]:
     retval = {}
-    for edge_tuple, edge_attrs in nx_graph.edges.items():
-        from_node_name, to_node_name, _ = edge_tuple
+    for from_node_name, to_node_name, edge_attrs in nx_graph.edges(data=True):
         if id_from_attr:
             from_node, to_node = nx_graph.nodes[from_node_name], nx_graph.nodes[to_node_name]
             edge_id = int(from_node["id"]), int(to_node["id"])

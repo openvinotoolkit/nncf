@@ -1015,8 +1015,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             else:
                 msg = "Invalid QuantizerPropagationStateGraph node!"
                 raise nncf.InternalError(msg)
-        for u, v in self.edges:
-            edge = self.edges[u, v]
+        for u, v, edge in self.edges(data=True):
             attrs = {}
             affecting_quantizers = edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             if affecting_quantizers:

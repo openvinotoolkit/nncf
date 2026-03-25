@@ -614,8 +614,7 @@ class NNCFGraph:
 
             out_graph.add_node(node_name, **attrs_node)
 
-        for u, v, k in self._nx_graph.edges:
-            edge = self._nx_graph.edges[u, v, k]
+        for u, v, edge in self._nx_graph.edges(data=True):
             attrs_edge = {}
             label = {}
             if extended:
@@ -649,8 +648,7 @@ class NNCFGraph:
             node_key = self.get_node_key_by_id(node.node_id)
             out_graph.add_node(node_key, **attrs_node)
 
-        for u, v, k in self._nx_graph.edges:
-            edge = self._nx_graph.edges[u, v, k]
+        for u, v, edge in self._nx_graph.edges(data=True):
             if edge[NNCFGraph.DTYPE_EDGE_ATTR] is Dtype.INTEGER:
                 style = "dashed"
             else:
