@@ -65,8 +65,8 @@ class FXModelTransformer(ModelTransformer):
     @staticmethod
     def _traverse_graph_up(
         input_nodes: list[torch.fx.Node],
-        stop_nodes: set[torch.fx.Node],
-        visited: set[torch.fx.Node],
+        stop_nodes: set[str],
+        visited: set[str],
     ) -> None:
         """
         Traverses through the graph in backward direction starting with the input nodes and
@@ -74,8 +74,8 @@ class FXModelTransformer(ModelTransformer):
         it modifies the visited container with all nodes visited during the traverse.
 
         :param input_nodes: Given input nodes.
-        :param stop_nodes: Given stop nodes.
-        :param visited: Set of already visited nodes.
+        :param stop_nodes: Given stop nodes names.
+        :param visited: Set of already visited nodes names.
         """
         while input_nodes:
             in_node = input_nodes.pop()

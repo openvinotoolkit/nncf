@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, Sequence
 
 import torch.fx
 
@@ -92,7 +92,7 @@ def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphM
     return Tensor(get_tensor_constant_from_node(graph_bias_const, model))
 
 
-def get_node_args(node: torch.fx.Node) -> tuple[Any, ...]:
+def get_node_args(node: torch.fx.Node) -> Sequence[Any]:
     """
     Correctly retrieves arguments of the given node.
 

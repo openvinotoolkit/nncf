@@ -187,9 +187,9 @@ class PTModelExtractionCommand(PTCommand):
 
     def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
         """
-        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+        :param input_ids: List of the input IDs: pairs of node names and corresponding input port ids.
             Each pair denotes the sub-graph beginning.
-        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+        :param output_ids: List of the output IDs: pairs of node names and corresponding output port ids.
             Each pair denotes the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
