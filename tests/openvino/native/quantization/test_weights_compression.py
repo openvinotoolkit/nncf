@@ -1611,7 +1611,7 @@ def test_float_compressed_weighs_range(mode, id_, data):
         ([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5]),
     ),
 )
-def test_codebook_weighs_range(data):
+def test_codebook_weights_range(data):
     data = np.array(data).astype(np.float32)
     codebook = data
     max_diff = 0.1
@@ -1625,6 +1625,7 @@ def test_codebook_weighs_range(data):
     target = np.arange(indexes.shape[0])
     assert np.allclose(indexes.data, target)
     assert np.all(np.abs(uncompressed_data.data - data) <= max_diff)
+    assert np.allclose(do_float_dequantization(cw).data, uncompressed_data)
 
 
 @pytest.mark.parametrize(
