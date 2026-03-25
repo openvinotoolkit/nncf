@@ -55,6 +55,7 @@ NNCF can automatically distribute precision assignments based on quantization se
 | MXFP8_E4M3       | E4M3         | E8M0       | Group-wise (32)          | [MX-compliant FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 |   FP8_E4M3       | E4M3         | FP16       | Per-channel / Group-wise | [FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 |   FP4            | E2M1         | FP16       | Per-channel / Group-wise | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+| NVFP4            | E2M1         | E4M3 per group / FP32 per weight | Group-wise (16)          | [NVFP4](https://arxiv.org/abs/2509.25149) |
 
 **Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
 
@@ -706,7 +707,7 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
-- NF4, MXFP4, MXFP8_E4M3 support is experimental on GPU and NPU - models quantized to nf4/mxfp4/mxfp8_e4m3 should not be faster models quantized to 8-bit integer.
+- NF4, MXFP4, MXFP8_E4M3, NVFP4 support is experimental on GPU and NPU - models quantized to nf4/mxfp4/mxfp8_e4m3/nvfp4 should not be faster models quantized to 8-bit integer.
 
 ### Additional resources
 

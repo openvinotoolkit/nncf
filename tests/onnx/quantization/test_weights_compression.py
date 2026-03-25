@@ -25,6 +25,7 @@ from onnx import numpy_helper
 from onnxruntime import InferenceSession
 from packaging import version
 
+import nncf
 from nncf import CompressWeightsMode
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import build_graph
@@ -42,6 +43,15 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.onnx.common import ModelBuilder
+
+UNSUPPORTED_MODES = (
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.NVFP4,
+    CompressWeightsMode.MXFP4,
+    CompressWeightsMode.MXFP8_E4M3,
+    CompressWeightsMode.FP8_E4M3,
+    CompressWeightsMode.FP4,
+)
 
 
 def create_model(opset_version=21):
@@ -346,6 +356,13 @@ def test_matmulnbits_gemm(trans_b: int):
     output19 = sess19.run(None, {"input": dummy_input})[0]
 
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
+
+
+@pytest.mark.parametrize("mode", UNSUPPORTED_MODES)
+def test_raise_error_with_not_int8(mode):
+    dummy_model = ModelBuilder().build()
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(dummy_model, mode=mode)
 
 
 class TestONNXTemplateWeightCompression(TemplateWeightCompression):
