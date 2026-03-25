@@ -55,6 +55,53 @@ class NNCFGraphToTest:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
+class NNCFGraphArithmeticDegree2:
+    def __init__(
+        self,
+        conv_metatype,
+        arithmetic_metatype,
+        conv_layer_attrs=None,
+        arithmetic_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+        const_metatype=None,
+        const_layer_attrs=None,
+    ):
+        #       Original graph
+        #          Input_1  Const_1
+        #             |    /
+        #           Conv_1
+        #            | |
+        #         Arithmetic
+        #             |
+        #           Output_1
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
+            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Arithmetic", arithmetic_metatype, layer_attributes=arithmetic_layer_attrs),
+            NodeWithType("Const_1", const_metatype, layer_attributes=const_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Const_1", "Conv_1"),
+            ("Conv_1", "Arithmetic"),
+            ("Conv_1", "Arithmetic"),
+            ("Arithmetic", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(
+            nodes,
+            node_edges,
+            (
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224)},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (3, 10, 4, 4), NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 10, 224, 224)},
+            ),
+        )
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
 class NNCFGraphToTestDepthwiseConv:
     def __init__(
         self,
@@ -319,26 +366,26 @@ class NNCFGraphDropoutRemovingCase:
 
         dropout_2 = self.nncf_graph.get_node_by_key("4 /Dropout_3_0")
         output = self.nncf_graph.add_nncf_node("/Output_3_1_0", "output", OutputNoopMetatype)
-        self.nncf_graph.add_edge_between_nncf_nodes(
-            dropout_2.node_id,
-            output.node_id,
-            tensor_shape=tensor_shape,
-            input_port_id=1,
-            output_port_id=1,
-            dtype=Dtype.FLOAT,
-            parallel_input_port_ids=list(range(2, 10)),
-        )
+        for input_port_id in range(1, 10):
+            self.nncf_graph.add_edge_between_nncf_nodes(
+                dropout_2.node_id,
+                output.node_id,
+                tensor_shape=tensor_shape,
+                input_port_id=input_port_id,
+                output_port_id=1,
+                dtype=Dtype.FLOAT,
+            )
         if wrong_parallel_edges:
             dropout_4 = self.nncf_graph.add_nncf_node("100 /dropout", "dropout", dropout_metatype)
-            self.nncf_graph.add_edge_between_nncf_nodes(
-                self.nncf_graph.get_node_by_key("0 /Input_1_0").node_id,
-                dropout_4.node_id,
-                tensor_shape=[1, 1, 1, 1],
-                input_port_id=0,
-                output_port_id=0,
-                dtype=Dtype.FLOAT,
-                parallel_input_port_ids=list(range(1, 10)),
-            )
+            for input_port_id in range(10):
+                self.nncf_graph.add_edge_between_nncf_nodes(
+                    self.nncf_graph.get_node_by_key("0 /Input_1_0").node_id,
+                    dropout_4.node_id,
+                    tensor_shape=[1, 1, 1, 1],
+                    input_port_id=input_port_id,
+                    output_port_id=0,
+                    dtype=Dtype.FLOAT,
+                )
 
 
 class NNCFGraphToTestConstantFiltering:
@@ -411,6 +458,48 @@ class NNCFGraphToTestConstantFiltering:
                 edges.append((any_after_node_name, edge[1]))
 
         original_mock_graph = create_mock_graph(nodes, edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFSplitGraphTransformer:
+    def __init__(
+        self,
+        matmul_metatype,
+        conv_metatype,
+        split_metatype,
+        softmax_metatype,
+        const_metatype,
+        mul_metatype,
+        conv_layer_weighted_attrs=None,
+        matmul_layer_non_weighted_attrs=None,
+        default_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        # softmax((K x Q) * scale) x V.T
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_QKV", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("QKV", conv_metatype, layer_attributes=conv_layer_weighted_attrs),
+            NodeWithType("SPLIT", split_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("KQ", matmul_metatype, layer_attributes=matmul_layer_non_weighted_attrs),
+            NodeWithType("div", mul_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("softmax", softmax_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("SA_V", matmul_metatype, layer_attributes=matmul_layer_non_weighted_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Input_1", "QKV"),
+            ("W_QKV", "QKV"),
+            ("QKV", "SPLIT"),
+            ("SPLIT", "KQ"),
+            ("SPLIT", "KQ"),
+            ("KQ", "div"),
+            ("div", "softmax"),
+            ("softmax", "SA_V"),
+            ("SPLIT", "SA_V"),
+            ("SA_V", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
