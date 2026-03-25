@@ -43,7 +43,6 @@ from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
-from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
 from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
@@ -196,9 +195,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: onnx.ModelProto, graph: NNCFGraph
     ) -> TensorDataType:
-        weight_name = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["name"]
-        weight_tensor = get_tensor(model, weight_name)
-        return ONNX_DTYPE_TO_NNCF_DTYPE[weight_tensor.data_type]
+        data_type = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["dtype"]
+        return ONNX_DTYPE_TO_NNCF_DTYPE[data_type]
 
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:

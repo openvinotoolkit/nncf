@@ -94,6 +94,8 @@ def get_weight_compression_configuration(
     elif group_size is None and mode in NON_INT8_MODES:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             group_size = 32
+        elif mode == CompressWeightsMode.NVFP4:
+            group_size = 16
         elif mode in [
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.CB4,
@@ -275,14 +277,18 @@ def check_user_compression_configuration(
             f"Supported modes are: {[e.value for e in GroupSizeFallbackMode]}."
         )
         raise nncf.ValidationError(msg)
-    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-        if group_size not in [None, 32]:
+    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4]:
+        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3] and group_size not in [None, 32]:
             msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
+            raise nncf.ValidationError(msg)
+
+        if mode == CompressWeightsMode.NVFP4 and group_size not in [None, 16]:
+            msg = f"NVFP4 type only supports group size of 16, group size of {group_size} is given"
             raise nncf.ValidationError(msg)
 
         if advanced_parameters and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST:
             msg = (
-                "MXFP4 and MXFP8_E4M3 types do not support the group size"
+                "MXFP4, MXFP8_E4M3 and NVFP4 types do not support the group size"
                 f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
                 " Please use other group size fallback mode."
             )
@@ -332,6 +338,8 @@ class WeightCompression(Algorithm):
             MXFP8_E4M3 is MX-compliant FP8 with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
             FP8_E4M3 is FP8 with E4M3 values sharing group-level FP16 scale.
             FP4 is FP4 with E2M1 values sharing group-level FP16 scale.
+            NVFP4 is FP4 format with E2M1 values sharing group-level E4M3 scale and FP32 per weight scale.
+                The size of group is 16.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to backup_mode).
         :param group_size: number of weights (e.g. 128) in the channel dimension

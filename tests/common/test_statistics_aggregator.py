@@ -24,6 +24,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.collectors import NoopAggregator
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.collectors import TensorReducerBase
@@ -596,7 +597,7 @@ class TemplateTestStatisticsAggregator:
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
         elif test_params.collector_type == BCStatsCollectors.RAW:
-            tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
+            tensor_collector = get_raw_stat_collector(len(dataset_samples))
         else:
             msg = f"Invalid collector type: {test_params.collector_type}"
             raise nncf.InvalidCollectorTypeError(msg)

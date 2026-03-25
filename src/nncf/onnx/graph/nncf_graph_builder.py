@@ -406,7 +406,12 @@ class GraphConverter:
                     weight_edge_names.append(weight_edge_name)
                     edge = edge_info_mapping[weight_edge_name]
                     weight_shape = get_edge_shape(edge)
-                    weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape}
+                    dtype = get_edge_dtype(
+                        edge_info_mapping.get(
+                            get_tensor_edge_name(onnx_model, node, weight_port_id, parents_node_mapping)
+                        )
+                    )
+                    weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape, "dtype": dtype}
                     if not is_shared and is_node_has_shared_weight(node, weight_port_id, children_node_mapping):
                         is_shared = True
 
