@@ -356,6 +356,7 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 - [Microsoft Olive](https://github.com/microsoft/olive)
 
   NNCF is used to quantize OpenVINO IR and ONNX models for the [OpenVINO integration](https://microsoft.github.io/Olive/features/ihv-integration/openvino.html).
+
 <a id="installation-guide"></a>
 
 ## Installation Guide
