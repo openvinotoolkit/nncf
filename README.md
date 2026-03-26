@@ -352,7 +352,11 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
   NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
   export new models based on available model templates as well as run the exported models with OpenVINO.
+  
+- [Microsoft Olive]([https://github.com/openvinotoolkit/training_extensions](https://github.com/microsoft/olive))
 
+  NNCF is used to quantize OpenVINO IR and ONNX models for the [OpenVINO integration](https://microsoft.github.io/Olive/features/ihv-integration/openvino.html).
+  
 <a id="installation-guide"></a>
 
 ## Installation Guide
