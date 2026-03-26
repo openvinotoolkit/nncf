@@ -141,8 +141,8 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "fp32_mAP": 0.5228869318962097,
-            "int8_mAP": 0.517384946346283,
-            "accuracy_drop": 0.0055444240
+            "int8_mAP": 0.5145288109779358,
+            "accuracy_drop": 0.0080191493
         },
         "performance_metrics": {
             "fp32_fps": 36.3,
