@@ -15,7 +15,7 @@ import numpy as np
 import onnx
 import openvino as ov
 import torch
-from __init__ import execute_benchmark_on_cpu
+from common import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from fastdownload import download_url
 from rich.progress import track
