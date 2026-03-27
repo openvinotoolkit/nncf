@@ -2,6 +2,7 @@ torch==2.10.0
 datasets==4.6.1
 numpy>=1.23.5,<2
 openvino==2026.1.0rc2
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 optimum-intel==1.27.0
 optimum-onnx==0.1.0
 optimum==2.1.0
