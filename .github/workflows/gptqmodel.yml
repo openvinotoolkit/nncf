@@ -42,7 +42,7 @@ jobs:
       - name: Install NNCF and test requirements
         run: pip install . -r tests/integration/gptq_model/requirements.txt
       - name: Install extra requirements
-        run: pip install -r tests/integration/gptq_model/requirements_extra.txt
+        run: pip install -r tests/integration/gptq_model/requirements_extra.txt --no-build-isolation
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
