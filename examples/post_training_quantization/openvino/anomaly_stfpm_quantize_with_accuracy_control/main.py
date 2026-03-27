@@ -22,9 +22,9 @@ from anomalib.data.mvtec import MVTec
 from anomalib.data.utils import download
 from anomalib.post_processing.normalization.min_max import normalize
 from anomalib.utils.metrics import create_metric_collection
+from common import execute_benchmark_on_cpu
 
 import nncf
-from examples import execute_benchmark_on_cpu
 
 ROOT = Path(__file__).parent.resolve()
 HOME_PATH = Path.home()

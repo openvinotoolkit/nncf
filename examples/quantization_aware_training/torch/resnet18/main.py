@@ -23,12 +23,12 @@ import torch.utils.data
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
+from common import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from rich.progress import track
 from torch.jit import TracerWarning
 
 import nncf
-from examples import execute_benchmark_on_cpu
 from nncf.common.utils.helpers import create_table
 
 warnings.filterwarnings("ignore", category=TracerWarning)

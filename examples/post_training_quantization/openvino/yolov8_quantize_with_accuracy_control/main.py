@@ -14,6 +14,7 @@ from typing import Any
 
 import openvino as ov
 import torch
+from common import execute_benchmark_on_cpu
 from rich.progress import track
 from ultralytics.cfg import get_cfg
 from ultralytics.data.converter import coco80_to_coco91_class
@@ -26,7 +27,6 @@ from ultralytics.utils import ops
 from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
-from examples import execute_benchmark_on_cpu
 
 MODEL_NAME = "yolov8n-seg"
 

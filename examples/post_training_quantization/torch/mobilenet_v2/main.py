@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import openvino as ov
 import torch
+from common import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from rich.progress import track
 from sklearn.metrics import accuracy_score
@@ -23,7 +24,6 @@ from torchvision import models
 from torchvision import transforms
 
 import nncf
-from examples import execute_benchmark_on_cpu
 
 ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin"

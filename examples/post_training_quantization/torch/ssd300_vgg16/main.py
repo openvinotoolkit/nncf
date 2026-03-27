@@ -19,7 +19,7 @@ from nncf.torch import disable_tracing
 import openvino as ov
 import torch
 import torchvision
-from examples import execute_benchmark_on_cpu
+from common import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision

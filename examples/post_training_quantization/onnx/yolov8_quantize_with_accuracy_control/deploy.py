@@ -13,6 +13,7 @@ from pathlib import Path
 
 import openvino as ov
 import torch
+from common import execute_benchmark_on_cpu
 from rich.progress import track
 from ultralytics.cfg import get_cfg
 from ultralytics.models.yolo import YOLO
@@ -20,7 +21,6 @@ from ultralytics.models.yolo.segment.val import SegmentationValidator
 from ultralytics.utils import DEFAULT_CFG
 from ultralytics.utils.metrics import ConfusionMatrix
 
-from examples import execute_benchmark_on_cpu
 from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import prepare_validation
 from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import print_statistics
 

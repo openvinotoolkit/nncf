@@ -23,9 +23,9 @@ from anomalib.data.utils import download
 from anomalib.deploy import ExportType
 from anomalib.engine import Engine
 from anomalib.models import Stfpm
+from common import execute_benchmark_on_cpu
 
 import nncf
-from examples import execute_benchmark_on_cpu
 
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 
