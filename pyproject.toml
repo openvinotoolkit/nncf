@@ -208,5 +208,8 @@ skips = [
     "B615", # huggingface_unsafe_download
 ]
 
-[tool.uv] # TODO: remove it before release
-extra-index-url = ["https://storage.openvinotoolkit.org/simple/wheels/nightly"]
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
+url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
