@@ -12,6 +12,8 @@
 import inspect
 import os
 from collections import defaultdict
+from dataclasses import dataclass
+from dataclasses import field
 from typing import Callable
 from unittest.mock import patch
 
@@ -19,7 +21,6 @@ import numpy as np
 import openvino as ov
 import pandas as pd
 import pytest
-from attr import dataclass
 from openvino import opset13 as opset
 
 import nncf
@@ -684,10 +685,10 @@ def test_shared_gather_all_layers(all_layers):
 class QuantErrorDesc:
     weight: list[float]
     ref_error: int = 0
-    axis = (1,)
+    axis: tuple[int, ...] = (1,)
     name: str = ""
     atol: float = None
-    config: WeightCompressionConfig = WeightCompressionConfig()
+    config: WeightCompressionConfig = field(default_factory=WeightCompressionConfig)
 
     def __str__(self):
         prefix = "exact_match_" if self.ref_error == 0 else ""
