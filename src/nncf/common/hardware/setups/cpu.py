@@ -179,7 +179,7 @@ CPU_SETUP: tuple[OpDesc, ...] = (
     ),
     OpDesc(
         type="ScaledDotProductAttention",
-        activations=(q16_a_sym, q8_a_sym),
+        activations=(q8_a_sym, q16_a_sym),
     ),
     OpDesc(type="MaxPool"),
     OpDesc(type="ReduceMax"),

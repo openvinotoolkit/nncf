@@ -718,7 +718,14 @@ class MinMaxQuantization(Algorithm):
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph, self._backend_entity.elementwise_metatypes)
         multi_config_setup = quantization_proposal.quantizer_setup
-        single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
+        default_config = self._get_default_qconfig(self._global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
+        if default_config.num_bits is not None:
+            single_config_setup = multi_config_setup.select_proper_qconfig_for_each_point(
+                num_bits=default_config.num_bits
+            )
+        else:
+            single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
+
         finalized_proposal = quantization_proposal.finalize(single_config_setup)
         final_setup = solver.get_final_quantizer_setup(finalized_proposal)
         return final_setup
