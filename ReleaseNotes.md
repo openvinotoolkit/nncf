@@ -46,7 +46,7 @@ Deprecations/Removals:
 
 Requirements:
 
-- ...
+- (TorchFX) `torchao` is required for compression flows related to TorchFX backend.
 
 ## New in Release 3.0.0
 
