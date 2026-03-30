@@ -99,7 +99,7 @@ DATA_BASED_SENSITIVITY_METRICS = (
 
 ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
 
-INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
+INT8_MODES = (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
 INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
@@ -2178,7 +2178,7 @@ def test_disabled_optimized_compression(disabled):
     model = LMLinearModel(input_shape=[1, 24, hidden_dim]).ov_model
 
     def run_compression():
-        compress_weights(model, mode=CompressWeightsMode.INT8)
+        compress_weights(model, mode=CompressWeightsMode.INT8_ASYM)
 
     fn_to_patch = opt_fns.do_integer_quantization
     patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
