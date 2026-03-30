@@ -190,7 +190,7 @@ def main():
 
     fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
     quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
-    quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
+    quantized_fx_model = torch.compile(quantized_fx_model, dynamic=True, backend="openvino")
 
     acc1_int8 = validate(val_loader, quantized_fx_model, device)
 
