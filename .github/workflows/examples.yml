@@ -2,7 +2,6 @@ name: Test examples
 permissions: read-all
 
 on:
-  pull_request:
   workflow_call:
     inputs:
       skip_windows:
