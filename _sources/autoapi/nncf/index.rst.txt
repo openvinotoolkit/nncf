@@ -205,7 +205,6 @@ Functions
        with a typical non-fixed zero point.
        https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
    :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
-   :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
    :param MXFP4: MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
    :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
    :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
