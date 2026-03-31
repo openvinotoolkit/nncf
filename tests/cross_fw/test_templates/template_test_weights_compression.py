@@ -38,6 +38,7 @@ from nncf.quantization.algorithms.weight_compression.algorithm import WeightComp
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
@@ -214,9 +215,7 @@ class TemplateWeightCompression(ABC):
         ),
     )
     @pytest.mark.parametrize("transpose_a", (False, True))
-    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, transpose_a_supported, mocker):
-        if transpose_a and not transpose_a_supported:
-            pytest.skip("transpose_a is not supported for the current backend")
+    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, mocker):
         model = self.get_sequential_matmul_model(transpose_a=transpose_a)
         input_shape = (4, 4) if transpose_a else (1, 4, 4)
         first = self.to_tensor(np.ones(input_shape, dtype=np.float32))
@@ -237,14 +236,14 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_for_test_scale_estimation() -> TModel:
+    def get_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
         """
         Returns a backend model for test_scale_estimation.
         """
 
     @staticmethod
     @abstractmethod
-    def get_moe_model_for_test_scale_estimation() -> TModel:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
         """
         Returns a backend MoE model for test_scale_estimation with 3D weights.
         """
@@ -267,17 +266,18 @@ class TemplateWeightCompression(ABC):
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    @pytest.mark.parametrize("is_moe", [False, True])
-    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
-    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
+    def test_scale_estimation(self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         if is_moe:
-            model = self.get_moe_model_for_test_scale_estimation()
+            model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
         else:
-            model = self.get_model_for_test_scale_estimation()
+            model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
 
         # prepare dataset of size subset_size with input tensors
@@ -323,10 +323,46 @@ class TemplateWeightCompression(ABC):
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a):
+        """Checks that act_ch_axis parameter is passed to calculate_quantization_params."""
+        calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
+
+        model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
+        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+        input = self.to_tensor(input)
+        dataset = Dataset([input], self.get_transform_func())
+
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=8,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
+
+        # Verify calculate_quantization_params was called
+        assert calc_q_params_spy.call_count > 0, "calculate_quantization_params should be called"
+
+        # Get the call arguments - act_ch_axis is the 5th positional argument (index 4)
+        # Signature: calculate_quantization_params(statistics, weight, reduction_axes, config, act_ch_axis, ...)
+        call_args = calc_q_params_spy.call_args[0]
+        assert len(call_args) >= 5, "calculate_quantization_params should have at least 5 positional arguments"
+
+        # Verify act_ch_axis has a valid value (should be an integer)
+        act_ch_axis = call_args[4]
+        if transpose_a:
+            assert act_ch_axis < 2
+        else:
+            assert act_ch_axis == 2
+
     def test_scale_estimation_outlier_channel_has_lowest_error(self, mocker):
         """Checks that outlier channel has a lowest error after quantization."""
         OUTLIER_CHANNEL = 4
-        model = self.get_model_for_test_scale_estimation()
+        model = self.get_model_for_test_scale_estimation(transpose_a=False)
         original_weight = self.get_orig_weight(model)
 
         # prepare dataset with one input tensor
@@ -358,102 +394,358 @@ class TemplateWeightCompression(ABC):
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
+    @dataclass
+    class ScaleEstimationTestParams:
+        ref_scale: np.ndarray
+        ref_zp: np.ndarray | None
+        ref_scale_transpose: np.ndarray
+        ref_zp_transpose: np.ndarray | None
+
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    @pytest.mark.parametrize("n_samples", [2, 4])
     @pytest.mark.parametrize(
-        "config,ref_scale,ref_zp",
+        "config,refs",
         [
             (
                 WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
-                np.array(
-                    [
-                        [[-0.22218132]],
-                        [[-0.19778779]],
-                        [[-0.24689576]],
-                        [[-0.21622597]],
-                        [[0.1586609]],
-                        [[-0.15784486]],
-                        [[0.238651]],
-                        [[0.17156479]],
-                    ],
-                    dtype=np.float32,
-                ),
-                None,
+                {
+                    2: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[-0.22218132]],
+                                [[-0.19778779]],
+                                [[-0.24689576]],
+                                [[-0.21622597]],
+                                [[0.1586609]],
+                                [[-0.15784486]],
+                                [[0.238651]],
+                                [[0.17156479]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=None,
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        0.18594319,
+                                        0.22840136,
+                                        0.16606122,
+                                        0.25422758,
+                                        0.1987621,
+                                        -0.23781118,
+                                        -0.2287395,
+                                        -0.23375487,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=None,
+                    ),
+                    4: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[-0.24165061]],
+                                [[-0.19896907]],
+                                [[-0.24648768]],
+                                [[-0.21318418]],
+                                [[0.16115057]],
+                                [[-0.15819049]],
+                                [[0.24036121]],
+                                [[0.17419375]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=None,
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        0.18594319,
+                                        0.21157789,
+                                        0.16573295,
+                                        0.25309673,
+                                        0.19764237,
+                                        -0.2193242,
+                                        -0.2271289,
+                                        -0.23375487,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=None,
+                    ),
+                },
             ),
             (
                 WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
-                np.array(
-                    [
-                        [[0.22218132]],
-                        [[0.19778779]],
-                        [[0.22600587]],
-                        [[0.22510362]],
-                        [[0.12782802]],
-                        [[0.14118923]],
-                        [[0.2070494]],
-                        [[0.15438876]],
-                    ],
-                    dtype=np.float32,
-                ),
-                np.array(
-                    [[[7.0]], [[7.0]], [[7.0]], [[7.0]], [[10.0]], [[6.0]], [[9.0]], [[9.0]]],
-                    dtype=np.float32,
-                ),
+                {
+                    2: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[0.22218132]],
+                                [[0.19778779]],
+                                [[0.22600587]],
+                                [[0.22510362]],
+                                [[0.12782802]],
+                                [[0.14118923]],
+                                [[0.2070494]],
+                                [[0.15438876]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=np.array(
+                            [[[7.0]], [[7.0]], [[7.0]], [[7.0]], [[10.0]], [[6.0]], [[9.0]], [[9.0]]],
+                            dtype=np.float32,
+                        ),
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        0.1919625,
+                                        0.20970625,
+                                        0.16606122,
+                                        0.25422758,
+                                        0.19682199,
+                                        0.14303008,
+                                        0.21059702,
+                                        0.20661725,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=np.array(
+                            [[[9.0, 9.0, 8.0, 8.0, 8.0, 4.0, 6.0, 6.0]]],
+                            dtype=np.float32,
+                        ),
+                    ),
+                    4: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[0.24165061]],
+                                [[0.19896907]],
+                                [[0.25049555]],
+                                [[0.2242006]],
+                                [[0.13055313]],
+                                [[0.14217281]],
+                                [[0.1906344]],
+                                [[0.15267286]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=np.array(
+                            [[[7.0]], [[7.0]], [[7.0]], [[7.0]], [[10.0]], [[6.0]], [[9.0]], [[9.0]]],
+                            dtype=np.float32,
+                        ),
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        0.1895767,
+                                        0.21360268,
+                                        0.16573295,
+                                        0.25309673,
+                                        0.19682199,
+                                        0.14301766,
+                                        0.21878883,
+                                        0.20673743,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=np.array(
+                            [[[9.0, 9.0, 8.0, 8.0, 8.0, 4.0, 6.0, 6.0]]],
+                            dtype=np.float32,
+                        ),
+                    ),
+                },
             ),
             (
                 WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
-                np.array(
-                    [
-                        [[1.9024894]],
-                        [[1.6864889]],
-                        [[2.0698037]],
-                        [[1.870039]],
-                        [[1.480314]],
-                        [[1.3043315]],
-                        [[1.863365]],
-                        [[1.5413069]],
-                    ],
-                    dtype=np.float32,
-                ),
-                None,
+                {
+                    2: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[1.9024894]],
+                                [[1.6864889]],
+                                [[2.0698037]],
+                                [[1.870039]],
+                                [[1.480314]],
+                                [[1.3043315]],
+                                [[1.863365]],
+                                [[1.5413069]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=None,
+                        ref_scale_transpose=np.array(
+                            [[[1.5086503, 1.744731, 1.3744454, 1.7661176, 1.5011221, 1.812953, 1.8130529, 1.870039]]],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=None,
+                    ),
+                    4: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[1.9024894]],
+                                [[1.6937989]],
+                                [[2.031642]],
+                                [[1.870039]],
+                                [[1.3577842]],
+                                [[1.2988861]],
+                                [[1.867487]],
+                                [[1.5418797]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=None,
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        1.5090985,
+                                        1.9886527,
+                                        1.3596942,
+                                        1.7720642,
+                                        1.5168957,
+                                        1.8008275,
+                                        1.8509885,
+                                        1.6427193,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=None,
+                    ),
+                },
             ),
             (
                 WeightCompressionConfig(
                     mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),
-                np.array(
-                    [
-                        [[0.54356843]],
-                        [[0.4866096]],
-                        [[0.4948216]],
-                        [[0.5342969]],
-                        [[0.42294687]],
-                        [[0.3495965]],
-                        [[0.53673494]],
-                        [[0.44053704]],
-                    ],
-                    dtype=np.float32,
-                ),
-                None,
+                {
+                    2: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[0.54356843]],
+                                [[0.4866096]],
+                                [[0.4948216]],
+                                [[0.5342969]],
+                                [[0.42294687]],
+                                [[0.3495965]],
+                                [[0.53673494]],
+                                [[0.44053704]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=None,
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        0.45134735,
+                                        0.51374865,
+                                        0.39394316,
+                                        0.5078208,
+                                        0.46379733,
+                                        0.54356843,
+                                        0.5176736,
+                                        0.5019394,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=None,
+                    ),
+                    4: ScaleEstimationTestParams(
+                        ref_scale=np.array(
+                            [
+                                [[0.54356843]],
+                                [[0.48773143]],
+                                [[0.49813777]],
+                                [[0.5342969]],
+                                [[0.42294687]],
+                                [[0.35084736]],
+                                [[0.537187]],
+                                [[0.44053704]],
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp=None,
+                        ref_scale_transpose=np.array(
+                            [
+                                [
+                                    [
+                                        0.45254004,
+                                        0.52448314,
+                                        0.38986304,
+                                        0.50888956,
+                                        0.44011182,
+                                        0.54356843,
+                                        0.52991974,
+                                        0.4682271,
+                                    ]
+                                ]
+                            ],
+                            dtype=np.float32,
+                        ),
+                        ref_zp_transpose=None,
+                    ),
+                },
             ),
         ],
         ids=["int4_sym", "int4_asym", "nf4", "codebook"],
     )
     def test_scale_estimation_calculate_quantization_params(
-        self, config: WeightCompressionConfig, ref_scale: np.ndarray, ref_zp: np.ndarray | None
+        self,
+        transpose_a: bool,
+        n_samples: int,
+        config: WeightCompressionConfig,
+        refs: dict[int, ScaleEstimationTestParams],
     ) -> None:
-        """Verifies that scale estimation produces correct scales for all 4-bit compression modes."""
+        """Verifies that scale estimation produces correct scales for all 4-bit compression modes.
+
+        Tests both transpose_a=False (reduction_axes=(1,), act_ch_axis=2) and
+        transpose_a=True (reduction_axes=(0,), act_ch_axis=1) scenarios,
+        with varying number of activation samples.
+        """
+        params = refs[n_samples]
+        if transpose_a:
+            reduction_axes = (0,)
+            act_ch_axis = 1
+            ref_scale = params.ref_scale_transpose
+            ref_zp = params.ref_zp_transpose
+        else:
+            reduction_axes = (1,)
+            act_ch_axis = 2
+            ref_scale = params.ref_scale
+            ref_zp = params.ref_zp
+
         rng = np.random.default_rng(42)
         weight_data = rng.uniform(-2.0, 2.0, size=(8, 8)).astype(np.float32)
         weight = Tensor(self.to_tensor(weight_data))
-        reduction_axes = (1,)
 
-        # Build synthetic activation statistics: 2 samples, shape (1, 4, 8)
+        # Build synthetic activation statistics: n_samples samples, shape (1, 4, 8)
         activations = [
-            Tensor(self.to_tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32))) for _ in range(2)
+            Tensor(self.to_tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32))) for _ in range(n_samples)
         ]
-        statistics = ScaleEstimation.activations_to_wc_statistics(activations)
+        statistics = GPTQ.activations_to_wc_statistics(activations)
 
         scale, zp = ScaleEstimation.calculate_quantization_params(
-            statistics, weight, reduction_axes, config, subset_size=2, initial_steps=2, scale_steps=3
+            statistics,
+            weight,
+            reduction_axes,
+            config,
+            act_ch_axis=act_ch_axis,
+            subset_size=n_samples,
+            initial_steps=2,
+            scale_steps=3,
         )
 
         assert fns.allclose(Tensor(ref_scale), scale, atol=1e-6), (
@@ -604,11 +896,6 @@ class TemplateWeightCompression(ABC):
     def test_awq_scale_ref() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    @abstractmethod
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        """True if backend supports tranpose for MM activations, False otherwise"""
-
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
     @pytest.mark.parametrize("is_3d_weights", [True, False])
@@ -617,17 +904,12 @@ class TemplateWeightCompression(ABC):
         non_mergable_pattern,
         transpose_a,
         test_awq_scale_ref,
-        transpose_a_supported,
         is_3d_weights,
         monkeypatch,
         mocker,
     ):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
         if transpose_a:
-            if not transpose_a_supported:
-                msg = "Transpose a is not supported for the current backend"
-                pytest.skip(msg)
-
             INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
             model = self.get_transposable_awq_model(
                 transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
@@ -913,7 +1195,6 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize(
         "kwargs",
         [
-            dict(scale_estimation=True),
             dict(lora_correction=True),
             dict(
                 gptq=True,
@@ -921,11 +1202,7 @@ class TemplateWeightCompression(ABC):
             ),
         ],
     )
-    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
-        if not transpose_a_supported:
-            pytest.skip("transpose_a is not supported for the current backend")
-        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
-            pytest.skip("Scale estimation is not supported")
+    def test_compression_skipped_with_transposed_activations(self, kwargs):
         if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
             pytest.skip("GPTQ is not supported")
         if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():
