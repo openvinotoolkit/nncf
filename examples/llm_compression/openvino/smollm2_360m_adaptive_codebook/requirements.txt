@@ -4,6 +4,6 @@ optimum-intel[openvino]==1.27.0
 optimum-onnx==0.1.0
 optimum==2.1.0
 transformers==4.53.0
-onnx==1.20.1
+onnx==1.21.0
 torch==2.10.0
 torchvision==0.25.0
