@@ -252,6 +252,10 @@ def get_integer_quantization_model(
     """
     Get a model that compresses weights using the given configuration.
 
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale (and zero point for asymmetric modes) is computed internally using `reduction_axes`,
+    which must not be None in that case.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
@@ -260,8 +264,7 @@ def get_integer_quantization_model(
     :param zero_point_shape: Optional shape of the zero point tensor. If not provided and the mode is asymmetric,
         zero point will be computed by the OV model. Otherwise, it is expected that the zero point tensor is provided
         as an input.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
-        inputs.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
@@ -289,12 +292,15 @@ def get_float_quantization_model(
     """
     Get a model that compresses weights to float destination type using the given configuration.
 
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale is computed internally using `reduction_axes`, which must not be None in that case.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
     :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
         Otherwise, it is expected that the scale tensor is given as an input to the model.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale is provided as input.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :return: A model callable that compresses weights using the given configuration.
     """
     weight_shape, scale_shape, _ = _prepare_quantization_model_inputs(
@@ -321,12 +327,15 @@ def get_float_quantize_dequantize_weight_model(
     """
     Get a model that performs float compression and decompression of the given weight.
 
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale is computed internally using `reduction_axes`, which must not be None in that case.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
     :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
         Otherwise, it is expected that the scale tensor is given as an input to the model.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale is provided as input.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :param return_compressed_weight: Whether to also return compressed weight and scale besides the
         decompressed weight.
     :return: A model callable that returns a decompressed weight, and optionally compressed weight and scale
@@ -358,6 +367,10 @@ def get_integer_quantize_dequantize_weight_model(
     """
     Get a model that performs compression and decompression of the given weight.
 
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale (and zero point for asymmetric modes) is computed internally using `reduction_axes`,
+    which must not be None in that case.
+
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
@@ -366,8 +379,7 @@ def get_integer_quantize_dequantize_weight_model(
     :param zero_point_shape: Optional shape of the zero point tensor. If not provided and the mode is asymmetric,
         zero point will be computed by the OV model. Otherwise, it is expected that the zero point is provided as an
         input.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
-        inputs.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :param return_compressed_weight: Whether to also return compressed weight, scale, (and zero point) besides the
         decompressed weight.
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,

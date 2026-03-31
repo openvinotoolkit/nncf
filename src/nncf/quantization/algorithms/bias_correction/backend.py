@@ -97,17 +97,6 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def raw_statistic_collector(num_samples: int | None = None) -> TensorCollector:
-        """
-        Returns backend-specific raw statistic collector.
-        This statistic collector is used for raw data calculation, without aggregating.
-
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorCollector for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
     def process_model_output(raw_data: OutputType, output_name: str | int) -> Tensor:
         """
         Returns backend-specific processed output from the model.

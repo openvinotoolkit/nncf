@@ -1,2 +1,3 @@
 torch==2.9.0
-transformers==4.53.0
+# TODO(AlexanderDokuchaev): remove transformers next release gptqmodel https://github.com/ModelCloud/GPTQModel/issues/2328
+transformers==4.57.6

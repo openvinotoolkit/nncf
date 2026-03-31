@@ -23,8 +23,8 @@ def write_dot_graph(G: nx.DiGraph, path: Path | str) -> None:
     nx.nx_pydot.write_dot(relabeled, str(path))
 
 
-def read_dot_graph(path: Path) -> nx.DiGraph:
-    loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
+def read_dot_graph(path: Path) -> nx.MultiDiGraph:
+    loaded = nx.MultiDiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)
 
 

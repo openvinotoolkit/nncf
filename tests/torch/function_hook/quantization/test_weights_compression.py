@@ -32,6 +32,7 @@ from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
 from nncf.torch.function_hook import wrap_model
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -53,6 +54,7 @@ INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 SUPPORTED_MODES = INT8_MODES + INT4_MODES
 UNSUPPORTED_MODES = (
     CompressWeightsMode.NF4,
+    CompressWeightsMode.NVFP4,
     CompressWeightsMode.MXFP4,
     CompressWeightsMode.MXFP8_E4M3,
     CompressWeightsMode.FP8_E4M3,
@@ -573,7 +575,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return MatMulModel(255 * torch.eye(3, dtype=torch.float32))
 
     @staticmethod
-    def get_RoPE_model() -> torch.nn.Module:
+    def get_RoPE_model(degree: int) -> torch.nn.Module:
         return RoPEModel()
 
     @staticmethod
@@ -805,11 +807,19 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             return "linear5/linear/0"
         return "/bmm/4"
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: torch.nn.Module) -> int:
+        return cls._get_num_typed_nodes(model, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: torch.nn.Module) -> int:
+        return cls._get_num_typed_nodes(model, (INT8SymmetricWeightsDecompressor, INT8AsymmetricWeightsDecompressor))
+
     @staticmethod
-    def get_num_int4_nodes(model: torch.nn.Module) -> int:
+    def _get_num_typed_nodes(model: torch.nn.Module, types: tuple[BaseWeightsDecompressor, ...]) -> int:
         num = 0
         for op in get_hook_storage(model).modules():
-            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+            num += isinstance(op, types)
         return num
 
     @staticmethod
@@ -901,6 +911,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return False
+
+    @pytest.mark.skip("RoPE pattern is invalid for the Torch backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass
 
 
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])
