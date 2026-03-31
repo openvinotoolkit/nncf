@@ -135,10 +135,10 @@ class GraphPattern:
         return isinstance(other, GraphPattern) and is_isomorphic(self._graph, other.graph)
 
     @property
-    def graph(self) -> nx.DiGraph:
+    def graph(self) -> nx.MultiDiGraph:
         return self._graph
 
-    def _unite_with_copy_of_graph(self, graph: nx.DiGraph) -> nx.DiGraph:
+    def _unite_with_copy_of_graph(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
         """
         Creates a copy of 'graph', relabels node names according to self.node_counter
         and then unites relabeled graph with graph of 'self'.
@@ -155,7 +155,7 @@ class GraphPattern:
         self._graph = nx.union(self._graph, other_graph_copy)
         return other_graph_copy
 
-    def _add_edge_connected_subgraphs(self, first_graph: nx.DiGraph, second_graph: nx.DiGraph) -> None:
+    def _add_edge_connected_subgraphs(self, first_graph: nx.MultiDiGraph, second_graph: nx.MultiDiGraph) -> None:
         """
         Adds an edge between last node of 'first_graph' and first node of 'second_graph',
         which are found by nx.lexicographical_topological_sort().
@@ -258,7 +258,7 @@ class GraphPattern:
     def add_edges_from(self, ebunch_to_add: list[Any], **attr: dict[str, Any]) -> None:
         self._graph.add_edges_from(ebunch_to_add, **attr)
 
-    def get_weakly_connected_subgraphs(self) -> list[nx.DiGraph]:
+    def get_weakly_connected_subgraphs(self) -> list[nx.MultiDiGraph]:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]
 
     def dump_graph(self, path: Path) -> None:
