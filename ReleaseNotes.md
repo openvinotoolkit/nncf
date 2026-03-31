@@ -49,6 +49,9 @@ Deprecations/Removals:
 Requirements:
 
 - (TorchFX) `torchao` is required for compression flows related to TorchFX backend.
+- Updated PyTorch (2.10.0) and Torchvision (0.25.0) versions.
+- Updated `numpy` version (>=1.24.0, <2.5.0).
+- `pandas` is moved to optinal dependencies.
 
 ## New in Release 3.0.0
 
