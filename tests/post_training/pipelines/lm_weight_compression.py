@@ -111,6 +111,7 @@ class LMWeightCompression(BaseTestPipeline):
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
+        quantizer_param: dict = None,
     ):
         super().__init__(
             reported_name,
@@ -125,6 +126,7 @@ class LMWeightCompression(BaseTestPipeline):
             params,
             batch_size,
             memory_monitor,
+            quantizer_param,
         )
         self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=WCNumCompressNodes())
 
