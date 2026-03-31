@@ -63,7 +63,7 @@ class FXModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _traverse_graph_up(
+    def _traverse_graph_backwards(
         input_nodes: list[torch.fx.Node],
         stop_nodes: set[str],
         visited: set[str],
@@ -111,15 +111,15 @@ class FXModelTransformer(ModelTransformer):
         for node_name, input_port_id in transformation.input_ids:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
-            target_inputs = node.all_input_nodes
+            target_inputs = node.all_input_nodes.copy()
             del target_inputs[input_port_id]
-            FXModelTransformer._traverse_graph_up(target_inputs, stop_nodes, visited)
+            FXModelTransformer._traverse_graph_backwards(target_inputs, stop_nodes, visited)
 
         for node_name in output_node_names:
             node = get_graph_node_by_name(model.graph, node_name)
             visited.add(node.name)
             if node.name not in input_node_names:
-                FXModelTransformer._traverse_graph_up(node.all_input_nodes, stop_nodes, visited)
+                FXModelTransformer._traverse_graph_backwards(node.all_input_nodes, stop_nodes, visited)
 
         extracted_graph = torch.fx.Graph()
         value_remap = {}
