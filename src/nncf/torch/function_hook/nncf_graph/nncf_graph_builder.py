@@ -201,15 +201,15 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
     for (s_node, t_node), list_meta in map_edges.items():
         source_node = map_nx_node_to_nncf_node[s_node]
         target_node = map_nx_node_to_nncf_node[t_node]
-        nncf_graph.add_edge_between_nncf_nodes(
-            source_node.node_id,
-            target_node.node_id,
-            tensor_shape=list_meta[0].shape,
-            input_port_id=list_meta[0].input_port,
-            output_port_id=list_meta[0].output_port,
-            dtype=get_dtype(list_meta[0].dtype),
-            parallel_input_port_ids=[meta.input_port for meta in list_meta[1:]] if len(list_meta) > 1 else None,
-        )
+        for meta in list_meta:
+            nncf_graph.add_edge_between_nncf_nodes(
+                source_node.node_id,
+                target_node.node_id,
+                tensor_shape=meta.shape,
+                input_port_id=meta.input_port,
+                output_port_id=meta.output_port,
+                dtype=get_dtype(meta.dtype),
+            )
     return nncf_graph
 
 

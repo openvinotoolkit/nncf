@@ -346,12 +346,16 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
-  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2026/openvino-workflow/torch-compile.html).
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
   NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
   export new models based on available model templates as well as run the exported models with OpenVINO.
+
+- [Microsoft Olive](https://github.com/microsoft/olive)
+
+  NNCF is used to quantize OpenVINO IR and ONNX models for the [OpenVINO integration](https://microsoft.github.io/Olive/features/ihv-integration/openvino.html).
 
 <a id="installation-guide"></a>
 
@@ -402,7 +406,7 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
 - [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
-- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
+- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2026/about-openvino/performance-benchmarks.html)
 
 ## Telemetry
 
@@ -411,4 +415,4 @@ You can opt-out at any time by running the following command in the Python envir
 
 `opt_in_out --opt_out`
 
-More information available on [OpenVINO telemetry](https://docs.openvino.ai/2025/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/2026/about-openvino/additional-resources/telemetry.html).

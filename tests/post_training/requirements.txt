@@ -9,6 +9,7 @@ torchvision
 onnx
 onnxruntime
 openvino
+pandas
 pytest
 pytest-forked
 pytest-split

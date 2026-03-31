@@ -13,6 +13,7 @@ from collections import Counter
 from typing import Any
 
 import torch.fx
+from torch.fx.node import map_arg
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFNode
@@ -154,18 +155,23 @@ class GraphConverter:
         for source_node in model.graph.nodes:
             source_nncf_node = nncf_graph.get_node_by_name(source_node.name)
             for idx, dist_node in enumerate(source_node.users):
-                dist_node_id = nncf_graph.get_node_by_name(dist_node.name).node_id
-                input_port_id, output_port_id, tensor_shape = GraphConverter.get_edge_params(
+                flat_args: list[torch.fx.Node] = []
+                map_arg(dist_node.args, flat_args.append)
+                output_port_id, tensor_shape = GraphConverter.get_edge_params(
                     model, source_node, source_nncf_node, dist_node, idx
                 )
-                nncf_graph.add_edge_between_nncf_nodes(
-                    source_nncf_node.node_id,
-                    dist_node_id,
-                    tensor_shape=tensor_shape,
-                    input_port_id=input_port_id,
-                    output_port_id=output_port_id,
-                    dtype=Dtype.FLOAT,
-                )
+                dist_node_id = nncf_graph.get_node_by_name(dist_node.name).node_id
+                for input_port_id, input_node in enumerate(flat_args):
+                    if input_node != source_node:
+                        continue
+                    nncf_graph.add_edge_between_nncf_nodes(
+                        source_nncf_node.node_id,
+                        dist_node_id,
+                        tensor_shape=tensor_shape,
+                        input_port_id=input_port_id,
+                        output_port_id=output_port_id,
+                        dtype=Dtype.FLOAT,
+                    )
         return nncf_graph
 
     @staticmethod
@@ -175,7 +181,7 @@ class GraphConverter:
         source_nncf_node: NNCFNode,
         dist_node: torch.fx.Node,
         output_idx: int,
-    ) -> tuple[int, int, tuple[int, ...]]:
+    ) -> tuple[int, tuple[int, ...]]:
         """
         Retrieves edge params from the given source_node and dist_node pair.
 
@@ -184,8 +190,7 @@ class GraphConverter:
         :param source_nncf_node: Source node in format of NNCFNode.
         :param dist_node: Distance node in format of torch.fx.Node.
         :param output_idx: Output index of the source_node.
-        :return: Tuple of edge parameters: edge input port id, edge output port id and
-            edge tensor shape.
+        :return: Tuple of edge parameters: edge output port id and edge tensor shape.
         """
         output_port_id = 0
         tensor_shape = None
@@ -221,8 +226,7 @@ class GraphConverter:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
             nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
 
-        input_port_id = dist_node.all_input_nodes.index(source_node)
-        return input_port_id, output_port_id, tensor_shape
+        return output_port_id, tensor_shape
 
 
 def apply_args_defaults(

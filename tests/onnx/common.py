@@ -286,3 +286,11 @@ class ModelBuilder:
 
         model = onnx.helper.make_model(graph, opset_imports=[op], ir_version=ir_version)
         return model
+
+    def add_split(self, input: str, axis: int, num_outputs: int) -> list[str]:
+        i = len(self._nodes)
+        outputs = [f"output_{i}_{j}" for j in range(num_outputs)]
+        self._nodes.append(
+            onnx.helper.make_node("Split", [input], outputs, name=f"{i}_split", num_outputs=num_outputs, axis=axis)
+        )
+        return outputs

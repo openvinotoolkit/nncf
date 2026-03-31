@@ -37,7 +37,6 @@ dependencies = [
     "numpy>=1.24.0, <2.5.0",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
-    "pandas>=1.1.5,<2.4",
     "psutil",
     "pydot>=1.4.1, <=3.0.4",
     "rich>=13.5.2",
@@ -51,6 +50,7 @@ dependencies = [
 plots = [
     "kaleido>=0.2.1",
     "matplotlib>=3.3.4",
+    "pandas>=1.1.5,<2.4",
     "pillow>=9.0.0",
     "plotly-express>=0.4.1",
 ]
