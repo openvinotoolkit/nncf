@@ -1,4 +1,5 @@
 name: Test examples
+run-name: "Test examples${{ inputs.pull_request_number != '' && format(' PR #{0}', inputs.pull_request_number) || '' }}"
 permissions: read-all
 
 on:
