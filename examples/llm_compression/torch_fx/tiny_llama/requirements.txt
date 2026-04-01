@@ -4,4 +4,4 @@ openvino==2026.0.0
 optimum==2.1.0
 torch==2.10.0
 torchvision==0.25.0
-torchao==0.16.0
+torchao==0.17.0
