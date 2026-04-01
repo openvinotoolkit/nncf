@@ -76,6 +76,7 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
+          set +e
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
@@ -85,7 +86,7 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }};
           ret=$?
-          (( ret == 5 )) && exit 0
+          (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
           exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -150,7 +151,7 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
-          (( ret == 5 )) && exit 0
+          (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
           exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -182,7 +183,7 @@ jobs:
             ref: ${{ inputs.pull_request_number != '' && format('refs/pull/{0}/head', inputs.pull_request_number) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.10"
+          python-version: 3.10.14
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Install NNCF and test requirements
         run: |
@@ -209,7 +210,7 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
-          (( ret == 5 )) && exit 0
+          (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
           exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
