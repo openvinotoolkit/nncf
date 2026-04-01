@@ -24,7 +24,7 @@ description: Generate release notes for the new NNCF release.
     - If no backend keywords, no prefix.
     - Do not add backend prefixes to the `Requirements` and `General` sections.
 4. **Formatting:**
-    - Each line: `(Backend) Description (#PR_NUMBER)`
+    - Each line: `(Backend) Description (https://github.com/openvinotoolkit/nncf/pull/PR_NUMBER)`
     - Sort subcategories by backend: General first, then OpenVINO, PyTorch, ONNX.
     - If message is unclear, use: `git log --format=%B -n 1 COMMIT_HASH`.
 5. **Template:** Update `ReleaseNotes.md` using this structure (use `- ...` for empty sections):
