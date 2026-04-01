@@ -43,6 +43,8 @@ concurrency:
 
 env:
   PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
+  TQDM_DISABLE: 1
+  NNCF_EXTENSION_LOAD_TIMEOUT: 180
 
 jobs:
   examples-cpu:
@@ -74,7 +76,6 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
-          set +e
           python -m pytest -s -ra tests/cross_fw/examples \
             -m 'not cuda' \
             --junit-xml=pytest-results.xml \
@@ -82,11 +83,10 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ env.PYTEST_ARGS }}
+            ${{ env.PYTEST_ARGS }};
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
-        env:
-          TQDM_DISABLE: 1
+          (( ret == 5 )) && exit 0
+          exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -150,9 +150,8 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
-        env:
-          TQDM_DISABLE: 1
+          (( ret == 5 )) && exit 0
+          exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -209,11 +208,9 @@ jobs:
             --splits 6 \
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
-          ret="$?"
-          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
-        env:
-          TQDM_DISABLE: 1
-          NNCF_EXTENSION_LOAD_TIMEOUT: 180
+          ret=$?
+          (( ret == 5 )) && exit 0
+          exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
