@@ -45,7 +45,6 @@ concurrency:
 env:
   PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
   TQDM_DISABLE: 1
-  NNCF_EXTENSION_LOAD_TIMEOUT: 180
 
 jobs:
   examples-cpu:
@@ -55,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2]  # 3, 4, 5, 6]
+        group: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
@@ -170,7 +169,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2] # 3, 4, 5, 6]
+        group: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
@@ -213,6 +212,8 @@ jobs:
           ret=$?
           (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
           exit $ret
+        env:
+          NNCF_EXTENSION_LOAD_TIMEOUT: 180
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
