@@ -25,7 +25,7 @@ description: Generate release notes for the new NNCF release.
     - Each change should be categorized based on the backend (e.g., OpenVINO, PyTorch, ONNX) by adding in the beginning of the line the backend name in  brackets. For example, `(OpenVINO) Fix bug in NNCF for OpenVINO`.
     - If it cannot be categorized by the backend, it should not add any backend name in the beginning of the line. For example, `Fix bug in NNCF`.
     - Each sub category should be sorted by the backend, start with general changes (without backend name) and then sorted in order `OpenVINO`, `PyTorch`, `ONNX`.
-    - Add a link to the pull request for each change in the end of line in the format `(#PR_NUMBER)`. For example, if the commit message is "Fix bug in NNCF (#123)", the release notes should include "Fix bug in NNCF (#123)".
+    - Add a link to the pull request for each change at the end of line in the format `(#PR_NUMBER)`. For example, if the commit message is "Fix bug in NNCF (#123)", the release notes should include "Fix bug in NNCF (#123)".
     - If not enough information in the commit message, to generate the change description, read full commit message from the commit hash using `git log --format=%B -n 1 COMMIT_HASH` and use it to generate the change description.
     - Template for release notes:
 
