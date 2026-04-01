@@ -84,7 +84,7 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ env.PYTEST_ARGS }};
+            ${{ env.PYTEST_ARGS }}
           ret=$?
           (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
           exit $ret
