@@ -22,6 +22,7 @@ description: Generate release notes for the new NNCF release.
     - PyTorch: `pytorch`, `torch`, `pt`, `cuda`, `fx`, `torch.fx`.
     - ONNX: `onnx`, `onnxruntime`, `ort`.
     - If no backend keywords, no prefix.
+    - Do not add backend prefixes to the `Requirements` and `General` sections.
 4. **Formatting:**
     - Each line: `(Backend) Description (#PR_NUMBER)`
     - Sort subcategories by backend: General first, then OpenVINO, PyTorch, ONNX.
