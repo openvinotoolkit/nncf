@@ -669,7 +669,6 @@ def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
 
 
 QUANTIZATION_MODELS = add_quantizer_compression_params(QUANTIZATION_MODELS)
-WEIGHT_COMPRESSION_MODELS = add_quantizer_compression_params(WEIGHT_COMPRESSION_MODELS)
 
 PTQ_TEST_CASES = generate_tests_scope(QUANTIZATION_MODELS)
 WC_TEST_CASES = generate_tests_scope(WEIGHT_COMPRESSION_MODELS)

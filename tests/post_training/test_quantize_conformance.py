@@ -188,7 +188,7 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
         "model_id": test_model_param["model_id"],
         "backend": test_model_param["backend"],
         "compression_params": test_model_param["compression_params"],
-        "quantizer_params": test_model_param["quantizer_params"],
+        "quantizer_params": test_model_param.get("quantizer_params"),
         "params": test_model_param.get("params"),
         "reference_data": test_reference,
     }

@@ -103,6 +103,7 @@ class LMWeightCompression(BaseTestPipeline):
         model_id: str,
         backend: BackendType,
         compression_params: dict,
+        quantizer_params: dict,
         output_dir: Path,
         data_dir: Path,
         reference_data: dict,
@@ -111,13 +112,13 @@ class LMWeightCompression(BaseTestPipeline):
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
-        quantizer_param: dict = None,
     ):
         super().__init__(
             reported_name,
             model_id,
             backend,
             compression_params,
+            quantizer_params,
             output_dir,
             data_dir,
             reference_data,
@@ -126,7 +127,6 @@ class LMWeightCompression(BaseTestPipeline):
             params,
             batch_size,
             memory_monitor,
-            quantizer_param,
         )
         self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=WCNumCompressNodes())
 
