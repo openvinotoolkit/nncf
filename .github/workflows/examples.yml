@@ -162,9 +162,9 @@ jobs:
           retention-days: 7
 
   examples-win-cpu:
-    timeout-minutes: 80
     name: Test examples CPU Windows [${{ matrix.group }}/6]
     runs-on: windows-2025-16-core
+    timeout-minutes: 80
     if: ${{ !inputs.skip_windows }}
     strategy:
       fail-fast: false
@@ -225,6 +225,7 @@ jobs:
   examples-cpu-summary:
     name: Examples CPU Summary
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ !cancelled() }}
     needs: examples-cpu
     steps:
@@ -243,6 +244,7 @@ jobs:
   examples-cuda-summary:
     name: Examples CUDA Summary
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ !cancelled() && !inputs.skip_gpu }}
     needs: examples-cuda
     steps:
@@ -261,6 +263,7 @@ jobs:
   examples-win-cpu-summary:
     name: Examples Windows CPU Summary
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ !cancelled() && !inputs.skip_windows }}
     needs: examples-win-cpu
     steps:
