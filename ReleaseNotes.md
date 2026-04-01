@@ -25,7 +25,7 @@ Post-training Quantization:
   - [Post-Training Optimization of PaddleOCR-VL/PaddleOCR-VL-1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/paddleocr_vl/paddleocr_vl.ipynb)
   - [Post-Training Optimization of RAG pipeline](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-eval.ipynb)
 - Requirements:
-  - Updated to `openvino` 2026.1.0 (#4005).
+  - Updated to `openvino` 2026.1.0 (https://github.com/openvinotoolkit/nncf/pull/4005).
   - Updated to `torch` 2.10.0 (https://github.com/openvinotoolkit/nncf/pull/3852).
   - Updated `onnx` from 1.17.0 to 1.20.1 (https://github.com/openvinotoolkit/nncf/pull/3966).
   - Moved `pandas` to optional dependency (https://github.com/openvinotoolkit/nncf/pull/3970).
