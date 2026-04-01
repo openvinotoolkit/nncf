@@ -4,54 +4,32 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
 - General:
-  - ...
+  - Migrated `NNCFGraph` from `nx.DiGraph` to `nx.MultiDiGraph` to support models with parallel/multi-edges, enabling correct quantization of models with complex graph structures such as YOLO26 and models like `a = conv(x); return a * a` (#3843).
 - Features:
-  - ...
+  - (OpenVINO) Added NVFP4 (`f4e2m1`) compression data type in Weight Compression. NVFP4 uses a constant group size of 16 with scales compressed to `f8e4m3` using a second-degree scale (#3967).
+  - (OpenVINO) Added `backup_mode` parameter for FP compression formats (MXFP4, MXFP8, FP4, FP8), allowing first/last layers to be compressed with a backup FP format instead of INT8 (#3886).
+  - (PyTorch) Added `TopKMetatype` support for TorchFX backend, enabling correct graph building for models with TopK operations such as YOLO26 (#3944).
+  - (PyTorch) Migrated TorchFX PT2E quantization support from deprecated `torch.ao` to `torchao` (#3854).
+  - Added experimental GPTQModel convertor to convert compressed linear modules to GPTQModel format with Triton kernel support (#3848).
 - Fixes:
-  - ...
+  - (OpenVINO) Fixed RoPe ignored pattern to handle operations without a preceding transpose (#3989).
+  - (OpenVINO) Fixed scale estimation for Adaptive Codebook weight compression (#3888).
+  - (ONNX) Fixed `nncf.errors.ValidationError: There is no tensor with the name` error (#3988).
+  - Fixed wrong usage of `do_float_quantization` in Weight Compression (#3991).
 - Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
+  - (PyTorch) Added lazy import for `nncf.torch` module to reduce startup import time (#3862).
+  - Removed redundant `get_raw_statistic_collector` backend methods across backends (#3979).
 - Tutorials:
   - [Post-Training Optimization of MiniCPM-o 4.5 Multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-4.5/minicpm-o-4.5.ipynb)
   - [Post-Training Optimization of PaddleOCR-VL/PaddleOCR-VL-1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/paddleocr_vl/paddleocr_vl.ipynb)
   - [Post-Training Optimization of RAG pipeline](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-eval.ipynb)
-- Known issues:
-  - ...
-
-Compression-aware training:
-
-- Breaking changes:
-  - ...
-- General:
-  - ...
-- Features:
-  - ...
-- Fixes:
-  - ...
-- Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
-
-Deprecations/Removals:
-
-- ...
-
-Requirements:
-
-- (TorchFX) `torchao` is required for compression flows related to TorchFX backend and by nncf.torch.
-- Updated PyTorch (2.10.0) and Torchvision (0.25.0) versions.
-- Updated `numpy` version (>=1.24.0, <2.5.0).
-- `pandas` is moved to optinal dependencies.
+- Requirements:
+  - Updated to `openvino` 2026.1.0 (#4005).
+  - Updated to `torch` 2.10.0 (#3852).
+  - Updated `onnx` from 1.17.0 to 1.20.1 (#3966).
+  - Moved `pandas` to optional dependency (#3970).
+  - Removed unused `pillow` dependency (#3929).
 
 ## New in Release 3.0.0
 
