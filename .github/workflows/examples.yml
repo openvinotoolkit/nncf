@@ -41,6 +41,9 @@ concurrency:
   group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ inputs.pytest_args || '' }}-${{ inputs.pull_request_number || '' }}
   cancel-in-progress: false
 
+env:
+  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
+
 jobs:
   examples-cpu:
     name: Test examples CPU [${{ matrix.group }}/6]
@@ -58,11 +61,7 @@ jobs:
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ inputs.pull_request_number }}/head:pr-${{ inputs.pull_request_number }}
-          git checkout pr-${{ inputs.pull_request_number }}
+            ref: ${{ inputs.pull_request_number != '' && format('refs/pull/{0}/head', inputs.pull_request_number) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.10.14
@@ -83,9 +82,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ inputs.pytest_args || '' }}
+            ${{ env.PYTEST_ARGS }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
       - name: Upload test results
@@ -128,11 +127,7 @@ jobs:
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ inputs.pull_request_number }}/head:pr-${{ inputs.pull_request_number }}
-          git checkout pr-${{ inputs.pull_request_number }}
+            ref: ${{ inputs.pull_request_number != '' && format('refs/pull/{0}/head', inputs.pull_request_number) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.10.14
@@ -153,9 +148,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 1 \
             --group ${{ matrix.group }} \
-            ${{ inputs.pytest_args || '' }}
+            ${{ env.PYTEST_ARGS }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
       - name: Upload test results
@@ -185,11 +180,7 @@ jobs:
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ inputs.pull_request_number }}/head:pr-${{ inputs.pull_request_number }}
-          git checkout pr-${{ inputs.pull_request_number }}
+            ref: ${{ inputs.pull_request_number != '' && format('refs/pull/{0}/head', inputs.pull_request_number) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.10"
@@ -217,9 +208,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ inputs.pytest_args || '' }}
+            ${{ env.PYTEST_ARGS }}
           ret="$?"
-          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
           NNCF_EXTENSION_LOAD_TIMEOUT: 180
