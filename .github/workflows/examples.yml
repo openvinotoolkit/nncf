@@ -242,7 +242,7 @@ jobs:
   examples-cuda-summary:
     name: Examples CUDA Summary
     runs-on: ubuntu-latest
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && !inputs.skip_gpu }}
     needs: examples-cuda
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -260,7 +260,7 @@ jobs:
   examples-win-cpu-summary:
     name: Examples Windows CPU Summary
     runs-on: ubuntu-latest
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && !inputs.skip_windows }}
     needs: examples-win-cpu
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
