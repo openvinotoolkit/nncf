@@ -301,7 +301,7 @@ class NNCFGraph:
 
     @staticmethod
     def _get_edge_boundaries(
-        match: list[str], graph: nx.DiGraph
+        match: list[str], graph: nx.MultiDiGraph
     ) -> tuple[list[tuple[str, str, dict[str, Any]]], list[tuple[str, str, dict[str, Any]]]]:
         out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
         complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
@@ -598,12 +598,12 @@ class NNCFGraph:
 
     def get_graph_for_structure_analysis(self, extended: bool = False, port_ids: bool = False) -> nx.MultiDiGraph:
         """
-        Returns the nx.Digraph, which is built based on self._nx_graph.
+        Returns the nx.MultiDiGraph, which is built based on self._nx_graph.
         The new graph has certain node attributes omitted, compared to the graph stored inside NNCFGraph.
         If the node name consists of a special reserved character, this character will be replaced.
 
         :param extended: whether the graph edges should have attributes: shape of the tensor and tensor primitive type.
-        :return: An nx.DiGraph to be used for structure analysis
+        :return: An nx.MultiDiGraph to be used for structure analysis
         """
         out_graph = nx.MultiDiGraph()
         for node_name, node in self._nx_graph.nodes.items():
@@ -614,8 +614,7 @@ class NNCFGraph:
 
             out_graph.add_node(node_name, **attrs_node)
 
-        for u, v, k in self._nx_graph.edges:
-            edge = self._nx_graph.edges[u, v, k]
+        for u, v, edge in self._nx_graph.edges(data=True):
             attrs_edge = {}
             label = {}
             if extended:
@@ -637,7 +636,7 @@ class NNCFGraph:
             out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 
-    def _get_graph_for_visualization(self) -> nx.DiGraph:
+    def _get_graph_for_visualization(self) -> nx.MultiDiGraph:
         """
         :return: A user-friendly graph .dot file, making it easier to debug the network and setup
         ignored/target scopes.
@@ -649,8 +648,7 @@ class NNCFGraph:
             node_key = self.get_node_key_by_id(node.node_id)
             out_graph.add_node(node_key, **attrs_node)
 
-        for u, v, k in self._nx_graph.edges:
-            edge = self._nx_graph.edges[u, v, k]
+        for u, v, edge in self._nx_graph.edges(data=True):
             if edge[NNCFGraph.DTYPE_EDGE_ATTR] is Dtype.INTEGER:
                 style = "dashed"
             else:
@@ -691,7 +689,7 @@ class NNCFGraph:
             nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
         )
 
-    def get_nx_graph_copy(self) -> nx.DiGraph:
+    def get_nx_graph_copy(self) -> nx.MultiDiGraph:
         return deepcopy(self._nx_graph)
 
     def get_nncf_graph_pattern_io(self, match: list[str]) -> NNCFGraphPatternIO:
