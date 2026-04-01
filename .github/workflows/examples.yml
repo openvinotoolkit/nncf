@@ -4,6 +4,14 @@ permissions: read-all
 on:
   workflow_call:
     inputs:
+      pull_request_number:
+        description: 'The pull request number'
+        type: string
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        type: string
+        default: ''
       skip_windows:
         description: 'Skip tests on Windows'
         type: boolean
@@ -30,7 +38,7 @@ on:
         default: false
 
 concurrency:
-  group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
+  group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ inputs.pytest_args || '' }}-${{ inputs.pull_request_number || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -51,10 +59,10 @@ jobs:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
       - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        if: ${{ inputs.pull_request_number != '' }}
         run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          git fetch origin pull/${{ inputs.pull_request_number }}/head:pr-${{ inputs.pull_request_number }}
+          git checkout pr-${{ inputs.pull_request_number }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.10.14
@@ -75,9 +83,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '' }}
+            ${{ inputs.pytest_args || '' }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
       - name: Upload test results
@@ -104,7 +112,7 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Install dependencies
-        run : |
+        run: |
           sudo apt-get update
           sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - name: Download CUDA
@@ -121,10 +129,10 @@ jobs:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
       - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        if: ${{ inputs.pull_request_number != '' }}
         run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          git fetch origin pull/${{ inputs.pull_request_number }}/head:pr-${{ inputs.pull_request_number }}
+          git checkout pr-${{ inputs.pull_request_number }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: 3.10.14
@@ -145,9 +153,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 1 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '' }}
+            ${{ inputs.pytest_args || '' }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
       - name: Upload test results
@@ -178,10 +186,10 @@ jobs:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
       - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        if: ${{ inputs.pull_request_number != '' }}
         run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          git fetch origin pull/${{ inputs.pull_request_number }}/head:pr-${{ inputs.pull_request_number }}
+          git checkout pr-${{ inputs.pull_request_number }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.10"
@@ -209,9 +217,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '' }}
+            ${{ inputs.pytest_args || '' }}
           ret="$?"
-          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
           NNCF_EXTENSION_LOAD_TIMEOUT: 180
