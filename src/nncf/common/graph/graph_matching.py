@@ -36,7 +36,7 @@ def _are_nodes_matched(node_1, node_2) -> bool:  # type:ignore
     return True
 
 
-def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
+def _sort_patterns_by_len(pattern: nx.MultiDiGraph) -> int:
     """
     Sort patterns by their length. GraphPattern.NON_PATTERN_NODE_TYPE is not counted as a pattern node.
     """
@@ -48,7 +48,7 @@ def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     return len(pattern) - len(non_pattern_nodes)
 
 
-def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgraph: dict[str, str]) -> bool:
+def _is_subgraph_matching_strict(graph: nx.MultiDiGraph, pattern: nx.MultiDiGraph, subgraph: dict[str, str]) -> bool:
     """
     Checks out whether the matched subgraph has:
     1) External predecessors of starting nodes.

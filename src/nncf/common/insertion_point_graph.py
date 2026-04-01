@@ -113,10 +113,9 @@ class InsertionPointGraph(nx.MultiDiGraph):  # type: ignore
             self.add_node(node_key, **attrs)
 
         INPUT_PORT_ID = "input_port_id"
-        for edge in self._base_nx_graph.edges:
-            input_port_id = self._base_nx_graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
-            dtype = self._base_nx_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR]
-            from_node, to_node, _ = edge
+        for from_node, to_node, edge in self._base_nx_graph.edges(data=True):
+            input_port_id = edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
+            dtype = edge[NNCFGraph.DTYPE_EDGE_ATTR]
 
             attrs = {
                 INPUT_PORT_ID: input_port_id,
@@ -200,13 +199,12 @@ class InsertionPointGraph(nx.MultiDiGraph):  # type: ignore
                 operator_node = self.nodes[operator_node_key]
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
-        for edge in self.edges:
+        for from_node_key, to_node_key in self.edges(keys=False):
             # Mark all edges from post-hook to pre-hook as integer if at least one was integer.
             # Until output ports are ready, the post-hook for output will treat op as having a single
             # tensor output. In multi-output case when some of tensors are integer, need to make
             # sure that the propagation won't happen from a pre-hook of the op consuming the floating part
             # of the output into the post-hook of the operation that produces both int and float tensors.
-            from_node_key, to_node_key, _ = edge
             from_node = self.nodes[from_node_key]
             to_node = self.nodes[to_node_key]
             if (
