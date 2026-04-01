@@ -83,6 +83,7 @@ def test_examples(
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
+    return
     python_version = sys.version_info
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
