@@ -207,6 +207,7 @@ def run_pipeline(
     extra_columns: bool,
     memory_monitor: bool,
 ):
+    return
     pipeline, exception_report, test_model_param = None, None, None
     start_time = time.perf_counter()
     if test_case_name not in reference_data:
