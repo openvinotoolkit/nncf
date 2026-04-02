@@ -38,10 +38,6 @@ on:
         type: boolean
         default: false
 
-concurrency:
-  group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ inputs.pytest_args || '' }}-${{ inputs.pull_request_number || '' }}
-  cancel-in-progress: false
-
 env:
   PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
   TQDM_DISABLE: 1
@@ -223,25 +219,25 @@ jobs:
           retention-days: 7
 
   examples-cpu-summary:
+    name: Summary Examples CPU
     if: ${{ !cancelled() }}
     needs: examples-cpu
     uses: ./.github/workflows/call_summary.yml
     with:
-      name: Examples CPU
       artifact_pattern: examples-cpu-pytest-results-*
 
   examples-cuda-summary:
+    name: Summary Examples CUDA
     if: ${{ !cancelled() && !inputs.skip_gpu }}
-    needs: examples-cpu
+    needs: examples-cuda
     uses: ./.github/workflows/call_summary.yml
     with:
-      name: Examples CUDA
       artifact_pattern: examples-cuda-pytest-results-*
 
   examples-win-cpu-summary:
+    name: Summary Examples Windows CPU
     if: ${{ !cancelled() && !inputs.skip_windows }}
     needs: examples-win-cpu
     uses: ./.github/workflows/call_summary.yml
     with:
-      name: Examples Windows CPU
       artifact_pattern: examples-win-cpu-pytest-results-*
