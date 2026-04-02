@@ -225,7 +225,7 @@ jobs:
   examples-cpu-summary:
     if: ${{ !cancelled() }}
     needs: examples-cpu
-    uses: ./.github/workflows/reusable/summary.yml
+    uses: ./.github/workflows/call_summary.yml
     with:
       name: Examples CPU
       artifact_pattern: examples-cpu-pytest-results-*
@@ -233,7 +233,7 @@ jobs:
   examples-cuda-summary:
     if: ${{ !cancelled() && !inputs.skip_gpu }}
     needs: examples-cpu
-    uses: ./.github/workflows/reusable/summary.yml
+    uses: ./.github/workflows/call_summary.yml
     with:
       name: Examples CUDA
       artifact_pattern: examples-cuda-pytest-results-*
@@ -241,7 +241,7 @@ jobs:
   examples-win-cpu-summary:
     if: ${{ !cancelled() && !inputs.skip_windows }}
     needs: examples-win-cpu
-    uses: ./.github/workflows/reusable/summary.yml
+    uses: ./.github/workflows/call_summary.yml
     with:
       name: Examples Windows CPU
       artifact_pattern: examples-win-cpu-pytest-results-*
