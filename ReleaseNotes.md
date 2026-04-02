@@ -9,7 +9,7 @@ Post-training Quantization:
 - Features:
   - (OpenVINO) Added NVFP4 (`f4e2m1`) compression data type in Weight Compression. NVFP4 uses a constant group size of 16 with scales compressed to `f8e4m3` using a second-degree scale (https://github.com/openvinotoolkit/nncf/pull/3967).
   - (OpenVINO) Added `backup_mode` parameter for FP compression formats (MXFP4, MXFP8, FP4, FP8), allowing first/last layers to be compressed with a backup FP format instead of INT8 (https://github.com/openvinotoolkit/nncf/pull/3886).
-  - (OpenVINO) RoPe ignored pattern is updated to handle operations without a preceding transpose like Phi-3.5-MoE-instruct (https://github.com/openvinotoolkit/nncf/pull/3989).
+  - (OpenVINO) RoPe ignored pattern is updated to handle operations without a preceding transpose like in the Phi-3.5-MoE-instruct model (https://github.com/openvinotoolkit/nncf/pull/3989).
   - (PyTorch) Added `TopKMetatype` support for TorchFX backend, enabling correct graph building for models with TopK operations such as YOLO26 (https://github.com/openvinotoolkit/nncf/pull/3944).
   - (PyTorch) Migrated TorchFX PT2E quantization support from deprecated `torch.ao` to `torchao` (https://github.com/openvinotoolkit/nncf/pull/3854).
   - Added experimental GPTQModel convertor to convert compressed linear modules to GPTQModel format with Triton kernel support (https://github.com/openvinotoolkit/nncf/pull/3848).
