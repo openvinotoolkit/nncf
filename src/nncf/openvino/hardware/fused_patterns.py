@@ -524,10 +524,13 @@ def create_linear_activations() -> GraphPattern:
 
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)
 def create_linear_arithmetic() -> GraphPattern:
-    linear = linear_operations()
-    arithmetic = arithmetic_operations()
-    linear.join_patterns(arithmetic)
-    return linear
+    pattern = GraphPattern()
+    for degree in [1, 2]:
+        linear = linear_operations()
+        arithmetic = arithmetic_operations()
+        linear.join_patterns_parallel(arithmetic, degree=degree)
+        pattern.add_pattern_alternative(linear)
+    return pattern
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS)

@@ -653,6 +653,35 @@ class ConcatModelWithTwoOutputs(SimpleConcatModel):
         return self.conv2(c), a
 
 
+class ConcatSameTensorModel(nn.Module):
+    INPUT_SHAPE = (1, 3, 3, 3)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.cat([x, x, x], dim=1)
+
+
+class SplitCatModel(nn.Module):
+    INPUT_SHAPE = (1, 9, 3, 3)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        chunks = torch.split(x, 3, dim=1)
+        return torch.cat(list(chunks), dim=1)
+
+
+class ConvReluBranchModel(nn.Module):
+    INPUT_SHAPE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.conv = nn.Conv2d(3, 3, 1)
+        self.conv_a = nn.Conv2d(3, 3, 1)
+        self.conv_b = nn.Conv2d(3, 3, 1)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        y = torch.relu(self.conv(x))
+        return self.conv_a(y), self.conv_b(y)
+
+
 class OneDepthwiseConvModel(nn.Module):
     def __init__(self) -> None:
         super().__init__()

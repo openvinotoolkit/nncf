@@ -246,6 +246,92 @@ class MultiInputOutputModel(ONNXReferenceModel):
 
 
 @ALL_SYNTHETIC_MODELS.register()
+class MultiInputOutputModelParallelEdges(ONNXReferenceModel):
+    def __init__(self):
+        input_shape_1 = [1, 6, 3, 3]
+        model_input_name_1 = "X_1"
+        X_1 = onnx.helper.make_tensor_value_info(model_input_name_1, onnx.TensorProto.FLOAT, input_shape_1)
+
+        model_output_name_1 = "Y_1"
+        Y_1 = onnx.helper.make_tensor_value_info(model_output_name_1, onnx.TensorProto.FLOAT, [6, 6, 3, 3])
+
+        concat_output = "concat1_output"
+        concat_node = onnx.helper.make_node(
+            name="Concat1",
+            op_type="Concat",
+            inputs=[
+                model_input_name_1,
+                model_input_name_1,
+            ],
+            outputs=[concat_output],
+            axis=0,
+        )
+
+        concat_node2 = onnx.helper.make_node(
+            name="Concat2",
+            op_type="Concat",
+            inputs=[concat_output, concat_output],
+            outputs=[model_output_name_1],
+            axis=0,
+        )
+
+        # Create the graph (GraphProto)
+        graph_def = onnx.helper.make_graph(
+            nodes=[concat_node, concat_node2],
+            name="MultiInputOutputNetParallelEdges",
+            inputs=[X_1],
+            outputs=[Y_1],
+            initializer=[],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = self.required_opset_version
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape_1], "multi_input_output_parallel_edges_model.dot")
+
+
+class MultiInputOutputNetParallelEdgesQuantizable(ONNXReferenceModel):
+    def __init__(self):
+        input_shape_1 = [1, 6, 3, 3]
+        model_input_name_1 = "X_1"
+        X_1 = onnx.helper.make_tensor_value_info(model_input_name_1, onnx.TensorProto.FLOAT, input_shape_1)
+
+        model_output_name_1 = "Y_1"
+        Y_1 = onnx.helper.make_tensor_value_info(model_output_name_1, onnx.TensorProto.FLOAT, [6, 6, 3, 3])
+
+        model_output_name_2 = "Y_2"
+        Y_2 = onnx.helper.make_tensor_value_info(model_output_name_2, onnx.TensorProto.FLOAT, [6, 6, 3, 3])
+
+        num_outputs = 2
+        axis = 1
+        outputs = [f"output_{1}_{j}" for j in range(num_outputs)]
+        split_node = onnx.helper.make_node("Split", [model_input_name_1], outputs, name="1_split", axis=axis)
+
+        matmul_node = onnx.helper.make_node(
+            name="MatMul", op_type="MatMul", inputs=outputs, outputs=[model_output_name_1]
+        )
+        matmul_node1 = onnx.helper.make_node(
+            name="MatMul1", op_type="MatMul", inputs=outputs, outputs=[model_output_name_2]
+        )
+
+        # Create the graph (GraphProto)
+        graph_def = onnx.helper.make_graph(
+            nodes=[split_node, matmul_node, matmul_node1],
+            name="MultiInputOutputNetParallelEdgesQuantizable",
+            inputs=[X_1],
+            outputs=[Y_1, Y_2],
+            initializer=[],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = self.required_opset_version
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape_1], "multi_input_output_parallel_quantizable_edges_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
 class DoubleInputOutputModel(ONNXReferenceModel):
     def __init__(self):
         input_shape_1 = [1, 6, 3, 3]

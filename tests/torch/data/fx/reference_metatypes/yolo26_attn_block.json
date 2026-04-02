@@ -1,0 +1,20 @@
+{
+    "qkv_conv_weight": "PTConstNoopMetatype",
+    "qkv_conv_bias": "PTConstNoopMetatype",
+    "lifted_tensor_0": "PTConstNoopMetatype",
+    "x": "PTInputNoopMetatype",
+    "conv2d": "PTConv2dMetatype",
+    "split": "PTSplitMetatype",
+    "getitem": "PTGatherMetatype",
+    "getitem_1": "PTGatherMetatype",
+    "getitem_2": "PTGatherMetatype",
+    "matmul": "PTMatMulMetatype",
+    "lift_fresh_copy": "UnknownMetatype",
+    "_assert_tensor_metadata_default": "UnknownMetatype",
+    "to": "PTNoopMetatype",
+    "sqrt": "PTSqrtMetatype",
+    "div": "PTDivMetatype",
+    "softmax": "PTSoftmaxMetatype",
+    "matmul_1": "PTMatMulMetatype",
+    "output": "PTOutputNoopMetatype"
+}
