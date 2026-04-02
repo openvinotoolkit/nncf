@@ -85,8 +85,7 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
-          (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
-          exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -147,8 +146,7 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
-          (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
-          exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -204,8 +202,7 @@ jobs:
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
-          (( ret == 5 )) && [[ -n "${{ env.PYTEST_ARGS }}" ]] && exit 0
-          exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
