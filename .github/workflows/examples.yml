@@ -43,6 +43,10 @@ env:
   TQDM_DISABLE: 1
   RESULT_XML: "pytest-results.xml"
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   examples-cpu:
     name: Test examples CPU [${{ matrix.group }}/6]
@@ -52,9 +56,6 @@ jobs:
       fail-fast: false
       matrix:
         group: [1, 2, 3, 4, 5, 6]
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -102,9 +103,6 @@ jobs:
       fail-fast: false
       matrix:
         group: [1]
-    defaults:
-      run:
-        shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -167,9 +165,6 @@ jobs:
       fail-fast: false
       matrix:
         group: [1, 2, 3, 4, 5, 6]
-    defaults:
-      run:
-        shell: bash
     env:
       PYTHONIOENCODING: utf-8
       NNCF_EXTENSION_LOAD_TIMEOUT: 180
