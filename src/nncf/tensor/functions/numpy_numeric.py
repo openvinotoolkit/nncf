@@ -12,7 +12,6 @@
 from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
-from numpy.typing import DTypeLike
 from numpy.typing import NDArray
 
 from nncf.tensor.definitions import T_AXIS
@@ -27,9 +26,9 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = T_NUMPY_ARRAY | np.generic  # type: ignore[type-arg]
+T_NUMPY = T_NUMPY_ARRAY | np.generic[Any]
 
-DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
+DTYPE_MAP: dict[TensorDataType, np.dtype[Any]] = {
     TensorDataType.float16: np.dtype(np.float16),
     TensorDataType.float32: np.dtype(np.float32),
     TensorDataType.float64: np.dtype(np.float64),
@@ -50,7 +49,7 @@ def validate_device(device: TensorDeviceType | None) -> None:
         raise ValueError(msg)
 
 
-def convert_to_numpy_dtype(dtype: TensorDataType | None) -> DTypeLike | None:
+def convert_to_numpy_dtype(dtype: TensorDataType | None) -> np.dtype[Any] | None:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
@@ -310,7 +309,7 @@ def _(a: T_NUMPY, b: T_NUMPY | float, operator_fn: Callable[..., Any]) -> T_NUMP
 
 @numeric.finfo.register
 def _(a: T_NUMPY) -> TypeInfo:
-    ti = np.finfo(a.dtype)  # type: ignore[arg-type]
+    ti = np.finfo(a.dtype)
     return TypeInfo(float(ti.eps), float(ti.max), float(ti.min))
 
 
@@ -411,7 +410,7 @@ def _(
 ) -> T_NUMPY_ARRAY:
     if mask is None:
         return np.mean(x, axis=axis, keepdims=keepdims)
-    masked_x = np.ma.array(x, mask=mask)  # type: ignore[no-untyped-call]
+    masked_x = np.ma.array(x, mask=mask)
     result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
     if isinstance(result, np.ma.MaskedArray):
         return result.data
@@ -422,7 +421,7 @@ def _(
 def _(x: T_NUMPY_ARRAY, mask: T_NUMPY_ARRAY | None, axis: T_AXIS, keepdims: bool = False) -> T_NUMPY_ARRAY:
     if mask is None:
         return np.median(x, axis=axis, keepdims=keepdims)
-    masked_x = np.ma.array(x, mask=mask)  # type: ignore[no-untyped-call]
+    masked_x = np.ma.array(x, mask=mask)
     result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)  # type: ignore[no-untyped-call]
     if isinstance(result, np.ma.MaskedArray):
         return result.data
