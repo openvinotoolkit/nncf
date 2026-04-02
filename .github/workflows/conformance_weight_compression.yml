@@ -1,11 +1,11 @@
 name: Weight compression
-run-name: "Weight compression${{ inputs.pull_request_number != '' && format(' PR#{0}', inputs.pull_request_number) || '' }}${{ inputs.pytest_args != '' && format(' [{0}]', inputs.pytest_args) || '' }}"
+run-name: "Weight compression${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}${{ inputs.pytest_args != '' && format(' [{0}]', inputs.pytest_args) || '' }}"
 permissions: read-all
 
 on:
   workflow_call:
     inputs:
-      pull_request_number:
+      pr_num:
         description: 'The pull request number'
         type: string
         default: ''
@@ -15,7 +15,7 @@ on:
         default: ''
   workflow_dispatch:
     inputs:
-      pull_request_number:
+      pr_num:
         description: 'The pull request number'
         type: string
         default: ''
@@ -48,7 +48,7 @@ jobs:
         with:
           lfs: true
           fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-          ref: ${{ inputs.pull_request_number != '' && format('refs/pull/{0}/head', inputs.pull_request_number) || github.ref }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
 
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -70,9 +70,9 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '' }}
+            ${{ env.PYTEST_ARGS }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
       - name: Print results.csv
         if: ${{ !cancelled() }}
         run: column -s, -t < tmp/results.csv || echo "no file"
