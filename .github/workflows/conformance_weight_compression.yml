@@ -61,7 +61,7 @@ jobs:
         run: uv pip install --system . -r tests/post_training/requirements.txt
       - name: Print installed modules
         run: pip list
-      - name: Run examples test scope
+      - name: Run wc test scope
         run: |
           set +e
           python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
@@ -92,7 +92,7 @@ jobs:
           retention-days: 7
 
   summary:
-    name: Summary WC Windows CPU
+    name: Summary WC
     if: ${{ !cancelled() }}
     needs: weight-compression-cpu
     uses: ./.github/workflows/call_summary.yml
