@@ -12,6 +12,7 @@
 from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
+from numpy.typing import DTypeLike
 from numpy.typing import NDArray
 
 from nncf.tensor.definitions import T_AXIS
@@ -26,9 +27,9 @@ from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
 T_NUMPY_ARRAY = NDArray[Any]
-T_NUMPY = T_NUMPY_ARRAY | np.generic[Any]
+T_NUMPY = T_NUMPY_ARRAY | np.generic
 
-DTYPE_MAP: dict[TensorDataType, np.dtype[Any]] = {
+DTYPE_MAP: dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
     TensorDataType.float32: np.dtype(np.float32),
     TensorDataType.float64: np.dtype(np.float64),
@@ -49,7 +50,7 @@ def validate_device(device: TensorDeviceType | None) -> None:
         raise ValueError(msg)
 
 
-def convert_to_numpy_dtype(dtype: TensorDataType | None) -> np.dtype[Any] | None:
+def convert_to_numpy_dtype(dtype: TensorDataType | None) -> DTypeLike | None:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
