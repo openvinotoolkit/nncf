@@ -133,7 +133,7 @@ def test_quantize_with_int16(model_creator_func, ref_fq_descs, target_device, mo
 
 @pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
 @pytest.mark.parametrize("num_bits", [8, 16])
-def test_quantize_activations_with_with_8_16_bits(num_bits, target_device, mocker):
+def test_quantize_activations_with_8_16_bits(num_bits, target_device, mocker):
     model = ScaledDotProductAttentionModel(with_weights=True).ov_model
     dataset = get_dataset_for_test(model)
     # sdpa q and k
@@ -157,13 +157,10 @@ def test_quantize_activations_with_with_8_16_bits(num_bits, target_device, mocke
     fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
     for node in fq_nodes:
         levels = node.get_attributes()["levels"]
-        if num_bits == 8:
-            assert levels in [2**8, 2**8 - 1]
-        else:
-            assert levels in [2**16, 2**16 - 1]
+        assert levels in [2**num_bits, 2**num_bits - 1]
 
     assert sym_mock.call_count == 2  # q and k sdpa inputs
-    assert asym_mock.call_count == 1  # one q, k, v matmul inputs
+    assert asym_mock.call_count == 1  # one input for q, k, v matmuls
 
 
 @pytest.mark.parametrize("model_creator_func, ref_nodes", [[ConvModel, REF_FQ_NODES[1]]])

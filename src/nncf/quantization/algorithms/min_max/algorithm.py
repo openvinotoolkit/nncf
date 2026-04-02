@@ -720,7 +720,7 @@ class MinMaxQuantization(Algorithm):
         multi_config_setup = quantization_proposal.quantizer_setup
         default_config = self._get_default_qconfig(self._global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
         if default_config.num_bits is not None:
-            single_config_setup = multi_config_setup.select_proper_qconfig_for_each_point(
+            single_config_setup = multi_config_setup.select_qconfig_by_num_bits_for_each_point(
                 num_bits=default_config.num_bits
             )
         else:

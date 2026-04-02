@@ -539,7 +539,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)
 
-    def select_proper_qconfig_for_each_point(self, num_bits: int) -> SingleConfigQuantizerSetup:
+    def select_qconfig_by_num_bits_for_each_point(self, num_bits: int) -> SingleConfigQuantizerSetup:
         """
         Selects the appropriate quantizer configuration for each quantization point based on the specified bit width.
 
@@ -549,12 +549,8 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         """
         qp_id_vs_qconfig_dict: dict[QuantizationPointId, QuantizerConfig] = {}
         for qp_id, qp in self.quantization_points.items():
-            if len(qp.possible_qconfigs) == 1:
-                qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
-            else:
-                qp_id_vs_qconfig_dict[qp_id] = [
-                    qconfig for qconfig in qp.possible_qconfigs if qconfig.num_bits == num_bits
-                ][0]
+            proper_configs = [qconfig for qconfig in qp.possible_qconfigs if qconfig.num_bits == num_bits]
+            qp_id_vs_qconfig_dict[qp_id] = proper_configs[0] if proper_configs else qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)
 
     @classmethod
