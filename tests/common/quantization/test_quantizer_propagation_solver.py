@@ -72,7 +72,7 @@ class TwoFcAfterDropout:
 
     @staticmethod
     def get_graph():
-        graph = nx.DiGraph()
+        graph = nx.MultiDiGraph()
         dropout_node_attrs = {
             NNCFNode.NODE_NAME_ATTR: TwoFcAfterDropout.DROPOUT_NODE_NAME,
             NNCFNode.NODE_TYPE_ATTR: TwoFcAfterDropout.DROPOUT_OP_TYPE_STR,
@@ -99,7 +99,7 @@ class TwoFcAfterDropout:
 
 
 def get_branching_model_graph() -> NNCFGraph:
-    mock_graph = nx.DiGraph()
+    mock_graph = nx.MultiDiGraph()
 
     #              (0 /O)  <-- treating this as an auxiliary "input" node
     #                 |
@@ -149,7 +149,7 @@ def get_branching_model_graph() -> NNCFGraph:
 
 
 def get_scaled_dot_product_graph():
-    mock_graph = nx.DiGraph()
+    mock_graph = nx.MultiDiGraph()
 
     node_keys = ["input", "branch_node", "reshape", "reshape_1", "reshape_2", "scaled_dot_product_attention"]
     for node_key in node_keys:
@@ -194,7 +194,7 @@ class MultiQPSerializedDataForTest:
 class RunOnIpGraphTestStruct:
     def __init__(
         self,
-        base_nx_graph: nx.DiGraph,
+        base_nx_graph: nx.MultiDiGraph,
         retval_qp_data: dict[QuantizationPointId, MultiQPSerializedDataForTest],
         retval_unified_scale_qp_groups: list[set[QuantizationPointId]],
         retval_shared_input_operation_set_groups: list[set[QuantizationPointId]],
@@ -1814,7 +1814,7 @@ class TestQuantizerPropagationSolver:
 
     @pytest.fixture()
     def ip_graph_with_int_edges(self):
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         # Double edges stand for integer data flows
         #        (0 /O_0)  <-- treating this as an auxiliary "input" node
@@ -1836,7 +1836,7 @@ class TestQuantizerPropagationSolver:
 
         mock_graph.add_edges_from([("O", "A"), ("A", "B"), ("B", "C"), ("B", "D"), ("C", "E"), ("D", "E"), ("E", "F")])
 
-        for edge in [("O", "A"), ("B", "C"), ("C", "E")]:
+        for edge in [("O", "A", 0), ("B", "C", 0), ("C", "E", 0)]:
             mock_graph.edges[edge][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
 
         mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)

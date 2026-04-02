@@ -142,7 +142,7 @@ def do_float_dequantization(compressed_weight: CompressedWeight, reduction_axis:
     else:
         scale = compressed_weight.scale
 
-    decompressed_weight = compressed_weight.tensor * scale
+    decompressed_weight = compressed_weight.get_unscaled_tensor() * scale
     if reduction_axis != -1:
         decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
     return decompressed_weight
@@ -233,7 +233,7 @@ def _do_float_quantization_single_scale(
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.is_codebook:
-        _, indexes = _calculate_codebook_quantized_weight(norm_weight, quantiles=config.get_numpy_codebook())
+        indexes = _calculate_codebook_indexes(norm_weight, quantiles=config.get_numpy_codebook())
         return CompressedWeight(
             indexes,
             scale,
@@ -586,18 +586,19 @@ def _calculate_float_quantized_weight(norm_weight: Tensor, compression_dtype: Te
     return quantized_weight
 
 
-def _calculate_codebook_quantized_weight(
+def _calculate_codebook_indexes(
     norm_weight: Tensor, quantiles: Tensor = None, center_of_quantiles: Tensor = None
-) -> tuple[Tensor, Tensor]:
+) -> Tensor:
     """
-    Performs quantization by quantiles (if center_of_quantiles is None). Look-up table is used to
-    "round" or "quantize" to the closest quant.
+    Quantizes the normalized weight by finding the closest codebook entry for each element.
+    Uses searchsorted on the midpoints between adjacent quantiles to assign each value to an index.
+    Returns the assigned indexes.
 
-    :param norm_weight: Weight tensor to quantize already normalized to quantiles range.
-    :param quantiles: Quantiles to use for quantization. If None, the center_of_quantiles must be provided.
-    :param center_of_quantiles: Center of quantiles to use for quantization. If None, it is calculated as the average
-        of adjacent quantiles.
-    :return: Tensor with floating-point values, where each of them corresponds to elements from quantiles.
+    :param norm_weight: Weight tensor to quantize, already normalized to the codebook range.
+    :param quantiles: Codebook values (quantization levels). If None, center_of_quantiles must be provided.
+    :param center_of_quantiles: Decision boundaries between adjacent quantiles. If None, computed as the
+        average of adjacent quantiles.
+    :return: Tensor of integer indexes into the codebook, one per weight element.
     """
     assert quantiles is not None or center_of_quantiles is not None, (
         "Either quantiles or center_of_quantiles should be provided"
@@ -605,11 +606,8 @@ def _calculate_codebook_quantized_weight(
 
     if center_of_quantiles is None:
         center_of_quantiles = 0.5 * (quantiles[1:] + quantiles[:-1])
-    center_of_quantiles = fns.from_numpy(center_of_quantiles, backend=norm_weight.backend)
-    indexes = fns.searchsorted(center_of_quantiles, norm_weight)
-    quantiles = fns.from_numpy(quantiles, backend=indexes.backend)
-    quantized_weight = quantiles[indexes]
-    return quantized_weight, indexes
+    center_of_quantiles = fns.from_numpy(center_of_quantiles.data, backend=norm_weight.backend)
+    return fns.searchsorted(center_of_quantiles, norm_weight)
 
 
 def _calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:

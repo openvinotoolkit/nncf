@@ -36,8 +36,10 @@ def get_nncf_graph_for_test(edge_shape, dtype):
     ]
     original_mock_graph = create_mock_graph(nodes, node_edges)
     nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0")][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = edge_shape
-    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0")][nncf_graph.DTYPE_EDGE_ATTR] = dtype
+    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0", 0)][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = (
+        edge_shape
+    )
+    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0", 0)][nncf_graph.DTYPE_EDGE_ATTR] = dtype
     return nncf_graph
 
 

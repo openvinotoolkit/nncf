@@ -11,7 +11,6 @@
 from typing import Any, Callable, Iterable, TypedDict, TypeVar
 
 import nncf
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging.logger import nncf_logger
@@ -495,12 +494,6 @@ def compress_weights(
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
     """
-    if mode == CompressWeightsMode.INT8:
-        warning_deprecated(
-            "`CompressWeightsMode.INT8` is deprecated. Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
-        )
-        mode = CompressWeightsMode.INT8_ASYM
-
     backend = get_backend(model)
     compression_weights_impl: Callable[..., Any] | None = None
 
@@ -549,7 +542,7 @@ def compress_weights(
 
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)  # type: ignore
-        if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
+        if mode in (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
             dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
 
@@ -589,10 +582,7 @@ def compress_weights(
             msg = "Torch FX backend does not support FQ, FQ_LORA and FQ_LORA_NLS compression formats."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if (
-            mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
-            and dataset is not None
-        ):
+        if mode in (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM) and dataset is not None:
             nncf_logger.warning("data-aware methods are not supported in INT8 modes. dataset is set to None")
             dataset = None
 

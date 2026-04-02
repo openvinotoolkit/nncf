@@ -22,7 +22,7 @@ from tests.common.quantization.mock_graphs import mark_input_ports_lexicographic
 
 
 def test_graph_pattern_io_building():
-    mock_graph = nx.DiGraph()
+    mock_graph = nx.MultiDiGraph()
     #   A
     # /   \
     # B   |
@@ -57,7 +57,6 @@ def test_graph_pattern_io_building():
             output_port_id=output_port_id,
             tensor_shape=[1, 1, 1, 1],
             dtype=Dtype.FLOAT,
-            parallel_input_port_ids=[],
         )
 
     def get_node(name: NNCFNodeName):
