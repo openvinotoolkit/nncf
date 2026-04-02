@@ -21,8 +21,7 @@ jobs:
           python-version: "3.12"
       - name: Install NNCF and doc requirements
         run: |
-          pip install .
-          pip install -r docs/api/requirements.txt
+          pip install . -r docs/api/requirements.txt
       - name: Build API docs
         run: |
           sphinx-build -M html docs/api/source html_build
