@@ -4,4 +4,4 @@ fastcore==1.11.5
 openvino==2026.0.0
 torch==2.10.0
 torchvision==0.25.0
-torchao==0.15.0
+torchao==0.16.0
