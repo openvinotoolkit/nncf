@@ -368,7 +368,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('flatten',)_ActivationQuantizationInsertionPoint": {
+        "('linear',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -384,7 +384,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('linear',)_ActivationQuantizationInsertionPoint": {
+        "('flatten',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,

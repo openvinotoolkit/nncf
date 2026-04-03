@@ -168,7 +168,7 @@ def test_quantized_model(
     )
 
     # Uncomment to visualize torch fx graph
-    # from tests.torch2.fx.helpers import visualize_fx_model
+    # from tests.torch.fx.helpers import visualize_fx_model
     # visualize_fx_model(quantized_model, f"{quantizer.__class__.__name__}_{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
@@ -180,7 +180,7 @@ def test_quantized_model(
     # Uncomment to visualize reference graphs
     # from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e
     # from torchao.quantization.pt2e.quantize_pt2e import prepare_pt2e
-    # from tests.torch2.fx.helpers import visualize_fx_model
+    # from tests.torch.fx.helpers import visualize_fx_model
     # prepared_model = prepare_pt2e(fx_model, quantizer)
     # prepared_model(example_input)
     # ao_quantized_model = convert_pt2e(prepared_model)
