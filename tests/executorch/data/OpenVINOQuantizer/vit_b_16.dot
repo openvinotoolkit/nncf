@@ -1,6 +1,6 @@
 digraph {
-"0 class_token" [id=0, type="get_attr"];
-"1 conv_proj_bias" [id=1, type="get_attr"];
+"0 conv_proj_bias" [id=0, type="get_attr"];
+"1 class_token" [id=1, type="get_attr"];
 "2 encoder_pos_embedding" [id=2, type="get_attr"];
 "3 encoder_layers_encoder_layer_0_ln_1_weight" [id=3, type="get_attr"];
 "4 encoder_layers_encoder_layer_0_ln_1_bias" [id=4, type="get_attr"];
@@ -980,8 +980,8 @@ digraph {
 "978 sub_tensor_49" [id=978, type=sub];
 "979 linear_48" [id=979, type=linear];
 "980 output" [id=980, type=output];
-"0 class_token" -> "113 expand" [key=0, style=solid, label="(1, 1, 768)"];
-"1 conv_proj_bias" -> "110 conv2d" [key=0, style=solid, label="(768,)"];
+"0 conv_proj_bias" -> "110 conv2d" [key=0, style=solid, label="(768,)"];
+"1 class_token" -> "113 expand" [key=0, style=solid, label="(1, 1, 768)"];
 "2 encoder_pos_embedding" -> "115 add" [key=0, style=solid, label="(1, 197, 768)"];
 "3 encoder_layers_encoder_layer_0_ln_1_weight" -> "117 layer_norm" [key=0, style=solid, label="(768,)"];
 "4 encoder_layers_encoder_layer_0_ln_1_bias" -> "117 layer_norm" [key=0, style=solid, label="(768,)"];
