@@ -3,7 +3,6 @@ run-name: "Test examples${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_n
 permissions: read-all
 
 on:
-  pull_request:
   workflow_call:
     inputs:
       pr_num:
