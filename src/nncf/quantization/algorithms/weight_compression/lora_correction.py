@@ -190,13 +190,11 @@ class LoraCorrectionAlgorithm:
 
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
             fq_weights = do_integer_dequantization(
-                compressed_weight.tensor,
-                compressed_weight.scale,
-                compressed_weight.zero_point,
+                compressed_weight,
                 reduction_axis,
             )
         elif mode == CompressWeightsMode.NF4:
-            fq_weights = do_float_dequantization(compressed_weight.tensor, compressed_weight.scale, reduction_axis)
+            fq_weights = do_float_dequantization(compressed_weight, reduction_axis)
         else:
             msg = (
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"

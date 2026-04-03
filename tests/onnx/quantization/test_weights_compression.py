@@ -25,6 +25,7 @@ from onnx import numpy_helper
 from onnxruntime import InferenceSession
 from packaging import version
 
+import nncf
 from nncf import CompressWeightsMode
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import build_graph
@@ -42,6 +43,15 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.onnx.common import ModelBuilder
+
+UNSUPPORTED_MODES = (
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.NVFP4,
+    CompressWeightsMode.MXFP4,
+    CompressWeightsMode.MXFP8_E4M3,
+    CompressWeightsMode.FP8_E4M3,
+    CompressWeightsMode.FP4,
+)
 
 
 def create_model(opset_version=21):
@@ -348,6 +358,13 @@ def test_matmulnbits_gemm(trans_b: int):
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
 
 
+@pytest.mark.parametrize("mode", UNSUPPORTED_MODES)
+def test_raise_error_with_not_int8(mode):
+    dummy_model = ModelBuilder().build()
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(dummy_model, mode=mode)
+
+
 class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
@@ -370,7 +387,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def get_RoPE_model() -> onnx.ModelProto:
+    def get_RoPE_model(degree: int) -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_rope_weight_compression() test.
         """
@@ -796,11 +813,19 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         return mb.build(opset_version=21)
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: onnx.ModelProto) -> int:
+        return cls._get_num_typed_nodes(model, [onnx.TensorProto.UINT4, onnx.TensorProto.INT4])
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: onnx.ModelProto) -> int:
+        return cls._get_num_typed_nodes(model, [onnx.TensorProto.UINT8, onnx.TensorProto.INT8])
+
     @staticmethod
-    def get_num_int4_nodes(model: onnx.ModelProto) -> int:
+    def _get_num_typed_nodes(model: onnx.ModelProto, types: list[onnx.TensorProto]) -> int:
         num = 0
         for i in model.graph.initializer:
-            if i.data_type in [onnx.TensorProto.UINT4, onnx.TensorProto.INT4]:
+            if i.data_type in types:
                 num += 1
         return num
 
@@ -929,3 +954,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+    @pytest.mark.skip("RoPE pattern is invalid for the ONNX backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass

@@ -16,6 +16,7 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
+from nncf import IgnoredScope
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
@@ -105,6 +106,7 @@ def min_max_quantize_model(
     convert_model_opset: bool = True,
     dataset_has_batch_size: bool = False,
     quantization_params: dict[str, Any] = None,
+    ignored_scope: IgnoredScope = None,
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
@@ -120,6 +122,7 @@ def min_max_quantize_model(
     advanced_parameters.disable_channel_alignment = True
     advanced_parameters.smooth_quant_alphas = AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
+    quantization_params["ignored_scope"] = ignored_scope
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
 

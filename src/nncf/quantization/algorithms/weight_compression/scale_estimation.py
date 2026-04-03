@@ -216,16 +216,19 @@ class ScaleEstimation:
         cur_config.group_size = group_size
 
         if not config.is_integer:
-            q_weights, compressed_weights, scale = float_quantize_dequantize_weight(
+            q_weights, compressed_weight = float_quantize_dequantize_weight(
                 weight, cur_config, reduction_axis, return_compressed_weight=True
             )
             zp = None
         else:
-            q_weights, compressed_weights, scale, zp = integer_quantize_dequantize_weight(
+            q_weights, compressed_weight = integer_quantize_dequantize_weight(
                 weight, cur_config, reduction_axis, return_compressed_weight=True
             )
+            zp = compressed_weight.zero_point
             if zp is not None:
-                zp = zp.astype(scale.dtype)
+                zp = zp.astype(compressed_weight.scale.dtype)
+        scale = compressed_weight.scale
+        compressed_weight = compressed_weight.get_unscaled_tensor()
 
         s = fns.unsqueeze(s, -2)
         s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
@@ -236,7 +239,7 @@ class ScaleEstimation:
         importance = fns.ones_like(weight)
         importance = importance * s
 
-        target, zero_mask = get_target_zero_mask(compressed_weights, zp)
+        target, zero_mask = get_target_zero_mask(compressed_weight, zp)
         importance = fns.where(zero_mask, 0.0, importance)
 
         # normalize importances for every group of weights to make sum of them equal to 1.0
@@ -304,17 +307,16 @@ class ScaleEstimation:
 
             if i < initial_steps - 1:
                 if not config.is_integer:
-                    compressed_weights, _, _ = do_float_quantization(
-                        weight, config, precomputed_scale=near_to_ideal_scale
-                    )
+                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=near_to_ideal_scale)
                 else:
-                    compressed_weights, _, _ = do_integer_quantization(
+                    compressed_weight = do_integer_quantization(
                         weight,
                         config,
                         precomputed_scale=near_to_ideal_scale,
                         precomputed_zero_point=zp,
                     )
-                target, zero_mask = get_target_zero_mask(compressed_weights, zp)
+                compressed_weight = compressed_weight.get_unscaled_tensor()
+                target, zero_mask = get_target_zero_mask(compressed_weight, zp)
                 zero_mask = zero_scale * zero_mask.astype(weight.dtype)
 
         # iterative rectification of scale based on grid search
@@ -323,16 +325,17 @@ class ScaleEstimation:
             scaled_scale = factor * scale
 
             if not config.is_integer:
-                compressed_weights, _, _ = do_float_quantization(weight, config, precomputed_scale=scaled_scale)
+                compressed_weight = do_float_quantization(weight, config, precomputed_scale=scaled_scale)
             else:
-                compressed_weights, _, _ = do_integer_quantization(
+                compressed_weight = do_integer_quantization(
                     weight,
                     config,
                     precomputed_scale=scaled_scale,
                     precomputed_zero_point=zp,
                 )
+            compressed_weight = compressed_weight.get_unscaled_tensor()
 
-            target, zero_mask = get_target_zero_mask(compressed_weights, zp)
+            target, zero_mask = get_target_zero_mask(compressed_weight, zp)
             zero_mask = zero_scale * zero_mask.astype(weight.dtype)
             near_to_ideal_scale = estimate_scales(weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign

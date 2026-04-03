@@ -59,8 +59,8 @@ class NodeWithType:
 
 def create_mock_graph(
     nodes: list[NodeWithType], node_edges: list[tuple[str, str]], edges_attrs: tuple[Any] | None = None
-) -> nx.DiGraph:
-    mock_graph = nx.DiGraph()
+) -> nx.MultiDiGraph:
+    mock_graph = nx.MultiDiGraph()
     for node in nodes:
         mock_node_attrs = get_mock_nncf_node_attrs(
             op_name=node.node_name,
@@ -78,15 +78,15 @@ def create_mock_graph(
     return mock_graph
 
 
-def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph):
+def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.MultiDiGraph):
     for node_key in graph.nodes:
-        input_edges = graph.in_edges(node_key)
+        input_edges = graph.in_edges(node_key, keys=True)
         sorted_input_edges = sorted(input_edges, key=lambda x: x[0])
         for idx, edge in enumerate(sorted_input_edges):
             graph.edges[edge][NNCFGraph.INPUT_PORT_ID_EDGE_ATTR] = idx
 
 
-def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFGraph) -> NNCFGraph:
+def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.MultiDiGraph, nncf_graph_cls=NNCFGraph) -> NNCFGraph:
     mock_graph = nncf_graph_cls()
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id: dict[tuple[str, str], tuple[int, int]] = {}
@@ -121,24 +121,22 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFG
         )
         key_vs_id[curr_node_key] = node_id
 
-        preds = list(nx_graph.predecessors(curr_node_key))
-        for pred_idx, pred in enumerate(preds):
-            in_edge = (pred, curr_node_key)
+        for input_port_id, in_edge in enumerate(nx_graph.in_edges(curr_node_key, keys=True)):
             out_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
             edge_data = nx_graph.edges[in_edge]
             dtype = edge_data.get(NNCFGraph.DTYPE_EDGE_ATTR, Dtype.FLOAT)
             shape = edge_data.get(NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR, [1, 1, 1, 1])
             mock_graph.add_edge_between_nncf_nodes(
-                creator_id, node_id, shape, input_port_id=pred_idx, output_port_id=out_idx, dtype=dtype
+                creator_id, node_id, shape, input_port_id=input_port_id, output_port_id=out_idx, dtype=dtype
             )
 
-        for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
+        for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key, keys=True)):
             edge_vs_output_idx_and_creator_id[out_edge] = (out_idx, node.node_id)
     return mock_graph
 
 
 def get_two_branch_mock_model_graph() -> NNCFGraph:
-    mock_nx_graph = nx.DiGraph()
+    mock_nx_graph = nx.MultiDiGraph()
 
     #   (0 /A)
     #      |
@@ -188,11 +186,11 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None, type_=
 
 
 def _add_nodes_with_layer_attrs(
-    nx_graph: nx.DiGraph,
+    nx_graph: nx.MultiDiGraph,
     node_keys: list[str],
     layer_attrs: dict[str, BaseLayerAttributes],
     metatypes: dict[str, OperatorMetatype] = None,
-) -> nx.DiGraph:
+) -> nx.MultiDiGraph:
     for node_key in node_keys:
         metatype = None
         if metatypes is not None and node_key in metatypes:
@@ -208,7 +206,7 @@ def _add_nodes_with_layer_attrs(
 def get_mock_model_graph_with_mergeable_pattern(
     conv2d_metatype=None, batchnorm_metatype=None, relu_metatype=None
 ) -> NNCFGraph:
-    mock_nx_graph = nx.DiGraph()
+    mock_nx_graph = nx.MultiDiGraph()
 
     #   (A)
     #    |
@@ -256,7 +254,7 @@ def get_mock_model_graph_with_mergeable_pattern(
 def get_mock_model_graph_with_no_mergeable_pattern(
     conv2d_metatype=None, batchnorm_metatype=None, relu_metatype=None
 ) -> NNCFGraph:
-    mock_nx_graph = nx.DiGraph()
+    mock_nx_graph = nx.MultiDiGraph()
 
     #   (A)
     #    |
@@ -310,7 +308,7 @@ def get_mock_model_graph_with_no_mergeable_pattern(
 def get_mock_model_graph_with_broken_output_edge_pattern(
     conv2d_metatype=None, batchnorm_metatype=None, relu_metatype=None
 ) -> NNCFGraph:
-    mock_nx_graph = nx.DiGraph()
+    mock_nx_graph = nx.MultiDiGraph()
 
     #   (A)
     #    |
@@ -382,9 +380,9 @@ def get_node_name(op_name: str, call_order: int = 0) -> str:
     return f"/{op_name}_{call_order}"
 
 
-def get_randomly_connected_model_graph(op_name_keys: set[str]) -> nx.DiGraph:
+def get_randomly_connected_model_graph(op_name_keys: set[str]) -> nx.MultiDiGraph:
     graph_len = len(op_name_keys)
-    mock_graph = nx.generators.gnc_graph(graph_len, None, 0)
+    mock_graph = nx.MultiDiGraph(nx.generators.gnc_graph(graph_len, None, 0))
 
     shuffled_op_names = random.sample(sorted(op_name_keys), len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
@@ -397,8 +395,8 @@ def get_randomly_connected_model_graph(op_name_keys: set[str]) -> nx.DiGraph:
     return mock_graph
 
 
-def get_sequentially_connected_model_graph(op_name_keys: list[str]) -> nx.DiGraph:
-    graph = nx.DiGraph()
+def get_sequentially_connected_model_graph(op_name_keys: list[str]) -> nx.MultiDiGraph:
+    graph = nx.MultiDiGraph()
     node_key_appearances = {k: 0 for k in op_name_keys}
 
     actual_keys = []

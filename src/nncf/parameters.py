@@ -89,11 +89,12 @@ class CompressWeightsMode(StrEnum):
         with a typical non-fixed zero point.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
-    :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     :param MXFP4: MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
     :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
     :param FP8_E4M3: A FP8 format with E4M3 values sharing group-level fp16 scale.
     :param FP4: A FP4 format with E2M1 values sharing group-level fp16 scale.
+    :param NVFP4: A FP4 format with E2M1 values sharing group-level E4M3 scale and FP32 per weight scale.
+        The size of group is 16.
     :param CODEBOOK: Codebook (LUT) quantization format.
     :param ADAPTIVE_CODEBOOK: Adaptive codebook (LUT) quantization format.
     :param CB4: Codebook (LUT) format with 16 fixed fp8 values in E4M3 format.
@@ -105,11 +106,11 @@ class CompressWeightsMode(StrEnum):
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
     CB4 = "cb4"
-    INT8 = "int8"  # Deprecated mode
     MXFP4 = "mxfp4"
     MXFP8_E4M3 = "mxfp8_e4m3"
     FP8_E4M3 = "fp8_e4m3"
     FP4 = "fp4"
+    NVFP4 = "nvfp4"
     CODEBOOK = "codebook"
     ADAPTIVE_CODEBOOK = "adaptive_codebook"
 
