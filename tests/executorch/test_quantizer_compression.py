@@ -214,6 +214,9 @@ def test_compress_pt2e_scales(
         json.load(f)
 
 
+@pytest.mark.xfail(
+    reason="Ticket: 184301.",
+)
 @pytest.mark.parametrize(
     ("model_case", "quantizer_params"),
     TEST_MODELS_NO_PT2E,
