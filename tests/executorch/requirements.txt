@@ -7,6 +7,9 @@ torch==2.11.0
 torchvision==0.26.0
 torchao==0.17.0
 
+# Copied from tests/torch/requirements.txt
+fastdownload==0.0.7
+
 # Copied from constraints.txt
 # Tests and examples
 pytest==8.0.2
