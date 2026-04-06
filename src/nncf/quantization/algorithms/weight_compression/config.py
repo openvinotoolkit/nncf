@@ -10,7 +10,6 @@
 # limitations under the License.
 import operator
 from dataclasses import dataclass
-from dataclasses import field
 from functools import cached_property
 from functools import reduce
 
@@ -50,6 +49,17 @@ class WeightCompressionConfig:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
+        if self.is_codebook:
+            if self.codebook_values is None:
+                msg = f"Codebook values must be provided for {self.mode}"
+                raise InternalError(msg)
+            n_quants = self.codebook_values.size
+            if n_quants <= 16:
+                return 4
+            if n_quants <= 256:
+                return 8
+            return 16
+
         if self.mode in [
             CompressWeightsMode.INT8_SYM,
             CompressWeightsMode.INT8_ASYM,
@@ -153,7 +163,7 @@ class WeightCompressionParameters:
     weight_dtype: TensorDataType
     weight_shape: tuple[int, ...]
     reduction_axes: tuple[int, ...]
-    compression_config: WeightCompressionConfig = field(default_factory=WeightCompressionConfig)
+    compression_config: WeightCompressionConfig | None
 
     @cached_property
     def num_weights(self) -> np.uint64:

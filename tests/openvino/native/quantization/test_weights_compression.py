@@ -1034,7 +1034,7 @@ def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
 
 def test_data_type_for_num_weights(mocker):
     stub = mocker.stub()
-    params = WeightCompressionParameters(stub, stub, stub, stub, (1,), stub)
+    params = WeightCompressionParameters(stub, stub, stub, stub, (1,), stub, stub)
     assert isinstance(params.num_weights, np.uint64)
 
 
