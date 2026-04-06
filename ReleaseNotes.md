@@ -19,7 +19,6 @@ Post-training Quantization:
   - (PyTorch) Added lazy import for `nncf.torch` module to reduce startup import time (https://github.com/openvinotoolkit/nncf/pull/3862).
 - Tutorials:
   - [Post-Training Optimization of Gemma 4 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma4/gemma4.ipynb)
-  - [Post-Training Optimization of YOLO26 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov26-optimization)
   - [Post-Training Optimization of Code-specialized LLMs](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-code-assistant/llm-code-assistant.ipynb)
   - [Post-Training Optimization of Vision-Language Models (VLMs)](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/vlm-chatbot/vlm-chatbot-generate-api.ipynb)
   - [Post-Training Optimization of MiniCPM-o 4.5 Multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-4.5/minicpm-o-4.5.ipynb)
