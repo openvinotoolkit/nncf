@@ -17,6 +17,7 @@ import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.errors import InternalError
+from nncf.errors import ValidationError
 from nncf.parameters import CompressWeightsMode
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -42,7 +43,7 @@ class WeightCompressionConfig:
     def __post_init__(self) -> None:
         if self.group_size == 0 or self.group_size < -1:
             msg = f"Invalid group_size={self.group_size}. Group size must be a positive integer or -1."
-            raise InternalError(msg)
+            raise ValidationError(msg)
 
     @property
     def num_bits(self) -> int:
