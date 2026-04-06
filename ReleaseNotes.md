@@ -21,6 +21,7 @@ Post-training Quantization:
   - [Post-Training Optimization of Gemma 4 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma4/gemma4.ipynb)
   - [Post-Training Optimization of YOLO26 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov26-optimization)
   - [Post-Training Optimization of Code-specialized LLMs](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-code-assistant/llm-code-assistant.ipynb)
+  - [Post-Training Optimization of Vision-Language Models (VLMs)](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/vlm-chatbot/vlm-chatbot-generate-api.ipynb)
   - [Post-Training Optimization of MiniCPM-o 4.5 Multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-4.5/minicpm-o-4.5.ipynb)
   - [Post-Training Optimization of PaddleOCR-VL/PaddleOCR-VL-1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/paddleocr_vl/paddleocr_vl.ipynb)
   - [Post-Training Optimization of RAG pipeline](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-eval.ipynb)
