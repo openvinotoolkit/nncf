@@ -24,7 +24,8 @@ Post-training Quantization:
 - Requirements:
   - Updated to `openvino` 2026.1.0 (https://github.com/openvinotoolkit/nncf/pull/4005).
   - Updated to `torch` 2.10.0 (https://github.com/openvinotoolkit/nncf/pull/3852).
-  - Updated `onnx` from 1.17.0 to 1.20.1 (https://github.com/openvinotoolkit/nncf/pull/3966).
+  - Updated to `onnx` 1.20.1 (https://github.com/openvinotoolkit/nncf/pull/3966).
+  - Updated to `onnxruntime` 1.24.3 (https://github.com/openvinotoolkit/nncf/pull/3977).
   - Moved `pandas` to optional dependency (https://github.com/openvinotoolkit/nncf/pull/3970).
   - Removed unused `pillow` dependency (https://github.com/openvinotoolkit/nncf/pull/3929).
 
