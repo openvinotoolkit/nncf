@@ -12,7 +12,7 @@ Keep behavior the same whenever possible.
 
 ---
 
-### Rules to keep
+## Rules to keep
 
 - **Filenames**: use `snake_case.yml`; reusable workflows start with `call_`.
 - **Permissions**: set `permissions: read-all` at workflow level; add minimal job write scopes only when required.
@@ -21,38 +21,23 @@ Keep behavior the same whenever possible.
 - **Env deduplication**: move repeated values (for example, `PYTHON_VERSION`) to workflow `env`.
 - **Timeouts**: every job must define `timeout-minutes`.
 
-### Rules to avoid forcing (default/optional)
+## Rules to avoid forcing (default/optional)
 
 - Do not add `run-name` if no dynamic context is needed.
 - Do not add `defaults.run.shell` when default runner shell is acceptable.
 - Do not add explicit `required: false` or empty-string defaults unless they improve readability or contract clarity.
 - Do not add checkout flags like `fetch-depth`/`lfs` unless needed.
+- Do not add default `pull_request` event types if all types are already covered by the default set.
 
-## Short examples
+## Dynamic run name
 
-### PR input contract
-
-```yaml
-on:
-  workflow_call:
-    inputs:
-      pr_num:
-        description: Pull request number
-        type: string
-  workflow_dispatch:
-    inputs:
-      pr_num:
-        description: Pull request number
-        type: string
-```
-
-### Optional dynamic run name
+If the workflow is PR-targeted, add a dynamic `run-name` that includes the PR number when available.
 
 ```yaml
 run-name: "<Workflow Name>${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 ```
 
-### PR-aware checkout
+## PR-aware checkout
 
 ```yaml
 - uses: actions/checkout@<SHA> # <version>
