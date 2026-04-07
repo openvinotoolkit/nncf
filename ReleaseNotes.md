@@ -2,8 +2,6 @@
 
 ## New in Release 3.1.0
 
-Post-training Quantization:
-
 - General:
   - Migrated `NNCFGraph` from `nx.DiGraph` to `nx.MultiDiGraph` to support models with parallel/multi-edges, enabling correct quantization of models with complex graph structures such as YOLO26 and models like `a = conv(x); return a * a` (https://github.com/openvinotoolkit/nncf/pull/3843).
 - Features:
