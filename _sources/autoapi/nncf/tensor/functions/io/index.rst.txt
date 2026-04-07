@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.tensor.functions.io`
-==================================
-
-.. py:module:: nncf.tensor.functions.io
-
-

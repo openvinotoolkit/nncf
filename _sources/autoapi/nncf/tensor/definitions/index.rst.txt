@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.tensor.definitions`
-=================================
-
-.. py:module:: nncf.tensor.definitions
-
-

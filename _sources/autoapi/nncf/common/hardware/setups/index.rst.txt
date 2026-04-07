@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.common.hardware.setups`
-=====================================
-
-.. py:module:: nncf.common.hardware.setups
-
-

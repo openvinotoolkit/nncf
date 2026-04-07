@@ -18,7 +18,7 @@ Classes
 
 
 
-.. py:class:: StatisticsType
+.. py:class:: StatisticsType(*args, **kwds)
 
    Bases: :py:obj:`enum.Enum`
 
@@ -34,7 +34,7 @@ Classes
    :param RAW: Tensor values as they are.
 
 
-.. py:class:: AggregatorType
+.. py:class:: AggregatorType(*args, **kwds)
 
    Bases: :py:obj:`enum.Enum`
 

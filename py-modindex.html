@@ -1,22 +1,22 @@
 <!doctype html>
-<html class="no-js" lang="en">
-  <head><meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" />
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html">
 
-    <!-- Generated with Sphinx 6.1.3 and Furo 2023.03.27 --><title>Python Module Index - NNCF</title>
-<link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?digest=fad236701ea90a88636c2a8c73b44ae642ed2a53" />
-    <link rel="stylesheet" type="text/css" href="_static/graphviz.css" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 --><title>Python Module Index - NNCF</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
     
     
 
 
 <style>
   body {
-    --color-code-background: #f8f8f8;
-  --color-code-foreground: black;
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
   
   }
   @media not print {
@@ -67,7 +67,7 @@
   <symbol id="svg-sun" viewBox="0 0 24 24">
     <title>Light mode</title>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
       <circle cx="12" cy="12" r="5"></circle>
       <line x1="12" y1="1" x2="12" y2="3"></line>
       <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -82,34 +82,73 @@
   <symbol id="svg-moon" viewBox="0 0 24 24">
     <title>Dark mode</title>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
     </svg>
   </symbol>
-  <symbol id="svg-sun-half" viewBox="0 0 24 24">
-    <title>Auto light/dark mode</title>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
-      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M13 12h5" />
-      <path d="M13 15h4" />
-      <path d="M13 18h1" />
-      <path d="M13 9h4" />
-      <path d="M13 6h1" />
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
     </svg>
   </symbol>
 </svg>
 
-<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
-<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
-<label class="overlay sidebar-overlay" for="__navigation">
-  <div class="visually-hidden">Hide navigation sidebar</div>
-</label>
-<label class="overlay toc-overlay" for="__toc">
-  <div class="visually-hidden">Hide table of contents sidebar</div>
-</label>
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
 
 
 
@@ -117,8 +156,7 @@
   <header class="mobile-header">
     <div class="header-left">
       <label class="nav-overlay-icon" for="__navigation">
-        <div class="visually-hidden">Toggle site navigation sidebar</div>
-        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
       </label>
     </div>
     <div class="header-center">
@@ -126,16 +164,15 @@
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
-        <button class="theme-toggle">
-          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
-          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
           <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
-        <div class="visually-hidden">Toggle table of contents sidebar</div>
-        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
   </header>
@@ -143,7 +180,6 @@
     <div class="sidebar-container">
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
-  
   
   <span class="sidebar-brand-text">NNCF</span>
   
@@ -155,18 +191,18 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="autoapi/nncf/index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="autoapi/nncf/api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="autoapi/nncf/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="autoapi/nncf/api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input aria-label="Toggle navigation of nncf.api" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="autoapi/nncf/api/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="autoapi/nncf/common/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3 has-children"><a class="reference internal" href="autoapi/nncf/common/initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="autoapi/nncf/common/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input aria-label="Toggle navigation of nncf.common" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="autoapi/nncf/common/initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><input aria-label="Toggle navigation of nncf.common.initialization" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="autoapi/nncf/common/initialization/dataloader/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization.dataloader</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="autoapi/nncf/common/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l4 has-children"><a class="reference internal" href="autoapi/nncf/common/quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="autoapi/nncf/common/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="autoapi/nncf/common/quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization.quantizer_propagation" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l5"><a class="reference internal" href="autoapi/nncf/common/quantization/quantizer_propagation/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation.structs</span></code></a></li>
 </ul>
 </li>
@@ -177,7 +213,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="autoapi/nncf/data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="autoapi/nncf/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="autoapi/nncf/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input aria-label="Toggle navigation of nncf.quantization" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="autoapi/nncf/quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="autoapi/nncf/quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
 </ul>
@@ -206,19 +242,18 @@
         </a>
         <div class="content-icon-container">
           <div class="theme-toggle-container theme-toggle-content">
-            <button class="theme-toggle">
-              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
-              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
               <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
           <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
-            <div class="visually-hidden">Toggle table of contents sidebar</div>
-            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
-        <article role="main">
+        <article role="main" id="furo-main-content">
           
 <section class="domainindex-section">
   <h1>Python Module Index</h1>
@@ -259,168 +294,6 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/deprecation/index.html#module-nncf.common.deprecation"><code class="xref">nncf.common.deprecation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/engine/index.html#module-nncf.common.engine"><code class="xref">nncf.common.engine</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/factory/index.html#module-nncf.common.factory"><code class="xref">nncf.common.factory</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/index.html#module-nncf.common.graph"><code class="xref">nncf.common.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/definitions/index.html#module-nncf.common.graph.definitions"><code class="xref">nncf.common.graph.definitions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/graph/index.html#module-nncf.common.graph.graph"><code class="xref">nncf.common.graph.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/graph_matching/index.html#module-nncf.common.graph.graph_matching"><code class="xref">nncf.common.graph.graph_matching</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/layer_attributes/index.html#module-nncf.common.graph.layer_attributes"><code class="xref">nncf.common.graph.layer_attributes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/model_transformer/index.html#module-nncf.common.graph.model_transformer"><code class="xref">nncf.common.graph.model_transformer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/operator_metatypes/index.html#module-nncf.common.graph.operator_metatypes"><code class="xref">nncf.common.graph.operator_metatypes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/patterns/index.html#module-nncf.common.graph.patterns"><code class="xref">nncf.common.graph.patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/patterns/manager/index.html#module-nncf.common.graph.patterns.manager"><code class="xref">nncf.common.graph.patterns.manager</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/patterns/patterns/index.html#module-nncf.common.graph.patterns.patterns"><code class="xref">nncf.common.graph.patterns.patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/transformations/index.html#module-nncf.common.graph.transformations"><code class="xref">nncf.common.graph.transformations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/transformations/command_creation/index.html#module-nncf.common.graph.transformations.command_creation"><code class="xref">nncf.common.graph.transformations.command_creation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/transformations/commands/index.html#module-nncf.common.graph.transformations.commands"><code class="xref">nncf.common.graph.transformations.commands</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/transformations/layout/index.html#module-nncf.common.graph.transformations.layout"><code class="xref">nncf.common.graph.transformations.layout</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/graph/utils/index.html#module-nncf.common.graph.utils"><code class="xref">nncf.common.graph.utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/index.html#module-nncf.common.hardware"><code class="xref">nncf.common.hardware</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/config/index.html#module-nncf.common.hardware.config"><code class="xref">nncf.common.hardware.config</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/defines/index.html#module-nncf.common.hardware.defines"><code class="xref">nncf.common.hardware.defines</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/opset/index.html#module-nncf.common.hardware.opset"><code class="xref">nncf.common.hardware.opset</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/qspaces/index.html#module-nncf.common.hardware.qspaces"><code class="xref">nncf.common.hardware.qspaces</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/setups/index.html#module-nncf.common.hardware.setups"><code class="xref">nncf.common.hardware.setups</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/setups/cpu/index.html#module-nncf.common.hardware.setups.cpu"><code class="xref">nncf.common.hardware.setups.cpu</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/setups/gpu/index.html#module-nncf.common.hardware.setups.gpu"><code class="xref">nncf.common.hardware.setups.gpu</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/hardware/setups/npu/index.html#module-nncf.common.hardware.setups.npu"><code class="xref">nncf.common.hardware.setups.npu</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
         <a href="autoapi/nncf/common/initialization/index.html#module-nncf.common.initialization"><code class="xref">nncf.common.initialization</code></a></td><td>
     <em></em></td>
   </tr>
@@ -433,61 +306,7 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/insertion_point_graph/index.html#module-nncf.common.insertion_point_graph"><code class="xref">nncf.common.insertion_point_graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/logging/index.html#module-nncf.common.logging"><code class="xref">nncf.common.logging</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/logging/logger/index.html#module-nncf.common.logging.logger"><code class="xref">nncf.common.logging.logger</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/logging/progress_bar/index.html#module-nncf.common.logging.progress_bar"><code class="xref">nncf.common.logging.progress_bar</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/logging/track_progress/index.html#module-nncf.common.logging.track_progress"><code class="xref">nncf.common.logging.track_progress</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
         <a href="autoapi/nncf/common/quantization/index.html#module-nncf.common.quantization"><code class="xref">nncf.common.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/config_assignment/index.html#module-nncf.common.quantization.config_assignment"><code class="xref">nncf.common.quantization.config_assignment</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/defaults/index.html#module-nncf.common.quantization.defaults"><code class="xref">nncf.common.quantization.defaults</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/initialization/index.html#module-nncf.common.quantization.initialization"><code class="xref">nncf.common.quantization.initialization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/initialization/range/index.html#module-nncf.common.quantization.initialization.range"><code class="xref">nncf.common.quantization.initialization.range</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
@@ -499,49 +318,7 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizer_propagation/graph/index.html#module-nncf.common.quantization.quantizer_propagation.graph"><code class="xref">nncf.common.quantization.quantizer_propagation.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizer_propagation/grouping/index.html#module-nncf.common.quantization.quantizer_propagation.grouping"><code class="xref">nncf.common.quantization.quantizer_propagation.grouping</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizer_propagation/solver/index.html#module-nncf.common.quantization.quantizer_propagation.solver"><code class="xref">nncf.common.quantization.quantizer_propagation.solver</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
         <a href="autoapi/nncf/common/quantization/quantizer_propagation/structs/index.html#module-nncf.common.quantization.quantizer_propagation.structs"><code class="xref">nncf.common.quantization.quantizer_propagation.structs</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizer_propagation/visualizer/index.html#module-nncf.common.quantization.quantizer_propagation.visualizer"><code class="xref">nncf.common.quantization.quantizer_propagation.visualizer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizer_removal/index.html#module-nncf.common.quantization.quantizer_removal"><code class="xref">nncf.common.quantization.quantizer_removal</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizer_setup/index.html#module-nncf.common.quantization.quantizer_setup"><code class="xref">nncf.common.quantization.quantizer_setup</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/quantization/quantizers/index.html#module-nncf.common.quantization.quantizers"><code class="xref">nncf.common.quantization.quantizers</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
@@ -559,811 +336,7 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/scopes/index.html#module-nncf.common.scopes"><code class="xref">nncf.common.scopes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/stateful_classes_registry/index.html#module-nncf.common.stateful_classes_registry"><code class="xref">nncf.common.stateful_classes_registry</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/strip/index.html#module-nncf.common.strip"><code class="xref">nncf.common.strip</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/index.html#module-nncf.common.tensor_statistics"><code class="xref">nncf.common.tensor_statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/aggregator/index.html#module-nncf.common.tensor_statistics.aggregator"><code class="xref">nncf.common.tensor_statistics.aggregator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/builders/index.html#module-nncf.common.tensor_statistics.builders"><code class="xref">nncf.common.tensor_statistics.builders</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/collectors/index.html#module-nncf.common.tensor_statistics.collectors"><code class="xref">nncf.common.tensor_statistics.collectors</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/statistic_point/index.html#module-nncf.common.tensor_statistics.statistic_point"><code class="xref">nncf.common.tensor_statistics.statistic_point</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/statistical_functions/index.html#module-nncf.common.tensor_statistics.statistical_functions"><code class="xref">nncf.common.tensor_statistics.statistical_functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/statistics/index.html#module-nncf.common.tensor_statistics.statistics"><code class="xref">nncf.common.tensor_statistics.statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/statistics_serializer/index.html#module-nncf.common.tensor_statistics.statistics_serializer"><code class="xref">nncf.common.tensor_statistics.statistics_serializer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/tensor_statistics/statistics_validator/index.html#module-nncf.common.tensor_statistics.statistics_validator"><code class="xref">nncf.common.tensor_statistics.statistics_validator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/index.html#module-nncf.common.utils"><code class="xref">nncf.common.utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/api_marker/index.html#module-nncf.common.utils.api_marker"><code class="xref">nncf.common.utils.api_marker</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/backend/index.html#module-nncf.common.utils.backend"><code class="xref">nncf.common.utils.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/caching/index.html#module-nncf.common.utils.caching"><code class="xref">nncf.common.utils.caching</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/debug/index.html#module-nncf.common.utils.debug"><code class="xref">nncf.common.utils.debug</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/decorators/index.html#module-nncf.common.utils.decorators"><code class="xref">nncf.common.utils.decorators</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/dot_file_rw/index.html#module-nncf.common.utils.dot_file_rw"><code class="xref">nncf.common.utils.dot_file_rw</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/helpers/index.html#module-nncf.common.utils.helpers"><code class="xref">nncf.common.utils.helpers</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/logger/index.html#module-nncf.common.utils.logger"><code class="xref">nncf.common.utils.logger</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/os/index.html#module-nncf.common.utils.os"><code class="xref">nncf.common.utils.os</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/patcher/index.html#module-nncf.common.utils.patcher"><code class="xref">nncf.common.utils.patcher</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/registry/index.html#module-nncf.common.utils.registry"><code class="xref">nncf.common.utils.registry</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/common/utils/timer/index.html#module-nncf.common.utils.timer"><code class="xref">nncf.common.utils.timer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
         <a href="autoapi/nncf/data/index.html#module-nncf.data"><code class="xref">nncf.data</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/data/dataset/index.html#module-nncf.data.dataset"><code class="xref">nncf.data.dataset</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/data/generators/index.html#module-nncf.data.generators"><code class="xref">nncf.data.generators</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/definitions/index.html#module-nncf.definitions"><code class="xref">nncf.definitions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/errors/index.html#module-nncf.errors"><code class="xref">nncf.errors</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/index.html#module-nncf.experimental"><code class="xref">nncf.experimental</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/common/index.html#module-nncf.experimental.common"><code class="xref">nncf.experimental.common</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/common/graph/index.html#module-nncf.experimental.common.graph"><code class="xref">nncf.experimental.common.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/common/graph/netron/index.html#module-nncf.experimental.common.graph.netron"><code class="xref">nncf.experimental.common.graph.netron</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/index.html#module-nncf.experimental.quantization"><code class="xref">nncf.experimental.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/index.html#module-nncf.experimental.quantization.algorithms"><code class="xref">nncf.experimental.quantization.algorithms</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/post_training/index.html#module-nncf.experimental.quantization.algorithms.post_training"><code class="xref">nncf.experimental.quantization.algorithms.post_training</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/post_training/algorithm/index.html#module-nncf.experimental.quantization.algorithms.post_training.algorithm"><code class="xref">nncf.experimental.quantization.algorithms.post_training.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/post_training/pipeline/index.html#module-nncf.experimental.quantization.algorithms.post_training.pipeline"><code class="xref">nncf.experimental.quantization.algorithms.post_training.pipeline</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/range_estimator/index.html#module-nncf.experimental.quantization.algorithms.range_estimator"><code class="xref">nncf.experimental.quantization.algorithms.range_estimator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/range_estimator/algorithm/index.html#module-nncf.experimental.quantization.algorithms.range_estimator.algorithm"><code class="xref">nncf.experimental.quantization.algorithms.range_estimator.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/weight_compression/index.html#module-nncf.experimental.quantization.algorithms.weight_compression"><code class="xref">nncf.experimental.quantization.algorithms.weight_compression</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/weight_compression/algorithm/index.html#module-nncf.experimental.quantization.algorithms.weight_compression.algorithm"><code class="xref">nncf.experimental.quantization.algorithms.weight_compression.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/algorithms/weight_compression/codebook_estimation/index.html#module-nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation"><code class="xref">nncf.experimental.quantization.algorithms.weight_compression.codebook_estimation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/quantization/quantizer/index.html#module-nncf.experimental.quantization.quantizer"><code class="xref">nncf.experimental.quantization.quantizer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/index.html#module-nncf.experimental.torch"><code class="xref">nncf.experimental.torch</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/index.html#module-nncf.experimental.torch.fx"><code class="xref">nncf.experimental.torch.fx</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/commands/index.html#module-nncf.experimental.torch.fx.commands"><code class="xref">nncf.experimental.torch.fx.commands</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/constant_folding/index.html#module-nncf.experimental.torch.fx.constant_folding"><code class="xref">nncf.experimental.torch.fx.constant_folding</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/groups/index.html#module-nncf.experimental.torch.fx.groups"><code class="xref">nncf.experimental.torch.fx.groups</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/model_transformer/index.html#module-nncf.experimental.torch.fx.model_transformer"><code class="xref">nncf.experimental.torch.fx.model_transformer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/model_utils/index.html#module-nncf.experimental.torch.fx.model_utils"><code class="xref">nncf.experimental.torch.fx.model_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/nncf_graph_builder/index.html#module-nncf.experimental.torch.fx.nncf_graph_builder"><code class="xref">nncf.experimental.torch.fx.nncf_graph_builder</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/node_utils/index.html#module-nncf.experimental.torch.fx.node_utils"><code class="xref">nncf.experimental.torch.fx.node_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/index.html#module-nncf.experimental.torch.fx.quantization"><code class="xref">nncf.experimental.torch.fx.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/backend_parameters/index.html#module-nncf.experimental.torch.fx.quantization.backend_parameters"><code class="xref">nncf.experimental.torch.fx.quantization.backend_parameters</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/quantize_model/index.html#module-nncf.experimental.torch.fx.quantization.quantize_model"><code class="xref">nncf.experimental.torch.fx.quantization.quantize_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/quantize_pt2e/index.html#module-nncf.experimental.torch.fx.quantization.quantize_pt2e"><code class="xref">nncf.experimental.torch.fx.quantization.quantize_pt2e</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/quantizer/index.html#module-nncf.experimental.torch.fx.quantization.quantizer"><code class="xref">nncf.experimental.torch.fx.quantization.quantizer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/quantizer/openvino_adapter/index.html#module-nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter"><code class="xref">nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/quantizer/openvino_quantizer/index.html#module-nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer"><code class="xref">nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/quantization/quantizer/torch_ao_adapter/index.html#module-nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter"><code class="xref">nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/statistics/index.html#module-nncf.experimental.torch.fx.statistics"><code class="xref">nncf.experimental.torch.fx.statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/statistics/aggregator/index.html#module-nncf.experimental.torch.fx.statistics.aggregator"><code class="xref">nncf.experimental.torch.fx.statistics.aggregator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/fx/transformations/index.html#module-nncf.experimental.torch.fx.transformations"><code class="xref">nncf.experimental.torch.fx.transformations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/gptqmodel/index.html#module-nncf.experimental.torch.gptqmodel"><code class="xref">nncf.experimental.torch.gptqmodel</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/gptqmodel/convertor/index.html#module-nncf.experimental.torch.gptqmodel.convertor"><code class="xref">nncf.experimental.torch.gptqmodel.convertor</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/sparsify_activations/index.html#module-nncf.experimental.torch.sparsify_activations"><code class="xref">nncf.experimental.torch.sparsify_activations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/sparsify_activations/sparsify_activations_impl/index.html#module-nncf.experimental.torch.sparsify_activations.sparsify_activations_impl"><code class="xref">nncf.experimental.torch.sparsify_activations.sparsify_activations_impl</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/sparsify_activations/target_scope/index.html#module-nncf.experimental.torch.sparsify_activations.target_scope"><code class="xref">nncf.experimental.torch.sparsify_activations.target_scope</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/experimental/torch/sparsify_activations/torch_backend/index.html#module-nncf.experimental.torch.sparsify_activations.torch_backend"><code class="xref">nncf.experimental.torch.sparsify_activations.torch_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/index.html#module-nncf.onnx"><code class="xref">nncf.onnx</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/engine/index.html#module-nncf.onnx.engine"><code class="xref">nncf.onnx.engine</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/index.html#module-nncf.onnx.graph"><code class="xref">nncf.onnx.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/metatypes/index.html#module-nncf.onnx.graph.metatypes"><code class="xref">nncf.onnx.graph.metatypes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/metatypes/groups/index.html#module-nncf.onnx.graph.metatypes.groups"><code class="xref">nncf.onnx.graph.metatypes.groups</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/metatypes/onnx_metatypes/index.html#module-nncf.onnx.graph.metatypes.onnx_metatypes"><code class="xref">nncf.onnx.graph.metatypes.onnx_metatypes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/model_metadata/index.html#module-nncf.onnx.graph.model_metadata"><code class="xref">nncf.onnx.graph.model_metadata</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/model_transformer/index.html#module-nncf.onnx.graph.model_transformer"><code class="xref">nncf.onnx.graph.model_transformer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/model_utils/index.html#module-nncf.onnx.graph.model_utils"><code class="xref">nncf.onnx.graph.model_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/nncf_graph_builder/index.html#module-nncf.onnx.graph.nncf_graph_builder"><code class="xref">nncf.onnx.graph.nncf_graph_builder</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/node_utils/index.html#module-nncf.onnx.graph.node_utils"><code class="xref">nncf.onnx.graph.node_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/onnx_helper/index.html#module-nncf.onnx.graph.onnx_helper"><code class="xref">nncf.onnx.graph.onnx_helper</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/passes/index.html#module-nncf.onnx.graph.passes"><code class="xref">nncf.onnx.graph.passes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/transformations/index.html#module-nncf.onnx.graph.transformations"><code class="xref">nncf.onnx.graph.transformations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/transformations/command_creation/index.html#module-nncf.onnx.graph.transformations.command_creation"><code class="xref">nncf.onnx.graph.transformations.command_creation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/graph/transformations/commands/index.html#module-nncf.onnx.graph.transformations.commands"><code class="xref">nncf.onnx.graph.transformations.commands</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/hardware/index.html#module-nncf.onnx.hardware"><code class="xref">nncf.onnx.hardware</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/hardware/config/index.html#module-nncf.onnx.hardware.config"><code class="xref">nncf.onnx.hardware.config</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/hardware/fused_patterns/index.html#module-nncf.onnx.hardware.fused_patterns"><code class="xref">nncf.onnx.hardware.fused_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/quantization/index.html#module-nncf.onnx.quantization"><code class="xref">nncf.onnx.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/quantization/backend_parameters/index.html#module-nncf.onnx.quantization.backend_parameters"><code class="xref">nncf.onnx.quantization.backend_parameters</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/quantization/default_quantization/index.html#module-nncf.onnx.quantization.default_quantization"><code class="xref">nncf.onnx.quantization.default_quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/quantization/ignored_patterns/index.html#module-nncf.onnx.quantization.ignored_patterns"><code class="xref">nncf.onnx.quantization.ignored_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/quantization/quantize_model/index.html#module-nncf.onnx.quantization.quantize_model"><code class="xref">nncf.onnx.quantization.quantize_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/quantization/quantizer_parameters/index.html#module-nncf.onnx.quantization.quantizer_parameters"><code class="xref">nncf.onnx.quantization.quantizer_parameters</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/statistics/index.html#module-nncf.onnx.statistics"><code class="xref">nncf.onnx.statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/onnx/statistics/aggregator/index.html#module-nncf.onnx.statistics.aggregator"><code class="xref">nncf.onnx.statistics.aggregator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/index.html#module-nncf.openvino"><code class="xref">nncf.openvino</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/cpu_info/index.html#module-nncf.openvino.cpu_info"><code class="xref">nncf.openvino.cpu_info</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/engine/index.html#module-nncf.openvino.engine"><code class="xref">nncf.openvino.engine</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/index.html#module-nncf.openvino.graph"><code class="xref">nncf.openvino.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/layer_attributes/index.html#module-nncf.openvino.graph.layer_attributes"><code class="xref">nncf.openvino.graph.layer_attributes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/layout/index.html#module-nncf.openvino.graph.layout"><code class="xref">nncf.openvino.graph.layout</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/metatypes/index.html#module-nncf.openvino.graph.metatypes"><code class="xref">nncf.openvino.graph.metatypes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/metatypes/groups/index.html#module-nncf.openvino.graph.metatypes.groups"><code class="xref">nncf.openvino.graph.metatypes.groups</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/metatypes/openvino_metatypes/index.html#module-nncf.openvino.graph.metatypes.openvino_metatypes"><code class="xref">nncf.openvino.graph.metatypes.openvino_metatypes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/model_builder/index.html#module-nncf.openvino.graph.model_builder"><code class="xref">nncf.openvino.graph.model_builder</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/model_transformer/index.html#module-nncf.openvino.graph.model_transformer"><code class="xref">nncf.openvino.graph.model_transformer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/model_utils/index.html#module-nncf.openvino.graph.model_utils"><code class="xref">nncf.openvino.graph.model_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/nncf_graph_builder/index.html#module-nncf.openvino.graph.nncf_graph_builder"><code class="xref">nncf.openvino.graph.nncf_graph_builder</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/node_utils/index.html#module-nncf.openvino.graph.node_utils"><code class="xref">nncf.openvino.graph.node_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/transformations/index.html#module-nncf.openvino.graph.transformations"><code class="xref">nncf.openvino.graph.transformations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/transformations/command_creation/index.html#module-nncf.openvino.graph.transformations.command_creation"><code class="xref">nncf.openvino.graph.transformations.command_creation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/graph/transformations/commands/index.html#module-nncf.openvino.graph.transformations.commands"><code class="xref">nncf.openvino.graph.transformations.commands</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/hardware/index.html#module-nncf.openvino.hardware"><code class="xref">nncf.openvino.hardware</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/hardware/config/index.html#module-nncf.openvino.hardware.config"><code class="xref">nncf.openvino.hardware.config</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/hardware/fused_patterns/index.html#module-nncf.openvino.hardware.fused_patterns"><code class="xref">nncf.openvino.hardware.fused_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/optimized_functions/index.html#module-nncf.openvino.optimized_functions"><code class="xref">nncf.openvino.optimized_functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/optimized_functions/functions/index.html#module-nncf.openvino.optimized_functions.functions"><code class="xref">nncf.openvino.optimized_functions.functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/optimized_functions/models/index.html#module-nncf.openvino.optimized_functions.models"><code class="xref">nncf.openvino.optimized_functions.models</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/quantization/index.html#module-nncf.openvino.quantization"><code class="xref">nncf.openvino.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/quantization/backend_parameters/index.html#module-nncf.openvino.quantization.backend_parameters"><code class="xref">nncf.openvino.quantization.backend_parameters</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/quantization/default_quantization/index.html#module-nncf.openvino.quantization.default_quantization"><code class="xref">nncf.openvino.quantization.default_quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/quantization/ignored_patterns/index.html#module-nncf.openvino.quantization.ignored_patterns"><code class="xref">nncf.openvino.quantization.ignored_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/quantization/quantize_ifmodel/index.html#module-nncf.openvino.quantization.quantize_ifmodel"><code class="xref">nncf.openvino.quantization.quantize_ifmodel</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/quantization/quantize_model/index.html#module-nncf.openvino.quantization.quantize_model"><code class="xref">nncf.openvino.quantization.quantize_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/rt_info/index.html#module-nncf.openvino.rt_info"><code class="xref">nncf.openvino.rt_info</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/statistics/index.html#module-nncf.openvino.statistics"><code class="xref">nncf.openvino.statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/statistics/aggregator/index.html#module-nncf.openvino.statistics.aggregator"><code class="xref">nncf.openvino.statistics.aggregator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/statistics/builders/index.html#module-nncf.openvino.statistics.builders"><code class="xref">nncf.openvino.statistics.builders</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/openvino/statistics/collectors/index.html#module-nncf.openvino.statistics.collectors"><code class="xref">nncf.openvino.statistics.collectors</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/parameters/index.html#module-nncf.parameters"><code class="xref">nncf.parameters</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/pruning/index.html#module-nncf.pruning"><code class="xref">nncf.pruning</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/pruning/prune_model/index.html#module-nncf.pruning.prune_model"><code class="xref">nncf.pruning.prune_model</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
@@ -1381,1021 +354,13 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/index.html#module-nncf.quantization.algorithms"><code class="xref">nncf.quantization.algorithms</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/index.html#module-nncf.quantization.algorithms.accuracy_control"><code class="xref">nncf.quantization.algorithms.accuracy_control</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/algorithm/index.html#module-nncf.quantization.algorithms.accuracy_control.algorithm"><code class="xref">nncf.quantization.algorithms.accuracy_control.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/backend/index.html#module-nncf.quantization.algorithms.accuracy_control.backend"><code class="xref">nncf.quantization.algorithms.accuracy_control.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/evaluator/index.html#module-nncf.quantization.algorithms.accuracy_control.evaluator"><code class="xref">nncf.quantization.algorithms.accuracy_control.evaluator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/onnx_backend/index.html#module-nncf.quantization.algorithms.accuracy_control.onnx_backend"><code class="xref">nncf.quantization.algorithms.accuracy_control.onnx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/openvino_backend/index.html#module-nncf.quantization.algorithms.accuracy_control.openvino_backend"><code class="xref">nncf.quantization.algorithms.accuracy_control.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/rank_functions/index.html#module-nncf.quantization.algorithms.accuracy_control.rank_functions"><code class="xref">nncf.quantization.algorithms.accuracy_control.rank_functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/ranker/index.html#module-nncf.quantization.algorithms.accuracy_control.ranker"><code class="xref">nncf.quantization.algorithms.accuracy_control.ranker</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/accuracy_control/subset_selection/index.html#module-nncf.quantization.algorithms.accuracy_control.subset_selection"><code class="xref">nncf.quantization.algorithms.accuracy_control.subset_selection</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/algorithm/index.html#module-nncf.quantization.algorithms.algorithm"><code class="xref">nncf.quantization.algorithms.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/bias_correction/index.html#module-nncf.quantization.algorithms.bias_correction"><code class="xref">nncf.quantization.algorithms.bias_correction</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/bias_correction/algorithm/index.html#module-nncf.quantization.algorithms.bias_correction.algorithm"><code class="xref">nncf.quantization.algorithms.bias_correction.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/bias_correction/backend/index.html#module-nncf.quantization.algorithms.bias_correction.backend"><code class="xref">nncf.quantization.algorithms.bias_correction.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/bias_correction/onnx_backend/index.html#module-nncf.quantization.algorithms.bias_correction.onnx_backend"><code class="xref">nncf.quantization.algorithms.bias_correction.onnx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/bias_correction/openvino_backend/index.html#module-nncf.quantization.algorithms.bias_correction.openvino_backend"><code class="xref">nncf.quantization.algorithms.bias_correction.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/bias_correction/torch_fx_backend/index.html#module-nncf.quantization.algorithms.bias_correction.torch_fx_backend"><code class="xref">nncf.quantization.algorithms.bias_correction.torch_fx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/channel_alignment/index.html#module-nncf.quantization.algorithms.channel_alignment"><code class="xref">nncf.quantization.algorithms.channel_alignment</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/channel_alignment/algorithm/index.html#module-nncf.quantization.algorithms.channel_alignment.algorithm"><code class="xref">nncf.quantization.algorithms.channel_alignment.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/channel_alignment/backend/index.html#module-nncf.quantization.algorithms.channel_alignment.backend"><code class="xref">nncf.quantization.algorithms.channel_alignment.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/channel_alignment/openvino_backend/index.html#module-nncf.quantization.algorithms.channel_alignment.openvino_backend"><code class="xref">nncf.quantization.algorithms.channel_alignment.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/index.html#module-nncf.quantization.algorithms.fast_bias_correction"><code class="xref">nncf.quantization.algorithms.fast_bias_correction</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/algorithm/index.html#module-nncf.quantization.algorithms.fast_bias_correction.algorithm"><code class="xref">nncf.quantization.algorithms.fast_bias_correction.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/backend/index.html#module-nncf.quantization.algorithms.fast_bias_correction.backend"><code class="xref">nncf.quantization.algorithms.fast_bias_correction.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/onnx_backend/index.html#module-nncf.quantization.algorithms.fast_bias_correction.onnx_backend"><code class="xref">nncf.quantization.algorithms.fast_bias_correction.onnx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/openvino_backend/index.html#module-nncf.quantization.algorithms.fast_bias_correction.openvino_backend"><code class="xref">nncf.quantization.algorithms.fast_bias_correction.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/torch_backend/index.html#module-nncf.quantization.algorithms.fast_bias_correction.torch_backend"><code class="xref">nncf.quantization.algorithms.fast_bias_correction.torch_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/fast_bias_correction/torch_fx_backend/index.html#module-nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend"><code class="xref">nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/hyperparameter_tuner/index.html#module-nncf.quantization.algorithms.hyperparameter_tuner"><code class="xref">nncf.quantization.algorithms.hyperparameter_tuner</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/hyperparameter_tuner/algorithm/index.html#module-nncf.quantization.algorithms.hyperparameter_tuner.algorithm"><code class="xref">nncf.quantization.algorithms.hyperparameter_tuner.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/hyperparameter_tuner/param_grid/index.html#module-nncf.quantization.algorithms.hyperparameter_tuner.param_grid"><code class="xref">nncf.quantization.algorithms.hyperparameter_tuner.param_grid</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/index.html#module-nncf.quantization.algorithms.layerwise"><code class="xref">nncf.quantization.algorithms.layerwise</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/backend/index.html#module-nncf.quantization.algorithms.layerwise.backend"><code class="xref">nncf.quantization.algorithms.layerwise.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/engine/index.html#module-nncf.quantization.algorithms.layerwise.engine"><code class="xref">nncf.quantization.algorithms.layerwise.engine</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/iterator/index.html#module-nncf.quantization.algorithms.layerwise.iterator"><code class="xref">nncf.quantization.algorithms.layerwise.iterator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/openvino_backend/index.html#module-nncf.quantization.algorithms.layerwise.openvino_backend"><code class="xref">nncf.quantization.algorithms.layerwise.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/openvino_iterator/index.html#module-nncf.quantization.algorithms.layerwise.openvino_iterator"><code class="xref">nncf.quantization.algorithms.layerwise.openvino_iterator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/layerwise/scheduler/index.html#module-nncf.quantization.algorithms.layerwise.scheduler"><code class="xref">nncf.quantization.algorithms.layerwise.scheduler</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/index.html#module-nncf.quantization.algorithms.min_max"><code class="xref">nncf.quantization.algorithms.min_max</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/algorithm/index.html#module-nncf.quantization.algorithms.min_max.algorithm"><code class="xref">nncf.quantization.algorithms.min_max.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/backend/index.html#module-nncf.quantization.algorithms.min_max.backend"><code class="xref">nncf.quantization.algorithms.min_max.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/onnx_backend/index.html#module-nncf.quantization.algorithms.min_max.onnx_backend"><code class="xref">nncf.quantization.algorithms.min_max.onnx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/openvino_backend/index.html#module-nncf.quantization.algorithms.min_max.openvino_backend"><code class="xref">nncf.quantization.algorithms.min_max.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/torch_backend/index.html#module-nncf.quantization.algorithms.min_max.torch_backend"><code class="xref">nncf.quantization.algorithms.min_max.torch_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/min_max/torch_fx_backend/index.html#module-nncf.quantization.algorithms.min_max.torch_fx_backend"><code class="xref">nncf.quantization.algorithms.min_max.torch_fx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/pipeline/index.html#module-nncf.quantization.algorithms.pipeline"><code class="xref">nncf.quantization.algorithms.pipeline</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/post_training/index.html#module-nncf.quantization.algorithms.post_training"><code class="xref">nncf.quantization.algorithms.post_training</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/post_training/algorithm/index.html#module-nncf.quantization.algorithms.post_training.algorithm"><code class="xref">nncf.quantization.algorithms.post_training.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/post_training/pipeline/index.html#module-nncf.quantization.algorithms.post_training.pipeline"><code class="xref">nncf.quantization.algorithms.post_training.pipeline</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/index.html#module-nncf.quantization.algorithms.smooth_quant"><code class="xref">nncf.quantization.algorithms.smooth_quant</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/algorithm/index.html#module-nncf.quantization.algorithms.smooth_quant.algorithm"><code class="xref">nncf.quantization.algorithms.smooth_quant.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/backend/index.html#module-nncf.quantization.algorithms.smooth_quant.backend"><code class="xref">nncf.quantization.algorithms.smooth_quant.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/onnx_backend/index.html#module-nncf.quantization.algorithms.smooth_quant.onnx_backend"><code class="xref">nncf.quantization.algorithms.smooth_quant.onnx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/openvino_backend/index.html#module-nncf.quantization.algorithms.smooth_quant.openvino_backend"><code class="xref">nncf.quantization.algorithms.smooth_quant.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/torch_backend/index.html#module-nncf.quantization.algorithms.smooth_quant.torch_backend"><code class="xref">nncf.quantization.algorithms.smooth_quant.torch_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/smooth_quant/torch_fx_backend/index.html#module-nncf.quantization.algorithms.smooth_quant.torch_fx_backend"><code class="xref">nncf.quantization.algorithms.smooth_quant.torch_fx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/index.html#module-nncf.quantization.algorithms.weight_compression"><code class="xref">nncf.quantization.algorithms.weight_compression</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/activation_stats/index.html#module-nncf.quantization.algorithms.weight_compression.activation_stats"><code class="xref">nncf.quantization.algorithms.weight_compression.activation_stats</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/algorithm/index.html#module-nncf.quantization.algorithms.weight_compression.algorithm"><code class="xref">nncf.quantization.algorithms.weight_compression.algorithm</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/awq/index.html#module-nncf.quantization.algorithms.weight_compression.awq"><code class="xref">nncf.quantization.algorithms.weight_compression.awq</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/awq_patterns/index.html#module-nncf.quantization.algorithms.weight_compression.awq_patterns"><code class="xref">nncf.quantization.algorithms.weight_compression.awq_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/backend/index.html#module-nncf.quantization.algorithms.weight_compression.backend"><code class="xref">nncf.quantization.algorithms.weight_compression.backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/config/index.html#module-nncf.quantization.algorithms.weight_compression.config"><code class="xref">nncf.quantization.algorithms.weight_compression.config</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/constants/index.html#module-nncf.quantization.algorithms.weight_compression.constants"><code class="xref">nncf.quantization.algorithms.weight_compression.constants</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/fp8_conversion/index.html#module-nncf.quantization.algorithms.weight_compression.fp8_conversion"><code class="xref">nncf.quantization.algorithms.weight_compression.fp8_conversion</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/gptq/index.html#module-nncf.quantization.algorithms.weight_compression.gptq"><code class="xref">nncf.quantization.algorithms.weight_compression.gptq</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/lora_correction/index.html#module-nncf.quantization.algorithms.weight_compression.lora_correction"><code class="xref">nncf.quantization.algorithms.weight_compression.lora_correction</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/mixed_precision/index.html#module-nncf.quantization.algorithms.weight_compression.mixed_precision"><code class="xref">nncf.quantization.algorithms.weight_compression.mixed_precision</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/onnx_backend/index.html#module-nncf.quantization.algorithms.weight_compression.onnx_backend"><code class="xref">nncf.quantization.algorithms.weight_compression.onnx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/openvino_backend/index.html#module-nncf.quantization.algorithms.weight_compression.openvino_backend"><code class="xref">nncf.quantization.algorithms.weight_compression.openvino_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/parameters/index.html#module-nncf.quantization.algorithms.weight_compression.parameters"><code class="xref">nncf.quantization.algorithms.weight_compression.parameters</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/scale_estimation/index.html#module-nncf.quantization.algorithms.weight_compression.scale_estimation"><code class="xref">nncf.quantization.algorithms.weight_compression.scale_estimation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/torch_backend/index.html#module-nncf.quantization.algorithms.weight_compression.torch_backend"><code class="xref">nncf.quantization.algorithms.weight_compression.torch_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/torch_fx_backend/index.html#module-nncf.quantization.algorithms.weight_compression.torch_fx_backend"><code class="xref">nncf.quantization.algorithms.weight_compression.torch_fx_backend</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/algorithms/weight_compression/weight_lowering/index.html#module-nncf.quantization.algorithms.weight_compression.weight_lowering"><code class="xref">nncf.quantization.algorithms.weight_compression.weight_lowering</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/fake_quantize/index.html#module-nncf.quantization.fake_quantize"><code class="xref">nncf.quantization.fake_quantize</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/passes/index.html#module-nncf.quantization.passes"><code class="xref">nncf.quantization.passes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/quantize_model/index.html#module-nncf.quantization.quantize_model"><code class="xref">nncf.quantization.quantize_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
         <a href="autoapi/nncf/quantization/range_estimator/index.html#module-nncf.quantization.range_estimator"><code class="xref">nncf.quantization.range_estimator</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/statistics_caching/index.html#module-nncf.quantization.statistics_caching"><code class="xref">nncf.quantization.statistics_caching</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/quantization/telemetry_extractors/index.html#module-nncf.quantization.telemetry_extractors"><code class="xref">nncf.quantization.telemetry_extractors</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/scopes/index.html#module-nncf.scopes"><code class="xref">nncf.scopes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/telemetry/index.html#module-nncf.telemetry"><code class="xref">nncf.telemetry</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/telemetry/decorator/index.html#module-nncf.telemetry.decorator"><code class="xref">nncf.telemetry.decorator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/telemetry/events/index.html#module-nncf.telemetry.events"><code class="xref">nncf.telemetry.events</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/telemetry/extractors/index.html#module-nncf.telemetry.extractors"><code class="xref">nncf.telemetry.extractors</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/telemetry/wrapper/index.html#module-nncf.telemetry.wrapper"><code class="xref">nncf.telemetry.wrapper</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/index.html#module-nncf.tensor"><code class="xref">nncf.tensor</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/definitions/index.html#module-nncf.tensor.definitions"><code class="xref">nncf.tensor.definitions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/index.html#module-nncf.tensor.functions"><code class="xref">nncf.tensor.functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/dispatcher/index.html#module-nncf.tensor.functions.dispatcher"><code class="xref">nncf.tensor.functions.dispatcher</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/io/index.html#module-nncf.tensor.functions.io"><code class="xref">nncf.tensor.functions.io</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/linalg/index.html#module-nncf.tensor.functions.linalg"><code class="xref">nncf.tensor.functions.linalg</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/numeric/index.html#module-nncf.tensor.functions.numeric"><code class="xref">nncf.tensor.functions.numeric</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/numpy_io/index.html#module-nncf.tensor.functions.numpy_io"><code class="xref">nncf.tensor.functions.numpy_io</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/numpy_linalg/index.html#module-nncf.tensor.functions.numpy_linalg"><code class="xref">nncf.tensor.functions.numpy_linalg</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/numpy_numeric/index.html#module-nncf.tensor.functions.numpy_numeric"><code class="xref">nncf.tensor.functions.numpy_numeric</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/openvino_numeric/index.html#module-nncf.tensor.functions.openvino_numeric"><code class="xref">nncf.tensor.functions.openvino_numeric</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/torch_io/index.html#module-nncf.tensor.functions.torch_io"><code class="xref">nncf.tensor.functions.torch_io</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/torch_linalg/index.html#module-nncf.tensor.functions.torch_linalg"><code class="xref">nncf.tensor.functions.torch_linalg</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/functions/torch_numeric/index.html#module-nncf.tensor.functions.torch_numeric"><code class="xref">nncf.tensor.functions.torch_numeric</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/tensor/tensor/index.html#module-nncf.tensor.tensor"><code class="xref">nncf.tensor.tensor</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
         <a href="autoapi/nncf/torch/index.html#module-nncf.torch"><code class="xref">nncf.torch</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/engine/index.html#module-nncf.torch.engine"><code class="xref">nncf.torch.engine</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/extensions/index.html#module-nncf.torch.extensions"><code class="xref">nncf.torch.extensions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/index.html#module-nncf.torch.function_hook"><code class="xref">nncf.torch.function_hook</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/commands/index.html#module-nncf.torch.function_hook.commands"><code class="xref">nncf.torch.function_hook.commands</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/extractor/index.html#module-nncf.torch.function_hook.extractor"><code class="xref">nncf.torch.function_hook.extractor</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/graph/index.html#module-nncf.torch.function_hook.graph"><code class="xref">nncf.torch.function_hook.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/graph/build_graph_mode/index.html#module-nncf.torch.function_hook.graph.build_graph_mode"><code class="xref">nncf.torch.function_hook.graph.build_graph_mode</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/graph/graph_utils/index.html#module-nncf.torch.function_hook.graph.graph_utils"><code class="xref">nncf.torch.function_hook.graph.graph_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/graph/graph_visualization/index.html#module-nncf.torch.function_hook.graph.graph_visualization"><code class="xref">nncf.torch.function_hook.graph.graph_visualization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/handle_inner_functions/index.html#module-nncf.torch.function_hook.handle_inner_functions"><code class="xref">nncf.torch.function_hook.handle_inner_functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/hook_executor_mode/index.html#module-nncf.torch.function_hook.hook_executor_mode"><code class="xref">nncf.torch.function_hook.hook_executor_mode</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/hook_storage/index.html#module-nncf.torch.function_hook.hook_storage"><code class="xref">nncf.torch.function_hook.hook_storage</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/model_transformer/index.html#module-nncf.torch.function_hook.model_transformer"><code class="xref">nncf.torch.function_hook.model_transformer</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/nncf_graph/index.html#module-nncf.torch.function_hook.nncf_graph"><code class="xref">nncf.torch.function_hook.nncf_graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/nncf_graph/layer_attributes/index.html#module-nncf.torch.function_hook.nncf_graph.layer_attributes"><code class="xref">nncf.torch.function_hook.nncf_graph.layer_attributes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/nncf_graph/nncf_graph_builder/index.html#module-nncf.torch.function_hook.nncf_graph.nncf_graph_builder"><code class="xref">nncf.torch.function_hook.nncf_graph.nncf_graph_builder</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/index.html#module-nncf.torch.function_hook.pruning"><code class="xref">nncf.torch.function_hook.pruning</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/batch_norm_adaptation/index.html#module-nncf.torch.function_hook.pruning.batch_norm_adaptation"><code class="xref">nncf.torch.function_hook.pruning.batch_norm_adaptation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/magnitude/index.html#module-nncf.torch.function_hook.pruning.magnitude"><code class="xref">nncf.torch.function_hook.pruning.magnitude</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/magnitude/algo/index.html#module-nncf.torch.function_hook.pruning.magnitude.algo"><code class="xref">nncf.torch.function_hook.pruning.magnitude.algo</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/magnitude/modules/index.html#module-nncf.torch.function_hook.pruning.magnitude.modules"><code class="xref">nncf.torch.function_hook.pruning.magnitude.modules</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/magnitude/schedulers/index.html#module-nncf.torch.function_hook.pruning.magnitude.schedulers"><code class="xref">nncf.torch.function_hook.pruning.magnitude.schedulers</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/prune_model/index.html#module-nncf.torch.function_hook.pruning.prune_model"><code class="xref">nncf.torch.function_hook.pruning.prune_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/rb/index.html#module-nncf.torch.function_hook.pruning.rb"><code class="xref">nncf.torch.function_hook.pruning.rb</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/rb/algo/index.html#module-nncf.torch.function_hook.pruning.rb.algo"><code class="xref">nncf.torch.function_hook.pruning.rb.algo</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/rb/losses/index.html#module-nncf.torch.function_hook.pruning.rb.losses"><code class="xref">nncf.torch.function_hook.pruning.rb.losses</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/rb/modules/index.html#module-nncf.torch.function_hook.pruning.rb.modules"><code class="xref">nncf.torch.function_hook.pruning.rb.modules</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/rb/schedulers/index.html#module-nncf.torch.function_hook.pruning.rb.schedulers"><code class="xref">nncf.torch.function_hook.pruning.rb.schedulers</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/scheduler_fns/index.html#module-nncf.torch.function_hook.pruning.scheduler_fns"><code class="xref">nncf.torch.function_hook.pruning.scheduler_fns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/pruning/statistics/index.html#module-nncf.torch.function_hook.pruning.statistics"><code class="xref">nncf.torch.function_hook.pruning.statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/quantization/index.html#module-nncf.torch.function_hook.quantization"><code class="xref">nncf.torch.function_hook.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/quantization/quantize_model/index.html#module-nncf.torch.function_hook.quantization.quantize_model"><code class="xref">nncf.torch.function_hook.quantization.quantize_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/serialization/index.html#module-nncf.torch.function_hook.serialization"><code class="xref">nncf.torch.function_hook.serialization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/statistics/index.html#module-nncf.torch.function_hook.statistics"><code class="xref">nncf.torch.function_hook.statistics</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/statistics/aggregator/index.html#module-nncf.torch.function_hook.statistics.aggregator"><code class="xref">nncf.torch.function_hook.statistics.aggregator</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/strip/index.html#module-nncf.torch.function_hook.strip"><code class="xref">nncf.torch.function_hook.strip</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/weak_map/index.html#module-nncf.torch.function_hook.weak_map"><code class="xref">nncf.torch.function_hook.weak_map</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/function_hook/wrapper/index.html#module-nncf.torch.function_hook.wrapper"><code class="xref">nncf.torch.function_hook.wrapper</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/functions/index.html#module-nncf.torch.functions"><code class="xref">nncf.torch.functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/index.html#module-nncf.torch.graph"><code class="xref">nncf.torch.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/graph/index.html#module-nncf.torch.graph.graph"><code class="xref">nncf.torch.graph.graph</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/operator_metatypes/index.html#module-nncf.torch.graph.operator_metatypes"><code class="xref">nncf.torch.graph.operator_metatypes</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/pattern_operations/index.html#module-nncf.torch.graph.pattern_operations"><code class="xref">nncf.torch.graph.pattern_operations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/transformations/index.html#module-nncf.torch.graph.transformations"><code class="xref">nncf.torch.graph.transformations</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/transformations/command_creation/index.html#module-nncf.torch.graph.transformations.command_creation"><code class="xref">nncf.torch.graph.transformations.command_creation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/graph/transformations/commands/index.html#module-nncf.torch.graph.transformations.commands"><code class="xref">nncf.torch.graph.transformations.commands</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/hardware/index.html#module-nncf.torch.hardware"><code class="xref">nncf.torch.hardware</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/hardware/config/index.html#module-nncf.torch.hardware.config"><code class="xref">nncf.torch.hardware.config</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/hardware/fused_patterns/index.html#module-nncf.torch.hardware.fused_patterns"><code class="xref">nncf.torch.hardware.fused_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/initialization/index.html#module-nncf.torch.initialization"><code class="xref">nncf.torch.initialization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/layer_utils/index.html#module-nncf.torch.layer_utils"><code class="xref">nncf.torch.layer_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/model_creation/index.html#module-nncf.torch.model_creation"><code class="xref">nncf.torch.model_creation</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/model_graph_manager/index.html#module-nncf.torch.model_graph_manager"><code class="xref">nncf.torch.model_graph_manager</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/node_utils/index.html#module-nncf.torch.node_utils"><code class="xref">nncf.torch.node_utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/index.html#module-nncf.torch.quantization"><code class="xref">nncf.torch.quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/default_quantization/index.html#module-nncf.torch.quantization.default_quantization"><code class="xref">nncf.torch.quantization.default_quantization</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/extensions/index.html#module-nncf.torch.quantization.extensions"><code class="xref">nncf.torch.quantization.extensions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/ignored_patterns/index.html#module-nncf.torch.quantization.ignored_patterns"><code class="xref">nncf.torch.quantization.ignored_patterns</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/layers/index.html#module-nncf.torch.quantization.layers"><code class="xref">nncf.torch.quantization.layers</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/quantize_functions/index.html#module-nncf.torch.quantization.quantize_functions"><code class="xref">nncf.torch.quantization.quantize_functions</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/quantize_model/index.html#module-nncf.torch.quantization.quantize_model"><code class="xref">nncf.torch.quantization.quantize_model</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/reference/index.html#module-nncf.torch.quantization.reference"><code class="xref">nncf.torch.quantization.reference</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/quantization/strip/index.html#module-nncf.torch.quantization.strip"><code class="xref">nncf.torch.quantization.strip</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/return_types/index.html#module-nncf.torch.return_types"><code class="xref">nncf.torch.return_types</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/strip/index.html#module-nncf.torch.strip"><code class="xref">nncf.torch.strip</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/torch/utils/index.html#module-nncf.torch.utils"><code class="xref">nncf.torch.utils</code></a></td><td>
-    <em></em></td>
-  </tr>
-  <tr class="cg-1">
-    <td></td>
-    <td>&#160;&#160;&#160;
-        <a href="autoapi/nncf/version/index.html#module-nncf.version"><code class="xref">nncf.version</code></a></td><td>
     <em></em></td>
   </tr>
 </table>
@@ -2430,9 +395,9 @@
       
     </aside>
   </div>
-</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/doctools.js"></script>
-    <script src="_static/sphinx_highlight.js"></script>
-    <script src="_static/scripts/furo.js"></script>
+</div><script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     </body>
 </html>

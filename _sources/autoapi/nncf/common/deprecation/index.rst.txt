@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.common.deprecation`
-=================================
-
-.. py:module:: nncf.common.deprecation
-
-

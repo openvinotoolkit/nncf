@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.openvino.rt_info`
-===============================
-
-.. py:module:: nncf.openvino.rt_info
-
-

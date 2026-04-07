@@ -1,24 +1,24 @@
 <!doctype html>
-<html class="no-js" lang="en">
-  <head><meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="nncf.api" href="api/index.html" /><link rel="prev" title="NNCF" href="../../index.html" />
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="nncf.api" href="api/index.html"><link rel="prev" title="NNCF" href="../../index.html">
 
-    <!-- Generated with Sphinx 6.1.3 and Furo 2023.03.27 -->
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>nncf - NNCF</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?digest=fad236701ea90a88636c2a8c73b44ae642ed2a53" />
-    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     
     
 
 
 <style>
   body {
-    --color-code-background: #f8f8f8;
-  --color-code-foreground: black;
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
   
   }
   @media not print {
@@ -69,7 +69,7 @@
   <symbol id="svg-sun" viewBox="0 0 24 24">
     <title>Light mode</title>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
       <circle cx="12" cy="12" r="5"></circle>
       <line x1="12" y1="1" x2="12" y2="3"></line>
       <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -84,34 +84,73 @@
   <symbol id="svg-moon" viewBox="0 0 24 24">
     <title>Dark mode</title>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
     </svg>
   </symbol>
-  <symbol id="svg-sun-half" viewBox="0 0 24 24">
-    <title>Auto light/dark mode</title>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
-      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M13 12h5" />
-      <path d="M13 15h4" />
-      <path d="M13 18h1" />
-      <path d="M13 9h4" />
-      <path d="M13 6h1" />
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
     </svg>
   </symbol>
 </svg>
 
-<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
-<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
-<label class="overlay sidebar-overlay" for="__navigation">
-  <div class="visually-hidden">Hide navigation sidebar</div>
-</label>
-<label class="overlay toc-overlay" for="__toc">
-  <div class="visually-hidden">Hide table of contents sidebar</div>
-</label>
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
 
 
 
@@ -119,8 +158,7 @@
   <header class="mobile-header">
     <div class="header-left">
       <label class="nav-overlay-icon" for="__navigation">
-        <div class="visually-hidden">Toggle site navigation sidebar</div>
-        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
       </label>
     </div>
     <div class="header-center">
@@ -128,16 +166,15 @@
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
-        <button class="theme-toggle">
-          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
-          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
           <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
       <label class="toc-overlay-icon toc-header-icon" for="__toc">
-        <div class="visually-hidden">Toggle table of contents sidebar</div>
-        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
   </header>
@@ -145,7 +182,6 @@
     <div class="sidebar-container">
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
-  
   
   <span class="sidebar-brand-text">NNCF</span>
   
@@ -157,18 +193,18 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">API Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input aria-label="Toggle navigation of nncf.api" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="common/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3 has-children"><a class="reference internal" href="common/initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="common/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input aria-label="Toggle navigation of nncf.common" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><input aria-label="Toggle navigation of nncf.common.initialization" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="common/initialization/dataloader/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization.dataloader</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="common/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l4 has-children"><a class="reference internal" href="common/quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="common/quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="common/quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization.quantizer_propagation" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l5"><a class="reference internal" href="common/quantization/quantizer_propagation/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation.structs</span></code></a></li>
 </ul>
 </li>
@@ -179,7 +215,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input aria-label="Toggle navigation of nncf.quantization" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
 </ul>
@@ -207,26 +243,30 @@
           <span>Back to top</span>
         </a>
         <div class="content-icon-container">
-          
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/autoapi/nncf/index.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
 <div class="theme-toggle-container theme-toggle-content">
-            <button class="theme-toggle">
-              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
-              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
               <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
           <label class="toc-overlay-icon toc-content-icon" for="__toc">
-            <div class="visually-hidden">Toggle table of contents sidebar</div>
-            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
-        <article role="main">
+        <article role="main" id="furo-main-content">
           <section id="module-nncf">
-<span id="nncf"></span><h1><a class="reference internal" href="#module-nncf" title="nncf"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf</span></code></a><a class="headerlink" href="#module-nncf" title="Permalink to this heading">#</a></h1>
+<span id="nncf"></span><h1><a class="reference internal" href="#module-nncf" title="nncf"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf</span></code></a><a class="headerlink" href="#module-nncf" title="Link to this heading">¶</a></h1>
 <p>Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.</p>
 <section id="subpackages">
-<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this heading">#</a></h2>
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><ul>
@@ -256,7 +296,7 @@
 </ul>
 </div>
 <section id="classes">
-<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading">#</a></h3>
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -310,7 +350,7 @@
 </div>
 </section>
 <section id="functions">
-<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h3>
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -343,7 +383,7 @@
 </div>
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.build_graph">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">build_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/factory.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.build_graph" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">build_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/factory.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.build_graph" title="Link to this definition">¶</a></dt>
 <dd><p>Builds NNCFGraph from the given model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -363,7 +403,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.strip">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/strip.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.strip" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">example_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/strip.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.strip" title="Link to this definition">¶</a></dt>
 <dd><p>Removes auxiliary layers and operations added during the compression process, resulting in a clean
 model ready for deployment. The functionality of the model object is still preserved as a compressed model.</p>
 <dl class="field-list simple">
@@ -374,7 +414,7 @@ model ready for deployment. The functionality of the model object is still prese
 will return the currently associated model object “stripped” in-place.</p></li>
 <li><p><strong>format</strong> (<em>strip</em>) – Describes the format in which model is saved after strip.</p></li>
 <li><p><strong>example_input</strong> (<em>Any</em><em> | </em><em>None</em>) – An example input tensor to be used for tracing the model.</p></li>
-<li><p><strong>strip_format</strong> (<em>nncf.parameters.StripFormat</em>) – </p></li>
+<li><p><strong>strip_format</strong> (<em>nncf.parameters.StripFormat</em>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -388,7 +428,7 @@ will return the currently associated model object “stripped” in-place.</p></
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.Dataset">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset" title="Link to this definition">¶</a></dt>
 <dd><p>Wrapper for passing custom user datasets into NNCF algorithms.</p>
 <p>This class defines the interface by which compression algorithms
 retrieve data items from the passed data source object. These data items are used
@@ -407,7 +447,7 @@ on the corresponding sample, and with <cite>False</cite> the state will not be r
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_source</strong> (<em>Iterable</em><em>[</em><em>Any</em><em>]</em>) – The iterable object serving as the source of data items.</p></li>
-<li><p><strong>transform_func</strong> (<em>Callable</em><em>[</em><em>...</em><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em>) – The function that is used to extract the model’s input
+<li><p><strong>transform_func</strong> (<em>Callable</em><em>[</em><em>Ellipsis</em><em>, </em><em>Any</em><em>] </em><em>| </em><em>None</em>) – The function that is used to extract the model’s input
 from the data item. The data item here is the data item that is returned from
 the data source per iteration. This function should be passed when
 the data item cannot be directly used as model’s input. If this is not specified, then the data item
@@ -417,7 +457,7 @@ will be passed into the model as-is.</p></li>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.Dataset.get_data">
-<span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_data" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_data" title="Link to this definition">¶</a></dt>
 <dd><p>Returns the iterable object that contains selected data items from the data source as-is.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -436,7 +476,7 @@ not passed all data items are selected from the data source.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.Dataset.get_inference_data">
-<span class="sig-name descname"><span class="pre">get_inference_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_inference_data" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_inference_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_inference_data" title="Link to this definition">¶</a></dt>
 <dd><p>Returns the iterable object that contains selected data items from the data source, for which
 the transformation function was applied. The item, which was returned per iteration from this
 iterable, can be used as the model’s input for model inference.</p>
@@ -458,7 +498,7 @@ the transformation function was applied.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.Dataset.get_length">
-<span class="sig-name descname"><span class="pre">get_length</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_length" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_length</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_length" title="Link to this definition">¶</a></dt>
 <dd><p>Tries to fetch length of the underlying dataset.
 :return: The length of the data_source if __len__() is implemented for it, and None otherwise.</p>
 <dl class="field-list simple">
@@ -470,7 +510,7 @@ the transformation function was applied.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.Dataset.get_batch_size">
-<span class="sig-name descname"><span class="pre">get_batch_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_batch_size" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">get_batch_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_batch_size" title="Link to this definition">¶</a></dt>
 <dd><p>Tries to fetch batch size of the underlying dataset.
 :return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.</p>
 <dl class="field-list simple">
@@ -484,7 +524,7 @@ the transformation function was applied.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.BackupMode">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">BackupMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.BackupMode" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">BackupMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.BackupMode" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Defines a backup mode for weight compression.
 :param NONE: Stands for original floating-point precision of the model weights.</p>
@@ -507,7 +547,7 @@ the transformation function was applied.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.CompressionFormat">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">CompressionFormat</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.CompressionFormat" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">CompressionFormat</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.CompressionFormat" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Describes the format in which the model is saved after weight compression.</p>
 <dl class="field-list simple">
@@ -534,7 +574,7 @@ results in better performance for downstream task fine-tuning.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.CompressWeightsMode">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">CompressWeightsMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.CompressWeightsMode" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">CompressWeightsMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.CompressWeightsMode" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Defines a mode for weight compression.
 :param INT8_SYM: Stands for 8-bit integer symmetric quantization of all weights.</p>
@@ -574,7 +614,7 @@ The size of group is 16.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.DropType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">DropType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.DropType" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">DropType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.DropType" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Describes the accuracy drop type, which determines how the accuracy drop between
 the original model and the compressed model is calculated.</p>
@@ -592,7 +632,7 @@ the original model.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.ModelType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">ModelType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.ModelType" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">ModelType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.ModelType" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Describes the model type the specificity of which will be taken into account during compression.</p>
 <dl class="field-list simple">
@@ -605,7 +645,7 @@ the original model.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.PruneMode">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">PruneMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.PruneMode" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">PruneMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.PruneMode" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Enumeration for different pruning modes in neural network compression.</p>
 <dl class="field-list simple">
@@ -625,7 +665,7 @@ This mode requires an additional regularization loss <cite>RBLoss</cite>.</p></l
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.QuantizationMode">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationMode" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationMode" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Defines special modes.
 Currently contains only FP8-related modes (<a class="reference external" href="https://arxiv.org/pdf/2209.05433.pdf">https://arxiv.org/pdf/2209.05433.pdf</a>).</p>
@@ -641,7 +681,7 @@ Currently contains only FP8-related modes (<a class="reference external" href="h
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.SensitivityMetric">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">SensitivityMetric</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.SensitivityMetric" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">SensitivityMetric</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.SensitivityMetric" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <dl class="simple">
 <dt>Defines a sensitivity metric for assigning quantization precision to layers. In order to</dt><dd><p>preserve the accuracy of the model, the more sensitive layers receives a higher precision.</p>
@@ -669,7 +709,7 @@ multiplied by inverted 8-bit quantization noise.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.StripFormat">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">StripFormat</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.StripFormat" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">StripFormat</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.StripFormat" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Describes the format in which model is saved after strip: operation that removes auxiliary layers and
 operations added during the compression process, resulting in a clean model ready for deployment.
@@ -689,7 +729,7 @@ with compressed weights.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.TargetDevice">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">TargetDevice</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.TargetDevice" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">TargetDevice</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.TargetDevice" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
 <p>Target device architecture for compression.</p>
 <p>Compression will take into account the value of this parameter in order to obtain the best performance
@@ -698,7 +738,7 @@ for this type of device.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.batch_norm_adaptation">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">batch_norm_adaptation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.batch_norm_adaptation" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">batch_norm_adaptation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.batch_norm_adaptation" title="Link to this definition">¶</a></dt>
 <dd><p>Adapt the batch normalization layers of the given model using the provided dataset.
 This function runs a specified number of iterations through the model
 to update the running statistics of the batch normalization layers.</p>
@@ -719,7 +759,7 @@ If set to None, the adaptation will run for the entire dataset.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.prune">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">prune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">examples_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.prune" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">prune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">examples_inputs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.prune" title="Link to this definition">¶</a></dt>
 <dd><p>Prunes the given model based on the specified mode and ratio.
 Insert binary masks for the parameters and calculate the initial masks by the given ratio.</p>
 <dl class="field-list simple">
@@ -728,7 +768,7 @@ Insert binary masks for the parameters and calculate the initial masks by the gi
 <li><p><strong>model</strong> (<em>TModel</em>) – The model to be pruned.</p></li>
 <li><p><strong>mode</strong> (<em>nncf.parameters.PruneMode</em>) – The mode of pruning to be applied.</p></li>
 <li><p><strong>ratio</strong> (<em>float</em><em> | </em><em>None</em>) – The ratio of parameters to prune from the model.</p></li>
-<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>IgnoredScope</em></a><em> | </em><em>None</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
+<li><p><strong>ignored_scope</strong> (<em>nncf.scopes.IgnoredScope</em><em> | </em><em>None</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
 <li><p><strong>examples_inputs</strong> (<em>Any</em><em> | </em><em>None</em>) – Example inputs to guide the pruning process. Defaults to None.</p></li>
 </ul>
 </dd>
@@ -743,7 +783,7 @@ Insert binary masks for the parameters and calculate the initial masks by the gi
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.pruning_statistic">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">pruning_statistic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.pruning_statistic" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">pruning_statistic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/pruning/prune_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.pruning_statistic" title="Link to this definition">¶</a></dt>
 <dd><p>Collects and returns pruning statistics for the given model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -760,14 +800,14 @@ Insert binary masks for the parameters and calculate the initial masks by the gi
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.QuantizationPreset">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationPreset</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/quantization/structs.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationPreset" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationPreset</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/common/quantization/structs.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationPreset" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.parameters.StrEnum</span></code></p>
 <p>An enum with values corresponding to the available quantization presets.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.compress_weights">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8_ASYM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensitivity_metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">awq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_estimation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gptq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backup_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressionFormat.DQ</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8_ASYM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensitivity_metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">awq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_estimation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gptq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backup_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressionFormat.DQ</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Link to this definition">¶</a></dt>
 <dd><p>Compress model weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -843,7 +883,7 @@ Defaults to nncf.CompressionFormat.DQ.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.quantize">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize" title="Link to this definition">¶</a></dt>
 <dd><p>Applies post-training quantization to the provided model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -870,7 +910,7 @@ more time but requires less memory.</p></li>
 in the model. Supported only <cite>transformer</cite> now.</p></li>
 <li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a><em>]</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>advanced_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
+<li><p><strong>advanced_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
 </ul>
 </dd>
@@ -885,7 +925,7 @@ fine-tuning the quantization algorithm.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.quantize_with_accuracy_control">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize_with_accuracy_control</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_fn</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_drop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DropType.ABSOLUTE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_quantization_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_accuracy_restorer_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize_with_accuracy_control" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize_with_accuracy_control</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_fn</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_drop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DropType.ABSOLUTE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_quantization_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_accuracy_restorer_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize_with_accuracy_control" title="Link to this definition">¶</a></dt>
 <dd><p>Applies post-training quantization algorithm with accuracy control to provided model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -923,7 +963,7 @@ more time but requires less memory.</p></li>
 in the model. Supported only <cite>transformer</cite> now.</p></li>
 <li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>advanced_quantization_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
+<li><p><strong>advanced_quantization_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
 <li><p><strong>advanced_accuracy_restorer_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><em>AdvancedAccuracyRestorerParameters</em></a><em>]</em>) – Advanced parameters for fine-tuning
 the accuracy restorer algorithm.</p></li>
@@ -940,7 +980,7 @@ the accuracy restorer algorithm.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.OverflowFix">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">OverflowFix</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.OverflowFix" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">OverflowFix</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.OverflowFix" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.parameters.StrEnum</span></code></p>
 <p>This option controls whether to apply the overflow issue fix for the 8-bit
 quantization.</p>
@@ -969,7 +1009,7 @@ are quantized using a half of the 8-bit quantization range.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.IgnoredScope">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.IgnoredScope" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.IgnoredScope" title="Link to this definition">¶</a></dt>
 <dd><p>Provides an option to specify portions of model to be excluded from compression.</p>
 <p>The ignored scope defines model sub-graphs that should be excluded from the compression process such as
 quantization, pruning and etc.</p>
@@ -1012,7 +1052,7 @@ in the model graph.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.Subgraph">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Subgraph</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Subgraph" title="Permalink to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Subgraph</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Subgraph" title="Link to this definition">¶</a></dt>
 <dd><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along
 all simple paths in the graph from input to output nodes.</p>
 <dl class="field-list simple">
@@ -1131,9 +1171,9 @@ all simple paths in the graph from input to output nodes.</p>
       
     </aside>
   </div>
-</div><script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/sphinx_highlight.js"></script>
-    <script src="../../_static/scripts/furo.js"></script>
+</div><script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
     </body>
 </html>
