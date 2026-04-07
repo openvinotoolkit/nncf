@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - '**/*.md'
       - '.ci/*'
+      - '.github/skills/*'
       - 'docs/**/*'
       - 'examples/**/*'
       - 'licensing/*'
