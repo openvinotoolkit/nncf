@@ -1,4 +1,4 @@
-tensorboard==2.13.0
+tensorboard==2.20.0
 torch==2.10.0
 torchao==0.17.0
 numpy>=1.23.5,<2
