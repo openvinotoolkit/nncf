@@ -7,3 +7,4 @@ numpy==2.2.6
 safetensors==0.6.2
 onnx==1.21.0
 timm==1.0.22
+pandas==2.3.3

@@ -25,7 +25,7 @@ on:
         default: ''
 
 env:
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.12"
   PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
   TQDM_DISABLE: 1
   RESULT_XML: "pytest-results.xml"
