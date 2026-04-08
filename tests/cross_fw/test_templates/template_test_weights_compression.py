@@ -921,30 +921,31 @@ class TemplateWeightCompression(ABC):
             ),
         ],
     )
-    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
+    def test_compression_works_with_transposed_activations(self, transpose_a_supported, kwargs):
         if not transpose_a_supported:
             pytest.skip("transpose_a is not supported for the current backend")
         if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
             pytest.skip("Scale estimation is not supported")
         if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
             pytest.skip("GPTQ is not supported")
+        if kwargs.get("gptq", False):
+            pytest.skip("GPTQ with transposed activations requires hessian axis refactoring - out of scope")
         if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():
             pytest.skip("lora_correction is not supported")
-
-        INPUT_SHAPE = (2, 4)
+        if kwargs.get("lora_correction", False):
+            pytest.skip("LoRA correction with transposed activations requires adapter shape refactoring - out of scope")
+        INPUT_SHAPE = (2, 24, 16)
         model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)
         input = 0.01 * np.arange(0, np.multiply.reduce(INPUT_SHAPE), dtype=np.float32).reshape(INPUT_SHAPE) + 0.02
         input = self.to_tensor(input)
         dataset = Dataset([input] * 2, self.get_transform_func())
-
-        with pytest.raises(nncf.UnsupportedModelError):
-            compress_weights(
-                model,
-                mode=CompressWeightsMode.INT4_SYM,
-                ratio=1.0,
-                group_size=1,
-                subset_size=2,
-                dataset=dataset,
-                all_layers=True,
-                **kwargs,
-            )
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=1,
+            subset_size=2,
+            dataset=dataset,
+            all_layers=True,
+            **kwargs,
+        )
