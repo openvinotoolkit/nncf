@@ -1,13 +1,23 @@
 name: MacOS
+run-name: "MacOS${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 permissions: read-all
 
 on:
   workflow_call:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
-      pull_request_number:
+      pr_num:
         description: 'The pull request number'
+        type: string
         default: ''
+
+env:
+  PYTHON_VERSION: "3.12"
 
 jobs:
   precommit-common:
@@ -16,16 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          lfs: true
-          fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: |
           pip install . -r tests/common/requirements.txt
@@ -40,16 +44,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          lfs: true
-          fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: |
           pip install . -r tests/openvino/requirements.txt

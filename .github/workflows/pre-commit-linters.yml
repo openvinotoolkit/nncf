@@ -3,10 +3,6 @@ permissions: read-all
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 jobs:
   pre-commit:
@@ -19,6 +15,8 @@ jobs:
           python-version: "3.12"
       - name: Install pre-commit package
         run: make install-pre-commit
+      - name: Print installed modules
+        run: pip list
       - name: Run pre-commit linter suite
         run: make pre-commit
   md-dead-link-check:
