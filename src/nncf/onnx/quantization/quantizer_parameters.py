@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
@@ -33,7 +32,7 @@ class ONNXQuantizerLayerParameters:
     scale: np.ndarray
     zero_point: np.ndarray
     tensor_type: np.dtype
-    axis: Optional[int] = None
+    axis: int | None = None
 
 
 def convert_fq_params_to_onnx_params(

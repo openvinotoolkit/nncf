@@ -29,6 +29,9 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         raise nncf.InternalError(msg)
 
     if node.metatype not in [PTMatMulMetatype, PTAddmmMetatype]:
+        if not isinstance(node.metatype.output_channel_axis, int):
+            msg = f"Node metatype {node.metatype} does not have defined output channel axis"
+            raise nncf.InternalError(msg)
         return node.metatype.output_channel_axis
 
     if port_id == 0:
@@ -38,5 +41,5 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         # W(port:0) * X(port:1): [... , C_OUT, C_IN] * [... , C_IN, ...]
         return -2
 
-    msg = f"Port id for a {node.metatype} operation is expected to be in [0, 1], {port_id} recieved"
+    msg = f"Port id for a {node.metatype} operation is expected to be in [0, 1], {port_id} received"
     raise nncf.InternalError(msg)

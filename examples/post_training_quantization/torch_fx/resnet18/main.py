@@ -18,9 +18,7 @@ import openvino.torch  # noqa
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
@@ -29,7 +27,6 @@ from rich.progress import track
 from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
-import nncf.torch
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
 
@@ -191,9 +188,9 @@ def main():
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
     example_input = torch.ones(*input_shape).to(device)
 
-    fx_model = torch.export.export_for_training(model.eval(), args=(example_input,)).module()
+    fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
     quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
-    quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
+    quantized_fx_model = torch.compile(quantized_fx_model, dynamic=True, backend="openvino")
 
     acc1_int8 = validate(val_loader, quantized_fx_model, device)
 
@@ -218,7 +215,7 @@ def main():
     print(f"{fp32_latency:.3f} ms")
 
     print("Benchmark FP32 model compiled with openvino backend ...")
-    compiled_model = torch.compile(model, backend="openvino")
+    compiled_model = torch.compile(model, dynamic=True, backend="openvino")
     fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_ov_latency:.3f} ms")
 

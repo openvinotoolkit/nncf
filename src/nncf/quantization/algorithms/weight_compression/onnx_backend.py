@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable
 
 import numpy as np
 import onnx
@@ -43,7 +43,6 @@ from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
-from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
 from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
@@ -94,9 +93,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self,
         compressed_weight: CompressedWeight,
         weight_shape: tuple[int],
-        dequantize_block_size: Optional[int] = None,
+        dequantize_block_size: int | None = None,
         apply_transpose: bool = False,
-    ) -> tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
         """
         Preprocess compressed weight tensor to ONNX-compatible form.
 
@@ -143,7 +142,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return node.layer_attributes.has_weight()
 
     @staticmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple[int] | None:
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
         # Everything remains the same, except when 3D weights, reduce by batch dimension also.
@@ -155,9 +154,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
-    def mean_statistic_collector(
-        self, reduction_axes: tuple[int], subset_size: Optional[int] = None
-    ) -> TensorCollector:
+    def mean_statistic_collector(self, reduction_axes: tuple[int], subset_size: int | None = None) -> TensorCollector:
         mean_reducer = MeanReducer(reduction_axes)
         shape_reducer = ShapeReducer()
         collector = TensorCollector(WCTensorStatistic)
@@ -198,9 +195,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: onnx.ModelProto, graph: NNCFGraph
     ) -> TensorDataType:
-        weight_name = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["name"]
-        weight_tensor = get_tensor(model, weight_name)
-        return ONNX_DTYPE_TO_NNCF_DTYPE[weight_tensor.data_type]
+        data_type = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["dtype"]
+        return ONNX_DTYPE_TO_NNCF_DTYPE[data_type]
 
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:
@@ -215,7 +211,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def _check_arguments_for_transform_model(
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm], compression_format: CompressionFormat
+        lora_correction_algo: LoraCorrectionAlgorithm | None, compression_format: CompressionFormat
     ):
         if lora_correction_algo is not None:
             msg = "LORA correction is not supported for the ONNX backend"
@@ -229,8 +225,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: onnx.ModelProto,
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_compressed_weights: Optional[dict[str, CompressedWeight]] = None,
-        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
+        precomputed_compressed_weights: dict[str, CompressedWeight] | None = None,
+        lora_correction_algo: LoraCorrectionAlgorithm | None = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = None,
     ) -> onnx.ModelProto:
@@ -328,7 +324,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: onnx.ModelProto,
         quantized_weights: np.ndarray,
         scale: np.ndarray,
-        zero_point: Optional[np.ndarray],
+        zero_point: np.ndarray | None,
         axis: int,
         block_size: int,
         weight_name: str,
@@ -421,7 +417,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         quantized_weights: np.ndarray,
         orig_weight,
         scale: np.ndarray,
-        zero_point: Optional[np.ndarray],
+        zero_point: np.ndarray | None,
         axis: int,
         block_size: int,
         weight_name: str,

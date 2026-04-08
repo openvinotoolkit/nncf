@@ -13,7 +13,6 @@ import os
 import re
 from functools import total_ordering
 from pathlib import Path
-from typing import Optional, Union
 
 import networkx as nx
 
@@ -25,7 +24,11 @@ from nncf.common.utils.dot_file_rw import write_dot_graph
 def sort_dot(path):
     with open(path, encoding="utf8") as f:
         content = f.readlines()
-    start_line_flavors = ["strict digraph  {\n", "strict digraph {\n"]  # pydot 3.4.0 has one space instead of two.
+    start_line_flavors = [
+        "strict digraph  {\n",
+        "strict digraph {\n",
+        "digraph {\n",
+    ]  # pydot 3.4.0 has one space instead of two.
     for start_line in start_line_flavors:
         if start_line in content:
             content.remove(start_line)
@@ -39,7 +42,7 @@ def sort_dot(path):
         first."""
 
         def __init__(
-            self, node_id: Optional[int] = None, edge_start_id: Optional[int] = None, edge_end_id: Optional[int] = None
+            self, node_id: int | None = None, edge_start_id: int | None = None, edge_end_id: int | None = None
         ):
             if node_id is not None:
                 if edge_start_id is not None or edge_end_id is not None:
@@ -98,10 +101,8 @@ def sort_dot(path):
         f.write(end_line)
 
 
-def _build_node_id_vs_attrs_dict(
-    nx_graph: nx.DiGraph, id_from_attr: bool = False
-) -> dict[Union[int, str], dict[str, str]]:
-    retval: dict[Union[int, str], dict[str, str]] = {}
+def _build_node_id_vs_attrs_dict(nx_graph: nx.DiGraph, id_from_attr: bool = False) -> dict[int | str, dict[str, str]]:
+    retval: dict[int | str, dict[str, str]] = {}
     for node_name, node_attrs in nx_graph.nodes.items():
         # When read a dot graph dumped by pydot the extra '\n' symbol appears as a graph node.
         # https://github.com/networkx/networkx/issues/5686
@@ -117,10 +118,10 @@ def _build_node_id_vs_attrs_dict(
 
 def _build_edge_vs_attrs_dict(
     nx_graph: nx.DiGraph, id_from_attr: bool = False
-) -> dict[tuple[Union[int, str], Union[int, str]], dict[str, str]]:
+) -> dict[tuple[int | str, int | str], dict[str, str]]:
     retval = {}
     for edge_tuple, edge_attrs in nx_graph.edges.items():
-        from_node_name, to_node_name = edge_tuple
+        from_node_name, to_node_name, _ = edge_tuple
         if id_from_attr:
             from_node, to_node = nx_graph.nodes[from_node_name], nx_graph.nodes[to_node_name]
             edge_id = int(from_node["id"]), int(to_node["id"])
@@ -159,7 +160,7 @@ def check_nx_graph(
 
 
 def compare_nx_graph_with_reference(
-    nx_graph: nx.DiGraph,
+    nx_graph: nx.MultiDiGraph,
     path_to_dot: str,
     sort_dot_graph: bool = True,
     check_edge_attrs: bool = False,
@@ -186,5 +187,5 @@ def compare_nx_graph_with_reference(
         if sort_dot_graph:
             sort_dot(path_to_dot)
 
-    expected_graph = nx.DiGraph(read_dot_graph(Path(path_to_dot)))
+    expected_graph = nx.MultiDiGraph(read_dot_graph(Path(path_to_dot)))
     check_nx_graph(nx_graph, expected_graph, check_edge_attrs, unstable_node_names)

@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import pytest
 import torch
@@ -88,7 +88,7 @@ def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
     return OpenVINOQuantizer(*args, **kwargs)
 
 
-def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[dict[str, Any]] = None) -> str:
+def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: dict[str, Any] | None = None) -> str:
     output = str(qparams.get("mode").value)
     output += f"gs{qparams.get('group_size', -1)}"
     if qparams.get("all_layers", False):

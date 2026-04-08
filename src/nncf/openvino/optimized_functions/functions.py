@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
 
 import nncf
 from nncf.common.utils.caching import disable_results_caching
@@ -24,21 +23,22 @@ from nncf.openvino.optimized_functions.models import get_integer_quantize_dequan
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.constants import OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES
 from nncf.quantization.algorithms.weight_compression.constants import OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorBackend
 from nncf.tensor import TensorDataType
 
-ReductionAxes = Union[int, tuple[int, ...]]
+ReductionAxes = int | tuple[int, ...]
 
 
 def do_integer_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
+    reduction_axes: ReductionAxes | None = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-) -> tuple[Tensor, Tensor, Tensor]:
+) -> CompressedWeight:
     """
     Quantizes the given weight tensor to an integer data type.
 
@@ -48,7 +48,7 @@ def do_integer_quantization(
         precomputed scale (and zero point) are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param precomputed_zero_point: Optional precomputed zero point tensor.
-    :return: A tuple containing the compressed weights, scale, and zero point tensors.
+    :return: A CompressedWeight object containing the compressed weights, scale, and zero point tensors.
     """
     assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
 
@@ -101,24 +101,28 @@ def do_integer_quantization(
         compressed_weight = model(inputs)[0]
         scale, zero_point = precomputed_scale, precomputed_zero_point
 
-    return compressed_weight, scale, zero_point
+    return CompressedWeight(compressed_weight, scale, zero_point=zero_point)
 
 
 def do_float_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-) -> tuple[Tensor, Tensor, Tensor]:
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+) -> CompressedWeight:
     """
     Computes quantization scale if not provided, and performs corresponding float weight quantization.
     NF4 format uses 16 levels in [-1, 1] range, while FP4/MXFP4 uses 16 levels in [-6, 6].
 
+    Either `precomputed_scale` or `reduction_axes` must be provided. When `precomputed_scale` is None,
+    the scale is computed internally using `reduction_axes`, which must not be None in that case.
+
     :param weight: Weight array to compress.
     :param config: Weight compression configuration.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics.
+        Required when precomputed_scale is not provided.
     :param precomputed_scale: Optional precomputed scale.
-    :return: Returns quantized weight tensor and corresponding scale tensor.
+    :return: A CompressedWeight object containing the quantized weights and scale.
     """
     assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES
 
@@ -154,17 +158,17 @@ def do_float_quantization(
         compressed_weight = model([weight, precomputed_scale])[0]
         scale = precomputed_scale
 
-    return compressed_weight, scale, None
+    return CompressedWeight(compressed_weight, scale)
 
 
 def integer_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-    precomputed_zero_point: Optional[Tensor] = None,
-    return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, tuple[Tensor, Tensor, Tensor, Tensor]]:
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+    precomputed_zero_point: Tensor | None = None,
+    return_compressed_weight: bool | None = False,
+) -> Tensor | tuple[Tensor, CompressedWeight]:
     """
     Quantizes the given weight tensor to an integer data type and then dequantizes it back to obtain float32 values.
 
@@ -176,8 +180,7 @@ def integer_quantize_dequantize_weight(
     :param precomputed_zero_point: Optional precomputed zero point tensor.
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight, scale,
         (and zero point).
-    :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight, scale,
-        (and zero point).
+    :return: Dequantized weight tensor or a tuple containing the decompressed weight and a CompressedWeight object.
     """
     assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_INT_MODES
 
@@ -218,17 +221,17 @@ def integer_quantize_dequantize_weight(
     else:
         decompressed_weight, compressed_weight, scale, zero_point = results
     if return_compressed_weight:
-        return decompressed_weight, compressed_weight, scale, zero_point
+        return decompressed_weight, CompressedWeight(compressed_weight, scale, zero_point=zero_point)
     return decompressed_weight
 
 
 def float_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Optional[Tensor] = None,
-    return_compressed_weight: Optional[bool] = False,
-) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
+    reduction_axes: ReductionAxes | None = None,
+    precomputed_scale: Tensor | None = None,
+    return_compressed_weight: bool | None = False,
+) -> Tensor | tuple[Tensor, CompressedWeight]:
     """
     First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
 
@@ -237,7 +240,7 @@ def float_quantize_dequantize_weight(
     :param reduction_axes: Axes along which to reduce statistics. Not required if precomputed scale are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
-    :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
+    :return: Dequantized weight tensor or a tuple containing the decompressed weight and a CompressedWeight object.
     """
     assert config.mode in OPTIMIZED_COMPRESSION_COMPATIBLE_FLOAT_MODES
 
@@ -271,7 +274,7 @@ def float_quantize_dequantize_weight(
     else:
         decompressed_weight, compressed_weight, scale = results
     if return_compressed_weight:
-        return decompressed_weight, compressed_weight, scale
+        return decompressed_weight, CompressedWeight(compressed_weight, scale)
     return decompressed_weight
 
 

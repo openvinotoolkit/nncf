@@ -32,7 +32,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('conv2d_2',)_ActivationQuantizationInsertionPoint": {
+        "('max_pool2d', 'slice_7')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -40,7 +40,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('max_pool2d', 'slice_7')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_2',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -152,7 +152,7 @@
             "narrow_range": true,
             "dest_dtype": "INT8"
         },
-        "('max_pool2d_3', 'slice_1')_ActivationQuantizationInsertionPoint": {
+        "('conv2d_8',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -160,7 +160,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_8',)_ActivationQuantizationInsertionPoint": {
+        "('max_pool2d_3', 'slice_1')_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -198,6 +198,14 @@
             "signedness_to_force": false,
             "per_channel": false,
             "narrow_range": false,
+            "dest_dtype": "INT8"
+        },
+        "('conv_transpose2d',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": false,
+            "per_channel": false,
+            "narrow_range": true,
             "dest_dtype": "INT8"
         },
         "('cat',)_ActivationQuantizationInsertionPoint": {
@@ -248,6 +256,14 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
+        "('conv_transpose2d_1',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": false,
+            "per_channel": false,
+            "narrow_range": true,
+            "dest_dtype": "INT8"
+        },
         "('cat_1',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
@@ -294,6 +310,14 @@
             "signedness_to_force": false,
             "per_channel": false,
             "narrow_range": false,
+            "dest_dtype": "INT8"
+        },
+        "('conv_transpose2d_2',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": false,
+            "per_channel": false,
+            "narrow_range": true,
             "dest_dtype": "INT8"
         },
         "('cat_2',)_ActivationQuantizationInsertionPoint": {
@@ -344,7 +368,15 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('cat_3',)_ActivationQuantizationInsertionPoint": {
+        "('conv_transpose2d_3',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": false,
+            "per_channel": false,
+            "narrow_range": true,
+            "dest_dtype": "INT8"
+        },
+        "('conv2d_16',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -352,7 +384,7 @@
             "narrow_range": false,
             "dest_dtype": "INT8"
         },
-        "('conv2d_16',)_ActivationQuantizationInsertionPoint": {
+        "('cat_3',)_ActivationQuantizationInsertionPoint": {
             "num_bits": 8,
             "mode": "asymmetric",
             "signedness_to_force": false,
@@ -427,24 +459,24 @@
             20
         ],
         "4": [
-            25,
             26,
-            27
+            27,
+            28
         ],
         "5": [
-            32,
-            33,
-            34
+            34,
+            35,
+            36
         ],
         "6": [
-            39,
-            40,
-            41
+            42,
+            43,
+            44
         ],
         "7": [
-            46,
-            47,
-            48
+            50,
+            51,
+            52
         ]
     },
     "shared_input_operation_set_groups": {}

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -28,9 +28,9 @@ class OperatorMetatype:
 
     name: str = ""
     hw_config_names: list[str] = []
-    output_channel_axis: Optional[int] = None
+    output_channel_axis: int | None = None
     ignored_input_ports: list[int] = []
-    target_input_ports: Optional[list[int]] = None
+    target_input_ports: list[int] | None = None
 
     @classmethod
     def get_all_aliases(cls) -> list[str]:
@@ -82,7 +82,7 @@ class OperatorMetatypeRegistry(Registry):
         super().__init__(name)
         self._op_name_to_op_meta_dict: dict[str, type[OperatorMetatype]] = {}
 
-    def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[[TOpClass], TOpClass]:
+    def register(self, name: str | None = None, is_subtype: bool = False) -> Callable[[TOpClass], TOpClass]:
         """
         Decorator for registering operator metatypes.
 

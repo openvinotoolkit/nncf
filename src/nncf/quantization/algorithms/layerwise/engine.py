@@ -9,11 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -147,7 +148,7 @@ class LayerwiseEngine:
         graph: NNCFGraph,
         target_nodes: list[NNCFNode],
         dataset: Dataset,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer | None = None,
     ) -> LayerwiseIterator:
         """
         Create the iterator through the target nodes of the model.
@@ -188,7 +189,7 @@ class LayerwiseEngine:
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, node_name, port_id=output_port_id
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self._subset_size)
+            stat_collector = get_raw_stat_collector(num_samples=self._subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key

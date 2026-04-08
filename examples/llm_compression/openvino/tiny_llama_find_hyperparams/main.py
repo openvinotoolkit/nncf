@@ -13,7 +13,7 @@ import datetime
 import itertools
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -100,7 +100,7 @@ def evaluate_model(
 
 
 def get_nncf_dataset(
-    data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
+    data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput] | None = None
 ) -> nncf.Dataset:
     """
     Create an NNCF dataset for the weight compression algorithm.

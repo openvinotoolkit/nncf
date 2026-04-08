@@ -21,7 +21,6 @@ from pytest_mock import MockerFixture
 from torch import nn
 
 import nncf
-import nncf.torch
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.openvino.optimized_functions.models import _compile_ov_model
 from nncf.parameters import CompressWeightsMode

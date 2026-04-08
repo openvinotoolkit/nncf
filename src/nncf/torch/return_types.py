@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import inspect
-from typing import Any, Union
+from typing import Any
 
 import torch
 
@@ -43,9 +43,7 @@ def maybe_get_values_from_torch_return_type(tensor: Any) -> torch.Tensor:
     return tensor
 
 
-def maybe_wrap_to_torch_return_type(
-    tensor: torch.Tensor, wrapped_input: Union[tuple, torch.Tensor]
-) -> Union[tuple, torch.Tensor]:
+def maybe_wrap_to_torch_return_type(tensor: torch.Tensor, wrapped_input: tuple | torch.Tensor) -> tuple | torch.Tensor:
     """
     Wraps tensor to wrapped_input wrapper in case wrapped_input is wrapped by a torch.return_value container.
 

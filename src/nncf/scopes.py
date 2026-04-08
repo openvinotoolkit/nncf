@@ -12,7 +12,6 @@
 import re
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Optional
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -133,7 +132,7 @@ def get_difference_ignored_scope(ignored_scope_1: IgnoredScope, ignored_scope_2:
     )
 
 
-def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> list[str]:
+def convert_ignored_scope_to_list(ignored_scope: IgnoredScope | None) -> list[str]:
     """
     Convert the contents of the `IgnoredScope` class to the legacy ignored
     scope format.

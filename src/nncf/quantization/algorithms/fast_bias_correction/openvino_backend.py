@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 import openvino as ov
@@ -59,8 +58,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def mean_statistic_collector(
         channel_axis: int,
         inplace: bool,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
+        num_samples: int | None = None,
+        window_size: int | None = None,
     ) -> TensorCollector:
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 

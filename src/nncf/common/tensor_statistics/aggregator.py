@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from itertools import islice
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import nncf
 from nncf.common import factory
@@ -50,7 +50,7 @@ class StatisticsAggregator(ABC):
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
 
-    def _get_iterations_number(self) -> Optional[int]:
+    def _get_iterations_number(self) -> int | None:
         """
         Returns number of iterations.
 

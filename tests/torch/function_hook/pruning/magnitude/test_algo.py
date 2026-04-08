@@ -16,7 +16,6 @@ import torch
 from torch import nn
 
 import nncf
-import nncf.torch
 from nncf.parameters import PruneMode
 from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage

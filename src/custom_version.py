@@ -104,7 +104,11 @@ def __getattr__(name: str) -> str:
         # Rewrite version.py to pass custom version to package
         if os.environ.get("_PYPROJECT_HOOKS_BUILD_BACKEND"):
             content = Path(NNCF_VERSION_FILE).read_text()
-            version_str = re.search(r"^__version__ = ['\"][^'\"]*['\"]", content, re.M).group(0)
+            version_match = re.search(r"^__version__ = ['\"][^'\"]*['\"]", content, re.M)
+            if version_match is None:
+                msg = "Unable to find version string."
+                raise RuntimeError(msg)
+            version_str = version_match.group(0)
             content = content.replace(version_str, f'__version__ = "{version}"')
             Path(NNCF_VERSION_FILE).write_text(content)
 

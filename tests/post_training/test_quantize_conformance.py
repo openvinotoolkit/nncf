@@ -16,7 +16,6 @@ import traceback
 from collections import OrderedDict
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 import pytest
@@ -197,12 +196,12 @@ def run_pipeline(
     test_cases: dict,
     result_data: dict[str, RunInfo],
     output_dir: Path,
-    data_dir: Optional[Path],
+    data_dir: Path | None,
     no_eval: bool,
-    batch_size: Optional[int],
+    batch_size: int | None,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
-    subset_size: Optional[int],
+    subset_size: int | None,
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
@@ -269,10 +268,10 @@ def test_ptq_quantization(
     output_dir: Path,
     result_data: dict[str, RunInfo],
     no_eval: bool,
-    batch_size: Optional[int],
+    batch_size: int | None,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
-    subset_size: Optional[int],
+    subset_size: int | None,
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
@@ -307,7 +306,7 @@ def test_weight_compression(
     batch_size: int,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
-    subset_size: Optional[int],
+    subset_size: int | None,
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,

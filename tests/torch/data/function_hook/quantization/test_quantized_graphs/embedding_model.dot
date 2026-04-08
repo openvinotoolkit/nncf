@@ -1,4 +1,4 @@
-strict digraph {
+digraph {
 x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "/type/0" [id=1, type=type, metatype=UnknownMetatype];
 "embedding.weight" [id=2, type="nncf_model_const", metatype=PTConstNoopMetatype];
@@ -11,15 +11,15 @@ x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" [id=9, type="symmetric_quantize", metatype=UnknownMetatype];
 "matmul/linear/0" [id=10, type=linear, metatype=PTLinearMetatype];
 output [id=11, type="nncf_model_output", metatype=PTOutputNoopMetatype];
-x -> "/type/0" [dtype=float, shape="(1, 10)", out_port_id=0, in_port_id=0];
-"/type/0" -> "embedding/embedding/0" [dtype=int, shape="(1, 10)", out_port_id=0, in_port_id=0];
-"embedding.weight" -> "embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(10, 20)", out_port_id=0, in_port_id=0];
-"__nncf_hooks.pre_hooks.embedding/embedding/0__1.0._scale_param_storage" -> "embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
-"embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" -> "embedding/embedding/0" [dtype=float, shape="(10, 20)", out_port_id=0, in_port_id=1];
-"embedding/embedding/0" -> "matmul/linear/0" [dtype=float, shape="(1, 10, 20)", out_port_id=0, in_port_id=0];
-"matmul.weight" -> "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(5, 20)", out_port_id=0, in_port_id=0];
-"matmul.bias" -> "matmul/linear/0" [dtype=float, shape="(1, 5)", out_port_id=0, in_port_id=2];
-"__nncf_hooks.pre_hooks.matmul/linear/0__1.0._scale_param_storage" -> "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(5, 1)", out_port_id=0, in_port_id=4];
-"matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" -> "matmul/linear/0" [dtype=float, shape="(5, 20)", out_port_id=0, in_port_id=1];
-"matmul/linear/0" -> output [dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
+x -> "/type/0" [key=0, dtype=float, shape="(1, 10)", out_port_id=0, in_port_id=0];
+"/type/0" -> "embedding/embedding/0" [key=0, dtype=int, shape="(1, 10)", out_port_id=0, in_port_id=0];
+"embedding.weight" -> "embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(10, 20)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks.embedding/embedding/0__1.0._scale_param_storage" -> "embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" -> "embedding/embedding/0" [key=0, dtype=float, shape="(10, 20)", out_port_id=0, in_port_id=1];
+"embedding/embedding/0" -> "matmul/linear/0" [key=0, dtype=float, shape="(1, 10, 20)", out_port_id=0, in_port_id=0];
+"matmul.weight" -> "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(5, 20)", out_port_id=0, in_port_id=0];
+"matmul.bias" -> "matmul/linear/0" [key=0, dtype=float, shape="(1, 5)", out_port_id=0, in_port_id=2];
+"__nncf_hooks.pre_hooks.matmul/linear/0__1.0._scale_param_storage" -> "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(5, 1)", out_port_id=0, in_port_id=4];
+"matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" -> "matmul/linear/0" [key=0, dtype=float, shape="(5, 20)", out_port_id=0, in_port_id=1];
+"matmul/linear/0" -> output [key=0, dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
 }

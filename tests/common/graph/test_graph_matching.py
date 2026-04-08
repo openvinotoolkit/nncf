@@ -12,6 +12,7 @@
 import itertools
 
 import networkx as nx
+import pytest
 
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns import GraphPattern
@@ -227,6 +228,57 @@ def test_not_match_edges_inside_pattern():
     pattern.add_edge(node_1, node_3)
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [["1", "2", "3"]]
+
+
+def test_parallel_edges_pattern():
+    """
+    a -(parallel edges 1/2/3) -> b
+    """
+    pattern_a = GraphPattern()
+    pattern_a.add_node(**{GraphPattern.METATYPE_ATTR: "a"})
+    pattern_c = GraphPattern()
+    pattern_c.add_node(**{GraphPattern.METATYPE_ATTR: "c"})
+    pattern_a.join_patterns_parallel(pattern_c, degree=2)
+
+    ref_graph = nx.MultiDiGraph()
+    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_edge("1", "2")
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern_a)
+    # One edge
+    assert not matches
+
+    # Two parallel edges
+    ref_graph.add_edge("1", "2")
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern_a)
+    assert matches == [["1", "2"]]
+
+    # Three parallel edges
+    ref_graph.add_edge("1", "2")
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern_a)
+    assert not matches
+
+
+def test_join_patterns_parallel_requires_single_node_patterns():
+    """
+    Check the join_patterns_parallel fails when the patterns have != 2 nodes
+    """
+    multi_node_pattern = GraphPattern()
+    node_1 = multi_node_pattern.add_node(**{GraphPattern.METATYPE_ATTR: "a"})
+    node_2 = multi_node_pattern.add_node(**{GraphPattern.METATYPE_ATTR: "b"})
+    multi_node_pattern.add_edge(node_1, node_2)
+
+    single_node_pattern = GraphPattern()
+    single_node_pattern.add_node(**{GraphPattern.METATYPE_ATTR: "c"})
+
+    with pytest.raises(AssertionError):
+        multi_node_pattern.join_patterns_parallel(single_node_pattern, degree=2)
+
+    single_node_pattern_2 = GraphPattern()
+    single_node_pattern_2.add_node(**{GraphPattern.METATYPE_ATTR: "a"})
+
+    with pytest.raises(AssertionError):
+        single_node_pattern_2.join_patterns_parallel(multi_node_pattern, degree=2)
 
 
 def test_non_pattern_graph_with_type():

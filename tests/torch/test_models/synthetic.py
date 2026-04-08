@@ -149,6 +149,14 @@ class MultiBranchesModel(nn.Module):
         return xa, xb, xc, xd
 
 
+class TopKModel(nn.Module):
+    INPUT_SHAPE = (1, 10)
+
+    def forward(self, x):
+        values, indices = torch.topk(x, k=5, dim=-1)
+        return values, indices
+
+
 class PartlyNonDifferentialOutputsModel(nn.Module):
     def __init__(self, input_size=None):
         super().__init__()
@@ -643,6 +651,35 @@ class ConcatModelWithTwoOutputs(SimpleConcatModel):
         b = self.conv1(x)
         c = torch.cat([a, b], dim=1)
         return self.conv2(c), a
+
+
+class ConcatSameTensorModel(nn.Module):
+    INPUT_SHAPE = (1, 3, 3, 3)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.cat([x, x, x], dim=1)
+
+
+class SplitCatModel(nn.Module):
+    INPUT_SHAPE = (1, 9, 3, 3)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        chunks = torch.split(x, 3, dim=1)
+        return torch.cat(list(chunks), dim=1)
+
+
+class ConvReluBranchModel(nn.Module):
+    INPUT_SHAPE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.conv = nn.Conv2d(3, 3, 1)
+        self.conv_a = nn.Conv2d(3, 3, 1)
+        self.conv_b = nn.Conv2d(3, 3, 1)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        y = torch.relu(self.conv(x))
+        return self.conv_a(y), self.conv_b(y)
 
 
 class OneDepthwiseConvModel(nn.Module):

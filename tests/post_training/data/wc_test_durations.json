@@ -1,7 +1,9 @@
 {
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_awq_backup_mode_none_backend_OV]": 249,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH]": 472,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_ONNX]": 725,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_OV]": 368,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_TORCH]": 352,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV]": 371,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_stateful_backend_OV]": 205,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_backend_FX_TORCH]": 368,
@@ -26,7 +28,5 @@
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_FX_TORCH]": 423,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_ONNX]": 518,
     "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_OV]": 251,
-    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_TORCH]": 274,
-    "tests/post_training/test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH]": 472,
-    "tests/post_training/test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_TORCH]": 352
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_TORCH]": 274
 }

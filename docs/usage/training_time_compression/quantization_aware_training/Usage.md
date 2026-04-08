@@ -47,7 +47,7 @@ The quantized model saving allows to load quantized modules to the target model 
 requires only example input for the target module, corresponding NNCF config and the quantized model state dict.
 
 ```python
-import nncf.torch
+import nncf
 
 # save part
 quantized_model = nncf.quantize(model, calibration_dataset)

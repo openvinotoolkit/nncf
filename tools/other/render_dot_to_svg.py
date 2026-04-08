@@ -9,30 +9,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Useful when the .dot file is so large that no tool, online or offline, can effectively visualize it.
+"""
+
 import sys
 from argparse import ArgumentParser
+from pathlib import Path
 
-import onnx
+import networkx as nx
+from networkx.drawing.nx_agraph import to_agraph
 
-
-def rename_quantize(model):
-    for node in model.graph.node:
-        if node.op_type == "Quantize":
-            node.op_type = "FakeQuantize"
-            node.doc_string = "Fake quantization operation"
+from nncf.common.utils.dot_file_rw import read_dot_graph
 
 
 def main(argv):
     parser = ArgumentParser()
-    parser.add_argument("-i", "--input-model", help="Path to input model file", required=True)
-    parser.add_argument("-o", "--output-model", help="Path to output model file", required=True)
+    parser.add_argument("-i", "--input_file", help="Input .dot file", required=True)
     args = parser.parse_args(args=argv)
 
-    model = onnx.load(args.input_model)
-
-    rename_quantize(model)
-
-    onnx.save(model, args.output_model)
+    graph = nx.MultiDiGraph(read_dot_graph(args.input_file))
+    A = to_agraph(graph)
+    A.layout("dot")
+    png_path = Path(args.input_file).with_suffix(".svg")
+    A.draw(str(png_path))
 
 
 if __name__ == "__main__":

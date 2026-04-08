@@ -9,10 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.observer import MinMaxObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
@@ -152,7 +153,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return (0,)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[int | None]:
         return get_weight_tensor_port_ids(node, graph)
 
     @staticmethod
@@ -203,9 +204,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             )
 
         if per_channel:
-            observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+            observer = PerChannelMinMaxObserver
         else:
-            observer = torch.ao.quantization.observer.MinMaxObserver
+            observer = MinMaxObserver
 
         if dtype is TensorDataType.int8:
             level_high = 127

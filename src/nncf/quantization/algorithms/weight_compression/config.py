@@ -12,7 +12,7 @@ import operator
 from dataclasses import dataclass
 from dataclasses import field
 from functools import reduce
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import numpy as np
 
@@ -37,9 +37,9 @@ class WeightCompressionConfig:
         destination data type information available.
     """
 
-    mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
-    group_size: Optional[int] = -1
-    codebook_values: Optional[TTensor] = None
+    mode: CompressWeightsMode | None = CompressWeightsMode.INT8_ASYM
+    group_size: int | None = -1
+    codebook_values: TTensor | None = None
 
     @property
     def num_bits(self):
@@ -70,6 +70,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.MXFP8_E4M3,
             CompressWeightsMode.FP8_E4M3,
             CompressWeightsMode.FP4,
+            CompressWeightsMode.NVFP4,
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
@@ -106,6 +107,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.NF4: TensorDataType.nf4,
             CompressWeightsMode.FP4: TensorDataType.f4e2m1,
             CompressWeightsMode.MXFP4: TensorDataType.f4e2m1,
+            CompressWeightsMode.NVFP4: TensorDataType.f4e2m1,
             CompressWeightsMode.FP8_E4M3: TensorDataType.f8e4m3,
             CompressWeightsMode.MXFP8_E4M3: TensorDataType.f8e4m3,
         }
@@ -141,7 +143,7 @@ class WeightCompressionParameters:
     weight_dtype: TensorDataType
     weight_shape: tuple[int, ...]
     reduction_axes: tuple[int, ...]
-    compression_config: Optional[WeightCompressionConfig] = field(default_factory=WeightCompressionConfig)
+    compression_config: WeightCompressionConfig | None = field(default_factory=WeightCompressionConfig)
 
     @property
     def num_weights(self) -> np.uint64:

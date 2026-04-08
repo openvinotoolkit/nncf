@@ -9,9 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Union
+from typing import Any
 
-import torch
 from torch import nn
 
 from nncf.common.engine import Engine
@@ -34,9 +33,7 @@ class PTEngine(Engine):
         if get_backend(model) == BackendType.TORCH:
             self._model.eval()
 
-    def infer(
-        self, input_data: Union[torch.Tensor, tuple[torch.Tensor], dict[str, torch.Tensor]]
-    ) -> Union[torch.Tensor, dict[str, Any]]:
+    def infer(self, input_data: Any) -> Any:
         """
         Runs Torch model on the provided input.
 

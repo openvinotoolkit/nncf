@@ -11,7 +11,6 @@
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
 
-import numpy as np
 import torch
 from torch.nn import Module
 
@@ -20,57 +19,33 @@ from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import is_windows
 
 
-def is_tracing_state():
+def is_tracing_state() -> bool:
+    """
+    Checks whether the current execution context is being traced by torch.jit.
+
+    :return: True if the current thread is being traced, False otherwise.
+    """
     return torch._C._get_tracing_state() is not None
 
 
-class no_jit_trace:
-    def __enter__(self):
-        self.state = torch._C._get_tracing_state()
-        torch._C._set_tracing_state(None)
+@contextmanager
+def no_jit_trace() -> Generator[None, None, None]:
+    """
+    Context manager and decorator to temporarily disable PyTorch JIT tracing.
 
-    def __exit__(self, *args):
-        torch._C._set_tracing_state(self.state)
-        self.state = None
-
-
-def fp32_accum_wrapper(func):
-    def wrapper(tensor_to_sum, ret_tensor):
-        half = tensor_to_sum.dtype == np.float16
-        if half:
-            tensor_to_sum = tensor_to_sum.astype(np.float32)
-        retval = func(tensor_to_sum, ret_tensor)
-        if half:
-            retval = retval.astype(np.float16)
-        return retval
-
-    return wrapper
-
-
-@fp32_accum_wrapper
-def sum_like(tensor_to_sum, ref_tensor):
-    """Warning: may modify tensor_to_sum"""
-    if ref_tensor.size == 1:
-        return tensor_to_sum.sum()
-
-    for dim, size in enumerate(ref_tensor.shape):
-        if size == 1:
-            if isinstance(tensor_to_sum, np.ndarray):
-                tensor_to_sum = tensor_to_sum.sum(dim, keepdims=True)
-            else:
-                tensor_to_sum = tensor_to_sum.sum(dim, keepdim=True)
-    return tensor_to_sum
-
-
-def get_flat_tensor_contents_string(input_tensor):
-    retval = "["
-    for idx, el in enumerate(input_tensor.view(-1)):
-        if idx >= 10:
-            retval += f"... (first 10/{len(input_tensor.view(-1))} elements shown only) "
-            break
-        retval += f"{el.item():.4f}, "
-    retval += "]"
-    return retval
+    When used, any operations performed within this scope will not be recorded
+    in the TorchScript graph, even if the code is currently being executed
+    via `torch.jit.trace`.
+    """
+    # Capture the original state
+    original_state = torch._C._get_tracing_state()
+    try:
+        # Disable tracing
+        torch._C._set_tracing_state(None)  # type: ignore[attr-defined]
+        yield
+    finally:
+        # Restore state regardless of whether an error occurred
+        torch._C._set_tracing_state(original_state)  # type: ignore[attr-defined]
 
 
 class _ModuleState:
@@ -97,7 +72,7 @@ def save_module_state(module: Module) -> _ModuleState:
     return _ModuleState(module)
 
 
-def load_module_state(base_module: Module, state: _ModuleState, strict=False) -> None:
+def load_module_state(base_module: Module, state: _ModuleState, strict: bool = False) -> None:
     for name, module in base_module.named_modules():
         try:
             module.train(state.training_state[name])
@@ -114,7 +89,7 @@ def load_module_state(base_module: Module, state: _ModuleState, strict=False) ->
 
 
 @contextmanager
-def training_mode_switcher(model: Module, is_training: bool = True):
+def training_mode_switcher(model: Module, is_training: bool = True) -> Generator[None, None, None]:
     saved_state = save_module_state(model)
     model.train(is_training)
     try:

@@ -15,16 +15,13 @@ from typing import Any
 
 import pytest
 import torch
-import torch.ao.quantization
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.observer import MinMaxObserver
-from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.observer import MinMaxObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
+from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
-import nncf.common
-import nncf.common.factory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -45,6 +42,7 @@ from nncf.experimental.torch.fx.transformations import output_insertion_transfor
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.fx.helpers import get_torch_fx_model
@@ -472,19 +470,23 @@ def insert_qdq_nodes(
         dequantize_op = torch.ops.quantized_decomposed.dequantize_per_tensor.default
 
     conv_node = get_graph_node_by_name(model.graph, node_name)
+    model_device = get_model_device(model)
     if per_channel:
         with model.graph.inserting_before(conv_node):
+            # Passing device is neccesary to avoid large models to be cached by torchao.
             scale_node = create_getattr_from_value(
                 model,
                 model.graph,
                 "scale_node",
                 torch.ones([3]),
+                device=model_device,
             )
             zp_node = create_getattr_from_value(
                 model,
                 model.graph,
                 "weight_node",
                 torch.ones([3]),
+                device=model_device,
             )
         qdq_args = (scale_node, zp_node, 0, -128, 127, torch.int8)
     else:

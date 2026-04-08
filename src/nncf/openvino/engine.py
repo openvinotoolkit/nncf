@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
 
 import numpy as np
 import openvino as ov
@@ -35,7 +34,7 @@ class OVCompiledModelEngine(Engine):
         self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
 
     def infer(
-        self, input_data: Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]]
+        self, input_data: np.ndarray | list[np.ndarray] | tuple[np.ndarray] | dict[str, np.ndarray]
     ) -> dict[str, np.ndarray]:
         """
         Runs model on the provided input via OpenVINO Runtime.
@@ -89,7 +88,7 @@ class OVNativeEngine(Engine):
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(
-        self, input_data: Union[np.ndarray, list[np.ndarray], tuple[np.ndarray], dict[str, np.ndarray]]
+        self, input_data: np.ndarray | list[np.ndarray] | tuple[np.ndarray] | dict[str, np.ndarray]
     ) -> dict[str, np.ndarray]:
         """
         Runs model on the provided input via OpenVINO Runtime.
