@@ -131,12 +131,6 @@ class WeightCompressionConfig:
         }
         return dtype_per_mode[self.mode]
 
-    def get_numpy_codebook(self) -> Tensor:
-        if self.codebook_values is None:
-            msg = "Codebook values not provided"
-            raise InternalError(msg)
-        return self.codebook_values.as_numpy_tensor()
-
     def __hash__(self) -> int:
         return hash((self.mode.value, self.group_size))
 
