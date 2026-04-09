@@ -134,9 +134,6 @@ class WeightCompressionConfig:
     def __hash__(self) -> int:
         return hash((self.mode.value, self.group_size))
 
-    def __str__(self) -> str:
-        return f"{self.mode.value}_{self.group_size}"
-
 
 @dataclass
 class WeightCompressionParameters:
