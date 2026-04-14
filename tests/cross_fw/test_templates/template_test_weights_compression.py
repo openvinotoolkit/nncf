@@ -363,75 +363,24 @@ class TemplateWeightCompression(ABC):
         [
             (
                 WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
-                np.array(
-                    [
-                        [[-0.22218132]],
-                        [[-0.19778779]],
-                        [[-0.24689576]],
-                        [[-0.21622597]],
-                        [[0.1586609]],
-                        [[-0.15784486]],
-                        [[0.238651]],
-                        [[0.17156479]],
-                    ],
-                    dtype=np.float32,
-                ),
+                [-0.22218132, -0.19778779, -0.24689576, -0.21622597, 0.1586609, -0.15784486, 0.238651, 0.17156479],
                 None,
             ),
             (
                 WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
-                np.array(
-                    [
-                        [[0.22218132]],
-                        [[0.19778779]],
-                        [[0.22600587]],
-                        [[0.22510362]],
-                        [[0.12782802]],
-                        [[0.14118923]],
-                        [[0.2070494]],
-                        [[0.15438876]],
-                    ],
-                    dtype=np.float32,
-                ),
-                np.array(
-                    [[[7.0]], [[7.0]], [[7.0]], [[7.0]], [[10.0]], [[6.0]], [[9.0]], [[9.0]]],
-                    dtype=np.float32,
-                ),
+                [0.22218132, 0.19778779, 0.22600587, 0.22510362, 0.12782802, 0.14118923, 0.2070494, 0.15438876],
+                [7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
             ),
             (
                 WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
-                np.array(
-                    [
-                        [[1.9024894]],
-                        [[1.6864889]],
-                        [[2.0698037]],
-                        [[1.870039]],
-                        [[1.480314]],
-                        [[1.3043315]],
-                        [[1.863365]],
-                        [[1.5413069]],
-                    ],
-                    dtype=np.float32,
-                ),
+                [1.9024894, 1.6864889, 2.0698037, 1.870039, 1.480314, 1.3043315, 1.863365, 1.5413069],
                 None,
             ),
             (
                 WeightCompressionConfig(
                     mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),
-                np.array(
-                    [
-                        [[0.54356843]],
-                        [[0.4866096]],
-                        [[0.4948216]],
-                        [[0.5342969]],
-                        [[0.42294687]],
-                        [[0.3495965]],
-                        [[0.53673494]],
-                        [[0.44053704]],
-                    ],
-                    dtype=np.float32,
-                ),
+                [0.54356843, 0.4866096, 0.4948216, 0.5342969, 0.42294687, 0.3495965, 0.53673494, 0.44053704],
                 None,
             ),
         ],
@@ -456,12 +405,14 @@ class TemplateWeightCompression(ABC):
             statistics, weight, reduction_axes, config, subset_size=2, initial_steps=2, scale_steps=3
         )
 
+        ref_scale = np.array(ref_scale, dtype=np.float32).reshape(8, 1, 1)
         assert fns.allclose(Tensor(ref_scale), scale, atol=1e-6), (
             f"Scale for {config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
         )
         if ref_zp is None:
             assert zp is None, f"Expected no zero point for {config.mode.value}, got: {zp}"
         else:
+            ref_zp = np.array(ref_zp, dtype=np.float32).reshape(8, 1, 1)
             assert fns.allclose(Tensor(ref_zp), zp, atol=1e-6), (
                 f"Zero point for {config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
             )
