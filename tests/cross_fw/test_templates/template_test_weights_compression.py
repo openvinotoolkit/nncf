@@ -358,36 +358,73 @@ class TemplateWeightCompression(ABC):
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
+    @dataclass
+    class ScaleEstimationQuantizationParamsTestCase:
+        config: WeightCompressionConfig
+        ref_scale: list[float]
+        ref_zp: list[float] | None
+        initial_steps: int
+        scale_steps: int
+
+        def __str__(self) -> str:
+            return f"{self.config.mode.value}_{self.initial_steps}_{self.scale_steps}"
+
     @pytest.mark.parametrize(
-        "config,ref_scale,ref_zp",
+        "case",
         [
-            (
-                WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
-                [-0.22218132, -0.19778779, -0.24689576, -0.21622597, 0.1586609, -0.15784486, 0.238651, 0.17156479],
-                None,
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                ref_scale=[
+                    -0.22218132,
+                    -0.19778779,
+                    -0.24689576,
+                    -0.21622597,
+                    0.1586609,
+                    -0.15784486,
+                    0.238651,
+                    0.17156479,
+                ],
+                ref_zp=None,
+                initial_steps=2,
+                scale_steps=3,
             ),
-            (
-                WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
-                [0.22218132, 0.19778779, 0.22600587, 0.22510362, 0.12782802, 0.14118923, 0.2070494, 0.15438876],
-                [7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
+                ref_scale=[
+                    0.22218132,
+                    0.19778779,
+                    0.22600587,
+                    0.22510362,
+                    0.12782802,
+                    0.14118923,
+                    0.2070494,
+                    0.15438876,
+                ],
+                ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                initial_steps=2,
+                scale_steps=3,
             ),
-            (
-                WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
-                [1.9024894, 1.6864889, 2.0698037, 1.870039, 1.480314, 1.3043315, 1.863365, 1.5413069],
-                None,
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                ref_scale=[1.9024894, 1.6864889, 2.0698037, 1.870039, 1.480314, 1.3043315, 1.863365, 1.5413069],
+                ref_zp=None,
+                initial_steps=2,
+                scale_steps=3,
             ),
-            (
-                WeightCompressionConfig(
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(
                     mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),
-                [0.54356843, 0.4866096, 0.4948216, 0.5342969, 0.42294687, 0.3495965, 0.53673494, 0.44053704],
-                None,
+                ref_scale=[0.54356843, 0.4866096, 0.4948216, 0.5342969, 0.42294687, 0.3495965, 0.53673494, 0.44053704],
+                ref_zp=None,
+                initial_steps=2,
+                scale_steps=3,
             ),
         ],
-        ids=["int4_sym", "int4_asym", "nf4", "codebook"],
+        ids=str,
     )
     def test_scale_estimation_calculate_quantization_params(
-        self, config: WeightCompressionConfig, ref_scale: np.ndarray, ref_zp: np.ndarray | None
+        self, case: ScaleEstimationQuantizationParamsTestCase
     ) -> None:
         """Verifies that scale estimation produces correct scales for all 4-bit compression modes."""
         rng = np.random.default_rng(42)
@@ -402,19 +439,25 @@ class TemplateWeightCompression(ABC):
         statistics = ScaleEstimation.activations_to_wc_statistics(activations)
 
         scale, zp = ScaleEstimation.calculate_quantization_params(
-            statistics, weight, reduction_axes, config, subset_size=2, initial_steps=2, scale_steps=3
+            statistics,
+            weight,
+            reduction_axes,
+            case.config,
+            subset_size=2,
+            initial_steps=case.initial_steps,
+            scale_steps=case.scale_steps,
         )
 
-        ref_scale = np.array(ref_scale, dtype=np.float32).reshape(8, 1, 1)
+        ref_scale = np.array(case.ref_scale, dtype=np.float32).reshape(8, 1, 1)
         assert fns.allclose(Tensor(ref_scale), scale, atol=1e-6), (
-            f"Scale for {config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
+            f"Scale for {case.config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
         )
-        if ref_zp is None:
-            assert zp is None, f"Expected no zero point for {config.mode.value}, got: {zp}"
+        if case.ref_zp is None:
+            assert zp is None, f"Expected no zero point for {case.config.mode.value}, got: {zp}"
         else:
-            ref_zp = np.array(ref_zp, dtype=np.float32).reshape(8, 1, 1)
+            ref_zp = np.array(case.ref_zp, dtype=np.float32).reshape(8, 1, 1)
             assert fns.allclose(Tensor(ref_zp), zp, atol=1e-6), (
-                f"Zero point for {config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
+                f"Zero point for {case.config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
             )
 
     # AWQ Tests
