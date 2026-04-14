@@ -307,7 +307,7 @@ class ScaleEstimation:
                     compressed_weight = do_integer_quantization(
                         weight,
                         config,
-                        precomputed_scale=near_to_ideal_scale,
+                        precomputed_scale=result_scale,
                         precomputed_zero_point=zp,
                     )
                 compressed_weight = compressed_weight.get_unscaled_tensor()
