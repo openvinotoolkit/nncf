@@ -247,8 +247,6 @@ class ScaleEstimation:
         importance = importance / (denum + eps)
 
         X, _ = reshape_weight_for_grouped_quantization(X, -2, group_size)
-        best_diffs = None
-        result_scale = None
         fp_outs = fns.matmul(fns.moveaxis(weight, -2, -3), X)
         q_outs = fns.matmul(fns.moveaxis(q_weights, -2, -3), X)
 
@@ -259,6 +257,10 @@ class ScaleEstimation:
 
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - weight) ** 2, axis=-1)
+
+        # Baseline values ensure correct behaviour when initial_steps=0 and/or scale_steps=0.
+        best_diffs = min_max_scale_diffs
+        result_scale = scale
 
         scale_sign = scale / fns.abs(scale)
         zero_scale = 0.001
@@ -290,20 +292,13 @@ class ScaleEstimation:
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - weight) ** 2, axis=-1)
 
-            if best_diffs is None:
-                best_diffs = min_max_scale_diffs
-
             mask = (ideal_scale_diffs > best_diffs).astype(best_diffs.dtype)
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
             mask = fns.unsqueeze(mask, axis=-1)
 
-            if result_scale is None:
-                near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
-            else:
-                near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
-            result_scale = near_to_ideal_scale
+            result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
 
             if i < initial_steps - 1:
                 if not config.is_integer:
@@ -362,11 +357,7 @@ class ScaleEstimation:
 
             mask = fns.unsqueeze(mask, axis=-1)
 
-            if result_scale is None:
-                near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
-            else:
-                near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
-            result_scale = near_to_ideal_scale
+            result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
 
         if config.group_size == -1:
             result_scale = fns.squeeze(result_scale, axis=-2)
