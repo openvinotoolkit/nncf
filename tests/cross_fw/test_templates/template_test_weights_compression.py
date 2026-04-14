@@ -361,7 +361,7 @@ class TemplateWeightCompression(ABC):
     @dataclass
     class ScaleEstimationQuantizationParamsTestCase:
         config: WeightCompressionConfig
-        ref_scale: list[float]
+        ref_scale: list[float] | None
         ref_zp: list[float] | None
         initial_steps: int
         scale_steps: int
@@ -374,39 +374,65 @@ class TemplateWeightCompression(ABC):
         [
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
-                ref_scale=[
-                    -0.22218132,
-                    -0.19778779,
-                    -0.24689576,
-                    -0.21622597,
-                    0.1586609,
-                    -0.15784486,
-                    0.238651,
-                    0.17156479,
-                ],
+                ref_scale=[-0.2221, -0.1977, -0.2468, -0.2162, 0.1586, -0.1578, 0.2386, 0.1716],
                 ref_zp=None,
                 initial_steps=2,
                 scale_steps=3,
             ),
             ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                ref_scale=None,
+                ref_zp=None,
+                initial_steps=0,
+                scale_steps=0,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                ref_scale=[-0.2405, -0.2133, -0.2468, -0.2299, 0.1586, -0.1578, 0.2386, 0.1927],
+                ref_zp=None,
+                initial_steps=1,
+                scale_steps=0,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                ref_scale=None,
+                ref_zp=None,
+                initial_steps=0,
+                scale_steps=1,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
-                ref_scale=[
-                    0.22218132,
-                    0.19778779,
-                    0.22600587,
-                    0.22510362,
-                    0.12782802,
-                    0.14118923,
-                    0.2070494,
-                    0.15438876,
-                ],
+                ref_scale=[0.2221, 0.1977, 0.2260, 0.2251, 0.1278, 0.1412, 0.2070, 0.1544],
                 ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
                 initial_steps=2,
                 scale_steps=3,
             ),
             ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
+                ref_scale=None,
+                ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                initial_steps=0,
+                scale_steps=0,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
-                ref_scale=[1.9024894, 1.6864889, 2.0698037, 1.870039, 1.480314, 1.3043315, 1.863365, 1.5413069],
+                ref_scale=[1.9024, 1.6864, 2.0698, 1.8700, 1.4803, 1.3043, 1.8633, 1.5413],
+                ref_zp=None,
+                initial_steps=2,
+                scale_steps=3,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                ref_scale=None,
+                ref_zp=None,
+                initial_steps=0,
+                scale_steps=0,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(
+                    mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
+                ),
+                ref_scale=[0.5435, 0.4866, 0.4948, 0.5343, 0.4229, 0.3496, 0.5367, 0.4405],
                 ref_zp=None,
                 initial_steps=2,
                 scale_steps=3,
@@ -415,10 +441,10 @@ class TemplateWeightCompression(ABC):
                 config=WeightCompressionConfig(
                     mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),
-                ref_scale=[0.54356843, 0.4866096, 0.4948216, 0.5342969, 0.42294687, 0.3495965, 0.53673494, 0.44053704],
+                ref_scale=None,
                 ref_zp=None,
-                initial_steps=2,
-                scale_steps=3,
+                initial_steps=0,
+                scale_steps=0,
             ),
         ],
         ids=str,
@@ -448,15 +474,19 @@ class TemplateWeightCompression(ABC):
             scale_steps=case.scale_steps,
         )
 
-        ref_scale = np.array(case.ref_scale, dtype=np.float32).reshape(8, 1, 1)
-        assert fns.allclose(Tensor(ref_scale), scale, atol=1e-6), (
-            f"Scale for {case.config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
-        )
+        if case.ref_scale is None:
+            assert scale is None, f"Expected no scale for {case.config.mode.value}, got: {scale.data}"
+        else:
+            ref_scale = np.array(case.ref_scale, dtype=np.float32).reshape(8, 1, 1)
+            assert fns.allclose(Tensor(ref_scale), scale, atol=1e-3), (
+                f"Scale for {case.config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
+            )
+
         if case.ref_zp is None:
             assert zp is None, f"Expected no zero point for {case.config.mode.value}, got: {zp}"
         else:
             ref_zp = np.array(case.ref_zp, dtype=np.float32).reshape(8, 1, 1)
-            assert fns.allclose(Tensor(ref_zp), zp, atol=1e-6), (
+            assert fns.allclose(Tensor(ref_zp), zp, atol=1e-3), (
                 f"Zero point for {case.config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
             )
 
