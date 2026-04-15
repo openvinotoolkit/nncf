@@ -68,6 +68,18 @@ def get_relative_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Ten
 spy_instance = None
 
 
+@dataclass
+class ScaleEstimationQuantizationParamsTestCase:
+    config: WeightCompressionConfig
+    ref_scale: list[float]
+    ref_zp: list[float] | None
+    initial_steps: int
+    scale_steps: int
+
+    def __str__(self) -> str:
+        return f"{self.config.mode.value}_{self.initial_steps}_{self.scale_steps}"
+
+
 class SpyAWQ(AWQ):
     def __init__(self, *agrs, **kwargs):
         global spy_instance
@@ -357,17 +369,6 @@ class TemplateWeightCompression(ABC):
         error_after_se = get_relative_error(original_weight, decompressed_weight_after_se, axis=1 - reduction_axes)
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
-
-    @dataclass
-    class ScaleEstimationQuantizationParamsTestCase:
-        config: WeightCompressionConfig
-        ref_scale: list[float] | None
-        ref_zp: list[float] | None
-        initial_steps: int
-        scale_steps: int
-
-        def __str__(self) -> str:
-            return f"{self.config.mode.value}_{self.initial_steps}_{self.scale_steps}"
 
     @pytest.mark.parametrize(
         "case",

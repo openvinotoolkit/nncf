@@ -169,7 +169,7 @@ class ScaleEstimation:
         initial_steps: int = 5,
         scale_steps: int = 10,
         weight_penalty: float = -1.0,
-    ) -> Tensor:
+    ) -> tuple[Tensor, Tensor | None]:
         """
         Calculates the quantization parameters for a given set of weights and activations.
         This function estimates the optimal quantization scale for weight compression by
@@ -258,7 +258,7 @@ class ScaleEstimation:
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - weight) ** 2, axis=-1)
 
-        # Baseline values ensure correct behaviour when initial_steps=0 and/or scale_steps=0.
+        # Baseline values ensure correct behavior when initial_steps=0 and/or scale_steps=0.
         best_diffs = min_max_scale_diffs
         result_scale = scale
 
