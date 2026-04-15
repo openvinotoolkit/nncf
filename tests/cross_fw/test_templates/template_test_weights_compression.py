@@ -429,6 +429,13 @@ class TemplateWeightCompression(ABC):
                 ref_zp=None,
             ),
             ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                initial_steps=10,
+                scale_steps=0,
+                ref_scale=[1.9024, 1.7070, 2.0698, 1.8700, 1.4803, 1.3307, 1.9705, 1.5413],
+                ref_zp=None,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(
                     mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),

@@ -302,7 +302,7 @@ class ScaleEstimation:
 
             if i < initial_steps - 1:
                 if not config.is_integer:
-                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=near_to_ideal_scale)
+                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=result_scale)
                 else:
                     compressed_weight = do_integer_quantization(
                         weight,
