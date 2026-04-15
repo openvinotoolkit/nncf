@@ -116,7 +116,7 @@ class TypeHintRemover(ast.NodeTransformer):
         node.returns = None
 
         # Remove docstring
-        if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, (ast.Str, ast.Constant)):
+        if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant):
             node.body.pop(0)
 
         # Process inner nodes

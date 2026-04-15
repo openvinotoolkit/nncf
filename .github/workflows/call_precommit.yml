@@ -128,6 +128,8 @@ jobs:
   pytorch-cpu:
     timeout-minutes: 40
     runs-on: ubuntu-latest
+    # TODO(AlexanderDokuchaev): Enable with torchao=0.18.0 release
+    if: ${{ inputs.python_version != '3.14' }}
     defaults:
       run:
         shell: bash
