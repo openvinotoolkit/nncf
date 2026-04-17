@@ -108,7 +108,7 @@ def calculate_float_quantization_params(
         if config.compression_dtype in FP_MAX_VALUES:
             max_val = FP_MAX_VALUES[config.compression_dtype]
         else:
-            max_val = fns.max(fns.abs(config.get_numpy_codebook()))
+            max_val = fns.max(fns.abs(config.codebook_values.as_numpy_tensor()))
         scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
@@ -233,7 +233,7 @@ def _do_float_quantization_single_scale(
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.is_codebook:
-        indexes = _calculate_codebook_indexes(norm_weight, quantiles=config.get_numpy_codebook())
+        indexes = _calculate_codebook_indexes(norm_weight, quantiles=config.codebook_values.as_numpy_tensor())
         return CompressedWeight(
             indexes,
             scale,
