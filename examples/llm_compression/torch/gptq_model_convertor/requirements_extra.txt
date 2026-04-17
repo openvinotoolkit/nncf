@@ -1,7 +1,7 @@
 gptqmodel==5.6.12
 torch==2.9.0
 # TODO(AlexanderDokuchaev): remove transformers next release gptqmodel https://github.com/ModelCloud/GPTQModel/issues/2328
-transformers==4.57.6
+transformers==5.0.0rc3
 huggingface_hub==0.36.2
 numpy==2.2.6
 kernels==0.12.3
