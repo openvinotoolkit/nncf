@@ -54,8 +54,7 @@ jobs:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
-        run: |
-          python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
       - name: Install NNCF and test requirements
         run: pip install . -r tests/onnx/requirements.txt
       - name: Print installed modules
@@ -77,8 +76,7 @@ jobs:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
-        run: |
-          python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
       - name: Install NNCF and test requirements
         run: pip install . -r tests/openvino/requirements.txt
       - name: Print installed modules
@@ -103,8 +101,7 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
-        run: |
-          python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
       - name: Install NNCF and test requirements
         run: |
           pip install . -r tests/torch/requirements.txt
