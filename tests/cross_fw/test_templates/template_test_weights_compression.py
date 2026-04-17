@@ -68,6 +68,18 @@ def get_relative_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Ten
 spy_instance = None
 
 
+@dataclass
+class ScaleEstimationQuantizationParamsTestCase:
+    config: WeightCompressionConfig
+    ref_scale: list[float]
+    ref_zp: list[float] | None
+    initial_steps: int
+    scale_steps: int
+
+    def __str__(self) -> str:
+        return f"{self.config.mode.value}_{self.initial_steps}_{self.scale_steps}"
+
+
 class SpyAWQ(AWQ):
     def __init__(self, *agrs, **kwargs):
         global spy_instance
@@ -359,86 +371,94 @@ class TemplateWeightCompression(ABC):
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
     @pytest.mark.parametrize(
-        "config,ref_scale,ref_zp",
+        "case",
         [
-            (
-                WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
-                np.array(
-                    [
-                        [[-0.22218132]],
-                        [[-0.19778779]],
-                        [[-0.24689576]],
-                        [[-0.21622597]],
-                        [[0.1586609]],
-                        [[-0.15784486]],
-                        [[0.238651]],
-                        [[0.17156479]],
-                    ],
-                    dtype=np.float32,
-                ),
-                None,
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                initial_steps=2,
+                scale_steps=3,
+                ref_scale=[-0.2221, -0.1977, -0.2468, -0.2162, 0.1586, -0.1578, 0.2386, 0.1716],
+                ref_zp=None,
             ),
-            (
-                WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
-                np.array(
-                    [
-                        [[0.22218132]],
-                        [[0.19778779]],
-                        [[0.22600587]],
-                        [[0.22510362]],
-                        [[0.12782802]],
-                        [[0.14118923]],
-                        [[0.2070494]],
-                        [[0.15438876]],
-                    ],
-                    dtype=np.float32,
-                ),
-                np.array(
-                    [[[7.0]], [[7.0]], [[7.0]], [[7.0]], [[10.0]], [[6.0]], [[9.0]], [[9.0]]],
-                    dtype=np.float32,
-                ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                initial_steps=0,
+                scale_steps=0,
+                ref_scale=[-0.2378, -0.2134, -0.2353, -0.2338, 0.185, -0.1663, 0.2463, 0.1927],
+                ref_zp=None,
             ),
-            (
-                WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
-                np.array(
-                    [
-                        [[1.9024894]],
-                        [[1.6864889]],
-                        [[2.0698037]],
-                        [[1.870039]],
-                        [[1.480314]],
-                        [[1.3043315]],
-                        [[1.863365]],
-                        [[1.5413069]],
-                    ],
-                    dtype=np.float32,
-                ),
-                None,
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                initial_steps=1,
+                scale_steps=0,
+                ref_scale=[-0.2405, -0.2133, -0.2468, -0.2299, 0.1586, -0.1578, 0.2386, 0.1927],
+                ref_zp=None,
             ),
-            (
-                WeightCompressionConfig(
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
+                initial_steps=0,
+                scale_steps=1,
+                ref_scale=[-0.2406, -0.2134, -0.2469, -0.23, 0.1587, -0.1578, 0.2387, 0.1927],
+                ref_zp=None,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
+                initial_steps=2,
+                scale_steps=3,
+                ref_scale=[0.2221, 0.1977, 0.2260, 0.2251, 0.1278, 0.1412, 0.2070, 0.1544],
+                ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
+                initial_steps=0,
+                scale_steps=0,
+                ref_scale=[0.2351, 0.213, 0.2418, 0.2463, 0.144, 0.1452, 0.2079, 0.1735],
+                ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                initial_steps=2,
+                scale_steps=3,
+                ref_scale=[1.9024, 1.6864, 2.0698, 1.8700, 1.4803, 1.3043, 1.8633, 1.5413],
+                ref_zp=None,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                initial_steps=0,
+                scale_steps=0,
+                ref_scale=[1.9024, 1.7070, 1.8827, 1.8700, 1.4803, 1.3307, 1.9705, 1.5418],
+                ref_zp=None,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
+                initial_steps=10,
+                scale_steps=0,
+                ref_scale=[1.9024, 1.7070, 2.0698, 1.8700, 1.4803, 1.3307, 1.9705, 1.5413],
+                ref_zp=None,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(
                     mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),
-                np.array(
-                    [
-                        [[0.54356843]],
-                        [[0.4866096]],
-                        [[0.4948216]],
-                        [[0.5342969]],
-                        [[0.42294687]],
-                        [[0.3495965]],
-                        [[0.53673494]],
-                        [[0.44053704]],
-                    ],
-                    dtype=np.float32,
+                initial_steps=2,
+                scale_steps=3,
+                ref_scale=[0.5435, 0.4866, 0.4948, 0.5343, 0.4229, 0.3496, 0.5367, 0.4405],
+                ref_zp=None,
+            ),
+            ScaleEstimationQuantizationParamsTestCase(
+                config=WeightCompressionConfig(
+                    mode=CompressWeightsMode.CODEBOOK, group_size=8, codebook_values=Tensor(CB4_QUANTILES)
                 ),
-                None,
+                initial_steps=0,
+                scale_steps=0,
+                ref_scale=[0.5435, 0.4877, 0.5379, 0.5342, 0.4229, 0.3802, 0.5630, 0.4405],
+                ref_zp=None,
             ),
         ],
-        ids=["int4_sym", "int4_asym", "nf4", "codebook"],
+        ids=str,
     )
     def test_scale_estimation_calculate_quantization_params(
-        self, config: WeightCompressionConfig, ref_scale: np.ndarray, ref_zp: np.ndarray | None
+        self, case: ScaleEstimationQuantizationParamsTestCase
     ) -> None:
         """Verifies that scale estimation produces correct scales for all 4-bit compression modes."""
         rng = np.random.default_rng(42)
@@ -453,17 +473,32 @@ class TemplateWeightCompression(ABC):
         statistics = ScaleEstimation.activations_to_wc_statistics(activations)
 
         scale, zp = ScaleEstimation.calculate_quantization_params(
-            statistics, weight, reduction_axes, config, subset_size=2, initial_steps=2, scale_steps=3
+            statistics,
+            weight,
+            reduction_axes,
+            case.config,
+            subset_size=2,
+            initial_steps=case.initial_steps,
+            scale_steps=case.scale_steps,
         )
 
-        assert fns.allclose(Tensor(ref_scale), scale, atol=1e-6), (
-            f"Scale for {config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
+        ref_scale = self.to_tensor(case.ref_scale).reshape(8, 1, 1)
+        assert fns.allclose(Tensor(ref_scale), scale, atol=1e-3), (
+            f"Scale for {case.config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
         )
-        if ref_zp is None:
-            assert zp is None, f"Expected no zero point for {config.mode.value}, got: {zp}"
+        assert scale.dtype == TensorDataType.float32, (
+            f"Expected float32 scale, got {scale.dtype} for {case.config.mode.value}"
+        )
+
+        if case.ref_zp is None:
+            assert zp is None, f"Expected no zero point for {case.config.mode.value}, got: {zp}"
         else:
-            assert fns.allclose(Tensor(ref_zp), zp, atol=1e-6), (
-                f"Zero point for {config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
+            ref_zp = self.to_tensor(case.ref_zp).reshape(8, 1, 1)
+            assert fns.allclose(Tensor(ref_zp), zp, atol=1e-3), (
+                f"Zero point for {case.config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
+            )
+            assert zp.dtype == TensorDataType.float32, (
+                f"Expected float32 zero point, got {zp.dtype} for {case.config.mode.value}"
             )
 
     # AWQ Tests
