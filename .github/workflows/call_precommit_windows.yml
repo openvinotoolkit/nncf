@@ -2,6 +2,7 @@ name: call-precommit-windows
 permissions: read-all
 
 on:
+  pull_request:
   workflow_call:
     inputs:
       python_version:
