@@ -26,6 +26,7 @@ from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.test_model_transformer import get_nodes_by_type
 
@@ -269,3 +270,30 @@ def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
             assert dumped_model.get_rt_info(rt_path) == value
         else:
             assert dumped_model.has_rt_info(rt_path) is False
+
+
+@pytest.mark.parametrize("target_device", TargetDevice)
+@pytest.mark.parametrize("num_bits", [None, 8, 16])
+def test_sdpa_quantize_activations_with_8_16_bits(num_bits: int | None, target_device: TargetDevice):
+    model = ScaledDotProductAttentionModel(with_weights=True).ov_model
+    dataset = get_dataset_for_test(model)
+
+    compressed_model = nncf.compress_weights(model, mode=nncf.CompressWeightsMode.INT8_SYM)
+    quantized_model = quantize_impl(
+        compressed_model,
+        dataset,
+        preset=QuantizationPreset.MIXED,
+        target_device=target_device,
+        subset_size=1,
+        advanced_parameters=AdvancedQuantizationParameters(
+            disable_bias_correction=True,
+            activations_quantization_params=QuantizationParameters(num_bits=num_bits),
+        ),
+    )
+    levels = 2**num_bits if num_bits is not None else 256
+    fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
+
+    for node in fq_nodes:
+        print(node.get_attributes())
+        levels = node.get_attributes()["levels"]
+        assert levels in [levels, levels - 1]
