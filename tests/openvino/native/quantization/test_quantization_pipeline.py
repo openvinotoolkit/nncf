@@ -290,10 +290,9 @@ def test_sdpa_quantize_activations_with_8_16_bits(num_bits: int | None, target_d
             activations_quantization_params=QuantizationParameters(num_bits=num_bits),
         ),
     )
-    levels = 2**num_bits if num_bits is not None else 256
+    expected_levels = 2**num_bits if num_bits is not None else 256
     fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
 
     for node in fq_nodes:
-        print(node.get_attributes())
         levels = node.get_attributes()["levels"]
-        assert levels in [levels, levels - 1]
+        assert levels in [expected_levels, expected_levels - 1]
