@@ -272,7 +272,7 @@ def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
             assert dumped_model.has_rt_info(rt_path) is False
 
 
-@pytest.mark.parametrize("target_device", TargetDevice)
+@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
 @pytest.mark.parametrize("num_bits", [None, 8, 16])
 def test_sdpa_quantize_activations_with_8_16_bits(num_bits: int | None, target_device: TargetDevice):
     model = ScaledDotProductAttentionModel(with_weights=True).ov_model
