@@ -13,6 +13,14 @@ from nncf.parameters import StrEnum
 
 
 class HWConfigOpName(StrEnum):
+    """
+    Enumeration of operation types supported by hardware quantization configurations.
+
+    Each member represents an operation type that can be quantized on a specific hardware platform
+    (CPU, GPU, NPU). These types are used to define quantization schemes and constraints in
+    hardware-specific setup configurations.
+    """
+
     ADD = "Add"
     AVGPOOL = "AvgPool"
     BROADCAST = "Broadcast"
