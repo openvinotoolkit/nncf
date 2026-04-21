@@ -38,15 +38,15 @@ on:
         type: boolean
         default: false
 
+defaults:
+  run:
+    shell: bash
+
 env:
   PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
   TQDM_DISABLE: 1
   RESULT_XML: "pytest-results.xml"
-  PYTHON_VERSION: "3.10"
-
-defaults:
-  run:
-    shell: bash
+  PYTHON_VERSION: "3.12"
 
 jobs:
   examples-cpu:
@@ -60,9 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-            lfs: false
-            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-            ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -88,7 +86,7 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: examples-cpu-pytest-results-${{ matrix.group }}
           path: ${{ env.RESULT_XML }}
@@ -121,9 +119,7 @@ jobs:
           cat /proc/cpuinfo
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-            lfs: false
-            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-            ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -149,7 +145,7 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: examples-cuda-pytest-results-${{ matrix.group }}
           path: ${{ env.RESULT_XML }}
@@ -170,9 +166,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-            lfs: false
-            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-            ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -205,7 +199,7 @@ jobs:
           [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: examples-win-cpu-pytest-results-${{ matrix.group }}
           path: ${{ env.RESULT_XML }}

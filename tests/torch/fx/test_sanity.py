@@ -127,11 +127,9 @@ def test_sanity(test_case: SanitySampleCase, tiny_imagenet_dataset):
     with torch.no_grad():
         ex_input = next(iter(calibration_dataset.get_inference_data()))
         model.eval()
-        exported_model = torch.export.export_for_training(model, args=(ex_input,), strict=True).module(
-            check_guards=False
-        )
+        exported_model = torch.export.export(model, args=(ex_input,), strict=True).module(check_guards=False)
         quantized_model = nncf.quantize(exported_model, calibration_dataset)
-        quantized_model = torch.compile(quantized_model, backend="openvino")
+        quantized_model = torch.compile(quantized_model, dynamic=True, backend="openvino")
 
     top1_int8 = validate(val_dataloader, quantized_model, device)
     assert np.isclose(top1_int8, test_case.top1_int8_ref, atol=0.1)
