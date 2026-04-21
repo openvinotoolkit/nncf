@@ -581,7 +581,7 @@ class TestQuantizerPropagationStateGraph:
 
     @staticmethod
     def get_model_graph() -> NNCFGraph:
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         #      (0 /A_0)
         #         |
@@ -1113,7 +1113,7 @@ class TestRedundantQuantizerMerge:
 
     @staticmethod
     def get_model_graph() -> NNCFGraph:
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         #      (0 /A_0)
         #        |
@@ -1159,7 +1159,7 @@ class TestRedundantQuantizerMerge:
                 ("L", "N"),
             ]
         )
-        mock_graph.edges[("K", "L")][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
+        mock_graph.edges[("K", "L", 0)][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
 
         mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
         return get_nncf_graph_from_mock_nx_graph(mock_graph)
@@ -1214,7 +1214,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
 
     @staticmethod
     def get_model_graph_with_split_node() -> QPSG:
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         #         (0 /A_0)
         #            |
@@ -1269,7 +1269,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
 
 
 def create_graph_for_output_quant_as_weights() -> NNCFGraph:
-    mock_graph = nx.DiGraph()
+    mock_graph = nx.MultiDiGraph()
 
     #      (0 A/A)       (1 B/B)
     #        |             |

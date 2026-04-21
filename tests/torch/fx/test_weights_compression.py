@@ -25,8 +25,11 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
@@ -125,7 +128,7 @@ def test_compress_weights_graph_edge(mode):
     for node in nncf_graph.get_all_nodes():
         if "weights_decompressor" in node.node_name and node.node_type == "call_module":
             decompressor_node_edge = nncf_graph.get_input_edges(node)[0]
-            decompressor_constant_edge = nncf_graph.get_edge(node, nncf_graph.get_next_nodes(node)[0])
+            decompressor_constant_edge = nncf_graph.get_edges(node, nncf_graph.get_next_nodes(node)[0])[0]
             assert decompressor_node_edge.tensor_shape == decompressor_constant_edge.tensor_shape
 
 
@@ -328,7 +331,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_RoPE_model() -> torch.fx.GraphModule:
+    def get_RoPE_model(degree: int) -> torch.fx.GraphModule:
         model = RoPEModel()
         ex_input = torch.ones(RoPEModel.INPUT_SIZE, dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
@@ -587,14 +590,22 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
             return "linear_4"
         return "bmm_4"
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: torch.fx.GraphModule) -> int:
+        return cls._get_num_typed_nodes(model, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: torch.fx.GraphModule) -> int:
+        return cls._get_num_typed_nodes(model, (INT8SymmetricWeightsDecompressor, INT8AsymmetricWeightsDecompressor))
+
     @staticmethod
-    def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
+    def _get_num_typed_nodes(model: torch.fx.GraphModule, types: tuple[BaseWeightsDecompressor, ...]) -> int:
         num = 0
         for node in model.graph.nodes:
             if node.op != "call_module":
                 continue
             op = getattr(model, node.target)
-            num += isinstance(op, (INT4SymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor))
+            num += isinstance(op, types)
         return num
 
     @staticmethod
@@ -733,3 +744,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return False
+
+    @pytest.mark.skip("RoPE pattern is invalid for the TorchFX backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass

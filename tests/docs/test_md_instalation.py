@@ -75,11 +75,9 @@ def _parse_versions_from_constraints_file() -> dict[str, str]:
     }
 
 
-def _parse_python_version_from_precommit_workflow(with_patch: bool = False) -> str:
+def _parse_python_version_from_precommit_workflow() -> str:
     workflow = WORKFLOW_PRECOMMIT.read_text(encoding="utf-8")
-    ret = re.search(r"python_version: \"(\d+\.\d+\.\d+)", workflow).group(1)
-    if not with_patch:
-        ret = ".".join(ret.split(".")[:2])
+    ret = re.search(r"python_version: \"(\d+\.\d+)", workflow).group(1)
     return ret
 
 
@@ -107,7 +105,7 @@ def test_test_environment():
     """Ensure that the test environment is set up correctly."""
     md_content = MD_INSTALLATION.read_text(encoding="utf-8")
     pattern = (
-        r"This repository is tested on Python\* (\d+\.\d+\.\d+), "
+        r"This repository is tested on Python\* (\d+\.\d+), "
         r"PyTorch\* (\d+\.\d+\.\d+) \(NVidia CUDA\\\* Toolkit (\d+\.\d+)\)"
     )
     match = re.search(pattern, md_content)
@@ -121,7 +119,7 @@ def test_test_environment():
     actual_versions = _parse_versions_from_constraints_file()
 
     ref = {
-        "python": _parse_python_version_from_precommit_workflow(True),
+        "python": _parse_python_version_from_precommit_workflow(),
         "pytorch": actual_versions["pytorch"],
         "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch-cuda"),
     }

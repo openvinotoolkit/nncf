@@ -13,43 +13,17 @@ from itertools import chain
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFNodeName
 from nncf.torch.function_hook.graph.graph_utils import TensorMeta
 from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
 class PTNNCFGraph(NNCFGraph):
-    def get_output_shapes_for_node(self, node_name: NNCFNodeName) -> list[tuple]:
-        node = self.get_node_by_name(node_name)
-        node_key = self.get_node_key_by_id(node.node_id)
-        succs = list(self._nx_graph.successors(node_key))
-        edge_list = [self._nx_graph.edges[node_key, to_node_key] for to_node_key in succs]
-        return [edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR] for edge in edge_list]
-
-    def get_input_shapes_for_node(self, node_name: NNCFNodeName) -> dict[int, tuple]:
-        node = self.get_node_by_name(node_name)
-        node_key = self.get_node_key_by_id(node.node_id)
-        in_edges = list(self._nx_graph.in_edges(node_key))
-        retval = {}
-        for in_edge in in_edges:
-            edge_attr_dict = self._nx_graph.edges[in_edge]
-            port_id = edge_attr_dict[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]
-            assert port_id not in retval
-            for p in [
-                port_id,
-            ] + edge_attr_dict[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
-                retval[p] = edge_attr_dict[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
-        return retval
-
     def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> tuple[int]:
-        target_node_name = insertion_point.target_node_name
-        if insertion_point.input_port_id is not None:
-            quantizer_input_shape = self.get_input_shapes_for_node(target_node_name)[insertion_point.input_port_id]
-        else:
-            # Tailored for post-hook quantization and first output quantization only
-            quantizer_input_shape = self.get_output_shapes_for_node(target_node_name)[0]
-        return quantizer_input_shape
+        nncf_node = self.get_node_by_name(insertion_point.target_node_name)
+        if insertion_point.input_port_id is not None:  # PRE_LAYER_OPERATION + OPERATION_WITH_WEIGHTS
+            return self.get_input_edge_by_port_id(nncf_node, insertion_point.input_port_id).tensor_shape
+        return next(edge.tensor_shape for edge in self.get_output_edges(nncf_node))
 
     def get_nodes_with_missed_input_edges(self) -> list[NNCFNode]:
         """

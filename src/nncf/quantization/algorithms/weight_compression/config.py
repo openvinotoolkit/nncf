@@ -10,18 +10,17 @@
 # limitations under the License.
 import operator
 from dataclasses import dataclass
-from dataclasses import field
+from functools import cached_property
 from functools import reduce
-from typing import TypeVar
 
 import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.errors import InternalError
+from nncf.errors import ValidationError
 from nncf.parameters import CompressWeightsMode
+from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-
-TWeightType = TypeVar("TWeightType")
-TTensor = TypeVar("TTensor")
 
 
 @dataclass
@@ -33,19 +32,35 @@ class WeightCompressionConfig:
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping. Defaults to -1.
     :param codebook_values: Optional codebook values for CODEBOOK compression mode.
-        Must be fns.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
+        Must be nncf.tensor.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
         destination data type information available.
     """
 
-    mode: CompressWeightsMode | None = CompressWeightsMode.INT8_ASYM
-    group_size: int | None = -1
-    codebook_values: TTensor | None = None
+    mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM
+    group_size: int = -1
+    codebook_values: Tensor | None = None
+
+    def __post_init__(self) -> None:
+        if self.group_size == 0 or self.group_size < -1:
+            msg = f"Invalid group_size={self.group_size}. Group size must be a positive integer or -1."
+            raise ValidationError(msg)
 
     @property
-    def num_bits(self):
+    def num_bits(self) -> int:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
+        if self.is_codebook:
+            if self.codebook_values is None:
+                msg = f"Codebook values must be provided for {self.mode}"
+                raise InternalError(msg)
+            n_quants = self.codebook_values.size
+            if n_quants <= 16:
+                return 4
+            if n_quants <= 256:
+                return 8
+            return 16
+
         if self.mode in [
             CompressWeightsMode.INT8_SYM,
             CompressWeightsMode.INT8_ASYM,
@@ -56,11 +71,11 @@ class WeightCompressionConfig:
         return 4
 
     @property
-    def is_asym_mode(self):
+    def is_asym_mode(self) -> bool:
         return self.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
 
     @property
-    def is_integer(self):
+    def is_integer(self) -> bool:
         """
         :return: True if compression type in integer, else False.
         """
@@ -77,7 +92,7 @@ class WeightCompressionConfig:
         ]
 
     @property
-    def is_codebook(self):
+    def is_codebook(self) -> bool:
         """
         :return: True if compression type is codebook, else False.
         """
@@ -93,6 +108,9 @@ class WeightCompressionConfig:
         :return: data type that is used to store compressed weights.
         """
         if self.is_codebook:
+            if self.codebook_values is None:
+                msg = f"Codebook values must be provided for {self.mode}"
+                raise InternalError(msg)
             n_quants = self.codebook_values.size
             if n_quants <= 16:
                 return TensorDataType.uint4
@@ -113,14 +131,8 @@ class WeightCompressionConfig:
         }
         return dtype_per_mode[self.mode]
 
-    def get_numpy_codebook(self):
-        return self.codebook_values.as_numpy_tensor()
-
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.mode.value, self.group_size))
-
-    def __str__(self):
-        return f"{self.mode.value}_{self.group_size}"
 
 
 @dataclass
@@ -130,7 +142,7 @@ class WeightCompressionParameters:
 
     :param weight_name: Unique weight name.
     :param node_with_weight: Node with weight in the NNCF graph.
-    :param weight_port_id: Number of elements in the weight array.
+    :param weight_port_id: Port id of the weight in the node with weight in the NNCF graph.
     :param weight_dtype: Data type of the weight tensor.
     :param weight_shape: Shape of the weight array.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
@@ -143,10 +155,13 @@ class WeightCompressionParameters:
     weight_dtype: TensorDataType
     weight_shape: tuple[int, ...]
     reduction_axes: tuple[int, ...]
-    compression_config: WeightCompressionConfig | None = field(default_factory=WeightCompressionConfig)
+    compression_config: WeightCompressionConfig | None
 
-    @property
+    @cached_property
     def num_weights(self) -> np.uint64:
-        if not hasattr(self, "_num_weights"):
-            self._num_weights = np.uint64(reduce(operator.mul, self.weight_shape, 1))
-        return self._num_weights
+        """
+        :return: Total number of weights in the weight tensor.
+        """
+        # Explicitly use unsigned 64-bit integer for number of weight in weight compression.
+        # To avoid overflow when calculating the total number of weights for large models.
+        return np.uint64(reduce(operator.mul, self.weight_shape, 1))

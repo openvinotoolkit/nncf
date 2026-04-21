@@ -71,10 +71,13 @@ def create_input_shift_scale() -> GraphPattern:
 
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)
 def create_linear_arithmetic_operations() -> GraphPattern:
-    linear = linear_operations()
-    arithmetic = arithmetic_operations()
-    linear.join_patterns(arithmetic)
-    return linear
+    pattern = GraphPattern()
+    for degree in [1, 2]:
+        linear = linear_operations()
+        arithmetic = arithmetic_operations()
+        linear.join_patterns_parallel(arithmetic, degree=degree)
+        pattern.add_pattern_alternative(linear)
+    return pattern
 
 
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SHIFT_SCALE)

@@ -387,7 +387,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build()
 
     @staticmethod
-    def get_RoPE_model() -> onnx.ModelProto:
+    def get_RoPE_model(degree: int) -> onnx.ModelProto:
         """
         Builds a model to be used in the TemplateWeightCompression.test_rope_weight_compression() test.
         """
@@ -813,11 +813,19 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         return mb.build(opset_version=21)
 
+    @classmethod
+    def get_num_int4_nodes(cls, model: onnx.ModelProto) -> int:
+        return cls._get_num_typed_nodes(model, [onnx.TensorProto.UINT4, onnx.TensorProto.INT4])
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: onnx.ModelProto) -> int:
+        return cls._get_num_typed_nodes(model, [onnx.TensorProto.UINT8, onnx.TensorProto.INT8])
+
     @staticmethod
-    def get_num_int4_nodes(model: onnx.ModelProto) -> int:
+    def _get_num_typed_nodes(model: onnx.ModelProto, types: list[onnx.TensorProto]) -> int:
         num = 0
         for i in model.graph.initializer:
-            if i.data_type in [onnx.TensorProto.UINT4, onnx.TensorProto.INT4]:
+            if i.data_type in types:
                 num += 1
         return num
 
@@ -946,3 +954,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
+
+    @pytest.mark.skip("RoPE pattern is invalid for the ONNX backend, ticket 183208")
+    def test_rope_weight_compression():
+        pass

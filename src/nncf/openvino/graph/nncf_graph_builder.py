@@ -109,19 +109,15 @@ class GraphConverter:
                     output_node_id = graph.get_node_by_name(out_node.get_friendly_name()).node_id
                     nncf_dtype = GraphConverter.convert_to_nncf_dtype(out.get_element_type())
 
-                    parallel_inputs = None
-                    if len(inputs) > 1:
-                        parallel_inputs = [inp.get_index() for inp in inputs[1:]]
-
-                    graph.add_edge_between_nncf_nodes(
-                        from_node_id=in_node_id,
-                        to_node_id=output_node_id,
-                        tensor_shape=tensor_shape,
-                        input_port_id=inputs[0].get_index(),
-                        output_port_id=output_port_id,
-                        dtype=nncf_dtype,
-                        parallel_input_port_ids=parallel_inputs,
-                    )
+                    for inp in inputs:
+                        graph.add_edge_between_nncf_nodes(
+                            from_node_id=in_node_id,
+                            to_node_id=output_node_id,
+                            tensor_shape=tensor_shape,
+                            input_port_id=inp.get_index(),
+                            output_port_id=output_port_id,
+                            dtype=nncf_dtype,
+                        )
 
     @staticmethod
     def _add_nncf_node(node: ov.Node, graph: NNCFGraph) -> None:

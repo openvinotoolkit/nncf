@@ -1,5 +1,35 @@
 # Release Notes
 
+## New in Release 3.1.0
+
+- General:
+  - Migrated `NNCFGraph` from `nx.DiGraph` to `nx.MultiDiGraph` to support models with parallel/multi-edges, enabling correct quantization of models with complex graph structures such as YOLO26 and models like `a = conv(x); return a * a` (https://github.com/openvinotoolkit/nncf/pull/3843).
+- Features:
+  - (OpenVINO) Added NVFP4 (`f4e2m1`) compression data type in Weight Compression. NVFP4 uses a constant group size of 16 with scales compressed to `f8e4m3` using a second-degree scale (https://github.com/openvinotoolkit/nncf/pull/3967).
+  - (OpenVINO) Added `backup_mode` parameter for FP compression formats (MXFP4, MXFP8, FP4, FP8), allowing first/last layers to be compressed with a backup FP format instead of INT8 (https://github.com/openvinotoolkit/nncf/pull/3886).
+  - (OpenVINO) RoPe ignored pattern is updated to handle operations without a preceding transpose like in the Phi-3.5-MoE-instruct model (https://github.com/openvinotoolkit/nncf/pull/3989).
+  - (PyTorch) Added `TopKMetatype` support for TorchFX backend, enabling correct graph building for models with TopK operations such as YOLO26 (https://github.com/openvinotoolkit/nncf/pull/3944).
+  - (PyTorch) Migrated to use `torchao` instead of deprecated `torch.ao` (https://github.com/openvinotoolkit/nncf/pull/3854).
+- Fixes:
+  - (OpenVINO) Fixed scale estimation for Adaptive Codebook weight compression (https://github.com/openvinotoolkit/nncf/pull/3888).
+  - (ONNX) Fixed `nncf.errors.ValidationError: There is no tensor with the name` error (https://github.com/openvinotoolkit/nncf/pull/3988).
+- Improvements:
+  - (PyTorch) Added lazy import for `nncf.torch` module to reduce startup import time (https://github.com/openvinotoolkit/nncf/pull/3862).
+- Tutorials:
+  - [Post-Training Optimization of Gemma 4 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma4/gemma4.ipynb)
+  - [Post-Training Optimization of Code-specialized LLMs](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-code-assistant/llm-code-assistant.ipynb)
+  - [Post-Training Optimization of Vision-Language Models (VLMs)](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/vlm-chatbot/vlm-chatbot-generate-api.ipynb)
+  - [Post-Training Optimization of MiniCPM-o 4.5 Multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-4.5/minicpm-o-4.5.ipynb)
+  - [Post-Training Optimization of PaddleOCR-VL/PaddleOCR-VL-1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/paddleocr_vl/paddleocr_vl.ipynb)
+  - [Post-Training Optimization of RAG pipeline](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-eval.ipynb)
+- Requirements:
+  - Updated to `openvino` 2026.1.0 (https://github.com/openvinotoolkit/nncf/pull/4005).
+  - Updated to `torch` 2.10.0 (https://github.com/openvinotoolkit/nncf/pull/3852).
+  - Updated to `onnx` 1.20.1 (https://github.com/openvinotoolkit/nncf/pull/3966).
+  - Updated to `onnxruntime` 1.24.3 (https://github.com/openvinotoolkit/nncf/pull/3977).
+  - Moved `pandas` to optional dependency (https://github.com/openvinotoolkit/nncf/pull/3970).
+  - Removed unused `pillow` dependency (https://github.com/openvinotoolkit/nncf/pull/3929).
+
 ## New in Release 3.0.0
 
 Post-training Quantization:

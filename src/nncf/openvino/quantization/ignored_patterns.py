@@ -71,6 +71,7 @@ def create_multihead_attention_output() -> GraphPattern:
         om.OVReadValueMetatype,
         om.OVReshapeMetatype,
         om.OVTransposeMetatype,
+        om.OVSplitMetatype,
         om.OVGatherMetatype,
         om.OVSqueezeMetatype,
         om.OVConcatMetatype,
@@ -174,7 +175,7 @@ def create_rope() -> GraphPattern:
     Scheme:
 
       (matmul)           (matmul)
-         |                  |
+         |                 | |
      (transpose)         (concat)
          |                /   \
       (concat)         (cos) (sin)
@@ -200,9 +201,12 @@ def create_rope() -> GraphPattern:
                 **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
             )
             pattern.add_edge(matmul_node, transpose_node)
-            pattern.add_edge(transpose_node, concat_node)
         else:
-            pattern.add_edge(matmul_node, concat_node)
+            transpose_node = matmul_node
+
+        pattern.add_edge(transpose_node, concat_node)
+        pattern.add_edge(transpose_node, concat_node)
+
         pattern.add_edge(concat_node, cos_node)
         pattern.add_edge(concat_node, sin_node)
         ret_pattern.add_pattern_alternative(pattern)

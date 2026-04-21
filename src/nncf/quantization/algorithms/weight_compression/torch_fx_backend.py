@@ -89,10 +89,18 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple[int] | None:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
-        edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
+        next_node = graph.get_next_nodes(weight_node)[0]
+        edges = graph.get_edges(weight_node, next_node)
+
+        if len(edges) > 1:
+            msg = (
+                f"Only one edge expected between the {weight_node.node_name} and {next_node.node_name},"
+                f" but {len(edges)} edges were found"
+            )
+            raise nncf.InternalError(msg)
         node_with_weight_metatype = node_with_weight.metatype
 
-        ndims = len(edge.tensor_shape)
+        ndims = len(edges[0].tensor_shape)
         reduction_axes = get_weight_compression_reduction_axes(node_with_weight_metatype, weight_port_id, ndims)
         return tuple(reduction_axes)
 
@@ -135,8 +143,14 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
-        edge = graph.get_edge(weight_node, node_with_weight)
-        return tuple(edge.tensor_shape)
+        edges = graph.get_edges(weight_node, node_with_weight)
+        if len(edges) > 1:
+            msg = (
+                f"Only one node expected between the {node_with_weight.node_name} and its weight,"
+                f" but {len(edges)} found"
+            )
+            raise nncf.InternalError(msg)
+        return tuple(edges[0].tensor_shape)
 
     def set_weight(
         self,

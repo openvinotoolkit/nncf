@@ -226,10 +226,16 @@ class SmoothQuant(Algorithm):
         groups = defaultdict(list)
         for node_to_smooth, input_act_port, shape in nodes_to_smooth:
             source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
-            edge = nncf_graph.get_edge(source_node, node_to_smooth)
+            edges = nncf_graph.get_edges(source_node, node_to_smooth)
+            if len(edges) > 1:
+                msg = (
+                    f"Only one edge expected between {source_node.node_name} and {node_to_smooth.node_name},"
+                    f" but {len(edges)} edges was found"
+                )
+                raise nncf.InternalError(msg)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
-            group_id = (source_node, input_act_port, edge.output_port_id, shape)
+            group_id = (source_node, input_act_port, edges[0].output_port_id, shape)
             groups[group_id].append(node_to_smooth)
 
         return groups

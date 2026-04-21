@@ -52,9 +52,9 @@ def _quote_str(s: str) -> str:
     return s
 
 
-def to_comparable_nx_graph(graph: NNCFGraph) -> nx.DiGraph:
+def to_comparable_nx_graph(graph: NNCFGraph) -> nx.MultiDiGraph:
     """
-    Convert NNCFGraph to nx.DiGraph for comparison with references.
+    Convert NNCFGraph to nx.MultiDiGraph for comparison with references.
 
     Attributes:
         - NODE:
@@ -67,12 +67,11 @@ def to_comparable_nx_graph(graph: NNCFGraph) -> nx.DiGraph:
             - shape
             - out_port_id
             - in_port_id
-            - parallel_input_port_ids (if exists)
 
     :param graph: NNCFGraph to convert.
-    :return: Graph in nx.DiGraph.
+    :return: Graph in nx.MultiDiGraph.
     """
-    out_graph = nx.DiGraph()
+    out_graph = nx.MultiDiGraph()
     for node in sorted(graph.get_all_nodes(), key=lambda x: x.node_id):
         attrs_node = {
             "id": node.node_id,
@@ -88,8 +87,6 @@ def to_comparable_nx_graph(graph: NNCFGraph) -> nx.DiGraph:
             "out_port_id": edge.output_port_id,
             "in_port_id": edge.input_port_id,
         }
-        if edge.parallel_input_port_ids:
-            attrs_edge["parallel_input_port_ids"] = edge.parallel_input_port_ids
 
         out_graph.add_edge(_quote_str(edge.from_node.node_name), _quote_str(edge.to_node.node_name), **attrs_edge)
     return out_graph

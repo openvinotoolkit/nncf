@@ -85,7 +85,7 @@ class GraphPattern:
     PATTERN_NODE_TO_EXCLUDE = "PATTERN_NODE_TO_EXCLUDE"
 
     def __init__(self) -> None:
-        self._graph = nx.DiGraph()
+        self._graph = nx.MultiDiGraph()
         self._node_counter = 0
 
     def __add__(self, other: "GraphPattern") -> "GraphPattern":
@@ -135,10 +135,10 @@ class GraphPattern:
         return isinstance(other, GraphPattern) and is_isomorphic(self._graph, other.graph)
 
     @property
-    def graph(self) -> nx.DiGraph:
+    def graph(self) -> nx.MultiDiGraph:
         return self._graph
 
-    def _unite_with_copy_of_graph(self, graph: nx.DiGraph) -> nx.DiGraph:
+    def _unite_with_copy_of_graph(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
         """
         Creates a copy of 'graph', relabels node names according to self.node_counter
         and then unites relabeled graph with graph of 'self'.
@@ -155,7 +155,7 @@ class GraphPattern:
         self._graph = nx.union(self._graph, other_graph_copy)
         return other_graph_copy
 
-    def _add_edge_connected_subgraphs(self, first_graph: nx.DiGraph, second_graph: nx.DiGraph) -> None:
+    def _add_edge_connected_subgraphs(self, first_graph: nx.MultiDiGraph, second_graph: nx.MultiDiGraph) -> None:
         """
         Adds an edge between last node of 'first_graph' and first node of 'second_graph',
         which are found by nx.lexicographical_topological_sort().
@@ -190,6 +190,18 @@ class GraphPattern:
         :param other: GraphPattern that will be added
         """
         self._unite_with_copy_of_graph(other.graph)
+
+    def join_patterns_parallel(self, other: "GraphPattern", degree: int) -> None:
+        """
+        Joins two single-node graph patterns in parallel by creating multiple identical edges
+        between their nodes.
+
+        :param other: Another graph pattern consisting of a single node.
+        :param degree: The number of parallel edges to create between the two nodes.
+        """
+        assert len(self.graph.nodes) == len(other.graph.nodes) == 1
+        edge = (list(self.graph.nodes)[0], list(other.graph.nodes)[0])
+        self.join_patterns(other, edges=[edge] * degree)
 
     def join_patterns(self, other: "GraphPattern", edges: list[tuple[Hashable, Hashable]] | None = None) -> None:
         """
@@ -233,20 +245,20 @@ class GraphPattern:
                 remapped_edges.append(new_edge)
             self._graph.add_edges_from(remapped_edges)
 
-    def add_node(self, **attrs: dict[str, Any]) -> int:
+    def add_node(self, **attrs: Any) -> int:
         if GraphPattern.METATYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
             attrs[GraphPattern.METATYPE_ATTR] = cast(Any, [attrs[GraphPattern.METATYPE_ATTR]])
         self._graph.add_node(self._node_counter, **attrs)
         self._node_counter += 1
         return self._node_counter - 1
 
-    def add_edge(self, u_name: str, v_name: str) -> None:
+    def add_edge(self, u_name: str | int, v_name: str | int) -> None:
         self._graph.add_edge(u_name, v_name)
 
     def add_edges_from(self, ebunch_to_add: list[Any], **attr: dict[str, Any]) -> None:
         self._graph.add_edges_from(ebunch_to_add, **attr)
 
-    def get_weakly_connected_subgraphs(self) -> list[nx.DiGraph]:
+    def get_weakly_connected_subgraphs(self) -> list[nx.MultiDiGraph]:
         return [self._graph.subgraph(c) for c in nx.weakly_connected_components(self._graph)]
 
     def dump_graph(self, path: Path) -> None:

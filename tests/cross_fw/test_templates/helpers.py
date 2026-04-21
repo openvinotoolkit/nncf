@@ -529,3 +529,33 @@ class SAMPEModel(nn.Module):
         x2 = x.cos()
         x = torch.cat([x1, x2], dim=-1)
         return x
+
+
+class ParallelEdgesModel(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self, different_output_ports=True):
+        super().__init__()
+        self._different_output_ports = different_output_ports
+        self.conv = create_conv(2, 2, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        a, b = torch.split(x, 1, dim=1)
+        if self._different_output_ports:
+            return torch.mul(a, b), torch.mul(a, b)
+        return torch.mul(a, a), torch.mul(a, a)
+
+
+class YOLO26AttentionBlock(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.qkv_conv = create_conv(2, 6, 1)
+
+    def forward(self, x):
+        x = self.qkv_conv(x)
+        q, k, v = torch.split(x, 2, dim=1)
+        attn = torch.softmax(torch.matmul(q, k) / np.sqrt(2), dim=1)
+        return torch.matmul(v, attn)
