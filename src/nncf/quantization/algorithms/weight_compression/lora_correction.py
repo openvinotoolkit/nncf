@@ -124,7 +124,6 @@ class LoraCorrectionAlgorithm:
         layer_name = wc_params.node_with_weight.node_name
         layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
-        transpose_a_flag = getattr(wc_params.node_with_weight, "transpose_a", False)
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,
             compressed_weight,
@@ -134,7 +133,6 @@ class LoraCorrectionAlgorithm:
             layer_statistics,
             act_ch_axis,
             is_debug,
-            transpose_a=transpose_a_flag,
         )
         if is_debug:
             self._debug_interface.add_noises(layer_name, mean_noises)
@@ -150,7 +148,6 @@ class LoraCorrectionAlgorithm:
         layer_statistics: WCTensorStatistic,
         act_ch_axis: int,
         is_debug: bool | None = False,
-        transpose_a: bool = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -184,9 +181,6 @@ class LoraCorrectionAlgorithm:
             reduction_axis = reduction_axes[0]
         else:
             reduction_axis = -1
-
-        if transpose_a and reduction_axis != -1:
-            reduction_axis = 1
 
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
             fq_weights = do_integer_dequantization(

@@ -29,9 +29,11 @@ def process_stats(
     :param stats: An object containing statistics for the layer.
     :param subset_size: The number of samples for AWQ. If subset_size <= 0, all samples are used.
     :param act_ch_axis: The activation channel axis.
+    :param transpose_a: When True, returns X in [SampleSize, HiddenDim] layout instead of the default
+        [HiddenDim, SampleSize]. Used by LoRA Correction which requires samples as rows.
     :return: tuple of the following tensors:
-        s - maximum channel magnitude across samples [HiddenDim]
-        X - average channel magnitude across tokens in the sequence [HiddenDim, min(SampleSize, ~subset_size)]
+        s - maximum channel magnitude across samples, shape [HiddenDim]
+        X - activation matrix, shape [HiddenDim, SampleSize] normally or [SampleSize, HiddenDim] if transpose_a=True
     """
     X = fns.stack(
         stats.mean_values
