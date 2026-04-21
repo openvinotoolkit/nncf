@@ -10,12 +10,14 @@
 # limitations under the License.
 
 import re
-from typing import Iterable
+from collections import deque
+from typing import Container, Iterable
 
 import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizerId
 from nncf.scopes import IgnoredScope
@@ -100,6 +102,88 @@ def get_not_matched_scopes(scope: list[str] | str | IgnoredScope | None, nodes: 
             if matches_any(node.node_name, pattern):
                 matched_patterns.add(pattern)
     return list(set(patterns) - matched_patterns)
+
+
+def propagate_ignored_constants_to_weighted_consumers(
+    ignored_names: set[str],
+    nncf_graph: NNCFGraph,
+    weighted_metatypes: Container[type[OperatorMetatype]],
+    constant_metatypes: Container[type[OperatorMetatype]],
+    passthrough_metatypes: Container[type[OperatorMetatype]] = (),
+    passthrough_node_types: Container[str] = (),
+) -> set[str]:
+    """
+    Expand a resolved IgnoredScope name set to include weighted operations reachable
+    from any ignored Constant node.
+
+    IgnoredScope name matching runs against every node in the NNCFGraph, including
+    Constants. But algorithms such as ``nncf.compress_weights`` and ``nncf.prune``
+    iterate only over weighted operation nodes (MatMul, Embedding, Convolution, ...).
+    A user who names a weight Constant in IgnoredScope therefore sees the node
+    matched but the weight is still modified, because the consuming operation is
+    never compared against the ignored set. This helper rewrites such cases so that
+    the consuming operation is also skipped, matching user intent.
+
+    For each ignored name whose node metatype is in ``constant_metatypes``, the
+    helper performs a forward BFS through the graph. When a node with a metatype
+    in ``weighted_metatypes`` is reached, its name is added to the ignored set;
+    traversal does not continue past a weighted op. When a node with a metatype in
+    ``passthrough_metatypes`` or a node_type in ``passthrough_node_types`` is
+    reached, BFS continues through its successors - this mirrors NNCF's existing
+    reverse walk used by ``get_operation_const_op`` for patterns like
+    ``Constant -> Convert -> FakeQuantize -> Reshape -> Operation``. Any other node
+    halts that branch of the walk.
+
+    Callers that do not have any "passthrough" nodes between Constants and their
+    consumers (e.g. ``nncf.prune`` on a raw PyTorch model) may leave the passthrough
+    parameters empty; in that case the walk resolves in a single hop.
+
+    :param ignored_names: Names resolved from an IgnoredScope against ``nncf_graph``.
+        All names are expected to belong to ``nncf_graph``.
+    :param nncf_graph: Graph containing the nodes referenced by ``ignored_names``.
+    :param weighted_metatypes: Metatypes that the calling algorithm iterates over as
+        candidates for compression/pruning (e.g. ``matmul_metatypes +
+        embedding_metatypes + convolution_metatypes`` on a weight-compression
+        backend). Reaching one of these stops traversal along that branch and adds
+        the node's name to the ignored set.
+    :param constant_metatypes: Metatypes representing weight Constants on the
+        caller's backend (e.g. ``[OVConstantMetatype]`` or ``[PTConstNoopMetatype]``).
+        Only ignored nodes whose metatype is in this set trigger propagation.
+    :param passthrough_metatypes: Optional metatypes of nodes that should be walked
+        through during propagation without halting - typically Convert, Reshape,
+        FakeQuantize and similar dtype/shape/quantization passthroughs. Matches
+        NNCF's existing convention in ``get_operation_const_op``.
+    :param passthrough_node_types: Optional node_type strings to walk through, for
+        backends that identify passthrough nodes by node_type rather than metatype
+        (e.g. PyTorch's ``symmetric_quantize`` / ``apply_magnitude_binary_mask``).
+    :return: A superset of ``ignored_names`` including consuming weighted ops.
+    """
+    expanded = set(ignored_names)
+    added: set[str] = set()
+    for name in ignored_names:
+        node = nncf_graph.get_node_by_name(name)
+        if node.metatype not in constant_metatypes:
+            continue
+        queue = deque(nncf_graph.get_next_nodes(node))
+        visited: set[int] = set()
+        while queue:
+            current = queue.popleft()
+            if current.node_id in visited:
+                continue
+            visited.add(current.node_id)
+            if current.metatype in weighted_metatypes:
+                if current.node_name not in expanded:
+                    added.add(current.node_name)
+                    expanded.add(current.node_name)
+                continue
+            if current.metatype in passthrough_metatypes or current.node_type in passthrough_node_types:
+                queue.extend(nncf_graph.get_next_nodes(current))
+    if added:
+        nncf_logger.info(
+            f"IgnoredScope propagation: {len(added)} weighted consumer(s) of ignored Constant node(s) "
+            f"were also excluded: {sorted(added)}"
+        )
+    return expanded
 
 
 def check_scopes_in_graph(

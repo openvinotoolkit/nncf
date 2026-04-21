@@ -50,7 +50,11 @@ from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
+from nncf.torch.graph.operator_metatypes import PRUNING_NODE_TYPES
+from nncf.torch.graph.operator_metatypes import QUANTIZE_NODE_TYPES
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
+from nncf.torch.graph.operator_metatypes import PTNoopMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTransformationCommand
@@ -91,6 +95,19 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
     def convolution_metatypes(self) -> list[OperatorMetatype]:
         return CONVOLUTION_METATYPES
+
+    @property
+    def constant_metatypes(self) -> list[OperatorMetatype]:
+        return [PTConstNoopMetatype]
+
+    @property
+    def passthrough_metatypes(self) -> list[OperatorMetatype]:
+        return [PTNoopMetatype]
+
+    @property
+    def passthrough_node_types(self) -> list[str]:
+        # Mirrors AVAILABLE_NODE_TYPES_FOR_WEIGHT_SUBGRAPH in model_graph_manager.
+        return list(QUANTIZE_NODE_TYPES) + list(PRUNING_NODE_TYPES)
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:

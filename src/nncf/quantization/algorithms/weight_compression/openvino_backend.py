@@ -93,6 +93,22 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def embedding_metatypes(self) -> list[OperatorMetatype]:
         return [om.OVEmbeddingMetatype]
 
+    @property
+    def constant_metatypes(self) -> list[OperatorMetatype]:
+        return [om.OVConstantMetatype]
+
+    @property
+    def passthrough_metatypes(self) -> list[OperatorMetatype]:
+        # Mirrors allowed_propagation_types_list in get_operation_const_op:
+        # weight Constants can be followed by Convert, FakeQuantize, FakeConvert,
+        # or Reshape nodes before reaching the consuming weighted op.
+        return [
+            om.OVConvertMetatype,
+            om.OVFakeQuantizeMetatype,
+            om.OVFakeConvertMetatype,
+            om.OVReshapeMetatype,
+        ]
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         return node.layer_attributes and node.layer_attributes.constant_attributes

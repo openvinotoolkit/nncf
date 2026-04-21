@@ -836,6 +836,12 @@ CALCULATE_SCALE_DESCS = [
         (IgnoredScope(types=["Gather"]), 2),
         (IgnoredScope(names=["MatMul_1"]), 2),
         (IgnoredScope(patterns=["MatMul_\\d"]), 1),
+        # IgnoredScope naming the weight Constant of a MatMul must also exclude the
+        # consuming MatMul from compression (see issue #4033).
+        (IgnoredScope(names=["matmul_1_data"]), 2),
+        (IgnoredScope(names=["matmul_2_data"]), 2),
+        # Same behaviour for the Constant feeding a compressable Gather (embedding).
+        (IgnoredScope(names=["gather_2_data"]), 2),
     ),
 )
 def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
@@ -851,6 +857,66 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
         ):
             act_num += 1
     assert act_num == num_compressed
+
+
+def _build_matmul_with_reshape_between_const_and_op() -> ov.Model:
+    """Build ``input -> MatMul <- Reshape <- Constant``. The Reshape is a
+    passthrough node between the weight Constant and the MatMul, exercising the
+    forward BFS used by IgnoredScope propagation.
+    """
+    input_1 = opset.parameter([1, 8], name="Input")
+    w_data = np.random.RandomState(0).rand(4, 16).astype(np.float32)
+    weight_const = opset.constant(w_data, dtype=np.float32, name="MyWeight")
+    # Reshape the weight from (4, 16) -> (8, 8) before the MatMul.
+    target_shape = opset.constant(np.array([8, 8], dtype=np.int64))
+    reshaped = opset.reshape(weight_const, target_shape, special_zero=False, name="WeightReshape")
+    matmul = opset.matmul(input_1, reshaped, transpose_a=False, transpose_b=False, name="TargetMatMul")
+    return ov.Model([opset.result(matmul, name="Result")], [input_1])
+
+
+_FP_DTYPE_NAMES = {"f16", "f32", "f64", "bf16", "float", "float16", "float32", "float64"}
+
+
+def _is_fp_dtype(dtype_name: str) -> bool:
+    return dtype_name.lower() in _FP_DTYPE_NAMES
+
+
+def test_weight_compress_ignored_constant_propagates_through_reshape():
+    """IgnoredScope naming the weight Constant of a ``Constant -> Reshape -> MatMul``
+    subgraph must still reach and exclude the MatMul. Without the forward
+    passthrough walk the MatMul would remain compressed (the Constant's direct
+    successor is the Reshape, not the MatMul).
+    """
+    model = _build_matmul_with_reshape_between_const_and_op()
+    compressed = compress_weights(
+        model,
+        mode=nncf.CompressWeightsMode.INT4_SYM,
+        group_size=4,
+        ignored_scope=IgnoredScope(names=["MyWeight"]),
+    )
+    # Locate the weight Constant in the compressed model and check its dtype.
+    for op in compressed.get_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "MyWeight":
+            dtype = op.get_output_element_type(0).get_type_name()
+            assert _is_fp_dtype(dtype), f"Weight should remain floating point, got {dtype}"
+            return
+    pytest.fail("MyWeight Constant not found in compressed model")
+
+
+def test_weight_compress_ignored_constant_via_reshape_baseline():
+    """Without IgnoredScope the same weight should be compressed (to any integer
+    dtype), confirming the previous test would have caught regression of the
+    propagation. Compression mode may vary with small single-MatMul models: what
+    matters is that compression happens at all.
+    """
+    model = _build_matmul_with_reshape_between_const_and_op()
+    compressed = compress_weights(model, mode=nncf.CompressWeightsMode.INT4_SYM, group_size=4)
+    for op in compressed.get_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "MyWeight":
+            dtype = op.get_output_element_type(0).get_type_name()
+            assert not _is_fp_dtype(dtype), f"Weight should be compressed to an integer dtype, got {dtype}"
+            return
+    pytest.fail("MyWeight Constant not found in compressed model")
 
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
