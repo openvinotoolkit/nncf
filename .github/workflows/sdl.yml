@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: 3.10.14
+          python-version: "3.12"
       - name: Install bandit
         run: pip install bandit[toml]==1.9.2
       - name: Run bandit
@@ -39,11 +39,11 @@ jobs:
         with:
           lfs: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        uses: github/codeql-action/init@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
         with:
           languages: python
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        uses: github/codeql-action/analyze@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
         with:
           category: "/language:python"
 
@@ -63,7 +63,7 @@ jobs:
           mv "report.pdf" "codeql_nncf_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.pdf"
       - name: Upload CodeQL Artifacts
         if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: codeql-scan-results
           path: "./codeql*.pdf"
@@ -98,7 +98,7 @@ jobs:
           mv "trivy_report.html" "trivy_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.html"
       - name: Upload Scan Results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: trivy-report
           path: "./trivy_report*.html"
@@ -116,7 +116,7 @@ jobs:
       - name: Get changed files
         if: ${{ github.event_name == 'pull_request' }}
         id: changed-files
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
       - name: Run ClamAV scan
         id: run-clamav
         uses: docker://clamav/clamav:stable
@@ -152,7 +152,7 @@ jobs:
           mv "clamav_report.txt" "clamav_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.txt"
       - name: Upload Scan Results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: clamav-report
           path: "./clamav_report*.txt"

@@ -92,6 +92,8 @@ files = [
     "src/nncf/tensor/",
     "src/nncf/*py",
     "src/nncf/experimental/torch/gptqmodel/",
+    "src/nncf/quantization/algorithms/weight_compression/config.py",
+    "src/nncf/quantization/algorithms/weight_compression/constants.py",
     "examples/llm_compression/torch/gptq_model_convertor/main.py",
 ]
 disable_error_code = ["import-untyped"]
