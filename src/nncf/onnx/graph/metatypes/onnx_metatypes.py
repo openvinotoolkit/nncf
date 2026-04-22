@@ -75,7 +75,7 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
 class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "DepthwiseConvOp"
     op_names = ["Conv"]
-    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+    hw_config_names = [HWConfigOpName.DEPTHWISE_CONVOLUTION]
     weight_channel_axis = 0
     weight_port_ids = [1]
     bias_port_id = 2
@@ -129,7 +129,7 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
 class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     name = "GemmOp"
     op_names = ["Gemm"]
-    hw_config_names = [HWConfigOpName.MATMUL]
+    hw_config_names = [HWConfigOpName.MAT_MUL]
     weight_channel_axis = -1  # For port_id=1
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -140,7 +140,7 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
 class ONNXMatMulMetatype(ONNXOpWithWeightsMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
-    hw_config_names = [HWConfigOpName.MATMUL]
+    hw_config_names = [HWConfigOpName.MAT_MUL]
     weight_channel_axis = -1  # For port_id=1
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
@@ -198,28 +198,28 @@ class ONNXHardSwishMetatype(ONNXOpMetatype):
 class ONNXGlobalAveragePoolMetatype(ONNXOpMetatype):
     name = "GlobalAveragePoolOp"
     op_names = ["GlobalAveragePool"]
-    hw_config_names = [HWConfigOpName.AVGPOOL]
+    hw_config_names = [HWConfigOpName.AVG_POOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAveragePoolMetatype(ONNXOpMetatype):
     name = "AveragePoolOp"
     op_names = ["AveragePool"]
-    hw_config_names = [HWConfigOpName.AVGPOOL]
+    hw_config_names = [HWConfigOpName.AVG_POOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXGlobalMaxPoolMetatype(ONNXOpMetatype):
     name = "GlobalMaxPoolOp"
     op_names = ["GlobalMaxPool"]
-    hw_config_names = [HWConfigOpName.MAXPOOL]
+    hw_config_names = [HWConfigOpName.MAX_POOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXMaxPoolMetatype(ONNXOpMetatype):
     name = "MaxPoolOp"
     op_names = ["MaxPool"]
-    hw_config_names = [HWConfigOpName.MAXPOOL]
+    hw_config_names = [HWConfigOpName.MAX_POOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -344,7 +344,7 @@ class ONNXLessMetatype(ONNXOpMetatype):
 class ONNXLessOrEqualMetatype(ONNXOpMetatype):
     name = "LessOrEqualOp"
     op_names = ["LessOrEqual"]
-    hw_config_names = [HWConfigOpName.LESSEQUAL]
+    hw_config_names = [HWConfigOpName.LESS_EQUAL]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -358,7 +358,7 @@ class ONNXGreaterMetatype(ONNXOpMetatype):
 class ONNXGreaterOrEqualMetatype(ONNXOpMetatype):
     name = "GreaterOrEqualOp"
     op_names = ["GreaterOrEqual"]
-    hw_config_names = [HWConfigOpName.GREATEREQUAL]
+    hw_config_names = [HWConfigOpName.GREATER_EQUAL]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -372,35 +372,35 @@ class ONNXEqualMetatype(ONNXOpMetatype):
 class ONNXNotMetatype(ONNXOpMetatype):
     name = "NotOp"
     op_names = ["Not"]
-    hw_config_names = [HWConfigOpName.LOGICALNOT]
+    hw_config_names = [HWConfigOpName.LOGICAL_NOT]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAndMetatype(ONNXOpMetatype):
     name = "AndOp"
     op_names = ["And"]
-    hw_config_names = [HWConfigOpName.LOGICALAND]
+    hw_config_names = [HWConfigOpName.LOGICAL_AND]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXOrMetatype(ONNXOpMetatype):
     name = "OrOp"
     op_names = ["Or"]
-    hw_config_names = [HWConfigOpName.LOGICALOR]
+    hw_config_names = [HWConfigOpName.LOGICAL_OR]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXXOrMetatype(ONNXOpMetatype):
     name = "XorOp"
     op_names = ["Xor"]
-    hw_config_names = [HWConfigOpName.LOGICALXOR]
+    hw_config_names = [HWConfigOpName.LOGICAL_XOR]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXModMetatype(ONNXOpMetatype):
     name = "ModOp"
     op_names = ["Mod"]
-    hw_config_names = [HWConfigOpName.FLOORMOD]
+    hw_config_names = [HWConfigOpName.FLOOR_MOD]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -559,20 +559,20 @@ class ONNXReduceMinMetatype(ONNXOpMetatype):
 class ONNXReduceMaxMetatype(ONNXOpMetatype):
     name = "ReduceMaxOp"
     op_names = ["ReduceMax"]
-    hw_config_names = [HWConfigOpName.REDUCEMAX]
+    hw_config_names = [HWConfigOpName.REDUCE_MAX]
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXReduceSumMetatype(ONNXOpMetatype):
     name = "ReduceSumOp"
     op_names = ["ReduceSum"]
-    hw_config_names = [HWConfigOpName.REDUCESUM]
+    hw_config_names = [HWConfigOpName.REDUCE_SUM]
 
 
 class ONNXReduceL2Metatype(ONNXOpMetatype):
     name = "ReduceL2Op"
     op_names = ["ReduceL2"]
-    hw_config_names = [HWConfigOpName.REDUCEL2]
+    hw_config_names = [HWConfigOpName.REDUCE_L2]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -591,7 +591,7 @@ class ONNXSpaceToDepthMetatype(ONNXOpMetatype):
 class ONNXReduceMeanMetatype(ONNXOpMetatype):
     name = "ReduceMeanOp"
     op_names = ["ReduceMean"]
-    hw_config_names = [HWConfigOpName.REDUCEMEAN]
+    hw_config_names = [HWConfigOpName.REDUCE_MEAN]
 
 
 @ONNX_OPERATION_METATYPES.register()
