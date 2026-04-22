@@ -14,7 +14,7 @@ from enum import auto
 from nncf.parameters import StrEnum
 
 
-class HWConfigOpName(StrEnum):
+class HWOpName(StrEnum):
     """
     Enumeration of operation types supported by hardware quantization configurations.
 

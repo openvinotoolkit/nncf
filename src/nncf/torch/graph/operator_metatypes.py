@@ -22,7 +22,7 @@ from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
-from nncf.common.hardware.opset import HWConfigOpName
+from nncf.common.hardware.opset import HWOpName
 
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
@@ -181,7 +181,7 @@ class PTNoopMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv1DOp"
-    hw_config_name = [HWConfigOpName.DEPTHWISE_CONVOLUTION]
+    hw_config_name = [HWOpName.DEPTHWISE_CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     output_channel_axis = 1
     num_expected_input_edges = 2
@@ -192,7 +192,7 @@ class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
 @PT_OPERATOR_METATYPES.register()
 class PTConv1dMetatype(PTOperatorMetatype):
     name = "Conv1DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    hw_config_names = [HWOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     subtypes = [PTDepthwiseConv1dSubtype]
     output_channel_axis = 1
@@ -204,7 +204,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv2DOp"
-    hw_config_names = [HWConfigOpName.DEPTHWISE_CONVOLUTION]
+    hw_config_names = [HWOpName.DEPTHWISE_CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     output_channel_axis = 1
     num_expected_input_edges = 2
@@ -215,7 +215,7 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
 @PT_OPERATOR_METATYPES.register()
 class PTConv2dMetatype(PTOperatorMetatype):
     name = "Conv2DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    hw_config_names = [HWOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     subtypes = [PTDepthwiseConv2dSubtype]
     output_channel_axis = 1
@@ -227,7 +227,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv3DOp"
-    hw_config_names = [HWConfigOpName.DEPTHWISE_CONVOLUTION]
+    hw_config_names = [HWOpName.DEPTHWISE_CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     output_channel_axis = 1
     num_expected_input_edges = 2
@@ -238,7 +238,7 @@ class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
 @PT_OPERATOR_METATYPES.register()
 class PTConv3dMetatype(PTOperatorMetatype):
     name = "Conv3DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    hw_config_names = [HWOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     subtypes = [PTDepthwiseConv3dSubtype]
     output_channel_axis = 1
@@ -250,7 +250,7 @@ class PTConv3dMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTConvTranspose1dMetatype(PTOperatorMetatype):
     name = "ConvTranspose1DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    hw_config_names = [HWOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
     output_channel_axis = 1
     num_expected_input_edges = 2
@@ -261,7 +261,7 @@ class PTConvTranspose1dMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTConvTranspose2dMetatype(PTOperatorMetatype):
     name = "ConvTranspose2DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    hw_config_names = [HWOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
     subtypes = []
     output_channel_axis = 1
@@ -273,7 +273,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTConvTranspose3dMetatype(PTOperatorMetatype):
     name = "ConvTranspose3DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    hw_config_names = [HWOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
     subtypes = []
     output_channel_axis = 1
@@ -295,7 +295,7 @@ class PTDeformConv2dMetatype(PTOperatorMetatype):
 class PTLinearMetatype(PTOperatorMetatype):
     name = "LinearOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"]}
-    hw_config_names = [HWConfigOpName.MAT_MUL]
+    hw_config_names = [HWOpName.MAT_MUL]
     subtypes = []
     output_channel_axis = -1
     num_expected_input_edges = 2
@@ -356,7 +356,7 @@ class PTLeakyRELUMetatype(PTOperatorMetatype):
 class PTLayerNormMetatype(PTOperatorMetatype):
     name = "LayerNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]}
-    hw_config_names = [HWConfigOpName.MVN]
+    hw_config_names = [HWOpName.MVN]
     subtypes = []
     num_expected_input_edges = 1
     weight_port_ids = [2]
@@ -366,7 +366,7 @@ class PTLayerNormMetatype(PTOperatorMetatype):
 class PTGroupNormMetatype(PTOperatorMetatype):
     name = "GroupNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
-    hw_config_names = [HWConfigOpName.MVN]
+    hw_config_names = [HWOpName.MVN]
     subtypes = []
     weight_port_ids = [2]
 
@@ -374,7 +374,7 @@ class PTGroupNormMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTGELUMetatype(PTOperatorMetatype):
     name = "GeluOp"
-    hw_config_names = [HWConfigOpName.GELU]
+    hw_config_names = [HWOpName.GELU]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["gelu"]}
 
 
@@ -413,7 +413,7 @@ class PTAddMetatype(PTOperatorMetatype):
         ],
         NamespaceTarget.TORCH: ["add"],
     }
-    hw_config_names = [HWConfigOpName.ADD]
+    hw_config_names = [HWOpName.ADD]
     num_expected_input_edges = 2
 
 
@@ -430,7 +430,7 @@ class PTSubMetatype(PTOperatorMetatype):
         ],
         NamespaceTarget.TORCH: ["sub"],
     }
-    hw_config_names = [HWConfigOpName.SUBTRACT]
+    hw_config_names = [HWOpName.SUBTRACT]
     num_expected_input_edges = 2
 
 
@@ -441,7 +441,7 @@ class PTMulMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["mul", "mul_", "__mul__", "__imul__", "__rmul__"],
         NamespaceTarget.TORCH: ["mul"],
     }
-    hw_config_names = [HWConfigOpName.MULTIPLY]
+    hw_config_names = [HWOpName.MULTIPLY]
     num_expected_input_edges = 2
 
 
@@ -461,7 +461,7 @@ class PTDivMetatype(PTOperatorMetatype):
         ],
         NamespaceTarget.TORCH: ["div"],
     }
-    hw_config_names = [HWConfigOpName.DIVIDE]
+    hw_config_names = [HWOpName.DIVIDE]
     num_expected_input_edges = 2
 
 
@@ -517,7 +517,7 @@ class PTMatMulMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__", "__rmatmul__"],
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
-    hw_config_names = [HWConfigOpName.MAT_MUL]
+    hw_config_names = [HWOpName.MAT_MUL]
     num_expected_input_edges = 2
     weight_port_ids = [0, 1]
 
@@ -526,7 +526,7 @@ class PTMatMulMetatype(PTOperatorMetatype):
 class PTAddmmMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["addmm", "baddbmm"]}
-    hw_config_names = [HWConfigOpName.MAT_MUL]
+    hw_config_names = [HWOpName.MAT_MUL]
     # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
     # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication
     # and therefore won't quantize the bias input, as this would break the hardware-fused pattern.
@@ -539,7 +539,7 @@ class PTAddmmMetatype(PTOperatorMetatype):
 class PTMeanMetatype(PTOperatorMetatype):
     name = "MeanOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["mean"]}
-    hw_config_names = [HWConfigOpName.REDUCE_MEAN]
+    hw_config_names = [HWOpName.REDUCE_MEAN]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -586,21 +586,21 @@ class PTAvgPool1dMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool1d", "adaptive_avg_pool1d"],
         NamespaceTarget.ATEN: ["adaptive_avg_pool1d"],
     }
-    hw_config_names = [HWConfigOpName.AVG_POOL]
+    hw_config_names = [HWOpName.AVG_POOL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTAvgPool2dMetatype(PTOperatorMetatype):
     name = "AvgPool2DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool2d", "adaptive_avg_pool2d"]}
-    hw_config_names = [HWConfigOpName.AVG_POOL]
+    hw_config_names = [HWOpName.AVG_POOL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTAvgPool3dMetatype(PTOperatorMetatype):
     name = "AvgPool3DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["avg_pool3d", "adaptive_avg_pool3d"]}
-    hw_config_names = [HWConfigOpName.AVG_POOL]
+    hw_config_names = [HWOpName.AVG_POOL]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -624,21 +624,21 @@ class PTAdaptiveMaxPool3dMetatype(PTOperatorMetatype):
 class PTMaxPool1dMetatype(PTOperatorMetatype):
     name = "MaxPool1DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d"]}
-    hw_config_names = [HWConfigOpName.MAX_POOL]
+    hw_config_names = [HWOpName.MAX_POOL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool2dMetatype(PTOperatorMetatype):
     name = "MaxPool2DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool2d"]}
-    hw_config_names = [HWConfigOpName.MAX_POOL]
+    hw_config_names = [HWOpName.MAX_POOL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool3dMetatype(PTOperatorMetatype):
     name = "MaxPool3DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d"]}
-    hw_config_names = [HWConfigOpName.MAX_POOL]
+    hw_config_names = [HWOpName.MAX_POOL]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -669,7 +669,7 @@ class PTPadMetatype(PTOperatorMetatype):
 class PTCatMetatype(PTOperatorMetatype):
     name = "CatOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["cat", "stack", "concat"]}
-    hw_config_names = [HWConfigOpName.CONCAT]
+    hw_config_names = [HWOpName.CONCAT]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -688,14 +688,14 @@ class PTRELU6Metatype(PTOperatorMetatype):
 class PTMaxMetatype(PTOperatorMetatype):
     name = "MaxOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["max"]}
-    hw_config_names = [HWConfigOpName.MAXIMUM, HWConfigOpName.REDUCE_MAX]
+    hw_config_names = [HWOpName.MAXIMUM, HWOpName.REDUCE_MAX]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTMinMetatype(PTOperatorMetatype):
     name = "MinOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["min"]}
-    hw_config_names = [HWConfigOpName.MINIMUM]
+    hw_config_names = [HWOpName.MINIMUM]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -705,7 +705,7 @@ class PTTransposeMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["transpose", "permute", "transpose_"],
         NamespaceTarget.TORCH: ["transpose"],
     }
-    hw_config_names = [HWConfigOpName.TRANSPOSE]
+    hw_config_names = [HWOpName.TRANSPOSE]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -731,7 +731,7 @@ class PTReshapeMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "unsqueeze"],
         NamespaceTarget.TORCH: ["flatten", "unflatten", "unsqueeze"],
     }
-    hw_config_names = [HWConfigOpName.RESHAPE, HWConfigOpName.UNSQUEEZE, HWConfigOpName.FLATTEN]
+    hw_config_names = [HWOpName.RESHAPE, HWOpName.UNSQUEEZE, HWOpName.FLATTEN]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -741,7 +741,7 @@ class PTSqueezeMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["squeeze"],
         NamespaceTarget.TORCH: ["squeeze"],
     }
-    hw_config_names = [HWConfigOpName.SQUEEZE]
+    hw_config_names = [HWOpName.SQUEEZE]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -753,7 +753,7 @@ class PTSplitMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["split", "chunk", "unbind"],
         NamespaceTarget.ATEN: ["split_with_sizes"],
     }
-    hw_config_names = [HWConfigOpName.SPLIT, HWConfigOpName.CHUNK]
+    hw_config_names = [HWOpName.SPLIT, HWOpName.CHUNK]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -772,7 +772,7 @@ class PTExpandAsMetatype(PTOperatorMetatype):
 class PTEmbeddingMetatype(PTOperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]}
-    hw_config_names = [HWConfigOpName.EMBEDDING]
+    hw_config_names = [HWOpName.EMBEDDING]
     subtypes = []
     weight_port_ids = [1]
 
@@ -781,7 +781,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
 class PTAtenEmbeddingMetatype(OperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
-    hw_config_names = [HWConfigOpName.EMBEDDING]
+    hw_config_names = [HWOpName.EMBEDDING]
     weight_port_ids = [0]
 
 
@@ -789,7 +789,7 @@ class PTAtenEmbeddingMetatype(OperatorMetatype):
 class PTEmbeddingBagMetatype(PTOperatorMetatype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding_bag"]}
-    hw_config_names = [HWConfigOpName.EMBEDDING_BAG]
+    hw_config_names = [HWOpName.EMBEDDING_BAG]
     subtypes = []
     weight_port_ids = [1]
 
@@ -798,7 +798,7 @@ class PTEmbeddingBagMetatype(PTOperatorMetatype):
 class PTAtenEmbeddingBagMetatype(OperatorMetatype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding_bag"]}
-    hw_config_names = [HWConfigOpName.EMBEDDING_BAG]
+    hw_config_names = [HWOpName.EMBEDDING_BAG]
     weight_port_ids = [0]
 
 
@@ -812,77 +812,77 @@ class PTSoftmaxMetatype(PTOperatorMetatype):
 class PTLessMetatype(PTOperatorMetatype):
     name = "LessOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__lt__"]}
-    hw_config_names = [HWConfigOpName.LESS]
+    hw_config_names = [HWOpName.LESS]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLessEqualMetatype(PTOperatorMetatype):
     name = "LessEqualOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__le__"]}
-    hw_config_names = [HWConfigOpName.LESS_EQUAL]
+    hw_config_names = [HWOpName.LESS_EQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTGreaterMetatype(PTOperatorMetatype):
     name = "GreaterOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__gt__"]}
-    hw_config_names = [HWConfigOpName.GREATER]
+    hw_config_names = [HWOpName.GREATER]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTGreaterEqualMetatype(PTOperatorMetatype):
     name = "GreaterEqualOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__ge__"]}
-    hw_config_names = [HWConfigOpName.GREATER_EQUAL]
+    hw_config_names = [HWOpName.GREATER_EQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTModMetatype(PTOperatorMetatype):
     name = "ModOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__mod__"]}
-    hw_config_names = [HWConfigOpName.FLOOR_MOD]
+    hw_config_names = [HWOpName.FLOOR_MOD]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTEqualsMetatype(PTOperatorMetatype):
     name = "EqualsOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__eq__"]}
-    hw_config_names = [HWConfigOpName.EQUAL]
+    hw_config_names = [HWOpName.EQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTNotEqualMetatype(PTOperatorMetatype):
     name = "NotEqualOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__ne__"]}
-    hw_config_names = [HWConfigOpName.NOT_EQUAL]
+    hw_config_names = [HWOpName.NOT_EQUAL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalOrMetatype(PTOperatorMetatype):
     name = "LogicalOrOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__", "__ior__", "__ror__"]}
-    hw_config_names = [HWConfigOpName.LOGICAL_OR]
+    hw_config_names = [HWOpName.LOGICAL_OR]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalXorMetatype(PTOperatorMetatype):
     name = "LogicalXorOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__xor__", "__ixor__", "__rxor__"]}
-    hw_config_names = [HWConfigOpName.LOGICAL_XOR]
+    hw_config_names = [HWOpName.LOGICAL_XOR]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalAndMetatype(PTOperatorMetatype):
     name = "LogicalAndOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__and__", "__iand__", "__rand__"]}
-    hw_config_names = [HWConfigOpName.LOGICAL_AND]
+    hw_config_names = [HWOpName.LOGICAL_AND]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalNotMetatype(PTOperatorMetatype):
     name = "LogicalNotOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["logical_not_", "__invert__"]}
-    hw_config_names = [HWConfigOpName.LOGICAL_NOT]
+    hw_config_names = [HWOpName.LOGICAL_NOT]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -901,7 +901,7 @@ class PTPowerMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["pow", "__pow__", "__ipow__", "__rpow__"],
         NamespaceTarget.TORCH: ["pow"],
     }
-    hw_config_names = [HWConfigOpName.POWER]
+    hw_config_names = [HWOpName.POWER]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -911,7 +911,7 @@ class PTSqrtMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_TENSOR: ["sqrt", "sqrt_"],
         NamespaceTarget.TORCH: ["sqrt", "sqrt_"],
     }
-    hw_config_names = [HWConfigOpName.POWER]
+    hw_config_names = [HWOpName.POWER]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -921,7 +921,7 @@ class PTInterpolateMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["interpolate"],
         NamespaceTarget.ATEN: ["upsample_nearest2d", "upsample_nearest_exact2d"],
     }
-    hw_config_names = [HWConfigOpName.INTERPOLATE]
+    hw_config_names = [HWOpName.INTERPOLATE]
     num_expected_input_edges = 1
 
 
@@ -929,7 +929,7 @@ class PTInterpolateMetatype(PTOperatorMetatype):
 class PTRepeatMetatype(PTOperatorMetatype):
     name = "RepeatOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["repeat_interleave"]}
-    hw_config_names = [HWConfigOpName.TILE]
+    hw_config_names = [HWOpName.TILE]
     num_expected_input_edges = 1
 
 
@@ -944,7 +944,7 @@ class PTPixelShuffleMetatype(PTOperatorMetatype):
 class PTSumMetatype(PTOperatorMetatype):
     name = "SumOp"
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["sum"], NamespaceTarget.TORCH: ["sum"]}
-    hw_config_names = [HWConfigOpName.REDUCE_SUM]
+    hw_config_names = [HWOpName.REDUCE_SUM]
     num_expected_input_edges = 1
 
 
@@ -954,7 +954,7 @@ class PTReduceL2(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["normalize"],  # note: normalize is for general L_p normalization
     }
-    hw_config_names = [HWConfigOpName.REDUCE_L2]
+    hw_config_names = [HWOpName.REDUCE_L2]
     num_expected_input_edges = 1
 
 
@@ -964,7 +964,7 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["scaled_dot_product_attention"],
     }
-    hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
+    hw_config_names = [HWOpName.SCALED_DOT_PRODUCT_ATTENTION]
     target_input_ports = [0, 1]
 
 

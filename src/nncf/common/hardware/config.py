@@ -21,7 +21,7 @@ from nncf.common.hardware.defines import ADJUST_PADDING
 from nncf.common.hardware.defines import SCALES
 from nncf.common.hardware.defines import UNIFIED
 from nncf.common.hardware.defines import OpDesc
-from nncf.common.hardware.opset import HWConfigOpName
+from nncf.common.hardware.opset import HWOpName
 from nncf.common.hardware.setups.cpu import CPU_SETUP
 from nncf.common.hardware.setups.gpu import GPU_SETUP
 from nncf.common.hardware.setups.npu import NPU_SETUP
@@ -101,7 +101,7 @@ class HWConfig(ABC):
 
         return retval
 
-    def _get_metatypes_for_hw_config_op(self, hw_config_op: HWConfigOpName) -> set[type[OperatorMetatype]]:
+    def _get_metatypes_for_hw_config_op(self, hw_config_op: HWOpName) -> set[type[OperatorMetatype]]:
         """
         Retrieve a set of operator metatypes that match the given hardware operation name.
 
