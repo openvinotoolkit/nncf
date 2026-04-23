@@ -252,7 +252,7 @@ nncf_config = resuming_checkpoint['nncf_config']
 state_dict = resuming_checkpoint['state_dict']
 
 quantized_model = nncf.torch.load_from_config(model, nncf_config)
-model.load_state_dict(state_dict)
+quantized_model.load_state_dict(state_dict)
 # ... the rest of the usual PyTorch-powered training pipeline
 ```
 
