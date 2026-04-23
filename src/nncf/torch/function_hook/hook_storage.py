@@ -239,13 +239,14 @@ class HookStorage(nn.Module):
         if not storage_dict[hook_key]:
             del storage_dict[hook_key]
 
-    def insert_hook_by_name(self, hook_name: str, hook: nn.Module) -> None:
+    def insert_hook_by_name(self, hook_name: str, hook: nn.Module) -> RemovableHookHandle:
         """
         Inserts a hook at the exact slot identified by hook_name.
         The name must follow the format produced by `named_hooks` method, like `pre_hooks.linear__0.0`.
 
         :param hook_name: Full hook name.
         :param hook: The hook module to insert.
+        :return: A handle for removing the registered hook.
         """
         hook_type, op_name, port_id = decode_hook_name(hook_name)
         hook_id = hook_name.split(".")[-1]
