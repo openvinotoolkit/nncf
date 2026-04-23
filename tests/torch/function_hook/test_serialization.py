@@ -86,7 +86,7 @@ def test_error_duplicate_names():
         load_from_config(SimpleModel(), config)
 
 
-def test_error_not_registered_compression_modules():
+def test_error_not_stateful_modules():
     model = wrap_model(SimpleModel())
     register_pre_function_hook(model, "conv1/conv2d/0", 0, nn.ReLU())
 
