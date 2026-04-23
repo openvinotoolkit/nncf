@@ -152,6 +152,7 @@ class SCQPointStateNames:
     NAMES_OF_QUANTIZED_OPS = "directly_quantized_operator_node_names"
 
 
+@CommonStatefulClassesRegistry.register()
 class SingleConfigQuantizationPoint(QuantizationPointBase):
     _state_names = SCQPointStateNames
 
@@ -453,7 +454,8 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 
         def decode_qp(pair: tuple[str, dict[str, Any]]) -> tuple[int, SingleConfigQuantizationPoint]:
             str_qp_id, qp_state = pair
-            return int(str_qp_id), SingleConfigQuantizationPoint.from_state(qp_state)
+            qp_cls = CommonStatefulClassesRegistry.get_registered_class(SingleConfigQuantizationPoint.__name__)
+            return int(str_qp_id), qp_cls.from_state(qp_state)
 
         def list2set(pair: tuple[str, list[int]]) -> tuple[int, set[int]]:
             str_idx, qp_id_list = pair
