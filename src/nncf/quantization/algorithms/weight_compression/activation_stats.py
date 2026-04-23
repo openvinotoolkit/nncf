@@ -17,16 +17,23 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int = -1) -> tuple[Tensor, Tensor]:
+def process_stats(
+    stats: WCTensorStatistic,
+    subset_size: int,
+    act_ch_axis: int = -1,
+    transpose_a: bool = False,
+) -> tuple[Tensor, Tensor]:
     """
     A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
     :param stats: An object containing statistics for the layer.
     :param subset_size: The number of samples for AWQ. If subset_size <= 0, all samples are used.
     :param act_ch_axis: The activation channel axis.
+    :param transpose_a: When True, returns X in [SampleSize, HiddenDim] layout instead of the default
+        [HiddenDim, SampleSize]. Used by LoRA Correction which requires samples as rows.
     :return: tuple of the following tensors:
-        s - maximum channel magnitude across samples [HiddenDim]
-        X - average channel magnitude across tokens in the sequence [HiddenDim, min(SampleSize, ~subset_size)]
+        s - maximum channel magnitude across samples, shape [HiddenDim]
+        X - activation matrix, shape [HiddenDim, SampleSize] normally or [SampleSize, HiddenDim] if transpose_a=True
     """
     X = fns.stack(
         stats.mean_values
@@ -37,8 +44,13 @@ def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int =
     axes = list(range(1, len(X.shape))) + [0]
     X_full = fns.transpose(X, axes=axes)
 
-    # The sample dimension is always the last axis after transpose
-    sample_axis = -1
+    if transpose_a:
+        axes = list(range(len(X_full.shape)))
+        axes[-1], axes[-2] = axes[-2], axes[-1]
+        X_full = fns.transpose(X_full, axes=axes)
+
+    # The sample dimension is axis -1 by default, but moves to -2 if transpose_a is True
+    sample_axis = -2 if transpose_a else -1
 
     # Prevent high memory and time consumption by sampling
     if X_full.shape[sample_axis] > subset_size and subset_size > 0:
@@ -47,11 +59,13 @@ def process_stats(stats: WCTensorStatistic, subset_size: int, act_ch_axis: int =
         ]
         step = X_full.shape[sample_axis] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-        X = X_full[..., idxs]
+        if transpose_a:
+            X = X_full[..., idxs, :]
+        else:
+            X = X_full[..., idxs]
     else:
         X = X_full
 
-    # Compute max magnitude along the sample axis (last axis)
-    # Result: [HiddenDim] or [No. of Experts, HiddenDim]
+    # Compute max magnitude along the sample axis
     s = fns.max(fns.abs(X_full), axis=sample_axis)
     return s, X
