@@ -14,6 +14,7 @@ import pytest
 import torch
 from torch import nn
 
+from nncf.errors import InternalError
 from nncf.torch.function_hook.hook_storage import HookStorage
 from nncf.torch.function_hook.hook_storage import decode_hook_name
 from tests.torch.function_hook.helpers import CallCount
@@ -242,7 +243,7 @@ def test_insert_hook_by_name():
     assert ("pre_hooks.foo__0.0", pre_hook) in named
     assert ("post_hooks.foo__0.3", post_hook) in named
 
-    with pytest.raises(ValueError, match="already occupied"):
+    with pytest.raises(InternalError, match="already occupied"):
         hook_storage.insert_hook_by_name("pre_hooks.foo__0.0", nn.Identity())
 
 
