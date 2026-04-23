@@ -117,16 +117,15 @@ def test_backward_compatibility_map(module_cls: str):
 
 @pytest.fixture()
 def _restore_sys_modules():
-    original_modules = sys.modules.copy()
+    module_path = "nncf.torch.quantization.layers"
+    state = sys.modules.pop(module_path, None)
     yield
-    sys.modules = original_modules
+    if state is not None:
+        sys.modules[module_path] = state
 
 
 @pytest.mark.parametrize("with_module_path", [True, False], ids=["new_config", "legacy_config"])
 def test_load_from_config_without_manual_compression_class_import(with_module_path: bool, _restore_sys_modules: None):
-    module_path = "nncf.torch.quantization.layers"
-    sys.modules.pop(module_path, None)
-
     compression_state = {
         "hook_names_in_model": ["pre_hooks.conv1/conv2d/0__0.0"],
         "module_cls_name": "AsymmetricQuantizer",
@@ -151,6 +150,6 @@ def test_load_from_config_without_manual_compression_class_import(with_module_pa
     quantizer = hook_storage.get_submodule("pre_hooks.conv1/conv2d/0__0.0")
 
     assert quantizer.__class__.__name__ == "AsymmetricQuantizer"
-    assert quantizer.__class__.__module__ == module_path
+    assert quantizer.__class__.__module__ == "nncf.torch.quantization.layers"
 
-    assert module_path in sys.modules
+    assert "nncf.torch.quantization.layers" in sys.modules
