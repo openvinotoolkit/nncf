@@ -11,10 +11,12 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
+from typing import Any, TypeVar
 
 import torch
 from torch import nn
+
+TObj = TypeVar("TObj", bound="StatefulModuleInterface")
 
 
 class StatefulModuleInterface(ABC):
@@ -39,7 +41,7 @@ class StatefulModuleInterface(ABC):
 
     @classmethod
     @abstractmethod
-    def from_config(cls, state: dict[str, Any]) -> object:
+    def from_config(cls: type[TObj], state: dict[str, Any]) -> TObj:
         """
         Creates a compression module instance from the given config.
         """
