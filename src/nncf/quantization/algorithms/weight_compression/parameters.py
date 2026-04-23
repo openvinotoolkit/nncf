@@ -12,6 +12,7 @@
 from dataclasses import dataclass
 
 from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 
 @dataclass
@@ -32,3 +33,17 @@ class CompressedWeight:
     zero_point: Tensor | None = None
     codebook: Tensor | None = None
     global_scale: Tensor | None = None
+
+    def get_unscaled_tensor(self) -> Tensor | None:
+        """
+        Returns the quantized weight values before scaling. For non-codebook compression, equals the tensor as-is.
+        For codebook compression, returns the codebook values indexed by the tensor.
+
+        :return: Tensor with quantized weight values.
+        """
+        if self.tensor is not None and self.codebook is not None:
+            # Convert fp datatypes like f8e4m3/fp4e2m1 to a numpy fp32 array
+            # Then converting the array back to the backend tensor
+            codebook = fns.from_numpy(self.codebook.as_numpy_tensor().data, backend=self.tensor.backend)
+            return codebook[self.tensor]
+        return self.tensor

@@ -104,17 +104,20 @@ def get_model_inputs(model: onnx.ModelProto) -> list[onnx.ValueInfoProto]:
     return inputs
 
 
-def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:
+def get_input_port_ids_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> list[int]:
     """
-    Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
+    Returns input_port_id list for 'to_node' connected with the model input with the name 'input_name'.
 
     :param input_name: Name of the ONNX model Input.
     :param to_node: Node, which has input edge with 'input_name' name.
-    :return: input port number for 'to_node', which is connected to 'input_name'.
+    :return: List of input port numbers for 'to_node', which is connected to 'input_name'.
     """
+    retval = []
     for input_port_id, port in enumerate(to_node.input):
         if port == input_name:
-            return input_port_id
+            retval.append(input_port_id)
+    if retval:
+        return retval
     msg = f"The node {to_node} does not have input edge with the name {input_name}"
     raise nncf.ValidationError(msg)
 

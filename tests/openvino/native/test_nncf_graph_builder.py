@@ -75,7 +75,6 @@ def test_parallel_edges():
             output_port_id=output_port_id,
             tensor_shape=[1, 3, 3],
             dtype=Dtype.FLOAT,
-            parallel_input_port_ids=[],
         )
 
     model = ParallelEdgesModel().ov_model

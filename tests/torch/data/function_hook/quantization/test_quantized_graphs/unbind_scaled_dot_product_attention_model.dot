@@ -1,4 +1,4 @@
-strict digraph {
+digraph {
 x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "/unbind/0" [id=1, type=unbind, metatype=PTSplitMetatype];
 "__nncf_hooks.pre_hooks./scaled_dot_product_attention/0__0.0._scale_param_storage" [id=2, type="nncf_model_const", metatype=PTConstNoopMetatype];
@@ -7,13 +7,13 @@ x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" [id=5, type="symmetric_quantize", metatype=UnknownMetatype];
 "/scaled_dot_product_attention/0" [id=6, type="scaled_dot_product_attention", metatype=PTScaledDotProductAttentionMetatype];
 output [id=7, type="nncf_model_output", metatype=PTOutputNoopMetatype];
-x -> "/unbind/0" [dtype=float, shape="(3, 1, 8, 16)", out_port_id=0, in_port_id=0];
-"/unbind/0" -> "pre_hook__-scaled_dot_product_attention-0__0[0]/symmetric_quantize/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
-"/unbind/0" -> "pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(1, 8, 16)", out_port_id=1, in_port_id=0];
-"/unbind/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=2, in_port_id=2];
-"__nncf_hooks.pre_hooks./scaled_dot_product_attention/0__0.0._scale_param_storage" -> "pre_hook__-scaled_dot_product_attention-0__0[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
-"pre_hook__-scaled_dot_product_attention-0__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
-"__nncf_hooks.pre_hooks./scaled_dot_product_attention/0__1.0._scale_param_storage" -> "pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
-"pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=1];
-"/scaled_dot_product_attention/0" -> output [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+x -> "/unbind/0" [key=0, dtype=float, shape="(3, 1, 8, 16)", out_port_id=0, in_port_id=0];
+"/unbind/0" -> "pre_hook__-scaled_dot_product_attention-0__0[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+"/unbind/0" -> "pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=1, in_port_id=0];
+"/unbind/0" -> "/scaled_dot_product_attention/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=2, in_port_id=2];
+"__nncf_hooks.pre_hooks./scaled_dot_product_attention/0__0.0._scale_param_storage" -> "pre_hook__-scaled_dot_product_attention-0__0[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"pre_hook__-scaled_dot_product_attention-0__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks./scaled_dot_product_attention/0__1.0._scale_param_storage" -> "pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"pre_hook__-scaled_dot_product_attention-0__1[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=1];
+"/scaled_dot_product_attention/0" -> output [key=0, dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
 }

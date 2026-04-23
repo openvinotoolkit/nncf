@@ -11,8 +11,10 @@
 
 import pytest
 
+from nncf import IgnoredScope
 from nncf.parameters import ModelType
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
+from tests.onnx.models import MultiInputOutputNetParallelEdgesQuantizable
 from tests.onnx.models import RoPEModel
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import min_max_quantize_model
@@ -28,6 +30,13 @@ def test_synthetic_models_graph(model_cls_to_test, mocker):
     model_to_test = model_cls_to_test()
     quantized_model = min_max_quantize_model(model_to_test.onnx_model)
     compare_nncf_graph(quantized_model, "synthetic/" + model_to_test.path_ref_graph)
+
+
+def test_multi_output_port_id_model(mocker):
+    mock_collect_statistics(mocker)
+    model_to_test = MultiInputOutputNetParallelEdgesQuantizable()
+    quantized_model = min_max_quantize_model(model_to_test.onnx_model, ignored_scope=IgnoredScope(types=["Split"]))
+    compare_nncf_graph(quantized_model, "synthetic/multi_output_port_id_model.dot")
 
 
 @pytest.mark.parametrize("model_cls_to_test", [RoPEModel])

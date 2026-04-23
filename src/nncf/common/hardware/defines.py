@@ -14,6 +14,7 @@ from dataclasses import field
 from itertools import product
 from typing import Any
 
+from nncf.common.hardware.opset import HWOpName
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.parameters import StrEnum
@@ -79,7 +80,7 @@ class OpDesc:
     :param attributes: A dictionary of additional attributes.
     """
 
-    type: str
+    type: HWOpName
     activations: tuple[QConfigSpace, ...] = field(default_factory=tuple)
     weights: tuple[QConfigSpace, ...] = field(default_factory=tuple)
     attributes: dict[str, Any] = field(default_factory=dict)

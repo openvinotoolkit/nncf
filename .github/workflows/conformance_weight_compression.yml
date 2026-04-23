@@ -1,19 +1,42 @@
 name: Weight compression
+run-name: "Weight compression${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}${{ inputs.pytest_args != '' && format(' [{0}]', inputs.pytest_args) || '' }}"
 permissions: read-all
 
 on:
   workflow_call:
-  workflow_dispatch:
     inputs:
-      pull_request_number:
+      pr_num:
         description: 'The pull request number'
+        type: string
         default: ''
       pytest_args:
         description: 'Pytest arguments'
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        type: string
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        type: string
         default: ''
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHON_VERSION: "3.12"
+  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
+  TQDM_DISABLE: 1
+  RESULT_XML: "pytest-results.xml"
+  HOME_HF: "/home/runner/hf_home"
+
 jobs:
-  examples-cpu:
+  weight-compression-cpu:
     name: Weight compression [${{ matrix.group }}/6]
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 60
@@ -21,77 +44,56 @@ jobs:
       fail-fast: false
       matrix:
         group: [1, 2, 3, 4, 5, 6]
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-            lfs: true
-            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: 3.10.14
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: uv pip install --system . -r tests/post_training/requirements.txt
       - name: Print installed modules
         run: pip list
-      - name: Run examples test scope
+      - name: Run wc test scope
         run: |
           set +e
           python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
-            --junit-xml=pytest-results.xml \
+            --junit-xml=${{ env.RESULT_XML }} \
             --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 6 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '' }}
+            ${{ env.PYTEST_ARGS }}
           ret=$?
-          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
-        env:
-          TQDM_DISABLE: 1
-          HOME_HF: "/home/runner/hf_home"
+          [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
       - name: Print results.csv
         if: ${{ !cancelled() }}
         run: column -s, -t < tmp/results.csv || echo "no file"
       - name: Upload artifact
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv
           if-no-files-found: ignore
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: weight-compression-pytest-results-${{ matrix.group }}
-          path: pytest-results.xml
-          retention-days: 1
+          path: ${{ env.RESULT_XML }}
+          retention-days: 7
 
-  weight-compression-summary:
-    name: Weight Compression Summary
-    runs-on: ubuntu-latest
-    if: ${{ always() && !cancelled() && needs.examples-cpu.result != 'cancelled' }}
-    needs: examples-cpu
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          sparse-checkout: .github/scripts/pytest_md_summary.py
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: weight-compression-pytest-results-*
-          path: test-results
-      - name: Test Summary
-        run: |
-          pip install defusedxml==0.7.1
-          python .github/scripts/pytest_md_summary.py test-results >> "$GITHUB_STEP_SUMMARY"
+  summary:
+    name: Summary WC
+    if: ${{ !cancelled() }}
+    needs: weight-compression-cpu
+    uses: ./.github/workflows/call_summary.yml
+    with:
+      artifact_pattern: weight-compression-pytest-results-*

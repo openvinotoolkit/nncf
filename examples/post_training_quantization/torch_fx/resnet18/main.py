@@ -190,7 +190,7 @@ def main():
 
     fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
     quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
-    quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
+    quantized_fx_model = torch.compile(quantized_fx_model, dynamic=True, backend="openvino")
 
     acc1_int8 = validate(val_loader, quantized_fx_model, device)
 
@@ -215,7 +215,7 @@ def main():
     print(f"{fp32_latency:.3f} ms")
 
     print("Benchmark FP32 model compiled with openvino backend ...")
-    compiled_model = torch.compile(model, backend="openvino")
+    compiled_model = torch.compile(model, dynamic=True, backend="openvino")
     fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_ov_latency:.3f} ms")
 

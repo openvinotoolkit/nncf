@@ -29,6 +29,7 @@ def _add_softmax_matmul(pattern: GraphPattern) -> None:
     branch_matmul_nodes = [
         om.ONNXReshapeMetatype,
         om.ONNXTransposeMetatype,
+        om.ONNXSplitMetatype,
         om.ONNXGatherMetatype,
         om.ONNXSqueezeMetatype,
         om.ONNXConcatMetatype,
@@ -64,6 +65,7 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
         om.ONNXReshapeMetatype,
         om.ONNXTransposeMetatype,
         om.ONNXGatherMetatype,
+        om.ONNXSplitMetatype,
         om.ONNXSqueezeMetatype,
         om.ONNXConcatMetatype,
     ]

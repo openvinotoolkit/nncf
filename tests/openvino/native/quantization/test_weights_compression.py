@@ -12,6 +12,8 @@
 import inspect
 import os
 from collections import defaultdict
+from dataclasses import dataclass
+from dataclasses import field
 from typing import Callable
 from unittest.mock import patch
 
@@ -19,7 +21,6 @@ import numpy as np
 import openvino as ov
 import pandas as pd
 import pytest
-from attr import dataclass
 from openvino import opset13 as opset
 
 import nncf
@@ -78,7 +79,7 @@ from tests.openvino.native.models import MatMul
 from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import Phi3dot5RoPEModel
-from tests.openvino.native.models import RoPEModel
+from tests.openvino.native.models import RoPEModelWC
 from tests.openvino.native.models import SAMPEModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import SimpleMoEModel
@@ -99,7 +100,7 @@ DATA_BASED_SENSITIVITY_METRICS = (
 
 ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
 
-INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
+INT8_MODES = (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
 INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
@@ -684,10 +685,10 @@ def test_shared_gather_all_layers(all_layers):
 class QuantErrorDesc:
     weight: list[float]
     ref_error: int = 0
-    axis = (1,)
+    axis: tuple[int, ...] = (1,)
     name: str = ""
     atol: float = None
-    config: WeightCompressionConfig = WeightCompressionConfig()
+    config: WeightCompressionConfig = field(default_factory=WeightCompressionConfig)
 
     def __str__(self):
         prefix = "exact_match_" if self.ref_error == 0 else ""
@@ -1033,7 +1034,7 @@ def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
 
 def test_data_type_for_num_weights(mocker):
     stub = mocker.stub()
-    params = WeightCompressionParameters(stub, stub, stub, stub, (1,), stub)
+    params = WeightCompressionParameters(stub, stub, stub, stub, (1,), stub, stub)
     assert isinstance(params.num_weights, np.uint64)
 
 
@@ -1611,7 +1612,7 @@ def test_float_compressed_weighs_range(mode, id_, data):
         ([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5]),
     ),
 )
-def test_codebook_weighs_range(data):
+def test_codebook_weights_range(data):
     data = np.array(data).astype(np.float32)
     codebook = data
     max_diff = 0.1
@@ -1625,6 +1626,7 @@ def test_codebook_weighs_range(data):
     target = np.arange(indexes.shape[0])
     assert np.allclose(indexes.data, target)
     assert np.all(np.abs(uncompressed_data.data - data) <= max_diff)
+    assert np.allclose(do_float_dequantization(cw).data, uncompressed_data)
 
 
 @pytest.mark.parametrize(
@@ -2177,7 +2179,7 @@ def test_disabled_optimized_compression(disabled):
     model = LMLinearModel(input_shape=[1, 24, hidden_dim]).ov_model
 
     def run_compression():
-        compress_weights(model, mode=CompressWeightsMode.INT8)
+        compress_weights(model, mode=CompressWeightsMode.INT8_ASYM)
 
     fn_to_patch = opt_fns.do_integer_quantization
     patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
@@ -2382,8 +2384,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return IdentityMatmul().ov_model
 
     @staticmethod
-    def get_RoPE_model() -> ov.Model:
-        return RoPEModel().ov_model
+    def get_RoPE_model(degree: int) -> ov.Model:
+        return RoPEModelWC(degree=degree).ov_model
 
     @staticmethod
     def get_SAM_PE_model() -> ov.Model:
