@@ -169,8 +169,8 @@ jobs:
           sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - name: Download CUDA
         run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/13.0.0/local_installers/cuda_13.0.0_580.65.06_linux.run
-          sudo sh cuda_13.0.0_580.65.06_linux.run --toolkit --silent
+          wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
+          sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
