@@ -131,9 +131,7 @@ def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
     return wrapped_model
 
 
-def restore_module(
-    module_path: str, cls_name: str, module_config: dict[str, Any]
-) -> nn.Module | StatefulModuleInterface:
+def restore_module(module_path: str, cls_name: str, module_config: dict[str, Any]) -> nn.Module:
     """
     Restores a compression module from a serialized command.
 
@@ -158,4 +156,4 @@ def restore_module(
         )
         raise nncf.InternalError(msg)
 
-    return module_cls.from_config(module_config)
+    return cast(nn.Module, module_cls.from_config(module_config))
