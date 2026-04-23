@@ -105,7 +105,7 @@ class HookStorage(nn.Module):
 
     @classmethod
     def _insert_hook(
-        cls, storage_dict: nn.ModuleDict, op_name: str, port_id: int, hook: nn.Module
+        cls, storage_dict: nn.ModuleDict, op_name: str, port_id: int, hook: nn.Module, hook_id: str = ""
     ) -> RemovableHookHandle:
         """
         Inserts a hook into the storage under the appropriate key.
@@ -114,6 +114,7 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
         :param hook: The hook module to be stored.
+        :param hook_id: The unique identifier for the hook. If not provided, it will be automatically generated.
         :return: A handle that can be used to remove the hook later.
         """
         hook_key = cls._generate_key(op_name, port_id)
@@ -125,7 +126,11 @@ class HookStorage(nn.Module):
             msg = f"Expected nn.ModuleDict for key={hook_key}, got {type(hooks_dict)}"
             raise TypeError(msg)
 
-        hook_id = cls._get_next_hook_id(hooks_dict)
+        hook_id = hook_id or cls._get_next_hook_id(hooks_dict)
+        if hook_id in hooks_dict:
+            msg = f"Hook slot '{hook_key}.{hook_id}' is already occupied."
+            raise InternalError(msg)
+
         hooks_dict[hook_id] = hook
 
         return RemovableHookHandle(storage_dict, hook_key, hook_id)
@@ -244,15 +249,11 @@ class HookStorage(nn.Module):
         """
         hook_type, op_name, port_id = decode_hook_name(hook_name)
         hook_id = hook_name.split(".")[-1]
+        if not hook_id.isdigit():
+            msg = f"Invalid hook name, hook id should be a digit, got {hook_id}"
+            raise ValueError(msg)
         storage_dict: nn.ModuleDict = getattr(self, hook_type)
-        hook_key = self._generate_key(op_name, port_id)
-        if hook_key not in storage_dict:
-            storage_dict[hook_key] = nn.ModuleDict()
-        hooks_dict = cast(nn.ModuleDict, storage_dict[hook_key])
-        if hook_id in hooks_dict:
-            msg = f"Hook slot '{hook_name}' is already occupied."
-            raise InternalError(msg)
-        hooks_dict[hook_id] = hook
+        return self._insert_hook(storage_dict, op_name, port_id, hook, hook_id)
 
     def is_empty(self) -> bool:
         """

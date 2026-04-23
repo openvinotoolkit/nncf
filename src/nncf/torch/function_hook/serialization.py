@@ -54,7 +54,11 @@ def get_config(model: nn.Module) -> dict[str, Any]:
     for module, names in modules_map.items():
         compression_module_name = module.__class__.__name__
         if not isinstance(module, StatefulModuleInterface):
-            msg = "Support only StatefulModuleInterface modules"
+            msg = (
+                "Support only StatefulModuleInterface modules. "
+                f"Got hook module '{module.__class__.__module__}.{module.__class__.__name__}' "
+                f"registered for hook names: {names}."
+            )
             raise nncf.InternalError(msg)
 
         serialized_transformations.append(
@@ -124,7 +128,8 @@ def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
             cls_name=command["module_cls_name"],
             module_config=command["module_config"],
         )
-        restored_module.to(device)
+        if device is not None:
+            restored_module.to(device)
         for target_name in command["hook_names_in_model"]:
             hook_storage.insert_hook_by_name(target_name, restored_module)
 
@@ -148,7 +153,9 @@ def restore_module(module_path: str, cls_name: str, module_config: dict[str, Any
     except Exception as e:
         msg = f"Error importing module {cls_name} from path {module_path}: {e}"
         raise nncf.InternalError(msg) from e
-
+    if not isinstance(module_cls, type):
+        msg = f"Expected a class for module '{cls_name}', but got {type(module_cls)}"
+        raise nncf.InternalError(msg)
     if not issubclass(module_cls, StatefulModuleInterface) or not issubclass(module_cls, nn.Module):
         msg = (
             "Support deserialization of modules which are subclasses of StatefulModuleInterface and nn.Module."
