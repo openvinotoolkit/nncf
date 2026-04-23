@@ -16,10 +16,6 @@ from typing import Any
 import torch
 from torch import nn
 
-from nncf.common.utils.registry import Registry
-
-COMPRESSION_MODULES = Registry("compression modules")
-
 
 class StatefulModuleInterface(ABC):
     """
