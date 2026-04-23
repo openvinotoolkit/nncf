@@ -16,6 +16,8 @@ from typing import Any, Iterator, cast
 
 from torch import nn
 
+from nncf.errors import InternalError
+
 
 class RemovableHookHandle:
     """
@@ -249,7 +251,7 @@ class HookStorage(nn.Module):
         hooks_dict = cast(nn.ModuleDict, storage_dict[hook_key])
         if hook_id in hooks_dict:
             msg = f"Hook slot '{hook_name}' is already occupied."
-            raise ValueError(msg)
+            raise InternalError(msg)
         hooks_dict[hook_id] = hook
 
     def is_empty(self) -> bool:

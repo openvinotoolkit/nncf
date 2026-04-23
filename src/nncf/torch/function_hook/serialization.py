@@ -119,21 +119,43 @@ def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
         nncf_logger.warning("Model is on multiple devices. Cannot determine device for loaded modules.")
 
     for command in transformation_commands:
-        module_path = command.get("module_path") or MODULE_NAME_MAP[command["module_cls_name"]]
-        imported_module = import_module(module_path)
-        module_cls = getattr(imported_module, command["module_cls_name"])
-        if not issubclass(module_cls, StatefulModuleInterface):
-            msg = "Support only StatefulModuleInterface modules"
-            raise nncf.InternalError(msg)
-        module = module_cls.from_config(command["module_config"])
-        module.to(device)
+        restored_module = restore_module(
+            module_path=command.get("module_path", ""),  # Use get to avoid KeyError for backward compatibility
+            cls_name=command["module_cls_name"],
+            module_config=command["module_config"],
+        )
+        restored_module.to(device)
         for target_name in command["hook_names_in_model"]:
-            hook_type, hook_key, hook_id = target_name.split(".")
-            storage_dict = getattr(hook_storage, hook_type)
-            if hook_key not in storage_dict:
-                storage_dict[hook_key] = nn.ModuleDict()
-            if hook_id in storage_dict[hook_key]:
-                msg = f"{hook_id=} for {hook_type}.{hook_key} already registered"
-                raise nncf.InternalError(msg)
-            storage_dict[hook_key][hook_id] = module
+            hook_storage.insert_hook_by_name(target_name, restored_module)
+
     return wrapped_model
+
+
+def restore_module(
+    module_path: str, cls_name: str, module_config: dict[str, Any]
+) -> nn.Module | StatefulModuleInterface:
+    """
+    Restores a compression module from a serialized command.
+
+    :param module_path: The import path of the module class.
+    :param cls_name: The name of the module class.
+    :param module_config: The configuration dictionary for the module.
+    :return: Restored compression module.
+    """
+    try:
+        # Backward compatibility: if module_path is not specified, get it from MODULE_NAME_MAP
+        module_path = module_path or MODULE_NAME_MAP[cls_name]
+        imported_module = import_module(module_path)
+        module_cls = getattr(imported_module, cls_name)
+    except Exception as e:
+        msg = f"Error importing module {cls_name} from path {module_path}: {e}"
+        raise nncf.InternalError(msg) from e
+
+    if not issubclass(module_cls, StatefulModuleInterface) or not issubclass(module_cls, nn.Module):
+        msg = (
+            "Support deserialization of modules which are subclasses of StatefulModuleInterface and nn.Module."
+            f"But got module class {module_cls} which is not."
+        )
+        raise nncf.InternalError(msg)
+
+    return module_cls.from_config(module_config)
