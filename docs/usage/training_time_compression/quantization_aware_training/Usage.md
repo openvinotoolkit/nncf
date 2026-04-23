@@ -64,7 +64,7 @@ resuming_checkpoint = torch.load(path)
 nncf_config = resuming_checkpoint['nncf_config']
 state_dict = resuming_checkpoint['state_dict']
 
-quantized_model = nncf.torch.load_from_config(model, nncf_config, dummy_input)
+quantized_model = nncf.torch.load_from_config(model, nncf_config)
 quantized_model.load_state_dict(state_dict)
 ```
 

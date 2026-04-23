@@ -291,9 +291,7 @@ def main():
 
     # Load quantization modules and parameters from best checkpoint to the source model.
     ckpt = torch.load(ROOT / BEST_CKPT_NAME, weights_only=False)
-    quantized_model = nncf.torch.load_from_config(
-        deepcopy(model), ckpt["compression_config"], torch.ones((1, 3, IMAGE_SIZE, IMAGE_SIZE)).to(device)
-    )
+    quantized_model = nncf.torch.load_from_config(deepcopy(model), ckpt["compression_config"])
     quantized_model.load_state_dict(ckpt["model_state_dict"])
 
     # Evaluate on validation set after Quantization-Aware Training (QAT case).
