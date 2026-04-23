@@ -245,7 +245,7 @@ def multi_head_attention_forward(
     src_len = k.size(1)
 
     if key_padding_mask is not None:
-        if not torch.jit.is_scripting() and not torch.jit.is_tracing():
+        if not torch.jit.is_scripting() and not torch.jit.is_tracing():  # type: ignore
             _check_key_padding_mask(key_padding_mask, src_len, bsz)
 
         key_padding_mask = (
