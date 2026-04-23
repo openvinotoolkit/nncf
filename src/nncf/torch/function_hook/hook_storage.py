@@ -232,6 +232,26 @@ class HookStorage(nn.Module):
         if not storage_dict[hook_key]:
             del storage_dict[hook_key]
 
+    def insert_hook_by_name(self, hook_name: str, hook: nn.Module) -> None:
+        """
+        Inserts a hook at the exact slot identified by hook_name.
+        The name must follow the format produced by `named_hooks` method, like `pre_hooks.linear__0.0`.
+
+        :param hook_name: Full hook name.
+        :param hook: The hook module to insert.
+        """
+        hook_type, op_name, port_id = decode_hook_name(hook_name)
+        hook_id = hook_name.split(".")[-1]
+        storage_dict: nn.ModuleDict = getattr(self, hook_type)
+        hook_key = self._generate_key(op_name, port_id)
+        if hook_key not in storage_dict:
+            storage_dict[hook_key] = nn.ModuleDict()
+        hooks_dict = cast(nn.ModuleDict, storage_dict[hook_key])
+        if hook_id in hooks_dict:
+            msg = f"Hook slot '{hook_name}' is already occupied."
+            raise ValueError(msg)
+        hooks_dict[hook_id] = hook
+
     def is_empty(self) -> bool:
         """
         Check if there are no hooks stored.
