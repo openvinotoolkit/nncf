@@ -77,16 +77,13 @@ def is_wrapped_model(model: Any) -> bool:
         FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
-def load_from_config(model: nn.Module, config: dict[str, Any], example_input: Any | None = None) -> nn.Module:
+def load_from_config(model: nn.Module, config: dict[str, Any]) -> nn.Module:
     """
     Wraps given model and recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded state_dict.
 
     :param model: PyTorch model.
-    :param config: NNCNetwork config.
-    :param example_input: An example input that will be used for model tracing. A tuple is interpreted
-        as an example input of a set of non keyword arguments, and a dict as an example input of a set
-        of keywords arguments. Required with enabled legacy tracing mode.
+    :param config: Compressed config.
     :return: Wrapped model with additional modules recovered from given config.
     """
     return pt2_load_from_config(model, config)
