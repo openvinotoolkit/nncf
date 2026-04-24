@@ -8,10 +8,10 @@ torchao==0.17.0
 
 # ONNX
 onnx==1.21.0
-onnx-ir==0.1.15
+onnx-ir==0.2.1
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
-onnxscript==0.6.2
+onnxscript==0.7.0
 
 # Tests and examples
 pytest==9.0.3
