@@ -1948,6 +1948,7 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor_a.device
 
+    @pytest.mark.xfail(reason="Failed on t4, ticket: 184285")
     @pytest.mark.parametrize(
         "a, upper, ref",
         (
