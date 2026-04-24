@@ -556,8 +556,6 @@ def test_constant_folding_scalar_clone(use_cuda):
 
     ex_input = torch.ones(model.INPUT_SIZE).cuda()
     with torch.no_grad():
-        # Use export function instead of export to
-        # reproduce SWIN model capturing
         captured_model = (
             torch.export.export(model, args=(ex_input,), strict=True)
             .run_decompositions(decomp_table={})
