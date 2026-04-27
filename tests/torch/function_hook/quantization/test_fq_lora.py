@@ -175,7 +175,7 @@ def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
     model = ShortTransformer(8, 16, share_weights=True).to(device)
-    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=input_ids)
+    model = load_from_config(model, nncf_ckpt["nncf_config"])
     model.load_state_dict(nncf_ckpt["model_state_dict"])
 
     with torch.no_grad():
