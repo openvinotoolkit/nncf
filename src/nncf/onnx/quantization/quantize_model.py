@@ -324,8 +324,9 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
-    backup_mode: BackupMode,
-    compression_format: CompressionFormat,
+    hqq: bool = False,
+    backup_mode: BackupMode = BackupMode.INT8_ASYM,
+    compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> onnx.ModelProto:
     if model.opset_import[0].version < 13:
@@ -357,8 +358,9 @@ def compress_weights_impl(
         gptq,
         lora_correction,
         backup_mode,
-        compression_format,
-        advanced_parameters,
+        hqq=hqq,
+        compression_format=compression_format,
+        advanced_parameters=advanced_parameters,
     )
     graph = build_graph(model)
 
