@@ -177,7 +177,7 @@ def test_compile_via_trace():
     torch.testing.assert_close(actual, return_origin + ADD_VALUE)
 
 
-@pytest.mark.parametrize("dynamo", [True, False])
+@pytest.mark.parametrize("dynamo", [True, False], ids=["dynamo", "no_dynamo"])
 def test_export_onnx(tmp_path: Path, dynamo: bool):
     example_input = helpers.ConvModel.get_example_inputs()
 
