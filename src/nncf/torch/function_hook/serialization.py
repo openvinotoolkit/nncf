@@ -189,20 +189,22 @@ def restore_module(
     :param allowed_modules: Allowed patterns for module import paths. Default is `("nncf.*",)`.
     :return: Restored compression module.
     """
+    # Backward compatibility: if module_path is not specified, get it from MODULE_NAME_MAP
+    module_path = module_path or MODULE_NAME_MAP[cls_name]
+    if not _is_allowed_module(module_path, allowed_modules):
+        msg = (
+            f"Refusing to import module '{cls_name}' from untrusted path '{module_path}'. "
+            f"Allowed patterns: {tuple(allowed_modules)}"
+        )
+        raise nncf.InternalError(msg)
+
     try:
-        # Backward compatibility: if module_path is not specified, get it from MODULE_NAME_MAP
-        module_path = module_path or MODULE_NAME_MAP[cls_name]
-        if not _is_allowed_module(module_path, allowed_modules):
-            msg = (
-                f"Refusing to import module '{cls_name}' from untrusted path '{module_path}'. "
-                f"Allowed patterns: {tuple(allowed_modules)}"
-            )
-            raise nncf.InternalError(msg)
         imported_module = import_module(module_path)
         module_cls = getattr(imported_module, cls_name)
     except Exception as e:
         msg = f"Error importing module {cls_name} from path {module_path}: {e}"
         raise nncf.InternalError(msg) from e
+
     if not isinstance(module_cls, type):
         msg = f"Expected a class for module '{cls_name}', but got {type(module_cls)}"
         raise nncf.InternalError(msg)
