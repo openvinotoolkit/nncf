@@ -328,7 +328,7 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 ### Used by
 
-- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum-intel/openvino/optimization)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel. For instance, the command below exports the [Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) model to OpenVINO format with INT4-quantized weights:
 
@@ -403,7 +403,7 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [Examples](./examples)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
-- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum-intel/openvino/optimization)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
 - [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
 - [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2026/about-openvino/performance-benchmarks.html)
