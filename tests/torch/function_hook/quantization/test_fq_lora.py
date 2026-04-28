@@ -24,9 +24,9 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
+from nncf.torch import get_config
 from nncf.torch import load_from_config
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.torch.model_creation import get_config
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin

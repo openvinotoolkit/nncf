@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from fnmatch import fnmatchcase
 from importlib import import_module
 from typing import Any, TypedDict, TypeVar, cast
 
@@ -16,6 +17,10 @@ from torch import nn
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.api_marker import api
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import StatefulModuleInterface
@@ -23,6 +28,7 @@ from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_multidevice
 
 COMPRESSION_STATE_ATTR = "compression_state"
+DEFAULT_ALLOWED_MODULES = ("nncf.*",)
 TModel = TypeVar("TModel", bound=nn.Module)
 
 
@@ -33,6 +39,13 @@ class S_COMMAND(TypedDict):
     module_config: dict[str, Any]
 
 
+@api(canonical_alias="nncf.torch.get_config")
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.get_config"),
+    ],
+)
 def get_config(model: nn.Module) -> dict[str, Any]:
     """
     Returns serializable config which contains all information required to recover all additional modules placement.
@@ -88,7 +101,19 @@ MODULE_NAME_MAP = {
 }
 
 
-def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
+@api(canonical_alias="nncf.torch.load_from_config")
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
+    ],
+)
+def load_from_config(
+    model: TModel,
+    config: dict[str, Any],
+    *,
+    allowed_modules: tuple[str] = DEFAULT_ALLOWED_MODULES,
+) -> TModel:
     """
     Initialize model with compressed modules from config file.
 
@@ -110,6 +135,7 @@ def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
 
     :param model: The original uncompressed model.
     :param config: The configuration dictionary containing the compressed model information.
+    :param allowed_modules: Allowed patterns for deserialized module import paths. Default is `("nncf.*",)`.
     :return: The compressed model.
     """
     wrapped_model = wrap_model(model)
@@ -127,6 +153,7 @@ def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
             module_path=command.get("module_path", ""),  # Use get to avoid KeyError for backward compatibility
             cls_name=command["module_cls_name"],
             module_config=command["module_config"],
+            allowed_modules=allowed_modules,
         )
         if device is not None:
             restored_module.to(device)
@@ -136,23 +163,48 @@ def load_from_config(model: TModel, config: dict[str, Any]) -> TModel:
     return wrapped_model
 
 
-def restore_module(module_path: str, cls_name: str, module_config: dict[str, Any]) -> nn.Module:
+def _is_allowed_module(module_path: str, allowed_modules: tuple[str, ...]) -> bool:
+    """
+    Check if the module path matches any of the allowed patterns.
+
+    :param module_path: The import path of the module.
+    :param allowed_modules: Allowed patterns for module import paths.
+    :return: True if the module path is allowed, False otherwise.
+    """
+    return any(fnmatchcase(module_path, pattern) for pattern in allowed_modules)
+
+
+def restore_module(
+    module_path: str,
+    cls_name: str,
+    module_config: dict[str, Any],
+    allowed_modules: tuple[str, ...] = DEFAULT_ALLOWED_MODULES,
+) -> nn.Module:
     """
     Restores a compression module from a serialized command.
 
     :param module_path: The import path of the module class.
     :param cls_name: The name of the module class.
     :param module_config: The configuration dictionary for the module.
+    :param allowed_modules: Allowed patterns for module import paths. Default is `("nncf.*",)`.
     :return: Restored compression module.
     """
+    # Backward compatibility: if module_path is not specified, get it from MODULE_NAME_MAP
+    module_path = module_path or MODULE_NAME_MAP[cls_name]
+    if not _is_allowed_module(module_path, allowed_modules):
+        msg = (
+            f"Refusing to import module '{cls_name}' from untrusted path '{module_path}'. "
+            f"Allowed patterns: {tuple(allowed_modules)}"
+        )
+        raise nncf.InternalError(msg)
+
     try:
-        # Backward compatibility: if module_path is not specified, get it from MODULE_NAME_MAP
-        module_path = module_path or MODULE_NAME_MAP[cls_name]
         imported_module = import_module(module_path)
         module_cls = getattr(imported_module, cls_name)
     except Exception as e:
         msg = f"Error importing module {cls_name} from path {module_path}: {e}"
         raise nncf.InternalError(msg) from e
+
     if not isinstance(module_cls, type):
         msg = f"Expected a class for module '{cls_name}', but got {type(module_cls)}"
         raise nncf.InternalError(msg)

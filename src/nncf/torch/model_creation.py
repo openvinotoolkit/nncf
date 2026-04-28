@@ -20,8 +20,6 @@ from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.function_hook import is_wrapped as pt2_is_wrapped
 from nncf.torch.function_hook import wrap_model as pt2_wrap_model
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.torch.function_hook.serialization import get_config as pt2_get_config
-from nncf.torch.function_hook.serialization import load_from_config as pt2_load_from_config
 
 TModel = TypeVar("TModel", bound=nn.Module)
 
@@ -69,37 +67,3 @@ def is_wrapped_model(model: Any) -> bool:
     from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
     return isinstance(model, GraphModelWrapper)
-
-
-@tracked_function(
-    NNCF_PT_CATEGORY,
-    [
-        FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
-    ],
-)
-def load_from_config(model: nn.Module, config: dict[str, Any]) -> nn.Module:
-    """
-    Wraps given model and recovers additional modules from given config.
-    Does not recover additional modules weights as they are located in a corresponded state_dict.
-
-    :param model: PyTorch model.
-    :param config: Compressed config.
-    :return: Wrapped model with additional modules recovered from given config.
-    """
-    return pt2_load_from_config(model, config)
-
-
-@tracked_function(
-    NNCF_PT_CATEGORY,
-    [
-        FunctionCallTelemetryExtractor("nncf.torch.get_config"),
-    ],
-)
-def get_config(model: nn.Module) -> dict[str, Any]:
-    """
-    Returns the configuration object of the compressed model.
-
-    :param model: The compressed model.
-    :return: The configuration object of the compressed model.
-    """
-    return pt2_get_config(model)
