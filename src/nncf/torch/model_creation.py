@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, TypeVar
+from typing import Any, Sequence, TypeVar
 
 from torch import nn
 
@@ -20,6 +20,7 @@ from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.function_hook import is_wrapped as pt2_is_wrapped
 from nncf.torch.function_hook import wrap_model as pt2_wrap_model
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.serialization import DEFAULT_ALLOWED_MODULES
 from nncf.torch.function_hook.serialization import get_config as pt2_get_config
 from nncf.torch.function_hook.serialization import load_from_config as pt2_load_from_config
 
@@ -77,16 +78,22 @@ def is_wrapped_model(model: Any) -> bool:
         FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
-def load_from_config(model: nn.Module, config: dict[str, Any]) -> nn.Module:
+def load_from_config(
+    model: nn.Module,
+    config: dict[str, Any],
+    allowed_modules: Sequence[str] = DEFAULT_ALLOWED_MODULES,
+) -> nn.Module:
     """
     Wraps given model and recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded state_dict.
 
     :param model: PyTorch model.
     :param config: Compressed config.
+    :param allowed_modules: Allowed patterns for deserialized module import paths.
+        Default is `("nncf.*",)`.
     :return: Wrapped model with additional modules recovered from given config.
     """
-    return pt2_load_from_config(model, config)
+    return pt2_load_from_config(model, config, allowed_modules=allowed_modules)
 
 
 @tracked_function(
