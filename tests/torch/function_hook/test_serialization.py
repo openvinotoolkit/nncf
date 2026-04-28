@@ -141,8 +141,7 @@ def test_restore_module_legacy_path_from_map():
     ("module_path", "cls_name", "match"),
     [
         ("nncf.nonexistent.module", "SomeClass", "Error importing module"),
-        ("math", "MissingClass", "Error importing module"),
-        ("", "UnknownLegacyClass", "Error importing module"),
+        ("math", "MissingClass", "from untrusted path"),
     ],
 )
 def test_restore_module_raises_on_invalid_input(module_path: str, cls_name: str, match: str):
