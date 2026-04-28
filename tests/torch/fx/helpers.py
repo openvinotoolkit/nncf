@@ -144,11 +144,15 @@ def get_torch_fx_model(
         device_ex_input.append(inp.to(device))
     device_ex_input = tuple(device_ex_input)
 
+    # Temporary workaround for executorch tests. Can be removed once torch>=2.11.0
+    export_fn = (
+        torch.export.export_for_training if hasattr(torch.export, "export_for_training") else torch.export.export
+    )
     model.eval()
     with torch.no_grad():
-        return torch.export.export_for_training(
-            model, args=device_ex_input, dynamic_shapes=dynamic_shapes, strict=True
-        ).module(check_guards=False)
+        return export_fn(model, args=device_ex_input, dynamic_shapes=dynamic_shapes, strict=True).module(
+            check_guards=False
+        )
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:

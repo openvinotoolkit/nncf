@@ -1,0 +1,48 @@
+name: ExecuTorch
+permissions: read-all
+ 
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+  pull_request:
+    paths: 
+       - 'tests/executorch/*'
+       - 'src/nncf/experimental/torch/fx/*'
+       - 'src/nncf/quantization/algorithms/*'
+
+jobs:
+  executorch:
+    timeout-minutes: 40
+    runs-on: ubuntu-latest-8-cores
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: true
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.10.14"
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          cat /etc/*release
+          cat /proc/cpuinfo
+      - name: Install NNCF and test requirements
+        run: |
+          pip install . -r tests/executorch/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run PyTorch precommit test scope
+        run: |
+          pytest -ra tests/executorch
