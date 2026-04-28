@@ -21,6 +21,7 @@ from nncf.common.factory import build_graph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.openvino.engine import calibration_device_context
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
@@ -119,9 +120,11 @@ def native_quantize_if_op_impl(
         f"The model consists of {if_ops_number} If node(-s) with then and else bodies. \
             Main model and all If bodies will be quantized recursively."
     )
-    quantized_model, _ = apply_algorithm_if_bodies(
-        quantization_algorithm, model, graphs, main_model_graph_id, calibration_dataset, subset_size, 1
-    )
+    calibration_device = advanced_parameters.calibration_device if advanced_parameters else None
+    with calibration_device_context(calibration_device):
+        quantized_model, _ = apply_algorithm_if_bodies(
+            quantization_algorithm, model, graphs, main_model_graph_id, calibration_dataset, subset_size, 1
+        )
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
@@ -168,7 +171,9 @@ def native_quantize_impl(
     )
     graph = GraphConverter.create_nncf_graph(model)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
-    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+    calibration_device = advanced_parameters.calibration_device if advanced_parameters else None
+    with calibration_device_context(calibration_device):
+        quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
@@ -296,15 +301,19 @@ def quantize_with_accuracy_control_impl(
             advanced_accuracy_restorer_parameters.num_ranking_workers,
             advanced_accuracy_restorer_parameters.restore_mode,
         )
-        quantized_model = accuracy_restorer.apply(
-            model,
-            initial_metric_results,
-            quantized_model,
-            quantized_metric_results,
-            validation_dataset,
-            validation_dataset_size,
-            evaluator,
+        calibration_device = (
+            advanced_quantization_parameters.calibration_device if advanced_quantization_parameters else None
         )
+        with calibration_device_context(calibration_device):
+            quantized_model = accuracy_restorer.apply(
+                model,
+                initial_metric_results,
+                quantized_model,
+                quantized_metric_results,
+                validation_dataset,
+                validation_dataset_size,
+                evaluator,
+            )
 
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
@@ -402,12 +411,15 @@ def compress_weights_impl(
         advanced_parameters,
     )
 
+    calibration_device = advanced_parameters.calibration_device if advanced_parameters else None
+
     statistics_points = None
     if advanced_parameters and advanced_parameters.statistics_path:
         # If there is no such directory, then caches statistics
         statistics_path = Path(advanced_parameters.statistics_path)
         if not statistics_path.exists():
-            cache_weight_compression_statistics(model, graph, dataset, subset_size, statistics_path)
+            with calibration_device_context(calibration_device):
+                cache_weight_compression_statistics(model, graph, dataset, subset_size, statistics_path)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         compression_algorithm.set_backend_entity(model)
         _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(graph)
@@ -421,4 +433,5 @@ def compress_weights_impl(
         statistics_aggregator.load_statistics_from_dir(statistics_path)
         statistics_points = statistics_aggregator.statistic_points
 
-    return compression_algorithm.apply(model, graph, statistics_points, dataset)
+    with calibration_device_context(calibration_device):
+        return compression_algorithm.apply(model, graph, statistics_points, dataset)

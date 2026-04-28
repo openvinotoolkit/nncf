@@ -35,3 +35,30 @@ def test_non_positive_subset_size():
     with pytest.raises(nncf.ValidationError) as e:
         nncf.quantize(model_to_test, Dataset(MockDataset(INPUT_SHAPE)), subset_size=0)
         assert "Subset size must be positive." in e.info
+
+
+def test_quantize_calibration_device(monkeypatch):
+    import numpy as np
+    import openvino as ov
+
+    from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+    from tests.openvino.native.models import LinearModel
+
+    model_to_test = LinearModel().ov_model
+    input_shape = [inp.shape for inp in model_to_test.inputs][0]
+    dataset = Dataset([np.random.rand(*input_shape).astype(np.float32) for _ in range(2)])
+    captured_devices = []
+
+    original_compile = ov.Core.compile_model
+
+    def mock_compile(self, model, device_name="CPU", config=None):
+        captured_devices.append(device_name)
+        return original_compile(self, model, device_name="CPU", config=config)
+
+    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
+    nncf.quantize(
+        model_to_test,
+        dataset,
+        advanced_parameters=AdvancedQuantizationParameters(calibration_device="GPU"),
+    )
+    assert any(d == "GPU" for d in captured_devices)
