@@ -64,6 +64,38 @@ class WeightCompressionAlgoBackend(ABC):
         Property for the backend-specific metatypes for embedding layers.
         """
 
+    @property
+    def constant_metatypes(self) -> list[OperatorMetatype]:
+        """
+        Metatypes representing weight Constants on this backend. Used by the
+        IgnoredScope propagation logic (see
+        ``propagate_ignored_constants_to_weighted_consumers``) to identify
+        weight-source nodes. Returns an empty list by default, which disables
+        propagation for subclasses that do not need it.
+        """
+        return []
+
+    @property
+    def passthrough_metatypes(self) -> list[OperatorMetatype]:
+        """
+        Metatypes of nodes that should be transparently traversed when walking
+        from a weight Constant to its consuming weighted op during IgnoredScope
+        propagation. Typically Convert/Reshape/FakeQuantize and similar shape or
+        dtype passthroughs. Matches the convention used by
+        ``get_operation_const_op``'s reverse walk. Empty by default.
+        """
+        return []
+
+    @property
+    def passthrough_node_types(self) -> list[str]:
+        """
+        Node_type strings to traverse during IgnoredScope propagation, for
+        backends that identify passthrough nodes by node_type rather than
+        metatype (e.g. PyTorch's quantize/pruning subgraph node types). Empty
+        by default.
+        """
+        return []
+
     @staticmethod
     @abstractmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:

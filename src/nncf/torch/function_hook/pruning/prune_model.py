@@ -15,6 +15,7 @@ from torch import nn
 import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.logging import nncf_logger
+from nncf.common.scopes import propagate_ignored_constants_to_weighted_consumers
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -43,6 +44,8 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
     om.PTMatMulMetatype,
 ]
 
+CONSTANT_METATYPES = [om.PTConstNoopMetatype]
+
 
 def prune(
     model: TModel,
@@ -61,6 +64,12 @@ def prune(
     ignored_names: set[str] = set()
     if ignored_scope is not None:
         ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scope, graph)
+        ignored_names = propagate_ignored_constants_to_weighted_consumers(
+            ignored_names,
+            graph,
+            weighted_metatypes=OPERATORS_WITH_WEIGHTS_METATYPES,
+            constant_metatypes=CONSTANT_METATYPES,
+        )
 
     # 1. Find all operation nodes with weights
     # 2. Filter by ignored names

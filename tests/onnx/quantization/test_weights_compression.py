@@ -365,6 +365,38 @@ def test_raise_error_with_not_int8(mode):
         compress_weights(dummy_model, mode=mode)
 
 
+def test_weight_compress_with_ignored_onnx_constant_name():
+    """IgnoredScope naming the ``Constant`` op that produces a weight must also
+    exclude the consuming MatMul from compression (see issue #4033).
+
+    Note: ONNX weight initializers are stored as model-level tensors, not graph
+    nodes, so this test uses an explicit ``Constant`` op to produce the weight
+    (which does become an NNCFGraph node of type ``ONNXConstantMetatype``).
+    """
+    input_t = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 8])
+    output_t = helper.make_tensor_value_info("output", TensorProto.FLOAT, [1, 8])
+    w_tensor = numpy_helper.from_array(np.random.rand(8, 8).astype(np.float32), name="w_value")
+    const_node = helper.make_node("Constant", inputs=[], outputs=["w"], value=w_tensor, name="WeightConst")
+    matmul = helper.make_node("MatMul", inputs=["input", "w"], outputs=["output"], name="MatMul_op")
+    g = helper.make_graph(
+        nodes=[const_node, matmul],
+        name="g",
+        inputs=[input_t],
+        outputs=[output_t],
+    )
+    model = helper.make_model(g, ir_version=11)
+    model.opset_import[0].version = 21
+
+    compressed = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=4,
+        ignored_scope=nncf.IgnoredScope(names=["WeightConst"]),
+    )
+    dq_nodes = [n for n in compressed.graph.node if n.op_type == "DequantizeLinear"]
+    assert dq_nodes == [], "MatMul's weight should not be compressed when its producing Constant is ignored"
+
+
 class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:

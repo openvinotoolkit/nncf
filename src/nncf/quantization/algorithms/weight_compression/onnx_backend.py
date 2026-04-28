@@ -137,6 +137,22 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def embedding_metatypes(self) -> list[OperatorMetatype]:
         return [metatypes.ONNXEmbeddingMetatype]
 
+    @property
+    def constant_metatypes(self) -> list[OperatorMetatype]:
+        return [metatypes.ONNXConstantMetatype]
+
+    @property
+    def passthrough_metatypes(self) -> list[OperatorMetatype]:
+        # ONNX analogs of the OV Convert/Reshape propagation list: Cast (dtype
+        # change), Reshape, Identity, Transpose are the typical shape/dtype ops
+        # between a Constant initializer and its consuming weighted op.
+        return [
+            metatypes.ONNXCastMetatype,
+            metatypes.ONNXReshapeMetatype,
+            metatypes.ONNXIdentityMetatype,
+            metatypes.ONNXTransposeMetatype,
+        ]
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         return node.layer_attributes.has_weight()

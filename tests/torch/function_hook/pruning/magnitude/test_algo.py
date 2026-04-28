@@ -80,6 +80,37 @@ def test_prune_mode(mode: PruneMode, ref):
         assert c == ref[name]
 
 
+@pytest.mark.parametrize(
+    "ignored_scope, expected_hooks",
+    (
+        # IgnoredScope naming the Conv's weight Constant must also skip the consuming
+        # Conv2d from pruning (issue #4033).
+        (nncf.IgnoredScope(names=["conv1.weight"]), {"post_hooks.conv2:weight__0.0"}),
+        (nncf.IgnoredScope(names=["conv2.weight"]), {"post_hooks.conv1:weight__0.0"}),
+        # Targeting the consuming op directly still works.
+        (
+            nncf.IgnoredScope(patterns=["^conv1/conv2d/.*"]),
+            {"post_hooks.conv2:weight__0.0"},
+        ),
+        # No IgnoredScope - both convs are pruned.
+        (None, {"post_hooks.conv1:weight__0.0", "post_hooks.conv2:weight__0.0"}),
+    ),
+)
+def test_prune_with_ignored_scope(ignored_scope, expected_hooks):
+    model = TwoConvModel()
+    example_inputs = TwoConvModel.get_example_inputs()
+    pruned_model = nncf.prune(
+        model,
+        mode=PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL,
+        ratio=0.5,
+        ignored_scope=ignored_scope,
+        examples_inputs=example_inputs,
+    )
+    hook_storage = get_hook_storage(pruned_model)
+    actual_hooks = {name for name, _ in hook_storage.named_hooks()}
+    assert actual_hooks == expected_hooks
+
+
 def test_infer(use_cuda: bool):
     model = ConvModel()
     example_inputs = ConvModel.get_example_inputs()
