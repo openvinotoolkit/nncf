@@ -2767,3 +2767,27 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             group_size=-1,
         )
         assert self.get_num_int8_nodes(compressed_model) == 0
+
+
+def test_compress_weights_calibration_device(monkeypatch):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([2, 8, 8])])
+    captured_devices = []
+
+    original_compile = ov.Core.compile_model
+
+    def mock_compile(self, model, device_name="CPU", config=None):
+        captured_devices.append(device_name)
+        return original_compile(self, model, device_name="CPU", config=config)
+
+    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=2,
+        dataset=dataset,
+        awq=True,
+        advanced_parameters=AdvancedCompressionParameters(calibration_device="GPU"),
+    )
+    assert any(d == "GPU" for d in captured_devices)
