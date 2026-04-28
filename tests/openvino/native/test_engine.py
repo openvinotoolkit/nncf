@@ -15,6 +15,7 @@ import pytest
 
 from nncf.definitions import NNCF_DATASET_RESET_STATE_KEY
 from nncf.openvino.engine import OVNativeEngine
+from nncf.openvino.engine import calibration_device_context
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
@@ -123,3 +124,57 @@ def test_stateful_model_inference_with_controlled_resetting():
         "infer",
         "infer",
     ]
+
+
+def test_calibration_device_default(monkeypatch):
+    model = LinearModel().ov_model
+    captured_device = {}
+
+    import openvino as ov
+
+    original_compile = ov.Core.compile_model
+
+    def mock_compile(self, model, device_name="CPU", config=None):
+        captured_device["device_name"] = device_name
+        return original_compile(self, model, device_name="CPU", config=config)
+
+    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
+    OVNativeEngine(model)
+    assert captured_device["device_name"] == "CPU"
+
+
+def test_calibration_device_context(monkeypatch):
+    model = LinearModel().ov_model
+    captured_device = {}
+
+    import openvino as ov
+
+    original_compile = ov.Core.compile_model
+
+    def mock_compile(self, model, device_name="CPU", config=None):
+        captured_device["device_name"] = device_name
+        return original_compile(self, model, device_name="CPU", config=config)
+
+    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
+    with calibration_device_context("GPU"):
+        OVNativeEngine(model)
+    assert captured_device["device_name"] == "GPU"
+
+
+def test_calibration_device_context_resets(monkeypatch):
+    model = LinearModel().ov_model
+    captured_devices = []
+
+    import openvino as ov
+
+    original_compile = ov.Core.compile_model
+
+    def mock_compile(self, model, device_name="CPU", config=None):
+        captured_devices.append(device_name)
+        return original_compile(self, model, device_name="CPU", config=config)
+
+    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
+    with calibration_device_context("GPU"):
+        OVNativeEngine(model)
+    OVNativeEngine(model)
+    assert captured_devices == ["GPU", "CPU"]
