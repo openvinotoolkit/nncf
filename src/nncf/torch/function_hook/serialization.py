@@ -11,7 +11,7 @@
 
 from fnmatch import fnmatchcase
 from importlib import import_module
-from typing import Any, Sequence, TypedDict, TypeVar, cast
+from typing import Any, TypedDict, TypeVar, cast
 
 from torch import nn
 
@@ -112,7 +112,7 @@ def load_from_config(
     model: TModel,
     config: dict[str, Any],
     *,
-    allowed_modules: Sequence[str] = DEFAULT_ALLOWED_MODULES,
+    allowed_modules: tuple[str] = DEFAULT_ALLOWED_MODULES,
 ) -> TModel:
     """
     Initialize model with compressed modules from config file.
@@ -163,7 +163,7 @@ def load_from_config(
     return wrapped_model
 
 
-def _is_allowed_module(module_path: str, allowed_modules: Sequence[str]) -> bool:
+def _is_allowed_module(module_path: str, allowed_modules: tuple[str, ...]) -> bool:
     """
     Check if the module path matches any of the allowed patterns.
 
@@ -178,7 +178,7 @@ def restore_module(
     module_path: str,
     cls_name: str,
     module_config: dict[str, Any],
-    allowed_modules: Sequence[str] = DEFAULT_ALLOWED_MODULES,
+    allowed_modules: tuple[str, ...] = DEFAULT_ALLOWED_MODULES,
 ) -> nn.Module:
     """
     Restores a compression module from a serialized command.
