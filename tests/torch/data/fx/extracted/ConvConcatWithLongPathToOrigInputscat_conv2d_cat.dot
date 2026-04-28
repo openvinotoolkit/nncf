@@ -1,0 +1,17 @@
+strict digraph {
+"0 conv_1_weight" [id=0, type="get_attr"];
+"1 conv_1_bias" [id=1, type="get_attr"];
+"2 conv2d_input_0" [id=2, type=input];
+"3 conv2d" [id=3, type=conv2d];
+"4 relu_1" [id=4, type=relu];
+"5 cat_input_1" [id=5, type=input];
+"6 cat" [id=6, type=cat];
+"7 output" [id=7, type=output];
+"0 conv_1_weight" -> "3 conv2d" [style=solid, label="(2, 2, 1, 1)"];
+"1 conv_1_bias" -> "3 conv2d" [style=solid, label="(2,)"];
+"2 conv2d_input_0" -> "3 conv2d" [style=solid, label=None];
+"3 conv2d" -> "4 relu_1" [style=solid, label="(1, 2, 4, 4)"];
+"4 relu_1" -> "6 cat" [style=solid, label="(1, 2, 4, 4)"];
+"5 cat_input_1" -> "6 cat" [style=solid, label=None];
+"6 cat" -> "7 output" [style=solid, label="(1, 4, 4, 4)"];
+}
