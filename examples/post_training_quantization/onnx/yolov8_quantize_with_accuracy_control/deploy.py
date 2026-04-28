@@ -9,12 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-import subprocess
 from pathlib import Path
 
 import openvino as ov
 import torch
+from common import execute_benchmark_on_cpu
 from rich.progress import track
 from ultralytics.cfg import get_cfg
 from ultralytics.models.yolo import YOLO
@@ -64,20 +63,6 @@ def validate_ov_model(
     return stats, validator.seen, validator.metrics.nt_per_class.sum()
 
 
-def run_benchmark(model_path: Path, config) -> float:
-    command = [
-        "benchmark_app",
-        "-m", model_path.as_posix(),
-        "-d", "CPU",
-        "-api", "async",
-        "-t", "30",
-        "-shape", str([1, 3, config.imgsz, config.imgsz]),
-    ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
-
-
 args = get_cfg(cfg=DEFAULT_CFG)
 args.data = "coco128-seg.yaml"
 
@@ -90,11 +75,11 @@ int8_ov_model = ov.convert_model(INT8_ONNX_MODEL_PATH)
 ov.save_model(int8_ov_model, INT8_OV_MODEL_PATH, compress_to_fp16=False)
 
 print("[3/7] Benchmark FP32 OpenVINO model:", end=" ")
-fp32_fps = run_benchmark(FP32_OV_MODEL_PATH, args)
+fp32_fps = execute_benchmark_on_cpu(FP32_OV_MODEL_PATH, time=30, shape=[1, 3, args.imgsz, args.imgsz])
 print(f"{fp32_fps} FPS")
 
 print("[4/7] Benchmark INT8 OpenVINO model:", end=" ")
-int8_fps = run_benchmark(INT8_OV_MODEL_PATH, args)
+int8_fps = execute_benchmark_on_cpu(INT8_OV_MODEL_PATH, time=30, shape=[1, 3, args.imgsz, args.imgsz])
 print(f"{int8_fps} FPS")
 
 validator, data_loader = prepare_validation(YOLO(ROOT / f"{MODEL_NAME}.pt"), args)

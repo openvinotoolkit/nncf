@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import subprocess
+from subprocess import (
+    CalledProcessError,  # nosec B404: imported only for CalledProcessError exception handling; no subprocess commands are executed in this module
+)
 
 import torch
 
@@ -92,7 +94,7 @@ class QuantizedFunctionsCUDALoader(ExtensionLoader):
             )
         except ExtensionLoaderTimeoutException as e:
             raise e
-        except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
+        except (CalledProcessError, OSError, RuntimeError) as e:
             assert torch.cuda.is_available()
             msg = (
                 "CUDA is available for PyTorch, but NNCF could not compile "

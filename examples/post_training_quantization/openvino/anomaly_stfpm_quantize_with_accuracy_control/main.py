@@ -10,8 +10,6 @@
 # limitations under the License.
 
 import json
-import re
-import subprocess
 import sys
 from functools import partial
 from pathlib import Path
@@ -24,6 +22,7 @@ from anomalib.data.mvtec import MVTec
 from anomalib.data.utils import download
 from anomalib.post_processing.normalization.min_max import normalize
 from anomalib.utils.metrics import create_metric_collection
+from common import execute_benchmark_on_cpu
 
 import nncf
 
@@ -80,21 +79,6 @@ def validate(
 
     metric_value = metric.compute()
     return metric_value, per_sample_metric_values
-
-
-def run_benchmark(model_path: Path, shape: list[int]) -> float:
-    command = [
-        "benchmark_app",
-        "-m", model_path.as_posix(),
-        "-d", "CPU",
-        "-api", "async",
-        "-t", "15",
-        "-shape", str(shape),
-    ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    print(*cmd_output.splitlines()[-8:], sep="\n")
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
 
 
 def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
@@ -182,9 +166,9 @@ def run_example():
     int8_size = get_model_size(int8_ir_path)
 
     print("[3/7] Benchmark FP32 model:")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 256, 256])
+    fp32_fps = execute_benchmark_on_cpu(fp32_ir_path, time=15, shape=[1, 3, 256, 256])
     print("[4/7] Benchmark INT8 model:")
-    int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256])
+    int8_fps = execute_benchmark_on_cpu(int8_ir_path, time=15, shape=[1, 3, 256, 256])
 
     print("[5/7] Validate OpenVINO FP32 model:")
     compiled_model = ov.compile_model(ov_model, device_name="CPU")

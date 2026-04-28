@@ -10,8 +10,6 @@
 # limitations under the License.
 
 import os
-import re
-import subprocess
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -25,6 +23,7 @@ import torch.utils.data
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
+from common import execute_benchmark_on_cpu
 from fastdownload import FastDownload
 from rich.progress import track
 from torch.jit import TracerWarning
@@ -205,20 +204,6 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def run_benchmark(model_path: Path, shape: tuple[int, ...]) -> float:
-    command = [
-        "benchmark_app",
-        "-m", model_path.as_posix(),
-        "-d", "CPU",
-        "-api", "async",
-        "-t", "15",
-        "-shape", str(list(shape)),
-    ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)  # nosec
-    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-    return float(match.group(1))
-
-
 def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
     xml_size = ir_path.stat().st_size
     bin_size = ir_path.with_suffix(".bin").stat().st_size
@@ -321,10 +306,10 @@ def main():
     # Step 5: Run benchmarks
     print(os.linesep + "[Step 5] Run benchmarks")
     print("Run benchmark for FP32 model (IR)...")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=input_shape)
+    fp32_fps = execute_benchmark_on_cpu(fp32_ir_path, time=15, shape=input_shape)
 
     print("Run benchmark for INT8 model (IR)...")
-    int8_fps = run_benchmark(int8_ir_path, shape=input_shape)
+    int8_fps = execute_benchmark_on_cpu(int8_ir_path, time=15, shape=input_shape)
 
     fp32_model_size = get_model_size(fp32_ir_path)
     int8_model_size = get_model_size(int8_ir_path)
