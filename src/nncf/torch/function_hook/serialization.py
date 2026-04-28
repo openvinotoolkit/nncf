@@ -17,6 +17,10 @@ from torch import nn
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.api_marker import api
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import StatefulModuleInterface
@@ -35,6 +39,13 @@ class S_COMMAND(TypedDict):
     module_config: dict[str, Any]
 
 
+@api(canonical_alias="nncf.torch.get_config")
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.get_config"),
+    ],
+)
 def get_config(model: nn.Module) -> dict[str, Any]:
     """
     Returns serializable config which contains all information required to recover all additional modules placement.
@@ -90,8 +101,18 @@ MODULE_NAME_MAP = {
 }
 
 
+@api(canonical_alias="nncf.torch.load_from_config")
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
+    ],
+)
 def load_from_config(
-    model: TModel, config: dict[str, Any], allowed_modules: Sequence[str] = DEFAULT_ALLOWED_MODULES
+    model: TModel,
+    config: dict[str, Any],
+    *,
+    allowed_modules: Sequence[str] = DEFAULT_ALLOWED_MODULES,
 ) -> TModel:
     """
     Initialize model with compressed modules from config file.
@@ -114,8 +135,7 @@ def load_from_config(
 
     :param model: The original uncompressed model.
     :param config: The configuration dictionary containing the compressed model information.
-    :param allowed_modules: Allowed patterns for deserialized module import paths.
-        Default is `("nncf.*",)`.
+    :param allowed_modules: Allowed patterns for deserialized module import paths. Default is `("nncf.*",)`.
     :return: The compressed model.
     """
     wrapped_model = wrap_model(model)
