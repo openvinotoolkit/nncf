@@ -766,6 +766,39 @@ class NNCFGraph:
             data[NNCFGraph.DTYPE_EDGE_ATTR],
         )
 
+    def bypass_node(self, node: NNCFNode) -> None:
+        """
+        Bypasses the given node in the graph by connecting all of its producers to all of its consumers and then
+        removing the node from the graph.
+
+        Limitations:
+            - one input edge and one or many output edges.
+            - new edges contains the same attributes as old output edges,
+              exclude from_node_id and output_port_id which are taken from old input edge.
+
+        :param node: The NNCFNode to bypass.
+        """
+        input_edges = self.get_input_edges(node)
+        output_edges = self.get_output_edges(node)
+
+        if len(input_edges) != 1:
+            msg = "Unsupported graph structure for node bypassing. Only one input edge is supported."
+            raise nncf.InternalError(msg)
+
+        for out_edge in output_edges:
+            self.add_edge_between_nncf_nodes(
+                from_node_id=input_edges[0].from_node.node_id,
+                to_node_id=out_edge.to_node.node_id,
+                tensor_shape=out_edge.tensor_shape,
+                input_port_id=out_edge.input_port_id,
+                output_port_id=input_edges[0].output_port_id,
+                dtype=out_edge.dtype,
+            )
+
+        self._nx_graph.remove_node(node.node_key)
+        self._nodes.pop(node.node_key)
+        self._node_id_to_key_dict.pop(node.node_id)
+
     def remove_nodes_from(self, nodes: Iterable[NNCFNode]) -> None:
         """
         Removes nodes from the current NNCFGraph instance.
