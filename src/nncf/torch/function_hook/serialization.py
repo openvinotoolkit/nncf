@@ -163,17 +163,6 @@ def load_from_config(
     return wrapped_model
 
 
-def _is_allowed_module(module_path: str, allowed_modules: tuple[str, ...]) -> bool:
-    """
-    Check if the module path matches any of the allowed patterns.
-
-    :param module_path: The import path of the module.
-    :param allowed_modules: Allowed patterns for module import paths.
-    :return: True if the module path is allowed, False otherwise.
-    """
-    return any(fnmatchcase(module_path, pattern) for pattern in allowed_modules)
-
-
 def restore_module(
     module_path: str,
     cls_name: str,
@@ -191,7 +180,7 @@ def restore_module(
     """
     # Backward compatibility: if module_path is not specified, get it from MODULE_NAME_MAP
     module_path = module_path or MODULE_NAME_MAP[cls_name]
-    if not _is_allowed_module(module_path, allowed_modules):
+    if not any(fnmatchcase(module_path, pattern) for pattern in allowed_modules):
         msg = (
             f"Refusing to import module '{cls_name}' from untrusted path '{module_path}'. "
             f"Allowed patterns: {tuple(allowed_modules)}"
