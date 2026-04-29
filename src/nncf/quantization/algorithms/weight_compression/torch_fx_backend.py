@@ -76,6 +76,10 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def convolution_metatypes(self) -> list[OperatorMetatype]:
         return CONVOLUTION_METATYPES
 
+    @property
+    def noop_metatypes(self) -> list[OperatorMetatype]:
+        return []
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         return PTWeightCompressionAlgoBackend.is_node_with_weights(node, graph)

@@ -51,6 +51,7 @@ from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
+from nncf.torch.graph.operator_metatypes import PTNoopMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTransformationCommand
@@ -91,6 +92,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
     def convolution_metatypes(self) -> list[OperatorMetatype]:
         return CONVOLUTION_METATYPES
+
+    @property
+    def noop_metatypes(self) -> list[OperatorMetatype]:
+        return [PTNoopMetatype]
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:

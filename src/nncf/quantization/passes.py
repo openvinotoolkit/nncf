@@ -153,7 +153,6 @@ def remove_nodes_and_reconnect_graph(
         prev_nodes = nncf_graph.get_previous_nodes(node)
         input_edges = nncf_graph.get_input_edges(node)
         assert len(prev_nodes) == len(input_edges) == 1
-        prev_node = prev_nodes[0]
         input_edge = input_edges[0]
 
         for output_node in nncf_graph.get_next_nodes(node):
@@ -163,7 +162,7 @@ def remove_nodes_and_reconnect_graph(
                 assert input_edge.dtype == output_edge.dtype
                 assert input_edge.tensor_shape == output_edge.tensor_shape
                 nncf_graph.add_edge_between_nncf_nodes(
-                    from_node_id=prev_node.node_id,
+                    from_node_id=input_edge.from_node.node_id,
                     to_node_id=output_edge.to_node.node_id,
                     tensor_shape=input_edge.tensor_shape,
                     input_port_id=output_edge.input_port_id,
@@ -200,3 +199,29 @@ def find_constant_subgraphs(
     constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
 
     return constant_nodes
+
+
+def _can_bypass_noop_node(node: NNCFNode, graph: NNCFGraph) -> bool:
+    in_edges = graph.get_input_edges(node)
+    out_edges = graph.get_output_edges(node)
+    if len(in_edges) != 1:
+        # Support only one input edge
+        return False
+    if any(edge.dtype != in_edges[0].dtype or edge.tensor_shape != in_edges[0].tensor_shape for edge in out_edges):
+        # All edges should have the same dtype and tensor shape to bypass the node
+        return False
+    return True
+
+
+def bypass_noop_operation_nodes(graph: NNCFGraph, metatypes: list[type[OperatorMetatype]]) -> None:
+    """
+    Bypasses noop nodes in the graph by connecting their predecessors directly
+    to their successors and removing the noop nodes.
+
+    :param graph: The NNCFGraph to be modified.
+    """
+    noop_nodes = graph.get_nodes_by_metatypes(metatypes)
+    for noop_node in noop_nodes:
+        if not _can_bypass_noop_node(noop_node, graph):
+            continue
+        graph.bypass_node(noop_node)
