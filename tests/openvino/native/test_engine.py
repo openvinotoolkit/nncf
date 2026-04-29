@@ -11,7 +11,10 @@
 from functools import wraps
 
 import numpy as np
+import openvino as ov
 import pytest
+from openvino import Type
+from openvino.properties.hint import inference_precision
 
 from nncf.definitions import NNCF_DATASET_RESET_STATE_KEY
 from nncf.openvino.engine import OVNativeEngine
@@ -126,55 +129,33 @@ def test_stateful_model_inference_with_controlled_resetting():
     ]
 
 
-def test_calibration_device_default(monkeypatch):
+def test_calibration_device(monkeypatch):
     model = LinearModel().ov_model
-    captured_device = {}
-
-    import openvino as ov
+    captured_device = None
+    captured_config = None
 
     original_compile = ov.Core.compile_model
 
     def mock_compile(self, model, device_name="CPU", config=None):
-        captured_device["device_name"] = device_name
+        nonlocal captured_device
+        nonlocal captured_config
+        captured_device = device_name
+        captured_config = config
         return original_compile(self, model, device_name="CPU", config=config)
 
     monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
+    # Check default CPU
     OVNativeEngine(model)
-    assert captured_device["device_name"] == "CPU"
+    assert captured_device == "CPU"
+    assert captured_config == {inference_precision: Type.f32}
 
-
-def test_calibration_device_context(monkeypatch):
-    model = LinearModel().ov_model
-    captured_device = {}
-
-    import openvino as ov
-
-    original_compile = ov.Core.compile_model
-
-    def mock_compile(self, model, device_name="CPU", config=None):
-        captured_device["device_name"] = device_name
-        return original_compile(self, model, device_name="CPU", config=config)
-
-    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
-    with calibration_device_context("GPU"):
+    # Check with the context
+    with calibration_device_context("SOME_DEVICE"):
         OVNativeEngine(model)
-    assert captured_device["device_name"] == "GPU"
+    assert captured_device == "SOME_DEVICE"
+    assert captured_config is None
 
-
-def test_calibration_device_context_resets(monkeypatch):
-    model = LinearModel().ov_model
-    captured_devices = []
-
-    import openvino as ov
-
-    original_compile = ov.Core.compile_model
-
-    def mock_compile(self, model, device_name="CPU", config=None):
-        captured_devices.append(device_name)
-        return original_compile(self, model, device_name="CPU", config=config)
-
-    monkeypatch.setattr(ov.Core, "compile_model", mock_compile)
-    with calibration_device_context("GPU"):
-        OVNativeEngine(model)
+    # Check the context exit resets the device back
     OVNativeEngine(model)
-    assert captured_devices == ["GPU", "CPU"]
+    assert captured_device == "CPU"
+    assert captured_config == {inference_precision: Type.f32}

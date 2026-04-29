@@ -983,3 +983,17 @@ class TemplateWeightCompression(ABC):
                 all_layers=True,
                 **kwargs,
             )
+
+    def test_compress_weights_calibration_device(self):
+        model = self.get_awq_model(non_mergable_pattern=False, is_3d_weights=False)
+        dataset = Dataset([self.to_tensor(np.ones([2, 8, 8]))])
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=2,
+                dataset=dataset,
+                awq=True,
+                advanced_parameters=CompressionParams(calibration_device="SOME_DEVICE"),
+            )

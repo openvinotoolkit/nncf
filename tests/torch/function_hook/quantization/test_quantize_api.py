@@ -8,5 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.template_test_quantize_api import TemplateTestQuantizeApi
 
-__version__ = "3.2.0"
+
+class TestPTQuantizeApi(TemplateTestQuantizeApi):
+    @staticmethod
+    def get_simple_model():
+        return ConvTestModel()
