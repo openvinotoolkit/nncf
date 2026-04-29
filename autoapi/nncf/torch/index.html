@@ -270,6 +270,12 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.load_from_config" title="nncf.torch.load_from_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_from_config</span></code></a>(model, config, *[, allowed_modules])</p></td>
+<td><p>Initialize model with compressed modules from config file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.torch.get_config" title="nncf.torch.get_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_config</span></code></a>(model)</p></td>
+<td><p>Returns serializable config which contains all information required to recover all additional modules placement.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.torch.disable_tracing" title="nncf.torch.disable_tracing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">disable_tracing</span></code></a>(method)</p></td>
 <td><p>Patch a method so that it will be executed within no_nncf_trace context</p></td>
 </tr>
@@ -282,6 +288,59 @@
 </tbody>
 </table>
 </div>
+<dl class="py function">
+<dt class="sig sig-object py" id="nncf.torch.load_from_config">
+<span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">load_from_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">allowed_modules</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_ALLOWED_MODULES</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/function_hook/serialization.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.load_from_config" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize model with compressed modules from config file.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">MyModel</span><span class="p">()</span>
+<span class="n">qmodel</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">quantize</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;state_dict&quot;</span><span class="p">:</span> <span class="n">qmodel</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+        <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">get_config</span><span class="p">(</span><span class="n">qmodel</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;ckpt.pth&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="n">ckpt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;ckpt.pth&quot;</span><span class="p">)</span>
+<span class="n">restored_model</span> <span class="o">=</span> <span class="n">load_from_config</span><span class="p">(</span><span class="n">MyModel</span><span class="p">(),</span> <span class="n">ckpt</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">])</span>
+<span class="n">restored_model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">ckpt</span><span class="p">[</span><span class="s2">&quot;state_dict&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>TModel</em>) – The original uncompressed model.</p></li>
+<li><p><strong>config</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – The configuration dictionary containing the compressed model information.</p></li>
+<li><p><strong>allowed_modules</strong> (<em>tuple</em><em>[</em><em>str</em><em>]</em>) – Allowed patterns for deserialized module import paths. Default is <cite>(“nncf.*”,)</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The compressed model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TModel</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nncf.torch.get_config">
+<span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">get_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/function_hook/serialization.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.get_config" title="Link to this definition">¶</a></dt>
+<dd><p>Returns serializable config which contains all information required to recover all additional modules placement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>torch.nn.Module</em>) – The model to serialize.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Serializable config.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.torch.disable_tracing">
 <span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">disable_tracing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/torch/function_hook/hook_executor_mode.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.disable_tracing" title="Link to this definition">¶</a></dt>
@@ -358,6 +417,8 @@
             <ul>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch</span></code></a><ul>
 <li><a class="reference internal" href="#functions">Functions</a><ul>
+<li><a class="reference internal" href="#nncf.torch.load_from_config"><code class="docutils literal notranslate"><span class="pre">load_from_config()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.torch.get_config"><code class="docutils literal notranslate"><span class="pre">get_config()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.disable_tracing"><code class="docutils literal notranslate"><span class="pre">disable_tracing()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.force_build_cpu_extensions"><code class="docutils literal notranslate"><span class="pre">force_build_cpu_extensions()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.force_build_cuda_extensions"><code class="docutils literal notranslate"><span class="pre">force_build_cuda_extensions()</span></code></a></li>

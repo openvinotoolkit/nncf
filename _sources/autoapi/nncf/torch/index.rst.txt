@@ -16,10 +16,46 @@ Functions
 
 .. autoapisummary::
 
+   nncf.torch.load_from_config
+   nncf.torch.get_config
    nncf.torch.disable_tracing
    nncf.torch.force_build_cpu_extensions
    nncf.torch.force_build_cuda_extensions
 
+
+
+.. py:function:: load_from_config(model, config, *, allowed_modules = DEFAULT_ALLOWED_MODULES)
+
+   Initialize model with compressed modules from config file.
+
+   .. code-block:: python
+
+       model = MyModel()
+       qmodel = nncf.quantize(model, ...)
+       torch.save(
+           {
+               "state_dict": qmodel.state_dict(),
+               "config": get_config(qmodel),
+           },
+           "ckpt.pth",
+       )
+       ...
+       ckpt = torch.load("ckpt.pth")
+       restored_model = load_from_config(MyModel(), ckpt["config"])
+       restored_model.load_state_dict(ckpt["state_dict"])
+
+   :param model: The original uncompressed model.
+   :param config: The configuration dictionary containing the compressed model information.
+   :param allowed_modules: Allowed patterns for deserialized module import paths. Default is `("nncf.*",)`.
+   :return: The compressed model.
+
+
+.. py:function:: get_config(model)
+
+   Returns serializable config which contains all information required to recover all additional modules placement.
+
+   :param model: The model to serialize.
+   :return: Serializable config.
 
 
 .. py:function:: disable_tracing(method)
