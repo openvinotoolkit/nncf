@@ -207,71 +207,71 @@ class MultipleConvTestModel(nn.Module):
         return self.conv_6(x)
 
 
-class ConvConcatWithInputModel(nn.Module):
-    """
-    Model where conv output is combined with the original model input via
-    a multi-input node (Concat or elementwise Add).  This triggers a bug in
-    bias correction subgraph extraction when such a node has an input from
-    outside the subgraph boundary.
+def build_conv(in_channels: int, out_channels: int, kernel_size: int) -> nn.Module:
+    conv = create_conv(in_channels, out_channels, kernel_size)
+    with set_torch_seed():
+        conv.weight.data = torch.randn([out_channels, in_channels, kernel_size, kernel_size])
+        conv.bias.data = torch.randn([out_channels])
+    return conv
 
-    mode="cat":
-        input ──→ conv1 ──→ relu ──→ cat([relu_out, input], dim=1) ──→ conv2
-                                        ↑                                 |
-        input ──────────────────────────┘                                 ↓
-                                                                       output
 
-    mode="add":
-        input ──→ conv1 ──→ relu ──→ add(relu_out, input) ──→ conv2
-                                        ↑                         |
-        input ──────────────────────────┘                         ↓
-                                                               output
-    """
-
+class ConcatWithInput(nn.Module):
     INPUT_SIZE = [1, 2, 4, 4]
 
-    def __init__(self, mode: str):
+    def __init__(self):
         super().__init__()
-        assert mode in ("cat", "add")
-        self.mode = mode
-        with set_torch_seed():
-            self.conv_1 = create_conv(2, 2, 1)
-            self.conv_1.weight.data = torch.randn([2, 2, 1, 1])
-            self.conv_1.bias.data = torch.randn([2])
-            # cat: conv_2 receives 2 + 2 = 4 channels;  add: 2 channels
-            conv_2_in = 4 if mode == "cat" else 2
-            self.conv_2 = create_conv(conv_2_in, 2, 1)
-            self.conv_2.weight.data = torch.randn([2, conv_2_in, 1, 1])
-            self.conv_2.bias.data = torch.randn([2])
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(4, 2, 1)
 
     def forward(self, x):
         x_1 = self.conv_1(x)
-        x_1 = F.relu(x_1)
-        if self.mode == "add":
-            x_combined = x_1 + x
-        else:
-            x_combined = torch.cat([x_1, x], dim=1)
+        x_1 = torch.relu(x_1)
+        x_combined = torch.cat([x_1, x], dim=1)
         return self.conv_2(x_combined)
 
 
-class ConvConcatWithInputModelCat(ConvConcatWithInputModel):
+class ConcatWithReluInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
     def __init__(self):
-        super().__init__(mode="cat")
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(4, 2, 1)
 
-
-class ConvConcatWithInputModelAdd(ConvConcatWithInputModel):
-    def __init__(self):
-        super().__init__(mode="add")
-
-
-class ConvConcatWithLongPathToOrigInputs(ConvConcatWithInputModel):
     def forward(self, x):
-        x_2 = F.relu(x)
         x_1 = self.conv_1(x)
         x_1 = F.relu(x_1)
-        if self.mode == "add":
-            x_combined = x_1 + x_2
-        else:
-            x_combined = torch.cat([x_1, x_2], dim=1)
+        x_combined = torch.cat([x_1, F.relu(x)], dim=1)
+        return self.conv_2(x_combined)
+
+
+class AddWithInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(2, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = x_1 + x
+        return self.conv_2(x_combined)
+
+
+class AddWithReluInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(2, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = x_1 + torch.relu(x)
         return self.conv_2(x_combined)
 
 

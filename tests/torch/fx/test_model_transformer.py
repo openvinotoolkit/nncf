@@ -45,8 +45,8 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModel
-from tests.cross_fw.test_templates.helpers import ConvConcatWithLongPathToOrigInputs
+from tests.cross_fw.test_templates.helpers import ConcatWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithReluInput
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
@@ -94,13 +94,13 @@ MODEL_EXTRACTION_CASES = (
         MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add__1", 0)])
     ),
     ModelExtractionTestCase(
-        ConvConcatWithInputModel(mode="cat"),
-        ConvConcatWithInputModel.INPUT_SIZE,
+        ConcatWithInput,
+        ConcatWithInput.INPUT_SIZE,
         PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
     ModelExtractionTestCase(
-        ConvConcatWithLongPathToOrigInputs(mode="cat"),
-        ConvConcatWithLongPathToOrigInputs.INPUT_SIZE,
+        ConcatWithReluInput,
+        ConcatWithReluInput.INPUT_SIZE,
         PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
 )
@@ -190,6 +190,15 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ),
             True,
             "(conv2d, conv2d, conv2d)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConcatWithReluInput,
+                ConcatWithReluInput.INPUT_SIZE,
+                PTModelExtractionCommand([("cat", 1)], [("output", 0)]),
+            ),
+            False,
+            "(conv2d_1,)",
         ),
     ),
     ids=idfn,

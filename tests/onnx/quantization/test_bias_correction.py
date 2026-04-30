@@ -20,7 +20,9 @@ from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
-from tests.cross_fw.test_templates.helpers import ConvConcatWithInputModel
+from tests.cross_fw.test_templates.helpers import AddWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithReluInput
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
@@ -51,7 +53,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
         if isinstance(model, OneDimMM):
             pytest.skip("ONNX does not support BC with MM ops")
-        if isinstance(model, ConvConcatWithInputModel):
+        if isinstance(model, (ConcatWithInput, ConcatWithReluInput, AddWithInput)):
             pytest.skip("ONNX model extraction fails with concat skip connections, ticket 183589")
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(
