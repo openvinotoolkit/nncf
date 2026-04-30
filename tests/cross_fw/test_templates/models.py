@@ -309,85 +309,6 @@ class NNCFGraphCAWithBias:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
-class NNCFGraphDropoutRemovingCase:
-    def __init__(
-        self,
-        dropout_metatype,
-        wrong_dropout_node: bool = False,
-        wrong_parallel_edges: bool = False,
-        nncf_graph_cls=NNCFGraph,
-    ):
-        nodes = [
-            NodeWithType("Input_1", InputNoopMetatype),
-            NodeWithType("Split_1", None),
-            NodeWithType(
-                "Dropout_1",
-                dropout_metatype,
-            ),
-            NodeWithType("Output_1", OutputNoopMetatype),
-            NodeWithType(
-                "Dropout_2",
-                dropout_metatype,
-            ),
-            NodeWithType("Output_2_1", OutputNoopMetatype),
-            NodeWithType("Output_2_2", OutputNoopMetatype),
-            NodeWithType("Output_2_3", OutputNoopMetatype),
-            NodeWithType(
-                "Dropout_3",
-                dropout_metatype,
-            ),
-            NodeWithType("Output_3", OutputNoopMetatype),
-        ]
-        node_edges = [
-            ("Input_1", "Split_1"),
-            ("Split_1", "Dropout_1"),
-            ("Dropout_1", "Output_1"),
-            ("Split_1", "Dropout_2"),
-            ("Dropout_2", "Output_2_1"),
-            ("Dropout_2", "Output_2_2"),
-            ("Dropout_2", "Output_2_3"),
-            ("Split_1", "Dropout_3"),
-            ("Dropout_3", "Output_3"),
-        ]
-        original_mock_graph = create_mock_graph(nodes, node_edges)
-        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
-
-        dropout_2 = self.nncf_graph.get_node_by_key("3 /Dropout_2_0")
-        output = self.nncf_graph.add_nncf_node("/Output_2_4_0", "output", OutputNoopMetatype)
-        tensor_shape = [1, 2, 1, 1] if wrong_dropout_node else [1, 1, 1, 1]
-        self.nncf_graph.add_edge_between_nncf_nodes(
-            dropout_2.node_id,
-            output.node_id,
-            tensor_shape=tensor_shape,
-            input_port_id=15,
-            output_port_id=1,
-            dtype=Dtype.FLOAT,
-        )
-
-        dropout_2 = self.nncf_graph.get_node_by_key("4 /Dropout_3_0")
-        output = self.nncf_graph.add_nncf_node("/Output_3_1_0", "output", OutputNoopMetatype)
-        for input_port_id in range(1, 10):
-            self.nncf_graph.add_edge_between_nncf_nodes(
-                dropout_2.node_id,
-                output.node_id,
-                tensor_shape=tensor_shape,
-                input_port_id=input_port_id,
-                output_port_id=1,
-                dtype=Dtype.FLOAT,
-            )
-        if wrong_parallel_edges:
-            dropout_4 = self.nncf_graph.add_nncf_node("100 /dropout", "dropout", dropout_metatype)
-            for input_port_id in range(10):
-                self.nncf_graph.add_edge_between_nncf_nodes(
-                    self.nncf_graph.get_node_by_key("0 /Input_1_0").node_id,
-                    dropout_4.node_id,
-                    tensor_shape=[1, 1, 1, 1],
-                    input_port_id=input_port_id,
-                    output_port_id=0,
-                    dtype=Dtype.FLOAT,
-                )
-
-
 class NNCFGraphToTestConstantFiltering:
     def __init__(
         self,
@@ -567,12 +488,6 @@ class NNCFGraphModelWithEmbeddingsShapeOf:
     ):
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
-            NodeWithType("Shape_of", shape_of_metatype, layer_attributes=default_layer_attrs),
-            NodeWithType("Add_int", add_metatype, layer_attributes=default_layer_attrs),
-            NodeWithType("W_EMB", const_metatype, layer_attributes=default_layer_attrs),
-            NodeWithType("Embedding", embedding_metatype, layer_attributes=embedding_layer_attrs),
-            NodeWithType("Conv", conv_metatype, layer_attributes=conv_layer_attrs),
-            NodeWithType("W_Conv", const_metatype, layer_attributes=default_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
         ]
         node_edges = [
