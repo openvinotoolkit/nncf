@@ -766,9 +766,9 @@ class NNCFGraph:
             data[NNCFGraph.DTYPE_EDGE_ATTR],
         )
 
-    def bypass_node(self, node: NNCFNode) -> None:
+    def remove_passthrough_node(self, node: NNCFNode) -> None:
         """
-        Bypasses the given node in the graph by connecting all of its producers to all of its consumers and then
+        Remove the given node in the graph by connecting all of its producers to all of its consumers and then
         removing the node from the graph.
 
         Limitations:
@@ -776,7 +776,7 @@ class NNCFGraph:
             - new edges contains the same attributes as old output edges,
               exclude from_node_id and output_port_id which are taken from old input edge.
 
-        :param node: The NNCFNode to bypass.
+        :param node: The NNCFNode to remove.
         """
         input_edges = self.get_input_edges(node)
         output_edges = self.get_output_edges(node)

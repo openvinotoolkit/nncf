@@ -1,9 +1,0 @@
-digraph {
-"0 Input_1" [id=0, type=any];
-"1 Input_2" [id=1, type=any];
-"2 ByPass" [id=2, type=noop];
-"3 Output_1" [id=3, type=any];
-"0 Input_1" -> "2 ByPass" [key=0];
-"1 Input_2" -> "2 ByPass" [key=0];
-"2 ByPass" -> "3 Output_1" [key=0];
-}

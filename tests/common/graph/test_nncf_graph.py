@@ -169,24 +169,24 @@ def test_multi_edges():
         assert ref_edge == edge
 
 
-def test_bypass_node_with_single_input_and_multiple_outputs():
+def test_remove_passthrough_node_with_single_input_and_multiple_outputs():
     nncf_graph = NNCFGraph()
 
     producer = nncf_graph.add_nncf_node("producer", "type_a", "metatype_a")
-    bypassed = nncf_graph.add_nncf_node("bypassed", "type_b", "metatype_b")
+    target_node = nncf_graph.add_nncf_node("target_node", "type_b", "metatype_b")
     consumer_1 = nncf_graph.add_nncf_node("consumer_1", "type_c", "metatype_c")
     consumer_2 = nncf_graph.add_nncf_node("consumer_2", "type_d", "metatype_d")
 
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=producer.node_id,
-        to_node_id=bypassed.node_id,
+        to_node_id=target_node.node_id,
         tensor_shape=(1,),
         input_port_id=4,
         output_port_id=7,
         dtype=Dtype.FLOAT,
     )
     nncf_graph.add_edge_between_nncf_nodes(
-        from_node_id=bypassed.node_id,
+        from_node_id=target_node.node_id,
         to_node_id=consumer_1.node_id,
         tensor_shape=(1,),
         input_port_id=0,
@@ -194,7 +194,7 @@ def test_bypass_node_with_single_input_and_multiple_outputs():
         dtype=Dtype.FLOAT,
     )
     nncf_graph.add_edge_between_nncf_nodes(
-        from_node_id=bypassed.node_id,
+        from_node_id=target_node.node_id,
         to_node_id=consumer_2.node_id,
         tensor_shape=(1,),
         input_port_id=1,
@@ -202,10 +202,10 @@ def test_bypass_node_with_single_input_and_multiple_outputs():
         dtype=Dtype.FLOAT,
     )
 
-    nncf_graph.bypass_node(bypassed)
+    nncf_graph.remove_passthrough_node(target_node)
 
     with pytest.raises(KeyError):
-        nncf_graph.get_node_key_by_id(bypassed.node_id)
+        nncf_graph.get_node_key_by_id(target_node.node_id)
 
     new_output_edges = nncf_graph.get_output_edges(producer)
     assert len(new_output_edges) == 2
@@ -223,17 +223,17 @@ def test_bypass_node_with_single_input_and_multiple_outputs():
     assert edge_to_consumer_2.dtype == Dtype.FLOAT
 
 
-def test_bypass_node_raises_if_more_than_one_input_edge():
+def test_remove_passthrough_node_raises_if_more_than_one_input_edge():
     nncf_graph = NNCFGraph()
 
     producer_1 = nncf_graph.add_nncf_node("producer_1", "type_a", "metatype_a")
     producer_2 = nncf_graph.add_nncf_node("producer_2", "type_b", "metatype_b")
-    bypassed = nncf_graph.add_nncf_node("bypassed", "type_c", "metatype_c")
+    target_node = nncf_graph.add_nncf_node("target_node", "type_c", "metatype_c")
     consumer = nncf_graph.add_nncf_node("consumer", "type_d", "metatype_d")
 
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=producer_1.node_id,
-        to_node_id=bypassed.node_id,
+        to_node_id=target_node.node_id,
         tensor_shape=(1,),
         input_port_id=0,
         output_port_id=0,
@@ -241,14 +241,14 @@ def test_bypass_node_raises_if_more_than_one_input_edge():
     )
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=producer_2.node_id,
-        to_node_id=bypassed.node_id,
+        to_node_id=target_node.node_id,
         tensor_shape=(1,),
         input_port_id=1,
         output_port_id=0,
         dtype=Dtype.FLOAT,
     )
     nncf_graph.add_edge_between_nncf_nodes(
-        from_node_id=bypassed.node_id,
+        from_node_id=target_node.node_id,
         to_node_id=consumer.node_id,
         tensor_shape=(1,),
         input_port_id=0,
@@ -257,4 +257,4 @@ def test_bypass_node_raises_if_more_than_one_input_edge():
     )
 
     with pytest.raises(nncf.InternalError, match="Only one input edge is supported"):
-        nncf_graph.bypass_node(bypassed)
+        nncf_graph.remove_passthrough_node(target_node)

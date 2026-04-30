@@ -1,5 +1,0 @@
-digraph {
-"0 ByPass" [id=0, type=noop];
-"1 Output_1" [id=1, type=any];
-"0 ByPass" -> "1 Output_1" [key=0];
-}

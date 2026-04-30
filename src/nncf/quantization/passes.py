@@ -33,7 +33,7 @@ def transform_to_inference_graph(
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param input_nodes: List of input nodes for the given NNCFGraph.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
-    :param noop_metatypes: List of backend-specific NoOp metatypes that should be bypassed.
+    :param noop_metatypes: List of backend-specific NoOp metatypes that should be removed.
     :param preserved_metatypes: List of backend-specific metatypes that require preserving
         float subgraphs when removing the ShapeOf subgraph.
     :return: NNCFGraph in the inference style.
@@ -45,7 +45,7 @@ def transform_to_inference_graph(
     nodes_to_drop = set([*shapeof_subgraphs, *constant_subgraphs]).difference(preserved_nodes)
     nncf_graph.remove_nodes_from(nodes_to_drop)
 
-    bypass_noop_operation_nodes(nncf_graph, noop_metatypes)
+    remove_noop_operation_nodes(nncf_graph, noop_metatypes)
     return nncf_graph
 
 
@@ -157,15 +157,15 @@ def find_constant_subgraphs(
     return constant_nodes
 
 
-def _can_bypass_noop_node(node: NNCFNode, graph: NNCFGraph) -> bool:
+def _can_remove_noop_node(node: NNCFNode, graph: NNCFGraph) -> bool:
     """
-    Checks that the node can be bypassed by connecting its predecessors directly to its successors.
+    Checks that the node can be removed by connecting its predecessors directly to its successors.
         - The node must have exactly one input edge.
         - All output edges must have the same dtype and tensor shape as the input edge.
 
     :param node: The node to check.
     :param graph: The graph containing the node.
-    :return: True if the node can be bypassed, False otherwise.
+    :return: True if the node can be removed, False otherwise.
     """
     in_edges = graph.get_input_edges(node)
     out_edges = graph.get_output_edges(node)
@@ -173,20 +173,20 @@ def _can_bypass_noop_node(node: NNCFNode, graph: NNCFGraph) -> bool:
         # Support only one input edge
         return False
     if any(edge.dtype != in_edges[0].dtype or edge.tensor_shape != in_edges[0].tensor_shape for edge in out_edges):
-        # All edges should have the same dtype and tensor shape to bypass the node
+        # All edges should have the same dtype and tensor shape to remove the node
         return False
     return True
 
 
-def bypass_noop_operation_nodes(graph: NNCFGraph, metatypes: list[type[OperatorMetatype]]) -> None:
+def remove_noop_operation_nodes(graph: NNCFGraph, metatypes: list[type[OperatorMetatype]]) -> None:
     """
-    Bypasses noop nodes in the graph by connecting their predecessors directly
+    Removes noop nodes in the graph by connecting their predecessors directly
     to their successors and removing the noop nodes.
 
     :param graph: The NNCFGraph to be modified.
     """
     noop_nodes = graph.get_nodes_by_metatypes(metatypes)
     for noop_node in noop_nodes:
-        if not _can_bypass_noop_node(noop_node, graph):
+        if not _can_remove_noop_node(noop_node, graph):
             continue
-        graph.bypass_node(noop_node)
+        graph.remove_passthrough_node(noop_node)
