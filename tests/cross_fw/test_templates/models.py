@@ -488,6 +488,12 @@ class NNCFGraphModelWithEmbeddingsShapeOf:
     ):
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Shape_of", shape_of_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Add_int", add_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_EMB", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Embedding", embedding_metatype, layer_attributes=embedding_layer_attrs),
+            NodeWithType("Conv", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("W_Conv", const_metatype, layer_attributes=default_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
         ]
         node_edges = [
