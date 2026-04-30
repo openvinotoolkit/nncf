@@ -243,7 +243,7 @@ def subgraph_with_same_noop_nodes_one_output():
     graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass_1.node_id, (1,), 0, 0, Dtype.FLOAT)
     graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_bypass_2.node_id, (1,), 0, 0, Dtype.FLOAT)
     graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
-    graph.add_edge_between_nncf_nodes(node_bypass_2.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_2.node_id, node_output.node_id, (1,), 1, 0, Dtype.FLOAT)
     return graph
 
 
