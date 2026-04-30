@@ -187,6 +187,25 @@ def _build_none_to_one_graph():
     return graph
 
 
+def subgraph_with_same_noop_nodes_in_sequence():
+    #  (input)
+    #     |
+    #  (bypass)
+    #     |
+    #  (bypass)
+    #     |
+    #  (output)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass_1 = graph.add_nncf_node("ByPass_1", "noop", NoopMetaType)
+    node_bypass_2 = graph.add_nncf_node("ByPass_2", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_bypass_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_2.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
 def subgraph_with_same_noop_nodes():
     #      (input)
     #         |
@@ -197,12 +216,14 @@ def subgraph_with_same_noop_nodes():
     #  (output)
     graph = NNCFGraph()
     node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
-    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_bypass_1 = graph.add_nncf_node("ByPass_1", "noop", NoopMetaType)
+    node_bypass_2 = graph.add_nncf_node("ByPass_2", "noop", NoopMetaType)
     node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
     node_output_2 = graph.add_nncf_node("Output_2", "any", AnyTestMetaType)
-    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
-    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
-    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_2.node_id, (1,), 1, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_bypass_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_2.node_id, node_output_2.node_id, (1,), 0, 0, Dtype.FLOAT)
     return graph
 
 
@@ -216,10 +237,13 @@ def subgraph_with_same_noop_nodes_one_output():
     #     (output)
     graph = NNCFGraph()
     node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
-    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_bypass_1 = graph.add_nncf_node("ByPass_1", "noop", NoopMetaType)
+    node_bypass_2 = graph.add_nncf_node("ByPass_2", "noop", NoopMetaType)
     node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
-    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
-    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_bypass_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_1.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass_2.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
     return graph
 
 
@@ -233,6 +257,7 @@ def subgraph_with_same_noop_nodes_one_output():
         ParamBypass(name="one_to_one_diff_shape", graph_builder=_build_one_to_one_diff_shape_graph),
         ParamBypass(name="one_to_none", graph_builder=_build_one_to_none_graph),
         ParamBypass(name="none_to_one", graph_builder=_build_none_to_one_graph),
+        ParamBypass(name="same_noop_nodes_in_sequence", graph_builder=subgraph_with_same_noop_nodes_in_sequence),
         ParamBypass(name="subgraph_with_same_noop_nodes", graph_builder=subgraph_with_same_noop_nodes),
         ParamBypass(
             name="subgraph_with_same_noop_nodes_one_output", graph_builder=subgraph_with_same_noop_nodes_one_output
