@@ -257,6 +257,8 @@ class NNCFGraph:
         :param metatype_list: List of types to look for.
         :return: List of nodes with provided metatypes.
         """
+        if not metatype_list:
+            return []
         all_nodes_of_type = []
         for nncf_node in self.get_all_nodes():
             if nncf_node.metatype in metatype_list:
