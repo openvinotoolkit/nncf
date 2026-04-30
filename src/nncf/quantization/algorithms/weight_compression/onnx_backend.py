@@ -138,7 +138,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return [metatypes.ONNXEmbeddingMetatype]
 
     @property
-    def noop_metatypes(self) -> list[OperatorMetatype]:
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
         return []
 
     @staticmethod

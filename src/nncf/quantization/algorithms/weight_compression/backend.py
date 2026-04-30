@@ -66,7 +66,7 @@ class WeightCompressionAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def noop_metatypes(self) -> list[OperatorMetatype]:
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes for noop layers.
         """

@@ -94,7 +94,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return [om.OVEmbeddingMetatype]
 
     @property
-    def noop_metatypes(self) -> list[OperatorMetatype]:
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
         return []
 
     @staticmethod
