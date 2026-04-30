@@ -184,6 +184,8 @@ def remove_noop_operation_nodes(graph: NNCFGraph, metatypes: list[type[OperatorM
     to their successors and removing the noop nodes.
 
     :param graph: The NNCFGraph to be modified.
+    :param metatypes: Operator metatypes that are treated as noop operations and
+        will be considered for removal from the graph.
     """
     noop_nodes = graph.get_nodes_by_metatypes(metatypes)
     for noop_node in noop_nodes:

@@ -153,7 +153,7 @@ def _build_one_to_one_diff_dtype_graph():
 def _build_one_to_one_diff_shape_graph():
     #  (input)
     #     | <(1,)>
-    #  (node)  <- should NOT be removed because of different dtypes
+    #  (node)  <- should NOT be removed because of different shape
     #     | <(1,1,)>
     #  (output)
     graph = NNCFGraph()
