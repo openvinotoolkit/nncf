@@ -782,10 +782,16 @@ class NNCFGraph:
         output_edges = self.get_output_edges(node)
 
         if len(input_edges) != 1:
-            msg = "Unsupported graph structure for node bypassing. Only one input edge is supported."
+            msg = "Only one input edge is supported."
             raise nncf.InternalError(msg)
 
         for out_edge in output_edges:
+            if out_edge.tensor_shape != input_edges[0].tensor_shape:
+                msg = "Output and input edge shapes must be the same."
+                raise nncf.InternalError(msg)
+            if out_edge.dtype != input_edges[0].dtype:
+                msg = "Output and input edge dtypes must be the same."
+                raise nncf.InternalError(msg)
             self.add_edge_between_nncf_nodes(
                 from_node_id=input_edges[0].from_node.node_id,
                 to_node_id=out_edge.to_node.node_id,

@@ -31,7 +31,6 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
-from nncf.quantization.passes import bypass_noop_operation_nodes
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
@@ -384,9 +383,13 @@ class AWQ(Algorithm):
         :return: A dict with node names and matched AWQ patterns.
         """
         matches = []
-        inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [], [], [])
-        bypass_noop_operation_nodes(inference_nncf_graph, self._backend_entity.noop_metatypes)
-
+        inference_nncf_graph = transform_to_inference_graph(
+            nncf_graph=deepcopy(graph),
+            input_nodes=[],
+            shapeof_metatypes=[],
+            noop_metatypes=self._backend_entity.noop_metatypes,
+            preserved_metatypes=[],
+        )
         nx_graph = inference_nncf_graph.get_nx_graph_copy()
         for pattern_graph in self._patterns.values():
             matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))

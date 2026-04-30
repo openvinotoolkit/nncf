@@ -9,57 +9,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.quantization.passes import bypass_noop_operation_nodes
 from nncf.quantization.passes import find_constant_subgraphs
-from nncf.quantization.passes import remove_nodes_and_reconnect_graph
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.cross_fw.test_templates.models import NNCFGraphDropoutRemovingCase
 from tests.cross_fw.test_templates.models import NNCFGraphToTestConstantFiltering
 
 DATA_ROOT = TEST_ROOT / "common" / "data" / "reference_graphs"
-
-
-class ParameterTestModes(Enum):
-    VALID = "valid"
-    WRONG_TENSOR_SHAPE = "wrong_dropout_node"
-    WRONG_PARALLEL_EDGES = "wrong_parallel_edges"
-
-    def __str__(self):
-        return self.value
 
 
 def _check_graphs(dot_file_name, nncf_graph) -> None:
     nx_graph = nncf_graph.get_graph_for_structure_analysis()
     path_to_dot = DATA_ROOT / dot_file_name
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
-
-
-@pytest.mark.parametrize("mode", ParameterTestModes)
-def test_remove_nodes_and_reconnect_graph(mode: ParameterTestModes):
-    dot_reference_path_before = Path("passes") / "dropout_synthetic_model_before.dot"
-    dot_reference_path_after = Path("passes") / "dropout_synthetic_model_after.dot"
-    dropout_metatype = "DROPOUT_METATYPE"
-    kwargs = {}
-    if mode != ParameterTestModes.VALID:
-        kwargs.update({mode.value: True})
-
-    nncf_graph = NNCFGraphDropoutRemovingCase(dropout_metatype, **kwargs).nncf_graph
-
-    if mode != ParameterTestModes.VALID:
-        with pytest.raises(AssertionError):
-            remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
-        return
-
-    _check_graphs(dot_reference_path_before, nncf_graph)
-    remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
-    _check_graphs(dot_reference_path_after, nncf_graph)
 
 
 @pytest.mark.parametrize("node_between_const_and_op", [False, True])
@@ -91,3 +63,184 @@ def test_find_constant_subgraphs(node_between_const_and_op):
     constant_subgraphs = find_constant_subgraphs(nncf_graph, input_nodes)
     nncf_graph.remove_nodes_from(constant_subgraphs)
     _check_graphs(dot_reference_path_after, nncf_graph)
+
+
+@dataclass
+class ParamBypass:
+    name: str
+    graph_builder: Callable[[], NNCFGraph]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def ref_file(self) -> Path:
+        return DATA_ROOT / "passes" / "bypass_noop" / f"{self.name}.dot"
+
+
+class AnyTestMetaType(OperatorMetatype):
+    pass
+
+
+class NoopMetaType(OperatorMetatype):
+    pass
+
+
+def _build_one_to_one_graph():
+    #  (input)
+    #     |
+    #  (bypass) <- should be bypassed
+    #     |
+    #  (output)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_one_to_many_graph():
+    #   (input)
+    #      |
+    #   (bypass)  <- should be bypassed
+    #     /  \
+    # (out1) (out2)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    node_output_2 = graph.add_nncf_node("Output_2", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_many_to_one_graph():
+    # (input) (input)
+    #      \  /
+    #    (bypass)  <- should NOT be bypassed
+    #       |
+    #     (out1)
+    graph = NNCFGraph()
+    node_input_1 = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_input_2 = graph.add_nncf_node("Input_2", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input_1.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_input_2.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_one_to_one_diff_dtype_graph():
+    #  (input)
+    #     | <float>
+    #  (bypass)  <- should NOT be bypassed because of different dtypes
+    #     | <int>
+    #  (output)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output.node_id, (1,), 0, 0, Dtype.INTEGER)
+    return graph
+
+
+def _build_one_to_one_diff_shape_graph():
+    #  (input)
+    #     | <(1,)>
+    #  (bypass)  <- should NOT be bypassed because of different dtypes
+    #     | <(1,1,)>
+    #  (output)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output.node_id, (1, 1), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_one_to_none_graph():
+    #  (input)
+    #     |
+    #  (bypass)  <- should be bypassed even if it has no output edges
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_none_to_one_graph():
+    #  (bypass)  <- should be bypassed even if it has no input edges
+    #     |
+    #  (output)
+    graph = NNCFGraph()
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def subgraph_with_same_noop_nodes():
+    #      (input)
+    #         |
+    #      (bypass)
+    #       /   \
+    #  (bypass) (output)
+    #     |
+    #  (output)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    node_output_2 = graph.add_nncf_node("Output_2", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output_2.node_id, (1,), 1, 0, Dtype.FLOAT)
+    return graph
+
+
+def subgraph_with_same_noop_nodes_one_output():
+    #      (input)
+    #         |
+    #      (bypass)
+    #       /   |
+    #  (bypass) |
+    #       \   |
+    #     (output)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_bypass = graph.add_nncf_node("ByPass", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_bypass.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_bypass.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+@pytest.mark.parametrize(
+    "param",
+    [
+        ParamBypass(name="one_to_one", graph_builder=_build_one_to_one_graph),
+        ParamBypass(name="one_to_many", graph_builder=_build_one_to_many_graph),
+        ParamBypass(name="many_to_one", graph_builder=_build_many_to_one_graph),
+        ParamBypass(name="one_to_one_diff_dtype", graph_builder=_build_one_to_one_diff_dtype_graph),
+        ParamBypass(name="one_to_one_diff_shape", graph_builder=_build_one_to_one_diff_shape_graph),
+        ParamBypass(name="one_to_none", graph_builder=_build_one_to_none_graph),
+        ParamBypass(name="none_to_one", graph_builder=_build_none_to_one_graph),
+        ParamBypass(name="subgraph_with_same_noop_nodes", graph_builder=subgraph_with_same_noop_nodes),
+        ParamBypass(
+            name="subgraph_with_same_noop_nodes_one_output", graph_builder=subgraph_with_same_noop_nodes_one_output
+        ),
+    ],
+    ids=str,
+)
+def test_bypass_noop_operation_nodes(param: ParamBypass):
+    graph = param.graph_builder()
+    bypass_noop_operation_nodes(graph, [NoopMetaType])
+    _check_graphs(param.ref_file, graph)

@@ -180,7 +180,7 @@ def test_bypass_node_with_single_input_and_multiple_outputs():
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=producer.node_id,
         to_node_id=bypassed.node_id,
-        tensor_shape=[10],
+        tensor_shape=(1,),
         input_port_id=4,
         output_port_id=7,
         dtype=Dtype.FLOAT,
@@ -188,15 +188,15 @@ def test_bypass_node_with_single_input_and_multiple_outputs():
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=bypassed.node_id,
         to_node_id=consumer_1.node_id,
-        tensor_shape=[1, 3, 32, 32],
+        tensor_shape=(1,),
         input_port_id=0,
         output_port_id=0,
-        dtype=Dtype.INTEGER,
+        dtype=Dtype.FLOAT,
     )
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=bypassed.node_id,
         to_node_id=consumer_2.node_id,
-        tensor_shape=[1, 3, 16, 16],
+        tensor_shape=(1,),
         input_port_id=1,
         output_port_id=1,
         dtype=Dtype.FLOAT,
@@ -213,13 +213,13 @@ def test_bypass_node_with_single_input_and_multiple_outputs():
     edge_to_consumer_1 = nncf_graph.get_edges(producer, consumer_1)[0]
     assert edge_to_consumer_1.input_port_id == 0
     assert edge_to_consumer_1.output_port_id == 7
-    assert edge_to_consumer_1.tensor_shape == (1, 3, 32, 32)
-    assert edge_to_consumer_1.dtype == Dtype.INTEGER
+    assert edge_to_consumer_1.tensor_shape == (1,)
+    assert edge_to_consumer_1.dtype == Dtype.FLOAT
 
     edge_to_consumer_2 = nncf_graph.get_edges(producer, consumer_2)[0]
     assert edge_to_consumer_2.input_port_id == 1
     assert edge_to_consumer_2.output_port_id == 7
-    assert edge_to_consumer_2.tensor_shape == (1, 3, 16, 16)
+    assert edge_to_consumer_2.tensor_shape == (1,)
     assert edge_to_consumer_2.dtype == Dtype.FLOAT
 
 
@@ -234,7 +234,7 @@ def test_bypass_node_raises_if_more_than_one_input_edge():
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=producer_1.node_id,
         to_node_id=bypassed.node_id,
-        tensor_shape=[1],
+        tensor_shape=(1,),
         input_port_id=0,
         output_port_id=0,
         dtype=Dtype.FLOAT,
@@ -242,7 +242,7 @@ def test_bypass_node_raises_if_more_than_one_input_edge():
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=producer_2.node_id,
         to_node_id=bypassed.node_id,
-        tensor_shape=[1],
+        tensor_shape=(1,),
         input_port_id=1,
         output_port_id=0,
         dtype=Dtype.FLOAT,
@@ -250,7 +250,7 @@ def test_bypass_node_raises_if_more_than_one_input_edge():
     nncf_graph.add_edge_between_nncf_nodes(
         from_node_id=bypassed.node_id,
         to_node_id=consumer.node_id,
-        tensor_shape=[1],
+        tensor_shape=(1,),
         input_port_id=0,
         output_port_id=0,
         dtype=Dtype.FLOAT,
