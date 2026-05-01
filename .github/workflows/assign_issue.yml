@@ -11,6 +11,7 @@ permissions: read-all
 jobs:
   handle-issue:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       issues: write
       repository-projects: write
