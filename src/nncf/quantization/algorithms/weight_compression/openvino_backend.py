@@ -93,6 +93,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def embedding_metatypes(self) -> list[OperatorMetatype]:
         return [om.OVEmbeddingMetatype]
 
+    @property
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
+        return []
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         return node.layer_attributes and node.layer_attributes.constant_attributes
