@@ -109,7 +109,7 @@ MODEL_EXTRACTION_CASES = (
 def get_test_id(test_case: ModelExtractionTestCase):
     input_names = [name for name, _ in test_case.command.input_ids]
     output_names = [name for name, _ in test_case.command.output_ids]
-    model_name = getattr(test_case.model, "__name__", test_case.model.__class__.__name__)
+    model_name = test_case.model.__name__
     return model_name + "_".join(input_names + output_names)
 
 
@@ -127,8 +127,7 @@ def _target_point_to_str(target_point: PTTargetPoint) -> str:
 
 @pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES, ids=idfn)
 def test_model_extraction(test_case: ModelExtractionTestCase):
-    model = test_case.model() if isinstance(test_case.model, type) else test_case.model
-    captured_model = get_torch_fx_model(model, torch.ones(test_case.input_shape))
+    captured_model = get_torch_fx_model(test_case.model(), torch.ones(test_case.input_shape))
     _, nncf_graph = _extract_model(test_case, captured_model)
 
     path_to_dot = EXTRACTED_GRAPHS_DIR_NAME / f"{get_test_id(test_case)}.dot"
