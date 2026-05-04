@@ -826,7 +826,7 @@ class MinMaxQuantization(Algorithm):
             deepcopy(nncf_graph),
             self._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             self._backend_entity.shapeof_metatypes,
-            self._backend_entity.dropout_metatypes,
+            self._backend_entity.noop_metatypes,
             self._backend_entity.preserved_metatypes,
         )
 

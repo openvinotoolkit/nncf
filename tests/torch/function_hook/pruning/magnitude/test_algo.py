@@ -138,7 +138,7 @@ def test_save_load(tmpdir: Path):
     orig_output = pruned_model(example_inputs)
 
     loaded_model = ConvModel()
-    loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config, example_inputs)
+    loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config)
     loaded_pruned_model.load_state_dict(state_dict)
     loaded_output = loaded_pruned_model(example_inputs)
     hook_storage = get_hook_storage(loaded_pruned_model)

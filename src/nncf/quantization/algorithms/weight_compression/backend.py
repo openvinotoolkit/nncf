@@ -64,6 +64,13 @@ class WeightCompressionAlgoBackend(ABC):
         Property for the backend-specific metatypes for embedding layers.
         """
 
+    @property
+    @abstractmethod
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
+        """
+        Property for the backend-specific metatypes for noop layers.
+        """
+
     @staticmethod
     @abstractmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:

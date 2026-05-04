@@ -265,6 +265,7 @@ class QuantizerSpec:
 
 
 class QuantizationConstraints:
+    # TODO(AlexanderDokuchaev): Refactor this class. Ticket-185344
     REF_QCONF_OBJ = QuantizerConfig()
 
     def __init__(self, **kwargs: Any) -> None:
@@ -302,12 +303,12 @@ class QuantizationConstraints:
 
     @classmethod
     def from_config_dict(cls, config_dict: dict[str, Any]) -> "QuantizationConstraints":
-        return cls(
-            num_bits=config_dict.get("bits"),
-            mode=config_dict.get("mode"),
-            per_channel=config_dict.get("per_channel"),
-            signedness_to_force=config_dict.get("signed"),
-        )
+        renamed_keys = {
+            "bits": "num_bits",
+            "signed": "signedness_to_force",
+        }
+        new_dict = {renamed_keys.get(k, k): v for k, v in config_dict.items()}
+        return cls(**new_dict)
 
     def constrain_qconfig_list(
         self,
