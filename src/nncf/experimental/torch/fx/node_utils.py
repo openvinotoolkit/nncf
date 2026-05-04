@@ -94,7 +94,7 @@ def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphM
 
 def get_node_args(node: torch.fx.Node) -> Sequence[Any]:
     """
-    Correctly retrieves arguments of the given node.
+    Retrieves arguments of the given node.
 
     :param node: The given node.
     :return: The arguments of the given node.
@@ -106,7 +106,7 @@ def get_node_args(node: torch.fx.Node) -> Sequence[Any]:
 
 def set_node_args(node: torch.fx.Node, args: tuple[Any, ...]) -> None:
     """
-    Correctly sets arguments of the given node.
+    Sets arguments of the given node.
 
     :param node: The given node.
     :param args: The arguments to set.
