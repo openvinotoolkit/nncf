@@ -21,6 +21,8 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from tests.cross_fw.test_templates.helpers import AddWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithInput
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
@@ -145,6 +147,20 @@ class TemplateTestBCAlgorithm:
             (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
             (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
             (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
+            (
+                ConcatWithInput,
+                {
+                    "/conv_1/Conv": [-1.1235, -0.1866],
+                    "/conv_2/Conv": [0.4620, 0.2709],
+                },
+            ),
+            (
+                AddWithInput,
+                {
+                    "/conv_1/Conv": [-1.1235, -0.1866],
+                    "/conv_2/Conv": [-1.1236, -0.1866],
+                },
+            ),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
