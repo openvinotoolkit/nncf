@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -17,8 +18,11 @@ from torch import nn
 
 import nncf
 from nncf.parameters import PruneMode
+from nncf.scopes import IgnoredScope
 from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.prune_model import get_prunable_parameters
 from nncf.torch.function_hook.wrapper import get_hook_storage
+from nncf.torch.graph.graph import PTNNCFGraph
 from tests.torch.function_hook.pruning.helpers import ConvModel
 from tests.torch.function_hook.pruning.helpers import MatMulLeft
 from tests.torch.function_hook.pruning.helpers import MatMulRight
@@ -168,3 +172,53 @@ def test_statistic():
     txt = str(stat)
     assert "conv.weight" in txt
     assert "All parameters" in txt
+
+
+@pytest.fixture(scope="session")
+def two_conv_graph() -> PTNNCFGraph:
+    model = TwoConvModel()
+    return nncf.build_graph(model, example_input=model.get_example_inputs())
+
+
+@dataclass
+class IgnoredScopeParam:
+    test_name: str
+    ignored_scope: IgnoredScope
+    expected_params: set[str]
+
+    def __str__(self):
+        return self.test_name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        IgnoredScopeParam(
+            test_name="none",
+            ignored_scope=None,
+            expected_params={"conv1.weight", "conv2.weight"},
+        ),
+        IgnoredScopeParam(
+            test_name="weight_name_1",
+            ignored_scope=IgnoredScope(names=["conv1.weight"]),
+            expected_params={"conv2.weight"},
+        ),
+        IgnoredScopeParam(
+            test_name="weight_name_2",
+            ignored_scope=IgnoredScope(names=["conv2.weight"]),
+            expected_params={"conv1.weight"},
+        ),
+        IgnoredScopeParam(
+            test_name="op_name", ignored_scope=IgnoredScope(names=["conv1/conv2d/0"]), expected_params={"conv2.weight"}
+        ),
+        IgnoredScopeParam(
+            test_name="pattern_conv",
+            ignored_scope=IgnoredScope(patterns=["^conv1/conv2d/.*"]),
+            expected_params={"conv2.weight"},
+        ),
+    ),
+    ids=str,
+)
+def test_ignore_scope_for_prunable_parameters(param: IgnoredScopeParam, two_conv_graph: PTNNCFGraph):
+    prunable_parameters = get_prunable_parameters(two_conv_graph, param.ignored_scope)
+    assert prunable_parameters == param.expected_params

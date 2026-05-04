@@ -25,7 +25,7 @@ TModel = TypeVar("TModel", bound=nn.Module)
 
 def apply_regularization_based_pruning(
     model: TModel,
-    parameters: list[str],
+    parameters: set[str],
 ) -> TModel:
     """
     :param model: The neural network model to be pruned.
@@ -33,8 +33,7 @@ def apply_regularization_based_pruning(
     :param ratio: The ratio of parameters to prune.
     :returns: The pruned model with hooks registered for the specified parameters.
     """
-    # Insert hooks
-    for param_name in set(parameters):
+    for param_name in parameters:
         param_data = get_const_data_by_name(param_name, model)
         hook_module = RBPruningMask(shape=tuple(param_data.shape)).to(device=param_data.device)
 

@@ -27,7 +27,7 @@ TModel = TypeVar("TModel", bound=nn.Module)
 
 def apply_magnitude_pruning(
     model: TModel,
-    parameters: list[str],
+    parameters: set[str],
     mode: PruneMode,
     ratio: float,
 ) -> TModel:
@@ -43,8 +43,7 @@ def apply_magnitude_pruning(
     :param ratio: The ratio of parameters to prune.
     :returns: The pruned model with hooks registered for the specified parameters.
     """
-    # Insert hooks
-    for param_name in set(parameters):
+    for param_name in parameters:
         param_data = get_const_data_by_name(param_name, model)
         hook_module = UnstructuredPruningMask(tuple(param_data.shape)).to(device=param_data.device)
         register_post_function_hook(
@@ -54,7 +53,6 @@ def apply_magnitude_pruning(
             hook=hook_module,
         )
 
-    # Set ratio
     update_pruning_ratio(model, mode, ratio)
 
     return model
@@ -65,11 +63,11 @@ def get_pruned_modules(model: nn.Module) -> dict[str, UnstructuredPruningMask]:
     Retrieves a mapping of operation names to their corresponding
     UnstructuredPruningMask hooks from the given model.
 
-    :param model: The model from which to retrieve the sparsity modules.
-    :return: A dictionary mapping tensor names to their corresponding MagnitudeSparsityBinaryMask instances.
+    :param model: The model from which to retrieve the prunable modules.
+    :return: A dictionary mapping tensor names to their corresponding UnstructuredPruningMask instances.
     """
     hook_storage = get_hook_storage(model)
-    sparsity_module_map: dict[str, UnstructuredPruningMask] = dict()
+    pruned_modules: dict[str, UnstructuredPruningMask] = dict()
 
     for name, hook in hook_storage.named_hooks():
         if not isinstance(hook, UnstructuredPruningMask):
@@ -79,9 +77,9 @@ def get_pruned_modules(model: nn.Module) -> dict[str, UnstructuredPruningMask]:
         if hook_type != "post_hooks" or port_id != 0:
             msg = f"Unexpected place of SparsityBinaryMask: {hook_type=}, {op_name=}, {port_id=}"
             raise nncf.InternalError(msg)
-        sparsity_module_map[op_name] = hook
+        pruned_modules[op_name] = hook
 
-    return sparsity_module_map
+    return pruned_modules
 
 
 @torch.no_grad()
@@ -104,7 +102,7 @@ def update_pruning_ratio(
     pruned_modules_map = get_pruned_modules(model)
 
     if not pruned_modules_map:
-        msg = "No Sparsity modules found in the model"
+        msg = "No pruned tensors found in the model"
         raise nncf.InternalError(msg)
 
     if mode == PruneMode.UNSTRUCTURED_MAGNITUDE_LOCAL:
