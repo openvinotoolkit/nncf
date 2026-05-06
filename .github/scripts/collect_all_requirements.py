@@ -24,7 +24,6 @@ def _package_name(requirement_line: str) -> str | None:
 def collect_requirements_files() -> list[Path]:
     result = subprocess.run(
         ["git", "ls-files", "**/requirements*.txt", "requirements.txt"],
-        shell=True,
         capture_output=True,
         text=True,
         check=True,
