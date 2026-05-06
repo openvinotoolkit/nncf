@@ -23,11 +23,12 @@ def _package_name(requirement_line: str) -> str | None:
 
 def collect_requirements_files() -> list[Path]:
     result = subprocess.run(
-        ["git", "ls-files", "**/requirements*.txt", "requirements.txt"], capture_output=True, text=True, check=False
+        ["git", "ls-files", "**/requirements*.txt", "requirements.txt"],
+        shell=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
-    if result.returncode != 0:
-        msg = f"Command failed ({result.stderr.strip() or result.stdout.strip()}"
-        raise RuntimeError(msg)
     paths = {Path(line) for line in result.stdout.splitlines() if line.strip()}
     print(f"Found {len(paths)} requirements.txt files")
     return sorted(paths)
