@@ -10,6 +10,7 @@
 # limitations under the License.
 import argparse
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -22,8 +23,10 @@ def _package_name(requirement_line: str) -> str | None:
 
 
 def collect_requirements_files() -> list[Path]:
+    git_executable = shutil.which("git")
     result = subprocess.run(
-        ["git", "ls-files", "**/requirements*.txt", "requirements.txt"],
+        [git_executable, "ls-files", "**/requirements*.txt", "requirements.txt"],
+        shell=False,
         capture_output=True,
         text=True,
         check=True,
@@ -80,11 +83,11 @@ def main() -> int:
     requirements = get_unique_packages_from_requirements_files()
     package_requirements = get_package_requirements()
     total_requirements = sorted(set(requirements) | set(package_requirements))
-    output_text = "\n".join(total_requirements) + "\n"
+    output_text = "\n".join(total_requirements)
 
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(output_text, encoding="utf-8")
+        args.output.write_text(output_text + "\n", encoding="utf-8")
     else:
         print(output_text)
 
