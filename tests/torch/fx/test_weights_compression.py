@@ -355,7 +355,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_model_for_test_scale_estimation():
-        model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+        model = LinearModel()
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
