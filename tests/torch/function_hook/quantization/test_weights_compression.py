@@ -957,7 +957,7 @@ class ParamIgnoredScope:
     ),
     ids=str,
 )
-def test_ignored_scope(param: ParamIgnoredScope):
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
     model = wrap_model(LinearModel())
     example_input = torch.rand(8, 8)
     wrapped_model = GraphModelWrapper(model, example_input=example_input)

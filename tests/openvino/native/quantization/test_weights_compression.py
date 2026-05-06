@@ -830,18 +830,31 @@ CALCULATE_SCALE_DESCS = [
 ]
 
 
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 @pytest.mark.parametrize(
-    ("ignored_scope", "num_compressed"),
+    "param",
     (
-        (IgnoredScope(types=["MatMul"]), 1),
-        (IgnoredScope(types=["Gather"]), 2),
-        (IgnoredScope(names=["MatMul_1"]), 2),
-        (IgnoredScope(patterns=["MatMul_\\d"]), 1),
+        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref=3),
+        ParamIgnoredScope(name="type", ignored_scope=IgnoredScope(types=["Gather"]), ref=2),
+        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["matmul_1_data"]), ref=2),
+        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul_1"]), ref=2),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=[".*data"]), ref=0),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=1),
     ),
+    ids=str,
 )
-def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
     model = IntegerModel(positive_w=False).ov_model
-    compressed_model = compress_weights(model, ignored_scope=ignored_scope)
+    compressed_model = compress_weights(model, ignored_scope=param.ignored_scope)
     ref_compressed_weights = TEST_MODELS[IntegerModel]
     act_num = 0
     for op in compressed_model.get_ops():
@@ -851,7 +864,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
             and op.get_element_type() == ov.Type.u8
         ):
             act_num += 1
-    assert act_num == num_compressed
+    assert act_num == param.ref
 
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
@@ -2768,41 +2781,3 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             group_size=-1,
         )
         assert self.get_num_int8_nodes(compressed_model) == 0
-
-
-@dataclass
-class ParamIgnoredScope:
-    name: str
-    ignored_scope: IgnoredScope
-    ref: set[str]
-
-    def __str__(self) -> str:
-        return self.name
-
-
-@pytest.mark.parametrize(
-    "param",
-    (
-        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref={"Weights"}),
-        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["Weights"]), ref=set()),
-        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul"]), ref=set()),
-        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=["Wei.*"]), ref=set()),
-        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=set()),
-    ),
-    ids=str,
-)
-def test_ignored_scope(param: ParamIgnoredScope):
-    model = LMLinearModel().ov_model
-    compressed_model = compress_weights(
-        model,
-        mode=CompressWeightsMode.INT4_SYM,
-        group_size=-1,
-        all_layers=True,
-        ignored_scope=param.ignored_scope,
-    )
-
-    compressed = set()
-    for op in compressed_model.get_ops():
-        if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
-            compressed.add(op.get_friendly_name())
-    assert compressed == set(param.ref)

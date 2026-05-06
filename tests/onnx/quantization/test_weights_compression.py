@@ -1012,7 +1012,7 @@ class ParamIgnoredScope:
     ),
     ids=str,
 )
-def test_ignored_scope(param: ParamIgnoredScope, model_for_ignored_scope_test: onnx.ModelProto):
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope, model_for_ignored_scope_test: onnx.ModelProto):
     model = deepcopy(model_for_ignored_scope_test)
 
     compressed_model = compress_weights(

@@ -773,7 +773,7 @@ class ParamIgnoredScope:
     ),
     ids=str,
 )
-def test_ignored_scope(param: ParamIgnoredScope):
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
     example_input = torch.rand(8, 8)
     model = get_torch_fx_model(LinearModel(), example_input)
     compressed_model = compress_weights(
