@@ -119,7 +119,8 @@ class LMLinearModel(OVReferenceModel):
         input_1 = opset.parameter(self._input_shape, name="Input")
         weight_shape = self.get_weight_shape(transpose_b)
         data = self._rng.random(weight_shape).astype(np.float32)
-        matmul = opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
+        opset_constant = opset.constant(data, name="Weights")
+        matmul = opset.matmul(input_1, opset_constant, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
@@ -2767,3 +2768,41 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             group_size=-1,
         )
         assert self.get_num_int8_nodes(compressed_model) == 0
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: int
+
+    def __str__(self):
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref={"Weights"}),
+        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["Weights"]), ref=set()),
+        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul"]), ref=set()),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=["Wei.*"]), ref=set()),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=set()),
+    ),
+    ids=str,
+)
+def test_ignored_scope(param: ParamIgnoredScope):
+    model = LMLinearModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+
+    compressed = set()
+    for op in compressed_model.get_ops():
+        if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
+            compressed.add(op.get_friendly_name())
+    assert compressed == set(param.ref)

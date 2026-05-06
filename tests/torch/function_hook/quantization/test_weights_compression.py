@@ -11,6 +11,7 @@
 
 
 from collections import defaultdict
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -27,6 +28,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
@@ -113,8 +115,9 @@ class MatMulModel(torch.nn.Module):
 
 
 class LinearModel(torch.nn.Module):
-    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
+    def __init__(self):
         super().__init__()
+        weight = torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8)
         self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
         self.linear.weight = torch.nn.Parameter(weight)
 
@@ -588,7 +591,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_model_for_test_scale_estimation():
-        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+        return LinearModel()
 
     @staticmethod
     def get_moe_model_for_test_scale_estimation():
@@ -931,3 +934,39 @@ def test_half_precision_models(dtype):
         awq=True,
         dataset=nncf.Dataset([dict(inputs)]),
     )
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: int
+
+    def __str__(self):
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), {"post_hooks.linear:weight__0.0"}),
+        ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["linear/linear/0"]), set()),
+        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear/*"]), set()),
+    ),
+    ids=str,
+)
+def test_ignored_scope(param: ParamIgnoredScope):
+    model = wrap_model(LinearModel())
+    example_input = torch.rand(8, 8)
+    wrapped_model = GraphModelWrapper(model, example_input=example_input)
+    compressed_model = compress_weights(
+        wrapped_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+    hooks = {n for n, _ in get_hook_storage(compressed_model).named_hooks()}
+    assert hooks == param.ref
