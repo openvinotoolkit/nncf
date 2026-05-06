@@ -46,7 +46,7 @@ jobs:
 
       - name: Collect current dependencies
         working-directory: ${{ env.CURRENT_DIR }}
-        run:
+        run: |
           python3 ${{ env.SCRIPT_PATH }} --output "${GITHUB_WORKSPACE}/${{ env.CURRENT_FILE }}"
 
       - name: Collect target dependencies
