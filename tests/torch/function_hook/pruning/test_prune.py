@@ -27,51 +27,27 @@ def two_conv_graph() -> PTNNCFGraph:
 
 
 @dataclass
-class IgnoredScopeParam:
-    test_name: str
+class ParamIgnoredScope:
+    name: str
     ignored_scope: IgnoredScope
     expected_params: set[str]
 
-    def __str__(self):
-        return self.test_name
+    def __str__(self) -> str:
+        return self.name
 
 
 @pytest.mark.parametrize(
     "param",
     (
-        IgnoredScopeParam(
-            test_name="none",
-            ignored_scope=None,
-            expected_params={"conv1.weight", "conv2.weight"},
-        ),
-        IgnoredScopeParam(
-            test_name="weight_name_1",
-            ignored_scope=IgnoredScope(names=["conv1.weight"]),
-            expected_params={"conv2.weight"},
-        ),
-        IgnoredScopeParam(
-            test_name="weight_name_2",
-            ignored_scope=IgnoredScope(names=["conv2.weight"]),
-            expected_params={"conv1.weight"},
-        ),
-        IgnoredScopeParam(
-            test_name="op_name",
-            ignored_scope=IgnoredScope(names=["conv1/conv2d/0"]),
-            expected_params={"conv2.weight"},
-        ),
-        IgnoredScopeParam(
-            test_name="pattern_conv",
-            ignored_scope=IgnoredScope(patterns=["^conv1/conv2d/.*"]),
-            expected_params={"conv2.weight"},
-        ),
-        IgnoredScopeParam(
-            test_name="pattern_const",
-            ignored_scope=IgnoredScope(patterns=[".*2.weight"]),
-            expected_params={"conv1.weight"},
-        ),
+        ParamIgnoredScope("empty", IgnoredScope(), {"conv1.weight", "conv2.weight"}),
+        ParamIgnoredScope("weight_name_1", IgnoredScope(names=["conv1.weight"]), {"conv2.weight"}),
+        ParamIgnoredScope("weight_name_2", IgnoredScope(names=["conv2.weight"]), {"conv1.weight"}),
+        ParamIgnoredScope("op_name", IgnoredScope(names=["conv1/conv2d/0"]), {"conv2.weight"}),
+        ParamIgnoredScope("pattern_conv", IgnoredScope(patterns=["^conv1/conv2d/.*"]), {"conv2.weight"}),
+        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*2.weight"]), {"conv1.weight"}),
     ),
     ids=str,
 )
-def test_ignore_scope_for_prunable_parameters(param: IgnoredScopeParam, two_conv_graph: PTNNCFGraph):
+def test_ignore_scope_for_prunable_parameters(param: ParamIgnoredScope, two_conv_graph: PTNNCFGraph):
     prunable_parameters = get_prunable_parameters(two_conv_graph, param.ignored_scope)
     assert prunable_parameters == param.expected_params

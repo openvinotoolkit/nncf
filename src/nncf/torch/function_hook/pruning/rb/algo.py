@@ -29,8 +29,7 @@ def apply_regularization_based_pruning(
 ) -> TModel:
     """
     :param model: The neural network model to be pruned.
-    :param parameters: A list of parameter names to be pruned.
-    :param ratio: The ratio of parameters to prune.
+    :param parameters: A set of parameter names to be pruned.
     :returns: The pruned model with hooks registered for the specified parameters.
     """
     for param_name in parameters:
@@ -64,7 +63,7 @@ def get_pruned_modules(model: nn.Module) -> dict[str, RBPruningMask]:
 
         hook_type, op_name, port_id = decode_hook_name(name)
         if hook_type != "post_hooks" or port_id != 0:
-            msg = f"Unexpected place of SparsityBinaryMask: {hook_type=}, {op_name=}, {port_id=}"
+            msg = f"Unexpected place of RBPruningMask: {hook_type=}, {op_name=}, {port_id=}"
             raise nncf.InternalError(msg)
         sparsity_module_map[op_name] = hook
 
