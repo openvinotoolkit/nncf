@@ -564,8 +564,10 @@ class WeightCompression(Algorithm):
         if self._all_layers:
             embedding_params = list(
                 filter(
-                    lambda wp: wp.node_with_weight.metatype in self._backend_entity.embedding_metatypes
-                    and len(wp.reduction_axes) == 1,
+                    lambda wp: (
+                        wp.node_with_weight.metatype in self._backend_entity.embedding_metatypes
+                        and len(wp.reduction_axes) == 1
+                    ),
                     all_weight_params,
                 )
             )
