@@ -16,7 +16,7 @@ repos:
         args: [--config=.ci/markdownlint.yaml]
 
   - repo: https://github.com/streetsidesoftware/cspell-cli
-    rev: v9.2.0
+    rev: v10.0.0
     hooks:
       - id: cspell
         args:
