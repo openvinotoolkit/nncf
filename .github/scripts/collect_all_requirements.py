@@ -24,7 +24,8 @@ def _package_name(requirement_line: str) -> str | None:
 
 def collect_requirements_files() -> list[Path]:
     git_executable = shutil.which("git")
-    result = subprocess.run(
+    assert git_executable is not None, "Git executable not found in PATH"
+    result = subprocess.run(  # nosec: B603
         [git_executable, "ls-files", "**/requirements*.txt", "requirements.txt"],
         shell=False,
         capture_output=True,
