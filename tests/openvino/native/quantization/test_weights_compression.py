@@ -2774,9 +2774,9 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
 class ParamIgnoredScope:
     name: str
     ignored_scope: IgnoredScope
-    ref: int
+    ref: set[str]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 

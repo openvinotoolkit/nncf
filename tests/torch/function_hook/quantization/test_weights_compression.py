@@ -118,11 +118,11 @@ class LinearModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         weight = torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8)
-        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
+        self.linear = torch.nn.Linear(weight.shape[1], weight.shape[0], False)
         self.linear.weight = torch.nn.Parameter(weight)
 
-    def forward(self, input):
-        return self.linear(input)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.linear(x)
 
 
 class SimpleMoEModel(nn.Module):
@@ -940,9 +940,9 @@ def test_half_precision_models(dtype):
 class ParamIgnoredScope:
     name: str
     ignored_scope: IgnoredScope
-    ref: int
+    ref: set[str]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
