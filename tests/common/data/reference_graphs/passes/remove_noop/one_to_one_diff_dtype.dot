@@ -1,0 +1,7 @@
+digraph {
+"0 Input_1" [id=0, type=any];
+"1 NodeToRemove" [id=1, type=noop];
+"2 Output_1" [id=2, type=any];
+"0 Input_1" -> "1 NodeToRemove" [key=0];
+"1 NodeToRemove" -> "2 Output_1" [key=0];
+}

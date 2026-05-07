@@ -75,8 +75,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def dropout_metatypes(self) -> list[OperatorMetatype]:
-        return [om.PTDropoutMetatype]
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
+        return [om.PTNoopMetatype, om.PTDropoutMetatype]
 
     @property
     def conv_metatypes(self) -> list[OperatorMetatype]:
