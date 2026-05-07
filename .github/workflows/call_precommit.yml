@@ -155,7 +155,7 @@ jobs:
 
   pytorch-cuda:
     timeout-minutes: 40
-    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    runs-on: aks-linux-6-cores-55gb-gpu-a10-st
     if: ${{ inputs.gpu_enabled == true }}
     defaults:
       run:

@@ -48,7 +48,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    runs-on: aks-linux-6-cores-55gb-gpu-a10-st
     timeout-minutes: 20
     env:
       DEBIAN_FRONTEND: noninteractive
