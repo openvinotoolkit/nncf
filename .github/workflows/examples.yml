@@ -94,7 +94,7 @@ jobs:
 
   examples-cuda:
     name: Test examples CUDA [${{ matrix.group }}/1]
-    runs-on: aks-linux-6-cores-55gb-gpu-a10-st
+    runs-on: aks-linux-6-cores-55gb-gpu-a10
     timeout-minutes: 40
     if: ${{ !inputs.skip_gpu }}
     strategy:
