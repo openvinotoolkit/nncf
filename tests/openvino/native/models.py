@@ -75,14 +75,18 @@ class LinearModel(OVReferenceModel):
 
 
 class SimpleMoEModel(OVReferenceModel):
-    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, seq_len=4, transpose_a: bool = False):
         input_shape = [num_experts, seq_len, hidden_dim]
         input_1 = opset.parameter(input_shape, name="Input")
 
         weight_data = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
         weight_data = weight_data.reshape(num_experts, hidden_dim, out_dim)
 
-        matmul = opset.matmul(input_1, weight_data, transpose_a=False, transpose_b=False, name="MoE_MatMul")
+        if transpose_a:
+            transpose = opset.transpose(input_1, (0, 2, 1))
+        else:
+            transpose = input_1
+        matmul = opset.matmul(transpose, weight_data, transpose_a=transpose_a, transpose_b=False, name="MoE_MatMul")
 
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
@@ -817,7 +821,7 @@ class SequentialMatmulModel(OVReferenceModel):
 
     def _create_ov_model(self, mm_hidden_dim=4, transpose_a: bool = False):
         # Make 2d inputs for transposed model
-        # to allign with onnx ref model
+        # to align with onnx ref model
         if transpose_a:
             input_node = opset.parameter([4, mm_hidden_dim], name="Input_1")
             last_node = opset.transpose(input_node, input_order=[1, 0])
@@ -1404,7 +1408,7 @@ class SAMPEModel(OVReferenceModel):
 
 
 class MatMul(OVReferenceModel):
-    def _create_ov_model(self, input_shape: list[int] | None = None, output_dim: int = 16):
+    def _create_ov_model(self, input_shape: list[int] | None = None, output_dim: int = 16, transpose_a: bool = False):
         input_shape = [1, 4, 8] if input_shape is None else input_shape
         input_node = opset.parameter(input_shape, name="Input")
 
@@ -1412,7 +1416,11 @@ class MatMul(OVReferenceModel):
         weights_data = np.arange(0, output_dim * input_dim, dtype=np.float32).reshape(output_dim, input_dim)
         weights_node = opset.constant(weights_data, dtype=np.float32, name="Weights")
 
-        matmul_node = opset.matmul(input_node, weights_node, transpose_a=False, transpose_b=True, name="MatMul")
+        if transpose_a:
+            transpose = opset.transpose(input_node, (0, 2, 1))
+        else:
+            transpose = input_node
+        matmul_node = opset.matmul(transpose, weights_node, transpose_a=transpose_a, transpose_b=True, name="MatMul")
 
         result_node = opset.result(matmul_node, name="Result")
 

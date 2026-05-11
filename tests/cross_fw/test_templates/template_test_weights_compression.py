@@ -38,6 +38,7 @@ from nncf.quantization.algorithms.weight_compression.algorithm import WeightComp
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
+from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
@@ -71,10 +72,10 @@ spy_instance = None
 @dataclass
 class ScaleEstimationQuantizationParamsTestCase:
     config: WeightCompressionConfig
-    ref_scale: list[float]
-    ref_zp: list[float] | None
     initial_steps: int
     scale_steps: int
+    # key: (transpose_a, n_samples), value: (ref_scale, ref_zp)
+    refs: dict[tuple[bool, int], tuple[list[float], list[float] | None]]
 
     def __str__(self) -> str:
         return f"{self.config.mode.value}_{self.initial_steps}_{self.scale_steps}"
@@ -226,9 +227,7 @@ class TemplateWeightCompression(ABC):
         ),
     )
     @pytest.mark.parametrize("transpose_a", (False, True))
-    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, transpose_a_supported, mocker):
-        if transpose_a and not transpose_a_supported:
-            pytest.skip("transpose_a is not supported for the current backend")
+    def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, mocker):
         model = self.get_sequential_matmul_model(transpose_a=transpose_a)
         input_shape = (4, 4) if transpose_a else (1, 4, 4)
         first = self.to_tensor(np.ones(input_shape, dtype=np.float32))
@@ -249,14 +248,14 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_for_test_scale_estimation() -> TModel:
+    def get_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
         """
         Returns a backend model for test_scale_estimation.
         """
 
     @staticmethod
     @abstractmethod
-    def get_moe_model_for_test_scale_estimation() -> TModel:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
         """
         Returns a backend MoE model for test_scale_estimation with 3D weights.
         """
@@ -279,17 +278,18 @@ class TemplateWeightCompression(ABC):
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
 
-    @pytest.mark.parametrize("is_moe", [False, True])
-    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True])
-    def test_scale_estimation(self, mocker, is_moe, check_sampling_activation_stats_flow):
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
+    @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
+    def test_scale_estimation(self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         if is_moe:
-            model = self.get_moe_model_for_test_scale_estimation()
+            model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
         else:
-            model = self.get_model_for_test_scale_estimation()
+            model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
 
         # prepare dataset of size subset_size with input tensors
@@ -335,10 +335,46 @@ class TemplateWeightCompression(ABC):
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a):
+        """Checks that act_ch_axis parameter is passed to calculate_quantization_params."""
+        calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
+
+        model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
+        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+        input = self.to_tensor(input)
+        dataset = Dataset([input], self.get_transform_func())
+
+        with SpyWeightCompressionStatisticsContext(mocker):
+            _ = compress_weights(
+                model,
+                mode=CompressWeightsMode.INT4_ASYM,
+                ratio=1.0,
+                group_size=8,
+                scale_estimation=True,
+                all_layers=True,
+                dataset=dataset,
+            )
+
+        # Verify calculate_quantization_params was called
+        assert calc_q_params_spy.call_count > 0, "calculate_quantization_params should be called"
+
+        # Get the call arguments - act_ch_axis is the 5th positional argument (index 4)
+        # Signature: calculate_quantization_params(statistics, weight, reduction_axes, config, act_ch_axis, ...)
+        call_args = calc_q_params_spy.call_args[0]
+        assert len(call_args) >= 5, "calculate_quantization_params should have at least 5 positional arguments"
+
+        # Verify act_ch_axis has a valid value (should be an integer)
+        act_ch_axis = call_args[4]
+        if transpose_a:
+            assert act_ch_axis < 2
+        else:
+            assert act_ch_axis == 2
+
     def test_scale_estimation_outlier_channel_has_lowest_error(self, mocker):
         """Checks that outlier channel has a lowest error after quantization."""
         OUTLIER_CHANNEL = 4
-        model = self.get_model_for_test_scale_estimation()
+        model = self.get_model_for_test_scale_estimation(transpose_a=False)
         original_weight = self.get_orig_weight(model)
 
         # prepare dataset with one input tensor
@@ -370,6 +406,8 @@ class TemplateWeightCompression(ABC):
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
+    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
+    @pytest.mark.parametrize("n_samples", [2, 4])
     @pytest.mark.parametrize(
         "case",
         [
@@ -377,64 +415,124 @@ class TemplateWeightCompression(ABC):
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
                 initial_steps=2,
                 scale_steps=3,
-                ref_scale=[-0.2221, -0.1977, -0.2468, -0.2162, 0.1586, -0.1578, 0.2386, 0.1716],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([-0.2408, -0.2082, -0.2263, -0.2195, 0.1593, -0.1582, 0.2382, 0.1698], None),
+                    (False, 4): ([-0.2413, -0.2056, -0.2469, -0.21, 0.1601, -0.1592, 0.2399, 0.2118], None),
+                    (True, 2): ([0.1859, 0.2124, 0.1643, 0.2538, 0.1981, -0.221, -0.2286, -0.2338], None),
+                    (True, 4): ([0.1859, 0.2093, 0.1654, 0.2525, 0.1969, -0.2378, -0.2265, -0.2338], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
                 initial_steps=0,
                 scale_steps=0,
-                ref_scale=[-0.2378, -0.2134, -0.2353, -0.2338, 0.185, -0.1663, 0.2463, 0.1927],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([-0.2378, -0.2134, -0.2353, -0.2338, 0.185, -0.1663, 0.2463, 0.1927], None),
+                    (False, 4): ([-0.2378, -0.2134, -0.2353, -0.2338, 0.185, -0.1663, 0.2463, 0.1927], None),
+                    (True, 2): ([0.1859, 0.2181, 0.1801, 0.2463, 0.2029, -0.2378, -0.2353, -0.2338], None),
+                    (True, 4): ([0.1859, 0.2181, 0.1801, 0.2463, 0.2029, -0.2378, -0.2353, -0.2338], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
                 initial_steps=1,
                 scale_steps=0,
-                ref_scale=[-0.2405, -0.2133, -0.2468, -0.2299, 0.1586, -0.1578, 0.2386, 0.1927],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([-0.2408, -0.2134, -0.249, -0.2336, 0.1593, -0.1582, 0.2382, 0.1927], None),
+                    (False, 4): ([-0.2413, -0.2134, -0.2469, -0.229, 0.1601, -0.1592, 0.2399, 0.2118], None),
+                    (True, 2): ([0.1859, 0.2281, 0.1712, 0.2538, 0.2012, -0.2378, -0.2423, -0.2338], None),
+                    (True, 4): ([0.1859, 0.2256, 0.171, 0.2525, 0.2005, -0.2378, -0.2411, -0.2338], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=8),
                 initial_steps=0,
                 scale_steps=1,
-                ref_scale=[-0.2406, -0.2134, -0.2469, -0.23, 0.1587, -0.1578, 0.2387, 0.1927],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([-0.2408, -0.2134, -0.249, -0.2336, 0.1593, -0.1582, 0.2382, 0.1927], None),
+                    (False, 4): ([-0.2413, -0.2134, -0.2469, -0.229, 0.1601, -0.1592, 0.2399, 0.2118], None),
+                    (True, 2): ([0.1859, 0.2281, 0.1712, 0.2538, 0.2012, -0.2378, -0.2423, -0.2338], None),
+                    (True, 4): ([0.1859, 0.2256, 0.171, 0.2525, 0.2005, -0.2378, -0.2411, -0.2338], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
                 initial_steps=2,
                 scale_steps=3,
-                ref_scale=[0.2221, 0.1977, 0.2260, 0.2251, 0.1278, 0.1412, 0.2070, 0.1544],
-                ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                refs={
+                    (False, 2): (
+                        [0.2408, 0.2082, 0.2601, 0.2283, 0.1276, 0.1416, 0.1899, 0.1532],
+                        [7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                    ),
+                    (False, 4): (
+                        [0.2279, 0.2056, 0.2264, 0.229, 0.1301, 0.1399, 0.2058, 0.1519],
+                        [7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                    ),
+                    (True, 2): (
+                        [0.1917, 0.2091, 0.1643, 0.2538, 0.1968, 0.1426, 0.2104, 0.2075],
+                        [9.0, 9.0, 8.0, 8.0, 8.0, 4.0, 6.0, 6.0],
+                    ),
+                    (True, 4): (
+                        [0.19, 0.2111, 0.1654, 0.2525, 0.1969, 0.142, 0.2191, 0.2075],
+                        [9.0, 9.0, 8.0, 8.0, 8.0, 4.0, 6.0, 6.0],
+                    ),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=8),
                 initial_steps=0,
                 scale_steps=0,
-                ref_scale=[0.2351, 0.213, 0.2418, 0.2463, 0.144, 0.1452, 0.2079, 0.1735],
-                ref_zp=[7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                refs={
+                    (False, 2): (
+                        [0.2351, 0.213, 0.2418, 0.2463, 0.144, 0.1452, 0.2079, 0.1735],
+                        [7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                    ),
+                    (False, 4): (
+                        [0.2351, 0.213, 0.2418, 0.2463, 0.144, 0.1452, 0.2079, 0.1735],
+                        [7.0, 7.0, 7.0, 7.0, 10.0, 6.0, 9.0, 9.0],
+                    ),
+                    (True, 2): (
+                        [0.1734, 0.205, 0.1917, 0.2452, 0.1968, 0.1656, 0.1983, 0.1974],
+                        [9.0, 9.0, 8.0, 8.0, 8.0, 4.0, 6.0, 6.0],
+                    ),
+                    (True, 4): (
+                        [0.1734, 0.205, 0.1917, 0.2452, 0.1968, 0.1656, 0.1983, 0.1974],
+                        [9.0, 9.0, 8.0, 8.0, 8.0, 4.0, 6.0, 6.0],
+                    ),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
                 initial_steps=2,
                 scale_steps=3,
-                ref_scale=[1.9024, 1.6864, 2.0698, 1.8700, 1.4803, 1.3043, 1.8633, 1.5413],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([1.9025, 1.7071, 2.2651, 1.87, 1.4803, 1.303, 1.9232, 1.5414], None),
+                    (False, 4): ([1.9025, 1.7071, 2.003, 1.7805, 1.3565, 1.233, 1.8641, 1.5419], None),
+                    (True, 2): ([1.5068, 1.7447, 1.3778, 1.7747, 1.5003, 1.8098, 1.8123, 1.87], None),
+                    (True, 4): ([1.4461, 1.9862, 1.3536, 1.9706, 1.6912, 1.7877, 1.8678, 1.6293], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
                 initial_steps=0,
                 scale_steps=0,
-                ref_scale=[1.9024, 1.7070, 1.8827, 1.8700, 1.4803, 1.3307, 1.9705, 1.5418],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([1.9025, 1.7071, 1.8828, 1.87, 1.4803, 1.3307, 1.9706, 1.5419], None),
+                    (False, 4): ([1.9025, 1.7071, 1.8828, 1.87, 1.4803, 1.3307, 1.9706, 1.5419], None),
+                    (True, 2): ([1.4875, 1.7447, 1.4408, 1.9706, 1.6233, 1.9025, 1.8828, 1.87], None),
+                    (True, 4): ([1.4875, 1.7447, 1.4408, 1.9706, 1.6233, 1.9025, 1.8828, 1.87], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(mode=CompressWeightsMode.NF4, group_size=8),
                 initial_steps=10,
                 scale_steps=0,
-                ref_scale=[1.9024, 1.7070, 2.0698, 1.8700, 1.4803, 1.3307, 1.9705, 1.5413],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([1.9025, 1.7071, 2.3383, 1.87, 1.4803, 1.3307, 1.9706, 1.5414], None),
+                    (False, 4): ([1.9025, 1.7071, 2.003, 1.7805, 1.4803, 1.3307, 1.9706, 1.5419], None),
+                    (True, 2): ([1.5068, 1.7447, 1.4309, 1.9706, 1.6149, 1.8098, 1.8728, 1.87], None),
+                    (True, 4): ([1.4956, 1.9862, 1.4408, 1.9706, 1.6912, 1.7877, 1.8828, 1.87], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(
@@ -442,8 +540,12 @@ class TemplateWeightCompression(ABC):
                 ),
                 initial_steps=2,
                 scale_steps=3,
-                ref_scale=[0.5435, 0.4866, 0.4948, 0.5343, 0.4229, 0.3496, 0.5367, 0.4405],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([0.5436, 0.4893, 0.4954, 0.5343, 0.4229, 0.3714, 0.5391, 0.4405], None),
+                    (False, 4): ([0.6051, 0.4974, 0.5021, 0.5343, 0.4229, 0.3527, 0.5357, 0.4405], None),
+                    (True, 2): ([0.4521, 0.4989, 0.395, 0.5094, 0.4638, 0.5003, 0.5173, 0.5032], None),
+                    (True, 4): ([0.4153, 0.53, 0.3881, 0.563, 0.4174, 0.5436, 0.5351, 0.5073], None),
+                },
             ),
             ScaleEstimationQuantizationParamsTestCase(
                 config=WeightCompressionConfig(
@@ -451,38 +553,57 @@ class TemplateWeightCompression(ABC):
                 ),
                 initial_steps=0,
                 scale_steps=0,
-                ref_scale=[0.5435, 0.4877, 0.5379, 0.5342, 0.4229, 0.3802, 0.5630, 0.4405],
-                ref_zp=None,
+                refs={
+                    (False, 2): ([0.5436, 0.4877, 0.5379, 0.5343, 0.4229, 0.3802, 0.563, 0.4405], None),
+                    (False, 4): ([0.5436, 0.4877, 0.5379, 0.5343, 0.4229, 0.3802, 0.563, 0.4405], None),
+                    (True, 2): ([0.425, 0.4985, 0.4117, 0.563, 0.4638, 0.5436, 0.5379, 0.5343], None),
+                    (True, 4): ([0.425, 0.4985, 0.4117, 0.563, 0.4638, 0.5436, 0.5379, 0.5343], None),
+                },
             ),
         ],
         ids=str,
     )
     def test_scale_estimation_calculate_quantization_params(
-        self, case: ScaleEstimationQuantizationParamsTestCase
+        self, case: ScaleEstimationQuantizationParamsTestCase, transpose_a: bool, n_samples: int
     ) -> None:
-        """Verifies that scale estimation produces correct scales for all 4-bit compression modes."""
+        """Verifies that scale estimation produces correct scales for all 4-bit compression modes.
+
+        Tests both transpose_a=False (reduction_axes=(1,), act_ch_axis=2) and
+        transpose_a=True (reduction_axes=(0,), act_ch_axis=1) scenarios,
+        with varying number of activation samples.
+        """
+        if transpose_a:
+            reduction_axes = (0,)
+            act_ch_axis = 1
+        else:
+            reduction_axes = (1,)
+            act_ch_axis = 2
+
+        ref_scale_list, ref_zp_list = case.refs[(transpose_a, n_samples)]
+
         rng = np.random.default_rng(42)
         weight_data = rng.uniform(-2.0, 2.0, size=(8, 8)).astype(np.float32)
         weight = Tensor(self.to_tensor(weight_data))
-        reduction_axes = (1,)
 
-        # Build synthetic activation statistics: 2 samples, shape (1, 4, 8)
+        # Build synthetic activation statistics: n_samples samples, shape (1, 4, 8)
         activations = [
-            Tensor(self.to_tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32))) for _ in range(2)
+            Tensor(self.to_tensor(rng.uniform(0.1, 1.0, size=(1, 4, 8)).astype(np.float32))) for _ in range(n_samples)
         ]
-        statistics = ScaleEstimation.activations_to_wc_statistics(activations)
+        activations = [act * (i + 1) for i, act in enumerate(activations)]
+        statistics = GPTQ.activations_to_wc_statistics(activations)
 
         scale, zp = ScaleEstimation.calculate_quantization_params(
             statistics,
             weight,
             reduction_axes,
             case.config,
+            act_ch_axis=act_ch_axis,
             subset_size=2,
             initial_steps=case.initial_steps,
             scale_steps=case.scale_steps,
         )
 
-        ref_scale = self.to_tensor(case.ref_scale).reshape(8, 1, 1)
+        ref_scale = self.to_tensor(ref_scale_list).reshape(scale.shape)
         assert fns.allclose(Tensor(ref_scale), scale, atol=1e-3), (
             f"Scale for {case.config.mode.value} doesn't match reference.\nActual:\n{scale.data}"
         )
@@ -490,10 +611,10 @@ class TemplateWeightCompression(ABC):
             f"Expected float32 scale, got {scale.dtype} for {case.config.mode.value}"
         )
 
-        if case.ref_zp is None:
+        if ref_zp_list is None:
             assert zp is None, f"Expected no zero point for {case.config.mode.value}, got: {zp}"
         else:
-            ref_zp = self.to_tensor(case.ref_zp).reshape(8, 1, 1)
+            ref_zp = self.to_tensor(ref_zp_list).reshape(zp.shape)
             assert fns.allclose(Tensor(ref_zp), zp, atol=1e-3), (
                 f"Zero point for {case.config.mode.value} doesn't match reference.\nActual:\n{zp.data}"
             )
@@ -639,11 +760,6 @@ class TemplateWeightCompression(ABC):
     def test_awq_scale_ref() -> dict[str, Tensor]:
         "Returns reference for test_awq_scale_reference."
 
-    @abstractmethod
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        """True if backend supports tranpose for MM activations, False otherwise"""
-
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
     @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
     @pytest.mark.parametrize("is_3d_weights", [True, False])
@@ -652,17 +768,12 @@ class TemplateWeightCompression(ABC):
         non_mergable_pattern,
         transpose_a,
         test_awq_scale_ref,
-        transpose_a_supported,
         is_3d_weights,
         monkeypatch,
         mocker,
     ):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
         if transpose_a:
-            if not transpose_a_supported:
-                msg = "Transpose a is not supported for the current backend"
-                pytest.skip(msg)
-
             INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
             model = self.get_transposable_awq_model(
                 transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
@@ -948,7 +1059,6 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize(
         "kwargs",
         [
-            dict(scale_estimation=True),
             dict(lora_correction=True),
             dict(
                 gptq=True,
@@ -956,11 +1066,7 @@ class TemplateWeightCompression(ABC):
             ),
         ],
     )
-    def test_compression_skipped_with_transposed_activations(self, transpose_a_supported, kwargs):
-        if not transpose_a_supported:
-            pytest.skip("transpose_a is not supported for the current backend")
-        if kwargs.get("scale_estimation", False) and "scale_estimation" in self.get_not_supported_algorithms():
-            pytest.skip("Scale estimation is not supported")
+    def test_compression_skipped_with_transposed_activations(self, kwargs):
         if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
             pytest.skip("GPTQ is not supported")
         if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():
