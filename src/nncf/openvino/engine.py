@@ -96,7 +96,7 @@ class OVNativeEngine(Engine):
         """
         device_name = _calibration_device.get() or "CPU"
         config = None
-        if use_fp32_precision and device_name == "CPU":
+        if use_fp32_precision:
             config = {inference_precision: Type.f32}
         ie = ov.Core()
         stateful = model_has_state(model)
