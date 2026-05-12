@@ -31,6 +31,7 @@ import nncf
 from nncf.common.logging.track_progress import track
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
+from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
@@ -157,3 +158,19 @@ class ImageClassificationBase(PTQTestPipeline):
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
         return []
+
+    def get_transform_calibration_fn(self):
+        if self.backend in FX_BACKENDS + PT_BACKENDS:
+            device = torch.device(
+                "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
+            )
+
+            def transform_fn(data_item):
+                return data_item["image"].to(device)
+
+        else:
+
+            def transform_fn(data_item):
+                return {self.input_name: np.array(data_item["image"], dtype=np.float32)}
+
+        return transform_fn
