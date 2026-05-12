@@ -14,6 +14,7 @@
   - Arbitrary look-up table (CODEBOOK) or predefined lookup table based on NF4 (CB4)
   - MX-compliant types - MXFP4 and MXFP8_E4M3
   - FP types - FP8_E4M3 and FP4
+  - NVFP4 type
   - Mixed precision weights compression
   - Grouped weights compression
 

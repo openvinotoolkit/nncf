@@ -34,7 +34,7 @@ jobs:
           git checkout pr-${{ github.event.inputs.pull_request_number }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - name: Install test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt
@@ -48,7 +48,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    runs-on: aks-linux-6-cores-55gb-gpu-a10
     timeout-minutes: 20
     env:
       DEBIAN_FRONTEND: noninteractive
@@ -76,7 +76,7 @@ jobs:
           git checkout pr-${{ github.event.inputs.pull_request_number }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: 3.10.14
+          python-version: "3.12"
       - name: Install test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt

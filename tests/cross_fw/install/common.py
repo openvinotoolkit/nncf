@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import pkgutil
 import re
 import sys
@@ -41,6 +42,6 @@ def load_nncf_modules(excluded_modules_patterns, verbose=False):
             if verbose:
                 print(f"Module {module_name} ------ LOADED")
             continue
-        loader.find_module(module_name).load_module(module_name)
+        importlib.import_module(module_name)
         if verbose:
             print(f"Module {module_name} ------ LOADED")

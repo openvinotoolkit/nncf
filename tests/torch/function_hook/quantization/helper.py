@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import torch
 
@@ -17,11 +16,13 @@ from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTAddMetatype
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -42,6 +43,29 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
     return NNCFGraphToTest(
         PTConv2dMetatype,
         conv_layer_attrs,
+        PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
+    )
+
+
+def get_single_conv_arithmetic_degree2_nncf_graph() -> NNCFGraphArithmeticDegree2:
+    conv_layer_attrs = ConvolutionLayerAttributes(
+        weight_requires_grad=True,
+        in_channels=4,
+        out_channels=4,
+        kernel_size=(4, 4),
+        stride=1,
+        dilations=1,
+        groups=1,
+        transpose=False,
+        padding_values=[],
+    )
+    return NNCFGraphArithmeticDegree2(
+        PTConv2dMetatype,
+        PTAddMetatype,
+        conv_layer_attrs,
+        None,
         PTNNCFGraph,
         const_metatype=PTConstNoopMetatype,
         const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
@@ -95,7 +119,7 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
     )
 
 
-def get_nncf_network(model: torch.nn.Module, input_shape: Optional[list[int]] = None):
+def get_nncf_network(model: torch.nn.Module, input_shape: list[int] | None = None):
     if input_shape is None:
         input_shape = [1, 3, 32, 32]
     model = model.eval()

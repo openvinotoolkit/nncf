@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Any, Optional
+from typing import Any
 
 from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
@@ -19,7 +19,7 @@ from nncf.common.scopes import matches_any
 
 
 def get_scoped_quantizer_config(
-    base_config: QuantizerConfig, scope_str: str, scope_overrides: Optional[dict[str, Any]] = None
+    base_config: QuantizerConfig, scope_str: str, scope_overrides: dict[str, Any] | None = None
 ) -> QuantizerConfig:
     """
     Returns a QuantizerConfig which is based on a given config, which will have overrides
@@ -56,8 +56,8 @@ def assign_qconfig_lists_to_modules(
     nodes_with_weights: list[NNCFNode],
     default_weight_qconfig: QuantizerConfig,
     global_weight_constraints: QuantizationConstraints = None,
-    scope_overrides_dict: Optional[dict[str, Any]] = None,
-    hw_config: Optional[HWConfig] = None,
+    scope_overrides_dict: dict[str, Any] | None = None,
+    hw_config: HWConfig | None = None,
 ) -> dict[NNCFNode, list[QuantizerConfig]]:
     """
     Assigns a list of possible quantizer configurations (as determined by HW config, defaults and overrides)

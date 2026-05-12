@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
 
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -28,7 +27,7 @@ class BackendParameters:
     EXTERNAL_DATA_DIR = "external_data_dir"
 
 
-def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
+def is_weight_compression_needed(advanced_parameters: AdvancedQuantizationParameters | None) -> bool:
     """
     Determines whether weight compression is needed based on the provided
     advanced quantization parameters.
@@ -42,8 +41,8 @@ def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizat
 
 
 def get_external_data_dir(
-    advanced_parameters: Optional[Union[AdvancedQuantizationParameters, AdvancedCompressionParameters]],
-) -> Optional[str]:
+    advanced_parameters: AdvancedQuantizationParameters | AdvancedCompressionParameters | None,
+) -> str | None:
     """
     Returns the value associated with the `BackendParameters.EXTERNAL_DATA_DIR` key from the backend parameters.
 

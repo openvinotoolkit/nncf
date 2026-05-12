@@ -13,7 +13,6 @@ import contextlib
 import numbers
 from abc import ABC
 from abc import abstractmethod
-from typing import Union
 
 import numpy as np
 import onnx
@@ -30,12 +29,11 @@ from nncf.torch.layer_utils import StatefulModuleInterface
 from tests.cross_fw.shared.command import Command as BaseCommand
 from tests.cross_fw.shared.comparator import BaseTensorListComparator
 
-TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
+TensorType = torch.Tensor | np.ndarray | numbers.Number
 
 
 def fill_conv_weight(conv, value, dim=2):
     conv.weight.data.fill_(value)
-    # TODO: Fill it right
     if dim in [2, 3]:
         with torch.no_grad():
             mask = torch.eye(conv.kernel_size[0])
@@ -271,8 +269,8 @@ class DummyOpWithState(torch.nn.Module, StatefulModuleInterface):
 
 
 def commands_are_equal(
-    command_left: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
-    command_right: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
+    command_left: PTInsertionCommand | PTSharedFnInsertionCommand,
+    command_right: PTInsertionCommand | PTSharedFnInsertionCommand,
     check_priority: bool = True,
     check_hooks_group_name: bool = True,
     check_fn_ref=True,
@@ -347,7 +345,7 @@ def get_grads(variables: list[nn.Parameter]) -> list[torch.Tensor]:
 
 class PTTensorListComparator(BaseTensorListComparator):
     @classmethod
-    def _to_numpy(cls, tensor: TensorType) -> Union[np.ndarray, numbers.Number]:
+    def _to_numpy(cls, tensor: TensorType) -> np.ndarray | numbers.Number:
         if isinstance(tensor, torch.Tensor):
             return tensor.cpu().detach().numpy()
         if isinstance(tensor, (np.ndarray, numbers.Number)):

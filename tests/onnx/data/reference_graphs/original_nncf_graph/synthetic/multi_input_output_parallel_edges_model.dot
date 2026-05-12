@@ -1,0 +1,11 @@
+digraph {
+"0 Concat1" [id=0, type=Concat];
+"1 Concat2" [id=1, type=Concat];
+"2 nncf_model_input_0" [id=2, type="nncf_model_input"];
+"3 nncf_model_output_0" [id=3, type="nncf_model_output"];
+"0 Concat1" -> "1 Concat2" [key=0, style=solid, label="[2, 6, 3, 3]"];
+"0 Concat1" -> "1 Concat2" [key=1, style=solid, label="[2, 6, 3, 3]"];
+"1 Concat2" -> "3 nncf_model_output_0" [key=0, style=solid, label="[6, 6, 3, 3]"];
+"2 nncf_model_input_0" -> "0 Concat1" [key=0, style=solid, label="[1, 6, 3, 3]"];
+"2 nncf_model_input_0" -> "0 Concat1" [key=1, style=solid, label="[1, 6, 3, 3]"];
+}

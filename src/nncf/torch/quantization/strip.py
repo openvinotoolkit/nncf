@@ -10,11 +10,11 @@
 # limitations under the License.
 
 
-from typing import Union
-
 import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.observer import MinMaxObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 
 import nncf
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -51,9 +51,9 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     dtype = torch.qint8 if nncf_quantizer.level_low < 0 else torch.quint8
 
     if per_channel:
-        observer = torch.ao.quantization.observer.PerChannelMinMaxObserver
+        observer = PerChannelMinMaxObserver
     else:
-        observer = torch.ao.quantization.observer.MinMaxObserver
+        observer = MinMaxObserver
 
     if isinstance(nncf_quantizer, SymmetricQuantizer):
         qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
@@ -87,7 +87,7 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
 
 def asym_fq_to_decompressor(
     quantizer: AsymmetricQuantizer, weight: torch.Tensor
-) -> tuple[Union[INT8AsymmetricWeightsDecompressor, INT4AsymmetricWeightsDecompressor], torch.Tensor]:
+) -> tuple[INT8AsymmetricWeightsDecompressor | INT4AsymmetricWeightsDecompressor, torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 
@@ -145,7 +145,7 @@ def asym_fq_to_decompressor(
 
 def sym_fq_to_decompressor(
     quantizer: SymmetricQuantizer, weight: torch.Tensor
-) -> tuple[Union[INT8SymmetricWeightsDecompressor, INT4SymmetricWeightsDecompressor], torch.Tensor]:
+) -> tuple[INT8SymmetricWeightsDecompressor | INT4SymmetricWeightsDecompressor, torch.Tensor]:
     """
     Converts an asymmetric quantizer and original weight tensor to a decompressor and quantized weight tensor.
 

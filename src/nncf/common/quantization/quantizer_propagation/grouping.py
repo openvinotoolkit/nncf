@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import copy
-from typing import Optional
 
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 
@@ -75,7 +74,7 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         """
         return copy(self._group_vs_prop_quants_dict)
 
-    def get_group_id_by_propagating_quantizer_id(self, requested_pqid: int) -> Optional[int]:
+    def get_group_id_by_propagating_quantizer_id(self, requested_pqid: int) -> int | None:
         """
         If a propagating quantizer with a given ID is registered within a group,
         then this function will return the corresponding group ID; otherwise, None is returned.

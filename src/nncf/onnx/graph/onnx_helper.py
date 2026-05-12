@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Any, Iterator, Optional, Union
+from typing import Any, Iterator
 
 import numpy as np
 import onnx
@@ -104,17 +104,20 @@ def get_model_inputs(model: onnx.ModelProto) -> list[onnx.ValueInfoProto]:
     return inputs
 
 
-def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:
+def get_input_port_ids_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> list[int]:
     """
-    Returns input_port_id for 'to_node' connected with the model input with the name 'input_name'.
+    Returns input_port_id list for 'to_node' connected with the model input with the name 'input_name'.
 
     :param input_name: Name of the ONNX model Input.
     :param to_node: Node, which has input edge with 'input_name' name.
-    :return: input port number for 'to_node', which is connected to 'input_name'.
+    :return: List of input port numbers for 'to_node', which is connected to 'input_name'.
     """
+    retval = []
     for input_port_id, port in enumerate(to_node.input):
         if port == input_name:
-            return input_port_id
+            retval.append(input_port_id)
+    if retval:
+        return retval
     msg = f"The node {to_node} does not have input edge with the name {input_name}"
     raise nncf.ValidationError(msg)
 
@@ -134,7 +137,7 @@ def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.
     raise nncf.ValidationError(msg)
 
 
-def get_node_index(model: onnx.ModelProto, node_name: str) -> Optional[int]:
+def get_node_index(model: onnx.ModelProto, node_name: str) -> int | None:
     """
     Returns the node index in the model.
 
@@ -217,7 +220,7 @@ def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> n
     return numpy_helper.to_array(tensor, base_dir)
 
 
-def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[int]:
+def get_edge_shape(edge: onnx.ValueInfoProto | onnx.TensorProto) -> list[int]:
     """
     Returns edge shape.
 
@@ -245,7 +248,7 @@ def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> list[i
     return shape
 
 
-def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
+def get_edge_dtype(edge: onnx.ValueInfoProto | onnx.TensorProto) -> int:
     """
     Returns the data type of the edge.
 
@@ -261,7 +264,7 @@ def get_parent(
     node: onnx.NodeProto,
     port_id: int,
     parents_node_mapping: dict[str, onnx.NodeProto],
-) -> Optional[onnx.NodeProto]:
+) -> onnx.NodeProto | None:
     """
     Returns parents of the node. If there is no parent node, returns None.
 
@@ -375,7 +378,7 @@ def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.
     return packed_weight
 
 
-def get_node_attr_value(node: onnx.NodeProto, attr_name: str) -> Optional[Any]:
+def get_node_attr_value(node: onnx.NodeProto, attr_name: str) -> Any | None:
     """
     Retrieves the value of a specified attribute from a node.
 

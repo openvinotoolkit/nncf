@@ -251,8 +251,8 @@ resuming_checkpoint = torch.load(path_to_checkpoint)
 nncf_config = resuming_checkpoint['nncf_config']
 state_dict = resuming_checkpoint['state_dict']
 
-quantized_model = nncf.torch.load_from_config(model, nncf_config, example_input)
-model.load_state_dict(state_dict)
+quantized_model = nncf.torch.load_from_config(model, nncf_config)
+quantized_model.load_state_dict(state_dict)
 # ... the rest of the usual PyTorch-powered training pipeline
 ```
 
@@ -328,7 +328,7 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 ### Used by
 
-- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum-intel/openvino/optimization)
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel. For instance, the command below exports the [Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) model to OpenVINO format with INT4-quantized weights:
 
@@ -346,12 +346,16 @@ NNCF may be easily integrated into training/evaluation pipelines of third-party 
 
 - [torch.compile](https://docs.pytorch.org/tutorials/prototype/openvino_quantizer.html)
 
-  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2025/openvino-workflow/torch-compile.html).
+  NNCF is used as primary quantization framework for the [torch.compile OpenVINO integration](https://docs.openvino.ai/2026/openvino-workflow/torch-compile.html).
 
 - [OpenVINO Training Extensions](https://github.com/openvinotoolkit/training_extensions)
 
   NNCF is integrated into OpenVINO Training Extensions as a model optimization backend. You can train, optimize, and
   export new models based on available model templates as well as run the exported models with OpenVINO.
+
+- [Microsoft Olive](https://github.com/microsoft/olive)
+
+  NNCF is used to quantize OpenVINO IR and ONNX models for the [OpenVINO integration](https://microsoft.github.io/Olive/features/ihv-integration/openvino.html).
 
 <a id="installation-guide"></a>
 
@@ -399,10 +403,10 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [Examples](./examples)
 - [FAQ](./docs/FAQ.md)
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
-- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
+- [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum-intel/openvino/optimization)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/nncf)
 - [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models)
-- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
+- [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2026/about-openvino/performance-benchmarks.html)
 
 ## Telemetry
 
@@ -411,4 +415,4 @@ You can opt-out at any time by running the following command in the Python envir
 
 `opt_in_out --opt_out`
 
-More information available on [OpenVINO telemetry](https://docs.openvino.ai/2025/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/2026/about-openvino/additional-resources/telemetry.html).

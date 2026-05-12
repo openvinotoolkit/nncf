@@ -12,7 +12,7 @@
 import types
 import warnings
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
 TObj = TypeVar("TObj")
 
@@ -28,7 +28,7 @@ def warning_deprecated(msg: str) -> None:
 
 
 def deprecated(
-    msg: Optional[str] = None, start_version: Optional[str] = None, end_version: Optional[str] = None
+    msg: str | None = None, start_version: str | None = None, end_version: str | None = None
 ) -> Callable[[TObj], TObj]:
     """
     Decorator to mark a function or class as deprecated.
@@ -73,7 +73,7 @@ def deprecated(
 
 
 def _generate_deprecation_message(
-    name: str, text: Optional[str], start_version: Optional[str], end_version: Optional[str]
+    name: str, text: str | None, start_version: str | None, end_version: str | None
 ) -> str:
     """
     Generate a deprecation message for a given name, with optional start and end versions.

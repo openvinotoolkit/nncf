@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -31,9 +30,9 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from tests.cross_fw.shared.command import Command
-from tools.memory_monitor import MemoryType
-from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import memory_monitor_context
+from tools.memory_monitor.memory_monitor import MemoryType
+from tools.memory_monitor.memory_monitor import MemoryUnit
+from tools.memory_monitor.memory_monitor import memory_monitor_context
 
 DEFAULT_VAL_THREADS = 4
 XFAIL_SUFFIX = "_xfail_reason"
@@ -57,8 +56,6 @@ class BackendType(Enum):
     CUDA_TORCH = "CUDA_TORCH"
     FX_TORCH = "FX_TORCH"
     CUDA_FX_TORCH = "CUDA_FX_TORCH"
-    OV_QUANTIZER_NNCF = "OV_QUANTIZER_NNCF"
-    OV_QUANTIZER_AO = "OV_QUANTIZER_AO"
     ONNX = "ONNX"
     OV = "OV"
     OPTIMUM = "OPTIMUM"
@@ -67,12 +64,7 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-FX_BACKENDS = [
-    BackendType.FX_TORCH,
-    BackendType.CUDA_FX_TORCH,
-    BackendType.OV_QUANTIZER_NNCF,
-    BackendType.OV_QUANTIZER_AO,
-]
+FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
@@ -100,7 +92,7 @@ class StatsFromOutput:
 
 @dataclass
 class NumCompressNodes:
-    num_int8: Optional[int] = None
+    num_int8: int | None = None
 
     def get_data(self):
         return {"Num int8": self.num_int8}
@@ -108,7 +100,7 @@ class NumCompressNodes:
 
 @dataclass
 class PTQNumCompressNodes(NumCompressNodes):
-    num_fq_nodes: Optional[int] = None
+    num_fq_nodes: int | None = None
 
     def get_data(self):
         data = super().get_data()
@@ -122,9 +114,9 @@ class PTQTimeStats(StatsFromOutput):
     Contains statistics that are parsed from the stdout of PTQ tests.
     """
 
-    time_stat_collection: Optional[str] = None
-    time_bias_correction: Optional[str] = None
-    time_validation: Optional[str] = None
+    time_stat_collection: str | None = None
+    time_bias_correction: str | None = None
+    time_validation: str | None = None
 
     STAT_NAMES = ["Stat. collection time", "Bias correction time", "Validation time"]
 
@@ -170,19 +162,19 @@ class RunInfo:
     Containing data about compression of the model.
     """
 
-    model: Optional[str] = None
-    backend: Optional[BackendType] = None
-    metric_name: Optional[str] = None
-    metric_value: Optional[float] = None
-    metric_diff: Optional[float] = None
-    compression_memory_usage: Optional[int] = None
-    compression_memory_usage_rss: Optional[int] = None
-    compression_memory_usage_system: Optional[int] = None
-    status: Optional[str] = None
-    fps: Optional[float] = None
-    time_total: Optional[float] = None
-    time_compression: Optional[float] = None
-    num_compress_nodes: Optional[NumCompressNodes] = None
+    model: str | None = None
+    backend: BackendType | None = None
+    metric_name: str | None = None
+    metric_value: float | None = None
+    metric_diff: float | None = None
+    compression_memory_usage: int | None = None
+    compression_memory_usage_rss: int | None = None
+    compression_memory_usage_system: int | None = None
+    status: str | None = None
+    fps: float | None = None
+    time_total: float | None = None
+    time_compression: float | None = None
+    num_compress_nodes: NumCompressNodes | None = None
     stats_from_output = StatsFromOutput()
 
     @staticmethod

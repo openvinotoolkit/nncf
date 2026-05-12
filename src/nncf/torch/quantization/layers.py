@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable
 
 import numpy as np
 import torch
@@ -35,7 +35,6 @@ from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
-from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
@@ -83,13 +82,13 @@ class PTQuantizerSpec(QuantizerSpec):
         self,
         num_bits: int,
         mode: QuantizationMode,
-        signedness_to_force: Optional[bool],
+        signedness_to_force: bool | None,
         narrow_range: bool,
         half_range: bool,
         scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
-        compression_lr_multiplier: Optional[float] = None,
+        compression_lr_multiplier: float | None = None,
     ):
         """
         :param num_bits: Bitwidth of the quantization.
@@ -123,7 +122,7 @@ class PTQuantizerSpec(QuantizerSpec):
         scale_shape: tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
-        compression_lr_multiplier: Optional[float],
+        compression_lr_multiplier: float | None,
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
@@ -420,7 +419,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         self.enabled[0] = 0
         self.disable_gradients()
 
-    def forward(self, x: Union[torch.Tensor, tuple]):
+    def forward(self, x: torch.Tensor | tuple):
         """
         Method that unwraps return types if it is needed
         before actual quantization forward impl
@@ -432,7 +431,7 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
     def _forward_impl(self, x: torch.Tensor):
         if is_debug():
             self.call_count += 1
-        # TODO: refactor to get rid of extra if's and calls on each forward
+        # TODO(AlexanderDokuchaev): refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
         is_exporting = is_tracing_state()
@@ -661,7 +660,6 @@ class StorageRedirectingStateDictHook:
         state_dict[prefix + self._name_in_state_dict] = v
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(BaseQuantizer):
     SCALE_PARAM_NAME = "scale"
@@ -757,7 +755,7 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -843,7 +841,6 @@ class SymmetricQuantizer(BaseQuantizer):
         )
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(BaseQuantizer):
     INPUT_LOW_PARAM_NAME = "input_low"
@@ -928,7 +925,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1089,7 +1086,6 @@ class LoraNLSMixin(LoraMixin):
         return lora_A, lora_B
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA)
 class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
     _arg_names = ["qspec", "lspec"]
@@ -1099,7 +1095,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1140,11 +1136,10 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         return cls(qspec, lspec)
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA_NLS)
 class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1170,7 +1165,6 @@ class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
         return cls(qspec, lspec)
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA)
 class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
     def __init__(self, qspec: PTQuantizerSpec, lspec: PTLoraSpec):
@@ -1178,7 +1172,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1218,11 +1212,10 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         return cls(qspec, lspec)
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
 class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        # TODO(AlexanderDokuchaev): remove within new tracing (ticket-163869)
         with DisableTorchFunction():
             # in multi-device case after loading nncf checkpoint, quantizers have a different device.
             self.to(x.device)
@@ -1247,7 +1240,7 @@ class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
         return cls(qspec, lspec)
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> list[int]:
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int | None = None) -> list[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1259,7 +1252,7 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[i
 
 
 def get_scale_shape(
-    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
+    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: int | None = None
 ) -> list[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
@@ -1314,7 +1307,7 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies asymmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: torch.dtype | None = None):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme
@@ -1349,7 +1342,7 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies symmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, result_dtype: torch.dtype | None = None):
         """
         :param scale: A scale in quantization scheme
         :param result_dtype: (Optional) A data type that result should be cast to
@@ -1380,8 +1373,8 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         scale: torch.Tensor,
         zero_point: torch.Tensor,
         compressed_weight_shape: tuple[int, ...],
-        result_shape: Optional[tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
     ):
         """
         :param scale: A scale in quantization scheme
@@ -1428,8 +1421,8 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         self,
         scale: torch.Tensor,
         compressed_weight_shape: tuple[int, ...],
-        result_shape: Optional[tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
+        result_shape: tuple[int, ...] | None = None,
+        result_dtype: torch.dtype | None = None,
     ):
         """
         :param scale: A scale in quantization scheme
@@ -1467,7 +1460,6 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         return result
 
 
-@COMPRESSION_MODULES.register()
 class SQMultiply(torch.nn.Module, StatefulModuleInterface):
     SCALE_SHAPE_KEY = "scale_shape"
 

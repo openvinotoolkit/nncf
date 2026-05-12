@@ -11,12 +11,11 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.layerwise.iterator import LayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
@@ -35,7 +34,7 @@ class LayerwiseEngineBackend(ABC):
         schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
+        cache: dict[NodeOutputPort, list[Tensor]] | None = None,
     ) -> LayerwiseIterator:
         """
         Creates an iterator to iterate through layers according to a given schedule.
@@ -63,15 +62,4 @@ class LayerwiseEngineBackend(ABC):
         :param target_node_name: Name of the located node.
         :param port_id: id of the port for the statistics distribution.
         :return: Backend-specific TargetPoint.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
-        """
-        Returns backend-specific raw statistic collector.
-        This statistic collector is used for raw data calculation, without aggregating.
-
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorCollector for the statistics calculation.
         """

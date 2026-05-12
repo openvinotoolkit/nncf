@@ -18,6 +18,7 @@ jobs:
           - python_version: "3.11"
           - python_version: "3.12"
           - python_version: "3.13"
+          - python_version: "3.14"
     uses: ./.github/workflows/call_precommit.yml
     with:
       python_version: ${{ matrix.python_version }}

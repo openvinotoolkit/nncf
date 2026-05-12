@@ -11,7 +11,6 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional
 
 from nncf.torch.function_hook.pruning.rb.losses import RBLoss
 from nncf.torch.function_hook.pruning.scheduler_fns import exponential_ratio_scheduler
@@ -31,7 +30,7 @@ class _BaseRBScheduler(ABC):
         self.rb_loss = rb_loss
         self.epoch = 0
 
-    def step(self, epoch: Optional[int] = None) -> None:
+    def step(self, epoch: int | None = None) -> None:
         """
         Updates the pruning schedule for the model based on the current epoch.
 

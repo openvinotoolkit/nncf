@@ -15,16 +15,13 @@ from typing import Any
 
 import pytest
 import torch
-import torch.ao.quantization
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.observer import MinMaxObserver
-from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
+from torchao.quantization.pt2e.observer import MinMaxObserver
+from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
+from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
-import nncf.common
-import nncf.common.factory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -45,8 +42,11 @@ from nncf.experimental.torch.fx.transformations import output_insertion_transfor
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.cross_fw.test_templates.helpers import ConcatWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithReluInput
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
@@ -71,31 +71,46 @@ class ModelExtractionTestCase:
 
 MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
-        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
+        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
     ),
     ModelExtractionTestCase(
-        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
+        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d_1"], ["add__1"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d_1", 0)], [("add__1", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add_", "add"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add_", 0), ("add", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d", "conv2d_1"], ["add_", "add__1"])
+        MultiBranchesConnectedModel,
+        (1, 3, 3, 3),
+        PTModelExtractionCommand([("conv2d", 0), ("conv2d_1", 0)], [("add_", 0), ("add__1", 0)]),
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d_2"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d_2", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add__1"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add__1", 0)])
+    ),
+    ModelExtractionTestCase(
+        ConcatWithInput,
+        ConcatWithInput.INPUT_SIZE,
+        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
+    ),
+    ModelExtractionTestCase(
+        ConcatWithReluInput,
+        ConcatWithReluInput.INPUT_SIZE,
+        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
 )
 
 
 def get_test_id(test_case: ModelExtractionTestCase):
-    return test_case.model.__name__ + "_".join(test_case.command.input_node_names + test_case.command.output_node_names)
+    input_names = [name for name, _ in test_case.command.input_ids]
+    output_names = [name for name, _ in test_case.command.output_ids]
+    model_name = test_case.model.__name__
+    return model_name + "_".join(input_names + output_names)
 
 
 def idfn(value: Any):
@@ -125,7 +140,9 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     (
         (
             ModelExtractionTestCase(
-                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
+                ConvolutionWithNotTensorBiasModel,
+                (1, 1, 3, 3),
+                PTModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
             ),
             False,
             "(conv2d,)",
@@ -134,14 +151,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
+                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             False,
             "(conv2d, conv2d, conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
+                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("output", 0)])
             ),
             False,
             "([conv2d, add],)",
@@ -150,14 +167,16 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithSeveralOutputs,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
+                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             False,
             "(conv2d, [conv2d, add], conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
+                ConvolutionWithNotTensorBiasModel,
+                (1, 1, 3, 3),
+                PTModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
             ),
             True,
             "(conv2d,)",
@@ -166,10 +185,19 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
+                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             True,
             "(conv2d, conv2d, conv2d)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConcatWithReluInput,
+                ConcatWithReluInput.INPUT_SIZE,
+                PTModelExtractionCommand([("cat", 1)], [("output", 0)]),
+            ),
+            False,
+            "(conv2d_1,)",
         ),
     ),
     ids=idfn,
@@ -472,19 +500,23 @@ def insert_qdq_nodes(
         dequantize_op = torch.ops.quantized_decomposed.dequantize_per_tensor.default
 
     conv_node = get_graph_node_by_name(model.graph, node_name)
+    model_device = get_model_device(model)
     if per_channel:
         with model.graph.inserting_before(conv_node):
+            # Passing device is neccesary to avoid large models to be cached by torchao.
             scale_node = create_getattr_from_value(
                 model,
                 model.graph,
                 "scale_node",
                 torch.ones([3]),
+                device=model_device,
             )
             zp_node = create_getattr_from_value(
                 model,
                 model.graph,
                 "weight_node",
                 torch.ones([3]),
+                device=model_device,
             )
         qdq_args = (scale_node, zp_node, 0, -128, 127, torch.int8)
     else:

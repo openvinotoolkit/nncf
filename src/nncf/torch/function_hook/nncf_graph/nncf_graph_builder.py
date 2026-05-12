@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import networkx as nx  # type: ignore
 import torch
@@ -33,7 +33,7 @@ from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttri
 from nncf.torch.graph.graph import PTNNCFGraph
 
 
-def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
+def get_node_type(type: NodeType, meta: ConstMeta | FunctionMeta | InOutMeta) -> str:
     """
     Convert a given NodeType to its corresponding string representation.
 
@@ -53,7 +53,7 @@ def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     raise nncf.InternalError(msg)
 
 
-def get_name_of_node(meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
+def get_name_of_node(meta: ConstMeta | FunctionMeta | InOutMeta) -> str:
     """
     Get the name of a node based on its metadata.
 
@@ -82,7 +82,7 @@ def get_dtype(dtype: torch.dtype) -> Dtype:
     return Dtype.INTEGER
 
 
-def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> type[om.PTOperatorMetatype]:
+def get_meta_type(node_type: str, meta: ConstMeta | FunctionMeta | InOutMeta) -> type[om.PTOperatorMetatype]:
     """
     Converts the node type and metadata into a PTOperatorMetatype object.
     :param node_type: The type of the node.
@@ -92,7 +92,7 @@ def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     node_metatype = cast(
         type[om.PTOperatorMetatype], om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
     )
-    node_sub_meta_type: Optional[type[om.PTOperatorMetatype]] = None
+    node_sub_meta_type: type[om.PTOperatorMetatype] | None = None
     if node_metatype.get_subtypes() and isinstance(meta, FunctionMeta):
         node_sub_meta_type = node_metatype.determine_subtype(function_args=meta.args, functions_kwargs=meta.kwargs)
     return node_sub_meta_type or node_metatype
@@ -145,8 +145,8 @@ def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> set[int]:
 
 
 def get_layer_attributes(
-    nx_graph: nx.MultiDiGraph, node: int, meta: Union[ConstMeta, FunctionMeta, InOutMeta]
-) -> Optional[BaseLayerAttributes]:
+    nx_graph: nx.MultiDiGraph, node: int, meta: ConstMeta | FunctionMeta | InOutMeta
+) -> BaseLayerAttributes | None:
     """
     Get the layer attributes of a node in the graph.
 
@@ -201,15 +201,15 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
     for (s_node, t_node), list_meta in map_edges.items():
         source_node = map_nx_node_to_nncf_node[s_node]
         target_node = map_nx_node_to_nncf_node[t_node]
-        nncf_graph.add_edge_between_nncf_nodes(
-            source_node.node_id,
-            target_node.node_id,
-            tensor_shape=list_meta[0].shape,
-            input_port_id=list_meta[0].input_port,
-            output_port_id=list_meta[0].output_port,
-            dtype=get_dtype(list_meta[0].dtype),
-            parallel_input_port_ids=[meta.input_port for meta in list_meta[1:]] if len(list_meta) > 1 else None,
-        )
+        for meta in list_meta:
+            nncf_graph.add_edge_between_nncf_nodes(
+                source_node.node_id,
+                target_node.node_id,
+                tensor_shape=meta.shape,
+                input_port_id=meta.input_port,
+                output_port_id=meta.output_port,
+                dtype=get_dtype(meta.dtype),
+            )
     return nncf_graph
 
 
@@ -243,7 +243,7 @@ class GraphModelWrapper:
         """
         self.model = model
         self.example_input = example_input
-        self.graph: Optional[PTNNCFGraph] = None
+        self.graph: PTNNCFGraph | None = None
 
     def build_graph(self) -> PTNNCFGraph:
         """

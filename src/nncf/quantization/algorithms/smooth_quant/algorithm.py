@@ -12,7 +12,7 @@
 from collections import Counter
 from collections import defaultdict
 from copy import deepcopy
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf import Dataset
@@ -110,8 +110,8 @@ class SmoothQuant(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self._set_backend_entity(model)
         alpha_map = self._get_alpha_map()
@@ -191,7 +191,7 @@ class SmoothQuant(Algorithm):
 
     @staticmethod
     def _calculate_scale_and_ratio(
-        activations: Tensor, weights: Tensor, alpha: float, quantile: Optional[float] = 0.1
+        activations: Tensor, weights: Tensor, alpha: float, quantile: float | None = 0.1
     ) -> tuple[Tensor, float]:
         """
         Calculates base scale value and it's ratio.
@@ -226,10 +226,16 @@ class SmoothQuant(Algorithm):
         groups = defaultdict(list)
         for node_to_smooth, input_act_port, shape in nodes_to_smooth:
             source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
-            edge = nncf_graph.get_edge(source_node, node_to_smooth)
+            edges = nncf_graph.get_edges(source_node, node_to_smooth)
+            if len(edges) > 1:
+                msg = (
+                    f"Only one edge expected between {source_node.node_name} and {node_to_smooth.node_name},"
+                    f" but {len(edges)} edges was found"
+                )
+                raise nncf.InternalError(msg)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
-            group_id = (source_node, input_act_port, edge.output_port_id, shape)
+            group_id = (source_node, input_act_port, edges[0].output_port_id, shape)
             groups[group_id].append(node_to_smooth)
 
         return groups
@@ -314,7 +320,7 @@ class SmoothQuant(Algorithm):
     def _create_tensor_collector(
         self,
         num_samples: int,
-        axes: Optional[tuple[int, ...]],
+        axes: tuple[int, ...] | None,
         axes_mode: AxesMode,
     ) -> TensorCollector:
         """

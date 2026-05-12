@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from itertools import islice
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -164,7 +164,7 @@ class ACValidationFunction:
     ]
 
     def __init__(
-        self, model_evaluator: ModelEvaluator, metric_name: str, metric_type: str, requests_number: Optional[int] = None
+        self, model_evaluator: ModelEvaluator, metric_name: str, metric_type: str, requests_number: int | None = None
     ):
         """
         :param model_evaluator: Model Evaluator.
@@ -185,7 +185,7 @@ class ACValidationFunction:
 
         self._collect_outputs = self._metric_type in self.SPECIAL_METRICS
 
-    def __call__(self, compiled_model: ov.CompiledModel, indices: Optional[Iterable[int]] = None) -> float:
+    def __call__(self, compiled_model: ov.CompiledModel, indices: Iterable[int] | None = None) -> float:
         """
         Calculates metrics for the provided model.
 
@@ -987,10 +987,10 @@ class ACDataset:
         self._indices = list(range(model_evaluator.dataset.full_size))
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[list[int]] = None):
+    def get_data(self, indices: list[int] | None = None):
         return DataProvider(self._indices, None, indices)
 
-    def get_inference_data(self, indices: Optional[list[int]] = None):
+    def get_inference_data(self, indices: list[int] | None = None):
         return DataProvider(ACDattasetWrapper(self._model_evaluator), self._transform_func, indices)
 
 

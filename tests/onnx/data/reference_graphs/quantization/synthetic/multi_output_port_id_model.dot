@@ -1,0 +1,31 @@
+digraph {
+"0 1_split" [id=0, type=Split];
+"1 QuantizeLinear_output_1_0_1" [id=1, type=QuantizeLinear];
+"2 DequantizeLinear_output_1_0_1" [id=2, type=DequantizeLinear];
+"3 QuantizeLinear_output_1_0_2" [id=3, type=QuantizeLinear];
+"4 DequantizeLinear_output_1_0_2" [id=4, type=DequantizeLinear];
+"5 QuantizeLinear_output_1_1_1" [id=5, type=QuantizeLinear];
+"6 DequantizeLinear_output_1_1_1" [id=6, type=DequantizeLinear];
+"7 QuantizeLinear_output_1_1_2" [id=7, type=QuantizeLinear];
+"8 DequantizeLinear_output_1_1_2" [id=8, type=DequantizeLinear];
+"9 MatMul" [id=9, type=MatMul];
+"10 MatMul1" [id=10, type=MatMul];
+"11 nncf_model_input_0" [id=11, type="nncf_model_input"];
+"12 nncf_model_output_0" [id=12, type="nncf_model_output"];
+"13 nncf_model_output_1" [id=13, type="nncf_model_output"];
+"0 1_split" -> "1 QuantizeLinear_output_1_0_1" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"0 1_split" -> "3 QuantizeLinear_output_1_0_2" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"0 1_split" -> "5 QuantizeLinear_output_1_1_1" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"0 1_split" -> "7 QuantizeLinear_output_1_1_2" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"1 QuantizeLinear_output_1_0_1" -> "2 DequantizeLinear_output_1_0_1" [key=0, style=dashed, label="[1, 3, 3, 3]"];
+"2 DequantizeLinear_output_1_0_1" -> "9 MatMul" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"3 QuantizeLinear_output_1_0_2" -> "4 DequantizeLinear_output_1_0_2" [key=0, style=dashed, label="[1, 3, 3, 3]"];
+"4 DequantizeLinear_output_1_0_2" -> "10 MatMul1" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"5 QuantizeLinear_output_1_1_1" -> "6 DequantizeLinear_output_1_1_1" [key=0, style=dashed, label="[1, 3, 3, 3]"];
+"6 DequantizeLinear_output_1_1_1" -> "9 MatMul" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"7 QuantizeLinear_output_1_1_2" -> "8 DequantizeLinear_output_1_1_2" [key=0, style=dashed, label="[1, 3, 3, 3]"];
+"8 DequantizeLinear_output_1_1_2" -> "10 MatMul1" [key=0, style=solid, label="[1, 3, 3, 3]"];
+"9 MatMul" -> "12 nncf_model_output_0" [key=0, style=solid, label="[6, 6, 3, 3]"];
+"10 MatMul1" -> "13 nncf_model_output_1" [key=0, style=solid, label="[6, 6, 3, 3]"];
+"11 nncf_model_input_0" -> "0 1_split" [key=0, style=solid, label="[1, 6, 3, 3]"];
+}

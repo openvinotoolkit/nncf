@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Union
+from typing import Any
 
 import openvino as ov  # type: ignore
 from numpy.typing import NDArray
@@ -95,7 +95,7 @@ def _(a: ov.Tensor) -> int:
 
 
 @numeric.reshape.register
-def _(a: ov.Tensor, shape: Union[int, tuple[int, ...]]) -> ov.Tensor:
+def _(a: ov.Tensor, shape: int | tuple[int, ...]) -> ov.Tensor:
     return ov.Tensor(a.data.reshape(shape), shape, a.get_element_type())
 
 

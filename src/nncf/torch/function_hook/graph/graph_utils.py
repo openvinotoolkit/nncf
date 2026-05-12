@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import torch
 
@@ -101,5 +101,5 @@ class TensorInfo:
     shape: tuple[int, ...]
     dtype: torch.dtype
     output_port_id: int
-    source_node_id: Optional[int]
-    name_in_model: Optional[str]
+    source_node_id: int | None
+    name_in_model: str | None

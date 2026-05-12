@@ -284,7 +284,7 @@ class TemplateTestPTQParams:
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.noop_metatypes,
             min_max_algo._backend_entity.preserved_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
@@ -310,7 +310,7 @@ class TemplateTestPTQParams:
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.noop_metatypes,
             min_max_algo._backend_entity.preserved_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
@@ -336,7 +336,7 @@ class TemplateTestPTQParams:
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.noop_metatypes,
             min_max_algo._backend_entity.preserved_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)

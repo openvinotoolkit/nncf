@@ -10,13 +10,10 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Union
 
 import torch.fx
 import torch.nn.parallel
-import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
@@ -123,7 +120,7 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
 
 
 def get_torch_fx_model(
-    model: torch.nn.Module, ex_input: Union[torch.Tensor, tuple[torch.Tensor, ...]], dynamic_shapes=None
+    model: torch.nn.Module, ex_input: torch.Tensor | tuple[torch.Tensor, ...], dynamic_shapes=None
 ) -> torch.fx.GraphModule:
     """
     Converts given module to GraphModule.
@@ -147,11 +144,15 @@ def get_torch_fx_model(
         device_ex_input.append(inp.to(device))
     device_ex_input = tuple(device_ex_input)
 
+    # Temporary workaround for executorch tests. Can be removed once torch>=2.11.0
+    export_fn = (
+        torch.export.export_for_training if hasattr(torch.export, "export_for_training") else torch.export.export
+    )
     model.eval()
     with torch.no_grad():
-        return torch.export.export_for_training(
-            model, args=device_ex_input, dynamic_shapes=dynamic_shapes, strict=True
-        ).module(check_guards=False)
+        return export_fn(model, args=device_ex_input, dynamic_shapes=dynamic_shapes, strict=True).module(
+            check_guards=False
+        )
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:

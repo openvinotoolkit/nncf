@@ -104,7 +104,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
         if OVLayoutElem.GROUPS in weights_layout:
             # Using groups dim as output channels dim for ChannelAlignment algorithm
-            # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
+            # TODO(dlyakhov): support group convolutions with groups number not in [1, out_channels]
             return LayoutDescriptor(
                 weights_layout.index(OVLayoutElem.GROUPS),
                 weights_layout.index(OVLayoutElem.C_IN),

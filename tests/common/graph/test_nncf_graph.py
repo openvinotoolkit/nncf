@@ -9,6 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import Dtype
@@ -51,38 +54,37 @@ def test_find_matching_subgraphs():
         assert match == nodes[:2]
 
 
-def test_parallel_edges():
-    def _get_default_nncf_graph_edge(from_node, to_node, input_port_id, output_port_id):
-        return NNCFGraphEdge(
-            from_node,
-            to_node,
-            input_port_id=input_port_id,
-            output_port_id=output_port_id,
-            parallel_input_port_ids=[],
-            tensor_shape=(1, 2, 3),
-            dtype="dummy",
-        )
+def _get_default_nncf_graph_edge(from_node, to_node, input_port_id, output_port_id):
+    return NNCFGraphEdge(
+        from_node,
+        to_node,
+        input_port_id=input_port_id,
+        output_port_id=output_port_id,
+        tensor_shape=(1, 2, 3),
+        dtype="dummy",
+    )
 
+
+def test_parallel_edges():
     nncf_graph = NNCFGraph()
     nodes = []
     for node in "abc":
         nodes.append(nncf_graph.add_nncf_node(node, f"type_{node}", f"metatype_{node}"))
 
-    nncf_graph.add_edge_between_nncf_nodes(
-        nodes[0].node_id,
-        nodes[1].node_id,
-        input_port_id=0,
-        output_port_id=0,
-        parallel_input_port_ids=list(range(1, 5)),
-        tensor_shape=(1, 2, 3),
-        dtype="dummy",
-    )
+    for input_port_id in range(5):
+        nncf_graph.add_edge_between_nncf_nodes(
+            nodes[0].node_id,
+            nodes[1].node_id,
+            input_port_id=input_port_id,
+            output_port_id=0,
+            tensor_shape=(1, 2, 3),
+            dtype="dummy",
+        )
     nncf_graph.add_edge_between_nncf_nodes(
         nodes[0].node_id,
         nodes[2].node_id,
         input_port_id=10,
         output_port_id=15,
-        parallel_input_port_ids=[],
         tensor_shape=(1, 2, 3),
         dtype="dummy",
     )
@@ -107,3 +109,152 @@ def test_parallel_edges():
         output_port_id=15,
     )
     assert ordinary_edge == output_edges[-1]
+
+
+def test_raise_error_for_duplicated_edge():
+    nncf_graph = NNCFGraph()
+    nodes = []
+    for node in "abc":
+        nodes.append(nncf_graph.add_nncf_node(node, f"type_{node}", f"metatype_{node}"))
+
+    # First edge from port 1 to port 1 - OK
+    nncf_graph.add_edge_between_nncf_nodes(
+        nodes[0].node_id,
+        nodes[1].node_id,
+        input_port_id=1,
+        output_port_id=1,
+        tensor_shape=(1, 2, 3),
+        dtype="dummy",
+    )
+    # Second edge from port 1 to port 1 - ValueError
+    with pytest.raises(ValueError):
+        nncf_graph.add_edge_between_nncf_nodes(
+            nodes[0].node_id,
+            nodes[1].node_id,
+            input_port_id=1,
+            output_port_id=1,
+            tensor_shape=(1, 2, 3),
+            dtype="dummy",
+        )
+
+
+def test_multi_edges():
+    nncf_graph = NNCFGraph()
+    nodes = []
+    for node in "ab":
+        nodes.append(nncf_graph.add_nncf_node(node, f"type_{node}", f"metatype_{node}"))
+
+    for port_id in range(5):
+        nncf_graph.add_edge_between_nncf_nodes(
+            nodes[0].node_id,
+            nodes[1].node_id,
+            input_port_id=port_id,
+            output_port_id=port_id,
+            tensor_shape=(1, 2, 3),
+            dtype="dummy",
+        )
+
+    output_edges = nncf_graph.get_output_edges(nodes[0])
+    input_edges = nncf_graph.get_input_edges(nodes[1])
+    assert len(input_edges) == 5
+    assert len(output_edges) == 5
+    assert input_edges == output_edges
+    for port_id, edge in enumerate(input_edges):
+        ref_edge = _get_default_nncf_graph_edge(
+            nodes[0],
+            nodes[1],
+            input_port_id=port_id,
+            output_port_id=port_id,
+        )
+        assert ref_edge == edge
+
+
+def test_remove_passthrough_node_with_single_input_and_multiple_outputs():
+    nncf_graph = NNCFGraph()
+
+    producer = nncf_graph.add_nncf_node("producer", "type_a", "metatype_a")
+    target_node = nncf_graph.add_nncf_node("target_node", "type_b", "metatype_b")
+    consumer_1 = nncf_graph.add_nncf_node("consumer_1", "type_c", "metatype_c")
+    consumer_2 = nncf_graph.add_nncf_node("consumer_2", "type_d", "metatype_d")
+
+    nncf_graph.add_edge_between_nncf_nodes(
+        from_node_id=producer.node_id,
+        to_node_id=target_node.node_id,
+        tensor_shape=(1,),
+        input_port_id=4,
+        output_port_id=7,
+        dtype=Dtype.FLOAT,
+    )
+    nncf_graph.add_edge_between_nncf_nodes(
+        from_node_id=target_node.node_id,
+        to_node_id=consumer_1.node_id,
+        tensor_shape=(1,),
+        input_port_id=0,
+        output_port_id=0,
+        dtype=Dtype.FLOAT,
+    )
+    nncf_graph.add_edge_between_nncf_nodes(
+        from_node_id=target_node.node_id,
+        to_node_id=consumer_2.node_id,
+        tensor_shape=(1,),
+        input_port_id=1,
+        output_port_id=1,
+        dtype=Dtype.FLOAT,
+    )
+
+    nncf_graph.remove_passthrough_node(target_node)
+
+    with pytest.raises(KeyError):
+        nncf_graph.get_node_key_by_id(target_node.node_id)
+
+    new_output_edges = nncf_graph.get_output_edges(producer)
+    assert len(new_output_edges) == 2
+
+    edge_to_consumer_1 = nncf_graph.get_edges(producer, consumer_1)[0]
+    assert edge_to_consumer_1.input_port_id == 0
+    assert edge_to_consumer_1.output_port_id == 7
+    assert edge_to_consumer_1.tensor_shape == (1,)
+    assert edge_to_consumer_1.dtype == Dtype.FLOAT
+
+    edge_to_consumer_2 = nncf_graph.get_edges(producer, consumer_2)[0]
+    assert edge_to_consumer_2.input_port_id == 1
+    assert edge_to_consumer_2.output_port_id == 7
+    assert edge_to_consumer_2.tensor_shape == (1,)
+    assert edge_to_consumer_2.dtype == Dtype.FLOAT
+
+
+def test_remove_passthrough_node_raises_if_more_than_one_input_edge():
+    nncf_graph = NNCFGraph()
+
+    producer_1 = nncf_graph.add_nncf_node("producer_1", "type_a", "metatype_a")
+    producer_2 = nncf_graph.add_nncf_node("producer_2", "type_b", "metatype_b")
+    target_node = nncf_graph.add_nncf_node("target_node", "type_c", "metatype_c")
+    consumer = nncf_graph.add_nncf_node("consumer", "type_d", "metatype_d")
+
+    nncf_graph.add_edge_between_nncf_nodes(
+        from_node_id=producer_1.node_id,
+        to_node_id=target_node.node_id,
+        tensor_shape=(1,),
+        input_port_id=0,
+        output_port_id=0,
+        dtype=Dtype.FLOAT,
+    )
+    nncf_graph.add_edge_between_nncf_nodes(
+        from_node_id=producer_2.node_id,
+        to_node_id=target_node.node_id,
+        tensor_shape=(1,),
+        input_port_id=1,
+        output_port_id=0,
+        dtype=Dtype.FLOAT,
+    )
+    nncf_graph.add_edge_between_nncf_nodes(
+        from_node_id=target_node.node_id,
+        to_node_id=consumer.node_id,
+        tensor_shape=(1,),
+        input_port_id=0,
+        output_port_id=0,
+        dtype=Dtype.FLOAT,
+    )
+
+    with pytest.raises(nncf.InternalError, match="Only one input edge is supported"):
+        nncf_graph.remove_passthrough_node(target_node)

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import operator
-from typing import Callable, TypeVar, Union
+from typing import Callable, TypeVar
 
 import numpy as np
 
@@ -43,9 +43,9 @@ def get_subset_indices_pot_version(errors: list[float], subset_size: int) -> lis
 
 def select_subset(
     subset_size: int,
-    reference_values_for_each_item: Union[list[float], list[list[TTensor]]],
-    approximate_values_for_each_item: Union[list[float], list[list[TTensor]]],
-    error_fn: Callable[[Union[float, list[TTensor]], Union[float, list[TTensor]]], float],
+    reference_values_for_each_item: list[float] | list[list[TTensor]],
+    approximate_values_for_each_item: list[float] | list[list[TTensor]],
+    error_fn: Callable[[float | list[TTensor], float | list[TTensor]], float],
 ) -> list[int]:
     """
     Selects first `subset_size` indices of data items for which `error_fn` function gives maximal value.

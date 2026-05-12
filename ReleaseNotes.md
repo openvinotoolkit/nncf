@@ -1,5 +1,79 @@
 # Release Notes
 
+## New in Release 3.1.0
+
+- General:
+  - Migrated `NNCFGraph` from `nx.DiGraph` to `nx.MultiDiGraph` to support models with parallel/multi-edges, enabling correct quantization of models with complex graph structures such as YOLO26 and models like `a = conv(x); return a * a` (https://github.com/openvinotoolkit/nncf/pull/3843).
+- Features:
+  - (OpenVINO) Added NVFP4 (`f4e2m1`) compression data type in Weight Compression. NVFP4 uses a constant group size of 16 with scales compressed to `f8e4m3` using a second-degree scale (https://github.com/openvinotoolkit/nncf/pull/3967).
+  - (OpenVINO) Added `backup_mode` parameter for FP compression formats (MXFP4, MXFP8, FP4, FP8), allowing first/last layers to be compressed with a backup FP format instead of INT8 (https://github.com/openvinotoolkit/nncf/pull/3886).
+  - (OpenVINO) RoPe ignored pattern is updated to handle operations without a preceding transpose like in the Phi-3.5-MoE-instruct model (https://github.com/openvinotoolkit/nncf/pull/3989).
+  - (PyTorch) Added `TopKMetatype` support for TorchFX backend, enabling correct graph building for models with TopK operations such as YOLO26 (https://github.com/openvinotoolkit/nncf/pull/3944).
+  - (PyTorch) Migrated to use `torchao` instead of deprecated `torch.ao` (https://github.com/openvinotoolkit/nncf/pull/3854).
+- Fixes:
+  - (OpenVINO) Fixed scale estimation for Adaptive Codebook weight compression (https://github.com/openvinotoolkit/nncf/pull/3888).
+  - (ONNX) Fixed `nncf.errors.ValidationError: There is no tensor with the name` error (https://github.com/openvinotoolkit/nncf/pull/3988).
+- Improvements:
+  - (PyTorch) Added lazy import for `nncf.torch` module to reduce startup import time (https://github.com/openvinotoolkit/nncf/pull/3862).
+- Tutorials:
+  - [Post-Training Optimization of Gemma 4 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma4/gemma4.ipynb)
+  - [Post-Training Optimization of Code-specialized LLMs](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-code-assistant/llm-code-assistant.ipynb)
+  - [Post-Training Optimization of Vision-Language Models (VLMs)](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/vlm-chatbot/vlm-chatbot-generate-api.ipynb)
+  - [Post-Training Optimization of MiniCPM-o 4.5 Multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-4.5/minicpm-o-4.5.ipynb)
+  - [Post-Training Optimization of PaddleOCR-VL/PaddleOCR-VL-1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/paddleocr_vl/paddleocr_vl.ipynb)
+  - [Post-Training Optimization of RAG pipeline](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-eval.ipynb)
+- Requirements:
+  - Updated to `openvino` 2026.1.0 (https://github.com/openvinotoolkit/nncf/pull/4005).
+  - Updated to `torch` 2.10.0 (https://github.com/openvinotoolkit/nncf/pull/3852).
+  - Updated to `onnx` 1.20.1 (https://github.com/openvinotoolkit/nncf/pull/3966).
+  - Updated to `onnxruntime` 1.24.3 (https://github.com/openvinotoolkit/nncf/pull/3977).
+  - Moved `pandas` to optional dependency (https://github.com/openvinotoolkit/nncf/pull/3970).
+  - Removed unused `pillow` dependency (https://github.com/openvinotoolkit/nncf/pull/3929).
+
+## New in Release 3.0.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - Renamed `nncf.CompressWeightsMode.CB4_F8E4M3` mode option to `nncf.CompressWeightsMode.CB4`.
+- General:
+  - Added `nncf.prune` API function, which provides a unified interface for pruning algorithms. Currently available for PyTorch backend and supports Magnitude Pruning.
+    More details about the new API can be found in the [documentation](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage/training_time_compression/pruning/Usage.md).
+  - Added `nncf.build_graph` API function for building `NNCFGraph` from a model. This API can be used to inspect and define [the ignored scope](/docs/usage/IgnoredScope.md).
+  - Added [documentation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/IgnoredScope.md) about using `nncf.IgnoredScope`.
+  - Reworked `HWConfig`, now using Python-style definition of hardware configuration instead of JSON files.
+- Features:
+  - Added support for models containing MatMul operations with transposed activation inputs in data-free Weight Compression and data-aware AWQ algorithms.
+  - (OpenVINO) Introduced new experimental compression data type ADAPTIVE_CODEBOOK. This compression type calculates a unique codebook for each MatMul or block of identical MatMuls (for example, all down_proj could have the same codebook). This approach reduces quality degradation in the case of per-channel weight compression. See [example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/smollm2_360m_adaptive_codebook).
+  - (TorchFX) Preview support for the new `compress_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer`. Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the OpenVINO backend via the nncf `compress_pt2e` employing Scale Estimation and AWQ.
+  - (PyTorch) Added support for linear functions for the Fast Bias Correction algorithm to improve the accuracy of such models after the quantization.
+  - (OpenVINO) Added [activation profiler](https://github.com/openvinotoolkit/nncf/tree/develop/tools/activation_profiler) tool to collect and visualize tensor statistics.
+- Fixes:
+  - (ONNX) Fixed `compress_quantize_weights_transformation()` method by removing names of deleted initializers from graph inputs.
+  - (ONNX) Fixed incorrect insertion of MatMulNBits nodes.
+- Improvements:
+  - Added support for the compression of 3D weights in AWQ, Scale Estimation, and GPTQ algorithms. Models with MoE (Mixture of Experts), such as GPT-OSS-20B and Qwen3-30B-A3B, can be compressed with data-aware methods now.
+- Tutorials:
+  - [Post-Training Quantization of YOLO26 OpenVINO Model](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/openvino/yolo26)
+  - [Post-Training Optimization of Wan2.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.2-text-image-to-video/wan2.2-text-image-to-video.ipynb)
+  - [Post-Training Optimization of DeepSeek-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/deepseek-ocr/deepseek-ocr.ipynb)
+  - [Post-Training Optimization of Z-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/z-image-turbo/z-image-turbo.ipynb)
+  - [Post-Training Optimization of Qwen-Image Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen-image/qwen-image.ipynb)
+  - [Post-Training Optimization of Qwen3-TTS Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-tts/qwen3-tts.ipynb)
+  - [Post-Training Optimization of Qwen3-ASR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-asr/qwen3-asr.ipynb)
+  - [Post-Training Optimization of Fun-ASR-Nano Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/funasr-nano/funasr-nano.ipynb)
+  - [Post-Training Optimization of Fun-CosyVoice 3.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/cosyvoice3-tts/cosyvoice3-tts.ipynb)
+
+Deprecations/Removals:
+
+- (TensorFlow) Removed support for TensorFlow backend.
+- (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
+- (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, and Movement Sparsity.
+
+Requirements:
+
+- Dropped `jsonschema`, `natsort`, and `pymoo` from dependencies as they are no longer required.
+
 ## New in Release 2.19.0
 
 Post-training Quantization:

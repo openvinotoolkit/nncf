@@ -71,6 +71,7 @@ def create_multihead_attention_output() -> GraphPattern:
         om.OVReadValueMetatype,
         om.OVReshapeMetatype,
         om.OVTransposeMetatype,
+        om.OVSplitMetatype,
         om.OVGatherMetatype,
         om.OVSqueezeMetatype,
         om.OVConcatMetatype,
@@ -168,24 +169,48 @@ def create_se_block() -> GraphPattern:
 
 @OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.ROPE)
 def create_rope() -> GraphPattern:
-    pattern = GraphPattern()
-    matmul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype}
-    )
-    transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
-    )
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
-    cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.OVCosMetatype})
-    sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.OVSinMetatype})
+    """
+    Creates Rotary Positional Embedding (RoPE) pattern
+    present in the OpenVINO models.
+    Scheme:
 
-    pattern.add_edge(matmul_node, transpose_node)
-    pattern.add_edge(transpose_node, concat_node)
-    pattern.add_edge(concat_node, cos_node)
-    pattern.add_edge(concat_node, sin_node)
-    return pattern
+      (matmul)           (matmul)
+         |                 | |
+     (transpose)         (concat)
+         |                /   \
+      (concat)         (cos) (sin)
+       /   \
+    (cos) (sin)
+
+    :return: The Rotary Positional Embedding (RoPE) pattern.
+    """
+    ret_pattern = GraphPattern()
+    for with_transpose in [True, False]:
+        pattern = GraphPattern()
+        matmul_node = pattern.add_node(
+            **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype}
+        )
+        concat_node = pattern.add_node(
+            **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
+        )
+        cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.OVCosMetatype})
+        sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.OVSinMetatype})
+
+        if with_transpose:
+            transpose_node = pattern.add_node(
+                **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
+            )
+            pattern.add_edge(matmul_node, transpose_node)
+        else:
+            transpose_node = matmul_node
+
+        pattern.add_edge(transpose_node, concat_node)
+        pattern.add_edge(transpose_node, concat_node)
+
+        pattern.add_edge(concat_node, cos_node)
+        pattern.add_edge(concat_node, sin_node)
+        ret_pattern.add_pattern_alternative(pattern)
+    return ret_pattern
 
 
 @OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SAM_PE)

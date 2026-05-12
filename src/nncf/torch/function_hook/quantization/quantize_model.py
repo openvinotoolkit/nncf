@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional
 
 import torch
 
@@ -32,14 +31,14 @@ from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_A
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `quantize()` method for the PyTorch backend.

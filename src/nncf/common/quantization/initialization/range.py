@@ -10,8 +10,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import Union
-
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.tensor_statistics.collectors import AggregationAxes
@@ -82,9 +80,9 @@ class RangeInitCollectorParams:
 
     def _get_reduction_axes(
         self,
-        shape_to_reduce: Union[tuple[int, ...], list[int]],
-        quantization_axes: Union[tuple[int, ...], list[int]],
-        aggregation_axes: Union[tuple[int, ...], list[int]],
+        shape_to_reduce: tuple[int, ...] | list[int],
+        quantization_axes: tuple[int, ...] | list[int],
+        aggregation_axes: tuple[int, ...] | list[int],
     ) -> tuple[int, ...]:
         """
         Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
@@ -111,8 +109,8 @@ class RangeInitCollectorParams:
 
     def get_reduction_aggregation_axes(
         self,
-        shape_to_reduce: Union[tuple[int, ...], list[int]],
-        quantization_axes: Union[tuple[int, ...], list[int]],
+        shape_to_reduce: tuple[int, ...] | list[int],
+        quantization_axes: tuple[int, ...] | list[int],
         batchwise_statistics: bool,
     ) -> tuple[ReductionAxes, AggregationAxes]:
         """

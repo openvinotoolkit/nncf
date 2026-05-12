@@ -23,9 +23,11 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSplitMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
@@ -33,6 +35,7 @@ from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.cross_fw.test_templates.models import NNCFGraphTransformer
+from tests.cross_fw.test_templates.models import NNCFSplitGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 
@@ -47,6 +50,11 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
         conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
+
+    @pytest.fixture
+    def single_conv_arithmetic_degree2_nncf_graph(self) -> NNCFGraphArithmeticDegree2:
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
+        return NNCFGraphArithmeticDegree2(OVConvolutionMetatype, OVAddMetatype, conv_layer_attrs)
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
@@ -66,6 +74,19 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             const_metatype=OVConstantMetatype,
             transpose_metatype=OVTransposeMetatype,
             matmul_layer_weighted_attrs=OVLayerAttributes({}),
+        )
+
+    @pytest.fixture
+    def split_transformer_nncf_graph(self) -> NNCFSplitGraphTransformer:
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
+        return NNCFSplitGraphTransformer(
+            matmul_metatype=OVMatMulMetatype,
+            conv_metatype=OVConvolutionMetatype,
+            split_metatype=OVSplitMetatype,
+            softmax_metatype=OVSoftmaxMetatype,
+            const_metatype=OVConstantMetatype,
+            mul_metatype=OVMultiplyMetatype,
+            conv_layer_weighted_attrs=conv_layer_attrs,
         )
 
     @pytest.fixture

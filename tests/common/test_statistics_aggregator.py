@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pytest
@@ -24,6 +24,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.collectors import NoopAggregator
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.collectors import TensorReducerBase
@@ -138,8 +139,8 @@ class TemplateTestStatisticsAggregator:
         target_type: TargetType
         quantization_mode: QuantizationMode
         per_channel: bool
-        ref_max_val: Union[np.ndarray, float]
-        ref_min_val: Union[np.ndarray, float]
+        ref_max_val: np.ndarray | float
+        ref_min_val: np.ndarray | float
 
     TEST_MEAN_QUANTILE = RangeEstimatorParameters(
         min=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN, quantile_outlier_prob=0.01),
@@ -596,7 +597,7 @@ class TemplateTestStatisticsAggregator:
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
         elif test_params.collector_type == BCStatsCollectors.RAW:
-            tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
+            tensor_collector = get_raw_stat_collector(len(dataset_samples))
         else:
             msg = f"Invalid collector type: {test_params.collector_type}"
             raise nncf.InvalidCollectorTypeError(msg)

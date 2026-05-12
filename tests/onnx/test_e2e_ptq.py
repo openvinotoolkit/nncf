@@ -17,7 +17,6 @@ import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Optional
 
 import pandas as pd
 import pytest
@@ -66,7 +65,7 @@ XFAIL_MODELS = {
 }
 
 
-def check_skip_model(model_name: str, model_names_to_test: Optional[list[str]]):
+def check_skip_model(model_name: str, model_names_to_test: list[str] | None):
     if model_names_to_test is not None and model_name not in model_names_to_test:
         pytest.skip(f"The model {model_name} is skipped, because it was not included in --model-names.")
     if model_name in XFAIL_MODELS:
@@ -276,7 +275,7 @@ class TestPTQ:
         self,
         task_type: str,
         model_name: str,
-        model_names_to_test: Optional[list[str]],
+        model_names_to_test: list[str] | None,
         model_dir: Path,
         data_dir: Path,
         anno_dir: Path,
@@ -321,7 +320,7 @@ class TestBenchmark:
         data_dir: Path,
         anno_dir: Path,
         out_file_name: Path,
-        eval_size: Optional[int],
+        eval_size: int | None,
     ) -> list[str]:
         com_line = [
             sys.executable, str(program_path),

@@ -2,6 +2,7 @@
 onnx
 onnxruntime
 openvino
+pandas
 pytest-cov
 pytest-mock
 pytest-ordering

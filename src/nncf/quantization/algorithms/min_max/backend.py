@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -71,9 +71,9 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def dropout_metatypes(self) -> list[type[OperatorMetatype]]:
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
         """
-        Property for the backend-specific Dropout metatypes.
+        Property for the backend-specific NoOp metatypes.
         """
 
     @property
@@ -246,7 +246,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> list[int | None]:
         """
         Returns node's input port indices with weight tensors.
 

@@ -9,14 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.builders import get_raw_stat_collector
-from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.data.dataset import Dataset
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.algorithms.layerwise.backend import LayerwiseEngineBackend
@@ -34,14 +31,10 @@ class OVLayerwiseEngineBackend(LayerwiseEngineBackend):
         schedule: list[LayerwiseStep],
         dataset: Dataset,
         subset_size: int = 100,
-        cache: Optional[dict[NodeOutputPort, list[Tensor]]] = None,
+        cache: dict[NodeOutputPort, list[Tensor]] | None = None,
     ) -> OVLayerwiseIterator:
         return OVLayerwiseIterator(model, graph, schedule, dataset, subset_size, cache)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
-
-    @staticmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
-        return get_raw_stat_collector(num_samples)

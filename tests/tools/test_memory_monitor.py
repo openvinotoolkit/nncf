@@ -21,10 +21,10 @@ import pytest
 
 from tests.cross_fw.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
-from tools.memory_monitor import MemoryMonitor
-from tools.memory_monitor import MemoryType
-from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import memory_monitor_context
+from tools.memory_monitor.memory_monitor import MemoryMonitor
+from tools.memory_monitor.memory_monitor import MemoryType
+from tools.memory_monitor.memory_monitor import MemoryUnit
+from tools.memory_monitor.memory_monitor import memory_monitor_context
 
 BYTES_TO_ALLOCATE_SMALL = 2**20  # 1 MiB
 BYTES_TO_ALLOCATE_LARGE = 100 * 2**20  # 100 MiB

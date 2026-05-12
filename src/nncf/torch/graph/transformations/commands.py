@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable
 
 import torch
 
@@ -43,7 +43,7 @@ class PTTargetPoint(TargetPoint):
 
     _state_names = PTTargetPointStateNames
 
-    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: Optional[int] = None):
+    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: int | None = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.target_type = target_type
@@ -140,7 +140,7 @@ class PTInsertionCommand(PTTransformationCommand):
         self,
         point: PTTargetPoint,
         fn: Callable,
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
+        priority: TransformationPriority | int = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, point)
@@ -165,7 +165,7 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         fn: Callable,
         op_unique_name: str,
         compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
+        priority: TransformationPriority | int = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, None)
@@ -182,16 +182,19 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
 
 class PTModelExtractionCommand(PTCommand):
     """
-    Extracts submodel based on the sub-model input and output names
+    Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, input_node_names: list[str], output_node_names: list[str]):
+    def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
         """
-        :param node_name: Node name that will be extracted.
+        :param input_ids: List of the input IDs: pairs of node names and corresponding input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and corresponding output port ids.
+            Each pair denotes the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.input_node_names = input_node_names
-        self.output_node_names = output_node_names
+        self.input_ids = input_ids
+        self.output_ids = output_ids
 
 
 class PTBiasCorrectionCommand(PTTransformationCommand):

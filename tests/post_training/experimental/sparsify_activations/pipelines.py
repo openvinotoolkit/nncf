@@ -12,12 +12,10 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import openvino as ov
 import torch
-import torch.utils
 import torch.utils.data
 import torchvision
 from datasets import load_dataset
@@ -55,7 +53,7 @@ class SATimeStats(WCTimeStats):
     Contains statistics that are parsed from the stdout of Sparsify Activations tests.
     """
 
-    time_sparsifier_calibration: Optional[str] = None
+    time_sparsifier_calibration: str | None = None
     STAT_NAMES = [*WCTimeStats.STAT_NAMES, "Activations Sparsifier calibration time"]
     VAR_NAMES = [*WCTimeStats.VAR_NAMES, "time_sparsifier_calibration"]
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
@@ -63,7 +61,7 @@ class SATimeStats(WCTimeStats):
 
 @dataclass
 class SANumCompressNodes(PTQNumCompressNodes, WCNumCompressNodes):
-    num_sparse_activations: Optional[int] = None
+    num_sparse_activations: int | None = None
 
     def get_data(self):
         data = super().get_data()

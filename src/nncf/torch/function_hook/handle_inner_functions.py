@@ -286,6 +286,9 @@ def batch_norm(
     if training:
         _verify_batch_size(input.size())
 
+    if eps <= 0.0:
+        raise ValueError(f"batch_norm eps must be positive, but got {eps}")
+
     return torch.batch_norm(
         input, weight, bias, running_mean, running_var, training, momentum, eps, torch.backends.cudnn.enabled
     )

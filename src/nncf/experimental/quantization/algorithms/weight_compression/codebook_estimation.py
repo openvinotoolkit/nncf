@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -125,7 +125,7 @@ class CodebookEstimation(Algorithm):
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates optimal codebook for weight compression.
@@ -180,7 +180,7 @@ class CodebookEstimation(Algorithm):
         graph: NNCFGraph,
         all_weight_params: list[WeightCompressionParameters],
         statistics: dict[str, WCTensorStatistic],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> dict[str, CompressedWeight]:
         """
         Estimates optimal codebook for a group of weights grouped by name (e.g., down_proj, up_proj).
@@ -323,9 +323,9 @@ class CodebookEstimation(Algorithm):
 
         diff = float("inf")
 
-        if self._num_elements == config.get_numpy_codebook().size:
+        if self._num_elements == config.codebook_values.as_numpy_tensor().size:
             variants[0] = fns.tensor(
-                config.get_numpy_codebook().data, backend=weight.backend, dtype=TensorDataType.float16
+                config.codebook_values.as_numpy_tensor().data, backend=weight.backend, dtype=TensorDataType.float16
             )
         variants[1] = fns.tensor(
             list(range(-self._num_elements // 2, self._num_elements - self._num_elements // 2)),
@@ -422,9 +422,9 @@ class CodebookEstimation(Algorithm):
 
         diff = float("inf")
 
-        if self._num_elements == config.get_numpy_codebook().size:
+        if self._num_elements == config.codebook_values.as_numpy_tensor().size:
             variants[0] = fns.tensor(
-                config.get_numpy_codebook().data, backend=weight.backend, dtype=TensorDataType.float16
+                config.codebook_values.as_numpy_tensor().data, backend=weight.backend, dtype=TensorDataType.float16
             )
         variants[1] = fns.tensor(
             list(range(-self._num_elements // 2, self._num_elements - self._num_elements // 2)),

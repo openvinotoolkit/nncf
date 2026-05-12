@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Optional
 
 import onnx
 
@@ -32,7 +31,7 @@ def set_metadata(model: onnx.ModelProto, key: MetadataKey, value: str) -> None:
     entry.value = value
 
 
-def get_metadata(model: onnx.ModelProto, key: MetadataKey) -> Optional[str]:
+def get_metadata(model: onnx.ModelProto, key: MetadataKey) -> str | None:
     """
     Returns the metadata value associated with the given key from the ONNX model.
 

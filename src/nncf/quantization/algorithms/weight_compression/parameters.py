@@ -10,9 +10,9 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional
 
 from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 
 @dataclass
@@ -25,17 +25,25 @@ class CompressedWeight:
     :param zero_point: The zero-point, it is the value of the compression type corresponding to the value 0
         in the non-compression realm. Applicable for INT quantization.
     :param codebook: The codebook (LUT) for the weight compression. Applicable for vector quantization
+    :param global_scale: The tensor-wide (global) scaling factor used in two-level scaling schemes such as NVFP4.
     """
 
-    tensor: Optional[Tensor] = None
-    scale: Optional[Tensor] = None
-    zero_point: Optional[Tensor] = None
-    codebook: Optional[Tensor] = None
+    tensor: Tensor | None = None
+    scale: Tensor | None = None
+    zero_point: Tensor | None = None
+    codebook: Tensor | None = None
+    global_scale: Tensor | None = None
 
-    def is_codebook(self):
+    def get_unscaled_tensor(self) -> Tensor | None:
         """
-        Check if the compressed weight is a codebook.
+        Returns the quantized weight values before scaling. For non-codebook compression, equals the tensor as-is.
+        For codebook compression, returns the codebook values indexed by the tensor.
 
-        :return: True if the compressed weight is a codebook, False otherwise.
+        :return: Tensor with quantized weight values.
         """
-        return self.codebook is not None and self.tensor is not None and self.scale is not None
+        if self.tensor is not None and self.codebook is not None:
+            # Convert fp datatypes like f8e4m3/fp4e2m1 to a numpy fp32 array
+            # Then converting the array back to the backend tensor
+            codebook = fns.from_numpy(self.codebook.as_numpy_tensor().data, backend=self.tensor.backend)
+            return codebook[self.tensor]
+        return self.tensor

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import numpy as np
 import openvino as ov
@@ -115,7 +114,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return get_weight_value(node_with_weight, model, port_id)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> list[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int | None]:
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod

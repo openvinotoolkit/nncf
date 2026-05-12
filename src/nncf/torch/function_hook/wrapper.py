@@ -14,7 +14,7 @@ from __future__ import annotations
 import inspect
 import types
 from types import MethodType
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
 from torch import nn
 
@@ -35,7 +35,7 @@ class ForwardWithHooks:
     _orig_forward: Callable[..., Any]
     _model: nn.Module
 
-    def __new__(cls, model: nn.Module, orig_forward: Optional[Callable[..., Any]] = None) -> ForwardWithHooks:
+    def __new__(cls, model: nn.Module, orig_forward: Callable[..., Any] | None = None) -> ForwardWithHooks:
         if isinstance(model.forward, ForwardWithHooks):
             msg = "Func already wrapped"
             raise TypeError(msg)

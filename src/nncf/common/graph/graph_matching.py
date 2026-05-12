@@ -36,7 +36,7 @@ def _are_nodes_matched(node_1, node_2) -> bool:  # type:ignore
     return True
 
 
-def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
+def _sort_patterns_by_len(pattern: nx.MultiDiGraph) -> int:
     """
     Sort patterns by their length. GraphPattern.NON_PATTERN_NODE_TYPE is not counted as a pattern node.
     """
@@ -48,7 +48,7 @@ def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     return len(pattern) - len(non_pattern_nodes)
 
 
-def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgraph: dict[str, str]) -> bool:
+def _is_subgraph_matching_strict(graph: nx.MultiDiGraph, pattern: nx.MultiDiGraph, subgraph: dict[str, str]) -> bool:
     """
     Checks out whether the matched subgraph has:
     1) External predecessors of starting nodes.
@@ -126,7 +126,7 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: dict[str, str], pattern_
 
 
 def find_subgraphs_matching_pattern(
-    graph: nx.DiGraph, pattern_graph: GraphPattern, strict: bool = True
+    graph: nx.MultiDiGraph, pattern_graph: GraphPattern, strict: bool = True
 ) -> list[list[str]]:
     """
     Finds a list of nodes which define a subgraph matched a pattern in pattern_graph.
@@ -142,7 +142,7 @@ def find_subgraphs_matching_pattern(
     patterns = pattern_graph.get_weakly_connected_subgraphs()
     patterns = sorted(patterns, key=_sort_patterns_by_len, reverse=True)
     for pattern in patterns:
-        matcher = ism.DiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
+        matcher = ism.MultiDiGraphMatcher(graph, pattern, node_match=_are_nodes_matched)
         for subgraph in matcher.subgraph_isomorphisms_iter():
             if strict and not _is_subgraph_matching_strict(graph, pattern, subgraph):
                 continue

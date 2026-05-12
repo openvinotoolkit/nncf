@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 import numpy as np
 import torch
@@ -55,7 +55,7 @@ class StaticDatasetMock:
 
 
 def get_static_dataset(
-    input_size: tuple, transform_fn: Callable, fn_to_type: Optional[Callable] = None, length: int = 1
+    input_size: tuple, transform_fn: Callable, fn_to_type: Callable | None = None, length: int = 1
 ) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.
@@ -205,6 +205,74 @@ class MultipleConvTestModel(nn.Module):
         x = self.conv_5(F.relu(x_1_2))
         x = self.max_pool(x)
         return self.conv_6(x)
+
+
+def build_conv(in_channels: int, out_channels: int, kernel_size: int) -> nn.Module:
+    conv = create_conv(in_channels, out_channels, kernel_size)
+    with set_torch_seed():
+        conv.weight.data = torch.randn([out_channels, in_channels, kernel_size, kernel_size])
+        conv.bias.data = torch.randn([out_channels])
+    return conv
+
+
+class ConcatWithInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(4, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = torch.relu(x_1)
+        x_combined = torch.cat([x_1, x], dim=1)
+        return self.conv_2(x_combined)
+
+
+class ConcatWithReluInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(4, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = torch.cat([x_1, F.relu(x)], dim=1)
+        return self.conv_2(x_combined)
+
+
+class AddWithInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(2, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = x_1 + x
+        return self.conv_2(x_combined)
+
+
+class AddWithReluInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(2, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = x_1 + torch.relu(x)
+        return self.conv_2(x_combined)
 
 
 class LinearMultiShapeModel(nn.Module):
@@ -529,3 +597,33 @@ class SAMPEModel(nn.Module):
         x2 = x.cos()
         x = torch.cat([x1, x2], dim=-1)
         return x
+
+
+class ParallelEdgesModel(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self, different_output_ports=True):
+        super().__init__()
+        self._different_output_ports = different_output_ports
+        self.conv = create_conv(2, 2, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        a, b = torch.split(x, 1, dim=1)
+        if self._different_output_ports:
+            return torch.mul(a, b), torch.mul(a, b)
+        return torch.mul(a, a), torch.mul(a, a)
+
+
+class YOLO26AttentionBlock(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.qkv_conv = create_conv(2, 6, 1)
+
+    def forward(self, x):
+        x = self.qkv_conv(x)
+        q, k, v = torch.split(x, 2, dim=1)
+        attn = torch.softmax(torch.matmul(q, k) / np.sqrt(2), dim=1)
+        return torch.matmul(v, attn)

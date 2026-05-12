@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Union
 
 import numpy as np
 import pytest
@@ -82,7 +81,7 @@ SYM_CASES = (
 
 @pytest.mark.parametrize("case_to_test", SYM_CASES)
 @pytest.mark.parametrize("dtype", [TensorDataType.uint8, TensorDataType.int8])
-def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: Optional[IntDtype]):
+def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: IntDtype | None):
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
@@ -302,7 +301,7 @@ SYM_CASES_SIGNEDNESS_TO_FORSE = (
 
 
 @pytest.mark.parametrize("case_to_test,ref_signed,signedness_to_force", SYM_CASES_SIGNEDNESS_TO_FORSE)
-def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool, signedness_to_force: Optional[bool]):
+def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool, signedness_to_force: bool | None):
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.SYMMETRIC
@@ -383,7 +382,7 @@ ASYM_CASES = (
 
 @pytest.mark.parametrize("case_to_test,ref_zp", ASYM_CASES)
 @pytest.mark.parametrize("dtype", [TensorDataType.uint8, TensorDataType.int8])
-def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: Union[int, list[int]], dtype: Optional[IntDtype]):
+def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: int | list[int], dtype: IntDtype | None):
     per_ch = case_to_test.per_channel
     narrow_range = case_to_test.narrow_range
     mode = QuantizationMode.ASYMMETRIC

@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf.common import factory
@@ -207,7 +207,7 @@ def sparsify_activations(
     model: TModel,
     dataset: Dataset,
     target_sparsity_by_scope: dict[TargetScope, float],
-    ignored_scope: Optional[IgnoredScope] = None,
+    ignored_scope: IgnoredScope | None = None,
 ) -> TModel:
     """
     Post-training activation sparsification on the given model.

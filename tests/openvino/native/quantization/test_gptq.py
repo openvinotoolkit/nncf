@@ -337,7 +337,7 @@ class Linear3DModel(torch.nn.Module):
 
 
 def _create_ov_model(weights: np.ndarray, input_shape: tuple, is_3d_weights: bool = False):
-    import openvino.runtime.opset13 as opset
+    import openvino.opset13 as opset
 
     param = opset.parameter(input_shape, dtype=np.float32, name="input")
     const = opset.constant(weights, dtype=np.float32, name="self.weight")
@@ -429,8 +429,8 @@ def test_calculate_scale_linear(is_3d_weights: bool):
         weight_dtype=TensorDataType.float32,
         weight_shape=weights.shape,
         reduction_axes=reduction_axes,
+        compression_config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=group_size),
     )
-    wc_param.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=group_size)
     wc_params = [wc_param]
 
     _, res = gptq.apply(ov_model, graph, nncf_dataset, wc_params)

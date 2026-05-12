@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import Callable, Union
+from typing import Callable
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -148,7 +148,7 @@ def get_number_of_quantized_ops(
 
 
 def get_reduction_axes(
-    channel_axes: Union[list[int], tuple[int, ...]], shape: Union[list[int], tuple[int, ...]]
+    channel_axes: list[int] | tuple[int, ...], shape: list[int] | tuple[int, ...]
 ) -> tuple[int, ...]:
     """
     Returns filtered reduction axes without axes that correspond to channels.

@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Optional
 
 import numpy as np
 import pytest
@@ -55,7 +54,7 @@ class DummyTensorReducerA(DummyTensorReducer):
 
 
 class DummyTensorAggregator(AggregatorBase):
-    def __init__(self, num_samples: Optional[int] = None):
+    def __init__(self, num_samples: int | None = None):
         super().__init__(None, num_samples=num_samples)
 
     def _register_reduced_input_impl(self, x: Tensor):

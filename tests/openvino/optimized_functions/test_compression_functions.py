@@ -28,6 +28,7 @@ from nncf.common.utils.caching import cache_results
 from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -227,17 +228,19 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
 
                 decompressed_weight, compressed_weight, scale, zero_point = (None,) * 4
                 if quantization_task == QuantizationTask.Q:
-                    if config.is_integer:
-                        compressed_weight, scale, zero_point = outputs
-                    else:
-                        compressed_weight, scale, _ = outputs
+                    assert isinstance(outputs, CompressedWeight)
+                    compressed_weight = outputs.tensor
+                    scale = outputs.scale
+                    zero_point = outputs.zero_point
                 elif quantization_task == QuantizationTask.Q_DQ:
                     decompressed_weight = outputs
                 else:
-                    if config.is_integer:
-                        decompressed_weight, compressed_weight, scale, zero_point = outputs
-                    else:
-                        decompressed_weight, compressed_weight, scale = outputs
+                    assert isinstance(outputs, tuple) and len(outputs) == 2
+                    decompressed_weight, cw = outputs
+                    assert isinstance(cw, CompressedWeight)
+                    compressed_weight = cw.tensor
+                    scale = cw.scale
+                    zero_point = cw.zero_point
 
                 if cb == ComputationBackend.NumPy:
                     mock.assert_not_called()

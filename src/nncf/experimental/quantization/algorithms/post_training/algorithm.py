@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import itertools
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -39,12 +39,12 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         self,
         quantizer: Quantizer,
         subset_size: int = 300,
-        fast_bias_correction: Optional[bool] = True,
+        fast_bias_correction: bool | None = True,
         smooth_quant: bool = False,
-        bias_correction_params: Optional[AdvancedBiasCorrectionParameters] = None,
-        smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
-        activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-        weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        bias_correction_params: AdvancedBiasCorrectionParameters | None = None,
+        smooth_quant_params: AdvancedSmoothQuantParameters | None = None,
+        activations_range_estimator_params: RangeEstimatorParameters | None = None,
+        weights_range_estimator_params: RangeEstimatorParameters | None = None,
         batchwise_statistics: bool = False,
     ):
         """
@@ -90,8 +90,8 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         if dataset is None and len(self._pipeline.pipeline_steps) > 1:
             msg = (

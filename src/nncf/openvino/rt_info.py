@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import asdict
-from typing import Any, Optional
+from typing import Any
 
 import openvino as ov
 
@@ -34,7 +34,7 @@ def exclude_empty_fields(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def dump_parameters(
-    model: ov.Model, parameters: dict, algo_name: Optional[str] = "quantization", path: Optional[list] = None
+    model: ov.Model, parameters: dict, algo_name: str | None = "quantization", path: list | None = None
 ) -> None:
     """
     Dumps the given parameters into Model's meta section.

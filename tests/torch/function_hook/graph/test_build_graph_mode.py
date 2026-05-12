@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
 
 import pytest
 import torch
@@ -123,7 +122,7 @@ def test_execute_pre_hooks():
 
 
 @pytest.fixture(params=["tensor", "list", "torch_return_type"])
-def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]:
+def example_outputs(request: FixtureRequest) -> torch.Tensor | list[torch.Tensor] | torch.return_types.max:
     return {
         "tensor": torch.tensor(1.0),
         "list": [torch.tensor(1), torch.tensor([2])],
@@ -131,7 +130,7 @@ def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, list[torch.T
     }.get(request.param)
 
 
-def test_execute_post_hooks(example_outputs: Union[torch.Tensor, list[torch.Tensor], torch.return_types.max]):
+def test_execute_post_hooks(example_outputs: torch.Tensor | list[torch.Tensor] | torch.return_types.max):
     ctx = GraphBuilderMode(nn.Identity(), HookStorage())
     op_meta = OpMeta("/relu/0", torch.relu, {"node_id": 0})
     ctx.execute_post_hooks(example_outputs, op_meta)

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistical_functions import mean_per_channel
@@ -70,7 +71,7 @@ class BiasCorrection(Algorithm):
         threshold: float = BIAS_CORRECTION_THRESHOLD,
         apply_for_all_nodes: bool = False,
         inplace_statistics: bool = True,
-        backend_params: Optional[dict[str, Any]] = None,
+        backend_params: dict[str, Any] | None = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -135,8 +136,8 @@ class BiasCorrection(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         self._set_backend_entity(model)
         main_transformations_layout = TransformationLayout()
@@ -500,7 +501,6 @@ class BiasCorrection(Algorithm):
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> Tensor:
         """
-        # TODO: paraphrase
         Makes out pre-layer needed data from the floating-point collected statistics.
 
         :param statistic_points: Filled StatisticPointsContainer.
@@ -600,7 +600,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, edge.from_node.node_name, port_id=edge.output_port_id
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
+            stat_collector = get_raw_stat_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -621,7 +621,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=OUTPUT_PORT_OF_NODE
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
+            stat_collector = get_raw_stat_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
@@ -31,7 +30,7 @@ class QuantizersCounter:
         num_per_tensor: int = 0,
         num_per_channel: int = 0,
         total_count: int = 0,
-        potential_count: Optional[int] = None,
+        potential_count: int | None = None,
     ):
         """
         Initializes quantizers counter.

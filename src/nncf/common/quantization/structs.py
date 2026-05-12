@@ -12,7 +12,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import nncf
 from nncf.common.graph import NNCFNode
@@ -65,7 +65,7 @@ class QuantizerConfig:
         self,
         num_bits: int = QUANTIZATION_BITS,
         mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
-        signedness_to_force: Optional[bool] = None,
+        signedness_to_force: bool | None = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
         narrow_range: bool = QUANTIZATION_NARROW_RANGE,
     ):
@@ -233,8 +233,8 @@ class QuantizerSpec:
         self,
         num_bits: int,
         mode: QuantizationScheme,
-        signedness_to_force: Optional[bool],
-        narrow_range: Optional[bool],
+        signedness_to_force: bool | None,
+        narrow_range: bool | None,
         half_range: bool,
     ):
         """
@@ -265,6 +265,7 @@ class QuantizerSpec:
 
 
 class QuantizationConstraints:
+    # TODO(AlexanderDokuchaev): Refactor this class. Ticket-185344
     REF_QCONF_OBJ = QuantizerConfig()
 
     def __init__(self, **kwargs: Any) -> None:
@@ -302,24 +303,24 @@ class QuantizationConstraints:
 
     @classmethod
     def from_config_dict(cls, config_dict: dict[str, Any]) -> "QuantizationConstraints":
-        return cls(
-            num_bits=config_dict.get("bits"),
-            mode=config_dict.get("mode"),
-            per_channel=config_dict.get("per_channel"),
-            signedness_to_force=config_dict.get("signed"),
-        )
+        renamed_keys = {
+            "bits": "num_bits",
+            "signed": "signedness_to_force",
+        }
+        new_dict = {renamed_keys.get(k, k): v for k, v in config_dict.items()}
+        return cls(**new_dict)
 
     def constrain_qconfig_list(
         self,
         node_name: NNCFNodeName,
-        target_device: Optional[TargetDevice],
+        target_device: TargetDevice | None,
         quantizer_config_list: list[QuantizerConfig],
     ) -> list[QuantizerConfig]:
         assert quantizer_config_list is not None
 
         constrained_quantizer_config_list = list(filter(self.is_config_compatible, quantizer_config_list))
 
-        # TODO: Make the logic more flexible when the flag "warning as error" is implemented.
+        # TODO(TBD): Make the logic more flexible when the flag "warning as error" is implemented.
         # It means that the qconfig from overrides must be selected as final config
         # even if it is not valid in hw-config.
         if not constrained_quantizer_config_list:
@@ -385,7 +386,7 @@ class NonWeightQuantizerId(QuantizerId):
     ordinary activation, function and input
     """
 
-    def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
+    def __init__(self, target_node_name: NNCFNodeName, input_port_id: int | None = None):
         self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
@@ -436,7 +437,7 @@ class TypedQuantizerConfig(QuantizerConfig):
         self,
         num_bits: int = QUANTIZATION_BITS,
         mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
-        signedness_to_force: Optional[bool] = None,
+        signedness_to_force: bool | None = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
         narrow_range: bool = QUANTIZATION_NARROW_RANGE,
         dest_dtype: IntDtype = TensorDataType.int8,

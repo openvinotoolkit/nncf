@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.quantization.structs import QuantizationPreset
@@ -31,14 +31,14 @@ TModel = TypeVar("TModel")
 
 
 def create_ptq_pipeline(
-    mode: Optional[QuantizationMode] = None,
-    preset: Optional[QuantizationPreset] = None,
+    mode: QuantizationMode | None = None,
+    preset: QuantizationPreset | None = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    model_type: ModelType | None = None,
+    ignored_scope: IgnoredScope | None = None,
+    advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> Pipeline:
     """
     Creates a post-training quantization pipeline.

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import itertools
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -39,14 +39,14 @@ class PostTrainingQuantization(Algorithm):
 
     def __init__(
         self,
-        mode: Optional[QuantizationMode] = None,
-        preset: Optional[QuantizationPreset] = None,
+        mode: QuantizationMode | None = None,
+        preset: QuantizationPreset | None = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         fast_bias_correction: bool = True,
-        model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None,
-        advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+        model_type: ModelType | None = None,
+        ignored_scope: IgnoredScope | None = None,
+        advanced_parameters: AdvancedQuantizationParameters | None = None,
     ):
         """
         :param mode: Special quantization mode that specify different ways of the optimization.
@@ -96,8 +96,8 @@ class PostTrainingQuantization(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        dataset: Dataset | None = None,
     ) -> TModel:
         if dataset is None and len(self._pipeline.pipeline_steps) > 1:
             msg = (

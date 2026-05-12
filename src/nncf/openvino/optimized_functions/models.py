@@ -13,7 +13,7 @@ import copy
 from dataclasses import dataclass
 from dataclasses import field
 from functools import partial
-from typing import Callable, Optional, Union
+from typing import Callable
 
 import numpy as np
 import openvino as ov
@@ -38,7 +38,7 @@ from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = list[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
-ReductionAxes = Union[int, tuple[int, ...]]
+ReductionAxes = int | tuple[int, ...]
 
 
 OV_MODEL_CACHE = ResultsCache()
@@ -174,10 +174,10 @@ def _infer_ov_model(
 def _prepare_quantization_model_inputs(
     ov_model_params,
     weight_shape: tuple,
-    scale_shape: Optional[tuple],
-    zero_point_shape: Optional[tuple],
-    reduction_axes: Optional[ReductionAxes],
-) -> tuple[tuple, Optional[tuple], Optional[tuple]]:
+    scale_shape: tuple | None,
+    zero_point_shape: tuple | None,
+    reduction_axes: ReductionAxes | None,
+) -> tuple[tuple, tuple | None, tuple | None]:
     """
     Do some input checks and convert static shapes to dynamic shapes if needed.
     """
@@ -203,10 +203,10 @@ def _prepare_quantization_model_inputs(
 
 def _validate_input_dtypes(
     weight_dtype: TensorDataType,
-    scale_shape: Optional[tuple] = None,
-    input_scale_dtype: Optional[TensorDataType] = None,
-    zero_point_shape: Optional[tuple] = None,
-    input_zero_point_dtype: Optional[TensorDataType] = None,
+    scale_shape: tuple | None = None,
+    input_scale_dtype: TensorDataType | None = None,
+    zero_point_shape: tuple | None = None,
+    input_zero_point_dtype: TensorDataType | None = None,
 ):
     """
     Validates the input data types for the quantization model.
@@ -245,12 +245,16 @@ def get_integer_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-) -> Union[ModelCallable, ModelAsNodes]:
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+) -> ModelCallable | ModelAsNodes:
     """
     Get a model that compresses weights using the given configuration.
+
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale (and zero point for asymmetric modes) is computed internally using `reduction_axes`,
+    which must not be None in that case.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -260,8 +264,7 @@ def get_integer_quantization_model(
     :param zero_point_shape: Optional shape of the zero point tensor. If not provided and the mode is asymmetric,
         zero point will be computed by the OV model. Otherwise, it is expected that the zero point tensor is provided
         as an input.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
-        inputs.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
@@ -283,18 +286,21 @@ def get_float_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-) -> Union[ModelCallable, ModelAsNodes]:
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+) -> ModelCallable | ModelAsNodes:
     """
     Get a model that compresses weights to float destination type using the given configuration.
+
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale is computed internally using `reduction_axes`, which must not be None in that case.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
     :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
         Otherwise, it is expected that the scale tensor is given as an input to the model.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale is provided as input.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :return: A model callable that compresses weights using the given configuration.
     """
     weight_shape, scale_shape, _ = _prepare_quantization_model_inputs(
@@ -314,19 +320,22 @@ def get_float_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
 ) -> ModelCallable:
     """
     Get a model that performs float compression and decompression of the given weight.
+
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale is computed internally using `reduction_axes`, which must not be None in that case.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
     :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
     :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
         Otherwise, it is expected that the scale tensor is given as an input to the model.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale is provided as input.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :param return_compressed_weight: Whether to also return compressed weight and scale besides the
         decompressed weight.
     :return: A model callable that returns a decompressed weight, and optionally compressed weight and scale
@@ -350,13 +359,17 @@ def get_integer_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
 ) -> ModelCallable:
     """
     Get a model that performs compression and decompression of the given weight.
+
+    Either `scale_shape` or `reduction_axes` must be provided. When `scale_shape` is None,
+    the scale (and zero point for asymmetric modes) is computed internally using `reduction_axes`,
+    which must not be None in that case.
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
@@ -366,8 +379,7 @@ def get_integer_quantize_dequantize_weight_model(
     :param zero_point_shape: Optional shape of the zero point tensor. If not provided and the mode is asymmetric,
         zero point will be computed by the OV model. Otherwise, it is expected that the zero point is provided as an
         input.
-    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
-        inputs.
+    :param reduction_axes: Axes to reduce the weight tensor. Required when scale_shape is not provided.
     :param return_compressed_weight: Whether to also return compressed weight, scale, (and zero point) besides the
         decompressed weight.
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
@@ -430,11 +442,11 @@ def _build_integer_quantization_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
     return_nodes: bool = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     is_asym_mode = config.is_asym_mode
 
     default_input_dtypes = {
@@ -576,10 +588,10 @@ def _build_float_quantization_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
     return_nodes: bool = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+) -> ModelCallable | ModelAsNodes:
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
 
@@ -668,12 +680,12 @@ def _build_integer_quantize_dequantize_weight_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    zero_point_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
-    return_nodes: Optional[bool] = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+    scale_shape: tuple | None = None,
+    zero_point_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
+    return_nodes: bool | None = False,
+) -> ModelCallable | ModelAsNodes:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
         # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion
@@ -728,11 +740,11 @@ def _build_float_quantize_dequantize_weight_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: tuple,
-    scale_shape: Optional[tuple] = None,
-    reduction_axes: Optional[ReductionAxes] = None,
-    return_compressed_weight: Optional[bool] = False,
-    return_nodes: Optional[bool] = False,
-) -> Union[ModelCallable, ModelAsNodes]:
+    scale_shape: tuple | None = None,
+    reduction_axes: ReductionAxes | None = None,
+    return_compressed_weight: bool | None = False,
+    return_nodes: bool | None = False,
+) -> ModelCallable | ModelAsNodes:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
         # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion

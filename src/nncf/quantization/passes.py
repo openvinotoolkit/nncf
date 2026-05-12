@@ -24,7 +24,7 @@ def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
     input_nodes: list[NNCFNode],
     shapeof_metatypes: list[type[OperatorMetatype]],
-    dropout_metatypes: list[type[OperatorMetatype]],
+    noop_metatypes: list[type[OperatorMetatype]],
     preserved_metatypes: list[type[OperatorMetatype]],
 ) -> NNCFGraph:
     """
@@ -33,7 +33,9 @@ def transform_to_inference_graph(
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param input_nodes: List of input nodes for the given NNCFGraph.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
-    :param dropout_metatypes: List of backend-specific Dropout metatypes.
+    :param noop_metatypes: List of backend-specific NoOp metatypes that should be removed.
+    :param preserved_metatypes: List of backend-specific metatypes that require preserving
+        float subgraphs when removing the ShapeOf subgraph.
     :return: NNCFGraph in the inference style.
     """
     shapeof_subgraphs = find_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
@@ -43,7 +45,7 @@ def transform_to_inference_graph(
     nodes_to_drop = set([*shapeof_subgraphs, *constant_subgraphs]).difference(preserved_nodes)
     nncf_graph.remove_nodes_from(nodes_to_drop)
 
-    remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
+    remove_noop_operation_nodes(nncf_graph, noop_metatypes)
     return nncf_graph
 
 
@@ -127,56 +129,6 @@ def find_preserved_nodes(
     return list(preserved_nodes)
 
 
-def remove_nodes_and_reconnect_graph(
-    nncf_graph: NNCFGraph,
-    metatypes: list[type[OperatorMetatype]],
-) -> NNCFGraph:
-    """
-    Removes nodes with metatypes specified by `metatypes` parameter from
-    the provided NNCFGraph instance and connects previous node of a matched node
-    with next nodes of a matched node inplace for each matched node.
-    Matched nodes should have only one input node and only one output port.
-
-    :param nncf_graph: NNCFGraph instance for the transformation.
-    :param metatypes: List of backend-specific metatypes.
-    :return: Resulting NNCFGraph.
-    """
-    if not metatypes:
-        return nncf_graph
-
-    nodes_to_drop = []
-    for node in nncf_graph.get_nodes_by_metatypes(metatypes):
-        if node.metatype in metatypes:
-            nodes_to_drop.append(node)
-
-            prev_nodes = nncf_graph.get_previous_nodes(node)
-            input_edges = nncf_graph.get_input_edges(node)
-            assert len(prev_nodes) == len(input_edges) == 1
-            prev_node = prev_nodes[0]
-            input_edge = input_edges[0]
-            assert not input_edge.parallel_input_port_ids
-
-            # nncf_graph.get_next_edges is not used to preserve
-            # parallel_input_port_ids
-            for output_node in nncf_graph.get_next_nodes(node):
-                output_edge = nncf_graph.get_edge(node, output_node)
-                # Connects previous node with all next nodes
-                # to keep NNCFGraph connected.
-                assert input_edge.dtype == output_edge.dtype
-                assert input_edge.tensor_shape == output_edge.tensor_shape
-                nncf_graph.add_edge_between_nncf_nodes(
-                    from_node_id=prev_node.node_id,
-                    to_node_id=output_edge.to_node.node_id,
-                    tensor_shape=input_edge.tensor_shape,
-                    input_port_id=output_edge.input_port_id,
-                    output_port_id=input_edge.output_port_id,
-                    dtype=input_edge.dtype,
-                    parallel_input_port_ids=output_edge.parallel_input_port_ids,
-                )
-    nncf_graph.remove_nodes_from(nodes_to_drop)
-    return nncf_graph
-
-
 def find_constant_subgraphs(
     nncf_graph: NNCFGraph,
     input_nodes: list[NNCFNode],
@@ -203,3 +155,40 @@ def find_constant_subgraphs(
     constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
 
     return constant_nodes
+
+
+def _can_remove_noop_node(node: NNCFNode, graph: NNCFGraph) -> bool:
+    """
+    Checks that the node can be removed by connecting its predecessors directly to its successors.
+        - The node must have exactly one input edge.
+        - All output edges must have the same dtype and tensor shape as the input edge.
+
+    :param node: The node to check.
+    :param graph: The graph containing the node.
+    :return: True if the node can be removed, False otherwise.
+    """
+    in_edges = graph.get_input_edges(node)
+    out_edges = graph.get_output_edges(node)
+    if len(in_edges) != 1:
+        # Support only one input edge
+        return False
+    if any(edge.dtype != in_edges[0].dtype or edge.tensor_shape != in_edges[0].tensor_shape for edge in out_edges):
+        # All edges should have the same dtype and tensor shape to remove the node
+        return False
+    return True
+
+
+def remove_noop_operation_nodes(graph: NNCFGraph, metatypes: list[type[OperatorMetatype]]) -> None:
+    """
+    Removes noop nodes in the graph by connecting their predecessors directly
+    to their successors and removing the noop nodes.
+
+    :param graph: The NNCFGraph to be modified.
+    :param metatypes: Operator metatypes that are treated as noop operations and
+        will be considered for removal from the graph.
+    """
+    noop_nodes = graph.get_nodes_by_metatypes(metatypes)
+    for noop_node in noop_nodes:
+        if not _can_remove_noop_node(noop_node, graph):
+            continue
+        graph.remove_passthrough_node(noop_node)

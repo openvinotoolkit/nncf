@@ -1,0 +1,14 @@
+{
+    "conv_weight": "PTConstNoopMetatype",
+    "conv_bias": "PTConstNoopMetatype",
+    "conv_a_weight": "PTConstNoopMetatype",
+    "conv_a_bias": "PTConstNoopMetatype",
+    "conv_b_weight": "PTConstNoopMetatype",
+    "conv_b_bias": "PTConstNoopMetatype",
+    "x": "PTInputNoopMetatype",
+    "conv2d": "PTConv2dMetatype",
+    "relu": "PTRELUMetatype",
+    "conv2d_1": "PTConv2dMetatype",
+    "conv2d_2": "PTConv2dMetatype",
+    "output": "PTOutputNoopMetatype"
+}

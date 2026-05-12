@@ -12,7 +12,7 @@
 import math
 from functools import reduce
 from operator import mul
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import nncf
 from nncf import Dataset
@@ -20,6 +20,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
@@ -84,8 +85,8 @@ class GPTQ:
         graph: NNCFGraph,
         dataset: Dataset,
         weight_compression_parameters: list[WeightCompressionParameters],
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        statistic_points: StatisticPointsContainer | None = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> tuple[TModel, dict[str, CompressedWeight]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
@@ -174,7 +175,7 @@ class GPTQ:
         model: TModel,
         graph: NNCFGraph,
         target_nodes: list[NNCFNode],
-        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
+        backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -317,7 +318,7 @@ class GPTQ:
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
                             activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
-                            wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations)
+                            wc_statistics = self.activations_to_wc_statistics(activations)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
                                 wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
@@ -376,3 +377,20 @@ class GPTQ:
         else:
             zero_points = None
         return quantized_tensor, scales, zero_points
+
+    @staticmethod
+    def activations_to_wc_statistics(activations: list[Tensor]) -> WCTensorStatistic:
+        """
+        Mimic the activation reducing logic from WeightCompression.get_statistic_points.
+
+        :param activations: List of raw activations.
+        :return: Instance of WCTensorStatistic class containing reduced activations and shapes.
+        """
+        mean_values = []
+        shapes = []
+        for act in activations:
+            shapes.append(act.shape)
+            reduction_shape = tuple(range(act.ndim - 1))
+            mean_values.append(fns.mean(act, axis=reduction_shape))
+        wc_statistics = WCTensorStatistic(mean_values, shapes)
+        return wc_statistics

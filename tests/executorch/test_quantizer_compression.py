@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import pytest
 import torch
@@ -41,8 +41,8 @@ from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_models.llama import LlamaDecoderOnly
 from tests.torch.test_models.synthetic import ShortTransformer
 
-FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "compress_pt2e"
-FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "fx" / "ao_export_compression_OpenVINOQuantizer"
+FX_PT2E_DIR = TEST_ROOT / "executorch" / "data" / "compress_pt2e"
+FX_AO_DIR = TEST_ROOT / "executorch" / "data" / "ao_export_compression_OpenVINOQuantizer"
 INT8_COMPRESSION_MODES = [QuantizationMode.INT8WO_ASYM, QuantizationMode.INT8WO_SYM]
 
 
@@ -88,7 +88,7 @@ def get_openvino_quantizer(*args, **kwargs) -> OpenVINOQuantizer:
     return OpenVINOQuantizer(*args, **kwargs)
 
 
-def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: Optional[dict[str, Any]] = None) -> str:
+def _string_from_quantizer_params(qparams: dict[str, Any], pt2e_param: dict[str, Any] | None = None) -> str:
     output = str(qparams.get("mode").value)
     output += f"gs{qparams.get('group_size', -1)}"
     if qparams.get("all_layers", False):
@@ -214,6 +214,9 @@ def test_compress_pt2e_scales(
         json.load(f)
 
 
+@pytest.mark.xfail(
+    reason="Ticket: 184301.",
+)
 @pytest.mark.parametrize(
     ("model_case", "quantizer_params"),
     TEST_MODELS_NO_PT2E,

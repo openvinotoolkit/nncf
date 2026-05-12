@@ -26,6 +26,7 @@ from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
+from torchvision.models.detection.transform import GeneralizedRCNNTransform
 from rich.progress import track
 from functools import partial
 
@@ -142,6 +143,7 @@ def main():
     # Disable NNCF tracing for some methods in order for the model to be properly traced by NNCF
     disable_tracing(SSD.postprocess_detections)
     disable_tracing(DefaultBoxGenerator.forward)
+    disable_tracing(GeneralizedRCNNTransform.postprocess)
 
     # Quantize model
     calibration_dataset = nncf.Dataset(dataset, partial(transform_fn, device=device))

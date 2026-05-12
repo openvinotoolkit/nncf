@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import TypeVar, Union
+from typing import TypeVar
 
 import torch
 from gptqmodel.nn_modules.qlinear.tritonv2 import TritonV2QuantLinear  # type: ignore[import-not-found]
@@ -27,7 +27,7 @@ from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
-T_INT8_DECOMPRESSOR = Union[INT8AsymmetricWeightsDecompressor, INT8SymmetricWeightsDecompressor]
+T_INT8_DECOMPRESSOR = INT8AsymmetricWeightsDecompressor | INT8SymmetricWeightsDecompressor
 
 TModel = TypeVar("TModel", bound=nn.Module)
 

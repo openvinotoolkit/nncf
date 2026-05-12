@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import torch.fx
 import torch.utils._pytree as pytree
@@ -239,7 +239,7 @@ def _is_impure(node: torch.fx.Node) -> bool:
 
 def constant_fold(
     gm: torch.fx.GraphModule,
-    constraint_fn: Optional[Callable[[torch.fx.Node], bool]] = None,
+    constraint_fn: Callable[[torch.fx.Node], bool] | None = None,
 ) -> None:
     """
     Calculates constant subgraphs values and replaces them with a constant node inplace.
