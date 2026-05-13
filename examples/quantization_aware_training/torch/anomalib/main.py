@@ -29,7 +29,6 @@ import nncf
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
 
 HOME_PATH = Path.home()
-DATASET_PATH = HOME_PATH / ".cache" / "nncf" / "datasets" / "mvtec"
 CHECKPOINT_PATH = HOME_PATH / ".cache" / "nncf" / "models" / "anomalib"
 ROOT = Path(__file__).parent.resolve()
 FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
@@ -44,8 +43,8 @@ DATASET_INFO = DownloadInfo(
 )
 
 
-def create_dataset(root: Path) -> MVTecAD:
-    if not root.exists():
+def create_dataset() -> MVTecAD:
+    if not DATASET_PATH.exists():
         download.download_and_extract(DATASET_PATH, DATASET_INFO)
     data = MVTecAD(DATASET_PATH, category="capsule")
     data.setup()
@@ -88,7 +87,7 @@ def main():
     print(os.linesep + "[Step 1] Prepare the model and dataset")
 
     model = Stfpm()
-    datamodule = create_dataset(root=DATASET_PATH)
+    datamodule = create_dataset()
 
     # Create an engine for the original model
     engine = Engine(default_root_dir=FP32_RESULTS_ROOT, devices=1)
