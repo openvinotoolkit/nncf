@@ -71,6 +71,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         CompressWeightsMode.INT8_ASYM: onnx.TensorProto.UINT8,
         CompressWeightsMode.INT4_SYM: onnx.TensorProto.INT4,
         CompressWeightsMode.INT4_ASYM: onnx.TensorProto.UINT4,
+        CompressWeightsMode.FP8_E4M3: onnx.TensorProto.FLOAT8E4M3FN,
     }
 
     def __init__(self, model: onnx.ModelProto):
@@ -363,8 +364,14 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 zero_point = pack_4_bits(zero_point)
 
         # Create initializers for the quantized weights, scale, and zero point
+        if weight_dtype == onnx.TensorProto.FLOAT8E4M3FN:
+            np_dtype = helper.tensor_dtype_to_np_dtype(weight_dtype)
+            vals = onnx.numpy_helper.saturate_cast(np.asarray(quantized_weights), np_dtype).flatten()
+        else:
+            vals = quantized_weights
+
         quantized_weights_initializer = onnx.helper.make_tensor(
-            quantized_weight_name, weight_dtype, orig_shape, quantized_weights.tobytes(), raw=True
+            quantized_weight_name, weight_dtype, orig_shape, vals.tobytes(), raw=True
         )
         scale_initializer = numpy_helper.from_array(
             np.array(scale, dtype=helper.tensor_dtype_to_np_dtype(scale_dtype)), name=scale_name
@@ -374,8 +381,15 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         if zero_point is not None:
             deq_inputs.append(weight_name + "_zero_point")
+
+            if weight_dtype == onnx.TensorProto.FLOAT8E4M3FN:
+                np_dtype = helper.tensor_dtype_to_np_dtype(weight_dtype)
+                vals = onnx.numpy_helper.saturate_cast(np.asarray(zero_point), np_dtype).flatten()
+            else:
+                vals = zero_point
+
             zero_point_initializer = onnx.helper.make_tensor(
-                weight_name + "_zero_point", weight_dtype, orig_zero_point_shape, zero_point.tobytes(), raw=True
+                weight_name + "_zero_point", weight_dtype, orig_zero_point_shape, vals.tobytes(), raw=True
             )
             new_initializers.append(zero_point_initializer)
 
