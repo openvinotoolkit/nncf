@@ -12,11 +12,9 @@
 import os
 import re
 import subprocess
-import tarfile
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import torch
 from anomalib.data import MVTecAD
@@ -38,57 +36,18 @@ FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
 INT8_RESULTS_ROOT = ROOT / "results" / "int8"
 CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_2.ckpt"
 USE_PRETRAINED = True
-# Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
-DOWNLOAD_INFO = DownloadInfo(
-    name="mvtecad",
-    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f283/"
-    "download/420938113-1629960298/mvtec_anomaly_detection.tar.xz",
-    hashsum="cf4313b13603bec67abb49ca959488f7eedce2a9f7795ec54446c649ac98cd3d",
+DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"
+DATASET_INFO = DownloadInfo(
+    name="mvtec_capsule",
+    url="https://huggingface.co/datasets/alexsu52/mvtec_capsule/resolve/main/capsule.tar.xz",
+    hashsum="f6a41cb11f1589d552888fe9c43a1adcbcae15b70073e19093322f836d00a2b6",
 )
-
-
-def safe_extract(tar_path: Path, extract_path: Path) -> None:
-    extract_path = Path(extract_path).resolve()
-    with tarfile.open(tar_path) as tar:
-        for member in tar.getmembers():
-            member_path = extract_path / member.name
-            member_path_resolved = member_path.resolve()
-            # Prevent path traversal
-            if extract_path not in member_path_resolved.parents and member_path_resolved != extract_path:
-                msg = f"Unsafe tar file member: {member.name}"
-                raise RuntimeError(msg)
-            if member.isfile():
-                member_path.parent.mkdir(parents=True, exist_ok=True)
-                tar.extract(member, path=extract_path)
-
-
-# Can be replaced to "from anomalib.data.datamodules.image.mvtecad import DOWNLOAD_INFO" on bump anomalib version
-DOWNLOAD_INFO = DownloadInfo(
-    name="mvtecad",
-    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f283/"
-    "download/420938113-1629960298/mvtec_anomaly_detection.tar.xz",
-    hashsum="cf4313b13603bec67abb49ca959488f7eedce2a9f7795ec54446c649ac98cd3d",
-)
-
-
-def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
-    root.mkdir(parents=True, exist_ok=True)
-    downloaded_file_path = root / info.url.split("/")[-1]
-    print(f"Downloading the {info.name} dataset.")
-    with download.DownloadProgressBar(unit="B", unit_scale=True, miniters=1, desc=info.name) as progress_bar:
-        urlretrieve(url=f"{info.url}", filename=downloaded_file_path, reporthook=progress_bar.update_to)  # nosec
-    print("Checking the hash of the downloaded file.")
-    download.check_hash(downloaded_file_path, info.hashsum)
-    print(f"Extracting the {info.name} dataset.")
-    safe_extract(downloaded_file_path, root)
-    print("Cleaning up files.")
-    downloaded_file_path.unlink()
 
 
 def create_dataset(root: Path) -> MVTecAD:
     if not root.exists():
-        download_and_extract(root, DOWNLOAD_INFO)
-    data = MVTecAD(root, category="bottle")
+        download.download_and_extract(DATASET_PATH, DATASET_INFO)
+    data = MVTecAD(DATASET_PATH, category="capsule")
     data.setup()
     return data
 
@@ -166,7 +125,7 @@ def main():
     quantized_model.model = quantized_inference_model
 
     # Create engine for the quantized model
-    engine = Engine(default_root_dir=INT8_RESULTS_ROOT, max_epochs=5, devices=1)
+    engine = Engine(default_root_dir=INT8_RESULTS_ROOT, max_epochs=2, devices=1)
 
     # Validate the quantized model
     print("Test results for INT8 model after PTQ:")
