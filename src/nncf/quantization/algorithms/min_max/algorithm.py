@@ -1030,7 +1030,9 @@ class MinMaxQuantization(Algorithm):
                 )
                 for quantization_target_point in unified_scale_group:
                     transformation_layout.register(
-                        self._backend_entity.create_convert_insertion_command(quantization_target_point, parameters)
+                        self._backend_entity.create_convert_insertion_command(
+                            graph, quantization_target_point, qconfig, parameters
+                        )
                     )
                     unified_ops_list.add(quantization_target_point)
                 continue
@@ -1069,7 +1071,7 @@ class MinMaxQuantization(Algorithm):
                         statistics, is_per_channel=qconfig.per_channel, destination_type=destination_type
                     )
                     command = self._backend_entity.create_convert_insertion_command(
-                        quantization_target_point, parameters
+                        graph, quantization_target_point, qconfig, parameters
                     )
                 else:
                     parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, half_range)

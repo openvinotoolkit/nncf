@@ -284,13 +284,17 @@ class ONNXModelTransformer(ModelTransformer):
         dims = scale.shape if per_channel else []
         onnx_scale = [scale.tolist()] if not per_channel else scale
         onnx_zero_point = [zero_point.tolist()] if not per_channel else zero_point
+
         if tensor_type == np.uint8:
             onnx_tensor_type = onnx.TensorProto.UINT8
         elif tensor_type == np.int8:
             onnx_tensor_type = onnx.TensorProto.INT8
+        elif tensor_type in (onnx.TensorProto.FLOAT8E5M2, onnx.TensorProto.FLOAT8E4M3FN):
+            onnx_tensor_type = tensor_type
         else:
             msg = f"Incorrect tensor type - {tensor_type}."
             raise nncf.ValidationError(msg)
+
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]

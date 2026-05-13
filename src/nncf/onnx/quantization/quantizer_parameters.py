@@ -12,7 +12,10 @@
 from dataclasses import dataclass
 
 import numpy as np
+import onnx
 
+from nncf.quantization.advanced_parameters import FP8Type
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import functions as fns
@@ -31,8 +34,42 @@ class ONNXQuantizerLayerParameters:
 
     scale: np.ndarray
     zero_point: np.ndarray
-    tensor_type: np.dtype
+    tensor_type: onnx.TensorProto.DataType | np.dtype
     axis: int | None = None
+
+
+def convert_fc_params_to_onnx_params(
+    parameters: FakeConvertParameters, axis: int | None
+) -> ONNXQuantizerLayerParameters:
+    """
+    Converts common FakeConvertParameters to ONNXQuantizerLayerParameters.
+
+    :param parameters: FakeConvertParameters representation.
+    :param axis: Axis for per-channel quantization.
+    :return: Quantizer layer attributes.
+    """
+    if parameters.destination_type == FP8Type.E4M3:
+        tensor_type = onnx.TensorProto.FLOAT8E4M3FN
+    elif parameters.destination_type == FP8Type.E5M2:
+        tensor_type = onnx.TensorProto.FLOAT8E5M2
+    else:
+        msg = f"Unsupported FP8type: {parameters.destination_type}. Expected FP8Type.E4M3 or FP8Type.E5M2"
+        raise ValueError(msg)
+
+    scale = parameters.scale
+    zero_point = parameters.shift
+
+    # TODO(andrey-churkin): Check that scale and zero_point are calculated correctly.
+
+    # NOTE: adding machine epsilon to avoid division by zero
+    eps = fns.finfo(scale).eps
+    scale = fns.where(fns.abs(scale) < eps, eps, scale)
+    scale = 1.0 / scale
+    # ONNX demands parameters to be a scalar or 1-D Tensor.
+    scale = fns.squeeze(scale)
+    zero_point = fns.squeeze(zero_point)
+
+    return ONNXQuantizerLayerParameters(scale.data, zero_point.data, tensor_type, axis)
 
 
 def convert_fq_params_to_onnx_params(
