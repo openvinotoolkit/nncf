@@ -1,0 +1,134 @@
+schema_version: 1
+suite: python
+reporting:
+  label: Python
+  artifact_group: python
+  artifact_name_template: coverage-{suite}-{lane}
+  selection_env: PY_TEST_NAMES
+  stats_file: python-coverage-stats.env
+  duration_file: python-test-durations.csv
+  coverage_file: python-coverage.xml
+  debug_dirs:
+    - src: .tmp/python-coverage
+      dest: python-coverage-debug
+  uploads:
+    - name: NNCF Python
+      artifact_pattern: coverage-python-*
+      file: python-coverage.xml
+      key: nncf_python_xml
+      flag: nncf-python
+
+tests:
+  - name: common
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -ra --durations=30 -n2 ${PYTEST_COVERAGE_ARGS}
+      tests/common --junitxml nncf-tests.xml
+
+  - name: onnx
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -ra --durations=30 -n4 ${PYTEST_COVERAGE_ARGS}
+      tests/onnx --junitxml nncf-tests.xml
+
+  - name: openvino
+    kind: command
+    profiles: [cpu]
+    command: >-
+      ONEDNN_MAX_CPU_ISA=AVX2 python3 -m pytest -ra --durations=30 -n4 --dist loadscope
+      ${PYTEST_COVERAGE_ARGS} tests/openvino --junitxml nncf-tests.xml
+
+  - name: torch_cpu
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -ra -n2 --durations=30 ${PYTEST_COVERAGE_ARGS}
+      tests/torch -m "not cuda" --junitxml nncf-tests.xml
+
+  - name: tools
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -ra --durations=30 ${PYTEST_COVERAGE_ARGS}
+      tests/tools --junitxml nncf-tests.xml
+
+  - name: executorch
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -ra --durations=30 ${PYTEST_COVERAGE_ARGS}
+      tests/executorch --junitxml nncf-tests.xml
+
+  - name: wc_1
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
+      tests/post_training/test_quantize_conformance.py::test_weight_compression
+      --junit-xml=nncf-tests.xml
+      --durations-path=tests/post_training/data/wc_test_durations.json
+      --splitting-algorithm=least_duration
+      --splits 6
+      --group 1
+
+  - name: wc_2
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
+      tests/post_training/test_quantize_conformance.py::test_weight_compression
+      --junit-xml=nncf-tests.xml
+      --durations-path=tests/post_training/data/wc_test_durations.json
+      --splitting-algorithm=least_duration
+      --splits 6
+      --group 2
+
+  - name: wc_3
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
+      tests/post_training/test_quantize_conformance.py::test_weight_compression
+      --junit-xml=nncf-tests.xml
+      --durations-path=tests/post_training/data/wc_test_durations.json
+      --splitting-algorithm=least_duration
+      --splits 6
+      --group 3
+
+  - name: wc_4
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
+      tests/post_training/test_quantize_conformance.py::test_weight_compression
+      --junit-xml=nncf-tests.xml
+      --durations-path=tests/post_training/data/wc_test_durations.json
+      --splitting-algorithm=least_duration
+      --splits 6
+      --group 4
+
+  - name: wc_5
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
+      tests/post_training/test_quantize_conformance.py::test_weight_compression
+      --junit-xml=nncf-tests.xml
+      --durations-path=tests/post_training/data/wc_test_durations.json
+      --splitting-algorithm=least_duration
+      --splits 6
+      --group 5
+
+  - name: wc_6
+    kind: command
+    profiles: [cpu]
+    command: >-
+      python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
+      tests/post_training/test_quantize_conformance.py::test_weight_compression
+      --junit-xml=nncf-tests.xml
+      --durations-path=tests/post_training/data/wc_test_durations.json
+      --splitting-algorithm=least_duration
+      --splits 6
+      --group 6

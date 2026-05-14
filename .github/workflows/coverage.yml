@@ -1,0 +1,392 @@
+name: Code coverage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.run_id || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: '3.12'
+  ENABLE_BRANCH_COVERAGE: 'false'
+
+jobs:
+  CoveragePythonCore:
+    name: Coverage Python ${{ matrix.test.name }} (CPU)
+    timeout-minutes: 120
+    runs-on: ${{ matrix.test.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - name: common
+            runner: ubuntu-latest
+            requirements: tests/common/requirements.txt
+          - name: onnx
+            runner: ubuntu-latest-8-cores
+            requirements: tests/onnx/requirements.txt
+          - name: openvino
+            runner: ubuntu-latest-8-cores
+            requirements: tests/openvino/requirements.txt
+          - name: torch_cpu
+            runner: ubuntu-latest
+            requirements: tests/torch/requirements.txt
+          - name: tools
+            runner: ubuntu-latest
+            requirements: tests/tools/requirements.txt
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEST_PROFILE: cpu
+      OV_WORKSPACE: ${{ github.workspace }}
+      PY_TEST_NAMES: ${{ matrix.test.name }}
+      COVERAGE_WRITE_STEP_SUMMARY: 'false'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install coverage Python dependencies
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: install-requirements
+
+      - name: Install NNCF and test requirements
+        run: uv pip install --system . -r ${{ matrix.test.requirements }}
+
+      - name: Run Python coverage tests
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: run-suite
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: ${{ matrix.test.name }}
+          test-names: ${{ matrix.test.name }}
+          python-package: nncf
+          python-source-dir: src/nncf
+          python-path-alias: nncf
+          python-coverage-omit: |
+            */tests/*
+            */docs/*
+            */examples/*
+            */tools/*
+            */build/*
+            */.venv/*
+            */venv/*
+
+      - name: Collect Python results
+        id: cpu_artifact
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: collect-results
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: ${{ matrix.test.name }}
+          test-names: ${{ matrix.test.name }}
+
+      - name: Upload Python artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.cpu_artifact.outputs['artifact-name'] }}
+          path: ${{ steps.cpu_artifact.outputs.dir }}
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+
+  CoveragePythonExecuTorch:
+    name: Coverage Python ExecuTorch (CPU)
+    timeout-minutes: 60
+    runs-on: ubuntu-latest-8-cores
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEST_PROFILE: cpu
+      OV_WORKSPACE: ${{ github.workspace }}
+      PY_TEST_NAMES: executorch
+      COVERAGE_WRITE_STEP_SUMMARY: 'false'
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
+
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.10.14'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install coverage Python dependencies
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: install-requirements
+
+      - name: Install NNCF and test requirements
+        run: pip install . -r tests/executorch/requirements.txt
+
+      - name: Run ExecuTorch coverage tests
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: run-suite
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: executorch
+          test-names: executorch
+          python-package: nncf
+          python-source-dir: src/nncf
+          python-path-alias: nncf
+          python-coverage-omit: |
+            */tests/*
+            */docs/*
+            */examples/*
+            */tools/*
+            */build/*
+            */.venv/*
+            */venv/*
+
+      - name: Collect ExecuTorch results
+        id: cpu_artifact
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: collect-results
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: executorch
+          test-names: executorch
+
+      - name: Upload ExecuTorch artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.cpu_artifact.outputs['artifact-name'] }}
+          path: ${{ steps.cpu_artifact.outputs.dir }}
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+
+  CoveragePythonWeightCompression:
+    name: Coverage Python Weight Compression ${{ matrix.group }}/6 (CPU)
+    timeout-minutes: 120
+    runs-on: ubuntu-latest-16-cores
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEST_PROFILE: cpu
+      OV_WORKSPACE: ${{ github.workspace }}
+      PY_TEST_NAMES: wc_${{ matrix.group }}
+      COVERAGE_WRITE_STEP_SUMMARY: 'false'
+      TQDM_DISABLE: 1
+      HOME_HF: /home/runner/hf_home
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install coverage Python dependencies
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: install-requirements
+
+      - name: Install NNCF and test requirements
+        run: uv pip install --system . -r tests/post_training/requirements.txt
+
+      - name: Run weight-compression coverage tests
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: run-suite
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: wc_${{ matrix.group }}
+          test-names: wc_${{ matrix.group }}
+          python-package: nncf
+          python-source-dir: src/nncf
+          python-path-alias: nncf
+          python-coverage-omit: |
+            */tests/*
+            */docs/*
+            */examples/*
+            */tools/*
+            */build/*
+            */.venv/*
+            */venv/*
+
+      - name: Collect weight-compression results
+        id: cpu_artifact
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: collect-results
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: wc_${{ matrix.group }}
+          test-names: wc_${{ matrix.group }}
+
+      - name: Upload weight-compression artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.cpu_artifact.outputs['artifact-name'] }}
+          path: ${{ steps.cpu_artifact.outputs.dir }}
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+
+  CoverageSummary:
+    name: Coverage Summary
+    if: ${{ always() && !cancelled() }}
+    needs: [CoveragePythonCore, CoveragePythonExecuTorch, CoveragePythonWeightCompression]
+    outputs:
+      upload_matrix_json: ${{ steps.coverage_files.outputs['upload-matrix-json'] || '[]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: false
+
+      - name: Install coverage Python dependencies
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: install-requirements
+
+      - name: Download Python artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: coverage-python-*
+          path: ${{ github.workspace }}/artifacts/python
+
+      - name: Generate final summary
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: render-summary
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          selection: phase-1
+          selected-lanes: common,onnx,openvino,torch_cpu,tools,executorch,wc_1,wc_2,wc_3,wc_4,wc_5,wc_6
+
+      - name: Merge duration reports
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: merge-durations
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          duration-output: ${{ github.workspace }}/coverage-test-durations-all.csv
+
+      - name: Upload merged duration artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-test-durations
+          path: coverage-test-durations-all.csv
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+
+      - name: Resolve Codecov upload files
+        id: coverage_files
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: resolve-uploads
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+
+  CoverageCodecovUploads:
+    name: Coverage Codecov Upload (${{ matrix.upload.name }})
+    if: ${{ always() && needs.CoverageSummary.result == 'success' && needs.CoverageSummary.outputs.upload_matrix_json != '[]' }}
+    needs: CoverageSummary
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        upload: ${{ fromJSON(needs.CoverageSummary.outputs.upload_matrix_json || '[]') }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: false
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: ${{ matrix.upload.artifact_pattern }}
+          path: ${{ github.workspace }}/artifacts/${{ matrix.upload.artifact_group }}
+          merge-multiple: false
+
+      - name: Resolve Codecov upload files
+        id: upload_files
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: resolve-upload-files
+          workspace: ${{ github.workspace }}
+          artifact-group: ${{ matrix.upload.artifact_group }}
+          artifact-names-json: ${{ toJSON(matrix.upload.artifact_names) }}
+          upload-key: ${{ matrix.upload.key }}
+          upload-file: ${{ matrix.upload.file }}
+
+      - name: Upload Codecov (${{ matrix.upload.name }})
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.upload_files.outputs.files }}
+          disable_search: true
+          plugins: noop
+          flags: ${{ matrix.upload.flag }}
+          override_commit: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          override_pr: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          fail_ci_if_error: true
+          verbose: true
