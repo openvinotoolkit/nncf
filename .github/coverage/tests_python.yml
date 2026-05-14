@@ -67,7 +67,7 @@ tests:
     command: >-
       python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
       tests/post_training/test_quantize_conformance.py::test_weight_compression
-      --junit-xml=nncf-tests.xml
+      --junitxml=nncf-tests.xml
       --durations-path=tests/post_training/data/wc_test_durations.json
       --splitting-algorithm=least_duration
       --splits 6
@@ -79,7 +79,7 @@ tests:
     command: >-
       python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
       tests/post_training/test_quantize_conformance.py::test_weight_compression
-      --junit-xml=nncf-tests.xml
+      --junitxml=nncf-tests.xml
       --durations-path=tests/post_training/data/wc_test_durations.json
       --splitting-algorithm=least_duration
       --splits 6
@@ -91,7 +91,7 @@ tests:
     command: >-
       python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
       tests/post_training/test_quantize_conformance.py::test_weight_compression
-      --junit-xml=nncf-tests.xml
+      --junitxml=nncf-tests.xml
       --durations-path=tests/post_training/data/wc_test_durations.json
       --splitting-algorithm=least_duration
       --splits 6
@@ -103,7 +103,7 @@ tests:
     command: >-
       python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
       tests/post_training/test_quantize_conformance.py::test_weight_compression
-      --junit-xml=nncf-tests.xml
+      --junitxml=nncf-tests.xml
       --durations-path=tests/post_training/data/wc_test_durations.json
       --splitting-algorithm=least_duration
       --splits 6
@@ -115,7 +115,7 @@ tests:
     command: >-
       python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
       tests/post_training/test_quantize_conformance.py::test_weight_compression
-      --junit-xml=nncf-tests.xml
+      --junitxml=nncf-tests.xml
       --durations-path=tests/post_training/data/wc_test_durations.json
       --splitting-algorithm=least_duration
       --splits 6
@@ -127,7 +127,7 @@ tests:
     command: >-
       python3 -m pytest -s -ra ${PYTEST_COVERAGE_ARGS}
       tests/post_training/test_quantize_conformance.py::test_weight_compression
-      --junit-xml=nncf-tests.xml
+      --junitxml=nncf-tests.xml
       --durations-path=tests/post_training/data/wc_test_durations.json
       --splitting-algorithm=least_duration
       --splits 6
