@@ -9,14 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Generic, TypeVar, ValuesView, cast
+from typing import Callable, Generic, TypeVar, ValuesView
 
 TKey = TypeVar("TKey")
 TObject = TypeVar("TObject")
 TRegisterObject = TypeVar("TRegisterObject")
-# Used another TRegisterObject for register method, to avoid replace type of registered object.
-# It may impossible to check type of registered object.
-# PEP695 provide solution for this problem, but it is not supported in python <3.12
+# Separate type variable preserves input type of decorated object.
+# PEP695 can express a stricter relation to TObject, but it is unavailable in Python < 3.12.
 
 
 class Registry(Generic[TKey, TObject]):
@@ -44,10 +43,10 @@ class Registry(Generic[TKey, TObject]):
         def wrap(obj: TRegisterObject) -> TRegisterObject:
             cls_name = name
             if cls_name is None:
-                cls_name = obj.__name__
+                cls_name = obj.__name__  # type: ignore[attr-defined]
             if self._add_name_as_attr:
                 setattr(obj, self.REGISTERED_NAME_ATTR, cls_name)
-            self._register(cast(TObject, obj), cls_name)
+            self._register(obj, cls_name)  # type: ignore[arg-type]
             return obj
 
         return wrap
