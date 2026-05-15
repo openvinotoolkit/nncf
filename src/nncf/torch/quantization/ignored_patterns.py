@@ -10,6 +10,7 @@
 # limitations under the License.
 from typing import Callable
 
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
@@ -22,11 +23,11 @@ PT_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]](
 
 def _add_softmax_matmul(
     pattern: GraphPattern,
-    matmul_metatypes,
-    reshape_squeeze_metatypes,
-    gather_metatypes,
-    transpose_metatypes,
-    concat_metatypes,
+    matmul_metatypes: list[type[OperatorMetatype]],
+    reshape_squeeze_metatypes: list[type[OperatorMetatype]],
+    gather_metatypes: list[type[OperatorMetatype]],
+    transpose_metatypes: list[type[OperatorMetatype]],
+    concat_metatypes: list[type[OperatorMetatype]],
 ) -> None:
     #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #           \              /
@@ -47,11 +48,11 @@ def _add_softmax_matmul(
 
 def _add_softmax_reshape_matmul(
     pattern: GraphPattern,
-    matmul_metatypes,
-    reshape_squeeze_metatypes,
-    gather_metatypes,
-    transpose_metatypes,
-    concat_metatypes,
+    matmul_metatypes: list[type[OperatorMetatype]],
+    reshape_squeeze_metatypes: list[type[OperatorMetatype]],
+    gather_metatypes: list[type[OperatorMetatype]],
+    transpose_metatypes: list[type[OperatorMetatype]],
+    concat_metatypes: list[type[OperatorMetatype]],
 ) -> None:
     #       SOFTMAX
     #           \
@@ -80,16 +81,19 @@ def _add_softmax_reshape_matmul(
     pattern.add_edge(softmax, reshape)
     pattern.add_edge(reshape, matmul)
     pattern.add_edge(matmul_branch_nodes, matmul)
-    return pattern
 
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.MULTIHEAD_ATTENTION_OUTPUT)
 def create_multihead_attention_output() -> GraphPattern:
-    matmul_metatypes = [om.PTLinearMetatype, om.PTAddmmMetatype, om.PTMatMulMetatype]
-    reshape_squeeze_metatypes = [om.PTReshapeMetatype, om.PTSqueezeMetatype, om.PTSplitMetatype]
-    gather_metatypes = [om.PTGatherMetatype]
-    transpose_metatypes = [om.PTTransposeMetatype]
-    concat_metatypes = [om.PTCatMetatype]
+    matmul_metatypes: list[type[OperatorMetatype]] = [om.PTLinearMetatype, om.PTAddmmMetatype, om.PTMatMulMetatype]
+    gather_metatypes: list[type[OperatorMetatype]] = [om.PTGatherMetatype]
+    transpose_metatypes: list[type[OperatorMetatype]] = [om.PTTransposeMetatype]
+    concat_metatypes: list[type[OperatorMetatype]] = [om.PTCatMetatype]
+    reshape_squeeze_metatypes: list[type[OperatorMetatype]] = [
+        om.PTReshapeMetatype,
+        om.PTSqueezeMetatype,
+        om.PTSplitMetatype,
+    ]
 
     pattern = GraphPattern()
     _add_softmax_matmul(
