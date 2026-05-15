@@ -249,19 +249,14 @@
         "backend": "torch",
         "requirements": "examples/quantization_aware_training/torch/anomalib/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
-        "python_version": [
-            3,
-            10,
-            0
-        ],
         "accuracy_tolerance_after_training": 0.02,
         "accuracy_tolerance": 0.08,
         "accuracy_metrics": {
-            "fp32_f1score": 0.9760000109672546,
-            "int8_init_f1score": 0.8630136847496033
+            "fp32_f1score": 0.9045643210411072,
+            "int8_init_f1score": 0.9045643210411072
         },
         "accuracy_metrics_after_training": {
-            "int8_f1score": 0.9344262480735779
+            "int8_f1score": 0.9152542352676392
         },
         "performance_metrics": {
             "fp32_fps": 316.28,
