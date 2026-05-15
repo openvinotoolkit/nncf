@@ -317,6 +317,11 @@ def calculate_integer_quantization_params(
         level_high = 2**num_bits - 1
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
+
+        zero = fns.zeros_like(min_values)
+        min_values = fns.minimum(zero, min_values)
+        max_values = fns.maximum(zero, max_values)
+
         scale, zero_point = calculate_scale_zero_point(
             min_values, max_values, level_low, level_high, narrow_range=False
         )
