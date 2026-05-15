@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Callable
+
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
@@ -15,7 +17,7 @@ from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.hardware.fused_patterns import atomic_activations_operations
 
-ONNX_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
+ONNX_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("IGNORED_PATTERNS")
 
 
 def _add_softmax_matmul(pattern: GraphPattern) -> None:

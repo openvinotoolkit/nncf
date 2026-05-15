@@ -8,13 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Callable
+
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import LINEAR_OPERATIONS
 
-OPENVINO_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
+OPENVINO_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("IGNORED_PATTERNS")
 
 
 def _add_softmax_matmul(pattern: GraphPattern, branch_matmul_nodes: list[om.OperatorMetatype]) -> None:
