@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable
+
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
@@ -21,7 +23,7 @@ from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
 
-PT_HW_FUSED_PATTERNS = Registry("torch")
+PT_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("torch")
 
 # ATOMIC OPERATIONS
 

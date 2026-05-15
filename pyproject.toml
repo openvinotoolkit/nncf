@@ -80,6 +80,7 @@ files = [
     "src/nncf/api",
     "src/nncf/data",
     "src/nncf/common",
+    "src/nncf/torch/hardware/fused_patterns.py",
     "src/nncf/torch/function_hook",
     "src/nncf/torch/engine.py",
     "src/nncf/torch/functions.py",
@@ -94,6 +95,8 @@ files = [
     "src/nncf/experimental/torch/gptqmodel/",
     "src/nncf/quantization/algorithms/weight_compression/config.py",
     "src/nncf/quantization/algorithms/weight_compression/constants.py",
+    "src/nncf/onnx/hardware/fused_patterns.py",
+    "src/nncf/openvino/hardware/fused_patterns.py",
     "examples/llm_compression/torch/gptq_model_convertor/main.py",
 ]
 disable_error_code = ["import-untyped"]
