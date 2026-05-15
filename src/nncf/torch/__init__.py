@@ -40,26 +40,3 @@ from nncf.torch.extensions import force_build_cuda_extensions as force_build_cud
 # before making wrapping changes
 if torch.__version__ >= "2.5.0":
     from torch._dynamo.polyfills import loader
-
-
-def patch_torch_operators():
-    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
-    from nncf.common.deprecation import warning_deprecated
-
-    warning_deprecated(
-        "nncf.torch.patch_torch_operators was called. This function is deprecated and no longer does anything."
-    )
-
-
-def register_module(*args, **kwargs):
-    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
-    from nncf.common.deprecation import warning_deprecated
-
-    warning_deprecated(
-        "nncf.torch.register_module was called. This function is deprecated and no longer does anything."
-    )
-
-    def wrap(cls):
-        return cls
-
-    return wrap
