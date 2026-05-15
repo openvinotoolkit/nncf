@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import onnx
 import openvino as ov
 import timm
@@ -95,19 +94,3 @@ class ImageClassificationTimm(ImageClassificationBase):
             mean=config["mean"],
             std=config["std"],
         )
-
-    def get_transform_calibration_fn(self):
-        if self.backend in PT_BACKENDS:
-            device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
-
-            def transform_fn(data_item):
-                images, _ = data_item
-                return images.to(device)
-
-        else:
-
-            def transform_fn(data_item):
-                images, _ = data_item
-                return {self.input_name: np.array(images, dtype=np.float32)}
-
-        return transform_fn

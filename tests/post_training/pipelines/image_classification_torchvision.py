@@ -12,7 +12,6 @@
 from dataclasses import dataclass
 from typing import Any, Callable
 
-import numpy as np
 import onnx
 import openvino as ov
 import torch
@@ -143,21 +142,3 @@ class ImageClassificationTorchvision(ImageClassificationBase):
 
     def prepare_preprocessor(self) -> None:
         self.transform = self.model_params.weights.transforms()
-
-    def get_transform_calibration_fn(self):
-        if self.backend in FX_BACKENDS + PT_BACKENDS:
-            device = torch.device(
-                "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
-            )
-
-            def transform_fn(data_item):
-                images, _ = data_item
-                return images.to(device)
-
-        else:
-
-            def transform_fn(data_item):
-                images, _ = data_item
-                return {self.input_name: np.array(images, dtype=np.float32)}
-
-        return transform_fn
