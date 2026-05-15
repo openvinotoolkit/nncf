@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import pytest
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import apply_combination
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import create_combinations
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import find_best_combination
+from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import _get_smooth_quant_param_grid
 
 CombinationKey = tuple[int, ...]
 Combination = dict[str, Any]
@@ -471,3 +472,14 @@ def test_number_of_combinations_considered(params, number_considered_combination
     assert number_considered_combinations == score_function_call_count, (
         f"Expected {number_considered_combinations} combinations to be considered, but got {score_function_call_count}."
     )
+
+
+def test_smooth_quant_param_grid():
+    matmul_expected_alpha_values = [0.15, 0.25, 0.5, 0.75, 0.95]
+
+    param_grid = _get_smooth_quant_param_grid()
+    smooth_quant_alphas = param_grid["advanced_parameters:smooth_quant_alphas"]
+
+    for i, matmul_alpha in enumerate(matmul_expected_alpha_values):
+        smooth_quant_alphas[i].matmul == matmul_alpha
+        smooth_quant_alphas[i].convolution == -1

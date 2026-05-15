@@ -8,3 +8,4 @@ MD036: false  # Emphasis used instead of a heading
 MD037: false  # Spaces inside emphasis markers
 MD041: false  # First line
 MD045: false  # no-alt-text
+MD059: false  # descriptive-link-text

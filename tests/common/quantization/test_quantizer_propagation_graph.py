@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,6 @@ from abc import abstractmethod
 from collections import Counter
 from collections import namedtuple
 from copy import deepcopy
-from typing import Optional
 
 import networkx as nx
 import pytest
@@ -216,7 +215,7 @@ class TestQuantizerPropagationStateGraph:
         assert Counter(get_cat_path_list(ref_paths)) == Counter(get_cat_path_list(test_paths))
 
     class DomIPGroupedByUnifiedScalesTestStruct:
-        def __init__(self, start_ip_node_key: str, ref_groups_vs_paths: dict[Optional[int], list[PropagationPath]]):
+        def __init__(self, start_ip_node_key: str, ref_groups_vs_paths: dict[int | None, list[PropagationPath]]):
             self.start_ip_node_key = start_ip_node_key
             self.ref_groups_vs_paths = ref_groups_vs_paths
 
@@ -316,7 +315,6 @@ class TestQuantizerPropagationStateGraph:
     def start_target_nodes(request):
         return request.param
 
-    @pytest.mark.dependency(name="propagate_via_path")
     def test_quantizers_can_propagate_via_path(self, start_target_nodes, mock_qp_graph):
         start_ip_node_key = start_target_nodes[0]
         target_ip_node_key = start_target_nodes[1]
@@ -381,7 +379,6 @@ class TestQuantizerPropagationStateGraph:
     def start_target_accepting_nodes(request):
         return request.param
 
-    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_backtrack_propagation_until_accepting_location(self, start_target_accepting_nodes, mock_qp_graph):
         start_ip_node_key = start_target_accepting_nodes[0]
         target_ip_node_key = start_target_accepting_nodes[1]
@@ -413,7 +410,6 @@ class TestQuantizerPropagationStateGraph:
             assert target_ip_node_key not in prop_quant.affected_ip_nodes
         assert accepting_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] == prop_quant
 
-    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_clone_propagating_quantizer(self, mock_qp_graph, start_target_nodes):
         start_ip_node_key = start_target_nodes[0]
         target_ip_node_key = start_target_nodes[1]
@@ -470,7 +466,6 @@ class TestQuantizerPropagationStateGraph:
     def start_target_nodes_for_two_quantizers(request):
         return request.param
 
-    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_remove_propagating_quantizer(self, mock_qp_graph, start_target_nodes_for_two_quantizers):
         start_ip_node_key_remove = start_target_nodes_for_two_quantizers[0]
         target_ip_node_key_remove = start_target_nodes_for_two_quantizers[1]
@@ -586,7 +581,7 @@ class TestQuantizerPropagationStateGraph:
 
     @staticmethod
     def get_model_graph() -> NNCFGraph:
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         #      (0 /A_0)
         #         |
@@ -1118,7 +1113,7 @@ class TestRedundantQuantizerMerge:
 
     @staticmethod
     def get_model_graph() -> NNCFGraph:
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         #      (0 /A_0)
         #        |
@@ -1164,7 +1159,7 @@ class TestRedundantQuantizerMerge:
                 ("L", "N"),
             ]
         )
-        mock_graph.edges[("K", "L")][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
+        mock_graph.edges[("K", "L", 0)][NNCFGraph.DTYPE_EDGE_ATTR] = Dtype.INTEGER
 
         mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
         return get_nncf_graph_from_mock_nx_graph(mock_graph)
@@ -1219,7 +1214,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
 
     @staticmethod
     def get_model_graph_with_split_node() -> QPSG:
-        mock_graph = nx.DiGraph()
+        mock_graph = nx.MultiDiGraph()
 
         #         (0 /A_0)
         #            |
@@ -1274,7 +1269,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
 
 
 def create_graph_for_output_quant_as_weights() -> NNCFGraph:
-    mock_graph = nx.DiGraph()
+    mock_graph = nx.MultiDiGraph()
 
     #      (0 A/A)       (1 B/B)
     #        |             |

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,7 +27,7 @@ def run_pytest_case_function_in_separate_process(fn: Callable) -> tuple[int, str
     pytest run failed, this function will trigger pytest.fail().
     :param fn - The function object corresponding to a pytest test function defined elsewhere.
     :returns A tuple of return code for the pytest invocation, and string representations of the stdout and stderr
-    pipe outputs of the pytest invoсation.
+    pipe outputs of the pytest invocation.
     """
     filename = inspect.getfile(fn)
     func_name = fn.__name__

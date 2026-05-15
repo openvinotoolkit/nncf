@@ -1,0 +1,9 @@
+{
+    "x": "PTInputNoopMetatype",
+    "split": "PTSplitMetatype",
+    "getitem": "PTGatherMetatype",
+    "getitem_1": "PTGatherMetatype",
+    "getitem_2": "PTGatherMetatype",
+    "cat": "PTCatMetatype",
+    "output": "PTOutputNoopMetatype"
+}

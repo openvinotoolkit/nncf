@@ -4,21 +4,25 @@ This example demonstrates how to optimize Large Language Models (LLMs) using NNC
 
 The example includes the following steps:
 
-- Prepare `TinyLlama/TinyLlama-1.1B-Chat-v1.0` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum/intel/inference).
+- Prepare `TinyLlama/TinyLlama-1.1B-Chat-v1.0` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum-intel/openvino/inference).
 - Prepare `synthetic` dataset using `nncf.data.generate_text_data` method.
 - Compress weights of the model with NNCF Weight compression algorithm with Scale Estimation & `synthetic` dataset.
 
-## Install requirements
+## Prerequisites
 
-To use this example:
+Before running this example, ensure you have Python 3.10+ installed and set up your environment:
 
-- Create a separate Python* environment and activate it: `python3 -m venv nncf_env && source nncf_env/bin/activate`
-- Install dependencies:
+### 1. Create and activate a virtual environment
 
 ```bash
-pip install -U pip
-pip install -r requirements.txt
-pip install ../../../../
+python3 -m venv nncf_env
+source nncf_env/bin/activate  # On Windows: nncf_env\Scripts\activate.bat
+```
+
+### 2. Install NNCF and other dependencies
+
+```bash
+python3 -m pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example

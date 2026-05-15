@@ -1,0 +1,9 @@
+digraph {
+"0 x" [id=0, type=input];
+"1 cat" [id=1, type=cat];
+"2 output" [id=2, type=output];
+"0 x" -> "1 cat" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 0"];
+"0 x" -> "1 cat" [key=1, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 1"];
+"0 x" -> "1 cat" [key=2, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 2"];
+"1 cat" -> "2 output" [key=0, style=solid, label="shape (1, 9, 3, 3)\nids 0 -> 0"];
+}

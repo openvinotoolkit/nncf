@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -156,7 +156,7 @@ def test_overflow_fix_scales(overflow_fix):
     [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
-@pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18", "ssd-vgg-300"))
+@pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18"))
 def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     torch.manual_seed(0)  # To use the same initialized model
     model_cls, input_shape = get_torch_model_info(model_name)

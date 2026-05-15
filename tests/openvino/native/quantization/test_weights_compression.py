@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,9 @@
 
 import inspect
 import os
+from collections import defaultdict
+from dataclasses import dataclass
+from dataclasses import field
 from typing import Callable
 from unittest.mock import patch
 
@@ -18,35 +21,39 @@ import numpy as np
 import openvino as ov
 import pandas as pd
 import pytest
-from attr import dataclass
 from openvino import opset13 as opset
 
 import nncf
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
+from nncf.common.tensor_statistics.collectors import AggregatorBase
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
-from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
+from nncf.openvino.optimized_functions import astype
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedAdaptiveCodebookParameters as CodebookParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
+from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
-from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_nf4_quantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_float_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -61,6 +68,9 @@ from tests.cross_fw.test_templates.template_test_weights_compression import Temp
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
+from tests.openvino.native.models import AWQModel
+from tests.openvino.native.models import AWQModel_fp16_overlow
+from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
@@ -68,7 +78,11 @@ from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import MatMul
 from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
+from tests.openvino.native.models import Phi3dot5RoPEModel
+from tests.openvino.native.models import RoPEModelWC
+from tests.openvino.native.models import SAMPEModel
 from tests.openvino.native.models import SequentialMatmulModel
+from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
 
@@ -86,7 +100,7 @@ DATA_BASED_SENSITIVITY_METRICS = (
 
 ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
 
-INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
+INT8_MODES = (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
 INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
@@ -96,14 +110,17 @@ class LMLinearModel(OVReferenceModel):
     HIDDEN_DIM = 16
     INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
-    def _create_ov_model(self, transpose_b: bool = True, transpose_a=False, input_shape=None):
+    def _create_ov_model(
+        self, transpose_b: bool = True, transpose_a: bool = False, input_shape: list[int] | None = None
+    ):
         self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
         hdim_axis = -2 if transpose_a else -1
         self._hidden_dim = self._input_shape[hdim_axis]
         input_1 = opset.parameter(self._input_shape, name="Input")
         weight_shape = self.get_weight_shape(transpose_b)
         data = self._rng.random(weight_shape).astype(np.float32)
-        matmul = opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
+        opset_constant = opset.constant(data, name="Weights")
+        matmul = opset.matmul(input_1, opset_constant, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
@@ -122,6 +139,13 @@ def get_next_node(node):
     assert len(target_inputs) == 1
     next_node = next(iter(target_inputs)).get_node()
     return next_node
+
+
+def get_prev_node(op: ov.Node, input_port_ids: list[int]) -> ov.Node:
+    next_node = op.input_value(input_port_ids[0]).get_node()
+    if len(input_port_ids) == 1:
+        return next_node
+    return get_prev_node(next_node, input_port_ids[1:])
 
 
 def get_shape_for_second_input(op_with_weights: ov.Node) -> list[int]:
@@ -161,9 +185,13 @@ def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode
     return stats
 
 
-def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
+def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
     dtype = ov.Type.u4 if mode == CompressWeightsMode.INT4_ASYM else ov.Type.i4
     assert op.get_element_type() == dtype
+
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
+
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
@@ -183,6 +211,10 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
         zero_point_node = convert_node.input_value(0).get_node()
         assert zero_point_node.get_element_type() == dtype
         assert list(zero_point_node.shape) == reduced_weight_shape
+
+        zp = astype(Tensor(zero_point_node.get_tensor_view()), TensorDataType.float16)
+        stats["zero_point"] = zp.as_numpy_tensor().data
+
         mul_node = get_next_node(sub_node)
     else:
         mul_node = get_next_node(convert_node)
@@ -197,13 +229,62 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     convert_node = get_next_node(reshape_node)
     assert convert_node.get_type_name() == "Convert"
 
-    return {
-        "scale": get_const_value_as_numpy_tensor(scale_node),
-    }
+    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
+    return stats
 
 
-def check_nf4_grouped(op: ov.Node, group_size: int = 7):
+def check_fp(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
+    dtype = (
+        ov.Type.f4e2m1
+        if mode in (CompressWeightsMode.MXFP4, CompressWeightsMode.FP4, CompressWeightsMode.NVFP4)
+        else ov.Type.f8e4m3
+    )
+    assert op.get_element_type() == dtype
+
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
+
+    weight_shape = op.shape
+    # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
+    assert list(weight_shape)[-1] == group_size
+    reduced_weight_shape = list(weight_shape)
+    reduced_weight_shape[-1] = 1
+
+    convert_node = get_next_node(op)
+    assert convert_node.get_type_name() == "Convert"
+
+    mul_node = get_next_node(convert_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = get_prev_node(mul_node, [1])
+    assert list(scale_node.shape) == reduced_weight_shape
+    if mode == CompressWeightsMode.NVFP4:
+        sec_order_scale = get_prev_node(scale_node, [0, 1])
+        stats["sec_order_scale"] = get_const_value_as_numpy_tensor(sec_order_scale)
+
+    if mode in (CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.MXFP4, CompressWeightsMode.NVFP4):
+        # Propagate through a convert node
+
+        scale_node = get_prev_node(scale_node, [0])
+        if mode == CompressWeightsMode.NVFP4:
+            scale_node = get_prev_node(scale_node, [0, 0])
+
+    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
+
+    reshape_node = get_next_node(mul_node)
+    assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
+
+    return stats
+
+
+def check_nf4_grouped(op: ov.Node, group_size: int = 3):
     assert op.get_element_type() == ov.Type.nf4
+
+    compressed_weight = astype(Tensor(op.get_tensor_view()), TensorDataType.float16)
+    stats = {"compressed_weight": compressed_weight.as_numpy_tensor().data}
+
     weight_shape = op.shape
     # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
@@ -223,9 +304,56 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
 
     convert_node = get_next_node(reshape_node)
     assert convert_node.get_type_name() == "Convert"
+    stats["scale"] = get_const_value_as_numpy_tensor(scale_node)
+    return stats
+
+
+def check_codebook_grouped(op: ov.Node, group_size: int = 3, dtype=ov.Type.f8e4m3):
+    assert op.get_element_type() == dtype
+
+    if dtype == ov.Type.f16:
+        convert_node = op
+    else:
+        convert_node = get_next_node(op)
+        assert convert_node.get_type_name() == "Convert"
+
+    gather_node = get_next_node(convert_node)
+    assert gather_node.get_type_name() == "Gather"
+
+    weight_shape = gather_node.shape
+    # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
+    assert list(weight_shape)[-1] == group_size
+    reduced_weight_shape = list(weight_shape)
+    reduced_weight_shape[-1] = 1
+
+    mul_node = get_next_node(gather_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = mul_node.input_value(1).get_node()
+    assert list(scale_node.shape) == reduced_weight_shape
+
+    reshape_node = get_next_node(mul_node)
+    assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
+
+    return {"scale": get_const_value_as_numpy_tensor(scale_node)}
+
+
+def check_codebook_indexes(op: ov.Node, dtype=ov.Type.u4):
+    assert op.get_element_type() == dtype
+
+    if dtype == ov.Type.u4:
+        convert_node = get_next_node(op)
+        assert convert_node.get_type_name() == "Convert"
+    else:
+        convert_node = op
+
+    gather_node = get_next_node(convert_node)
+    assert gather_node.get_type_name() == "Gather"
 
     return {
-        "scale": get_const_value_as_numpy_tensor(scale_node),
+        "indexes": get_const_value_as_numpy_tensor(op),
     }
 
 
@@ -241,8 +369,35 @@ def check_int8_sym(op: ov.Node):
     return check_int8_node(op, mode=CompressWeightsMode.INT8_SYM)
 
 
+def check_mxfp4(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.MXFP4, group_size=32)
+
+
+def check_mxfp8(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.MXFP8_E4M3, group_size=32)
+
+
+def check_fp8(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.FP8_E4M3, group_size=3)
+
+
+def check_fp4(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.FP4, group_size=3)
+
+
+def check_nvfp4(op: ov.Node):
+    return check_fp(op, mode=CompressWeightsMode.NVFP4, group_size=16)
+
+
 def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
-    mapping = {node_name: check_int8_node for node_name in list_layers}
+    if primary_fn in (check_fp8, check_fp4):
+        backup_fn = check_fp8
+    elif primary_fn in (check_mxfp4, check_mxfp8):
+        backup_fn = check_mxfp8
+    else:
+        backup_fn = check_int8_node
+
+    mapping = {node_name: backup_fn for node_name in list_layers}
     primary_node_name = TEST_MODELS[IntegerModel][0]
     mapping[primary_node_name] = primary_fn
     return mapping
@@ -253,13 +408,31 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: list[str]):
     (
         (CompressWeightsMode.INT8_ASYM, -1, {node_name: check_int8_node for node_name in TEST_MODELS[IntegerModel]}),
         (CompressWeightsMode.INT8_SYM, -1, {node_name: check_int8_sym for node_name in TEST_MODELS[IntegerModel]}),
-        (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_SYM, 3, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_ASYM, 3, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.NF4, 3, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.CB4, 3, get_mixed_mapping(check_codebook_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.MXFP4, 32, get_mixed_mapping(check_mxfp4, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.MXFP8_E4M3, 32, get_mixed_mapping(check_mxfp8, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.FP8_E4M3, 3, get_mixed_mapping(check_fp8, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.FP4, 3, get_mixed_mapping(check_fp4, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.NVFP4, 16, get_mixed_mapping(check_nvfp4, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
-    model = IntegerModel().ov_model
+    mode_vs_dim3 = {
+        CompressWeightsMode.MXFP4: 32,
+        CompressWeightsMode.MXFP8_E4M3: 32,
+        CompressWeightsMode.NVFP4: 16,
+    }
+    model = IntegerModel(
+        dim2=group_size if group_size > 0 else 3,
+        dim3=mode_vs_dim3.get(
+            mode,
+            6,
+        ),
+        positive_w=False,
+    ).ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
     for op in compressed_model.get_ops():
@@ -279,12 +452,65 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     compare_stats(ref_stats, actual_stats)
 
 
+@pytest.mark.parametrize(
+    "codebook, codebook_dtype, index_dtype, name",
+    [
+        (np.array([i for i in range(16)], np.uint8), ov.Type.u8, ov.Type.u4, "u8_u4"),
+        (np.array([0.1 * i for i in range(-8, 8)], np.float16), ov.Type.f16, ov.Type.u4, "f16_u4"),
+        (
+            Tensor(np.array([0.35 * i for i in range(-10, 11)], np.float16))
+            .as_openvino_tensor()
+            .astype(TensorDataType.f8e4m3),
+            ov.Type.f8e4m3,
+            ov.Type.u8,
+            "f8e4m3_u8",
+        ),
+        (
+            Tensor(np.array([i for i in range(-10, 11)], np.int8)).as_openvino_tensor().astype(TensorDataType.int8),
+            ov.Type.i8,
+            ov.Type.u8,
+            "i8_u8",
+        ),
+    ],
+)
+def test_codebook_compression_for_different_dtypes(codebook, codebook_dtype, index_dtype, name):
+    group_size = 3
+    model = IntegerModel(dim2=group_size, positive_w=False).ov_model
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        group_size=group_size,
+        advanced_parameters=nncf.AdvancedCompressionParameters(codebook=codebook),
+    )
+    actual_stats = {}
+    for op in compressed_model.get_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant":
+            if op_name == "matmul_2_data":
+                actual_stats[op_name] = check_codebook_grouped(op, group_size=group_size, dtype=codebook_dtype)
+            elif op_name == "matmul_2_data_nncf_codebook_idxs":
+                actual_stats[op_name] = check_codebook_indexes(op, dtype=index_dtype)
+
+    ref_stats_path = get_actual_reference_for_current_openvino(
+        REFERENCE_SCALES_DIR / f"IntegerModel_codebook_{name}.json"
+    )
+
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+        dump_to_json(ref_stats_path, actual_stats)
+
+    ref_stats = load_json(ref_stats_path)
+    compare_stats(ref_stats, actual_stats)
+
+
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_gather_in_4_bit_if_all_layers_with_data(metric):
     dim1 = 2  # sequence length dimension
     dim2 = 7
     max_input_value = 6
-    model = IntegerModel(dim1=dim1, dim2=dim2, max_input_value=max_input_value, add_batch_dimension=True).ov_model
+    model = IntegerModel(
+        dim1=dim1, dim2=dim2, max_input_value=max_input_value, add_batch_dimension=True, positive_w=False
+    ).ov_model
 
     input_shape = (dim1, dim2, dim1)
     n_inputs = input_shape[0] * input_shape[1] * input_shape[2]
@@ -313,7 +539,7 @@ def test_gather_in_4_bit_if_all_layers_with_data(metric):
 
 
 def test_gather_can_be_8_bit_if_all_layers_without_data():
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=True).ov_model
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.INT4_SYM,
@@ -369,7 +595,7 @@ def test_conv_in_8_bit_if_mode_4bit(all_layers):
 
 
 def test_gather_can_be_4_bit_if_all_layers_without_data():
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=False).ov_model
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.INT4_SYM,
@@ -387,7 +613,7 @@ def test_gather_can_be_4_bit_if_all_layers_without_data():
 
 @pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
 def test_gather_in_8_bit_if_not_all_layers(metric):
-    model = IntegerModel(add_batch_dimension=True).ov_model
+    model = IntegerModel(add_batch_dimension=True, positive_w=False).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     compressed_model = compress_weights(
         model,
@@ -434,7 +660,7 @@ def test_shared_gather(mode):
         "matmul_1_data": ov.Type.i4 if mode == CompressWeightsMode.INT4_SYM else ov.Type.u4,
     }
     model = GatherAndMatmulShareData().ov_model
-    compressed_model = compress_weights(model, mode, group_size=3)
+    compressed_model = compress_weights(model, mode=mode, group_size=3)
     for op in compressed_model.get_ordered_ops():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:
@@ -449,7 +675,7 @@ def test_shared_gather_all_layers(all_layers):
         "matmul_1_data": ov.Type.u4,
     }
     model = GatherAndMatmulShareData().ov_model
-    compressed_model = compress_weights(model, CompressWeightsMode.INT4_ASYM, group_size=-1, all_layers=all_layers)
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, group_size=-1, all_layers=all_layers)
     for op in compressed_model.get_ordered_ops():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:
@@ -460,10 +686,10 @@ def test_shared_gather_all_layers(all_layers):
 class QuantErrorDesc:
     weight: list[float]
     ref_error: int = 0
-    axis = (1,)
+    axis: tuple[int, ...] = (1,)
     name: str = ""
     atol: float = None
-    config: WeightCompressionConfig = WeightCompressionConfig()
+    config: WeightCompressionConfig = field(default_factory=WeightCompressionConfig)
 
     def __str__(self):
         prefix = "exact_match_" if self.ref_error == 0 else ""
@@ -553,7 +779,7 @@ LIST_DESCS = [
 def test_quantization_error_calculation(desc: QuantErrorDesc):
     weight = Tensor(desc.weight)
     axis = 1
-    actual_error = get_integer_quantization_error(weight, axis, desc.config)
+    actual_error = get_integer_quantization_error(weight, axis, desc.config, reduction="max_mean")
     ref_error = desc.ref_error
     atol = desc.atol if desc.atol is not None else 1e-8
     assert np.allclose(actual_error, ref_error, atol=atol)
@@ -604,18 +830,31 @@ CALCULATE_SCALE_DESCS = [
 ]
 
 
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 @pytest.mark.parametrize(
-    ("ignored_scope", "num_compressed"),
+    "param",
     (
-        (IgnoredScope(types=["MatMul"]), 1),
-        (IgnoredScope(types=["Gather"]), 2),
-        (IgnoredScope(names=["MatMul_1"]), 2),
-        (IgnoredScope(patterns=["MatMul_\\d"]), 1),
+        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref=3),
+        ParamIgnoredScope(name="type", ignored_scope=IgnoredScope(types=["Gather"]), ref=2),
+        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["matmul_1_data"]), ref=2),
+        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul_1"]), ref=2),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=[".*data"]), ref=0),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=1),
     ),
+    ids=str,
 )
-def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
-    model = IntegerModel().ov_model
-    compressed_model = compress_weights(model, ignored_scope=ignored_scope)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
+    model = IntegerModel(positive_w=False).ov_model
+    compressed_model = compress_weights(model, ignored_scope=param.ignored_scope)
     ref_compressed_weights = TEST_MODELS[IntegerModel]
     act_num = 0
     for op in compressed_model.get_ops():
@@ -625,7 +864,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
             and op.get_element_type() == ov.Type.u8
         ):
             act_num += 1
-    assert act_num == num_compressed
+    assert act_num == param.ref
 
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
@@ -683,18 +922,71 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
-@pytest.mark.parametrize(
-    "algo",
-    (
-        "lora_correction",
-        "awq",
-        "scale_estimation",
-        "gptq",
-    ),
-)
-def test_raise_error_with_unsupported_params_for_e2m1(algo):
-    with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
+@pytest.mark.parametrize("mode", [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4])
+class TestUnsupportedParams:
+    @pytest.mark.parametrize(
+        "algo",
+        (
+            "lora_correction",
+            "awq",
+            "scale_estimation",
+            "gptq",
+        ),
+    )
+    def test_raise_error_with_unsupported_algo(self, algo, mode):
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(ov.Model([], []), dataset="anything", mode=mode, **{algo: True})
+
+    def test_raise_error_with_unsupported_group_size(self, mode):
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(ov.Model([], []), dataset="anything", mode=mode, group_size=64)
+
+    def test_raise_error_with_unsupported_fallback_mode(self, mode):
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(
+                ov.Model([], []),
+                dataset="anything",
+                mode=mode,
+                advanced_parameters=AdvancedCompressionParameters(
+                    group_size_fallback_mode=GroupSizeFallbackMode.ADJUST
+                ),
+            )
+
+
+def test_nvfp4_precomputed_scales():
+    data = np.array([42])
+    with pytest.raises(nncf.InternalError):
+        do_float_quantization(
+            Tensor(data), WeightCompressionConfig(mode=CompressWeightsMode.NVFP4), precomputed_scale=Tensor(data)
+        )
+
+
+def test_nvfp4_optimized_scale_compression():
+    """
+    Reproduces the ValueError that occurs when NVFP4 compression hits the optimized OV path
+    for the second-level scale quantization (FP8_E4M3). In NVFP4, the weight is first compressed
+    to FP4, producing a group-level scale. That scale is then quantized to FP8_E4M3 with
+    reduction_axes=None (per-tensor). When this second call takes the optimized OV path,
+    get_float_quantization_model receives scale_shape=None and reduction_axes=None, which triggers:
+        ValueError: Reduction axes must be provided if scale shape is not provided.
+    in _prepare_quantization_model_inputs.
+
+    The optimized path is forced via patching to avoid needing a large weight tensor.
+    """
+    weight = Tensor(np.random.randn(2, 16).astype(np.float32))
+    config = WeightCompressionConfig(mode=CompressWeightsMode.NVFP4)
+    reduction_axes = -1
+
+    # Force the optimized OV path for all tensors regardless of size
+    with patch(
+        "nncf.quantization.algorithms.weight_compression.weight_lowering._can_run_optimized",
+        return_value=True,
+    ):
+        result = do_float_quantization(weight, config, reduction_axes)
+
+    assert result.tensor is not None
+    assert result.scale is not None
+    assert result.global_scale is not None
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
@@ -714,14 +1006,14 @@ def test_raise_error_with_unsupported_params_for_empty_dataset(mode, algo):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
-    model = IntegerModel().ov_model
+    model = IntegerModel(positive_w=False).ov_model
     with pytest.raises(nncf.ValidationError):
         compress_weights(model, mode=mode, sensitivity_metric=metric, group_size=-1, ratio=0.8)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
-    model = IntegerModel(add_batch_dimension=True).ov_model
+    model = IntegerModel(add_batch_dimension=True, positive_w=False).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
     scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
@@ -734,7 +1026,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
 @pytest.mark.parametrize("mode", INT4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -742,7 +1034,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -750,13 +1042,13 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
+    dataset = Dataset([np.ones([2, 8, 8])])
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
 
 def test_data_type_for_num_weights(mocker):
     stub = mocker.stub()
-    params = WeightCompressionParameters(stub, stub, stub, np.int32(1), stub)
+    params = WeightCompressionParameters(stub, stub, stub, stub, (1,), stub, stub)
     assert isinstance(params.num_weights, np.uint64)
 
 
@@ -789,15 +1081,27 @@ def check_compressed_matmul_subgraph(start_node, activation_dtype, weight_dtype,
         (ov.Type.f32, ov.Type.f32),
         (ov.Type.f16, ov.Type.f32),
         (ov.Type.bf16, ov.Type.f32),
+        (ov.Type.f8e4m3, ov.Type.f32),
+        (ov.Type.f8e5m2, ov.Type.f32),
         (ov.Type.f16, ov.Type.f16),
+        (ov.Type.f8e4m3, ov.Type.f16),
+        (ov.Type.f8e5m2, ov.Type.f16),
         (ov.Type.bf16, ov.Type.bf16),
+        (ov.Type.f8e4m3, ov.Type.bf16),
+        (ov.Type.f8e5m2, ov.Type.bf16),
     ],
     ids=[
         "w32a32",
         "w16a32",
         "wb16a32",
+        "wf8e4m3a32",
+        "wf8e5m2a32",
         "w16a16",
+        "wf8e4m3a16",
+        "wf8e5m2a16",
         "wb16a16",
+        "wf8e4m3ab16",
+        "wf8e5m2ab16",
     ],
 )
 class TestActivationWeightDtype:
@@ -816,7 +1120,7 @@ class TestActivationWeightDtype:
     def test_set_weight(weight_dtype, activation_dtype, tmp_path):
         model = GatherAndMatmulShareData(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
         ov_backend = OVWeightCompressionAlgoBackend(model)
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         node_key = "5 MatMul_2"
         weight_node = graph.get_node_by_key(node_key)
         weight_port_id = 1
@@ -979,49 +1283,207 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 
 
 @pytest.mark.parametrize(
-    ("mode", "all_layers", "ratio", "ref_ids"),
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], None),
+        # One test to check manual group size setup is working as expected
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], 32),
     ),
 )
-def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
-    model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
+@pytest.mark.parametrize(
+    "mode, ov_type",
+    [
+        (CompressWeightsMode.MXFP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.MXFP4, ov.Type.f4e2m1),
+    ],
+)
+def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mode, ov_type, group_size):
+    # Use hidden dim % 32 == 0 to make it possible to quantize in MX format
+    model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
+    dataset = Dataset([np.ones([1, 4, 32]), np.arange(128).reshape(1, 4, 32)])
+    kwargs = {}
+    if group_size is not None:
+        kwargs["group_size"] = group_size
     compressed_model = compress_weights(
         model,
-        mode=CompressWeightsMode.E2M1,
+        mode=mode,
         ratio=ratio,
-        group_size=1,
         all_layers=all_layers,
-        sensitivity_metric=mode,
+        sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        backup_mode=nncf.BackupMode.INT8_ASYM,
+        **kwargs,
     )
-    names_e2m1 = {
-        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f4e2m1
-    }
-    ref_e2m1_nodes = {f"weights_{i}" for i in ref_ids}
-    assert ref_e2m1_nodes == names_e2m1
+    ops = []
+    for op in compressed_model.get_ordered_ops():
+        if op.get_element_type() == ov_type:
+            # Check effective default group size == 32
+            assert tuple(op.shape) == (32, 1, 32)
+            ops.append(op)
+
+    names_fp = {op.get_friendly_name() for op in ops}
+    ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_fp_nodes == names_fp
 
     names_e8m0 = {
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f8e8m0
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
+
+
+@pytest.mark.parametrize(
+    ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2], None),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], None),
+        # One test to check manual group size setup is working as expected
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2], 16),
+    ),
+)
+@pytest.mark.parametrize(
+    "mode, weight_type",
+    [
+        (CompressWeightsMode.FP8_E4M3, ov.Type.f8e4m3),
+        (CompressWeightsMode.FP4, ov.Type.f4e2m1),
+        (CompressWeightsMode.NVFP4, ov.Type.f4e2m1),
+    ],
+    ids=["FP8", "FP4", "NVFP4"],
+)
+def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode, weight_type, group_size):
+    model = SequentialMatmulModel(mm_hidden_dim=128).ov_model
+    dataset = Dataset([np.ones([1, 4, 128]), np.arange(512).reshape(1, 4, 128)])
+    kwargs = {}
+    if group_size is not None:
+        kwargs["group_size"] = group_size
+    compressed_model = compress_weights(
+        model,
+        mode=mode,
+        ratio=ratio,
+        all_layers=all_layers,
+        sensitivity_metric=sensitivity_metric,
+        dataset=dataset,
+        backup_mode=nncf.BackupMode.INT8_SYM,
+        **kwargs,
+    )
+    ops = []
+    for op in compressed_model.get_ordered_ops():
+        if op.get_element_type() == weight_type:
+            # Check effective default group size
+            ref_shape = (128, 8, 16) if mode == CompressWeightsMode.NVFP4 or group_size == 16 else (128, 1, 128)
+            assert tuple(op.shape) == ref_shape
+            ops.append(op)
+
+    names_fp = {op.get_friendly_name() for op in ops}
+    ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_fp_nodes == names_fp
+    scale_dtypes = (ov.Type.f16, ov.Type.f8e4m3)
+    names_scales = {
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_element_type() in scale_dtypes and "scale" in op.get_friendly_name()
+    }
+    ref_scale_nodes = {f"weights_{i}/scale" for i in range(5)}
+    assert ref_scale_nodes == names_scales
+
+
+@pytest.mark.parametrize(
+    ("mode", "all_layers", "ratio", "ref_ids"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, 5),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, 3),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, 1),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, 0),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, 4),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, 3),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, 1),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, 0),
+    ),
+)
+def test_mixed_precision_codebook(mode, all_layers, ratio, ref_ids):
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CB4,
+        ratio=ratio,
+        group_size=1,
+        all_layers=all_layers,
+        sensitivity_metric=mode,
+    )
+    names_codebook = {
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f8e4m3
+    }
+
+    assert ref_ids == len(names_codebook)
+
+
+@pytest.mark.parametrize(
+    ("codebook", "dst_type", "n_layers"),
+    (
+        (np.array([i for i in range(-8, 8)], np.int8), ov.Type.i8, 5),
+        (np.array([i for i in range(-(2**6), 2**6)], np.int8), ov.Type.i8, 5),
+        (
+            Tensor(np.array([np.sign(i) * 2 ** np.abs(i) for i in range(-6, 6)]))
+            .as_openvino_tensor()
+            .astype(TensorDataType.f8e4m3),
+            ov.Type.f8e4m3,
+            5,
+        ),
+    ),
+)
+@pytest.mark.parametrize("group_size", (1, -1))
+def test_codebook(codebook, n_layers, dst_type, group_size):
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.CODEBOOK,
+        ratio=1.0,
+        group_size=group_size,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(codebook=codebook),
+    )
+    names_codebook = [
+        op.get_friendly_name()
+        for op in compressed_model.get_ordered_ops()
+        if op.get_friendly_name().endswith("nncf_codebook")
+    ]
+
+    assert len(names_codebook) == n_layers
+
+    names_codebook = [
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == dst_type
+    ]
+
+    assert len(names_codebook) == n_layers
 
 
 @pytest.mark.parametrize(
@@ -1035,14 +1497,150 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
         ),
     ),
 )
-def test_compressed_weighs_range(mode, data):
+def test_int_compressed_weighs_range(mode, data):
     data = np.array(data).astype(np.float32)
     w = Tensor(data)
 
     config = WeightCompressionConfig(mode=mode)
-    compressed_weighs, _, _ = do_integer_quantization(w, config, -1)
+    compressed_weight = do_integer_quantization(w, config, -1)
 
-    assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
+    assert np.allclose(np.abs(compressed_weight.tensor.data), np.abs(w.data))
+
+
+FP4_REF = {
+    "neg": [
+        -8.0,
+        -8.0,
+        -5.333333492279053,
+        -5.333333492279053,
+        -4.0,
+        -2.6666667461395264,
+        -2.0,
+        -1.3333333730697632,
+        -0.0,
+    ],
+    "pos": [-0.0, 1.3333333730697632, 2.0, 2.6666667461395264, 4.0, 5.333333492279053, 5.333333492279053, 8.0, 8.0],
+    "neg-pos": [
+        -8.0,
+        -8.0,
+        -5.333333492279053,
+        -5.333333492279053,
+        -4.0,
+        -2.6666667461395264,
+        -2.0,
+        -1.3333333730697632,
+        -0.0,
+        1.3333333730697632,
+        2.0,
+        2.6666667461395264,
+        4.0,
+        5.333333492279053,
+        5.333333492279053,
+        8.0,
+    ],
+}
+
+TEST_FLOAT_COMPRESSED_REFS = {
+    CompressWeightsMode.MXFP4: {
+        "neg": [-8.0, -8.0, -6.0, -4.0, -4.0, -3.0, -2.0, -1.0, -0.0],
+        "pos": [-0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 6.0, 8.0, 8.0],
+        "neg-pos": [-8.0, -8.0, -6.0, -4.0, -4.0, -3.0, -2.0, -1.0, -0.0, 1.0, 2.0, 3.0, 4.0, 4.0, 6.0, 8.0],
+    },
+    CompressWeightsMode.NVFP4: FP4_REF,
+    CompressWeightsMode.FP4: FP4_REF,
+    CompressWeightsMode.FP8_E4M3: {
+        "neg": [
+            -8.0,
+            -6.857143402099609,
+            -5.714285850524902,
+            -5.142857551574707,
+            -4.0,
+            -2.857142925262451,
+            -2.0,
+            -1.0,
+            0.0,
+        ],
+        "pos": [0.0, 1.0, 2.0, 2.857142925262451, 4.0, 5.142857551574707, 5.714285850524902, 6.857143402099609, 8.0],
+        "neg-pos": [
+            -8.0,
+            -6.857143402099609,
+            -5.714285850524902,
+            -5.142857551574707,
+            -4.0,
+            -2.857142925262451,
+            -2.0,
+            -1.0,
+            0.0,
+            1.0,
+            2.0,
+            2.857142925262451,
+            4.0,
+            5.142857551574707,
+            5.714285850524902,
+            6.857143402099609,
+        ],
+    },
+}
+
+
+@pytest.mark.parametrize(
+    "mode",
+    (
+        CompressWeightsMode.NVFP4,
+        CompressWeightsMode.FP4,
+        CompressWeightsMode.MXFP4,
+        CompressWeightsMode.FP8_E4M3,
+        CompressWeightsMode.MXFP8_E4M3,
+    ),
+)
+@pytest.mark.parametrize(
+    "id_,data",
+    (
+        ("neg", [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
+        ("pos", [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+        ("neg-pos", [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
+    ),
+)
+def test_float_compressed_weighs_range(mode, id_, data):
+    data = np.array(data).astype(np.float32)
+    w = Tensor(data)
+
+    config = WeightCompressionConfig(mode=mode)
+    cw = do_float_quantization(w, config, -1)
+
+    decompressed_weight = do_float_dequantization(cw, -1).data
+    if mode in TEST_FLOAT_COMPRESSED_REFS:
+        ref = TEST_FLOAT_COMPRESSED_REFS[mode][id_]
+        fp32_ref = np.array(ref).astype(np.float32)
+        assert np.allclose(decompressed_weight.data, fp32_ref)
+    else:
+        assert np.allclose(decompressed_weight, w.data)
+
+
+@pytest.mark.parametrize(
+    ("data"),
+    (
+        ([-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
+        ([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+        ([-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
+        ([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5]),
+    ),
+)
+def test_codebook_weights_range(data):
+    data = np.array(data).astype(np.float32)
+    codebook = data
+    max_diff = 0.1
+    w = Tensor(data + (np.random.rand(*data.shape) - 0.5) * max_diff)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=Tensor(data))
+    cw = do_float_quantization(w, config, -1)
+
+    uncompressed_data = codebook[cw.tensor.data] * cw.scale.data
+
+    indexes = cw.tensor.flatten()
+    target = np.arange(indexes.shape[0])
+    assert np.allclose(indexes.data, target)
+    assert np.all(np.abs(uncompressed_data.data - data) <= max_diff)
+    assert np.allclose(do_float_dequantization(cw).data, uncompressed_data)
 
 
 @pytest.mark.parametrize(
@@ -1072,16 +1670,14 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
 
     if raises:
         with pytest.raises(ValueError) as exc_info:
-            _, scale, zero_point = do_integer_quantization(
-                weight, config, -1, precomputed_scale, precomputed_zero_point
-            )
+            do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
             assert exc_info.value == (
                 "If precomputed quantization parameters are provided, both scale and zero point "
                 "are required for asymmetric quantization."
             )
         return
-    else:
-        _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+    compressed_weight = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+    scale, zero_point = compressed_weight.scale, compressed_weight.zero_point
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
@@ -1235,8 +1831,14 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, apply_regularization, is_pe
         (ov.Type.f32, ov.Type.f32),
         (ov.Type.f32, ov.Type.f16),
         (ov.Type.f32, ov.Type.bf16),
+        (ov.Type.f32, ov.Type.f8e4m3),
+        (ov.Type.f32, ov.Type.f8e5m2),
         (ov.Type.f16, ov.Type.f16),
+        (ov.Type.f16, ov.Type.f8e4m3),
+        (ov.Type.f16, ov.Type.f8e5m2),
         (ov.Type.bf16, ov.Type.bf16),
+        (ov.Type.bf16, ov.Type.f8e4m3),
+        (ov.Type.bf16, ov.Type.f8e5m2),
     ],
 )
 def test_compression_with_lora_for_different_dtypes(activation_dtype, weight_dtype):
@@ -1397,6 +1999,135 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
     assert act_num == num_compressed
 
 
+@pytest.mark.parametrize(
+    (
+        "compress_mode",
+        "backup_mode",
+        "num_compressed",
+        "scale_type",
+    ),
+    [
+        # FP4
+        (CompressWeightsMode.FP4, BackupMode.NONE, 3, ov.Type.f16),
+        (CompressWeightsMode.FP4, BackupMode.FP8_E4M3, 3, ov.Type.f16),
+        (CompressWeightsMode.FP4, None, 3, ov.Type.f16),
+        # MXFP4
+        (CompressWeightsMode.MXFP4, BackupMode.NONE, 3, ov.Type.f8e8m0),
+        (CompressWeightsMode.MXFP4, BackupMode.MXFP8_E4M3, 3, ov.Type.f8e8m0),
+        (CompressWeightsMode.MXFP4, None, 3, ov.Type.f8e8m0),
+    ],
+)
+def test_fp4_compression_with_backup_mode(
+    compress_mode,
+    backup_mode,
+    num_compressed,
+    scale_type,
+):
+    model = SequentialMatmulModel(mm_hidden_dim=32).ov_model
+
+    compressed_model = compress_weights(
+        model,
+        mode=compress_mode,
+        ratio=0.8,
+        group_size=32,
+        backup_mode=backup_mode,
+    )
+
+    backup_ov_type = ov.Type.f32 if backup_mode == BackupMode.NONE else ov.Type.f8e4m3
+    act_num = 0
+    for op in compressed_model.get_ops():
+        if op.get_type_name() != "Constant":
+            continue
+
+        if op.get_element_type() == ov.Type.f4e2m1:
+            act_num += 1
+        elif "/scale" in op.get_friendly_name():
+            assert op.get_element_type() == scale_type
+        elif "Constant_" in op.get_friendly_name():
+            continue
+        else:
+            assert op.get_element_type() == backup_ov_type
+
+    assert act_num == num_compressed
+
+
+NVFP4_MatMul_REFERENCE_OUTPUT = np.array(
+    [
+        [
+            [
+                1.1840625,
+                3.8781247,
+                6.0718746,
+                9.1375,
+                12.570938,
+                14.572499,
+                17.49,
+                20.4,
+                23.31,
+                26.234999,
+                29.144999,
+                29.144999,
+                32.07,
+                34.98,
+                37.89,
+                40.8,
+            ]
+        ]
+    ]
+)
+
+
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Ticket: 176785.",
+)
+def test_nvfp4_openvino_compilation_sanity():
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    input_data = np.ones([1, 1, 16], dtype=np.float32) * 0.01
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.NVFP4,
+        ratio=1.0,
+        all_layers=True,
+    )
+
+    has_nvfp4_weights = any(
+        op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.f4e2m1
+        for op in compressed_model.get_ops()
+    )
+    assert has_nvfp4_weights
+
+    compressed_compiled_model = ov.compile_model(compressed_model, device_name="CPU")
+    compressed_output = compressed_compiled_model(input_data)[0]
+
+    assert np.allclose(compressed_output, NVFP4_MatMul_REFERENCE_OUTPUT)
+
+
+def test_awq_fp16_overflow_fix(mocker):
+    """
+    Special model with low magnitude activations for testing the fix for overflow in AWQ fp16 quantization.
+    """
+    dim = 8
+    model = AWQModel_fp16_overlow(dim=8).ov_model
+    dataset = Dataset(16 * [0.01 * np.ones((1, 2 * dim + 1, dim))])
+
+    from nncf.quantization.algorithms.weight_compression.algorithm import AWQ
+
+    awq_spy = mocker.spy(AWQ, "_clamp_scale")
+
+    compress_weights(model, mode=CompressWeightsMode.INT4_SYM, group_size=-1, dataset=dataset, awq=True, ratio=1.0)
+
+    assert awq_spy.call_count == 36
+
+    for call, res in zip(awq_spy.call_args_list, awq_spy.spy_return_list):
+        scale = call[0][2]
+        clamped_scale = call[0][3]
+        assert np.all(scale.data <= clamped_scale.data)
+        assert np.all(scale.data <= res.data)
+        assert np.any(scale.data < res.data)
+
+
 @pytest.mark.parametrize("n_extra_dims", [0, 1, 2])
 def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
     model = AWQMatmulModel(n_extra_dims=n_extra_dims).ov_model
@@ -1456,49 +2187,13 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
     )
 
 
-@pytest.mark.parametrize(
-    "kwargs",
-    [
-        dict(scale_estimation=True),
-        dict(lora_correction=True),
-        dict(
-            gptq=True,
-            awq=True,
-            scale_estimation=True,
-            advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
-        ),
-    ],
-)
-def test_compression_with_transposed_activations(kwargs):
-    dataset_size = 4
-    model = LMLinearModel(transpose_a=True, transpose_b=False).ov_model
-    input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
-    dataset = Dataset(input_data)
-
-    with pytest.raises(nncf.UnsupportedModelError):
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=8,
-            subset_size=2,
-            dataset=dataset,
-            all_layers=True,
-            **kwargs,
-        )
-
-
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     hidden_dim = (MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION // LMLinearModel.OUTPUT_DIM) + 1
     model = LMLinearModel(input_shape=[1, 24, hidden_dim]).ov_model
 
     def run_compression():
-        compress_weights(model, mode=CompressWeightsMode.INT8)
+        compress_weights(model, mode=CompressWeightsMode.INT8_ASYM)
 
     fn_to_patch = opt_fns.do_integer_quantization
     patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
@@ -1520,12 +2215,181 @@ def test_nf4_quantization_mid_quant(weight, scale):
     scale = Tensor(scale)
     # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
     norm_weight = _calculate_normalized_weight(weight, scale)
-    nf4_quant = _calculate_nf4_quantized_weight(norm_weight)
+    nf4_quant = _calculate_float_quantized_weight(norm_weight, TensorDataType.nf4)
 
     norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
     ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
 
     np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
+
+
+@pytest.mark.parametrize(
+    "input_val,expected_val,description",
+    [
+        (-7.0, -6.0, "Lower than quantile range"),
+        (7.0, 6.0, "Higher than quantile range"),
+        (-5.0, -4.0, "Should pick nearest EVEN index (index 2: -4.0)"),
+        (-3.5, -4.0, "Should pick nearest EVEN index (index 2: -4.0)"),
+        (1.75, 2.0, "Should pick nearest EVEN index (index 12: 2.0)"),
+        (2.5, 2.0, "Should pick nearest EVEN index (index 12: 2.0)"),
+        (-4.0, -4.0, "Exactly on a quantile"),
+        (0.0, 0.0, "Value 0.0 is on quantile boundary"),
+        (-0.0, 0.0, "Value -0.0 is on quantile boundary"),
+        (-0.25, 0.0, "Should round up, 0.0 (even index)"),
+        (0.25, 0.0, "Should round down, 0.0 (even index)"),
+        (-0.49, -0.5, "Closer to -0.5"),
+        (-0.51, -0.5, "Closer to -0.5)"),
+    ],
+)
+def test_mxfp4_quantization_edge_cases(input_val, expected_val, description):
+    norm_weight = Tensor(np.array([input_val], dtype=np.float32))
+    result = _calculate_float_quantized_weight(norm_weight, TensorDataType.f4e2m1)
+
+    assert result.data[0] == expected_val, (
+        f"{description}: Expected {expected_val}, got {result.data[0]} for input value {input_val}"
+    )
+
+
+@pytest.mark.parametrize(
+    "input_val,expected_val,description",
+    [
+        # --- Zeros ---
+        (0.0, 0.0, "Positive zero should stay 0.0"),
+        (-0.0, 0.0, "Negative zero should quantize to +0.0 (LUT[0])"),
+        # --- Small subnormals & underflow (based on LUT[0..15]) ---
+        # LUT[1] = 0.001953125
+        (0.0005, 0.0, "Too small magnitude should underflow to 0.0"),
+        (0.001, 0.001953125, "Small positive should become smallest positive subnormal (LUT[1])"),
+        (-0.001, -0.001953125, "Negative small should become smallest negative subnormal (-LUT[1])"),
+        # A few more subnormal points (LUT[2] and LUT[4])
+        # LUT[2] = 0.00390625, LUT[4] = 0.0078125
+        (0.003, 0.00390625, "Should round up to subnormal 0.00390625 (LUT[2])"),
+        (0.006, 0.005859375, "Should round to subnormal 0.005859375 (LUT[3])"),
+        (-0.006, -0.005859375, "Negative should round to -0.005859375 (LUT[3])"),
+        # --- Around the transition into 'larger' subnormals / small normals ---
+        # LUT[16] = 0.03125
+        (0.03125, 0.03125, "0.03125 exactly representable (LUT[16])"),
+        (0.030, 0.029296875, "0.030 should round to 0.029296875 (LUT[15])"),
+        (-0.030, -0.029296875, "Negative rounding around -0.029296875"),
+        # --- Normal range values (taken directly from LUT for guaranteed exactness) ---
+        # From LUT around 0.0625..0.25
+        (0.0625, 0.0625, "0.0625 exactly representable (LUT[24])"),
+        (0.0703125, 0.0703125, "0.0703125 exactly representable (LUT[25])"),
+        (0.078125, 0.078125, "0.078125 exactly representable (LUT[26])"),
+        (0.109375, 0.109375, "0.109375 exactly representable (LUT[30])"),
+        (0.125, 0.125, "0.125 exactly representable (LUT[32])"),
+        (0.25, 0.25, "0.25 exactly representable (LUT[40])"),
+        # A couple of midpoints to test rounding-to-nearest-even-ish behavior
+        (0.26, 0.25, "0.26 closer to 0.25 than 0.28125 – should round to 0.25"),
+        (0.28, 0.28125, "0.28 closer to 0.28125 (LUT[41]) – should round up"),
+        # --- Symmetry around zero for normals ---
+        (0.5, 0.5, "0.5 exactly representable (LUT[48])"),
+        (-0.5, -0.5, "-0.5 exactly representable"),
+        (1.0, 1.0, "1.0 exactly representable (LUT[56])"),
+        (-1.0, -1.0, "-1.0 exactly representable"),
+        (1.75, 1.75, "1.75 exactly representable (LUT[62])"),
+        (-1.75, -1.75, "-1.75 exactly representable"),
+        # --- Values in the 'integer-like' region ---
+        (2.0, 2.0, "2.0 exactly representable (LUT[64])"),
+        (3.0, 3.0, "3.0 exactly representable (LUT[68])"),
+        (4.0, 4.0, "4.0 exactly representable (LUT[72])"),
+        (5.0, 5.0, "5.0 exactly representable (LUT[74])"),
+        (6.0, 6.0, "6.0 exactly representable (LUT[76])"),
+        (7.0, 7.0, "7.0 exactly representable (LUT[78])"),
+        (8.0, 8.0, "8.0 exactly representable (LUT[80])"),
+        (-8.0, -8.0, "-8.0 exactly representable"),
+        # --- Larger finite values near high end of LUT ---
+        (16.0, 16.0, "16.0 exactly representable (LUT[88])"),
+        (32.0, 32.0, "32.0 exactly representable (LUT[96])"),
+        (64.0, 64.0, "64.0 exactly representable (LUT[104])"),
+        (128.0, 128.0, "128.0 exactly representable (LUT[112])"),
+        (256.0, 256.0, "256.0 exactly representable (LUT[120])"),
+        (448.0, 448.0, "448.0 exactly representable (LUT[126], max finite)"),
+        # --- Rounding near the max finite value ---
+        (400.0, 384.0, "400.0 should round to the nearest representable (LUT[116] = 384.0)"),
+        (460.0, 448.0, "460.0 should round to max finite 448.0 (LUT[126])"),
+        # --- Overflow / NaN / Inf handling ---
+        (500.0, np.nan, "Above max finite range, should overflow to NaN"),
+        (1e4, np.nan, "Way above max finite range, should overflow to NaN"),
+        (np.inf, np.nan, "+inf should map to NaN (no Inf representation)"),
+        (-np.inf, np.nan, "-inf should map to NaN (no Inf representation)"),
+        (np.nan, np.nan, "NaN input should remain NaN after quantization/dequantization"),
+    ],
+)
+@pytest.mark.parametrize("backend", ["numpy", "openvino"])
+def test_f8e4m3_quantization_edge_cases(input_val, expected_val, description, backend):
+    norm_weight = Tensor(np.array([input_val], dtype=np.float32))
+    if backend == "numpy":
+        result = _calculate_float_quantized_weight(norm_weight, TensorDataType.f8e4m3)
+    else:
+        result = (
+            norm_weight.as_openvino_tensor()
+            .astype(TensorDataType.f8e4m3)
+            .astype(TensorDataType.float32)
+            .as_numpy_tensor()
+        )
+
+    out = result.data[0]
+
+    if isinstance(expected_val, float) and np.isnan(expected_val):
+        assert np.isnan(out), f"{description}: Expected NaN, got {out} for input value {input_val}"
+    else:
+        assert out == expected_val, f"{description}: Expected {expected_val}, got {out} for input value {input_val}"
+
+
+@pytest.mark.parametrize(
+    "codebook",
+    [
+        np.array([0.2, 0.2, 0.3, 0.4], dtype=np.float32),
+        np.array([0.5, 0.2, 0.3, 0.4], dtype=np.float32),
+        np.array([[-1, 0, 1, 2, 3], [-1, 0, 1, 2, 3]], dtype=np.float32),
+        np.array([5], dtype=np.float32),
+    ],
+)
+def test_codebook_is_correct_array(codebook):
+    model = SequentialMatmulModel().ov_model
+
+    # The codebook should be a non empty 1D numpy array and sorted
+    with pytest.raises(nncf.ValidationError):
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.CODEBOOK,
+            group_size=-1,
+            advanced_parameters=nncf.AdvancedCompressionParameters(codebook=codebook),
+        )
+
+
+@pytest.mark.parametrize("value_type", [None, TensorDataType.float16, TensorDataType.f8e4m3, TensorDataType.int8])
+@pytest.mark.parametrize("group_size", [-1, 4])
+def test_adaptive_codebooks(value_type, group_size):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([1, 8, 8])])
+    advanced_parameters = (
+        CompressionParams()
+        if value_type is None
+        else CompressionParams(adaptive_codebook_params=CodebookParams(value_type=value_type))
+    )
+
+    n_matmuls = 0
+    for op in model.get_ordered_ops():
+        if op.get_type_name() == "MatMul":
+            n_matmuls += 1
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.ADAPTIVE_CODEBOOK,
+        group_size=group_size,
+        dataset=dataset,
+        advanced_parameters=advanced_parameters,
+    )
+
+    n_gathers = 0
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Gather":
+            n_gathers += 1
+
+    # For each MatMul except lm_head, there should be one Gather operation to fetch from the codebook
+    assert n_gathers == n_matmuls - 1
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
@@ -1534,20 +2398,45 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return IdentityMatmul().ov_model
 
     @staticmethod
-    def get_sequential_matmul_model() -> ov.Model:
-        return SequentialMatmulModel().ov_model
+    def get_RoPE_model(degree: int) -> ov.Model:
+        return RoPEModelWC(degree=degree).ov_model
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
-        return MatMul().ov_model
+    def get_SAM_PE_model() -> ov.Model:
+        return SAMPEModel().ov_model
 
     @staticmethod
-    def get_awq_model() -> ov.Model:
-        return AWQMatmulModel().ov_model
+    def get_sequential_matmul_model(transpose_a: bool) -> ov.Model:
+        return SequentialMatmulModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_awq_act_model(with_multiply, n_layers):
-        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
+    def get_model_for_test_scale_estimation(transpose_a: bool):
+        return MatMul(transpose_a=transpose_a).ov_model
+
+    @staticmethod
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+        return SimpleMoEModel(transpose_a=transpose_a).ov_model
+
+    @staticmethod
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> ov.Model:
+        # if is_3d_weights:
+        #     return AWQMatmulModel3D(non_mergable_pattern=non_mergable_pattern).ov_model
+        return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern, is_3d_weights=is_3d_weights).ov_model
+
+    @staticmethod
+    def get_different_channel_size_model(channel_sizes: list[int]) -> ov.Model:
+        return DifferentChannelSizeMatmulModel(channel_sizes=channel_sizes).ov_model
+
+    @staticmethod
+    def get_awq_act_model(is_3d_weights, with_multiply, n_layers):
+        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers, is_3d_weights=is_3d_weights).ov_model
+
+    @staticmethod
+    def get_transposable_awq_model(transpose_a, transpose_b, input_shape=None, is_3d_weights: bool = False):
+        ov_model = AWQModel(
+            transpose_a=transpose_a, transpose_b=transpose_b, input_shape=input_shape, is_3d_weights=is_3d_weights
+        ).ov_model
+        return ov_model
 
     @staticmethod
     def to_tensor(x) -> np.ndarray:
@@ -1562,7 +2451,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         raise NotImplementedError
 
     @staticmethod
-    def check_weights(model: ov.Model, ref_ids: list[int]) -> None:
+    def check_weights(model: ov.Model, ref_ids: list[int], transpose_a=False) -> None:
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
@@ -1576,27 +2465,150 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_scale_estimation_ref():
-        return np.array(
-            [
-                [[0.473328]],
-                [[0.929023]],
-                [[1.446527]],
-                [[1.920595]],
-                [[2.517053]],
-                [[3.030101]],
-                [[3.584278]],
-                [[4.04351]],
-                [[4.620007]],
-                [[5.165322]],
-                [[5.710637]],
-                [[6.122580]],
-                [[6.655914]],
-                [[7.237173]],
-                [[7.722581]],
-                [[8.255914]],
-            ]
-        )
+    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            np.array(
+                [
+                    [[0.473328]],
+                    [[0.929023]],
+                    [[1.446527]],
+                    [[1.920595]],
+                    [[2.517054]],
+                    [[3.030102]],
+                    [[3.584279]],
+                    [[4.043509]],
+                    [[4.620008]],
+                    [[5.165322]],
+                    [[5.710637]],
+                    [[6.122581]],
+                    [[6.655914]],
+                    [[7.237174]],
+                    [[7.722580]],
+                    [[8.255914]],
+                ]
+            ),
+            np.array(
+                [
+                    [[0.47344488]],
+                    [[0.9287766]],
+                    [[1.4463282]],
+                    [[1.920052]],
+                    [[2.5167778]],
+                    [[3.02987]],
+                    [[3.5842714]],
+                    [[4.0429296]],
+                    [[4.619769]],
+                    [[5.165224]],
+                    [[5.7106786]],
+                    [[6.121212]],
+                    [[6.654546]],
+                    [[7.2366524]],
+                    [[7.7212124]],
+                    [[8.254545]],
+                ]
+            ),
+        )[check_sampling_activation_stats_flow]
+
+    @staticmethod
+    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
+        return (
+            np.array(
+                [
+                    [
+                        [
+                            [
+                                7.5732,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.2602,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.4667,
+                                7.3083,
+                                7.8467,
+                                7.2233,
+                                7.2715,
+                                7.4205,
+                                7.4667,
+                            ]
+                        ]
+                    ],
+                    [
+                        [
+                            [
+                                14.8205,
+                                14.9032,
+                                14.9858,
+                                15.0685,
+                                15.1512,
+                                14.3400,
+                                14.4173,
+                                14.4945,
+                                14.5718,
+                                14.6491,
+                                14.7264,
+                                14.8037,
+                                14.8810,
+                                14.9583,
+                                15.0355,
+                                15.1128,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+            np.array(
+                [
+                    [
+                        [
+                            [
+                                7.575118,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.254837,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.4666667,
+                                7.495066,
+                                7.850108,
+                                7.219489,
+                                7.2685375,
+                                7.418597,
+                                7.4666667,
+                            ]
+                        ]
+                    ],
+                    [
+                        [
+                            [
+                                14.820066,
+                                14.902746,
+                                14.985427,
+                                15.068108,
+                                15.150787,
+                                14.3391285,
+                                14.416424,
+                                14.493721,
+                                14.571016,
+                                14.648311,
+                                14.725608,
+                                14.802904,
+                                14.8801985,
+                                14.957496,
+                                15.034791,
+                                15.112087,
+                            ]
+                        ]
+                    ],
+                ]
+            ),
+        )[check_sampling_activation_stats_flow]
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
@@ -1617,15 +2629,31 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(weight_output)
 
     @staticmethod
-    def get_ignored_scope_name() -> str:
-        return "MatMul_6"
+    def get_ignored_scope_name(is_3d_weights) -> str:
+        return "MatMul_5"
+
+    @classmethod
+    def get_num_int4_nodes(cls, model: ov.Model) -> int:
+        return cls._get_num_typed_nodes(model, [ov.Type.i4, ov.Type.u4])
+
+    @classmethod
+    def get_num_int8_nodes(cls, model: ov.Model) -> int:
+        return cls._get_num_typed_nodes(model, [ov.Type.i8, ov.Type.u8])
 
     @staticmethod
-    def get_num_int4_nodes(model: ov.Model) -> int:
+    def _get_num_typed_nodes(model: ov.Model, types: list[ov.Type]) -> int:
         num = 0
         for op in model.get_ops():
-            if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.i4:
+            if op.get_type_name() == "Constant" and op.get_element_type() in types:
                 num += 1
+        return num
+
+    @staticmethod
+    def get_num_int4_group_sizes(model: ov.Model) -> dict[int, int]:
+        num = defaultdict(int)
+        for op in model.get_ops():
+            if op.get_type_name() == "Constant" and op.get_element_type() in [ov.Type.i4, ov.Type.u4]:
+                num[op.get_output_shape(0)[-1]] += 1
         return num
 
     @pytest.fixture(params=INT4_NF4_MODES)
@@ -1641,12 +2669,115 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_reference_for_test_awq_scale_reference() -> dict[str, Tensor]:
-        return {
-            "MatMul_3": Tensor(
-                np.array(
-                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
-                    dtype=np.float32,
-                )
-            )
-        }
+    @pytest.fixture
+    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
+        return [
+            {
+                "MatMul": Tensor(np.array([[10.337929], [6.4558873]], dtype=np.float32)),
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [1.2264546],
+                            [1.2054994],
+                            [1.1413403],
+                            [1.0974358],
+                            [1.0643553],
+                            [1.0379708],
+                            [1.0161183],
+                            [0.9975262],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [
+                                [
+                                    1.9909902,
+                                    1.8632966,
+                                    1.5759803,
+                                    1.3974594,
+                                    1.2722752,
+                                    1.1779976,
+                                    1.1035581,
+                                    1.042768,
+                                ]
+                            ]
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+            {
+                "MatMul": Tensor(
+                    np.array(
+                        [
+                            [[10.337929], [6.4558873]],
+                            [[7.7174687], [5.987996]],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_3": Tensor(
+                    np.array(
+                        [
+                            [
+                                [1.2264546],
+                                [1.2054994],
+                                [1.1413403],
+                                [1.0974358],
+                                [1.0643553],
+                                [1.0379708],
+                                [1.0161183],
+                                [0.9975262],
+                            ],
+                            [
+                                [0.46889508],
+                                [0.4599662],
+                                [0.4321173],
+                                [0.40815368],
+                                [0.387274],
+                                [0.36888793],
+                                [0.35255024],
+                                [0.33791822],
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+                "MatMul_2": Tensor(
+                    np.array(
+                        [
+                            [[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]],
+                            [
+                                [
+                                    0.47422293,
+                                    0.4648561,
+                                    0.4367122,
+                                    0.41249463,
+                                    0.39139354,
+                                    0.37281245,
+                                    0.3563014,
+                                    0.3415141,
+                                ]
+                            ],
+                        ],
+                        dtype=np.float32,
+                    )
+                ),
+            },
+        ]
+
+    @pytest.fixture
+    def transpose_a_supported(self) -> bool:
+        return True
+
+    def test_phi_rope_model(self):
+        model = Phi3dot5RoPEModel().ov_model
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT8_SYM,
+            group_size=-1,
+        )
+        assert self.get_num_int8_nodes(compressed_model) == 0

@@ -1,5 +1,208 @@
 # Release Notes
 
+## New in Release 3.1.0
+
+- General:
+  - Migrated `NNCFGraph` from `nx.DiGraph` to `nx.MultiDiGraph` to support models with parallel/multi-edges, enabling correct quantization of models with complex graph structures such as YOLO26 and models like `a = conv(x); return a * a` (https://github.com/openvinotoolkit/nncf/pull/3843).
+- Features:
+  - (OpenVINO) Added NVFP4 (`f4e2m1`) compression data type in Weight Compression. NVFP4 uses a constant group size of 16 with scales compressed to `f8e4m3` using a second-degree scale (https://github.com/openvinotoolkit/nncf/pull/3967).
+  - (OpenVINO) Added `backup_mode` parameter for FP compression formats (MXFP4, MXFP8, FP4, FP8), allowing first/last layers to be compressed with a backup FP format instead of INT8 (https://github.com/openvinotoolkit/nncf/pull/3886).
+  - (OpenVINO) RoPe ignored pattern is updated to handle operations without a preceding transpose like in the Phi-3.5-MoE-instruct model (https://github.com/openvinotoolkit/nncf/pull/3989).
+  - (PyTorch) Added `TopKMetatype` support for TorchFX backend, enabling correct graph building for models with TopK operations such as YOLO26 (https://github.com/openvinotoolkit/nncf/pull/3944).
+  - (PyTorch) Migrated to use `torchao` instead of deprecated `torch.ao` (https://github.com/openvinotoolkit/nncf/pull/3854).
+- Fixes:
+  - (OpenVINO) Fixed scale estimation for Adaptive Codebook weight compression (https://github.com/openvinotoolkit/nncf/pull/3888).
+  - (ONNX) Fixed `nncf.errors.ValidationError: There is no tensor with the name` error (https://github.com/openvinotoolkit/nncf/pull/3988).
+- Improvements:
+  - (PyTorch) Added lazy import for `nncf.torch` module to reduce startup import time (https://github.com/openvinotoolkit/nncf/pull/3862).
+- Tutorials:
+  - [Post-Training Optimization of Gemma 4 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma4/gemma4.ipynb)
+  - [Post-Training Optimization of Code-specialized LLMs](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-code-assistant/llm-code-assistant.ipynb)
+  - [Post-Training Optimization of Vision-Language Models (VLMs)](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/vlm-chatbot/vlm-chatbot-generate-api.ipynb)
+  - [Post-Training Optimization of MiniCPM-o 4.5 Multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-4.5/minicpm-o-4.5.ipynb)
+  - [Post-Training Optimization of PaddleOCR-VL/PaddleOCR-VL-1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/paddleocr_vl/paddleocr_vl.ipynb)
+  - [Post-Training Optimization of RAG pipeline](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-eval.ipynb)
+- Requirements:
+  - Updated to `openvino` 2026.1.0 (https://github.com/openvinotoolkit/nncf/pull/4005).
+  - Updated to `torch` 2.10.0 (https://github.com/openvinotoolkit/nncf/pull/3852).
+  - Updated to `onnx` 1.20.1 (https://github.com/openvinotoolkit/nncf/pull/3966).
+  - Updated to `onnxruntime` 1.24.3 (https://github.com/openvinotoolkit/nncf/pull/3977).
+  - Moved `pandas` to optional dependency (https://github.com/openvinotoolkit/nncf/pull/3970).
+  - Removed unused `pillow` dependency (https://github.com/openvinotoolkit/nncf/pull/3929).
+
+## New in Release 3.0.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - Renamed `nncf.CompressWeightsMode.CB4_F8E4M3` mode option to `nncf.CompressWeightsMode.CB4`.
+- General:
+  - Added `nncf.prune` API function, which provides a unified interface for pruning algorithms. Currently available for PyTorch backend and supports Magnitude Pruning.
+    More details about the new API can be found in the [documentation](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage/training_time_compression/pruning/Usage.md).
+  - Added `nncf.build_graph` API function for building `NNCFGraph` from a model. This API can be used to inspect and define [the ignored scope](/docs/usage/IgnoredScope.md).
+  - Added [documentation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/IgnoredScope.md) about using `nncf.IgnoredScope`.
+  - Reworked `HWConfig`, now using Python-style definition of hardware configuration instead of JSON files.
+- Features:
+  - Added support for models containing MatMul operations with transposed activation inputs in data-free Weight Compression and data-aware AWQ algorithms.
+  - (OpenVINO) Introduced new experimental compression data type ADAPTIVE_CODEBOOK. This compression type calculates a unique codebook for each MatMul or block of identical MatMuls (for example, all down_proj could have the same codebook). This approach reduces quality degradation in the case of per-channel weight compression. See [example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/smollm2_360m_adaptive_codebook).
+  - (TorchFX) Preview support for the new `compress_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer`. Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the OpenVINO backend via the nncf `compress_pt2e` employing Scale Estimation and AWQ.
+  - (PyTorch) Added support for linear functions for the Fast Bias Correction algorithm to improve the accuracy of such models after the quantization.
+  - (OpenVINO) Added [activation profiler](https://github.com/openvinotoolkit/nncf/tree/develop/tools/activation_profiler) tool to collect and visualize tensor statistics.
+- Fixes:
+  - (ONNX) Fixed `compress_quantize_weights_transformation()` method by removing names of deleted initializers from graph inputs.
+  - (ONNX) Fixed incorrect insertion of MatMulNBits nodes.
+- Improvements:
+  - Added support for the compression of 3D weights in AWQ, Scale Estimation, and GPTQ algorithms. Models with MoE (Mixture of Experts), such as GPT-OSS-20B and Qwen3-30B-A3B, can be compressed with data-aware methods now.
+- Tutorials:
+  - [Post-Training Quantization of YOLO26 OpenVINO Model](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/openvino/yolo26)
+  - [Post-Training Optimization of Wan2.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.2-text-image-to-video/wan2.2-text-image-to-video.ipynb)
+  - [Post-Training Optimization of DeepSeek-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/deepseek-ocr/deepseek-ocr.ipynb)
+  - [Post-Training Optimization of Z-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/z-image-turbo/z-image-turbo.ipynb)
+  - [Post-Training Optimization of Qwen-Image Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen-image/qwen-image.ipynb)
+  - [Post-Training Optimization of Qwen3-TTS Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-tts/qwen3-tts.ipynb)
+  - [Post-Training Optimization of Qwen3-ASR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-asr/qwen3-asr.ipynb)
+  - [Post-Training Optimization of Fun-ASR-Nano Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/funasr-nano/funasr-nano.ipynb)
+  - [Post-Training Optimization of Fun-CosyVoice 3.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/cosyvoice3-tts/cosyvoice3-tts.ipynb)
+
+Deprecations/Removals:
+
+- (TensorFlow) Removed support for TensorFlow backend.
+- (PyTorch) Removed legacy `create_compressed_model` API for PyTorch backend, which was previously marked as deprecated.
+- (PyTorch) Removed legacy algorithms for PyTorch that were based on using `NNCFNetwork`: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, and Movement Sparsity.
+
+Requirements:
+
+- Dropped `jsonschema`, `natsort`, and `pymoo` from dependencies as they are no longer required.
+
+## New in Release 2.19.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - (OpenVINO) `nncf.CompressWeightsMode.E2M1` `mode` option is renamed to `nncf.CompressWeightsMode.MXFP4`.
+- Features:
+  - The Histogram Aggregator was introduced: it records the running histogram of tensor values and computes the quantization range to minimize the L2 norm of histogram bin quantization error. The Histogram Aggregator improved accuracy metrics for a number of PTQ classification models. It can be activated using `RangeEstimatorParametersSet.HISTOGRAM` through the `AdvancedQuantizationParameters` in `nncf.quantize()`.
+  - (OpenVINO) Introduced several new compression modes in `nncf.CompressWeightsMode`: `MXFP8`, `FP8`, and `FP4`. These can be used as the `mode` option in `nncf.compress_weights()` to apply the corresponding MXFP8, FP8, or FP4 precisions (experimental).
+  - Now weight compression bitwidth distribution table also displays group size value for each of the compression data type.
+  - (ONNX) Support for the SmoothQuant algorithm has been added to the ONNX backend for INT8 quantization.
+  - (ONNX) A new transformation has been added to optimize models by folding `QuantizeLinear` nodes with constant inputs into precomputed, quantized initializers. This behavior is controlled by the `COMPRESS_WEIGHTS` backend parameter in `nncf.quantize()`, which is now enabled (`True`) by default.
+  - (ONNX) Support has been added for applying the Fast Bias/Bias Correction algorithm to `MatMul` + `Add` subgraphs where one of the inputs to the `Add` operation is a constant. Previously, these cases were skipped because the `MatMul` operation was not recognized as having a bias, preventing the algorithm from being applied.
+- Fixes:
+  - Added an ignored pattern for position embedding layer in Segment Anything model.
+  - (ONNX) Fixed incorrect input handling for the `MatMulNBits` operation that previously caused graph breaks.
+  - (ONNX) Resolved an issue with INT4 weight compression in the `Gemm` operation when `transB=1`.
+  - Fixed a typo in the `_get_smooth_quant_param_grid()` method reported in [#3613](https://github.com/openvinotoolkit/nncf/issues/3613).
+- Improvements:
+  - Maximum memory consumption during statistic collection has been reduced by releasing model output memory before the next statistic collection inference call.
+  - Reduced peak memory footprint for Bias Correction algorithm.
+  - (OpenVINO) Reduced time (by up to 3x) and memory (by up to 1.5x) it takes to compress models to `MXFP4` data type.
+- Tutorials:
+  - [Deployment of a Post-Training Optimized Qwen3 Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/notebooks/qwen-3/smolagents/qwen3_agent.ipynb)
+  - [Post-Training Optimization of ACE Step Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ace-step-music-generation/ace-step-music-generation.ipynb)
+  - [Post-Training Optimization of Qwen3-VL Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-vl/qwen3-vl.ipynb)
+- Other:
+  - Refined the handling of layers that don't have channel size divisible by group size during weight compression. Now the default behavior in such case is that an error will be raised and in the error message users are suggested to provide a different group size value or use `GroupSizeFallbackMode.ADJUST` to automatically adjust group size for problematic layers.
+
+Compression-aware training:
+
+- Improvements:
+  - Optimized `nncf.strip()` for `StripFormat.IN_PLACE` and `example_input` is no longer required.
+
+Deprecations/Removals:
+
+- (TensorFlow) The TensorFlow backend is now deprecated and will be removed in future releases. It is recommended to use PyTorch analogous models for training-aware optimization methods and OpenVINO IR, PyTorch, and ONNX models for post-training optimization methods from NNCF.
+- The following experimental NNCF methods are deprecated and will be removed in future releases: NAS, Structural Pruning, AutoML, Knowledge Distillation, Mixed-Precision Quantization, Movement Sparsity.
+
+Requirements:
+
+- Updated PyTorch (2.9.0) and Torchvision (0.24.0) versions.
+- Dropped support for Python 3.9.
+
+## New in Release 2.18.0
+
+Post-training Quantization:
+
+- Features:
+  - (OpenVINO) Introduced new compression data types CB4_F8E4M3 and CODEBOOK. CB4_F8E4M3 is a fixed codebook with 16 fp8 values based on NF4 data type values. CODEBOOK is an arbitrary user-selectable codebook that can be used to experiment with different data types. Both data types are used for weight compression. The AWQ and scale estimation algorithms are supported for these data types.
+  - (OpenVINO) Added support for compressing FP8 (f8e4m3 and f8e5m2) weights to 4-bit data types, which is particularly beneficial for models like DeepSeek-R1.
+  - Added `group_size_fallback_mode` parameter for advanced weight compression. It controls how nodes that do not support the default group size are handled. By default (`IGNORE`), such nodes are skipped. With `ERROR`, an exception is raised if the channel size is not divisible by the group size, while `ADJUST` attempts to modify the group size so it becomes valid.
+  - (TorchFX) Added support for external quantizers in the `quantize_pt2e` API, including [XNNPACKQuantizer](https://docs.pytorch.org/executorch/stable/backends-xnnpack.html#quantization) and [CoreMLQuantizer](https://docs.pytorch.org/executorch/stable/backends-coreml.html#quantization). Users now can quantize their models in [ExecuTorch](https://github.com/pytorch/executorch) for the XNNPACK and CoreML backends via the nncf `quantize_pt2e` employing smooth quant, bias correction algorithms and a wide range of statistic collectors.
+  - (ONNX) Added support for data-aware weight compression in the ONNX backend, including the AWQ and Scale Estimation algorithms. Provided an [example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/onnx/tiny_llama_scale_estimation) demonstrating the data-aware weight compression pipeline using the `TinyLlama/TinyLlama-1.1B-Chat-v1.0` model in ONNX format.
+- Improvements:
+  - Support of weight compression for models with the Rotary Positional Embedding block.
+  - Support of weight compression for models with stateful self-attention blocks.
+- Tutorials:
+  - [Post-Training Optimization of Qwen-Agent](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-mcp/llm-agent-mcp.ipynb)
+  - [Post-Training Optimization of FLUX.1 Kontext Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flux.1-kontext/flux.1-kontext.ipynb)
+  - [Post-Training Optimization of Qwen3 Embedding Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-embedding/qwen3-embedding.ipynb)
+  - [Post-Training Optimization of GLM-4.1V-9B-Thinking Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm4.1-v-thinking/glm4.1-v-thinking.ipynb)
+
+Compression-aware training:
+
+- Features:
+  - (PyTorch) Enhanced initialization for "QAT with absorbable LoRA" using advanced compression methods (AWQ + Scale Estimation). This improvement replaces the previous basic data-free compression approach, enabling QAT to start with a more accurate model baseline and achieve [superior final accuracy](https://github.com/openvinotoolkit/nncf/pull/3577).
+- Improvements:
+  - (PyTorch) Streamlined "QAT with absorbable LoRA" by removing checkpoint selection based on validation set. This change significantly reduces overall tuning time and maximum allocated memory. While [the results on Wikitext](/examples/llm_compression/torch/distillation_qat_with_lora/README.md#results-on-wikitext) are slightly worse, it provides a more efficient and faster tuning pipeline (e.g. reduced from 32 minutes to 25 minutes for SmoLM-1.7B).
+- Tutorials:
+  - (TorchFX) Added [example](examples/llm_compression/torch_fx/tiny_llama/README.md) for compression of TinnyLama-1.1B.
+  - Updated [example](examples/llm_compression/onnx/tiny_llama/main.py) to meet NPU implementation.
+  - Implemented fast evaluation and improved output in [example](examples/llm_compression/torch/downstream_qat_with_nls/README.md).
+
+Deprecations/Removals:
+
+- Removed examples that used `create_compressed_model` API.
+
+Requirements:
+
+- Updated PyTorch (2.8.0) and Torchvision (0.23.0) versions.
+- Set require `setuptools>=77` to build package.
+
+## New in Release 2.17.0
+
+Post-training Quantization:
+
+- General:
+  - (PyTorch) The function_hook module is now the default mechanism for model tracing. It has moved out from experimental status and has been moved to the core nncf.torch namespace.
+- Features:
+  - (OpenVINO, PyTorch, TorchFX) Added 4-bit data-free AWQ (Activation-aware Weight Quantization) based on the per-column magnitudes of the weights making it possible to apply AWQ without a dataset for more accurate compression.
+  - (OpenVINO) Added support for quantizing of the value input for ScaledDotProductAttention for FP8.
+  - (ONNX) Added support for data-free weight compression using INT4 (INT8) in the ONNX backend. Added an example for LLM weight compression in the ONNX backend. [This example](examples/llm_compression/onnx/tiny_llama) showcases the optimization of the `TinyLlama-1.1B-Chat-v0.3` model in ONNX format using the NNCF weight compression API.
+  - (ONNX) Added the `BackendParameters.EXTERNAL_DATA_DIR` parameter for the ONNX backend. This parameter specifies the absolute path to the directory where the model's external data files are stored. All external data files must be located in the same directory. It should be used when the model is loaded without external data using `onnx.load("model.onnx", load_external_data=False)`, and the external data files are not in the current working directory of the process. This parameter can be omitted if the external data files are located in the current working directory of the process.
+  - (TorchFX, Experimental) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce accuracy loss.
+- Fixes:
+  - (TorchFX, Experimental) To simplify usage, the nncf.torch.disable_patching() context manager has been made redundant and is no longer required ([example](/examples/post_training_quantization/torch_fx/resnet18/README.md)).
+  - Fixed BiasCorrection failures with models without a batch dimension.
+  - Aligned quantile centers for NF4 with OpenVINO implementation.
+  - Weights compression statistics collection have been fixed to show the data types of ignored weights.
+- Improvements:
+  - (OpenVINO) Added the version of NNCF to rt_info.
+  - Optimized weight compression for NF4 (up to 10x speed up).
+  - Support for `transformer>4.52` by `nncf.data.generate_text_data`.
+- Tutorials:
+  - [Post-Training Optimization of MiniCPM-o 2.6 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-o-omnimodal-chatbot/minicpm-o-omnimodal-chatbot.ipynb)
+  - [Post-Training Optimization of Qwen2.5-Omni Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2.5-omni-chatbot/qwen2.5-omni-chatbot.ipynb)
+  - [Post-Training Optimization of InternVideo2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/intern-video2-classiciation/intern-video2-classification.ipynb)
+  - [Post-Training Optimization of OpenVoice2 and MeloTTS Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/openvoice2-and-melotts/openvoice2-and-melotts.ipynb)
+  - [Post-Training Optimization of Flex.2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flex.2-image-generation/flex.2-image-generation.ipynb)
+  - [Post-Training Optimization of Wan2.1 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/wan2.1-text-to-video/wan2.1-text-to-video.ipynb)
+  - [Post-Training Optimization of Phi-4-mini Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/supplementary_materials/phi4-agent/phi4_agent.py)
+  - [Post-Training Optimization of Torch.FX Stable Diffusion v3 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-v3-torch-fx/stable-diffusion-v3-torch-fx.ipynb)
+
+Compression-aware training:
+
+- Features:
+  - (PyTorch) For downstream tasks, we introduce Quantization-Aware Training (QAT) with absorbable elastic LoRA adapters and neural low-rank search (NLS). This novel weight compression method enhances the accuracy of Large Language Models (LLMs) with int4 weights on downstream tasks, achieving a reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA_NLS`. A sample QAT compression pipeline with preview support is available [here](examples/llm_compression/torch/downstream_qat_with_nls). Building on our previous work with absorbable LoRA adapters, this new pipeline is specifically designed for downstream tasks. In contrast, the pipeline from the previous release was tailored to enhance general accuracy through knowledge distillation using static rank settings. For a more comprehensive understanding of both approaches, please refer to ["Weight-Only Quantization Aware Training with LoRA and NLS"](/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md) in the ["Training-Time Compression Algorithms"](/README.md#Training-Time-Compression-Algorithms) section of the main README in the repository.
+- Fixes:
+  - (PyTorch) Minimized the disparity in accuracy between the Torch model and its exported OpenVINO equivalent for ["Weight-Only Quantization Aware Training with LoRA and NLS"](/docs/usage/training_time_compression/quantization_aware_training_lora/Usage.md).
+- Improvements:
+  - (Pytorch) The evaluation and selection process for the best checkpoint in "QAT + absorbable LoRA" with knowledge distillation has been revised. The tuned Torch model is now evaluated using the validation split of Wikitext, while the final results are measured on the test split with the OpenVINO model. The [results table for Wikitext](/examples/llm_compression/torch/distillation_qat_with_lora/README.md#results-on-wikitext) has been updated accordingly and now includes three additional models.
+
+Requirements:
+
+- Updated ONNX Runtime (1.21.1).
+- Updated PyTorch (2.7.1) and Torchvision (0.22.1) versions.
+- Removed jstyleson from requirements.
+
 ## New in Release 2.16.0
 
 Post-training Quantization:

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,26 +9,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MinReducer
-from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.common.tensor_statistics.collectors import MeanReducer
+from nncf.common.tensor_statistics.collectors import MeanVarianceReducer
+from nncf.common.tensor_statistics.collectors import MinReducer
+from nncf.common.tensor_statistics.collectors import QuantileReducer
 from nncf.tensor import Tensor
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
+from tests.common.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 
 class TestReducersAggregators(TemplateTestReducersAggregators):
-    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+    def get_nncf_tensor(self, x: np.array, dtype: Dtype | None = None):
         if dtype is Dtype.INTEGER:
             x = x.astype(np.int64)
         if dtype is Dtype.FLOAT:
@@ -42,6 +44,8 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
             "max": MaxReducer,
             "abs_max": AbsMaxReducer,
             "mean": MeanReducer,
+            "mean_variance": MeanVarianceReducer,
+            "max_variance": MaxVarianceReducer,
             "quantile": QuantileReducer,
             "abs_quantile": AbsQuantileReducer,
             "batch_mean": BatchMeanReducer,
@@ -53,7 +57,7 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         ref_ = np.array(ref)
         return np.allclose(val_, ref_) and val_.shape == ref_.shape
 
-    def squeeze_tensor(self, ref_tensor: list[Any], axes: Optional[tuple[int]] = None):
+    def squeeze_tensor(self, ref_tensor: list[Any], axes: tuple[int] | None = None):
         return np.squeeze(np.array(ref_tensor), axes)
 
     def cast_tensor(self, tensor, dtype: Dtype):

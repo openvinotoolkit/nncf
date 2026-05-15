@@ -72,6 +72,7 @@ ckpt
 clusterization
 cmap
 cnode
+codeofconduct
 coeffs
 concr
 confs
@@ -132,6 +133,7 @@ eprint
 eprinttype
 errstate
 evals
+execu
 extendleft
 facecolors
 fakequantizer
@@ -163,6 +165,7 @@ giga
 gmtime
 googlenet
 gptq
+gptqmodel
 graphdef
 groupnormalization
 groupsize
@@ -202,6 +205,7 @@ inproceedings
 inputless
 interp
 ioff
+ipynb
 iterval
 jinjie
 junitxml
@@ -270,10 +274,10 @@ multidevice
 multiforward
 multihead
 multiobjective
+mxfp
 namedtuples
 nanmean
 nanquantile
-natsorted
 nbytes
 nccl
 ncdhw
@@ -306,6 +310,7 @@ nsamples
 nsga
 numels
 nvcc
+nvfp
 objwalk
 odict
 oimp
@@ -358,7 +363,6 @@ ptselu
 ptsilu
 ptwc
 pymodules
-pymoo
 pyopenvino
 pythonpath
 qconf

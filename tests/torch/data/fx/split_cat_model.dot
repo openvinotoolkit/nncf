@@ -1,0 +1,17 @@
+digraph {
+"0 x" [id=0, type=input];
+"1 split" [id=1, type=split];
+"2 getitem" [id=2, type="__getitem__"];
+"3 getitem_1" [id=3, type="__getitem__"];
+"4 getitem_2" [id=4, type="__getitem__"];
+"5 cat" [id=5, type=cat];
+"6 output" [id=6, type=output];
+"0 x" -> "1 split" [key=0, style=solid, label="shape (1, 9, 3, 3)\nids 0 -> 0"];
+"1 split" -> "2 getitem" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 0"];
+"1 split" -> "3 getitem_1" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 1 -> 0"];
+"1 split" -> "4 getitem_2" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 2 -> 0"];
+"2 getitem" -> "5 cat" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 0"];
+"3 getitem_1" -> "5 cat" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 1"];
+"4 getitem_2" -> "5 cat" [key=0, style=solid, label="shape (1, 3, 3, 3)\nids 0 -> 2"];
+"5 cat" -> "6 output" [key=0, style=solid, label="shape (1, 9, 3, 3)\nids 0 -> 0"];
+}

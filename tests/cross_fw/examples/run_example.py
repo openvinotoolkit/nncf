@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,10 +12,7 @@
 import json
 import os
 import sys
-import tarfile
 from argparse import ArgumentParser
-from pathlib import Path
-from typing import Union
 
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
@@ -51,15 +48,6 @@ def post_training_quantization_openvino_mobilenet_v2_quantize() -> dict[str, flo
     return post_training_quantization_mobilenet_v2(example_root)
 
 
-def post_training_quantization_tensorflow_mobilenet_v2() -> dict[str, float]:
-    import tensorflow_datasets as tfds
-
-    tfds.display_progress_bar(enable=False)
-
-    example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "tensorflow" / "mobilenet_v2")
-    return post_training_quantization_mobilenet_v2(example_root)
-
-
 def post_training_quantization_torch_mobilenet_v2() -> dict[str, float]:
     example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "torch" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
@@ -76,10 +64,10 @@ def format_results(results: tuple[float]) -> dict[str, float]:
     }
 
 
-def post_training_quantization_openvino_yolo8_quantize() -> dict[str, float]:
-    from examples.post_training_quantization.openvino.yolov8.main import main as yolo8_main
+def post_training_quantization_openvino_yolo26_quantize() -> dict[str, float]:
+    from examples.post_training_quantization.openvino.yolo26.main import main as yolo26_main
 
-    results = yolo8_main()
+    results = yolo26_main()
 
     return format_results(results)
 
@@ -168,8 +156,24 @@ def llm_compression() -> dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def llm_compression_fx() -> dict[str, float]:
+    from examples.llm_compression.torch_fx.tiny_llama.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
 def llm_compression_onnx() -> dict[str, float]:
     from examples.llm_compression.onnx.tiny_llama.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
+def llm_compression_scale_estimation_onnx() -> dict[str, float]:
+    from examples.llm_compression.onnx.tiny_llama_scale_estimation.main import main as llm_compression_main
 
     result = llm_compression_main()
 
@@ -200,6 +204,20 @@ def fp8_llm_quantization() -> dict[str, float]:
     return {"answers": list(result.values())}
 
 
+def codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_codebook.main import main as codebook_llm_compression_main
+
+    return {"answers": codebook_llm_compression_main()}
+
+
+def adaptive_codebook_llm_compression() -> list[str]:
+    from examples.llm_compression.openvino.smollm2_360m_adaptive_codebook.main import (
+        main as adaptive_codebook_llm_compression_main,
+    )
+
+    return {"answers": adaptive_codebook_llm_compression_main()}
+
+
 def llm_compression_distillation_qat_with_lora() -> float:
     from examples.llm_compression.torch.distillation_qat_with_lora.main import main as distillation_qat_with_lora_main
 
@@ -209,18 +227,17 @@ def llm_compression_distillation_qat_with_lora() -> float:
         "--epochs=1",
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
         "--num_train_samples=128",
-        "--calib_seqlen=128",
+        "--train_seqlen=128",
         "--lora_rank=8",
         "--batch_size=16",
         "--microbatch_size=4",
         "--lr=5e-4",
-        "--fast_eval",
         "--limit=0.2",
     ]
 
-    perplexity_diff_torch, best_ov_perplexity = distillation_qat_with_lora_main(args)
+    best_ov_perplexity = distillation_qat_with_lora_main(args)
 
-    return {"perplexity_diff_torch": perplexity_diff_torch, "best_ov_perplexity": best_ov_perplexity}
+    return {"best_ov_perplexity": best_ov_perplexity}
 
 
 def llm_compression_qat_with_nls() -> float:
@@ -230,9 +247,11 @@ def llm_compression_qat_with_nls() -> float:
 
     args = [
         "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
+        "--fast_eval",
         "--task=arc_challenge",
         "--epochs=2",
         "--batch_size=16",
+        "--num_min_loss_configs=5",
         "--lr=5e-4",
         "--lora_rank_space",
         "16",
@@ -248,7 +267,6 @@ def llm_compression_qat_with_nls() -> float:
 def post_training_quantization_torch_fx_resnet18():
     from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     results = resnet18_main()
 
     return {
@@ -263,7 +281,6 @@ def post_training_quantization_torch_fx_resnet18():
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
     results = resnet18_main()
 
@@ -281,11 +298,22 @@ def quantization_aware_training_torch_resnet18():
     }
 
 
+def magnitude_pruning_torch_resnet18():
+    from examples.pruning.torch.resnet18.main import main as pruning_resnet18_main
+
+    set_torch_cuda_seed()
+    results = pruning_resnet18_main()
+
+    return {
+        "acc1": results,
+    }
+
+
 def set_torch_cuda_seed(seed: int = 42):
     """
-    Sets torch, cuda and python random module to determenistic mode with
+    Sets torch, cuda and python random module to deterministic mode with
     given seed.
-    :param seed: Seed to use for determenistic run.
+    :param seed: Seed to use for deterministic run.
     """
     import random
 
@@ -302,19 +330,9 @@ def set_torch_cuda_seed(seed: int = 42):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def quantization_aware_training_torch_anomalib(data: Union[str, None]):
-    from anomalib.data.image import mvtec
-
-    from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
+def quantization_aware_training_torch_anomalib():
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
 
-    if data is not None and not dataset_path.exists():
-        dataset_path.mkdir(parents=True, exist_ok=True)
-        tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
-        with tarfile.open(tar_file_path) as tar_file:
-            tar_file.extractall(dataset_path)
-
-    # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
     results = anomalib_main()
 
@@ -332,19 +350,17 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
     }
 
 
-def quantization_aware_training_tensorflow_mobilenet_v2() -> dict[str, float]:
-    import tensorflow_datasets as tfds
+def llm_compression_torch_gptqmodel_convertor():
+    from examples.llm_compression.torch.gptq_model_convertor.main import main as gptqmodel_convertor_main
 
-    tfds.display_progress_bar(enable=False)
+    result = gptqmodel_convertor_main()
 
-    example_root = str(PROJECT_ROOT / "examples" / "quantization_aware_training" / "tensorflow" / "mobilenet_v2")
-    return post_training_quantization_mobilenet_v2(example_root)
+    return {"word_count": len(result.split())}
 
 
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)
-    parser.add_argument("--data", help="Path to datasets", default=None, required=False)
     parser.add_argument("-o", "--output", help="Path to the json file to save example metrics", required=True)
     args = parser.parse_args(args=argv)
 
@@ -356,10 +372,7 @@ def main(argv):
     except ImportError:
         pass
 
-    if args.name == "quantization_aware_training_torch_anomalib":
-        metrics = globals()[args.name](args.data)
-    else:
-        metrics = globals()[args.name]()
+    metrics = globals()[args.name]()
 
     with open(args.output, "w", encoding="utf8") as json_file:
         return json.dump(metrics, json_file)

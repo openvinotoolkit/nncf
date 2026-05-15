@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,7 +22,6 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
@@ -31,7 +30,6 @@ from rich.progress import track
 from torch.jit import TracerWarning
 
 import nncf
-import nncf.torch
 from nncf.common.utils.helpers import create_table
 
 warnings.filterwarnings("ignore", category=TracerWarning)
@@ -293,9 +291,7 @@ def main():
 
     # Load quantization modules and parameters from best checkpoint to the source model.
     ckpt = torch.load(ROOT / BEST_CKPT_NAME, weights_only=False)
-    quantized_model = nncf.torch.load_from_config(
-        deepcopy(model), ckpt["compression_config"], torch.ones((1, 3, IMAGE_SIZE, IMAGE_SIZE)).to(device)
-    )
+    quantized_model = nncf.torch.load_from_config(deepcopy(model), ckpt["compression_config"])
     quantized_model.load_state_dict(ckpt["model_state_dict"])
 
     # Evaluate on validation set after Quantization-Aware Training (QAT case).

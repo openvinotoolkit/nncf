@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -203,7 +203,6 @@ def evaluator_and_ranker():
     "backend, metric_mode, expected_result",
     [
         (BackendType.OPENVINO, True, operator.sub),
-        (BackendType.TENSORFLOW, True, operator.sub),
         (BackendType.OPENVINO, False, callable),
     ],
 )
@@ -218,7 +217,7 @@ def test_create_ranking_fn_error(evaluator_and_ranker):
     evaluator, ranker = evaluator_and_ranker
     evaluator.is_metric_mode.return_value = False
     with pytest.raises(nncf.UnsupportedBackendError):
-        ranker._create_ranking_fn(BackendType.TENSORFLOW)
+        ranker._create_ranking_fn(None)
 
 
 @pytest.fixture

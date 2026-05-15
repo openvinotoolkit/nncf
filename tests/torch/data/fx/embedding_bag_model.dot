@@ -1,0 +1,28 @@
+strict digraph {
+"0 embedding_weight" [id=0, type="get_attr"];
+"1 embeddingbag_weight" [id=1, type="get_attr"];
+"2 x" [id=2, type=input];
+"3 embedding" [id=3, type=embedding];
+"4 arange" [id=4, type=arange];
+"5 reshape" [id=5, type=reshape];
+"6 embedding_bag" [id=6, type="embedding_bag"];
+"7 getitem" [id=7, type="__getitem__"];
+"8 getitem_1" [id=8, type="__getitem__"];
+"9 getitem_2" [id=9, type="__getitem__"];
+"10 getitem_3" [id=10, type="__getitem__"];
+"11 add" [id=11, type=add];
+"12 output" [id=12, type=output];
+"0 embedding_weight" -> "3 embedding" [style=solid, label="(10, 10)"];
+"1 embeddingbag_weight" -> "6 embedding_bag" [style=solid, label="(10, 10)"];
+"2 x" -> "3 embedding" [style=solid, label="(1, 1)"];
+"2 x" -> "5 reshape" [style=solid, label="(1, 1)"];
+"3 embedding" -> "11 add" [style=solid, label="(1, 1, 10)"];
+"4 arange" -> "6 embedding_bag" [style=solid, label="(1,)"];
+"5 reshape" -> "6 embedding_bag" [style=solid, label="(1,)"];
+"6 embedding_bag" -> "7 getitem" [style=solid, label="(1, 10)"];
+"6 embedding_bag" -> "8 getitem_1" [style=solid, label="(1,)"];
+"6 embedding_bag" -> "9 getitem_2" [style=solid, label="(1,)"];
+"6 embedding_bag" -> "10 getitem_3" [style=solid, label="(1,)"];
+"7 getitem" -> "11 add" [style=solid, label="(1, 10)"];
+"11 add" -> "12 output" [style=solid, label="(1, 1, 10)"];
+}

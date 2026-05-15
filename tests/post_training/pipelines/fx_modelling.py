@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -33,18 +33,13 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         self.model = torch.compile(model, backend="openvino", options={"aot_autograd": True})
         self.generation_config = generation_config
         self.main_input_name = "input_ids"
-        self._device = device.upper()
-
-    @property
-    def device(self) -> torch.device:
-        return torch.device(self._device)
+        self.device = torch.device(device)
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
         cache_position = kwargs["cache_position"]
         past_len = cache_position[0]
         if past_len < input_ids.shape[1]:
             input_ids = input_ids[:, past_len:]
-
         return {"input_ids": input_ids, "cache_position": cache_position}
 
     def forward(
@@ -105,5 +100,6 @@ def convert_and_export_with_cache(model: PreTrainedModel):
             example_cache_position,
         ),
         dynamic_shapes=dynamic_shapes,
+        strict=True,
     ).run_decompositions(decomp_table={})
     return exported_program, model_config, gen_config

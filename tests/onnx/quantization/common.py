@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,13 +10,14 @@
 # limitations under the License.
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import onnx
 
 from nncf import Dataset
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf import IgnoredScope
+from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
@@ -53,7 +54,7 @@ def mock_collect_statistics(mocker):
         "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
     )
     _ = mocker.patch(
-        "nncf.experimental.common.tensor_statistics.collectors.TensorCollector.get_statistics",
+        "nncf.common.tensor_statistics.collectors.TensorCollector.get_statistics",
         return_value=get_statistics_value,
     )
 
@@ -63,7 +64,7 @@ def _get_input_keys(original_model: onnx.ModelProto) -> str:
     return input_keys
 
 
-def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, length: Optional[int] = 10):
+def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, length: int | None = 10):
     keys = _get_input_keys(model)
     edge_info_mapping = get_edge_info_mapping(model)
 
@@ -94,7 +95,7 @@ def get_dataset_for_test(samples: list[tuple[np.ndarray, int]], input_name: str)
 
 
 class ModelToTest:
-    def __init__(self, model_name: str, input_shape: Optional[list[int]] = None):
+    def __init__(self, model_name: str, input_shape: list[int] | None = None):
         self.model_name = model_name
         self.path_ref_graph = self.model_name + ".dot"
         self.input_shape = input_shape
@@ -105,6 +106,7 @@ def min_max_quantize_model(
     convert_model_opset: bool = True,
     dataset_has_batch_size: bool = False,
     quantization_params: dict[str, Any] = None,
+    ignored_scope: IgnoredScope = None,
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
@@ -120,6 +122,7 @@ def min_max_quantize_model(
     advanced_parameters.disable_channel_alignment = True
     advanced_parameters.smooth_quant_alphas = AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
+    quantization_params["ignored_scope"] = ignored_scope
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
 

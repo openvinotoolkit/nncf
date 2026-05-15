@@ -1,0 +1,12 @@
+strict digraph {
+"0 x" [id=0, type=input];
+"1 topk" [id=1, type=topk];
+"2 getitem" [id=2, type="__getitem__"];
+"3 getitem_1" [id=3, type="__getitem__"];
+"4 output" [id=4, type=output];
+"0 x" -> "1 topk" [style=solid, label="(1, 10)"];
+"1 topk" -> "2 getitem" [style=solid, label="(1, 5)"];
+"1 topk" -> "3 getitem_1" [style=solid, label="(1, 5)"];
+"2 getitem" -> "4 output" [style=solid, label="(1, 5)"];
+"3 getitem_1" -> "4 output" [style=solid, label="(1, 5)"];
+}

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,11 +16,9 @@ from torch import nn
 import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.os import is_windows
-from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import _ModuleState
 from nncf.torch.utils import get_model_device
-from nncf.torch.utils import get_model_dtype
 from nncf.torch.utils import is_multidevice
 from nncf.torch.utils import save_module_state
 from nncf.torch.utils import training_mode_switcher
@@ -28,8 +26,70 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import EmptyModel
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import TwoConvTestModel
-from tests.torch.quantization.test_overflow_issue_export import DepthWiseConvTestModel
-from tests.torch.quantization.test_overflow_issue_export import EightConvTestModel
+from tests.torch.helpers import create_conv
+
+
+def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
+    """
+    Get the datatype of the first model parameter.
+
+    :param model: The PyTorch model.
+    :return: The datatype of the first model parameter.
+        Default to torch.float32 if the model has no parameters.
+    """
+    try:
+        dtype = next(model.parameters()).dtype
+    except StopIteration:
+        # The model had no parameters at all, assume FP32
+        dtype = torch.float32
+    return dtype
+
+
+class EightConvTestModel(nn.Module):
+    def __init__(self, in_out_ch=((1, 3), (3, 5), (5, 7), (7, 10))):
+        super().__init__()
+        self.features = []
+        self.features.append(create_conv(*in_out_ch[0], 2, -1, -2))
+        self.features.append(nn.BatchNorm2d(in_out_ch[0][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*in_out_ch[1], 5, 1, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[1][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*in_out_ch[2], 1, 2, 2))
+        self.features.append(nn.BatchNorm2d(in_out_ch[2][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*in_out_ch[3], 9, -1, 0))
+        self.features.append(nn.BatchNorm2d(in_out_ch[3][1]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[3]), 3, 0, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[3][0]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[2]), 1, -1, 9))
+        self.features.append(nn.BatchNorm2d(in_out_ch[2][0]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[1]), 2, 10, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[1][0]))
+        self.features.append(nn.ReLU())
+        self.features.append(create_conv(*reversed(in_out_ch[0]), 1, 1, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[0][0]))
+        self.features.append(nn.ReLU())
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        return self.features(x)
+
+
+class DepthWiseConvTestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = []
+        self.features.append(nn.Conv2d(1, 3, 3, groups=1))
+        self.features.append(nn.Conv2d(3, 30, 3, groups=3))
+        self.features.append(nn.Conv2d(30, 1, 3))
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        return self.features(x)
 
 
 def compare_saved_model_state_and_current_model_state(model: nn.Module, model_state: _ModuleState):
@@ -56,30 +116,6 @@ def test_training_mode_switcher(model: nn.Module):
     saved_state = save_module_state(model)
     with training_mode_switcher(model, True):
         pass
-
-    compare_saved_model_state_and_current_model_state(model, saved_state)
-
-
-@pytest.mark.parametrize(
-    "model", [BasicConvTestModel(), TwoConvTestModel(), MockModel(), DepthWiseConvTestModel(), EightConvTestModel()]
-)
-def test_bn_training_state_switcher(model: nn.Module):
-    def check_were_only_bn_training_state_changed(model: nn.Module, saved_state: _ModuleState):
-        for name, module in model.named_modules():
-            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
-                assert module.training
-            else:
-                assert module.training == saved_state.training_state[name]
-
-    runner = DataLoaderBNAdaptationRunner(model, "cuda")
-
-    for p in model.parameters():
-        p.requires_grad = False
-
-    saved_state = save_module_state(model)
-
-    with runner._bn_training_state_switcher():
-        check_were_only_bn_training_state_changed(model, saved_state)
 
     compare_saved_model_state_and_current_model_state(model, saved_state)
 

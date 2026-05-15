@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,8 +22,8 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 @pytest.fixture(scope="module")
-def ref_graph() -> nx.DiGraph:
-    graph = nx.DiGraph()
+def ref_graph() -> nx.MultiDiGraph:
+    graph = nx.MultiDiGraph()
     graph.add_node("Node::A", label=":baz")
     graph.add_node("Node::B", label="qux:")
     graph.add_node("Node::C")

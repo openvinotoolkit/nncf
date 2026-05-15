@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 import pytest
@@ -50,7 +50,7 @@ RQ = ReferenceQuantize(backend_type=ReferenceBackendType.NUMPY)
 def generate_one_channel_input(
     input_low: np.ndarray,
     input_range: np.ndarray,
-    ch_idx: Optional[list[int]],
+    ch_idx: list[int] | None,
     input_size: list[int],
     bits: int,
     get_deviation: Callable[[], int],

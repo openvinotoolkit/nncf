@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
+
 import numpy as np
 import openvino as ov
 import pytest
@@ -17,11 +19,14 @@ import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.test_model_transformer import get_nodes_by_type
 
@@ -59,6 +64,71 @@ def test_compress_weights(model_creator_func, ref_nodes):
                 node = node.input_value(0).get_node()
             assert node.get_element_type() == ov.Type(np.int8)
             break
+
+
+@dataclass
+class FQDesc:
+    name: str
+    is_per_channel: bool
+    is_weights: bool
+
+
+REF_FQ_DESCS = [
+    (
+        [
+            FQDesc(name="Input/fq_output_0", is_per_channel=False, is_weights=False),
+            FQDesc(name="MatMul/fq_weights_1", is_per_channel=True, is_weights=True),
+        ]
+    ),
+    (
+        [
+            FQDesc(name="Sub/fq_output_0", is_per_channel=False, is_weights=False),
+            FQDesc(name="Conv/fq_weights_1", is_per_channel=True, is_weights=True),
+        ]
+    ),
+    (
+        [
+            FQDesc(name="Input/fq_output_0", is_per_channel=False, is_weights=False),
+            FQDesc(name="MatMul/fq_weights_1", is_per_channel=True, is_weights=True),
+        ]
+    ),
+]
+
+
+@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
+@pytest.mark.parametrize("model_creator_func, ref_fq_descs", zip([LinearModel, ConvModel, MatMul2DModel], REF_FQ_DESCS))
+def test_quantize_with_int16(model_creator_func, ref_fq_descs, target_device, mocker):
+    model = model_creator_func().ov_model
+    dataset = get_dataset_for_test(model)
+    sym_mock = mocker.spy(nncf.quantization.fake_quantize, "symmetric_range")
+    asym_mock = mocker.spy(nncf.quantization.fake_quantize, "asymmetric_range")
+    quantized_model = quantize_impl(
+        model,
+        dataset,
+        preset=QuantizationPreset.MIXED,
+        target_device=target_device,
+        subset_size=1,
+        fast_bias_correction=True,
+        advanced_parameters=AdvancedQuantizationParameters(
+            activations_quantization_params=QuantizationParameters(num_bits=16),
+            weights_quantization_params=QuantizationParameters(num_bits=16),
+        ),
+    )
+
+    fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
+    assert len(fq_nodes) == len(ref_fq_descs)
+    for fq_node in fq_nodes:
+        fq_name = fq_node.get_friendly_name()
+        matching_desc = next((desc for desc in ref_fq_descs if desc.name == fq_name), None)
+        assert matching_desc is not None
+        levels = fq_node.get_attributes()["levels"]
+        ref_levels = 2**16 - 1 if matching_desc.is_weights else 2**16
+        assert levels == ref_levels
+        is_per_channel = len(fq_node.input_value(1).get_node().get_shape()) > 1
+        assert is_per_channel == matching_desc.is_per_channel
+
+    assert sym_mock.call_count == 1
+    assert asym_mock.call_count == 1
 
 
 @pytest.mark.parametrize("model_creator_func, ref_nodes", [[ConvModel, REF_FQ_NODES[1]]])
@@ -200,3 +270,29 @@ def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
             assert dumped_model.get_rt_info(rt_path) == value
         else:
             assert dumped_model.has_rt_info(rt_path) is False
+
+
+@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
+@pytest.mark.parametrize("num_bits", [None, 8, 16])
+def test_sdpa_quantize_activations_with_8_16_bits(num_bits: int | None, target_device: TargetDevice):
+    model = ScaledDotProductAttentionModel(with_weights=True).ov_model
+    dataset = get_dataset_for_test(model)
+
+    compressed_model = nncf.compress_weights(model, mode=nncf.CompressWeightsMode.INT8_SYM)
+    quantized_model = quantize_impl(
+        compressed_model,
+        dataset,
+        preset=QuantizationPreset.MIXED,
+        target_device=target_device,
+        subset_size=1,
+        advanced_parameters=AdvancedQuantizationParameters(
+            disable_bias_correction=True,
+            activations_quantization_params=QuantizationParameters(num_bits=num_bits),
+        ),
+    )
+    expected_levels = 2**num_bits if num_bits is not None else 256
+    fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
+
+    for node in fq_nodes:
+        levels = node.get_attributes()["levels"]
+        assert levels in [expected_levels, expected_levels - 1]

@@ -6,10 +6,11 @@ on:
     paths-ignore:
       - '**/*.md'
       - '.ci/*'
+      - '.github/skills/*'
       - 'docs/**/*'
+      - 'examples/**/*'
+      - 'licensing/*'
       - 'tests/post_training/*'  # post_training tests runs on Jenkins
-      - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
-      - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
       - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
 concurrency:
@@ -20,5 +21,5 @@ jobs:
   pytest:
     uses: ./.github/workflows/call_precommit.yml
     with:
-      python_version: "3.10.14"
+      python_version: "3.12"
       gpu_enabled: true

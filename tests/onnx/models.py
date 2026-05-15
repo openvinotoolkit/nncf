@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,14 +9,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import numpy as np
 import onnx
+import pytest
+from packaging import version
 
 from nncf.common.utils.registry import Registry
 from tests.onnx.common import get_random_generator
 
-OPSET_VERSION = 13
+DEFAULT_OPSET_VERSION = 13
+OPSET_AVAILABILITY = [
+    # (opset_version, onnx_version) see https://github.com/onnx/onnx/releases
+    (24, "1.19.0"),
+    (23, "1.18.0"),
+    # ONNX versions below 1.17.0 are not tested,
+    # so opsets 22 and below are always available
+]
+
 ALL_SYNTHETIC_MODELS = Registry("ONNX_SYNTHETIC_MODELS")
 
 
@@ -30,11 +39,32 @@ def create_initializer_tensor(
 
 
 class ONNXReferenceModel:
+    required_opset_version = DEFAULT_OPSET_VERSION
+
     def __init__(self, onnx_model, input_shape: list[list[int]], graph_path):
         self.onnx_model = onnx_model
         self.onnx_model.ir_version = 9
         self.input_shape = input_shape
         self.path_ref_graph = graph_path
+
+    @classmethod
+    def get_pytest_marks(cls):
+        required_opset = cls.required_opset_version
+        onnx_version = version.parse(onnx.__version__)
+
+        for opset_version, available_since in OPSET_AVAILABILITY:
+            is_required = required_opset >= opset_version
+            is_available = onnx_version >= version.parse(available_since)
+
+            if is_required and not is_available:
+                model_name = cls.__name__
+                return pytest.mark.skip(
+                    reason=f"Model {model_name} requires opset {required_opset} "
+                    f"that is available since ONNX v{available_since}, but ONNX "
+                    f"v{onnx.__version__} is currently installed",
+                )
+
+        return ()
 
 
 @ALL_SYNTHETIC_MODELS.register()
@@ -162,7 +192,7 @@ class LinearModel(ONNXReferenceModel):
             ],
         )
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "linear_model.dot")
@@ -209,10 +239,96 @@ class MultiInputOutputModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape_1, input_shape_2, input_shape_3], "multi_input_output_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class MultiInputOutputModelParallelEdges(ONNXReferenceModel):
+    def __init__(self):
+        input_shape_1 = [1, 6, 3, 3]
+        model_input_name_1 = "X_1"
+        X_1 = onnx.helper.make_tensor_value_info(model_input_name_1, onnx.TensorProto.FLOAT, input_shape_1)
+
+        model_output_name_1 = "Y_1"
+        Y_1 = onnx.helper.make_tensor_value_info(model_output_name_1, onnx.TensorProto.FLOAT, [6, 6, 3, 3])
+
+        concat_output = "concat1_output"
+        concat_node = onnx.helper.make_node(
+            name="Concat1",
+            op_type="Concat",
+            inputs=[
+                model_input_name_1,
+                model_input_name_1,
+            ],
+            outputs=[concat_output],
+            axis=0,
+        )
+
+        concat_node2 = onnx.helper.make_node(
+            name="Concat2",
+            op_type="Concat",
+            inputs=[concat_output, concat_output],
+            outputs=[model_output_name_1],
+            axis=0,
+        )
+
+        # Create the graph (GraphProto)
+        graph_def = onnx.helper.make_graph(
+            nodes=[concat_node, concat_node2],
+            name="MultiInputOutputNetParallelEdges",
+            inputs=[X_1],
+            outputs=[Y_1],
+            initializer=[],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = self.required_opset_version
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape_1], "multi_input_output_parallel_edges_model.dot")
+
+
+class MultiInputOutputNetParallelEdgesQuantizable(ONNXReferenceModel):
+    def __init__(self):
+        input_shape_1 = [1, 6, 3, 3]
+        model_input_name_1 = "X_1"
+        X_1 = onnx.helper.make_tensor_value_info(model_input_name_1, onnx.TensorProto.FLOAT, input_shape_1)
+
+        model_output_name_1 = "Y_1"
+        Y_1 = onnx.helper.make_tensor_value_info(model_output_name_1, onnx.TensorProto.FLOAT, [6, 6, 3, 3])
+
+        model_output_name_2 = "Y_2"
+        Y_2 = onnx.helper.make_tensor_value_info(model_output_name_2, onnx.TensorProto.FLOAT, [6, 6, 3, 3])
+
+        num_outputs = 2
+        axis = 1
+        outputs = [f"output_{1}_{j}" for j in range(num_outputs)]
+        split_node = onnx.helper.make_node("Split", [model_input_name_1], outputs, name="1_split", axis=axis)
+
+        matmul_node = onnx.helper.make_node(
+            name="MatMul", op_type="MatMul", inputs=outputs, outputs=[model_output_name_1]
+        )
+        matmul_node1 = onnx.helper.make_node(
+            name="MatMul1", op_type="MatMul", inputs=outputs, outputs=[model_output_name_2]
+        )
+
+        # Create the graph (GraphProto)
+        graph_def = onnx.helper.make_graph(
+            nodes=[split_node, matmul_node, matmul_node1],
+            name="MultiInputOutputNetParallelEdgesQuantizable",
+            inputs=[X_1],
+            outputs=[Y_1, Y_2],
+            initializer=[],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = self.required_opset_version
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape_1], "multi_input_output_parallel_quantizable_edges_model.dot")
 
 
 @ALL_SYNTHETIC_MODELS.register()
@@ -252,7 +368,7 @@ class DoubleInputOutputModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape_1, input_shape_2], "double_input_output_model.dot")
@@ -287,7 +403,7 @@ class ModelWithIntEdges(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "int_edges_model.dot")
@@ -335,7 +451,7 @@ class OneConvolutionalModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         self.conv_bias = conv1_B
@@ -392,7 +508,7 @@ class OneConvolutionalIdentityBiasModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         self.conv_bias = conv1_B
@@ -469,7 +585,7 @@ class ReshapeWeightModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "reshape_weight_model.dot")
@@ -547,7 +663,7 @@ class WeightSharingModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "weight_sharing_model.dot")
@@ -599,7 +715,7 @@ class OneInputPortQuantizableModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "one_input_port_quantizable_model.dot")
@@ -654,7 +770,7 @@ class ManyInputPortsQuantizableModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "many_input_ports_quantizable_model.dot")
@@ -703,7 +819,7 @@ class OneDepthwiseConvolutionalModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "one_depthwise_convolutional_model.dot")
@@ -726,7 +842,7 @@ class InputOutputModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "input_output_model.dot")
@@ -795,7 +911,7 @@ class IdentityConvolutionalModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "one_convolutional_model.dot")
@@ -942,7 +1058,7 @@ class ShapeOfModel(ONNXReferenceModel):
             ],
         )
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "shape_of_model.dot")
@@ -1014,7 +1130,7 @@ class Float64InputMulModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "float64_model.dot")
@@ -1193,7 +1309,7 @@ class NonShapeModel(ONNXReferenceModel):
             ],
         )
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "non_shape_model.dot")
@@ -1240,7 +1356,7 @@ class MatMulWeightModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "weight_matmul_model.dot")
@@ -1276,10 +1392,46 @@ class MatMulActivationModel(ONNXReferenceModel):
         graph_def = onnx.helper.make_graph(nodes=[matmul_node, softmax_node], name="Net", inputs=[X, Y], outputs=[Z])
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [x_input_shape, y_input_shape], "activation_matmul_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class AttentionModel(ONNXReferenceModel):
+    #         Q   K   V
+    #          \  |  /
+    #         Attention
+    #             |
+    #            OUT
+
+    # Attention node is only supported in opsets 23+
+    required_opset_version = 23
+
+    def __init__(self):
+        queries, keys, values, outputs = "Q", "K", "V", "OUT"
+        shape = [1, 8, 16]
+
+        Q = onnx.helper.make_tensor_value_info(queries, onnx.TensorProto.FLOAT, shape)
+        K = onnx.helper.make_tensor_value_info(keys, onnx.TensorProto.FLOAT, shape)
+        V = onnx.helper.make_tensor_value_info(values, onnx.TensorProto.FLOAT, shape)
+        OUT = onnx.helper.make_tensor_value_info(outputs, onnx.TensorProto.FLOAT, shape)
+
+        attention_node = onnx.helper.make_node(
+            name="Attention",
+            op_type="Attention",
+            inputs=["Q", "K", "V"],
+            outputs=["OUT"],
+        )
+
+        graph_def = onnx.helper.make_graph(nodes=[attention_node], name="Net", inputs=[Q, K, V], outputs=[OUT])
+
+        op = onnx.OperatorSetIdProto()
+        op.version = self.required_opset_version
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [shape, shape, shape], "attention_model.dot")
 
 
 @ALL_SYNTHETIC_MODELS.register()
@@ -1329,7 +1481,7 @@ class GEMMTransposeWeightModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "gemm_weight_transpose_model.dot")
@@ -1389,7 +1541,7 @@ class WeightPropagationMatMulModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "weight_propagation_matmul_model.dot")
@@ -1548,7 +1700,7 @@ class WeightPropagationConvModel(ONNXReferenceModel):
 
         # Create the model with the graph
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "weight_propagation_conv_model.dot")
@@ -1638,7 +1790,7 @@ class EmbeddingModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "embedding_model.dot")
@@ -1752,7 +1904,7 @@ class UnifiedEmbeddingModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "unified_embedding_model.dot")
@@ -1875,7 +2027,7 @@ class RoPEModel(ONNXReferenceModel):
         )
 
         op = onnx.OperatorSetIdProto()
-        op.version = OPSET_VERSION
+        op.version = self.required_opset_version
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "rope_model.dot")
@@ -1895,7 +2047,10 @@ def build_matmul_model() -> onnx.ModelProto:
     )
 
     graph = onnx.helper.make_graph([matmul], "matmul-model", [X], [A], [W_initializer])
-    model = onnx.helper.make_model(graph)
+
+    op = onnx.OperatorSetIdProto()
+    op.version = 19
+    model = onnx.helper.make_model(graph, opset_imports=[op], ir_version=11)
     return model
 
 

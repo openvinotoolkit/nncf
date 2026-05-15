@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import partial
 
 import pytest
 
@@ -27,20 +28,21 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.common.tensor_statistics.collectors import MaxAggregator
+from nncf.common.tensor_statistics.collectors import MaxReducer
+from nncf.common.tensor_statistics.collectors import MeanAggregator
+from nncf.common.tensor_statistics.collectors import MinAggregator
+from nncf.common.tensor_statistics.collectors import MinReducer
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -68,7 +70,7 @@ class TemplateTestQuantizerConfig:
         assert aggrs[0].__class__ == aggrs[1].__class__
 
     def get_reduction_axes(self, reducer: TensorReducerBase) -> ReductionAxes:
-        return reducer._reduction_axes
+        return reducer._axes
 
     @staticmethod
     def _transform_to_inference_graph(nncf_graph: NNCFGraph, min_max_algo: MinMaxQuantization):
@@ -76,7 +78,7 @@ class TemplateTestQuantizerConfig:
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.noop_metatypes,
             min_max_algo._backend_entity.preserved_metatypes,
         )
 
@@ -87,7 +89,17 @@ class TemplateTestQuantizerConfig:
 
     @abstractmethod
     @pytest.fixture
+    def single_conv_arithmetic_degree2_nncf_graph(self) -> NNCFGraphArithmeticDegree2:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
     def transformer_nncf_graph(self) -> NNCFGraphToTest:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
+    def split_transformer_nncf_graph(self) -> NNCFGraphToTest:
         pass
 
     @abstractmethod
@@ -272,87 +284,102 @@ class TemplateTestQuantizerConfig:
             if quantization_point.is_activation_quantization_point():
                 assert quantization_point.qconfig == activation_default_config
 
-    REF_TRANSFORMER_SETUP_STATE = {
-        "quantization_points": {
-            4: {
-                "qip": {"target_node_name": "/K_0", "input_port_id": None},
-                "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {
-                    "num_bits": 8,
-                    "mode": "symmetric",
-                    "signedness_to_force": None,
-                    "per_channel": False,
-                    "narrow_range": False,
+    @staticmethod
+    def get_ref_transformer_setup_state(num_bits=8):
+        return {
+            "quantization_points": {
+                4: {
+                    "qip": {"target_node_name": "/K_0", "input_port_id": None},
+                    "qip_class": "ActivationQuantizationInsertionPoint",
+                    "qconfig": {
+                        "num_bits": num_bits,
+                        "mode": "symmetric",
+                        "signedness_to_force": None,
+                        "per_channel": False,
+                        "narrow_range": False,
+                    },
+                    "directly_quantized_operator_node_names": ["/K_Q_0"],
                 },
-                "directly_quantized_operator_node_names": ["/K_Q_0"],
-            },
-            5: {
-                "qip": {"target_node_name": "/Q_0", "input_port_id": None},
-                "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {
-                    "num_bits": 8,
-                    "mode": "symmetric",
-                    "signedness_to_force": None,
-                    "per_channel": False,
-                    "narrow_range": False,
+                5: {
+                    "qip": {"target_node_name": "/Q_0", "input_port_id": None},
+                    "qip_class": "ActivationQuantizationInsertionPoint",
+                    "qconfig": {
+                        "num_bits": num_bits,
+                        "mode": "symmetric",
+                        "signedness_to_force": None,
+                        "per_channel": False,
+                        "narrow_range": False,
+                    },
+                    "directly_quantized_operator_node_names": ["/K_Q_0"],
                 },
-                "directly_quantized_operator_node_names": ["/K_Q_0"],
-            },
-            6: {
-                "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
-                "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {
-                    "num_bits": 8,
-                    "mode": "asymmetric",
-                    "signedness_to_force": None,
-                    "per_channel": False,
-                    "narrow_range": False,
+                6: {
+                    "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
+                    "qip_class": "ActivationQuantizationInsertionPoint",
+                    "qconfig": {
+                        "num_bits": num_bits,
+                        "mode": "asymmetric",
+                        "signedness_to_force": None,
+                        "per_channel": False,
+                        "narrow_range": False,
+                    },
+                    "directly_quantized_operator_node_names": ["/K_0", "/Q_0", "/V_0"],
                 },
-                "directly_quantized_operator_node_names": ["/K_0", "/Q_0", "/V_0"],
-            },
-            8: {
-                "qip": {"target_node_name": "/K_0"},
-                "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {
-                    "num_bits": 8,
-                    "mode": "symmetric",
-                    "signedness_to_force": True,
-                    "per_channel": True,
-                    "narrow_range": True,
+                8: {
+                    "qip": {"target_node_name": "/K_0"},
+                    "qip_class": "WeightQuantizationInsertionPoint",
+                    "qconfig": {
+                        "num_bits": num_bits,
+                        "mode": "symmetric",
+                        "signedness_to_force": True,
+                        "per_channel": True,
+                        "narrow_range": True,
+                    },
+                    "directly_quantized_operator_node_names": ["/K_0"],
                 },
-                "directly_quantized_operator_node_names": ["/K_0"],
-            },
-            9: {
-                "qip": {"target_node_name": "/Q_0"},
-                "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {
-                    "num_bits": 8,
-                    "mode": "symmetric",
-                    "signedness_to_force": True,
-                    "per_channel": True,
-                    "narrow_range": True,
+                9: {
+                    "qip": {"target_node_name": "/Q_0"},
+                    "qip_class": "WeightQuantizationInsertionPoint",
+                    "qconfig": {
+                        "num_bits": num_bits,
+                        "mode": "symmetric",
+                        "signedness_to_force": True,
+                        "per_channel": True,
+                        "narrow_range": True,
+                    },
+                    "directly_quantized_operator_node_names": ["/Q_0"],
                 },
-                "directly_quantized_operator_node_names": ["/Q_0"],
-            },
-            10: {
-                "qip": {"target_node_name": "/V_0"},
-                "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {
-                    "num_bits": 8,
-                    "mode": "symmetric",
-                    "signedness_to_force": True,
-                    "per_channel": True,
-                    "narrow_range": True,
+                10: {
+                    "qip": {"target_node_name": "/V_0"},
+                    "qip_class": "WeightQuantizationInsertionPoint",
+                    "qconfig": {
+                        "num_bits": num_bits,
+                        "mode": "symmetric",
+                        "signedness_to_force": True,
+                        "per_channel": True,
+                        "narrow_range": True,
+                    },
+                    "directly_quantized_operator_node_names": ["/V_0"],
                 },
-                "directly_quantized_operator_node_names": ["/V_0"],
             },
-        },
-        "unified_scale_groups": {},
-        "shared_input_operation_set_groups": {0: [4, 5], 1: [8, 9, 10, 6]},
-    }
+            "unified_scale_groups": {},
+            "shared_input_operation_set_groups": {0: [4, 5], 1: [8, 9, 10, 6]},
+        }
 
-    def test_model_type_transformer_quantization_config(self, transformer_nncf_graph):
-        min_max_algo = MinMaxQuantization(model_type=ModelType.TRANSFORMER)
+    @pytest.mark.parametrize(
+        ("quant_params", "ref_setup_state_fn"),
+        [
+            (dict(), get_ref_transformer_setup_state),
+            (
+                dict(
+                    activations_quantization_params=QuantizationParameters(num_bits=16),
+                    weights_quantization_params=QuantizationParameters(num_bits=16),
+                ),
+                partial(get_ref_transformer_setup_state, num_bits=16),
+            ),
+        ],
+    )
+    def test_model_type_transformer_quantization_config(self, transformer_nncf_graph, quant_params, ref_setup_state_fn):
+        min_max_algo = MinMaxQuantization(model_type=ModelType.TRANSFORMER, **quant_params)
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = transformer_nncf_graph.nncf_graph
         inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
@@ -371,7 +398,7 @@ class TemplateTestQuantizerConfig:
         state["quantization_points"][6]["directly_quantized_operator_node_names"] = sorted(
             state["quantization_points"][6]["directly_quantized_operator_node_names"]
         )
-        assert state == self.REF_TRANSFORMER_SETUP_STATE
+        assert state == ref_setup_state_fn()
 
     REF_EMBEDDING_MODEL_SETUP_STATE = {
         "quantization_points": {
@@ -460,6 +487,127 @@ class TemplateTestQuantizerConfig:
         return min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         ).get_state()
+
+    REF_CONV_ARITHMETIC_DEGREE_2_STATE = {
+        "quantization_points": {
+            1: {
+                "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_1_0"],
+            },
+            3: {
+                "qip": {"target_node_name": "/Conv_1_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_1_0"],
+            },
+        },
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {0: [1, 3]},
+    }
+
+    def test_conv_arithmetic_with_degree2(self, single_conv_arithmetic_degree2_nncf_graph):
+        min_max_algo = MinMaxQuantization()
+        min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = single_conv_arithmetic_degree2_nncf_graph.nncf_graph
+        inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
+        hw_patterns = PatternsManager.get_full_hw_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY
+        )
+        ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY
+        )
+        q_setup = min_max_algo._get_quantizer_setup(
+            nncf_graph, inference_nncf_graph, hw_patterns=hw_patterns, ignored_patterns=ignored_patterns
+        )
+
+        assert q_setup.get_state() == self.REF_CONV_ARITHMETIC_DEGREE_2_STATE
+
+    REF_SPLIT_TRANSFORMER_STATE = {
+        "quantization_points": {
+            1: {
+                "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "asymmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/QKV_0"],
+            },
+            2: {
+                "qip": {"target_node_name": "/KQ_0", "input_port_id": 0},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/KQ_0"],
+            },
+            3: {
+                "qip": {"target_node_name": "/KQ_0", "input_port_id": 1},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/KQ_0"],
+            },
+            5: {
+                "qip": {"target_node_name": "/QKV_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
+                "directly_quantized_operator_node_names": ["/QKV_0"],
+            },
+        },
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {0: [1, 5], 1: [2, 3]},
+    }
+
+    def test_split_transformer(self, split_transformer_nncf_graph):
+        min_max_algo = MinMaxQuantization(model_type=ModelType.TRANSFORMER)
+        min_max_algo._backend_entity = self.get_algo_backend()
+        nncf_graph = split_transformer_nncf_graph.nncf_graph
+        inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
+        hw_patterns = PatternsManager.get_full_hw_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=ModelType.TRANSFORMER
+        )
+        ignored_patterns = PatternsManager.get_full_ignored_pattern_graph(
+            backend=self.get_backend_type(), device=TargetDevice.ANY, model_type=ModelType.TRANSFORMER
+        )
+        q_setup = min_max_algo._get_quantizer_setup(
+            nncf_graph, inference_nncf_graph, hw_patterns=hw_patterns, ignored_patterns=ignored_patterns
+        )
+        min_max_algo._apply_model_type_pass(ModelType.TRANSFORMER, q_setup, nncf_graph)
+
+        assert q_setup.get_state() == self.REF_SPLIT_TRANSFORMER_STATE
 
     @pytest.mark.parametrize(
         "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX]

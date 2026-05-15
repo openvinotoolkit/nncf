@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,6 +32,8 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
             return x.astype(np.float32)
         if dtype is TensorDataType.float16:
             return x.astype(np.float16)
+        if dtype is TensorDataType.int32:
+            return x.astype(np.int32)
         raise NotImplementedError
 
     @staticmethod

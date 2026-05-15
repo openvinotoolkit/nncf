@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,14 +13,11 @@ from tests.cross_fw.install.common import load_nncf_modules
 
 EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.openvino.*",
-    "nncf\\.tensorflow.*",
     "nncf\\.torch.*",
-    "nncf\\.experimental\\.tensorflow.*",
     "nncf\\.experimental\\.torch.*",
     "nncf\\.experimental\\.openvino.*",
     "^(?!nncf(?:\\.experimental)*\\.onnx.*?\\.).*?openvino_[^\\.]*",
     "^(?!nncf(?:\\.experimental)*\\.onnx.*?\\.).*?torch_[^\\.]*",
-    "^(?!nncf(?:\\.experimental)*\\.onnx.*?\\.).*?tf_[^\\.]*",
 )
 
 load_nncf_modules(EXCLUDED_MODULES_PATTERNS)

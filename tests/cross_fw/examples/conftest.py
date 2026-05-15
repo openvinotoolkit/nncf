@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 import pytest
 
-TESTED_BACKENDS = ["torch", "tf", "onnx", "openvino"]
+TESTED_BACKENDS = ["torch", "onnx", "openvino", "torchfx"]
 
 
 def pytest_addoption(parser):
@@ -31,7 +31,6 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ov_version_override", default=None, help="Parameter to set OpenVINO into the env with the version from PyPI"
     )
-    parser.addoption("--data", type=str, default=None, help="Path to test datasets")
     parser.addoption("--reuse-venv", action="store_true", help="Use venv from example directory")
 
 
@@ -48,11 +47,6 @@ def is_check_performance(request):
 @pytest.fixture(scope="module")
 def ov_version_override(request):
     return request.config.getoption("--ov_version_override")
-
-
-@pytest.fixture(scope="module")
-def data(request):
-    return request.config.getoption("--data")
 
 
 @pytest.fixture(scope="module")

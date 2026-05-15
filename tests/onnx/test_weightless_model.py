@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,7 +22,7 @@ def test_save_weightless_model(tmp_path):
     model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
     onnx_model_path = tmp_path / "resnet18.onnx"
     x = torch.randn([1, 3, 224, 224], requires_grad=False)
-    torch.onnx.export(model, x, onnx_model_path)
+    torch.onnx.export(model, x, onnx_model_path, dynamo=False)
     onnx_model = onnx.load_model(onnx_model_path)
 
     weightless_model_path = tmp_path / Path("weightless_model.onnx")

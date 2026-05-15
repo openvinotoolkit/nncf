@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Optional
 
 import pytest
 import yaml
@@ -42,7 +41,7 @@ def test_sparsify_activations(
     batch_size: int,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
-    subset_size: Optional[int],
+    subset_size: int | None,
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,

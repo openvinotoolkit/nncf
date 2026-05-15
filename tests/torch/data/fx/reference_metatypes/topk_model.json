@@ -1,0 +1,7 @@
+{
+    "x": "PTInputNoopMetatype",
+    "topk": "PTTopKMetatype",
+    "getitem": "PTGatherMetatype",
+    "getitem_1": "PTGatherMetatype",
+    "output": "PTOutputNoopMetatype"
+}

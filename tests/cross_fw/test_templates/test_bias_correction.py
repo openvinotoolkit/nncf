@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,13 +14,15 @@ from typing import Any, TypeVar
 
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from tests.cross_fw.test_templates.helpers import AddWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithInput
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
@@ -122,7 +124,7 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
         modified_model = self.remove_fq_from_inputs(quantized_model)
         return modified_model
@@ -145,6 +147,20 @@ class TemplateTestBCAlgorithm:
             (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
             (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
             (OneDimMM, {"/linear/MatMul": [0.95773065, 1.3218939, 0.81694865]}),
+            (
+                ConcatWithInput,
+                {
+                    "/conv_1/Conv": [-1.1235, -0.1866],
+                    "/conv_2/Conv": [0.4620, 0.2709],
+                },
+            ),
+            (
+                AddWithInput,
+                {
+                    "/conv_1/Conv": [-1.1235, -0.1866],
+                    "/conv_2/Conv": [-1.1236, -0.1866],
+                },
+            ),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
@@ -152,14 +168,14 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
         mapped_ref_biases = self.map_references(ref_biases, model_cls)
         self.check_bias(quantized_model, mapped_ref_biases)
 
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
-        nncf_graph = NNCFGraphFactory.create(quantized_test_model)
+        nncf_graph = build_graph(quantized_test_model)
 
         bc_algo = self.get_bias_correction_algorithm()
         bc_algo._set_backend_entity(quantized_test_model)
@@ -173,7 +189,7 @@ class TemplateTestBCAlgorithm:
 
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
 
         bc_algo = self.get_bias_correction_algorithm()
         bc_algo.get_statistic_points(model, graph)

@@ -1,0 +1,43 @@
+{
+    "quantization_points": {
+        "('linear',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "asymmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear_1',)_ActivationQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "asymmetric",
+            "signedness_to_force": null,
+            "per_channel": false,
+            "narrow_range": false
+        },
+        "('linear',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        },
+        "('linear_1',)_WeightQuantizationInsertionPoint": {
+            "num_bits": 8,
+            "mode": "symmetric",
+            "signedness_to_force": true,
+            "per_channel": true,
+            "narrow_range": true
+        }
+    },
+    "unified_scale_groups": {},
+    "shared_input_operation_set_groups": {
+        "0": [
+            1,
+            4
+        ],
+        "1": [
+            2,
+            5
+        ]
+    }
+}

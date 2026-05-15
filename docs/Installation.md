@@ -5,10 +5,9 @@ We suggest to install or use the package in the [Python virtual environment](htt
 NNCF supports multiple backends. Follow the corresponding installation guides and ensure your system meets
 the required specifications for your chosen backend:
 
-- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2025/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2025/about-openvino/release-notes-openvino/system-requirements.html)
+- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2026/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2026/about-openvino/release-notes-openvino/system-requirements.html)
 - ONNX: [Install Guide](https://onnxruntime.ai/docs/install/)
 - PyTorch: [Install Guide](https://pytorch.org/get-started/locally/#start-locally)
-- TensorFlow: [Install Guide](https://www.tensorflow.org/install/)
 
 ## As a PyPI package
 
@@ -49,7 +48,12 @@ as well as the supported versions of Python:
 
 | NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
 |-----------|------------|----------|----------|------------|--------|
-| `develop` | `2025.1.0` | `2.7.0`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `develop` | `2026.1.0` | `2.10.0` | `1.21.0` |            | `3.12` |
+| `3.1.0`   | `2026.1.0` | `2.10.0` | `1.21.0` |            | `3.10` |
+| `3.0.0`   | `2026.0.0` | `2.9.0`  | `1.17.0` |            | `3.10` |
+| `2.19.0`  | `2025.4.0` | `2.8.0`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `2.18.0`  | `2025.3.0` | `2.8.0`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `2.17.0`  | `2025.2.0` | `2.7.1`  | `1.17.0` | `2.15.1`   | `3.10` |
 | `2.16.0`  | `2025.1.0` | `2.6.0`  | `1.17.0` | `2.15.1`   | `3.10` |
 | `2.15.0`  | `2025.0.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
 | `2.14.1`  | `2024.6.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
@@ -68,4 +72,4 @@ as well as the supported versions of Python:
 
 > (*) Python 3.9 or higher is required for TensorFlow 2.15.1
 
-This repository is tested on Python* 3.10.14, PyTorch* 2.7.0 (NVidia CUDA\* Toolkit 12.6) and TensorFlow* 2.15.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.12, PyTorch* 2.10.0 (NVidia CUDA\* Toolkit 12.6).

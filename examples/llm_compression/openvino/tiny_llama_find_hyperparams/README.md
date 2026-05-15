@@ -6,22 +6,26 @@ To evaluate the accuracy of the compressed model we measure similarity between t
 The example includes the following steps:
 
 - Prepare `wikitext` dataset.
-- Prepare `TinyLlama/TinyLlama-1.1B-step-50K-105b` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum/intel/inference).
+- Prepare `TinyLlama/TinyLlama-1.1B-step-50K-105b` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum-intel/openvino/inference).
 - Compress weights of the model with NNCF Weight compression algorithm.
 - Find appropriate `awq`, `ratio` and `group_size` if acceptable similarity is not achieved.
 - Measure the similarity and footprint of the final model.
 
-## Install requirements
+## Prerequisites
 
-To run the example you should install the corresponding Python dependencies:
+Before running this example, ensure you have Python 3.10+ installed and set up your environment:
 
-- Create a separate Python* environment and activate it: `python3 -m venv nncf_env && source nncf_env/bin/activate`
-- Install dependencies:
+### 1. Create and activate a virtual environment
 
 ```bash
-pip install -U pip
-pip install ../../../../
-pip install -r requirements.txt
+python3 -m venv nncf_env
+source nncf_env/bin/activate  # On Windows: nncf_env\Scripts\activate.bat
+```
+
+### 2. Install NNCF and other dependencies
+
+```bash
+python3 -m pip install ../../../../ -r requirements.txt
 ```
 
 ## Run Example

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
@@ -36,8 +36,10 @@ def get_nncf_graph_for_test(edge_shape, dtype):
     ]
     original_mock_graph = create_mock_graph(nodes, node_edges)
     nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
-    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0")][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = edge_shape
-    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0")][nncf_graph.DTYPE_EDGE_ATTR] = dtype
+    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0", 0)][nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR] = (
+        edge_shape
+    )
+    nncf_graph._nx_graph.out_edges[("1 /Conv_1_0", "2 /Output_1_0", 0)][nncf_graph.DTYPE_EDGE_ATTR] = dtype
     return nncf_graph
 
 
@@ -66,7 +68,7 @@ def test_remove_friendly_name_duplicates(model_instance, remove_duplicates, uniq
     model_uniqie_names = set([op.get_friendly_name() for op in model_instance.get_ops()])
     assert len(model_uniqie_names) == unique_layer_numbers
 
-    nncf_graph = NNCFGraphFactory.create(model_instance)
+    nncf_graph = build_graph(model_instance)
     assert len(nncf_graph.get_all_nodes()) == unique_layer_numbers
 
     try:

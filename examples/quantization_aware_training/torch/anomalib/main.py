@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,15 +12,13 @@
 import os
 import re
 import subprocess
-import tarfile
+import warnings
 from copy import deepcopy
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import torch
-from anomalib import TaskType
-from anomalib.data import MVTec
-from anomalib.data.image import mvtec
+from anomalib.data import MVTecAD
+from anomalib.data.utils import DownloadInfo
 from anomalib.data.utils import download
 from anomalib.deploy import ExportType
 from anomalib.engine import Engine
@@ -28,35 +26,29 @@ from anomalib.models import Stfpm
 
 import nncf
 
+warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
+
 HOME_PATH = Path.home()
-DATASET_PATH = HOME_PATH / ".cache" / "nncf" / "datasets" / "mvtec"
 CHECKPOINT_PATH = HOME_PATH / ".cache" / "nncf" / "models" / "anomalib"
 ROOT = Path(__file__).parent.resolve()
 FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
 INT8_RESULTS_ROOT = ROOT / "results" / "int8"
-CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec.ckpt"
+CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec_2.ckpt"
 USE_PRETRAINED = True
+DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"
+DATASET_INFO = DownloadInfo(
+    name="mvtec_capsule",
+    url="https://huggingface.co/datasets/alexsu52/mvtec_capsule/resolve/main/capsule.tar.xz",
+    hashsum="f6a41cb11f1589d552888fe9c43a1adcbcae15b70073e19093322f836d00a2b6",
+)
 
 
-def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
-    root.mkdir(parents=True, exist_ok=True)
-    downloaded_file_path = root / info.url.split("/")[-1]
-    print(f"Downloading the {info.name} dataset.")
-    with download.DownloadProgressBar(unit="B", unit_scale=True, miniters=1, desc=info.name) as progress_bar:
-        urlretrieve(url=f"{info.url}", filename=downloaded_file_path, reporthook=progress_bar.update_to)  # nosec
-    print("Checking the hash of the downloaded file.")
-    download.check_hash(downloaded_file_path, info.hashsum)
-    print(f"Extracting the {info.name} dataset.")
-    with tarfile.open(downloaded_file_path) as tar_file:
-        tar_file.extractall(root)
-    print("Cleaning up files.")
-    downloaded_file_path.unlink()
-
-
-def create_dataset(root: Path) -> MVTec:
-    if not root.exists():
-        download_and_extract(root, mvtec.DOWNLOAD_INFO)
-    return MVTec(root)
+def create_dataset() -> MVTecAD:
+    if not DATASET_PATH.exists():
+        download.download_and_extract(DATASET_PATH, DATASET_INFO)
+    data = MVTecAD(DATASET_PATH, category="capsule")
+    data.setup()
+    return data
 
 
 def run_benchmark(model_path: Path, shape: list[int]) -> float:
@@ -95,10 +87,10 @@ def main():
     print(os.linesep + "[Step 1] Prepare the model and dataset")
 
     model = Stfpm()
-    datamodule = create_dataset(root=DATASET_PATH)
+    datamodule = create_dataset()
 
     # Create an engine for the original model
-    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=FP32_RESULTS_ROOT, devices=1)
+    engine = Engine(default_root_dir=FP32_RESULTS_ROOT, devices=1)
     if USE_PRETRAINED:
         # Load the pretrained checkpoint
         CHECKPOINT_PATH.mkdir(parents=True, exist_ok=True)
@@ -132,7 +124,7 @@ def main():
     quantized_model.model = quantized_inference_model
 
     # Create engine for the quantized model
-    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=INT8_RESULTS_ROOT, max_epochs=1, devices=1)
+    engine = Engine(default_root_dir=INT8_RESULTS_ROOT, max_epochs=2, devices=1)
 
     # Validate the quantized model
     print("Test results for INT8 model after PTQ:")
@@ -141,7 +133,7 @@ def main():
     ###############################################################################
     # Step 3: Fine tune the quantized model
     print(os.linesep + "[Step 3] Fine tune the quantized model")
-
+    quantized_model.train()
     engine.fit(model=quantized_model, datamodule=datamodule)
     print("Test results for INT8 model after QAT:")
     int8_test_results = engine.test(model=quantized_model, datamodule=datamodule)
@@ -151,12 +143,22 @@ def main():
     print(os.linesep + "[Step 4] Export models")
 
     # Export FP32 model to OpenVINO™ IR
-    fp32_ir_path = engine.export(model=model, export_type=ExportType.OPENVINO, export_root=FP32_RESULTS_ROOT)
+    fp32_ir_path = engine.export(
+        model=model,
+        export_type=ExportType.OPENVINO,
+        export_root=FP32_RESULTS_ROOT,
+        onnx_kwargs={"dynamo": False},
+    )
     print(f"Original model path: {fp32_ir_path}")
     fp32_size = get_model_size(fp32_ir_path)
 
     # Export INT8 model to OpenVINO™ IR
-    int8_ir_path = engine.export(model=quantized_model, export_type=ExportType.OPENVINO, export_root=INT8_RESULTS_ROOT)
+    int8_ir_path = engine.export(
+        model=quantized_model,
+        export_type=ExportType.OPENVINO,
+        export_root=INT8_RESULTS_ROOT,
+        onnx_kwargs={"dynamo": False},
+    )
     print(f"Quantized model path: {int8_ir_path}")
     int8_size = get_model_size(int8_ir_path)
 

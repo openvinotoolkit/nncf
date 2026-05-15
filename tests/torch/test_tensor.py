@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,6 +23,8 @@ def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
         return x.type(torch.float32)
     if dtype is TensorDataType.float16:
         return x.type(torch.float16)
+    if dtype is TensorDataType.int32:
+        return x.type(torch.int32)
     raise NotImplementedError
 
 

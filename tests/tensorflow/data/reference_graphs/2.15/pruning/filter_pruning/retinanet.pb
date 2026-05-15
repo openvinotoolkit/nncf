@@ -1,1 +1,0 @@
-../../../2.12/pruning/filter_pruning/retinanet.pb

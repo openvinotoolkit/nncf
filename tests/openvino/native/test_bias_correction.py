@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import openvino as ov
 import pytest
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -45,7 +45,9 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
+        torch.onnx.export(
+            model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"], dynamo=False
+        )
         ov_model = ov.convert_model(onnx_path)
         if isinstance(model, TransposeConvTestModel):
             for node in ov_model.get_ops():
@@ -83,7 +85,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def check_bias(model: ov.Model, ref_biases: dict) -> None:
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = build_graph(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
             ref_value = np.array(ref_value)

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -25,21 +26,40 @@ from tqdm import tqdm
 
 import nncf
 
+
+@dataclass
+class TestModel:
+    model_url: str
+    model_name: str
+    int8_ref_top1: float
+    num_inputs_initial_model: int
+    num_inputs_quantized_model: int
+
+    def __str__(self) -> str:
+        return self.model_name
+
+
 MODELS = [
-    (
+    TestModel(
         "https://github.com/onnx/models/raw/5faef4c33eba0395177850e1e31c4a6a9e634c82/vision/classification/mobilenet/model/mobilenetv2-12.onnx",
         "mobilenetv2-12",
         0.7864968152866242,
+        1,
+        1,
     ),
-    (
+    TestModel(
         "https://github.com/onnx/models/raw/5faef4c33eba0395177850e1e31c4a6a9e634c82/vision/classification/resnet/model/resnet50-v1-7.onnx",
         "resnet50-v1-7",
         0.8114649681528663,
+        300,
+        246,
     ),
-    (
+    TestModel(
         "https://github.com/onnx/models/raw/5faef4c33eba0395177850e1e31c4a6a9e634c82/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx",
         "efficientnet-lite4-11",
         0.8035668789808917,
+        1,
+        1,
     ),
 ]
 
@@ -111,9 +131,9 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     return accuracy_score(predictions, references)
 
 
-@pytest.mark.parametrize("model_url, model_name, int8_ref_top1", MODELS, ids=[model_name[1] for model_name in MODELS])
-def test_compression(tmp_path, model_dir, data_dir, model_url, model_name, int8_ref_top1):
-    original_model_path = download_model(model_url, model_dir)
+@pytest.mark.parametrize("test_model", MODELS, ids=str)
+def test_compression(tmp_path, model_dir, data_dir, test_model):
+    original_model_path = download_model(test_model.model_url, model_dir)
     dataset_path = download_dataset(data_dir)
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -126,7 +146,9 @@ def test_compression(tmp_path, model_dir, data_dir, model_url, model_name, int8_
                 transforms.ToTensor(),
                 normalize,
                 transforms.Lambda(
-                    lambda images: torch.moveaxis(images, 0, 2) if model_name == "efficientnet-lite4-11" else images
+                    lambda images: torch.moveaxis(images, 0, 2)
+                    if test_model.model_name == "efficientnet-lite4-11"
+                    else images
                 ),
             ]
         ),
@@ -142,10 +164,15 @@ def test_compression(tmp_path, model_dir, data_dir, model_url, model_name, int8_
         images, _ = data_item
         return {input_name: images.numpy()}
 
+    assert len([inp.name for inp in converted_model.graph.input]) == test_model.num_inputs_initial_model
+
     calibration_dataset = nncf.Dataset(val_loader, transform_fn)
     quantized_model = nncf.quantize(converted_model, calibration_dataset)
+
+    assert len([inp.name for inp in quantized_model.graph.input]) == test_model.num_inputs_quantized_model
+
     int8_model_path = tmp_path / "quantized_model.onnx"
     onnx.save_model(quantized_model, str(int8_model_path))
     int8_top1 = validate(int8_model_path, val_loader)
     print(f"INT8 metrics = {int8_top1}")
-    assert abs(int8_top1 - int8_ref_top1) < 3e-3  # 0.03 deviations
+    assert abs(int8_top1 - test_model.int8_ref_top1) < 3e-3  # 0.03 deviations

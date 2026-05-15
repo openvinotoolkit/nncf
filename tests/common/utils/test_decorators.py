@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional
 from unittest.mock import patch
 
 import pytest
@@ -22,7 +21,7 @@ from nncf.common.utils.decorators import skip_if_dependency_unavailable
 @dataclass
 class StructForTest:
     dependencies: list[str]
-    side_effect: Optional[type[Exception]]
+    side_effect: type[Exception] | None
     result_is_none: bool
     final_imported_dependencies: bool
 

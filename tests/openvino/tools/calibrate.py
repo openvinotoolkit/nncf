@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from itertools import islice
-from typing import Any, Iterable, Optional, TypeVar
+from typing import Any, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -55,10 +55,10 @@ from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import RestoreMode
-from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
@@ -164,7 +164,7 @@ class ACValidationFunction:
     ]
 
     def __init__(
-        self, model_evaluator: ModelEvaluator, metric_name: str, metric_type: str, requests_number: Optional[int] = None
+        self, model_evaluator: ModelEvaluator, metric_name: str, metric_type: str, requests_number: int | None = None
     ):
         """
         :param model_evaluator: Model Evaluator.
@@ -185,7 +185,7 @@ class ACValidationFunction:
 
         self._collect_outputs = self._metric_type in self.SPECIAL_METRICS
 
-    def __call__(self, compiled_model: ov.CompiledModel, indices: Optional[Iterable[int]] = None) -> float:
+    def __call__(self, compiled_model: ov.CompiledModel, indices: Iterable[int] | None = None) -> float:
         """
         Calculates metrics for the provided model.
 
@@ -945,8 +945,7 @@ class ACDattasetWrapper:
                 filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
                 subset_size += len(filled_inputs)
             return subset_size
-        else:
-            return sequence_subset_size
+        return sequence_subset_size
 
 
 def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_parameters):
@@ -988,10 +987,10 @@ class ACDataset:
         self._indices = list(range(model_evaluator.dataset.full_size))
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[list[int]] = None):
+    def get_data(self, indices: list[int] | None = None):
         return DataProvider(self._indices, None, indices)
 
-    def get_inference_data(self, indices: Optional[list[int]] = None):
+    def get_inference_data(self, indices: list[int] | None = None):
         return DataProvider(ACDattasetWrapper(self._model_evaluator), self._transform_func, indices)
 
 

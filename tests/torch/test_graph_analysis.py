@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,7 +22,7 @@ from tests.common.quantization.mock_graphs import mark_input_ports_lexicographic
 
 
 def test_graph_pattern_io_building():
-    mock_graph = nx.DiGraph()
+    mock_graph = nx.MultiDiGraph()
     #   A
     # /   \
     # B   |
@@ -57,7 +57,6 @@ def test_graph_pattern_io_building():
             output_port_id=output_port_id,
             tensor_shape=[1, 1, 1, 1],
             dtype=Dtype.FLOAT,
-            parallel_input_port_ids=[],
         )
 
     def get_node(name: NNCFNodeName):

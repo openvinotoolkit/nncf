@@ -10,14 +10,6 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
-ifdef SOTA_DATA_DIR
-	SOTA_DATA_DIR_ARG := --sota-data-dir $(SOTA_DATA_DIR)
-endif
-
-ifdef SOTA_CHKP_DIR
-	SOTA_CHKP_DIR_ARG := --sota-checkpoints-dir $(SOTA_CHKP_DIR)
-endif
-
 ifdef WEEKLY_MODELS
 	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
 endif
@@ -27,7 +19,7 @@ ifdef NUM_WORKERS
 endif
 
 install-pre-commit:
-	pip install pre-commit==3.2.2
+	pip install pre-commit==4.3.0
 
 
 ###############################################################################
@@ -88,34 +80,6 @@ test-examples-openvino:
 		--backend openvino                  \
 		--junitxml ${JUNITXML_PATH}
 
-###############################################################################
-# TensorFlow backend
-install-tensorflow-test:
-	pip install -U pip
-	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@e7df86da686d2e1600282422e54f66c2fecea160#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install -r tests/tensorflow/requirements.txt
-	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r tests/cross_fw/examples/requirements.txt
-
-install-tensorflow-dev: install-tensorflow-test install-pre-commit
-	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
-
-test-tensorflow:
-	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/tensorflow -m "not nightly"   \
-		--junitxml ${JUNITXML_PATH}         \
-		$(DATA_ARG)
-
-test-tensorflow-nightly:
-	pytest ${COVERAGE_ARGS} tests/tensorflow -m 'nightly'  \
-		--junitxml ${JUNITXML_PATH}         \
-		$(DATA_ARG)
-
-test-install-tensorflow:
-	pytest tests/cross_fw/install -s --backend tf --junitxml ${JUNITXML_PATH}
-
-test-examples-tensorflow:
-	pytest tests/cross_fw/examples -s --backend tf --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # PyTorch backend
@@ -154,7 +118,7 @@ test-torch-nightly:
 
 test-torch-weekly:
 	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
-	    --junitxml ${JUNITXML_PATH} $(DATA_ARG) $(SOTA_DATA_DIR_ARG) $(SOTA_CHKP_DIR_ARG) ${WEEKLY_MODELS_ARG}
+	    --junitxml ${JUNITXML_PATH} $(DATA_ARG)  ${WEEKLY_MODELS_ARG}
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install -s       \
@@ -171,9 +135,6 @@ test-examples-torch:
 	pytest tests/cross_fw/examples -s        \
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
-
-test-models-hub-torch:
-	pytest tests/torch/models_hub_test --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # Common part

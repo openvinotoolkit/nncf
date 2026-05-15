@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -57,7 +57,6 @@ def test_compare_nncf_graph_precision_synthetic_models(model, precision):
         "mobilenet-v3-small",
         "resnet-18",
         "inception-v3",
-        "ssd-mobilenet",
     ),
 )
 def test_compare_nncf_graph_real_models(tmp_path, model_name):
@@ -76,7 +75,6 @@ def test_parallel_edges():
             output_port_id=output_port_id,
             tensor_shape=[1, 3, 3],
             dtype=Dtype.FLOAT,
-            parallel_input_port_ids=[],
         )
 
     model = ParallelEdgesModel().ov_model
@@ -143,7 +141,7 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
 @pytest.mark.parametrize(
     "ov_type",
     [
-        ov.Type.undefined,
+        ov.Type.dynamic,
     ],
 )
 def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):

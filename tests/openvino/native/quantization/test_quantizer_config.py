@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,11 +20,14 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolut
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVSplitMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphArithmeticDegree2
 from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
@@ -32,6 +35,7 @@ from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.cross_fw.test_templates.models import NNCFGraphTransformer
+from tests.cross_fw.test_templates.models import NNCFSplitGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 
@@ -46,6 +50,11 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
         conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
+
+    @pytest.fixture
+    def single_conv_arithmetic_degree2_nncf_graph(self) -> NNCFGraphArithmeticDegree2:
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
+        return NNCFGraphArithmeticDegree2(OVConvolutionMetatype, OVAddMetatype, conv_layer_attrs)
 
     @pytest.fixture
     def depthwise_conv_nncf_graph(self):
@@ -65,6 +74,19 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             const_metatype=OVConstantMetatype,
             transpose_metatype=OVTransposeMetatype,
             matmul_layer_weighted_attrs=OVLayerAttributes({}),
+        )
+
+    @pytest.fixture
+    def split_transformer_nncf_graph(self) -> NNCFSplitGraphTransformer:
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
+        return NNCFSplitGraphTransformer(
+            matmul_metatype=OVMatMulMetatype,
+            conv_metatype=OVConvolutionMetatype,
+            split_metatype=OVSplitMetatype,
+            softmax_metatype=OVSoftmaxMetatype,
+            const_metatype=OVConstantMetatype,
+            mul_metatype=OVMultiplyMetatype,
+            conv_layer_weighted_attrs=conv_layer_attrs,
         )
 
     @pytest.fixture
@@ -97,4 +119,18 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             conv_metatype=OVConvolutionMetatype,
             add_metatype=OVAddMetatype,
             conv_layer_attrs=OVLayerAttributes({}),
+        )
+
+    def test_self_attn_output_with_read_value(self):
+        self.test_model_type_transformer_quantization_config(
+            NNCFGraphTransformer(
+                matmul_metatype=OVMatMulMetatype,
+                softmax_metatype=OVSoftmaxMetatype,
+                mul_metatype=OVMultiplyMetatype,
+                const_metatype=OVConstantMetatype,
+                transpose_metatype=OVReadValueMetatype,
+                matmul_layer_weighted_attrs=OVLayerAttributes({}),
+            ),
+            dict(),
+            self.get_ref_transformer_setup_state,
         )

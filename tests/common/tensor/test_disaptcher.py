@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -73,11 +73,12 @@ def test_get_arg_type(data, ref):
     "data, ref",
     (
         (float, [float]),
-        (Union[float, str], [float, str]),
+        (float | str, [float, str]),
+        (Union[float, str], [float, str]),  # noqa
         (list[float], [float]),
-        (list[Union[float, str]], [float, str]),
+        (list[float | str], [float, str]),
         (dict[str, int], [int]),
-        (dict[str, Union[float, int]], [float, int]),
+        (dict[str, float | int], [float, int]),
     ),
 )
 def test_get_register_types(data, ref):

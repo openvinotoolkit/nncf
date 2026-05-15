@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,11 +10,13 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TypeVar
 
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
@@ -22,10 +24,20 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.cross_fw.test_templates.helpers import ConvBNTestModel
 from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import FCTestModel
 from tests.cross_fw.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
+
+
+@dataclass
+class TestCase:
+    model_cls: type
+    ref_bias: list
+
+    def __str__(self):
+        return self.model_cls.__name__
 
 
 class TemplateTestFBCAlgorithm:
@@ -104,18 +116,19 @@ class TemplateTestFBCAlgorithm:
         )
 
     @pytest.mark.parametrize(
-        "model_cls, ref_bias",
+        "params",
         (
-            (ConvTestModel, [0.0288348, 1.0838453]),
-            (ConvBNTestModel, [0.08396978, 1.1676897]),
+            TestCase(ConvTestModel, [0.0288348, 1.0838453]),
+            TestCase(ConvBNTestModel, [0.08396978, 1.1676897]),
+            TestCase(FCTestModel, [0.9999, 1.9989]),
         ),
+        ids=str,
     )
-    def test_update_bias(self, model_cls, ref_bias, tmpdir):
-        model = self.backend_specific_model(model_cls(), tmpdir)
-        dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
+    def test_update_bias(self, params: TestCase, tmpdir: Path):
+        model = self.backend_specific_model(params.model_cls(), tmpdir)
+        dataset = get_static_dataset(params.model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
-
-        self.check_bias(quantized_model, ref_bias)
+        self.check_bias(quantized_model, params.ref_bias)

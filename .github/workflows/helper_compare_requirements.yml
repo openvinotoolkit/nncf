@@ -1,0 +1,84 @@
+name: Compare requirements
+run-name: "Compare requirements with ${{ inputs.target_ref }}"
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'The reference to compare with (branch, tag, or commit SHA). E.g. "release_v300".'
+        type: string
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHON_VERSION: '3.12'
+  CURRENT_DIR: current
+  TARGET_DIR: target
+  CURRENT_FILE: current_requirements.txt
+  TARGET_FILE: target_requirements.txt
+  SCRIPT_PATH: ".github/scripts/collect_all_requirements.py"
+
+jobs:
+  compare-requirements:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: ${{ env.CURRENT_DIR }}
+
+      - name: Checkout target
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.target_ref }}
+          path: ${{ env.TARGET_DIR }}
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Collect current dependencies
+        working-directory: ${{ env.CURRENT_DIR }}
+        run: |
+          python3 ${{ env.SCRIPT_PATH }} --output "${GITHUB_WORKSPACE}/${{ env.CURRENT_FILE }}"
+
+      - name: Collect target dependencies
+        working-directory: ${{ env.TARGET_DIR }}
+        run: |
+          python3 "${GITHUB_WORKSPACE}/${{ env.CURRENT_DIR }}/${{ env.SCRIPT_PATH}}" \
+            --output "${GITHUB_WORKSPACE}/${{ env.TARGET_FILE }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: requirements
+          path: "./*_requirements.txt"
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Added dependencies:"
+            echo
+            printf '%s\n' '```txt'
+            comm -23 "${{ env.CURRENT_FILE }}" "${{ env.TARGET_FILE }}"  || true
+            printf '%s\n' '```'
+            echo "## Removed dependencies:"
+            echo
+            printf '%s\n' '```txt'
+            comm -13 "${{ env.CURRENT_FILE }}" "${{ env.TARGET_FILE }}"  || true
+            printf '%s\n' '```'
+            echo "## All current dependencies:"
+            echo
+            printf '%s\n' '```txt'
+            cat "${{ env.CURRENT_FILE }}"
+            printf '%s\n' '```'
+          } >> "${GITHUB_STEP_SUMMARY}"

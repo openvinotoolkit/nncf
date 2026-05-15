@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,8 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import os
+
+# From https://docs.pytorch.org/docs/stable/torch.compiler_aot_inductor.html:
+# For better performance during CPU inference,
+# it is suggested to enable freezing by setting export TORCHINDUCTOR_FREEZING=1 before running the Python script below.
+# The same behavior works in an environment with Intel® GPU as well.
+os.environ["TORCHINDUCTOR_FREEZING"] = "1"
+
+import copy
 
 import numpy as np
 import openvino as ov
@@ -22,6 +29,7 @@ import nncf
 from nncf.common.logging.track_progress import track
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
+from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -75,7 +83,15 @@ class ImageClassificationBase(PTQTestPipeline):
     def _validate_torch_compile(
         self, val_loader: torch.utils.data.DataLoader, predictions: np.ndarray, references: np.ndarray
     ):
-        compiled_model = torch.compile(self.compressed_model.cpu(), backend="openvino", options={"aot_autograd": True})
+        if self.backend in [
+            BackendType.FX_TORCH,
+            BackendType.CUDA_FX_TORCH,
+        ]:
+            compiled_model = torch.compile(
+                self.compressed_model.cpu(), backend="openvino", options={"aot_autograd": True}
+            )
+        else:
+            compiled_model = torch.compile(self.compressed_model)
         for i, (images, target) in enumerate(val_loader):
             # W/A for memory leaks when using torch DataLoader and OpenVINO
             pred = compiled_model(images)
@@ -103,3 +119,4 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
+        return []

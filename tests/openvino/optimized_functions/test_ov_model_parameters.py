@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,6 @@ import pytest
 
 from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
-from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
@@ -145,6 +144,7 @@ MODEL_GETTERS = [
             weight_shape=(10, 2, 2),
             original_reduction_axes=(1,),
             reduction_axes=(2,),
+            reduction="max_mean",
         ),
     ),
     ModelGetter(
@@ -216,10 +216,6 @@ MODEL_GETTERS = [
 ]
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize(
     "model_getter,input_shapes,ref_cache_size",
     [
@@ -333,10 +329,6 @@ def test_dynamic_shapes(model_getter, input_shapes, ref_cache_size, dynamic_shap
     assert len(OV_MODEL_CACHE._cache) == ref_cache_size[dynamic_shapes]
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("model_getter", MODEL_GETTERS)
 @pytest.mark.parametrize("recompile", [True, False])
 def test_recompile(model_getter, recompile):
@@ -362,10 +354,6 @@ def test_recompile(model_getter, recompile):
     assert len(OV_MODEL_CACHE._cache) == ref_size
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize("model_getter", MODEL_GETTERS)
 @pytest.mark.parametrize("return_ov_tensors", [True, False])
 def test_return_ov_tensors(model_getter, return_ov_tensors):
@@ -446,10 +434,6 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
     )
 
 
-@pytest.mark.xfail(
-    is_arm_cpu(),
-    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
-)
 @pytest.mark.parametrize(
     "weight,convertable_division,ref_compressed_weight",
     [

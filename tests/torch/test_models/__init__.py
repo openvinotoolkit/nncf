@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,8 +15,7 @@ from .dpn import *
 from .googlenet import *
 from .inceptionv3 import *
 from .lenet import *
-from .mobilenet import *
-from .mobilenet_v3 import *
+from .llama import *
 from .pnasnet import *
 from .preact_resnet import *
 from .resnet import *
@@ -26,7 +25,5 @@ from .shufflenet import *
 from .shufflenetv2 import *
 from .squeezenet import *
 from .sr_small_model import *
-from .ssd_mobilenet import *
-from .ssd_vgg import *
 from .unet import *
 from .vgg import *

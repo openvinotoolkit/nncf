@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,8 +12,8 @@
 from abc import abstractmethod
 from typing import TypeVar
 
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
+from nncf.common.factory import build_graph
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.tensor import functions as fns
 from tests.cross_fw.test_templates.helpers import ConvTestModel
@@ -79,7 +79,7 @@ class TemplateTestLayerwiseEngine:
         model = self.backend_specific_model(ConvTestModel(), tmpdir)
         dataset = get_static_dataset(ConvTestModel.INPUT_SIZE, self.get_transform_fn())
 
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         output_nodes = graph.get_output_nodes()
         target_nodes = []
         for node in graph.get_all_nodes():
@@ -102,7 +102,7 @@ class TemplateTestLayerwiseEngine:
         model = self.backend_specific_model(ConvTestModel(), tmpdir)
         dataset = get_static_dataset(ConvTestModel.INPUT_SIZE, self.get_transform_fn())
 
-        graph = NNCFGraphFactory.create(model)
+        graph = build_graph(model)
         output_nodes = graph.get_output_nodes()
         target_nodes = []
         for node in graph.get_all_nodes():

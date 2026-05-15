@@ -98,5 +98,5 @@ To convert a PyTorch model to an INT4 OpenVINO model, transform the `FQ_LORA` or
 
 ```python
 # Convert to OpenVINO format after training is complete
-compressed_model = nncf.strip(model, strip_format=StripFormat.DQ, example_input=example_input)
+compressed_model = nncf.strip(model, strip_format=StripFormat.DQ)
 ```

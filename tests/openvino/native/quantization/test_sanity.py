@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 import nncf
+from nncf.openvino.cpu_info import is_arm_cpu
 
 MODELS = [
     (
@@ -108,6 +109,10 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
     return accuracy_score(predictions, references)
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Ticket: 176785.",
+)
 @pytest.mark.parametrize("model_url, model_name, int8_ref_top1", MODELS, ids=[model_name[1] for model_name in MODELS])
 def test_compression(tmp_path, model_dir, data_dir, model_url, model_name, int8_ref_top1):
     original_model_path = download_model(model_url, model_dir)

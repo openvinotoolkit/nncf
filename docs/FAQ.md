@@ -4,7 +4,6 @@ Links to sections:
 
 - [Common](#common)
 - [PyTorch](#pytorch)
-- [TensorFlow](#tensorflow)
 - [ONNX](#onnx)
 
 ## Common
@@ -27,7 +26,7 @@ No *compression* in the sense of archiving or entropy coding is being done durin
 
 ### How does your compression make inference faster?
 
-General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization, filter pruning and knowledge distillation) are applied, with Intel HW/runtime specifics in mind.
+General, well-known, literature-backed techniques of neural network inference acceleration (such as quantization) are applied, with Intel HW/runtime specifics in mind.
 
 An overview of some of those can be found in the [following paper](https://arxiv.org/abs/2002.08679).
 
@@ -58,8 +57,6 @@ Post-training is faster, but can degrade accuracy more than the training-enabled
 
 The sparsity algorithms introduce unstructured sparsity which can only be taken advantage of in terms of performance by using specialized hardware and/or software runtimes. Within the scope of these algorithms, NNCF provides functionally correct models with non-salient weights simply zeroed out, which does not lead to the reduction of the model checkpoint size. The models can, however, be used for benchmarking experimental/future hardware or runtimes, and for SOTA claims of applying unstructured sparsity on a given model architecture.
 
-For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./usage/training_time_compression/other_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
-
 ### What is a "saturation issue" and how to avoid it?
 
 On older generations of Intel CPUs (those not supporting [AVX-VNNI](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX-VNNI)) convolutions and linear layer INT8 execution is implemented in OpenVINO's Inference Engine in such a way that mathematical overflow manifests itself *if more than 128 levels are used in the quantized domain* (out of possible 2^8 = 256) for the weights of the corresponding operations.
@@ -72,16 +69,6 @@ This does not apply to activation quantization - values of quantized activation 
 You can influence this behaviour by setting the `"overflow_fix"` parameter in the NNCF configuration file.
 See documentation for this parameter in the [NNCF configuration file JSON schema reference](https://openvinotoolkit.github.io/nncf/#compression_oneOf_i0_oneOf_i0_overflow_fix).
 
-### How can I exclude certain layers from compression?
-
-Utilize the "ignored_scopes" parameter, either using an [NNCF config file](./ConfigFile.md) or by passing these as a function parameter if you are using NNCF purely by its Python API.
-Within this parameter you can set up one or multiple identifiers to layers in your model (regex is possible) and these will be correspondingly ignored while applying the algorithms.
-This can be done either globally or on a per-algorithm basis.
-
-The format of the layer identifiers is different for each backend that NNCF supports, but attempts to be as close to the identifiers encountered in the original framework as possible.
-For better understanding of how NNCF sees the layers in your network so that you can set up a working "ignored_scopes" line, see the `original_graph.dot` and the `compressed_graph.dot` Graphviz-format visualizations of the model's control flow graph.
-These files are dumped in the NNCF's log directory at each invocation of model compression.
-
 ### Why do I need to pass a dataloader to certain NNCF algorithms?
 
 These algorithms have to run a forward pass on the model to be compressed in order to properly initialize the compressed state of the model and/or to gather activation statistics that are indisposable in this algorithm.
@@ -90,8 +77,7 @@ It is recommended, although by no means mandatory, to pass a dataloader with the
 ### The compression process takes too long, how can I make it faster?
 
 For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here.
-Try the built-in [knowledge distillation](./usage/training_time_compression/other_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
-Alternatively you may want to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
+Try to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
 
 ### I get a "CUDA out of memory" error when running NNCF in the compression-aware training approach, although the original model to be compressed runs and trains fine without NNCF
 
@@ -132,42 +118,6 @@ See the answer to the above question. Additional parameters are part of the comp
 
 Currently NNCF PyTorch can only properly handle models with acyclic execution graphs.
 RNNs, which inherently have cycles, can behave oddly when processed with NNCF PyTorch, which includes loss of quality, unreproducible results and failure to compress.
-
-<a name="pt_init_dataloader"></a>
-
-### I get a `Could not deduce the forward arguments from the initializing dataloader output.` runtime error when executing `create_compressed_model`
-
-Dataloaders can return anything, and this output may be preprocessed in the rest of the training pipeline before actually ending up in model's `forward` method.
-NNCF needs a dataloader already at the compressed model creation stage, e.g. before training, and doesn't in general know about the further preprocessing (turning the output of `v8_dataloader` into actual `forward` args and kwargs.
-You have to give NNCF this information by wrapping your dataloader object in an own subclass of a `nncf.torch.initialization.PTInitializingDataLoader` object that properly defines the `get_inputs` and `get_target` abstract methods:
-
-```python
-from nncf.torch.initialization import PTInitializingDataLoader
-
-class MyInitializingDataLoader(PTInitializingDataLoader):
-    def  get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
-        # your implementation - `dataloader_output` is what is returned by your dataloader,
-        # and you have to turn it into a (args, kwargs) tuple that is required by your model
-        # in this function, for instance, if your dataloader returns dictionaries where
-        # the input image is under key `"img"`, and your YOLOv8 model accepts the input
-        # images as 0-th `forward` positional arg, you would do:
-        return (dataloader_output["img"],), {}
-
-   def get_target(self, dataloader_output: Any) -> Any:
-        # and in this function you should extract the "ground truth" value from your
-        # dataloader, so, for instance, if your dataloader output is a dictionary where
-        # ground truth images are under a "gt" key, then here you would write:
-        return dataloader_output["gt"]
-
-init_dataloader = MyInitializingDataLoader(my_dataloader)
-# now you pass this wrapped object instead of your original dataloader into the `register_default_init_args`
-nncf_config = register_default_init_args(nncf_config, init_dataloader)
-# and then call `create_compressed_model` with that config file as usual.
-```
-
-## TensorFlow
-
-*To be filled*
 
 ## ONNX
 

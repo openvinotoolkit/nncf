@@ -16,4 +16,4 @@ Parameters:
 To set up parallel testing between jobs using `pytest-split` with the option `--splitting-algorithm=least_duration`,
 you need to ensure that each test's duration is tracked correctly and stored so that future test runs can use that data
 to split the tests efficiently. After run workflow get time frm artifact of job and
-add new test to [.test_durations](.test_durations).
+add new test to [test_durations.json](test_durations.json).

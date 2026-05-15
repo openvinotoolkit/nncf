@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 
 import xml.etree.ElementTree as ET  # nosec
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 
@@ -27,7 +26,7 @@ from tests.common.quantization.mock_graphs import get_two_branch_mock_model_grap
 
 @dataclass
 class GraphDescTestCase:
-    include_fq_params: Optional[bool]
+    include_fq_params: bool | None
     get_attributes_fn: GET_ATTRIBUTES_FN_TYPE
 
 

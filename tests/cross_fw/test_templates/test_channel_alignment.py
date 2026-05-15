@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,12 +21,12 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
+from nncf.common.tensor_statistics.collectors import MedianAggregator
+from nncf.common.tensor_statistics.collectors import QuantileReducer
+from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
-from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
@@ -184,7 +184,7 @@ class TemplateTestChannelAlignment:
         pass
 
     def mock_nncf_graph_factory(self, mocker, nncf_graph: NNCFGraph) -> None:
-        mocker.patch("nncf.common.factory.NNCFGraphFactory.create", return_value=nncf_graph)
+        mocker.patch("nncf.common.factory.build_graph", return_value=nncf_graph)
 
     def mock_model_transformer_factory(self, mocker, model_transformer: ModelTransformer) -> None:
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=model_transformer)
@@ -547,7 +547,7 @@ class TemplateTestChannelAlignment:
         assert len(statistic_collector.reducers) == 1
         reducer = statistic_collector.reducers.pop()
         assert isinstance(reducer, QuantileReducer)
-        assert reducer._reduction_axes == reduction_axes_ref
+        assert reducer._axes == reduction_axes_ref
         assert np.allclose(reducer._quantile, (q_ref, 1 - q_ref))
 
         assert len(statistic_collector.aggregators) == 2

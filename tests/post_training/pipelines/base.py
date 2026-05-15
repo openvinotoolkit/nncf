@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import onnx
@@ -31,9 +30,9 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from tests.cross_fw.shared.command import Command
-from tools.memory_monitor import MemoryType
-from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import memory_monitor_context
+from tools.memory_monitor.memory_monitor import MemoryType
+from tools.memory_monitor.memory_monitor import MemoryUnit
+from tools.memory_monitor.memory_monitor import memory_monitor_context
 
 DEFAULT_VAL_THREADS = 4
 XFAIL_SUFFIX = "_xfail_reason"
@@ -93,7 +92,7 @@ class StatsFromOutput:
 
 @dataclass
 class NumCompressNodes:
-    num_int8: Optional[int] = None
+    num_int8: int | None = None
 
     def get_data(self):
         return {"Num int8": self.num_int8}
@@ -101,7 +100,7 @@ class NumCompressNodes:
 
 @dataclass
 class PTQNumCompressNodes(NumCompressNodes):
-    num_fq_nodes: Optional[int] = None
+    num_fq_nodes: int | None = None
 
     def get_data(self):
         data = super().get_data()
@@ -115,9 +114,9 @@ class PTQTimeStats(StatsFromOutput):
     Contains statistics that are parsed from the stdout of PTQ tests.
     """
 
-    time_stat_collection: Optional[str] = None
-    time_bias_correction: Optional[str] = None
-    time_validation: Optional[str] = None
+    time_stat_collection: str | None = None
+    time_bias_correction: str | None = None
+    time_validation: str | None = None
 
     STAT_NAMES = ["Stat. collection time", "Bias correction time", "Validation time"]
 
@@ -163,19 +162,19 @@ class RunInfo:
     Containing data about compression of the model.
     """
 
-    model: Optional[str] = None
-    backend: Optional[BackendType] = None
-    metric_name: Optional[str] = None
-    metric_value: Optional[float] = None
-    metric_diff: Optional[float] = None
-    compression_memory_usage: Optional[int] = None
-    compression_memory_usage_rss: Optional[int] = None
-    compression_memory_usage_system: Optional[int] = None
-    status: Optional[str] = None
-    fps: Optional[float] = None
-    time_total: Optional[float] = None
-    time_compression: Optional[float] = None
-    num_compress_nodes: Optional[NumCompressNodes] = None
+    model: str | None = None
+    backend: BackendType | None = None
+    metric_name: str | None = None
+    metric_value: float | None = None
+    metric_diff: float | None = None
+    compression_memory_usage: int | None = None
+    compression_memory_usage_rss: int | None = None
+    compression_memory_usage_system: int | None = None
+    status: str | None = None
+    fps: float | None = None
+    time_total: float | None = None
+    time_compression: float | None = None
+    num_compress_nodes: NumCompressNodes | None = None
     stats_from_output = StatsFromOutput()
 
     @staticmethod
@@ -495,7 +494,7 @@ class PTQTestPipeline(BaseTestPipeline):
             )
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
-            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),), strict=True)
             # Torch export is used to save the model because ov.convert_model does not fully claim support for
             # Converting ExportedProgram
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")
@@ -506,7 +505,7 @@ class PTQTestPipeline(BaseTestPipeline):
             mod = torch.compile(
                 exported_model.module(),
                 backend="openvino",
-                options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
+                options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
             )
             mod(self.dummy_tensor)
 
@@ -515,7 +514,7 @@ class PTQTestPipeline(BaseTestPipeline):
             if len(cached_ov_model_files) > 1:
                 msg = "Graph break encountered in torch compile!"
                 raise nncf.InternalError(msg)
-            elif len(cached_ov_model_files) == 0:
+            if len(cached_ov_model_files) == 0:
                 msg = "Openvino Model Files Not Found!"
                 raise FileNotFoundError(msg)
             self.path_compressed_ir = cached_ov_model_files[0]

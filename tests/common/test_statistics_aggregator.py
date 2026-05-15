@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,23 +13,23 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pytest
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
+from nncf.common.tensor_statistics.builders import get_raw_stat_collector
+from nncf.common.tensor_statistics.collectors import NoopAggregator
+from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -139,8 +139,8 @@ class TemplateTestStatisticsAggregator:
         target_type: TargetType
         quantization_mode: QuantizationMode
         per_channel: bool
-        ref_max_val: Union[np.ndarray, float]
-        ref_min_val: Union[np.ndarray, float]
+        ref_max_val: np.ndarray | float
+        ref_min_val: np.ndarray | float
 
     TEST_MEAN_QUANTILE = RangeEstimatorParameters(
         min=StatisticsCollectorParameters(StatisticsType.QUANTILE, AggregatorType.MEAN, quantile_outlier_prob=0.01),
@@ -428,7 +428,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
         def filter_func(point):
@@ -597,7 +597,7 @@ class TemplateTestStatisticsAggregator:
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
         elif test_params.collector_type == BCStatsCollectors.RAW:
-            tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
+            tensor_collector = get_raw_stat_collector(len(dataset_samples))
         else:
             msg = f"Invalid collector type: {test_params.collector_type}"
             raise nncf.InvalidCollectorTypeError(msg)
@@ -613,7 +613,7 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         model = self.get_backend_model(dataset_samples)
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
         def filter_func(point):
@@ -659,7 +659,7 @@ class TemplateTestStatisticsAggregator:
             inplace_statistics=inplace_statistics,
         )
         algo._set_backend_entity(model)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = nncf.build_graph(model)
         algo._subset_size = subset_size
         tensor_collector = algo._get_stat_collector(nncf_graph, target_point, q_config, False)
         return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
@@ -701,7 +701,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
         tensor_collectors = list(statistics_points.get_tensor_collectors())
@@ -773,7 +773,7 @@ class TemplateTestStatisticsAggregator:
     def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics, mocker):
         params = test_params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = nncf.build_graph(model)
 
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
@@ -839,10 +839,10 @@ class TemplateTestStatisticsAggregator:
         model = params["model"](dataset_samples)
         params = {}
         if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
             params["inplace"] = [False, True]
@@ -871,7 +871,7 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         # Run statistic collection to check output names matches reducer names
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator.collect_statistics(model, graph)
 
     @pytest.mark.parametrize(
@@ -925,7 +925,7 @@ class TemplateTestStatisticsAggregator:
         statistics_points = StatisticPointsContainer()
         statistics_points.add_statistic_point(dummy_statistic_point)
         dataset = nncf.Dataset(MockedDataset())
-        graph = NNCFGraphFactory.create(model)
+        graph = nncf.build_graph(model)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         with pytest.raises(nncf.ValidationError) as e:

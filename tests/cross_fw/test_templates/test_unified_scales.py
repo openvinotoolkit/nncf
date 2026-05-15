@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,7 @@ from typing import TypeVar
 import pytest
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import build_graph
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from tests.torch.test_models.synthetic import ConcatSDPABlock
 
@@ -44,7 +44,7 @@ class TemplateTestUnifiedScales:
         if isinstance(backend_model, torch.nn.Module) and not isinstance(backend_model, torch.fx.GraphModule):
             unified_group = unified_group_nncf_network
 
-        nncf_graph = NNCFGraphFactory.create(backend_model)
+        nncf_graph = build_graph(backend_model)
         algo = MinMaxQuantization()
         algo._set_backend_entity(backend_model)
         _, groups = algo._get_quantization_target_points(backend_model, nncf_graph)

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -99,7 +99,7 @@ def test_get_const_value(precisions, as_ov_tensor):
     [
         [ConvNotBiasModel, True, "Conv"],
         [ConvModel, True, "Conv"],
-        # TODO: add group conv to node with bias
+        # TODO(l-bat): add group conv to node with bias
         # [DepthwiseConv3DModel, True, 'Conv3D'],
         # [DepthwiseConv4DModel, True, 'Conv4D'],
         # [DepthwiseConv5DModel, True, 'Conv5D'],

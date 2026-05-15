@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,6 +26,7 @@ from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
+from torchvision.models.detection.transform import GeneralizedRCNNTransform
 from rich.progress import track
 from functools import partial
 
@@ -142,6 +143,7 @@ def main():
     # Disable NNCF tracing for some methods in order for the model to be properly traced by NNCF
     disable_tracing(SSD.postprocess_detections)
     disable_tracing(DefaultBoxGenerator.forward)
+    disable_tracing(GeneralizedRCNNTransform.postprocess)
 
     # Quantize model
     calibration_dataset = nncf.Dataset(dataset, partial(transform_fn, device=device))
@@ -151,11 +153,11 @@ def main():
     dummy_input = torch.randn(1, 3, 480, 480)
 
     fp32_onnx_path = ROOT / "ssd300_vgg16_fp32.onnx"
-    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path)
+    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path, dynamo=False)
     ov_model = ov.convert_model(fp32_onnx_path)
 
     int8_onnx_path = ROOT / "ssd300_vgg16_int8.onnx"
-    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path)
+    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path, dynamo=False)
     ov_quantized_model = ov.convert_model(int8_onnx_path)
 
     fp32_ir_path = ROOT / "ssd300_vgg16_fp32.xml"

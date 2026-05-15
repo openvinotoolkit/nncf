@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2026 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@ import datetime
 import itertools
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -100,7 +100,7 @@ def evaluate_model(
 
 
 def get_nncf_dataset(
-    data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
+    data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput] | None = None
 ) -> nncf.Dataset:
     """
     Create an NNCF dataset for the weight compression algorithm.
@@ -216,30 +216,18 @@ def find_parameters(
 
 
 def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATION_FUNCTION>
-    input_dtypes = {inp.get_any_name(): inp.get_element_type() for inp in ov_model.inputs}
     tokens = tokenizer(item["text"])
     input_ids = np.expand_dims(np.array(tokens["input_ids"]), 0)
     attention_mask = np.expand_dims(np.array(tokens["attention_mask"]), 0)
     position_ids = np.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
-    res = {
+    batch_size = input_ids.shape[0]
+    return {
         "input_ids": input_ids,
         "attention_mask": attention_mask,
-        "position_ids": position_ids.reshape(*attention_mask.shape),
+        "position_ids": position_ids,
+        "beam_idx": np.arange(batch_size, dtype=np.int64),
     }
-
-    def gen_pkv(num_heads, head_dim, num_layers):
-        res = {}
-        shape = (1, num_heads, 0, head_dim)
-        for i in range(num_layers):
-            key_name = f"past_key_values.{i}.key"
-            val_name = f"past_key_values.{i}.value"
-            res[key_name] = ov.Tensor(shape=shape, type=input_dtypes[key_name])
-            res[val_name] = ov.Tensor(shape=shape, type=input_dtypes[val_name])
-        return res
-
-    res.update(gen_pkv(4, 64, 22))
-    return res
 
 
 def main():
@@ -248,7 +236,6 @@ def main():
         "PERFORMANCE_HINT": "LATENCY",
         "NUM_STREAMS": "1",
         "CACHE_DIR": "",
-        "KV_CACHE_PRECISION": "f16",
     }
     model = OVModelForCausalLM.from_pretrained(
         model_id,
@@ -256,11 +243,10 @@ def main():
         trust_remote_code=True,
         use_cache=True,
         ov_config=ov_config,
-        stateful=False,
         load_in_8bit=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train[:1000]")  # <YOUR_DATASET>
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train[:1000]")  # <YOUR_DATASET>
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 

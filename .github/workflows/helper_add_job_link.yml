@@ -1,0 +1,87 @@
+name: "Add Job Link to PR"
+on:
+  workflow_run:
+    workflows:
+      - "Test examples"
+      - "Weight compression"
+    types:
+      - requested
+      - in_progress
+      - completed
+
+permissions:
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: "update-description"
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  update-description:
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add workflow run link to PR description
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Triggered by workflow '${{ github.event.workflow_run.name }}' (run #$RUN_ID, event: ${{ github.event.action }})."
+
+          # 1. Get the 'display_title' (the rendered run-name, e.g. "Test examples PR#123 [args]")
+          #    and workflow_id to resolve the static workflow name
+          RUN_DATA=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '{display_title: .display_title, workflow_id: .workflow_id}')
+          DISPLAY_TITLE=$(echo "$RUN_DATA" | jq -r '.display_title')
+          WORKFLOW_ID=$(echo "$RUN_DATA" | jq -r '.workflow_id')
+          WORKFLOW_NAME=$(gh api "repos/$REPO/actions/workflows/$WORKFLOW_ID" --jq '.name')
+          echo "Run display title: $DISPLAY_TITLE"
+          echo "Workflow name: $WORKFLOW_NAME"
+
+          # 2. Extract the number following 'PR#'
+          PR_NUM=$(echo "$DISPLAY_TITLE" | grep -oP 'PR#\K\d+')
+
+          if [ -z "$PR_NUM" ]; then
+            echo "Could not find PR number in display title '$DISPLAY_TITLE'. Skipping."
+            exit 0
+          fi
+
+          echo "Resolved PR #$PR_NUM."
+
+          # 3. Get current PR body
+          CURRENT_BODY=$(gh pr view "$PR_NUM" -R "$REPO" --json body --jq '.body')
+          echo "Current PR body length: ${#CURRENT_BODY} chars."
+
+          # 4. Prepare the update
+          RUN_URL="${{ github.event.workflow_run.html_url }}"
+          NEW_LINE="[$WORKFLOW_NAME]($RUN_URL) - ${{ github.event.workflow_run.conclusion || github.event.workflow_run.status }}"
+          echo "Run URL: $RUN_URL"
+          echo "Name: $WORKFLOW_NAME"
+          echo "New link line: $NEW_LINE"
+
+          # 5. Replace previous workflow link or append a new one
+          LINK_PREFIX="[$WORKFLOW_NAME]("
+          OLD_LINE=$(printf '%s\n' "$CURRENT_BODY" | grep -m1 -F "$LINK_PREFIX" || true)
+
+          if [ -n "$OLD_LINE" ]; then
+            echo "Replacing existing link: $OLD_LINE"
+            OLD_ESC=$(printf '%s\n' "$OLD_LINE" | sed "s#[.[\\*^\\$()+?{|}/]#\\\\&#g")
+            NEW_ESC=$(printf '%s\n' "$NEW_LINE" | sed 's/[&/]/\\&/g')
+            UPDATED_BODY=$(printf '%s\n' "$CURRENT_BODY" | sed "0,/$OLD_ESC/s//$NEW_ESC/")
+          elif [ -n "$CURRENT_BODY" ]; then
+            echo "No existing link found. Appending to PR body."
+            UPDATED_BODY=$(printf '%s\n\n%s' "$CURRENT_BODY" "$NEW_LINE")
+          else
+            echo "PR body is empty. Creating with link."
+            UPDATED_BODY="$NEW_LINE"
+          fi
+
+          echo "New PR body:"
+          echo "$UPDATED_BODY"
+          echo ""
+          gh pr edit "$PR_NUM" -R "$REPO" --body "$UPDATED_BODY"
