@@ -298,7 +298,6 @@ def create_eval_model(
         yield model
 
 
-@torch.inference_mode()
 def lm_eval(
     model: OptimizedModel,
     task: str,
@@ -318,11 +317,9 @@ def lm_eval(
     print("#" * 50 + " Evaluate via lm-eval-harness " + "#" * 50)
     lm_obj = OptimumLM(pretrained=model, batch_size=batch_size)
     results = evaluator.simple_evaluate(lm_obj, tasks=task, log_samples=False)["results"]
-    torch.cuda.empty_cache()
     return results[task]
 
 
-@torch.inference_mode()
 def tokenize(
     tokenizer: AutoTokenizer,
     prompt: str,
@@ -465,7 +462,6 @@ def export_to_openvino(
     )
 
 
-@torch.inference_mode()
 def evaluate_after_training(
     model: nn.Module,
     args: argparse.Namespace,
@@ -953,7 +949,6 @@ def main(argv) -> float:
                     opt.step()
                     scheduler.step()
                     opt.zero_grad()
-                    torch.cuda.empty_cache()
                     aggregated_loss = loss_numerator / grad_steps
                     loss_numerator = grad_steps = 0
 
