@@ -531,11 +531,10 @@ def _build_integer_quantization_model(
         max_values = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
         min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
 
-        zero = opset.constant(0.0, ov.Type.f32)
-        min_values = opset.minimum(zero, min_values)
-        max_values = opset.maximum(zero, max_values)
-
         if is_asym_mode:
+            zero = opset.constant(0.0, ov.Type.f32)
+            min_values = opset.minimum(zero, min_values)
+            max_values = opset.maximum(zero, max_values)
             levels = level_high - level_low + 1
             scale = divide_op(max_values - min_values, opset.constant(levels - 1, ov.Type.f32))
             scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
