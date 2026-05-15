@@ -49,7 +49,6 @@ UNSUPPORTED_MODES = (
     CompressWeightsMode.NVFP4,
     CompressWeightsMode.MXFP4,
     CompressWeightsMode.MXFP8_E4M3,
-    CompressWeightsMode.FP8_E4M3,
     CompressWeightsMode.FP4,
 )
 
