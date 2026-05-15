@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -23,6 +24,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import BaseWeightsDecompressor
@@ -357,7 +359,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     def get_model_for_test_scale_estimation(transpose_a: bool):
         if transpose_a:
             pytest.skip("transpose_a=True is not supported for FX backend")
-        model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+        model = LinearModel()
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
@@ -750,3 +752,39 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @pytest.mark.skip("RoPE pattern is invalid for the TorchFX backend, ticket 183208")
     def test_rope_weight_compression(self):
         pass
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: int
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), 1),
+        ParamIgnoredScope("name_const", IgnoredScope(names=["linear_weight"]), 0),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["linear"]), 0),
+        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), 0),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear*"]), 0),
+    ),
+    ids=str,
+)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
+    example_input = torch.rand(8, 8)
+    model = get_torch_fx_model(LinearModel(), example_input)
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+
+    num_int4 = TestFXTemplateWeightCompression.get_num_int4_nodes(compressed_model)
+    assert num_int4 == param.ref
