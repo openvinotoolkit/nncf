@@ -14,8 +14,6 @@ from typing import Callable, Generic, TypeVar, ValuesView
 TKey = TypeVar("TKey")
 TObject = TypeVar("TObject")
 TRegisterObject = TypeVar("TRegisterObject")
-# Separate type variable preserves input type of decorated object.
-# PEP695 can express a stricter relation to TObject, but it is unavailable in Python < 3.12.
 
 
 class Registry(Generic[TKey, TObject]):
@@ -25,17 +23,14 @@ class Registry(Generic[TKey, TObject]):
     Stores objects by key and provides a decorator-based registration API.
     """
 
-    REGISTERED_NAME_ATTR = "_registered_name"
-
-    def __init__(self, name: str, add_name_as_attr: bool = False):
+    def __init__(self, name: str):
         """
+        Initialize a registry.
+
         :param name: Human-readable registry name used in error messages.
-        :param add_name_as_attr: Whether to set the registered key on object attribute
-            `REGISTERED_NAME_ATTR`.
         """
         self._name = name
         self._registry_dict: dict[TKey, TObject] = {}
-        self._add_name_as_attr = add_name_as_attr
 
     @property
     def registry_dict(self) -> dict[TKey, TObject]:
@@ -74,8 +69,6 @@ class Registry(Generic[TKey, TObject]):
             cls_name = name
             if cls_name is None:
                 cls_name = obj.__name__  # type: ignore[attr-defined]
-            if self._add_name_as_attr:
-                setattr(obj, self.REGISTERED_NAME_ATTR, cls_name)
             self._register(obj, cls_name)  # type: ignore[arg-type]
             return obj
 
