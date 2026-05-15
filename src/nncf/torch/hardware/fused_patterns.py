@@ -23,7 +23,7 @@ from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
 
-PT_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("torch")
+PT_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("torch_hw_fused_patterns")
 
 # ATOMIC OPERATIONS
 

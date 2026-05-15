@@ -18,7 +18,7 @@ from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 
-PT_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("IGNORED_PATTERNS")
+PT_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("pt_ignored_patterns")
 
 
 def _add_softmax_matmul(

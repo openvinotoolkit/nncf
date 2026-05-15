@@ -21,7 +21,7 @@ from nncf.openvino.graph.metatypes.groups import BATCH_NORMALIZATION_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import LINEAR_OPERATIONS
 
-OPENVINO_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("openvino")
+OPENVINO_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("openvino_hw_fused_patterns")
 
 # BLOCK PATTERNS
 

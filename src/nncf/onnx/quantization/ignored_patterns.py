@@ -17,7 +17,7 @@ from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.hardware.fused_patterns import atomic_activations_operations
 
-ONNX_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("IGNORED_PATTERNS")
+ONNX_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("onnx_ignored_patterns")
 
 
 def _add_softmax_matmul(pattern: GraphPattern) -> None:
