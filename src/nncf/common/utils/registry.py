@@ -9,52 +9,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, TypeVar
+from typing import Callable, Generic, TypeVar, ValuesView, cast
 
-TClass = TypeVar("TClass", bound=type)
+TKey = TypeVar("TKey")
+TObject = TypeVar("TObject")
+TRegisterObject = TypeVar("TRegisterObject")
+# Used another TRegisterObject for register method, to avoid replace type of registered object.
+# It may impossible to check type of registered object.
+# PEP695 provide solution for this problem, but it is not supported in python <3.12
 
 
-class Registry:
+class Registry(Generic[TKey, TObject]):
     REGISTERED_NAME_ATTR = "_registered_name"
 
     def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
-        self._registry_dict: dict[str, Any] = {}
+        self._registry_dict: dict[TKey, TObject] = {}
         self._add_name_as_attr = add_name_as_attr
 
     @property
-    def registry_dict(self) -> dict[str, Any]:
+    def registry_dict(self) -> dict[TKey, TObject]:
         return self._registry_dict
 
-    def values(self) -> Any:
+    def values(self) -> ValuesView[TObject]:
         return self._registry_dict.values()
 
-    def _register(self, obj: Any, name: str) -> None:
+    def _register(self, obj: TObject, name: TKey) -> None:
         if name in self._registry_dict:
             msg = f"{name} is already registered in {self._name}"
             raise KeyError(msg)
         self._registry_dict[name] = obj
 
-    def register(self, name: str = None) -> Callable[[TClass], TClass]:
-        def wrap(obj: TClass) -> TClass:
+    def register(self, name: TKey | None = None) -> Callable[[TRegisterObject], TRegisterObject]:
+        def wrap(obj: TRegisterObject) -> TRegisterObject:
             cls_name = name
             if cls_name is None:
                 cls_name = obj.__name__
             if self._add_name_as_attr:
-                setattr(obj, self.REGISTERED_NAME_ATTR, name)
-            self._register(obj, cls_name)
+                setattr(obj, self.REGISTERED_NAME_ATTR, cls_name)
+            self._register(cast(TObject, obj), cls_name)
             return obj
 
         return wrap
 
-    def get(self, name: str) -> Any:
+    def get(self, name: TKey) -> TObject:
         if name not in self._registry_dict:
             self._key_not_found(name)
         return self._registry_dict[name]
 
-    def _key_not_found(self, name: str) -> None:
+    def _key_not_found(self, name: TKey) -> None:
         msg = f"{name} is unknown type of {self._name} "
         raise KeyError(msg)
 
-    def __contains__(self, item: Any) -> bool:
+    def __contains__(self, item: TObject) -> bool:
         return item in self._registry_dict.values()
