@@ -19,18 +19,39 @@ TRegisterObject = TypeVar("TRegisterObject")
 
 
 class Registry(Generic[TKey, TObject]):
+    """
+    Generic key-to-object registry.
+
+    Stores objects by key and provides a decorator-based registration API.
+    """
+
     REGISTERED_NAME_ATTR = "_registered_name"
 
     def __init__(self, name: str, add_name_as_attr: bool = False):
+        """
+        :param name: Human-readable registry name used in error messages.
+        :param add_name_as_attr: Whether to set the registered key on object attribute
+            `REGISTERED_NAME_ATTR`.
+        """
         self._name = name
         self._registry_dict: dict[TKey, TObject] = {}
         self._add_name_as_attr = add_name_as_attr
 
     @property
     def registry_dict(self) -> dict[TKey, TObject]:
+        """
+        Return the underlying registry mapping.
+
+        :return: Dictionary with registered objects.
+        """
         return self._registry_dict
 
     def values(self) -> ValuesView[TObject]:
+        """
+        Return registered object values.
+
+        :return: View over registered objects.
+        """
         return self._registry_dict.values()
 
     def _register(self, obj: TObject, name: TKey) -> None:
@@ -40,6 +61,15 @@ class Registry(Generic[TKey, TObject]):
         self._registry_dict[name] = obj
 
     def register(self, name: TKey | None = None) -> Callable[[TRegisterObject], TRegisterObject]:
+        """
+        Create a decorator that registers an object in the registry.
+
+        If `name` is not provided, `obj.__name__` is used.
+
+        :param name: Explicit key for registration.
+        :return: Decorator that registers and returns the input object.
+        """
+
         def wrap(obj: TRegisterObject) -> TRegisterObject:
             cls_name = name
             if cls_name is None:
@@ -52,6 +82,12 @@ class Registry(Generic[TKey, TObject]):
         return wrap
 
     def get(self, name: TKey) -> TObject:
+        """
+        Get a registered object by key.
+
+        :param name: Registry key.
+        :return: Registered object associated with `name`.
+        """
         if name not in self._registry_dict:
             self._key_not_found(name)
         return self._registry_dict[name]
@@ -61,4 +97,10 @@ class Registry(Generic[TKey, TObject]):
         raise KeyError(msg)
 
     def __contains__(self, item: TObject) -> bool:
+        """
+        Check whether an object instance is present in registered values.
+
+        :param item: Object to check.
+        :return: `True` if object is registered, otherwise `False`.
+        """
         return item in self._registry_dict.values()
