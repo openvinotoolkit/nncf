@@ -16,6 +16,9 @@ from typing import Callable
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
+# For tests, it is in a shared place so that other tests can use it too.
+OPENVINO_EXTRA_INDEX_URL = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
+
 
 def is_windows() -> bool:
     return "win32" in sys.platform

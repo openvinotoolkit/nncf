@@ -20,6 +20,7 @@ import pytest
 
 from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
 from tests.cross_fw.shared.command import Command
+from tests.cross_fw.shared.helpers import OPENVINO_EXTRA_INDEX_URL
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
 from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
 from tests.cross_fw.shared.helpers import get_python_executable_with_venv
@@ -105,7 +106,7 @@ def test_examples(
             if "whowhatbench" in requirements_content:
                 install_wwb = True
 
-        run_cmd_line = f"{pip_with_venv} install -r {requirements}"
+        run_cmd_line = f"{pip_with_venv} install --extra-index-url {OPENVINO_EXTRA_INDEX_URL} -r {requirements}"
         print(f"Installing requirements: {run_cmd_line}")
         subprocess.run(run_cmd_line, check=True, shell=True)
 
@@ -118,14 +119,13 @@ def test_examples(
     if ov_version_override is not None:
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         uninstall_cmd_line = f"{pip_with_venv} uninstall --yes openvino-genai openvino_tokenizers"
-        extra_index_url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
         print(f"Installing OpenVINO version override: {ov_version_cmd_line}")
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
 
         if install_wwb:
             wwb_module_string = "whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
             wwb_override_cmd_line = (
-                f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
+                f"{pip_with_venv} install --pre --extra-index-url {OPENVINO_EXTRA_INDEX_URL} {wwb_module_string}"
             )
             print(f"Uninstalling OpenVINO packages: {uninstall_cmd_line}")
             subprocess.run(uninstall_cmd_line, check=True, shell=True)
