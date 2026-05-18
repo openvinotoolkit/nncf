@@ -75,6 +75,9 @@ url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 [tool.uv.sources]
 openvino = { index = "openvino-rc" }
 
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
 [tool.mypy]
 follow_imports = "silent"
 strict = true
