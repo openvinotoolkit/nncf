@@ -34,6 +34,7 @@ env:
   TQDM_DISABLE: 1
   RESULT_XML: "pytest-results.xml"
   HOME_HF: "/home/runner/hf_home"
+  UV_EXTRA_INDEX_URL: "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 
 jobs:
   weight-compression-cpu:

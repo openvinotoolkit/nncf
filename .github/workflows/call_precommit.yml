@@ -18,6 +18,9 @@ on:
         type: string
         required: false
 
+env:
+  UV_EXTRA_INDEX_URL: "https://storage.openvinotoolkit.org/simple/wheels/nightly"
+
 jobs:
   common:
     timeout-minutes: 40
