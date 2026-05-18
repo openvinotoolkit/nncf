@@ -1,5 +1,26 @@
 # Release Notes
 
+## New in Release 3.2.0
+
+Breaking changes:
+- ...
+General:
+- ...
+Features:
+- ...
+Fixes:
+- ...
+Improvements:
+- (PyTorch) Optimized GPU memory usage in the `downstream_qat_with_nls` example by reducing batch size and number of epochs to prevent CUDA out-of-memory errors on newer runners (https://github.com/openvinotoolkit/nncf/pull/4073).
+Tutorials:
+- ...
+Known issues:
+- ...
+Deprecations/Removals:
+- ...
+Requirements:
+- ...
+
 ## New in Release 3.1.0
 
 - General:
