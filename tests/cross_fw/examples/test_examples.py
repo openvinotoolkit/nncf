@@ -106,7 +106,7 @@ def test_examples(
             if "whowhatbench" in requirements_content:
                 install_wwb = True
 
-        run_cmd_line = f"{pip_with_venv} install --extra-index-url {OPENVINO_EXTRA_INDEX_URL} -r {requirements}"
+        run_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {OPENVINO_EXTRA_INDEX_URL} -r {requirements}"
         print(f"Installing requirements: {run_cmd_line}")
         subprocess.run(run_cmd_line, check=True, shell=True)
 
