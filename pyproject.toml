@@ -68,6 +68,13 @@ namespaces = false
 [tool.md_dead_link_check]
 exclude_files = ["ReleaseNotes.md"]
 
+[[tool.uv.index]]
+name = "openvino-rc"
+url = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
 [tool.mypy]
 follow_imports = "silent"
 strict = true
