@@ -38,7 +38,6 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import YOLO26AttentionBlock
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
-from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_models.synthetic import ConcatSameTensorModel
 from tests.torch.test_models.synthetic import ConvReluBranchModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
@@ -196,6 +195,18 @@ TEST_MODELS_QUANIZED = (
         [Dim.AUTO, Dim.AUTO, Dim.STATIC],
     ),
 )
+
+
+def count_q_dq(model: torch.fx.GraphModule):
+    q, dq = 0, 0
+    for node in model.graph.nodes:
+        if node.op == "call_function" and hasattr(node.target, "overloadpacket"):
+            node_type = str(node.target.overloadpacket).split(".")[1]
+            if node_type in ["quantize_per_tensor", "quantize_per_channel"]:
+                q += 1
+            elif node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
+                dq += 1
+    return q, dq
 
 
 @pytest.mark.parametrize("enable_dynamic_shapes", [True, False])
