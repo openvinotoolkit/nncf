@@ -2,35 +2,32 @@
 
 ## New in Release 3.2.0
 
-Breaking changes:
-- (PyTorch) Removed `example_input` parameter from `load_from_config`, which has been unused since 3.0.0 (https://github.com/openvinotoolkit/nncf/pull/4051).
-- (PyTorch) Removed `OVQuantizer` from NNCF; use it from the `executorch` package instead (https://github.com/openvinotoolkit/nncf/pull/3842).
-General:
-- ...
-Features:
-- (OpenVINO) Added support for ignoring compressed weights by constant node name in the ignored scope for Weight Compression (https://github.com/openvinotoolkit/nncf/pull/4064).
-- (PyTorch) Added support for ignoring pruned weights by constant node name in the ignored scope for Magnitude Pruning (https://github.com/openvinotoolkit/nncf/pull/4063).
-- (PyTorch) Added `allowed_modules` argument to `load_from_config` function (https://github.com/openvinotoolkit/nncf/pull/4054).
-Fixes:
-- (PyTorch) Fixed TorchFX model extractor to prevent capture of nodes that do not affect target outputs (https://github.com/openvinotoolkit/nncf/pull/3982).
-- Fixed `QuantizationConstraints.from_config_dict` to avoid unexpected behavior (https://github.com/openvinotoolkit/nncf/pull/4046).
-- (OpenVINO) Fixed Scale Estimation to properly handle zero `initial_steps` and `scale_steps` in `calculate_quantization_params` (https://github.com/openvinotoolkit/nncf/pull/4039).
-Improvements:
-- (OpenVINO) Added `transpose_a` attribute support for Scale Estimation algorithm in ONNX and OpenVINO backends (https://github.com/openvinotoolkit/nncf/pull/3839).
-- (PyTorch) Removed no-op operations (`to`, `dropout`, etc.) from the inference graph in PTQ and Weight Compression algorithms (https://github.com/openvinotoolkit/nncf/pull/4057).
-- (PyTorch) Improved `load_from_config` reliability by saving module path in serialized config (https://github.com/openvinotoolkit/nncf/pull/4050).
-- (PyTorch) Optimized GPU memory usage in `downstream_qat_with_nls` example to prevent CUDA out-of-memory errors on newer runners (https://github.com/openvinotoolkit/nncf/pull/4073).
-Tutorials:
-- ...
-Known issues:
-- ...
-Deprecations/Removals:
-- Removed deprecated `CompressWeightsMode.INT8` mode. Use `CompressWeightsMode.INT8_SYM` or `CompressWeightsMode.INT8_ASYM` instead (https://github.com/openvinotoolkit/nncf/pull/4008).
-- Removed unused `ProgressBar` class (https://github.com/openvinotoolkit/nncf/pull/4044).
-Requirements:
-- Updated `onnx` to 1.21.0 (https://github.com/openvinotoolkit/nncf/pull/4006).
-- Updated `torchao` to 0.17.0 (https://github.com/openvinotoolkit/nncf/pull/4013).
-- Updated `onnxscript` to 0.6.2 (https://github.com/openvinotoolkit/nncf/pull/4015).
+- Breaking changes:
+  - (PyTorch) Removed `example_input` parameter from `load_from_config`, which has been unused since 3.0.0 (https://github.com/openvinotoolkit/nncf/pull/4051).
+  - (PyTorch) Removed `OVQuantizer` from NNCF; use it from the `executorch` package instead (https://github.com/openvinotoolkit/nncf/pull/3842).
+- General:
+  - ...
+- Features:
+  - Add support for ignoring specific weight nodes by constant node name within `IgnoredScope` for `nncf.compress_weights` and `nncf.prune` (https://github.com/openvinotoolkit/nncf/pull/4063) (https://github.com/openvinotoolkit/nncf/pull/4064).
+- Fixes:
+  - (PyTorch) Fixed TorchFX model extractor to prevent capture of nodes that do not affect target outputs (https://github.com/openvinotoolkit/nncf/pull/3982).
+  - Fixed `QuantizationConstraints.from_config_dict` to avoid unexpected behavior (https://github.com/openvinotoolkit/nncf/pull/4046).
+  - (OpenVINO) Fixed Scale Estimation to properly handle zero `initial_steps` and `scale_steps` in `calculate_quantization_params` (https://github.com/openvinotoolkit/nncf/pull/4039).
+- Improvements:
+  - (OpenVINO) Added `transpose_a` attribute support for Scale Estimation algorithm in ONNX and OpenVINO backends (https://github.com/openvinotoolkit/nncf/pull/3839).
+  - (PyTorch) Removed no-op operations (`to`, `dropout`, etc.) from the inference graph in PTQ and Weight Compression algorithms (https://github.com/openvinotoolkit/nncf/pull/4057).
+  - (PyTorch) Improved `load_from_config` reliability by saving module path in serialized config (https://github.com/openvinotoolkit/nncf/pull/4050) (https://github.com/openvinotoolkit/nncf/pull/4054).
+- Tutorials:
+  - ...
+- Known issues:
+  - ...
+- Deprecations/Removals:
+  - Removed deprecated `CompressWeightsMode.INT8` mode. Use `CompressWeightsMode.INT8_SYM` or `CompressWeightsMode.INT8_ASYM` instead (https://github.com/openvinotoolkit/nncf/pull/4008).
+  - Removed unused `ProgressBar` class (https://github.com/openvinotoolkit/nncf/pull/4044).
+- Requirements:
+  - Updated `onnx` to 1.21.0 (https://github.com/openvinotoolkit/nncf/pull/4006).
+  - Updated `torchao` to 0.17.0 (https://github.com/openvinotoolkit/nncf/pull/4013).
+  - Updated `onnxscript` to 0.6.2 (https://github.com/openvinotoolkit/nncf/pull/4015).
 
 ## New in Release 3.1.0
 
