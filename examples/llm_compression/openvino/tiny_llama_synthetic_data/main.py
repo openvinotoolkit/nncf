@@ -43,7 +43,9 @@ def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    hf_model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False)
+    hf_model = OVModelForCausalLM.from_pretrained(
+        MODEL_ID, export=True, load_in_8bit=False, compile=False, ov_config={"INFERENCE_PRECISION_HINT": "f32"}
+    )
 
     dataset_size = 100
 
@@ -68,7 +70,8 @@ def main():
 
     hf_model.model = optimized_model
     hf_model.request = None
-    opt_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens)
+    hf_model.ov_config = {"INFERENCE_PRECISION_HINT": "f32"}
+    opt_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens, do_sample=False)
     opt_output_text = tokenizer.decode(opt_output[0])
 
     print(f"Optimized model output: {opt_output_text}\n")
