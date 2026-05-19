@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from functools import partial
 
 import numpy as np
@@ -43,9 +44,7 @@ def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    hf_model = OVModelForCausalLM.from_pretrained(
-        MODEL_ID, export=True, load_in_8bit=False, compile=False, ov_config={"INFERENCE_PRECISION_HINT": "f32"}
-    )
+    hf_model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False)
 
     dataset_size = 100
 
@@ -65,13 +64,12 @@ def main():
         scale_estimation=True,
     )
 
+    hf_model.model = optimized_model
+    hf_model.request = None
     input_ids = tokenizer("What is Python? ", return_tensors="pt").to(device=hf_model.device)
     max_new_tokens = 100
 
-    hf_model.model = optimized_model
-    hf_model.request = None
-    hf_model.ov_config = {"INFERENCE_PRECISION_HINT": "f32"}
-    opt_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens, do_sample=False)
+    opt_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens)
     opt_output_text = tokenizer.decode(opt_output[0])
 
     print(f"Optimized model output: {opt_output_text}\n")
