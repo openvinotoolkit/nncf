@@ -198,13 +198,17 @@ class MinMaxAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_convert_insertion_command(
+        nncf_graph: NNCFGraph,
         target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
         parameters: FakeConvertParameters,
     ) -> Command:
         """
         Returns backend-specific convert insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeConvertParameters to calculate activation quantization parameters.
         :return: Backend-specific Command for the quantizer insertion operation.
         """

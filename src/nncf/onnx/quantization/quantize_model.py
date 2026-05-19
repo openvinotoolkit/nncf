@@ -139,13 +139,14 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         msg = "target_device == CPU_SPR is not supported."
         raise nncf.ValidationError(msg)
-    if mode is not None:
-        msg = f"mode={mode} is not supported"
-        raise ValueError(msg)
-    if model.opset_import[0].version < 10:
+
+    opset_version = model.opset_import[0].version
+    if opset_version < 21 and mode is not None:
+        msg = f"FP8 quantization requires opset >= 21, got {opset_version}"
+    if opset_version < 10:
         msg = "ONNX models with opset version < 10 do not support quantization."
         raise nncf.ValidationError(msg)
-    if model.opset_import[0].version < 13:
+    if opset_version < 13:
         nncf_logger.warning(
             "ONNX models with 10 < opset version < 13 do not support per-channel quantization."
             " Per-tensor quantization will be applied."
@@ -163,6 +164,7 @@ def quantize_impl(
     model = apply_preprocess_passes(model)
 
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,

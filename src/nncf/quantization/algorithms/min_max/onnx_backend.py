@@ -12,7 +12,6 @@
 
 import numpy as np
 
-import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -33,6 +32,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionComma
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+from nncf.onnx.quantization.quantizer_parameters import convert_fc_params_to_onnx_params
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -158,11 +158,20 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_convert_insertion_command(
+        nncf_graph: NNCFGraph,
         target_point: ONNXTargetPoint,
+        quantizer_config: QuantizerConfig,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        msg = "FakeConvert insertion not implemented in ONNX backend!"
-        raise nncf.InternalError(msg)
+        axis = None
+        if quantizer_config.per_channel:
+            node = nncf_graph.get_node_by_name(target_point.target_node_name)
+            axis = (
+                get_weight_quantization_axis(node, target_point.port_id) if target_point.is_weight_target_point() else 1
+            )
+        onnx_parameters = convert_fc_params_to_onnx_params(parameters, axis)
+        nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
+        return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):
