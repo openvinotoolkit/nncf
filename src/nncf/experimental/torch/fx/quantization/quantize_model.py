@@ -129,8 +129,9 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
-    backup_mode: BackupMode,
-    compression_format: CompressionFormat,
+    hqq: bool = False,
+    backup_mode: BackupMode = BackupMode.INT8_ASYM,
+    compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: AdvancedCompressionParameters | None = None,
 ) -> torch.fx.GraphModule:
     """
@@ -149,8 +150,9 @@ def compress_weights_impl(
         gptq,
         lora_correction,
         backup_mode,
-        compression_format,
-        advanced_parameters,
+        hqq=hqq,
+        compression_format=compression_format,
+        advanced_parameters=advanced_parameters,
     )
     graph = build_graph(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
