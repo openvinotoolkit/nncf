@@ -48,7 +48,7 @@ as well as the supported versions of Python:
 
 | NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
 |-----------|------------|----------|----------|------------|--------|
-| `develop` | `2026.1.0` | `2.10.0` | `1.21.0` |            | `3.12` |
+| `develop` | `2026.1.0` | `2.11.0` | `1.21.0` |            | `3.12` |
 | `3.1.0`   | `2026.1.0` | `2.10.0` | `1.21.0` |            | `3.10` |
 | `3.0.0`   | `2026.0.0` | `2.9.0`  | `1.17.0` |            | `3.10` |
 | `2.19.0`  | `2025.4.0` | `2.8.0`  | `1.17.0` | `2.15.1`   | `3.10` |
@@ -72,4 +72,4 @@ as well as the supported versions of Python:
 
 > (*) Python 3.9 or higher is required for TensorFlow 2.15.1
 
-This repository is tested on Python* 3.12, PyTorch* 2.10.0 (NVidia CUDA\* Toolkit 12.6).
+This repository is tested on Python* 3.12, PyTorch* 2.11.0 (NVidia CUDA\* Toolkit 13.2).

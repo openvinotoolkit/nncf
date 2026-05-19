@@ -163,8 +163,8 @@ def transform_fn(data_item):
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 
 # Step 3: Export model to TorchFX
-input_shape = (1, 3, 224, 224)
-fx_model = torch.export.export_for_training(model, args=(ex_input,)).module()
+ex_input = torch.randn(1, 3, 224, 224)
+fx_model = torch.export.export(model, args=(ex_input,)).module()
 # or
 # fx_model = torch.export.export(model, args=(ex_input,)).module()
 

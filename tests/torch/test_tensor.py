@@ -13,6 +13,7 @@ import torch
 
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
 from tests.cross_fw.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
@@ -76,3 +77,21 @@ class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def device() -> TensorDeviceType:
         return TensorDeviceType.GPU
+
+    # TODO(AlexanderDokuchaev): Some tests cases failed on t4, ticket: 184285
+    @pytest.mark.parametrize(
+        "a, upper, ref",
+        (
+            ([[1.0, 0.0], [2.0, 1.0]], False, [[5.0, -2.0], [-2.0, 1.0]]),
+            ([[1.0, 2.0], [0.0, 1.0]], True, [[5.0, -2.0], [-2.0, 1.0]]),
+        ),
+    )
+    def test_fn_linalg_cholesky_inverse(self, a, upper, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.linalg.cholesky_inverse(tensor_a, upper=upper)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor_a.device

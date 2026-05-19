@@ -6,4 +6,4 @@ optimum==2.1.0
 onnx==1.21.0
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
-torch==2.10.0
+torch==2.11.0
