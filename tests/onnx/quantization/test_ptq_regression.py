@@ -146,9 +146,9 @@ def test_compression(tmp_path, model_dir, data_dir, test_model):
                 transforms.ToTensor(),
                 normalize,
                 transforms.Lambda(
-                    lambda images: torch.moveaxis(images, 0, 2)
-                    if test_model.model_name == "efficientnet-lite4-11"
-                    else images
+                    lambda images: (
+                        torch.moveaxis(images, 0, 2) if test_model.model_name == "efficientnet-lite4-11" else images
+                    )
                 ),
             ]
         ),
