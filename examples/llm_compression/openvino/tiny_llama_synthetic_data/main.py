@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from functools import partial
 
 import numpy as np
@@ -64,11 +63,11 @@ def main():
         scale_estimation=True,
     )
 
-    hf_model.model = optimized_model
-    hf_model.request = None
     input_ids = tokenizer("What is Python? ", return_tensors="pt").to(device=hf_model.device)
     max_new_tokens = 100
 
+    hf_model.model = optimized_model
+    hf_model.request = None
     opt_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens)
     opt_output_text = tokenizer.decode(opt_output[0])
 
