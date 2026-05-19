@@ -16,6 +16,10 @@ from typing import Callable
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
+# For tests, it is in a shared place so that other tests can use it too.
+OPENVINO_EXTRA_INDEX_URL = "https://storage.openvinotoolkit.org/simple/wheels/nightly"
+OPENVINO_PIP_EXTRA_FLAGS = f"--pre --extra-index-url {OPENVINO_EXTRA_INDEX_URL}"
+
 
 def is_windows() -> bool:
     return "win32" in sys.platform
@@ -122,7 +126,9 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         # Install backend specific packages with according version from constraints.txt
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
         extra_reqs = " ".join(packages)
-        cmd_install_backends = f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt"
+        cmd_install_backends = (
+            f"{pip_with_venv} install {OPENVINO_PIP_EXTRA_FLAGS} {extra_reqs} -c {PROJECT_ROOT}/constraints.txt"
+        )
         print(f"Installing backend packages: {cmd_install_backends}")
         subprocess.run(
             cmd_install_backends,

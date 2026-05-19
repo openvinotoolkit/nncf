@@ -1,4 +1,6 @@
 -c ../../constraints.txt
+--pre
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
 
 datasets
 matplotlib # required for the memory monitor tool

@@ -88,8 +88,10 @@ class TestInstall:
             pytest.xfail("Disabled until NNCF is exposed in a release")
         venv_path = create_venv_with_nncf(removable_tmp_path, package_type, "venv", {backend})
         if ov_version_override is not None:
+            from tests.cross_fw.shared.helpers import OPENVINO_PIP_EXTRA_FLAGS
+
             pip_with_venv = get_pip_executable_with_venv(venv_path)
-            ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
+            ov_version_cmd_line = f"{pip_with_venv} install {OPENVINO_PIP_EXTRA_FLAGS} {ov_version_override}"
             subprocess.run(ov_version_cmd_line, check=True, shell=True)
         run_install_checks(
             venv_path, removable_tmp_path, package_type, backend=backend, install_type=host_configuration_clopt
