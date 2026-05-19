@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable
+
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
@@ -19,7 +21,7 @@ from nncf.openvino.graph.metatypes.groups import BATCH_NORMALIZATION_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import LINEAR_OPERATIONS
 
-OPENVINO_HW_FUSED_PATTERNS = Registry("openvino")
+OPENVINO_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("openvino_hw_fused_patterns")
 
 # BLOCK PATTERNS
 
@@ -596,7 +598,7 @@ def create_mvn_scale_shift_activations() -> GraphPattern:
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE)
-def create_linear_activations_unsqueeze_bn_squeeze():
+def create_linear_activations_unsqueeze_bn_squeeze() -> GraphPattern:
     linear_biased = create_biased_op()
     activations = atomic_activations_operations()
     unsqueeze_op = unsqueeze_operation()

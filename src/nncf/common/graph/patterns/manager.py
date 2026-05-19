@@ -34,24 +34,18 @@ class PatternsManager:
         :param backend: BackendType instance.
         :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
-        registry: dict[HWFusedPatternNames, Callable[[], GraphPattern]] = {}
         if backend == BackendType.ONNX:
             from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
-            registry = cast(dict[HWFusedPatternNames, Callable[[], GraphPattern]], ONNX_HW_FUSED_PATTERNS.registry_dict)
-            return registry
+            return ONNX_HW_FUSED_PATTERNS.registry_dict
         if backend == BackendType.OPENVINO:
             from nncf.openvino.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 
-            registry = cast(
-                dict[HWFusedPatternNames, Callable[[], GraphPattern]], OPENVINO_HW_FUSED_PATTERNS.registry_dict
-            )
-            return registry
+            return OPENVINO_HW_FUSED_PATTERNS.registry_dict
         if backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 
-            registry = cast(dict[HWFusedPatternNames, Callable[[], GraphPattern]], PT_HW_FUSED_PATTERNS.registry_dict)
-            return registry
+            return PT_HW_FUSED_PATTERNS.registry_dict
         msg = f"Hardware-fused patterns not implemented for {backend} backend."
         raise ValueError(msg)
 
@@ -65,24 +59,18 @@ class PatternsManager:
         :param backend: BackendType instance.
         :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
-        registry: dict[IgnoredPatternNames, Callable[[], GraphPattern]] = {}
         if backend == BackendType.ONNX:
             from nncf.onnx.quantization.ignored_patterns import ONNX_IGNORED_PATTERNS
 
-            registry = cast(dict[IgnoredPatternNames, Callable[[], GraphPattern]], ONNX_IGNORED_PATTERNS.registry_dict)
-            return registry
+            return ONNX_IGNORED_PATTERNS.registry_dict
         if backend == BackendType.OPENVINO:
             from nncf.openvino.quantization.ignored_patterns import OPENVINO_IGNORED_PATTERNS
 
-            registry = cast(
-                dict[IgnoredPatternNames, Callable[[], GraphPattern]], OPENVINO_IGNORED_PATTERNS.registry_dict
-            )
-            return registry
+            return OPENVINO_IGNORED_PATTERNS.registry_dict
         if backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
 
-            registry = cast(dict[IgnoredPatternNames, Callable[[], GraphPattern]], PT_IGNORED_PATTERNS.registry_dict)
-            return registry
+            return PT_IGNORED_PATTERNS.registry_dict
         msg = f"Ignored patterns not implemented for {backend} backend."
         raise ValueError(msg)
 
