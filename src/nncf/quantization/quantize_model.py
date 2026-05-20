@@ -201,6 +201,10 @@ def quantize(
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_impl
 
+        if advanced_parameters and advanced_parameters.calibration_device:
+            msg = "ONNX backend does not support the `calibration_device` option."
+            raise nncf.ParameterNotSupportedError(msg)
+
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
@@ -217,6 +221,10 @@ def quantize(
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
 
+        if advanced_parameters and advanced_parameters.calibration_device:
+            msg = "Torch backend does not support the `calibration_device` option."
+            raise nncf.ParameterNotSupportedError(msg)
+
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,
             calibration_dataset=calibration_dataset,
@@ -232,6 +240,10 @@ def quantize(
 
     if backend == BackendType.TORCH_FX:
         from nncf.experimental.torch.fx.quantization.quantize_model import quantize_impl
+
+        if advanced_parameters and advanced_parameters.calibration_device:
+            msg = "TorchFX backend does not support the `calibration_device` option."
+            raise nncf.ParameterNotSupportedError(msg)
 
         return quantize_impl(  # type: ignore[no-any-return]
             model=model,
@@ -371,6 +383,10 @@ def quantize_with_accuracy_control(
         )
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_with_accuracy_control_impl
+
+        if advanced_quantization_parameters and advanced_quantization_parameters.calibration_device:
+            msg = "ONNX backend does not support the `calibration_device` option."
+            raise nncf.ParameterNotSupportedError(msg)
 
         return quantize_with_accuracy_control_impl(  # type: ignore[no-any-return]
             model,
@@ -528,6 +544,10 @@ def compress_weights(
             msg = "Torch backend does not support statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
+        if advanced_parameters and advanced_parameters.calibration_device:
+            msg = "Torch backend does not support the `calibration_device` option."
+            raise nncf.ParameterNotSupportedError(msg)
+
         if compression_format == CompressionFormat.FQ and group_size != -1:
             msg = "Torch backend does not support FQ compression format for group-wise quantization."
             raise nncf.ParameterNotSupportedError(msg)
@@ -576,6 +596,10 @@ def compress_weights(
 
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "TorchFX does not supports statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if advanced_parameters and advanced_parameters.calibration_device:
+            msg = "TorchFX backend does not support the `calibration_device` option."
             raise nncf.ParameterNotSupportedError(msg)
 
         if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA, CompressionFormat.FQ_LORA_NLS]:
@@ -648,6 +672,10 @@ def compress_weights(
 
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "ONNX does not supports statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if advanced_parameters and advanced_parameters.calibration_device:
+            msg = "ONNX backend does not support the `calibration_device` option."
             raise nncf.ParameterNotSupportedError(msg)
         compression_weights_impl = onnx_compress_weights_impl
     if compression_weights_impl is None:

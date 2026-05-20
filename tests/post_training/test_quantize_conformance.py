@@ -198,6 +198,7 @@ def run_pipeline(
     output_dir: Path,
     data_dir: Path | None,
     no_eval: bool,
+    ov_calibration_device: str | None,
     batch_size: int | None,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
@@ -216,6 +217,10 @@ def run_pipeline(
     maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
     pipeline_cls = test_model_param["pipeline_cls"]
     pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
+    if ov_calibration_device:
+        compression_params = pipeline_kwargs["compression_params"]
+        advanced_params = compression_params.setdefault("advanced_parameters", nncf.AdvancedCompressionParameters())
+        advanced_params.calibration_device = ov_calibration_device
     pipeline_kwargs.update(
         {
             "output_dir": output_dir,
@@ -285,6 +290,7 @@ def test_ptq_quantization(
         output_dir,
         data_dir,
         no_eval,
+        None,
         batch_size,
         run_fp32_backend,
         run_torch_cuda_backend,
@@ -311,6 +317,7 @@ def test_weight_compression(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
+    ov_calibration_device: str | None,
     use_avx2: None,
 ):
     run_pipeline(
@@ -321,6 +328,7 @@ def test_weight_compression(
         output_dir,
         None,  # data_dir is not used in WC
         no_eval,
+        ov_calibration_device,
         batch_size,
         run_fp32_backend,
         run_torch_cuda_backend,
