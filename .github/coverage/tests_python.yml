@@ -47,6 +47,20 @@ tests:
       python3 -m pytest -ra -n2 --durations=30 ${PYTEST_COVERAGE_ARGS}
       tests/torch -m "not cuda" --junitxml nncf-tests.xml
 
+  - name: torch_cuda
+    kind: command
+    profiles: [gpu]
+    command: >-
+      python3 -m pytest -ra --durations=30 ${PYTEST_COVERAGE_ARGS}
+      tests/torch -m cuda --junitxml nncf-tests.xml
+
+  - name: gptqmodel_cuda
+    kind: command
+    profiles: [gpu]
+    command: >-
+      python3 -m pytest -ra --durations=30 ${PYTEST_COVERAGE_ARGS}
+      tests/integration/gptq_model/ --junitxml nncf-tests.xml
+
   - name: tools
     kind: command
     profiles: [cpu]

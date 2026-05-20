@@ -281,10 +281,124 @@ jobs:
           compression-level: 0
           overwrite: true
 
+  CoveragePythonCuda:
+    name: Coverage Python ${{ matrix.test.name }} (CUDA)
+    timeout-minutes: 120
+    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - name: torch_cuda
+            requirements: tests/torch/requirements.txt
+            extra_requirements: ''
+          - name: gptqmodel_cuda
+            requirements: tests/integration/gptq_model/requirements.txt
+            extra_requirements: tests/integration/gptq_model/requirements_extra.txt
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEST_PROFILE: gpu
+      OV_WORKSPACE: ${{ github.workspace }}
+      PY_TEST_NAMES: ${{ matrix.test.name }}
+      COVERAGE_WRITE_STEP_SUMMARY: 'false'
+      PYTHONDONTWRITEBYTECODE: '1'
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          nvidia-smi
+          cat /proc/cpuinfo
+
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install coverage Python dependencies
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: install-requirements
+
+      - name: Install NNCF and test requirements
+        run: uv pip install --system . -r ${{ matrix.test.requirements }}
+
+      - name: Install extra requirements
+        if: ${{ matrix.test.extra_requirements != '' }}
+        run: uv pip install --system -r ${{ matrix.test.extra_requirements }}
+
+      - name: Check CUDA
+        run: python -c "import torch; print(torch.cuda.is_available())"
+
+      - name: Run CUDA Python coverage tests
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: run-suite
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: gpu
+          lane: ${{ matrix.test.name }}
+          test-names: ${{ matrix.test.name }}
+          python-package: nncf
+          python-source-dir: src/nncf
+          python-path-alias: nncf
+          python-coverage-omit: |
+            */tests/*
+            */docs/*
+            */examples/*
+            */tools/*
+            */build/*
+            */.venv/*
+            */venv/*
+
+      - name: Collect CUDA Python results
+        id: gpu_artifact
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: collect-results
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: gpu
+          lane: ${{ matrix.test.name }}
+          test-names: ${{ matrix.test.name }}
+
+      - name: Upload CUDA Python artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.gpu_artifact.outputs['artifact-name'] }}
+          path: ${{ steps.gpu_artifact.outputs.dir }}
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+
   CoverageSummary:
     name: Coverage Summary
     if: ${{ always() && !cancelled() }}
-    needs: [CoveragePythonCore, CoveragePythonExecuTorch, CoveragePythonWeightCompression]
+    needs: [CoveragePythonCore, CoveragePythonExecuTorch, CoveragePythonWeightCompression, CoveragePythonCuda]
     outputs:
       upload_matrix_json: ${{ steps.coverage_files.outputs['upload-matrix-json'] || '[]' }}
     runs-on: ubuntu-latest
@@ -312,8 +426,8 @@ jobs:
           command: render-summary
           workspace: ${{ github.workspace }}
           config-dir: ${{ github.workspace }}/.github/coverage
-          selection: phase-1
-          selected-lanes: common,onnx,openvino,torch_cpu,tools,executorch,wc_1,wc_2,wc_3,wc_4,wc_5,wc_6
+          selection: phase-1,phase-2
+          selected-lanes: common,onnx,openvino,torch_cpu,tools,executorch,wc_1,wc_2,wc_3,wc_4,wc_5,wc_6,torch_cuda,gptqmodel_cuda
 
       - name: Merge duration reports
         if: ${{ always() }}
