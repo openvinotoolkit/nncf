@@ -18,7 +18,14 @@
   - (PyTorch) Removed no-op operations (`to`, `dropout`, etc.) from the inference graph in PTQ and Weight Compression algorithms (https://github.com/openvinotoolkit/nncf/pull/4057).
   - (PyTorch) Improved `load_from_config` reliability by saving module path in serialized config (https://github.com/openvinotoolkit/nncf/pull/4050) (https://github.com/openvinotoolkit/nncf/pull/4054).
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of MinerU 2.5 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/mineru2.5/mineru2.5.ipynb)
+  - [Post-Training Optimization of GLM-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm-ocr/glm-ocr.ipynb)
+  - [Post-Training Optimization of FLUX.2 Klein Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flux.2-klein/flux.2-klein.ipynb)
+  - [Post-Training Optimization of MedASR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/medasr-medical-asr/medasr-medical-asr.ipynb)
+  - [Post-Training Optimization of ERNIE-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ernie-image/ernie-image.ipynb)
+  - [Post-Training Optimization of VoxCPM2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/voxcpm2-tts/voxcpm2-tts.ipynb)
+  - [Post-Training Optimization of HY-MT1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/hunyuan-translation/hunyuan-translation.ipynb)
+  - [Post-Training Optimization of YOLO26 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/yolov26-optimization)
 - Known issues:
   - ...
 - Deprecations/Removals:
