@@ -3,7 +3,6 @@ run-name: "Weight compression${{ inputs.pr_num != '' && format(' PR#{0}', inputs
 permissions: read-all
 
 on:
-  pull_request:
   workflow_call:
     inputs:
       pr_num:
