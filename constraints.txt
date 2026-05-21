@@ -1,5 +1,6 @@
 # Openvino
-openvino==2026.1.0
+openvino==2026.2.0rc2
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 
 # Pytorch
 torch==2.10.0
@@ -27,3 +28,4 @@ matplotlib==3.10.9
 pandas==2.3.3
 fastprogress==1.0.5
 fastcore==1.11.5
+safetensors==0.7.0
