@@ -73,7 +73,7 @@ class SequentialMatmulModel(nn.Module):
         for _, main_value in enumerate(self.main_values):
             weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
             weights_data[-1, -1] = main_value
-            weight_tensor = torch.tensor(weights_data)
+            weight_tensor = weights_data.detach().clone()
             layer = nn.Linear(4, 4, bias=False)
             layer.weight = nn.Parameter(weight_tensor.t())
             self.layers.append(layer)
@@ -223,9 +223,9 @@ class AWQLinearModel(nn.Module):
     def get_linear_layer(self, weights_data, is_int8):
         if not is_int8:
             linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
-            linear_layer.weight = nn.Parameter(torch.tensor(weights_data, dtype=torch.float32))
+            linear_layer.weight = nn.Parameter(weights_data.detach().clone().to(dtype=torch.float32))
         else:
-            qw = torch.tensor(weights_data, dtype=torch.uint8).float()
+            qw = weights_data.detach().clone().to(dtype=torch.uint8).float()
             zp = torch.tensor([2**7], dtype=torch.uint8).float()
             scale = torch.ones((weights_data.shape[0], 1), dtype=torch.float32)
             weights = (qw - zp) * scale
