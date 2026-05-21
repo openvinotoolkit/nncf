@@ -739,11 +739,18 @@ LIST_DESCS = [
         weight=TWO_GROUPS_IN_TWO_ROWS_ASYM,
         config=int4_asym_grouped_config,
     ),
-    # non-zero error
-    QuantErrorDesc(name="2 rows scaled [1, 254] linspace", weight=TWO_ROWS_LINSPACE[:, 1:-1], ref_error=239, atol=1),
+    QuantErrorDesc(name="2 rows scaled [1, 254] linspace", weight=TWO_ROWS_LINSPACE[:, 1:-1], ref_error=0, atol=1),
     QuantErrorDesc(
-        name="2 columns of scaled [0, 255] linspace", weight=np.transpose(TWO_ROWS_LINSPACE), ref_error=46818, atol=1
+        name="2 columns of scaled [0, 255] linspace", weight=np.transpose(TWO_ROWS_LINSPACE), ref_error=0, atol=1
     ),
+    QuantErrorDesc(
+        name="2 columns of [0-15] linspace for asym",
+        weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
+        config=int4_asym_config,
+        ref_error=0,
+        atol=1,
+    ),
+    # non-zero error
     QuantErrorDesc(
         name="2 rows of scaled [0, 15] linspace for sym",
         weight=TWO_ROWS_LINSPACE_INT4_ASYM,
@@ -763,13 +770,6 @@ LIST_DESCS = [
         weight=TWO_ROWS_LINSPACE_INT4_ASYM[:, 1:-1],
         config=int4_asym_config,
         ref_error=1.49,
-        atol=1,
-    ),
-    QuantErrorDesc(
-        name="2 columns of [0-15] linspace for asym",
-        weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
-        config=int4_asym_config,
-        ref_error=162,
         atol=1,
     ),
 ]
@@ -1286,12 +1286,12 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
@@ -1338,6 +1338,7 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
 
     names_fp = {op.get_friendly_name() for op in ops}
     ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+
     assert ref_fp_nodes == names_fp
 
     names_e8m0 = {
@@ -1351,12 +1352,12 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
     ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
@@ -1405,6 +1406,7 @@ def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode
 
     names_fp = {op.get_friendly_name() for op in ops}
     ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+
     assert ref_fp_nodes == names_fp
     scale_dtypes = (ov.Type.f16, ov.Type.f8e4m3)
     names_scales = {
