@@ -281,6 +281,85 @@ jobs:
           compression-level: 0
           overwrite: true
 
+  CoveragePythonFuzz:
+    name: Coverage Python Fuzz (CPU)
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEST_PROFILE: cpu
+      OV_WORKSPACE: ${{ github.workspace }}
+      PY_TEST_NAMES: fuzz
+      COVERAGE_WRITE_STEP_SUMMARY: 'false'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install coverage Python dependencies
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: install-requirements
+
+      - name: Install NNCF and fuzz requirements
+        run: uv pip install --system . -r tests/cross_fw/sdl/fuzz/requirements.txt
+
+      - name: Run fuzz coverage test
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: run-suite
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: fuzz
+          test-names: fuzz
+          python-package: nncf
+          python-source-dir: src/nncf
+          python-path-alias: nncf
+          python-coverage-omit: |
+            */tests/*
+            */docs/*
+            */examples/*
+            */tools/*
+            */build/*
+            */.venv/*
+            */venv/*
+
+      - name: Collect fuzz results
+        id: cpu_artifact
+        if: ${{ always() }}
+        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        with:
+          command: collect-results
+          workspace: ${{ github.workspace }}
+          config-dir: ${{ github.workspace }}/.github/coverage
+          suite: python
+          profile: cpu
+          lane: fuzz
+          test-names: fuzz
+
+      - name: Upload fuzz artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.cpu_artifact.outputs['artifact-name'] }}
+          path: ${{ steps.cpu_artifact.outputs.dir }}
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+
   CoveragePythonCuda:
     name: Coverage Python ${{ matrix.test.name }} (CUDA)
     timeout-minutes: 120
@@ -398,7 +477,7 @@ jobs:
   CoverageSummary:
     name: Coverage Summary
     if: ${{ always() && !cancelled() }}
-    needs: [CoveragePythonCore, CoveragePythonExecuTorch, CoveragePythonWeightCompression, CoveragePythonCuda]
+    needs: [CoveragePythonCore, CoveragePythonExecuTorch, CoveragePythonWeightCompression, CoveragePythonFuzz, CoveragePythonCuda]
     outputs:
       upload_matrix_json: ${{ steps.coverage_files.outputs['upload-matrix-json'] || '[]' }}
     runs-on: ubuntu-latest
@@ -426,8 +505,8 @@ jobs:
           command: render-summary
           workspace: ${{ github.workspace }}
           config-dir: ${{ github.workspace }}/.github/coverage
-          selection: phase-1,phase-2
-          selected-lanes: common,onnx,openvino,torch_cpu,tools,executorch,wc_1,wc_2,wc_3,wc_4,wc_5,wc_6,torch_cuda,gptqmodel_cuda
+          selection: common,onnx,openvino,torch_cpu,tools,executorch,wc_1,wc_2,wc_3,wc_4,wc_5,wc_6,fuzz,torch_cuda,gptqmodel_cuda
+          selected-lanes: common,onnx,openvino,torch_cpu,tools,executorch,wc_1,wc_2,wc_3,wc_4,wc_5,wc_6,fuzz,torch_cuda,gptqmodel_cuda
 
       - name: Merge duration reports
         if: ${{ always() }}
