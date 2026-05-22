@@ -75,7 +75,7 @@ class SequentialMatmulModel(nn.Module):
             weights_data[-1, -1] = main_value
             weight_tensor = weights_data.detach().clone()
             layer = nn.Linear(4, 4, bias=False)
-            layer.weight = nn.Parameter(weight_tensor.t())
+            layer.weight = nn.Parameter(weight_tensor)
             self.layers.append(layer)
 
     def forward(self, x):

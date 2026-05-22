@@ -230,6 +230,7 @@ class TemplateWeightCompression(ABC):
     def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, mocker):
         model = self.get_sequential_matmul_model(transpose_a=transpose_a)
         input_shape = (4, 4) if transpose_a else (1, 4, 4)
+
         first = self.to_tensor(np.ones(input_shape, dtype=np.float32))
         second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(input_shape)
         dataset = Dataset([first, second], self.get_transform_func())

@@ -370,6 +370,7 @@ def get_integer_quantization_error(
 
     decompressed_weight = integer_quantize_dequantize_weight(weight, config, reduction_axes)
     decompressed_weight = decompressed_weight.reshape(weight.shape)
+
     if reduction == "max_mean":
         diff = (decompressed_weight - weight) ** 2
         layer_err = fns.mean(diff, axis=reduction_axes)
