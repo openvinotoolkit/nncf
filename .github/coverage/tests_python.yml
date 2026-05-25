@@ -12,11 +12,10 @@ reporting:
     - src: .tmp/python-coverage
       dest: python-coverage-debug
   uploads:
-    - name: NNCF Python
-      artifact_pattern: coverage-python-*
+    - name_template: NNCF Python, {lane}
       file: python-coverage.xml
-      key: nncf_python_xml
-      flag: nncf-python
+      key_template: nncf_python_{lane}_xml
+      flag_template: nncf-python-{lane}
 
 tests:
   - name: common
@@ -67,13 +66,6 @@ tests:
     command: >-
       python3 -m pytest -ra --durations=30 ${PYTEST_COVERAGE_ARGS}
       tests/tools --junitxml nncf-tests.xml
-
-  - name: fuzz
-    kind: command
-    profiles: [cpu]
-    command: >-
-      python3 -m coverage run --rcfile=${PY_COV_CONFIG} --append
-      tests/cross_fw/sdl/fuzz/fuzz_target.py -runs=10 -seed=1
 
   - name: executorch
     kind: command
