@@ -60,7 +60,7 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install coverage Python dependencies
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: install-requirements
 
@@ -68,7 +68,7 @@ jobs:
         run: uv pip install --system . -r ${{ matrix.test.requirements }}
 
       - name: Run Python coverage tests
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: run-suite
           workspace: ${{ github.workspace }}
@@ -92,7 +92,7 @@ jobs:
       - name: Collect Python results
         id: cpu_artifact
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: collect-results
           workspace: ${{ github.workspace }}
@@ -145,7 +145,7 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install coverage Python dependencies
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: install-requirements
 
@@ -153,7 +153,7 @@ jobs:
         run: pip install . -r tests/executorch/requirements.txt
 
       - name: Run ExecuTorch coverage tests
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: run-suite
           workspace: ${{ github.workspace }}
@@ -177,7 +177,7 @@ jobs:
       - name: Collect ExecuTorch results
         id: cpu_artifact
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: collect-results
           workspace: ${{ github.workspace }}
@@ -228,7 +228,7 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install coverage Python dependencies
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: install-requirements
 
@@ -236,7 +236,7 @@ jobs:
         run: uv pip install --system . -r tests/post_training/requirements.txt
 
       - name: Run weight-compression coverage tests
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: run-suite
           workspace: ${{ github.workspace }}
@@ -260,7 +260,7 @@ jobs:
       - name: Collect weight-compression results
         id: cpu_artifact
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: collect-results
           workspace: ${{ github.workspace }}
@@ -335,7 +335,7 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Install coverage Python dependencies
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: install-requirements
 
@@ -350,7 +350,7 @@ jobs:
         run: python -c "import torch; print(torch.cuda.is_available())"
 
       - name: Run CUDA Python coverage tests
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: run-suite
           workspace: ${{ github.workspace }}
@@ -374,7 +374,7 @@ jobs:
       - name: Collect CUDA Python results
         id: gpu_artifact
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: collect-results
           workspace: ${{ github.workspace }}
@@ -409,7 +409,7 @@ jobs:
           lfs: false
 
       - name: Install coverage Python dependencies
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: install-requirements
 
@@ -421,7 +421,7 @@ jobs:
 
       - name: Generate final summary
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: render-summary
           workspace: ${{ github.workspace }}
@@ -431,7 +431,7 @@ jobs:
 
       - name: Merge duration reports
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: merge-durations
           workspace: ${{ github.workspace }}
@@ -452,7 +452,7 @@ jobs:
       - name: Resolve Codecov upload files
         id: coverage_files
         if: ${{ always() }}
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: resolve-uploads
           workspace: ${{ github.workspace }}
@@ -482,7 +482,7 @@ jobs:
 
       - name: Resolve Codecov upload files
         id: upload_files
-        uses: mkruszyx/openvino/.github/actions/coverage_toolkit@composite-coverage
+        uses: openvinotoolkit/openvino/.github/actions/coverage_toolkit@master
         with:
           command: resolve-upload-files
           workspace: ${{ github.workspace }}
