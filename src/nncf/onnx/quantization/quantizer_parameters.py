@@ -59,8 +59,6 @@ def convert_fc_params_to_onnx_params(
     scale = parameters.scale
     zero_point = parameters.shift
 
-    # TODO(andrey-churkin): Check that scale and zero_point are calculated correctly.
-
     # NOTE: adding machine epsilon to avoid division by zero
     eps = fns.finfo(scale).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
