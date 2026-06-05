@@ -170,6 +170,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 get_weight_quantization_axis(node, target_point.port_id) if target_point.is_weight_target_point() else 1
             )
         onnx_parameters = convert_fc_params_to_onnx_params(parameters, axis)
+        # TODO(andrey-churkin): Investigate why the nncf_input_node_next_nodes parameter is passed directly to the
+        # command rather than being created within ModelTransformer, as it is for the OpenVINO backend.
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
