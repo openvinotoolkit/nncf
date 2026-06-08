@@ -181,7 +181,6 @@ exclude = [
     "src/nncf/quantization/algorithms/weight_compression/weight_lowering.py",
     "src/nncf/torch/__init__.py",
     "src/nncf/torch/extensions/__init__.py",
-    "src/nncf/torch/graph/graph.py",
     "src/nncf/torch/graph/operator_metatypes.py",
     "src/nncf/torch/graph/pattern_operations.py",
     "src/nncf/torch/graph/transformations/command_creation.py",
