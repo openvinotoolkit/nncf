@@ -71,10 +71,6 @@ exclude_files = ["ReleaseNotes.md"]
 [tool.mypy]
 follow_imports = "silent"
 strict = true
-# should be removed later
-# mypy recommends the following tool as an autofix:
-# https://github.com/hauntsaninja/no_implicit_optional
-implicit_optional = true
 files = [
     "src/custom_version.py",
     "src/nncf/api",
