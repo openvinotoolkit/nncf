@@ -79,7 +79,7 @@ def _get_extension_load_timeout() -> int | None:
     try:
         timeout = int(raw_timeout)
     except ValueError as e:
-        msg = f"Environment variable {EXTENSION_LOAD_TIMEOUT_ENV_VAR} must be an integer, got: {raw_timeout!r}"
+        msg = f"Environment variable {EXTENSION_LOAD_TIMEOUT_ENV_VAR} must be an integer, got: {raw_timeout}"
         raise ValueError(msg) from e
     return timeout if timeout > 0 else None
 
