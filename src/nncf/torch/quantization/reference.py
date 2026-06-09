@@ -21,34 +21,6 @@ from nncf.torch.utils import CompilationWrapper
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
 
 
-def fp32_accum_wrapper(func):
-    def wrapper(tensor_to_sum, ret_tensor):
-        half = tensor_to_sum.dtype == np.float16
-        if half:
-            tensor_to_sum = tensor_to_sum.astype(np.float32)
-        retval = func(tensor_to_sum, ret_tensor)
-        if half:
-            retval = retval.astype(np.float16)
-        return retval
-
-    return wrapper
-
-
-@fp32_accum_wrapper
-def sum_like(tensor_to_sum, ref_tensor):
-    """Warning: may modify tensor_to_sum"""
-    if ref_tensor.size == 1:
-        return tensor_to_sum.sum()
-
-    for dim, size in enumerate(ref_tensor.shape):
-        if size == 1:
-            if isinstance(tensor_to_sum, np.ndarray):
-                tensor_to_sum = tensor_to_sum.sum(dim, keepdims=True)
-            else:
-                tensor_to_sum = tensor_to_sum.sum(dim, keepdim=True)
-    return tensor_to_sum
-
-
 class ReferenceBackendType(Enum):
     NUMPY = "numpy"
     TORCH = "torch"
@@ -78,6 +50,46 @@ class ReferenceQuantize:
         if self.backend is np:
             return np.reciprocal(tensor)
         return torch.reciprocal(tensor)
+
+    def _sum_like(self, tensor_to_sum: GeneralizedTensor, ref_tensor: GeneralizedTensor):
+        """Warning: may modify tensor_to_sum"""
+        if self.backend is np:
+            half = tensor_to_sum.dtype == np.float16
+            if half:
+                tensor_to_sum = tensor_to_sum.astype(np.float32)
+            retval = self._sum_like_fp32(tensor_to_sum, ref_tensor)
+            if half:
+                retval = retval.astype(np.float16)
+            return retval
+
+        half = tensor_to_sum.dtype == torch.float16
+        if half:
+            tensor_to_sum = tensor_to_sum.type(torch.float32)
+        retval = self._sum_like_fp32(tensor_to_sum, ref_tensor)
+        if half:
+            retval = retval.type(torch.float16)
+        return retval
+
+    def _sum_like_fp32(self, tensor_to_sum: GeneralizedTensor, ref_tensor: GeneralizedTensor):
+        """Warning: may modify tensor_to_sum"""
+        if self.backend is np:
+            n_elements = ref_tensor.size
+            if n_elements == 1:
+                return tensor_to_sum.sum()
+
+            for dim, size in enumerate(ref_tensor.shape):
+                if size == 1:
+                    tensor_to_sum = tensor_to_sum.sum(dim, keepdims=True)
+            return tensor_to_sum
+
+        n_elements = ref_tensor.numel()
+        if n_elements == 1:
+            return tensor_to_sum.sum()
+
+        for dim, size in enumerate(ref_tensor.shape):
+            if size == 1:
+                tensor_to_sum = tensor_to_sum.sum(dim, keepdim=True)
+        return tensor_to_sum
 
     def forward(
         self, input_: GeneralizedTensor, input_low: GeneralizedTensor, input_range: GeneralizedTensor, levels: int
@@ -114,12 +126,12 @@ class ReferenceQuantize:
         output = self.forward(input_, input_low, input_range, levels)
         err = (output - input_) * self._reciprocal(input_range * range_sign)
         grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
-        grad_range = sum_like(grad_range, input_range)
+        grad_range = self._sum_like(grad_range, input_range)
 
         grad_input = grad_output * mask_in
 
         grad_low = grad_output * (mask_hi + mask_lo)
-        grad_low = sum_like(grad_low, input_low)
+        grad_low = self._sum_like(grad_low, input_low)
         return [grad_input, grad_low, grad_range]
 
     def tune_range(

@@ -171,6 +171,10 @@ class CompilationWrapper:
 
         :return: Result of the function call.
         """
+        # Prevent nested compilation
+        if torch.compiler.is_compiling():
+            return self._func(*args, **kwargs)
+
         if self._compiled_func is None:
             try:
                 self._compiled_func = torch.compile(self._func)
