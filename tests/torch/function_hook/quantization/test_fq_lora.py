@@ -141,7 +141,6 @@ def test_fq_lora_export(compression_kwargs, _seed):
         example_inputs_numpy = example_input.detach().cpu().numpy()
         stripped_ov_output = torch.tensor(model(example_inputs_numpy)[0], device=example_input.device)
 
-        # TODO(aanuf): fix input_low, input_range computation for AsymmetricQuantizer
         assert torch.allclose(tuned_output, stripped_output, atol=1e-1)
         assert torch.allclose(tuned_output, stripped_ov_output, atol=1e-1)
 
