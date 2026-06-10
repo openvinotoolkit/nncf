@@ -34,4 +34,14 @@ def load_file(file_path: str, *, device: TensorDeviceType | None = None) -> dict
 @io.save_file.register
 def _(data: dict[str, T_NUMPY], file_path: Path) -> None:
     fail_if_symlink(file_path)
-    np_save_file(data, file_path)  # type: ignore [arg-type]
+
+    normalized_data: dict[str, T_NUMPY_ARRAY] = {}
+    for key, value in data.items():
+        if isinstance(value, np.generic):
+            # Safetensors >= 0.8.0 requires np.array(scalar) instead of raw NumPy scalars.
+            # Note: This only changes the container type; functional behavior remains identical.
+            normalized_data[key] = np.asarray(value)
+        else:
+            normalized_data[key] = value
+
+    np_save_file(normalized_data, file_path)
