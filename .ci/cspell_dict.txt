@@ -182,6 +182,7 @@ hellaswag
 hiddens
 hparam
 hparams
+hqq
 hswish
 huggingface
 hutter
