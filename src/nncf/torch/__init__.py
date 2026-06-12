@@ -32,11 +32,3 @@ from nncf.torch.strip import strip as strip
 
 from nncf.torch.extensions import force_build_cpu_extensions as force_build_cpu_extensions
 from nncf.torch.extensions import force_build_cuda_extensions as force_build_cuda_extensions
-
-# This is required since torchvision changes a dictionary inside of pytorch mapping
-# different ops and their role in torch fx graph. Once the nncf mapping is done, it is
-# represented as a different custom operation which is how it is changed in
-# the said mapping. The polyfills loader is the specific file to be imported
-# before making wrapping changes
-if torch.__version__ >= "2.5.0":
-    from torch._dynamo.polyfills import loader
