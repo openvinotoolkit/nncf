@@ -34,7 +34,7 @@ def exclude_empty_fields(value: dict[str, Any]) -> dict[str, Any]:
 
 
 def dump_parameters(
-    model: ov.Model, parameters: dict, algo_name: str | None = "quantization", path: list | None = None
+    model: ov.Model, parameters: dict[str, Any], algo_name: str | None = "quantization", path: list[str] | None = None
 ) -> None:
     """
     Dumps the given parameters into Model's meta section.

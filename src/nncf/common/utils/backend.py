@@ -80,7 +80,7 @@ def is_onnx_model(model: Any) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of onnx.ModelProto, otherwise False.
     """
-    import onnx  # type: ignore
+    import onnx
 
     return isinstance(model, onnx.ModelProto)
 
