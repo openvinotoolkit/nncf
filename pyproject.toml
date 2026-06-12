@@ -74,10 +74,7 @@ strict = true
 files = ["src"]
 exclude = [
     "src/nncf/experimental/*",
-    "src/nncf/onnx/engine.py",
-    "src/nncf/onnx/graph/metatypes/groups.py",
     "src/nncf/onnx/graph/metatypes/onnx_metatypes.py",
-    "src/nncf/onnx/graph/model_metadata.py",
     "src/nncf/onnx/graph/model_transformer.py",
     "src/nncf/onnx/graph/model_utils.py",
     "src/nncf/onnx/graph/nncf_graph_builder.py",
@@ -86,9 +83,7 @@ exclude = [
     "src/nncf/onnx/graph/passes.py",
     "src/nncf/onnx/graph/transformations/command_creation.py",
     "src/nncf/onnx/graph/transformations/commands.py",
-    "src/nncf/onnx/hardware/config.py",
     "src/nncf/onnx/quantization/backend_parameters.py",
-    "src/nncf/onnx/quantization/default_quantization.py",
     "src/nncf/onnx/quantization/quantize_model.py",
     "src/nncf/onnx/quantization/quantizer_parameters.py",
     "src/nncf/onnx/statistics/aggregator.py",
