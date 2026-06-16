@@ -36,7 +36,7 @@ class ONNXTargetPoint(TargetPoint):
         self.target_node_name = target_node_name
         self.port_id = port_id
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, ONNXTargetPoint)
             and self.type == other.type
