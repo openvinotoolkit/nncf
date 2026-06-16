@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, TypeVar
 
 import nncf
@@ -42,6 +43,16 @@ TModel = TypeVar("TModel")
 
 BIAS_CORRECTION_THRESHOLD = 1000
 OUTPUT_PORT_OF_NODE = 0
+
+
+@dataclass()
+class SubgraphData:
+    """
+    Describes the subgraph data for the bias correction algorithm.
+    """
+
+    input_ids: set[tuple[NNCFNodeName, int]]
+    output_ids: set[tuple[NNCFNodeName, int]]
 
 
 class BiasCorrection(Algorithm):
@@ -311,7 +322,7 @@ class BiasCorrection(Algorithm):
             edges_queue.extend(nncf_graph.get_input_edges(node))
         return subgraph_input_ids
 
-    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> dict[str, set[tuple[str, int]]]:
+    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> SubgraphData:
         """
         This method collects necessary data for the specified node and its subgraph.
         This data contains the nodes (NNCFNode) for the subgraph building
@@ -321,7 +332,7 @@ class BiasCorrection(Algorithm):
         :param nncf_graph: NNCFGraph instance for graph analysis.
         :return: A dict with the list of the nodes for the subgraph input and statistics collection.
         """
-        subgraph_input_ids = []
+        subgraph_input_ids: list[tuple[NNCFNodeName, int]] = []
 
         # First, we need to find out the nodes with bias that follow by main node.
         # To collect statistics for next nodes.
@@ -344,14 +355,14 @@ class BiasCorrection(Algorithm):
 
         # In case the outputs were not found during the collection of statistics nodes,
         # we use the latter as the outputs of the subgraph.
-        subgraph_data = {
-            "subgraph_input_ids": set(subgraph_input_ids),
-            "subgraph_output_ids": set(subgraph_output_ids),
-        }
+        return SubgraphData(
+            input_ids=set(subgraph_input_ids),
+            output_ids=set(subgraph_output_ids),
+        )
 
-        return subgraph_data
-
-    def _prepare_subgraph(self, node: NNCFNode, model: TModel, nncf_graph: NNCFGraph, subgraph_data: dict) -> TModel:
+    def _prepare_subgraph(
+        self, node: NNCFNode, model: TModel, nncf_graph: NNCFGraph, subgraph_data: SubgraphData
+    ) -> TModel:
         """
         This method prepares the subgraph from the model for the further inference.
 
@@ -361,9 +372,7 @@ class BiasCorrection(Algorithm):
         :param subgraph_data: A dictionary with the layers for the graph building.
         :return: Backend-specific subgraph extracted from the model.
         """
-        extracted_model = self.extract_model(
-            model, subgraph_data["subgraph_input_ids"], subgraph_data["subgraph_output_ids"]
-        )
+        extracted_model = self.extract_model(model, subgraph_data.input_ids, subgraph_data.output_ids)
 
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(extracted_model)
@@ -377,7 +386,7 @@ class BiasCorrection(Algorithm):
         return model_transformer.transform(transformation_layout)
 
     def _create_feed_dicts(
-        self, model: TModel, subgraph_data: dict, statistic_points: StatisticPointsContainer
+        self, model: TModel, subgraph_data: SubgraphData, statistic_points: StatisticPointsContainer
     ) -> list[dict]:
         """
         Creates the list of the dictionaries that contains the input data for the model execution.
@@ -391,7 +400,7 @@ class BiasCorrection(Algorithm):
         statistics_size = self.subset_size
         statistics_per_input = {}
 
-        for input_node_name, input_port_id in subgraph_data["subgraph_input_ids"]:
+        for input_node_name, input_port_id in subgraph_data.input_ids:
             input_tensor_name = self._backend_entity.get_input_name(model, input_node_name, input_port_id)
             activation_name, output_port_id = self._collected_stat_inputs_map[(input_node_name, input_port_id)]
             input_fp = self._get_fp_inputs(statistic_points, node_name=activation_name, port_id=output_port_id)
@@ -400,7 +409,7 @@ class BiasCorrection(Algorithm):
 
         for stat_id in range(statistics_size):
             feed_dict = {}
-            for input_node_name, input_port_id in subgraph_data["subgraph_input_ids"]:
+            for input_node_name, input_port_id in subgraph_data.input_ids:
                 input_tensor_name = self._backend_entity.get_input_name(model, input_node_name, input_port_id)
                 # Since we do not use as inputs the layers from which the statistics are gathered,
                 # but those that follow them, we need to take this into account when creating feed dicts.
@@ -463,7 +472,7 @@ class BiasCorrection(Algorithm):
         transformation_layout.register(bias_correction_command)
         return model_transformer.transform(transformation_layout)
 
-    def _collect_new_stats(self, model: TModel, feed_dicts: list, subgraph_data: dict) -> None:
+    def _collect_new_stats(self, model: TModel, feed_dicts: list, subgraph_data: SubgraphData) -> None:
         """
         Updates the self._fp_inputs with the new statistics for the next layers
         after the correction of the bias for the current.
@@ -475,11 +484,11 @@ class BiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         for feed_dict in feed_dicts:
             new_q_output = engine.infer(feed_dict)
-            for output_node_name, output_id in subgraph_data["subgraph_output_ids"]:
+            for output_node_name, output_id in subgraph_data.output_ids:
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name, output_id)
                 self._fp_inputs[(output_node_name, output_id)].append(Tensor(new_q_output[output_tensor_name]))
 
-    def _remove_unnecessary_stats(self, position: int, subgraphs_data: dict[str, dict]) -> None:
+    def _remove_unnecessary_stats(self, position: int, subgraphs_data: list[SubgraphData]) -> None:
         """
         Removes unnecessary statistics that were collected before to reduce the memory usage.
 
@@ -490,10 +499,10 @@ class BiasCorrection(Algorithm):
         # Collects list of the statistics that needed for the future layers.
         needed_stats_list = []
         for i in range(position + 1, len(subgraphs_data)):
-            input_ids = subgraphs_data[i]["subgraph_input_ids"]
+            input_ids = subgraphs_data[i].input_ids
             needed_stats_list.extend([self._collected_stat_inputs_map[input_id][0] for input_id in input_ids])
 
-        node_inputs_ids = subgraphs_data[position]["subgraph_input_ids"]
+        node_inputs_ids = subgraphs_data[position].input_ids
         for node_input_id in node_inputs_ids:
             activation_name, port_id = self._collected_stat_inputs_map[node_input_id]
             input_id = (activation_name, port_id)
@@ -675,7 +684,9 @@ class BiasCorrection(Algorithm):
 
         return list(biased_nodes - dependant_nodes)
 
-    def extract_model(self, model: TModel, input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]) -> TModel:
+    def extract_model(
+        self, model: TModel, input_ids: set[tuple[NNCFNodeName, int]], output_ids: set[tuple[NNCFNodeName, int]]
+    ) -> TModel:
         """
         Returns the backend-specific model that bounded by the specified input & output layers.
 
