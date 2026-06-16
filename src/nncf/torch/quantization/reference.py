@@ -75,7 +75,7 @@ class ReferenceQuantize:
         if self.backend is np:
             n_elements = ref_tensor.size
             if n_elements == 1:
-                return tensor_to_sum.sum()
+                return tensor_to_sum.sum().reshape(ref_tensor.shape)
 
             for dim, size in enumerate(ref_tensor.shape):
                 if size == 1:
@@ -84,7 +84,7 @@ class ReferenceQuantize:
 
         n_elements = ref_tensor.numel()
         if n_elements == 1:
-            return tensor_to_sum.sum()
+            return tensor_to_sum.sum().reshape(ref_tensor.shape)
 
         for dim, size in enumerate(ref_tensor.shape):
             if size == 1:
