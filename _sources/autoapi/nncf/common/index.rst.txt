@@ -15,7 +15,6 @@ Subpackages
    :titlesonly:
    :maxdepth: 3
 
-   initialization/index.rst
    quantization/index.rst
 
 

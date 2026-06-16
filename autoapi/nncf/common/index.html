@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html"><link rel="next" title="nncf.common.initialization" href="initialization/index.html"><link rel="prev" title="nncf.api.statistics" href="../api/statistics/index.html">
+<link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html"><link rel="next" title="nncf.common.quantization" href="quantization/index.html"><link rel="prev" title="nncf" href="../index.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>nncf.common - NNCF</title>
@@ -194,28 +194,19 @@
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
-<li class="toctree-l2 has-children"><a class="reference internal" href="../api/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api</span></code></a><input aria-label="Toggle navigation of nncf.api" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="../api/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input aria-label="Toggle navigation of nncf.common" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3 has-children"><a class="reference internal" href="initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><input aria-label="Toggle navigation of nncf.common.initialization" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="initialization/dataloader/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization.dataloader</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l4 has-children"><a class="reference internal" href="quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization.quantizer_propagation" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common</span></code></a><input aria-label="Toggle navigation of nncf.common" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><input aria-label="Toggle navigation of nncf.common.quantization.quantizer_propagation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l5"><a class="reference internal" href="quantization/quantizer_propagation/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation.structs</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l4"><a class="reference internal" href="quantization/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.statistics</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="quantization/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.structs</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../data/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.data</span></code></a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input aria-label="Toggle navigation of nncf.quantization" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization</span></code></a><input aria-label="Toggle navigation of nncf.quantization" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../quantization/advanced_parameters/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../quantization/range_estimator/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.range_estimator</span></code></a></li>
 </ul>
@@ -268,16 +259,11 @@
 <h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="initialization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="initialization/dataloader/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization.dataloader</span></code></a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="quantization/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></a><ul>
 <li class="toctree-l2"><a class="reference internal" href="quantization/quantizer_propagation/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="quantization/quantizer_propagation/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.quantizer_propagation.structs</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="quantization/statistics/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.statistics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="quantization/structs/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization.structs</span></code></a></li>
 </ul>
 </li>
@@ -291,23 +277,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="initialization/index.html">
+          <a class="next-page" href="quantization/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.initialization</span></code></div>
+                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.quantization</span></code></div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="../api/statistics/index.html">
+          <a class="prev-page" href="../index.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.api.statistics</span></code></div>
+                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf</span></code></div>
                 
               </div>
             </a>

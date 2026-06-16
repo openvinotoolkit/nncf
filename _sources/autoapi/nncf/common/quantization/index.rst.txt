@@ -19,7 +19,6 @@ Submodules
    :titlesonly:
    :maxdepth: 1
 
-   statistics/index.rst
    structs/index.rst
 
 

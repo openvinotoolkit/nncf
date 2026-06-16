@@ -15,7 +15,6 @@ Subpackages
    :titlesonly:
    :maxdepth: 3
 
-   api/index.rst
    common/index.rst
    data/index.rst
    quantization/index.rst
