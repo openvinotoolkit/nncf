@@ -330,7 +330,7 @@ class BiasCorrection(Algorithm):
 
         :param node: NNCFNode instance. This is the main node with bias that would be corrected (or not).
         :param nncf_graph: NNCFGraph instance for graph analysis.
-
+        :return: SubgraphData instance containing input and output ids for the subgraph.
         """
         subgraph_input_ids: list[tuple[NNCFNodeName, int]] = []
 
