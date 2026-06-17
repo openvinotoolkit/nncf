@@ -14,12 +14,18 @@ import time
 from pathlib import Path
 
 import onnx
+
+# TODO(AlexanderDokuchaev): Remove this workaround when update transformers version or optimum-intel
+# WA for https://github.com/huggingface/optimum-intel/pull/1798
+import optimum.intel.utils.import_utils as import_utils
 from optimum.intel.openvino import OVModelForCausalLM
 from optimum.onnxruntime import ORTModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
 from nncf.onnx.quantization.backend_parameters import BackendParameters
+
+import_utils._transformers_version = "5.0.0"
 
 ROOT = Path(__file__).parent.resolve()
 
