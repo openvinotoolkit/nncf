@@ -70,8 +70,8 @@ class InsertionPointGraph(nx.MultiDiGraph):  # type: ignore
     def __init__(
         self,
         nncf_graph: NNCFGraph,
-        allowed_pre_hook_insertion_points: list[PreHookInsertionPoint] = None,
-        allowed_post_hook_insertion_points: list[PostHookInsertionPoint] = None,
+        allowed_pre_hook_insertion_points: list[PreHookInsertionPoint] | None = None,
+        allowed_post_hook_insertion_points: list[PostHookInsertionPoint] | None = None,
     ):
         """
         Initializes the insertion point graph.

@@ -1,5 +1,38 @@
 # Release Notes
 
+## New in Release 3.2.0
+
+- Features:
+  - Add support for ignoring specific weight nodes by constant node name within `IgnoredScope` for `nncf.compress_weights` and `nncf.prune` (https://github.com/openvinotoolkit/nncf/pull/4063) (https://github.com/openvinotoolkit/nncf/pull/4064).
+- Fixes:
+  - (PyTorch) Fixed TorchFX model extractor to prevent capture of nodes that do not affect target outputs (https://github.com/openvinotoolkit/nncf/pull/3982).
+  - Fixed `QuantizationConstraints.from_config_dict` to avoid unexpected behavior (https://github.com/openvinotoolkit/nncf/pull/4046).
+  - (OpenVINO) Fixed Scale Estimation to properly handle zero `initial_steps` and `scale_steps` in `calculate_quantization_params` (https://github.com/openvinotoolkit/nncf/pull/4039).
+- Improvements:
+  - (OpenVINO) Added `transpose_a` attribute support for Scale Estimation algorithm in ONNX and OpenVINO backends (https://github.com/openvinotoolkit/nncf/pull/3839).
+  - (PyTorch) Removed no-op operations (`to`, `dropout`, etc.) from the inference graph in PTQ and Weight Compression algorithms (https://github.com/openvinotoolkit/nncf/pull/4057).
+  - (PyTorch) Improved `load_from_config` reliability by saving module path in serialized config (https://github.com/openvinotoolkit/nncf/pull/4050) (https://github.com/openvinotoolkit/nncf/pull/4054).
+- Tutorials:
+  - [Post-Training Optimization of Qwen3-VL Embedding and Reranker Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen3-vl-embedding)
+  - [Post-Training Optimization of MiniCPM-V 4.6 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-v-4.6/minicpm-v-4.6.ipynb)
+  - [Post-Training Optimization of MinerU 2.5 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/mineru2.5/mineru2.5.ipynb)
+  - [Post-Training Optimization of GLM-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm-ocr/glm-ocr.ipynb)
+  - [Post-Training Optimization of FLUX.2 Klein Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flux.2-klein/flux.2-klein.ipynb)
+  - [Post-Training Optimization of MedASR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/medasr-medical-asr/medasr-medical-asr.ipynb)
+  - [Post-Training Optimization of ERNIE-Image-Turbo Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ernie-image/ernie-image.ipynb)
+  - [Post-Training Optimization of VoxCPM2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/voxcpm2-tts/voxcpm2-tts.ipynb)
+  - [Post-Training Optimization of HY-MT1.5 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/hunyuan-translation/hunyuan-translation.ipynb)
+  - [Post-Training Optimization of YOLO26 Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/yolov26-optimization)
+- Deprecations/Removals:
+  - (PyTorch) Removed `example_input` parameter from `load_from_config`, which has been unused since 3.0.0 (https://github.com/openvinotoolkit/nncf/pull/4051).
+  - (PyTorch) Removed `OVQuantizer` from NNCF; use it from the `executorch` package instead (https://github.com/openvinotoolkit/nncf/pull/3842).
+  - Removed deprecated `CompressWeightsMode.INT8` mode. Use `CompressWeightsMode.INT8_SYM` or `CompressWeightsMode.INT8_ASYM` instead (https://github.com/openvinotoolkit/nncf/pull/4008).
+  - Removed unused `ProgressBar` class (https://github.com/openvinotoolkit/nncf/pull/4044).
+- Requirements:
+  - Updated `onnx` to 1.21.0 (https://github.com/openvinotoolkit/nncf/pull/4006).
+  - Updated `torchao` to 0.17.0 (https://github.com/openvinotoolkit/nncf/pull/4013).
+  - Updated `onnxscript` to 0.6.2 (https://github.com/openvinotoolkit/nncf/pull/4015).
+
 ## New in Release 3.1.0
 
 - General:

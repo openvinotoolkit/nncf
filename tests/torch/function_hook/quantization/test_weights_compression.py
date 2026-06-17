@@ -11,6 +11,7 @@
 
 
 from collections import defaultdict
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -27,6 +28,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
@@ -71,7 +73,7 @@ class SequentialMatmulModel(nn.Module):
         for _, main_value in enumerate(self.main_values):
             weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
             weights_data[-1, -1] = main_value
-            weight_tensor = torch.tensor(weights_data)
+            weight_tensor = weights_data.detach().clone()
             layer = nn.Linear(4, 4, bias=False)
             layer.weight = nn.Parameter(weight_tensor.t())
             self.layers.append(layer)
@@ -113,13 +115,14 @@ class MatMulModel(torch.nn.Module):
 
 
 class LinearModel(torch.nn.Module):
-    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
+    def __init__(self):
         super().__init__()
-        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
+        weight = torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8)
+        self.linear = torch.nn.Linear(weight.shape[1], weight.shape[0], False)
         self.linear.weight = torch.nn.Parameter(weight)
 
-    def forward(self, input):
-        return self.linear(input)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.linear(x)
 
 
 class SimpleMoEModel(nn.Module):
@@ -220,9 +223,9 @@ class AWQLinearModel(nn.Module):
     def get_linear_layer(self, weights_data, is_int8):
         if not is_int8:
             linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
-            linear_layer.weight = nn.Parameter(torch.tensor(weights_data, dtype=torch.float32))
+            linear_layer.weight = nn.Parameter(weights_data.detach().clone().to(dtype=torch.float32))
         else:
-            qw = torch.tensor(weights_data, dtype=torch.uint8).float()
+            qw = weights_data.detach().clone().to(dtype=torch.uint8).float()
             zp = torch.tensor([2**7], dtype=torch.uint8).float()
             scale = torch.ones((weights_data.shape[0], 1), dtype=torch.float32)
             weights = (qw - zp) * scale
@@ -592,7 +595,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     def get_model_for_test_scale_estimation(transpose_a: bool):
         if transpose_a:
             pytest.skip("transpose_a=True is not supported for PT backend")
-        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+        return LinearModel()
 
     @staticmethod
     def get_moe_model_for_test_scale_estimation(transpose_a: bool):
@@ -933,3 +936,39 @@ def test_half_precision_models(dtype):
         awq=True,
         dataset=nncf.Dataset([dict(inputs)]),
     )
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), {"post_hooks.linear:weight__0.0"}),
+        ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["linear/linear/0"]), set()),
+        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear/*"]), set()),
+    ),
+    ids=str,
+)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
+    model = wrap_model(LinearModel())
+    example_input = torch.rand(8, 8)
+    wrapped_model = GraphModelWrapper(model, example_input=example_input)
+    compressed_model = compress_weights(
+        wrapped_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+    hooks = {n for n, _ in get_hook_storage(compressed_model).named_hooks()}
+    assert hooks == param.ref

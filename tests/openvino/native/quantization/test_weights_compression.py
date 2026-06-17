@@ -119,7 +119,8 @@ class LMLinearModel(OVReferenceModel):
         input_1 = opset.parameter(self._input_shape, name="Input")
         weight_shape = self.get_weight_shape(transpose_b)
         data = self._rng.random(weight_shape).astype(np.float32)
-        matmul = opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
+        opset_constant = opset.constant(data, name="Weights")
+        matmul = opset.matmul(input_1, opset_constant, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
@@ -829,18 +830,31 @@ CALCULATE_SCALE_DESCS = [
 ]
 
 
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 @pytest.mark.parametrize(
-    ("ignored_scope", "num_compressed"),
+    "param",
     (
-        (IgnoredScope(types=["MatMul"]), 1),
-        (IgnoredScope(types=["Gather"]), 2),
-        (IgnoredScope(names=["MatMul_1"]), 2),
-        (IgnoredScope(patterns=["MatMul_\\d"]), 1),
+        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref=3),
+        ParamIgnoredScope(name="type", ignored_scope=IgnoredScope(types=["Gather"]), ref=2),
+        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["matmul_1_data"]), ref=2),
+        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul_1"]), ref=2),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=[".*data"]), ref=0),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=1),
     ),
+    ids=str,
 )
-def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
     model = IntegerModel(positive_w=False).ov_model
-    compressed_model = compress_weights(model, ignored_scope=ignored_scope)
+    compressed_model = compress_weights(model, ignored_scope=param.ignored_scope)
     ref_compressed_weights = TEST_MODELS[IntegerModel]
     act_num = 0
     for op in compressed_model.get_ops():
@@ -850,7 +864,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
             and op.get_element_type() == ov.Type.u8
         ):
             act_num += 1
-    assert act_num == num_compressed
+    assert act_num == param.ref
 
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
