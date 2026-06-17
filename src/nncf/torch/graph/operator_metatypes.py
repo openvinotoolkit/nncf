@@ -178,7 +178,7 @@ class PTNoopMetatype(PTOperatorMetatype):
     }
 
 
-@PT_OPERATOR_METATYPES.register(is_subtype=True)
+@PT_OPERATOR_METATYPES.register()
 class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv1DOp"
     hw_config_name = [HWOpName.DEPTHWISE_CONVOLUTION]
@@ -201,7 +201,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register(is_subtype=True)
+@PT_OPERATOR_METATYPES.register()
 class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv2DOp"
     hw_config_names = [HWOpName.DEPTHWISE_CONVOLUTION]
@@ -224,7 +224,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register(is_subtype=True)
+@PT_OPERATOR_METATYPES.register()
 class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv3DOp"
     hw_config_names = [HWOpName.DEPTHWISE_CONVOLUTION]
