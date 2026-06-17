@@ -12,17 +12,11 @@
 from functools import partial
 
 import numpy as np
-
-# TODO(AlexanderDokuchaev): Remove this workaround when update transformers version or optimum-intel
-# WA for https://github.com/huggingface/optimum-intel/pull/1798
-import optimum.intel.utils.import_utils as import_utils
 import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
-
-import_utils._transformers_version = "5.0.0"
 
 SEED = 0
 

@@ -15,18 +15,12 @@ from itertools import product
 import datasets
 import numpy as np
 import openvino as ov
-
-# TODO(AlexanderDokuchaev): Remove this workaround when update transformers version or optimum-intel
-# WA for https://github.com/huggingface/optimum-intel/pull/1798
-import optimum.intel.utils.import_utils as import_utils
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.scopes import IgnoredScope
-
-import_utils._transformers_version = "5.0.0"
 
 MODEL_ID = "hf-internal-testing/tiny-random-OPTForCausalLM"
 DEFAULT_RATIO = 0.4

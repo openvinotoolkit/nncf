@@ -14,10 +14,6 @@ from functools import partial
 
 import datasets
 import numpy as np
-
-# TODO(AlexanderDokuchaev): Remove this workaround when update transformers version or optimum-intel
-# WA for https://github.com/huggingface/optimum-intel/pull/1798
-import optimum.intel.utils.import_utils as import_utils
 from optimum.intel.openvino import OVModelForCausalLM
 from scipy.stats import norm
 from torch.jit import TracerWarning
@@ -26,8 +22,6 @@ from transformers import logging
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedAdaptiveCodebookParameters
-
-import_utils._transformers_version = "5.0.0"
 
 logging.set_verbosity_error()
 warnings.filterwarnings("ignore", category=TracerWarning)

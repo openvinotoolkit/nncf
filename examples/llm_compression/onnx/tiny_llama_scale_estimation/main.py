@@ -16,10 +16,6 @@ from pathlib import Path
 
 import numpy as np
 import onnx
-
-# TODO(AlexanderDokuchaev): Remove this workaround when update transformers version or optimum-intel
-# WA for https://github.com/huggingface/optimum-intel/pull/1798
-import optimum.intel.utils.import_utils as import_utils
 import torch
 from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
@@ -30,9 +26,6 @@ from transformers import LlamaTokenizerFast
 
 import nncf
 from nncf.onnx.quantization.backend_parameters import BackendParameters
-
-import_utils._transformers_version = "5.0.0"
-
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"

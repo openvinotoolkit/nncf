@@ -17,10 +17,6 @@ from typing import Callable, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
-
-# TODO(AlexanderDokuchaev): Remove this workaround when update transformers version or optimum-intel
-# WA for https://github.com/huggingface/optimum-intel/pull/1798
-import optimum.intel.utils.import_utils as import_utils
 from datasets import load_dataset
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer
@@ -29,8 +25,6 @@ from whowhatbench import Evaluator
 import nncf
 from nncf.common.logging import nncf_logger
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
-
-import_utils._transformers_version = "5.0.0"
 
 DataItem = TypeVar("DataItem")
 ModelInput = TypeVar("ModelInput")
