@@ -330,7 +330,7 @@ class BiasCorrection(Algorithm):
 
         :param node: NNCFNode instance. This is the main node with bias that would be corrected (or not).
         :param nncf_graph: NNCFGraph instance for graph analysis.
-        :return: A dict with the list of the nodes for the subgraph input and statistics collection.
+
         """
         subgraph_input_ids: list[tuple[NNCFNodeName, int]] = []
 
@@ -369,7 +369,7 @@ class BiasCorrection(Algorithm):
         :param node: NNCFNode instance for the current layer.
         :param model: Backend-specific model instance.
         :param nncf_graph: Instance of NNCFGraph.
-        :param subgraph_data: A dictionary with the layers for the graph building.
+        :param subgraph_data: SubgraphData instance with the layers for the graph building.
         :return: Backend-specific subgraph extracted from the model.
         """
         extracted_model = self.extract_model(model, subgraph_data.input_ids, subgraph_data.output_ids)
@@ -392,7 +392,7 @@ class BiasCorrection(Algorithm):
         Creates the list of the dictionaries that contains the input data for the model execution.
 
         :param model: TModel instance.
-        :param subgraph_data: A dictionary with the necessary data for current node.
+        :param subgraph_data: SubgraphData instance with the necessary data for current node.
         :param statistic_points: StatisticPointsContainer instance.
         :return: List of the dictionaries with the input data.
         """
@@ -479,7 +479,7 @@ class BiasCorrection(Algorithm):
 
         :param model: Backend-specific subgraph.
         :param feed_dicts: List of dictionaries with the input data for the subgraph.
-        :param subgraph_data: A dictionary with the needed list of the statistic nodes that will be updated.
+        :param subgraph_data: A SubgraphData with the needed list of the statistic nodes that will be updated.
         """
         engine = EngineFactory.create(model)
         for feed_dict in feed_dicts:
@@ -493,7 +493,7 @@ class BiasCorrection(Algorithm):
         Removes unnecessary statistics that were collected before to reduce the memory usage.
 
         :param position: Zero-based position of the current node that was corrected.
-        :param subgraphs_data: A dictionary of the data (input & statistic node names) that
+        :param subgraphs_data: A list of SubgraphData of the data (input & statistic node names) that
             uses for the sub-graphs creation.
         """
         # Collects list of the statistics that needed for the future layers.
