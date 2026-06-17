@@ -16,6 +16,9 @@ from torch import nn
 from torch.nn import BatchNorm2d
 from torch.nn import Dropout
 from torch.nn import Parameter
+from torchvision.models.swin_transformer import PatchMergingV2
+from torchvision.models.swin_transformer import SwinTransformer
+from torchvision.models.swin_transformer import SwinTransformerBlockV2
 from torchvision.transforms.functional import normalize
 
 from tests.torch.helpers import create_bn
@@ -690,3 +693,26 @@ class OneDepthwiseConvModel(nn.Module):
     def forward(self, x):
         # input_shape = [1, 3, 32, 32]
         return self.depthwise_conv(x)
+
+
+class SwinV2SingleBlock(nn.Module):
+    """Minimal Swin Transformer V2 model with a single block for testing."""
+
+    INPUT_SHAPE = (1, 3, 224, 224)
+
+    def __init__(self):
+        super().__init__()
+        self.model = SwinTransformer(
+            patch_size=[4, 4],
+            embed_dim=96,
+            depths=[1, 1, 1, 1],
+            num_heads=[3, 6, 12, 24],
+            window_size=[8, 8],
+            stochastic_depth_prob=0.2,
+            num_classes=10,
+            block=SwinTransformerBlockV2,
+            downsample_layer=PatchMergingV2,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)

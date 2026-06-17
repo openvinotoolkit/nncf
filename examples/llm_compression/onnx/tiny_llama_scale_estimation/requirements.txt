@@ -4,7 +4,7 @@ openvino==2026.2.0
 optimum-intel[openvino]==2.0.0
 optimum==2.2.0
 optimum-onnx @ git+https://github.com/AlexanderDokuchaev/optimum-onnx.git@b577399d0a6fe748af0ad2c776c7aab3adeec66d
-onnx==1.21.0
+onnx==1.22.0
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
 datasets==5.0.0
