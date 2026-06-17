@@ -5,5 +5,5 @@ numpy>=1.23.5,<2
 openvino==2026.2.0
 optimum-intel==2.0.0
 optimum==2.2.0
-transformers==5.0.0rc3
+transformers==5.0.0
 lm_eval==0.4.12
