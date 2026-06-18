@@ -38,13 +38,13 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import YOLO26AttentionBlock
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
-from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_models.synthetic import ConcatSameTensorModel
 from tests.torch.test_models.synthetic import ConvReluBranchModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import SplitCatModel
+from tests.torch.test_models.synthetic import SwinV2SingleBlock
 from tests.torch.test_models.synthetic import TopKModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
@@ -73,7 +73,7 @@ TEST_MODELS = (
     torchvision_model_case("resnet18", (1, 3, 224, 224)),
     torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
     torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-    torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
+    ModelCase(SwinV2SingleBlock, "swin_v2_single_block", SwinV2SingleBlock.INPUT_SHAPE),
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
     ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
@@ -173,11 +173,11 @@ TEST_MODELS_QUANIZED = (
         [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This ViT Model is not eligible for dynamic shape capability
     ),
     (
-        torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
+        ModelCase(SwinV2SingleBlock, "swin_v2_single_block", SwinV2SingleBlock.INPUT_SHAPE),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [
-            (130, 130),
-            (77, 77),
+            (50, 50),
+            (29, 29),
         ],
         [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
@@ -196,6 +196,18 @@ TEST_MODELS_QUANIZED = (
         [Dim.AUTO, Dim.AUTO, Dim.STATIC],
     ),
 )
+
+
+def count_q_dq(model: torch.fx.GraphModule):
+    q, dq = 0, 0
+    for node in model.graph.nodes:
+        if node.op == "call_function" and hasattr(node.target, "overloadpacket"):
+            node_type = str(node.target.overloadpacket).split(".")[1]
+            if node_type in ["quantize_per_tensor", "quantize_per_channel"]:
+                q += 1
+            elif node_type in ["dequantize_per_tensor", "dequantize_per_channel"]:
+                dq += 1
+    return q, dq
 
 
 @pytest.mark.parametrize("enable_dynamic_shapes", [True, False])

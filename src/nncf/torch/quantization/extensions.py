@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import subprocess
+from typing import Any
 
 import torch
 
@@ -44,7 +45,7 @@ CUDA_EXT_SRC_LIST = [
 @EXTENSIONS.register()
 class QuantizedFunctionsCPULoader(ExtensionLoader):
     @classmethod
-    def extension_type(cls):
+    def extension_type(cls) -> ExtensionsType:
         return ExtensionsType.CPU
 
     @classmethod
@@ -52,7 +53,7 @@ class QuantizedFunctionsCPULoader(ExtensionLoader):
         return "quantized_functions_cpu"
 
     @classmethod
-    def load(cls):
+    def load(cls) -> Any:
         try:
             retval = torch.utils.cpp_extension.load(
                 cls.name(),
@@ -77,11 +78,11 @@ class QuantizedFunctionsCPULoader(ExtensionLoader):
 @EXTENSIONS.register()
 class QuantizedFunctionsCUDALoader(ExtensionLoader):
     @classmethod
-    def extension_type(cls):
+    def extension_type(cls) -> ExtensionsType:
         return ExtensionsType.CUDA
 
     @classmethod
-    def load(cls):
+    def load(cls) -> Any:
         try:
             return torch.utils.cpp_extension.load(
                 cls.name(),
@@ -112,4 +113,4 @@ QuantizedFunctionsCPU = ExtensionNamespace(QuantizedFunctionsCPULoader())
 if torch.cuda.is_available():
     QuantizedFunctionsCUDA = ExtensionNamespace(QuantizedFunctionsCUDALoader())
 else:
-    QuantizedFunctionsCUDA = CudaNotAvailableStub()
+    QuantizedFunctionsCUDA = CudaNotAvailableStub()  # type: ignore[assignment]

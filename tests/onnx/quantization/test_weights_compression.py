@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
@@ -19,6 +20,7 @@ import numpy as np
 import onnx
 import onnxruntime
 import pytest
+import torch
 from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
@@ -39,6 +41,7 @@ from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization import compress_weights
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
@@ -502,23 +505,33 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_model_for_test_scale_estimation() -> onnx.ModelProto:
+    def get_model_for_test_scale_estimation(transpose_a) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_scale_estimation()
             - TemplateWeightCompression.test_scale_estimation_outlier_channel_has_lowest_error()
         tests.
         """
+
         mb = ModelBuilder()
         x = mb.add_input("input", (1, 4, 8))
         output = mb.add_output("output", (1, 4, 16))
         weights = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8).T
-        mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
+        if transpose_a:
+            squeeze = mb.add_squeeze(x)
+            transpose = mb.add_transpose(squeeze, (1, 0))
+            mb.add_gemm(transpose, shape=(8, 16), output=output, weight_data=weights, trans_a=1)
+        else:
+            mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
 
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> onnx.ModelProto:
+        if transpose_a:
+            msg = "ONNX does not support transpose_a + MoE"
+            pytest.skip(msg)
+
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
@@ -956,5 +969,69 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return True
 
     @pytest.mark.skip("RoPE pattern is invalid for the ONNX backend, ticket 183208")
-    def test_rope_weight_compression():
+    def test_rope_weight_compression(self):
         pass
+
+
+class LinearModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        weight = torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8)
+        self.linear = torch.nn.Linear(weight.shape[1], weight.shape[0], False)
+        self.linear.weight = torch.nn.Parameter(weight)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.linear(x)
+
+
+@pytest.fixture(name="model_for_ignored_scope_test", scope="module")
+def get_model_for_ignored_scope_test(tmp_path_factory) -> onnx.ModelProto:
+    pt_model = LinearModel().eval()
+    onnx_path = tmp_path_factory.mktemp("onnx_models") / "LinearModel.onnx"
+    torch.onnx.export(
+        pt_model, torch.randn(1, 8), onnx_path, input_names=["input"], output_names=["output"], external_data=False
+    )
+    model = onnx.load(onnx_path)
+    return model
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), {"linear.weight_quantized"}),
+        pytest.param(
+            ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
+            marks=pytest.mark.xfail(reason="See ticket 186262"),
+        ),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["node_linear"]), set()),
+        pytest.param(
+            ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
+            marks=pytest.mark.xfail(reason="See ticket 186262"),
+        ),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["node_li.*"]), set()),
+    ),
+    ids=str,
+)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope, model_for_ignored_scope_test: onnx.ModelProto):
+    model = deepcopy(model_for_ignored_scope_test)
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+
+    names = {i.name for i in compressed_model.graph.initializer if i.data_type == onnx.TensorProto.INT4}
+    assert names == param.ref

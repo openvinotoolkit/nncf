@@ -23,7 +23,7 @@ fastprogress==1.0.5
 
 # This is because torch backend uses it and we import from torch
 # ONNX
-onnx==1.21.0
+onnx==1.22.0
 onnx-ir==0.1.15
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
