@@ -885,7 +885,7 @@ class WeightCompression(Algorithm):
 
         :param weight_dtype: The data type of the weights to be compressed.
         :param compression_mode: The compression mode to be applied.
-        :return: True if the combination of wgit eight_dtype and compression_mode is supported for compression,
+        :return: True if the combination of weight_dtype and compression_mode is supported for compression,
             False otherwise. Specifically, returns False if the data type is one of the supported
             float8 types and the mode is an INT8 mode (i.e., same-bit compression is not supported).
         """
@@ -1009,7 +1009,11 @@ class WeightCompression(Algorithm):
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
 
                 wc_config = None
-                if is_target_node and self.is_weight_compression_supported(weight_dtype, self._mode):
+                if (
+                    is_target_node
+                    and weight_name not in ignored_names
+                    and self.is_weight_compression_supported(weight_dtype, self._mode)
+                ):
                     if (
                         self._group_size != -1
                         and self._all_layers
