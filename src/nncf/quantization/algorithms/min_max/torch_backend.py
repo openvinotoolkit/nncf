@@ -232,7 +232,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             half_range=False,
             logarithm_scale=False,
             is_quantized_on_export=False,
-            compression_lr_multiplier=None,
         )
         quantizer = quantizer_cls(quantizer_spec)
 

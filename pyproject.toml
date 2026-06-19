@@ -183,7 +183,6 @@ exclude = [
     "src/nncf/torch/graph/operator_metatypes.py",
     "src/nncf/torch/graph/transformations/commands.py",
     "src/nncf/torch/initialization.py",
-    "src/nncf/torch/layer_utils.py",
     "src/nncf/torch/model_graph_manager.py",
     "src/nncf/torch/quantization/layers.py",
     "src/nncf/torch/quantization/quantize_functions.py",

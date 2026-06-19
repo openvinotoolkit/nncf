@@ -127,7 +127,6 @@ EXAMPLE_CONFIG = {
         "scale_shape": (1,),
         "logarithm_scale": False,
         "is_quantized_on_export": False,
-        "compression_lr_multiplier": None,
     },
 }
 
