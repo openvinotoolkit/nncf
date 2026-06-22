@@ -118,7 +118,8 @@ def test_fq_lora_export(compression_kwargs, _seed):
     Tests FQ-LoRA (Fake-Quantize with Low-Rank Adaptation) can be stripped and exported to OpenVINO.
     """
     device = "cuda"
-    example_input = 0.01 * torch.arange(0, 4 * 8, device=device).reshape(1, 4, 8) + 0.02
+    example_input = 0.01 * torch.arange(0, 4 * 8, device=device).reshape(1, 4, 8)
+    example_input = example_input - example_input.mean(dim=-1, keepdim=True)
 
     model = AWQLinearModel().to(device)
     model = nncf.compress_weights(

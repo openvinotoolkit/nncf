@@ -19,7 +19,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
 class PTNNCFGraph(NNCFGraph):
-    def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> tuple[int]:
+    def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> tuple[int, ...]:
         nncf_node = self.get_node_by_name(insertion_point.target_node_name)
         if insertion_point.input_port_id is not None:  # PRE_LAYER_OPERATION + OPERATION_WITH_WEIGHTS
             return self.get_input_edge_by_port_id(nncf_node, insertion_point.input_port_id).tensor_shape

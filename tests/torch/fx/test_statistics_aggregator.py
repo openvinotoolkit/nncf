@@ -93,7 +93,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             dataset_samples[0][0, i, 0, 0] = value["max"]
             dataset_samples[0][0, i, 0, 1] = value["min"]
 
-        return torch.tensor(dataset_samples, dtype=torch.float32)
+        return torch.tensor(np.array(dataset_samples), dtype=torch.float32)
 
     @pytest.fixture(params=[False], ids=["out_of_palce"])
     def inplace_statistics(self, request) -> bool:

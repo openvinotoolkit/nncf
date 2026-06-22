@@ -8,16 +8,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Callable
+
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import LINEAR_OPERATIONS
 
-OPENVINO_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
+OPENVINO_IGNORED_PATTERNS = Registry[IgnoredPatternNames, Callable[[], GraphPattern]]("openvino_ignored_patterns")
 
 
-def _add_softmax_matmul(pattern: GraphPattern, branch_matmul_nodes: list[om.OperatorMetatype]) -> None:
+def _add_softmax_matmul(pattern: GraphPattern, branch_matmul_nodes: list[type[OperatorMetatype]]) -> None:
     #       SOFTMAX  READVALUE||RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #           \              /
     #            \            /
@@ -37,7 +40,7 @@ def _add_softmax_matmul(pattern: GraphPattern, branch_matmul_nodes: list[om.Oper
     pattern.add_edge(matmul_branch_nodes, matmul)
 
 
-def _add_softmax_reshape_matmul(pattern: GraphPattern, branch_matmul_nodes: list[om.OperatorMetatype]) -> None:
+def _add_softmax_reshape_matmul(pattern: GraphPattern, branch_matmul_nodes: list[type[OperatorMetatype]]) -> None:
     #       SOFTMAX
     #           \
     #            \

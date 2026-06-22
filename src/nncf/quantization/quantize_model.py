@@ -498,8 +498,10 @@ def compress_weights(
     compression_weights_impl: Callable[..., Any] | None = None
 
     if backend == BackendType.TORCH:
+        from nncf.torch.function_hook.quantization.quantize_model import (
+            compress_weights_impl as pt_compression_weights_impl,
+        )
         from nncf.torch.model_creation import is_wrapped_model
-        from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         not_supported_modes = [
             CompressWeightsMode.NF4,

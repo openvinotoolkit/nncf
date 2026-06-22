@@ -32,7 +32,3 @@ The example is fully automated. Just run the following command in the prepared P
 ```bash
 python main.py
 ```
-
-## See also
-
-- [YOLOv8 Jupyter notebook](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization)

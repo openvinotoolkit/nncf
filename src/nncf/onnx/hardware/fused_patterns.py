@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable
+
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
@@ -19,7 +21,7 @@ from nncf.onnx.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import BATCH_NORMALIZATION_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import LINEAR_OPERATIONS
 
-ONNX_HW_FUSED_PATTERNS = Registry("onnx")
+ONNX_HW_FUSED_PATTERNS = Registry[HWFusedPatternNames, Callable[[], GraphPattern]]("onnx_hw_fused_patterns")
 
 # BLOCK PATTERNS
 

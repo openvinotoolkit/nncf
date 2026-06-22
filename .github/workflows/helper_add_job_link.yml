@@ -6,7 +6,6 @@ on:
       - "Weight compression"
     types:
       - requested
-      - in_progress
       - completed
 
 permissions:
@@ -44,7 +43,7 @@ jobs:
           echo "Workflow name: $WORKFLOW_NAME"
 
           # 2. Extract the number following 'PR#'
-          PR_NUM=$(echo "$DISPLAY_TITLE" | grep -oP 'PR#\K\d+')
+          PR_NUM=$(echo "$DISPLAY_TITLE" | grep -oP 'PR#\K\d+' || echo "")
 
           if [ -z "$PR_NUM" ]; then
             echo "Could not find PR number in display title '$DISPLAY_TITLE'. Skipping."

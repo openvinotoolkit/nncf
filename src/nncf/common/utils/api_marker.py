@@ -17,7 +17,7 @@ API_MARKER_ATTR = "_nncf_api_marker"
 CANONICAL_ALIAS_ATTR = "_nncf_canonical_alias"
 
 
-def api(canonical_alias: str = None) -> Callable[[TObj], TObj]:
+def api(canonical_alias: str | None = None) -> Callable[[TObj], TObj]:
     """
     Decorator function used to mark a object as an API.
 

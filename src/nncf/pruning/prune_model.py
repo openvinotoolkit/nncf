@@ -48,7 +48,7 @@ def prune(
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.pruning.prune_model import prune
 
-        model = prune(model, mode, ratio, ignored_scope, examples_inputs)
+        model = prune(model, mode, ratio, ignored_scope, examples_inputs)  # type: ignore[type-var]
     else:
         msg = f"Pruning is not supported for the {backend} backend."
         raise nncf.InternalError(msg)
@@ -71,7 +71,7 @@ def batch_norm_adaptation(model: TModel, calibration_dataset: Dataset, *, num_it
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.pruning.batch_norm_adaptation import batch_norm_adaptation
 
-        return batch_norm_adaptation(model, calibration_dataset=calibration_dataset, num_iterations=num_iterations)
+        return batch_norm_adaptation(model, calibration_dataset=calibration_dataset, num_iterations=num_iterations)  # type: ignore[type-var]
 
     msg = f"Batch norm adaptation is not supported for the {backend} backend."
     raise nncf.InternalError(msg)
@@ -107,8 +107,8 @@ class ModelPruningStatistic:
     pruned_tensors: list[TensorPruningStatistic]
 
     def __str__(self) -> str:
-        total = [
-            [None, None, None, None],
+        total: list[list[Any]] = [
+            [None, None, None],
             ["Prunable parameters", None, self.pruning_ratio],
             ["All parameters", None, self.global_pruning_ratio],
         ]
@@ -131,6 +131,6 @@ def pruning_statistic(model: TModel) -> ModelPruningStatistic:
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.pruning.statistics import pruning_statistic
 
-        return pruning_statistic(model)
+        return pruning_statistic(model)  # type: ignore[arg-type]
     msg = f"Pruning statistics collection is not supported for the {backend} backend."
     raise nncf.InternalError(msg)

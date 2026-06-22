@@ -77,7 +77,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         self,
         ip_graph: InsertionPointGraph,
         ignored_scopes: dict[str, IgnoreReason] | None = None,
-        target_scopes: list[str] = None,
+        target_scopes: list[str] | None = None,
     ):
         super().__init__()
         ip_graph = deepcopy(ip_graph)

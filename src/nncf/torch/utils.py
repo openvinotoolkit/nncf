@@ -49,7 +49,7 @@ def no_jit_trace() -> Generator[None, None, None]:
 
 
 class _ModuleState:
-    def __init__(self, base_module: Module = None):
+    def __init__(self, base_module: Module | None = None):
         self._training_state: dict[str, bool] = {}
         self._requires_grad_state: dict[str, bool] = {}
         if base_module is not None:

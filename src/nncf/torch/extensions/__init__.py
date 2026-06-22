@@ -18,7 +18,7 @@ from abc import abstractmethod
 from multiprocessing.context import TimeoutError as MPTimeoutError
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import torch
 from torch.utils.cpp_extension import _get_build_directory
@@ -27,8 +27,6 @@ import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
-
-EXTENSIONS = Registry("extensions")
 
 EXTENSION_LOAD_TIMEOUT_ENV_VAR = "NNCF_EXTENSION_LOAD_TIMEOUT"
 DEFAULT_EXTENSION_LOAD_TIMEOUT = 60
@@ -50,12 +48,12 @@ def get_build_directory_for_extension(name: str) -> Path:
 class ExtensionLoader(ABC):
     @classmethod
     @abstractmethod
-    def extension_type(cls):
+    def extension_type(cls) -> ExtensionsType:
         pass
 
     @classmethod
     @abstractmethod
-    def load(cls):
+    def load(cls) -> Any:
         pass
 
     @classmethod
@@ -66,6 +64,24 @@ class ExtensionLoader(ABC):
     @classmethod
     def get_build_dir(cls) -> str:
         return str(get_build_directory_for_extension(cls.name()))
+
+
+EXTENSIONS = Registry[str, type[ExtensionLoader]]("extensions")
+
+
+def _get_extension_load_timeout() -> int | None:
+    """
+    Get the extension load timeout from environment variable.
+
+    :return: Timeout in seconds, or None if timeout is disabled (set to 0 or negative).
+    """
+    raw_timeout = os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT)
+    try:
+        timeout = int(raw_timeout)
+    except ValueError as e:
+        msg = f"Environment variable {EXTENSION_LOAD_TIMEOUT_ENV_VAR} must be an integer, got: {raw_timeout}"
+        raise ValueError(msg) from e
+    return timeout if timeout > 0 else None
 
 
 class ExtensionLoaderTimeoutException(Exception):
@@ -84,7 +100,7 @@ class ExtensionNamespace:
         self._loaded_namespace = None
         self._loader = loader
 
-    def get(self, fn_name: str) -> Callable:
+    def get(self, fn_name: str) -> Callable[..., Any]:
         """
         Returns the callable object corresponding to a function from the extension, loading the extension first if
         necessary.
@@ -93,8 +109,7 @@ class ExtensionNamespace:
         :return: A callable object corresponding to the requested function.
         """
         if self._loaded_namespace is None:
-            timeout = int(os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT))
-            timeout = timeout if timeout > 0 else None
+            timeout = _get_extension_load_timeout()
             nncf_logger.info(f"Compiling and loading torch extension: {self._loader.name()}...")
             try:
                 with warnings.catch_warnings():
@@ -119,10 +134,10 @@ class ExtensionNamespace:
                 raise ExtensionLoaderTimeoutException(msg) from error
             nncf_logger.info(f"Finished loading torch extension: {self._loader.name()}")
 
-        return getattr(self._loaded_namespace, fn_name)
+        return getattr(self._loaded_namespace, fn_name)  # type: ignore[no-any-return]
 
 
-def _force_build_extensions(ext_type: ExtensionsType):
+def _force_build_extensions(ext_type: ExtensionsType) -> None:
     for class_type in EXTENSIONS.registry_dict.values():
         if class_type.extension_type() != ext_type:
             continue
@@ -130,17 +145,17 @@ def _force_build_extensions(ext_type: ExtensionsType):
 
 
 @api(canonical_alias="nncf.torch.force_build_cpu_extensions")
-def force_build_cpu_extensions():
+def force_build_cpu_extensions() -> None:
     _force_build_extensions(ExtensionsType.CPU)
 
 
 @api(canonical_alias="nncf.torch.force_build_cuda_extensions")
-def force_build_cuda_extensions():
+def force_build_cuda_extensions() -> None:
     _force_build_extensions(ExtensionsType.CUDA)
 
 
 class CudaNotAvailableStub:
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         msg = (
             f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
             f"driver supporting CUDA {torch.version.cuda} is installed."

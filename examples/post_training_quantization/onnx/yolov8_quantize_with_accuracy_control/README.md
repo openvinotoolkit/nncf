@@ -40,7 +40,3 @@ Run the following command to convert resulted INT8 model to the OpenVINO format:
 ```bash
 python deploy.py
 ```
-
-## See also
-
-- [YOLOv8 Jupyter notebook](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization)

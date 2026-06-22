@@ -601,31 +601,6 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         return cls(qsetup)
 
 
-class QuantizersSwitcher:
-    """Enables/disables quantizers with saving and restoring original state"""
-
-    def __init__(self, quantizers: list[BaseQuantizer]):
-        self.originally_disabled: list[BaseQuantizer] = []
-        self.originally_enabled: list[BaseQuantizer] = []
-        self._quantizers = quantizers
-
-    def disable_quantizers(self):
-        for module in self._quantizers:
-            if not module.is_enabled_quantization():
-                self.originally_disabled.append(module)
-            if module not in self.originally_enabled:
-                module.disable_quantization()
-        self.originally_enabled = []
-
-    def enable_quantizers(self):
-        for module in self._quantizers:
-            if module.is_enabled_quantization():
-                self.originally_enabled.append(module)
-            if module not in self.originally_disabled:
-                module.enable_quantization()
-        self.originally_disabled = []
-
-
 class StorageRedirectingLoadStateDictHook:
     def __init__(
         self, storage_attribute_in_module: str, name_in_state_dict: str, use_log_storage_in_module: bool = False
