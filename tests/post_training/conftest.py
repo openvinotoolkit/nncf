@@ -39,6 +39,12 @@ def pytest_addoption(parser):
         help="Report memory using MemoryMonitor from tools/memory_monitor.py. "
         "Warning: currently, reported memory values are not always reproducible.",
     )
+    parser.addoption(
+        "--ov-calibration-device",
+        action="store",
+        default=None,
+        help="OpenVINO device to use for calibration during weight compression (e.g. CPU, GPU).",
+    )
 
 
 @pytest.fixture(scope="session", name="data_dir")
@@ -92,6 +98,11 @@ def fixture_extra_columns(pytestconfig):
 @pytest.fixture(scope="session", name="memory_monitor")
 def fixture_memory_monitor(pytestconfig):
     return pytestconfig.getoption("memory_monitor")
+
+
+@pytest.fixture(scope="session", name="ov_calibration_device")
+def fixture_ov_calibration_device(pytestconfig):
+    return pytestconfig.getoption("ov_calibration_device")
 
 
 @pytest.fixture(scope="session", name="forked")

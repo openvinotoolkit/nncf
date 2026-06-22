@@ -252,6 +252,10 @@ class AdvancedQuantizationParameters:
     :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
+    :param calibration_device: OpenVINO device name to use for calibration inference
+        (e.g. "CPU", "GPU", "GPU.0", "AUTO:GPU,CPU"). If None, defaults to "CPU".
+        Only applicable to the OpenVINO backend.
+    :type calibration_device: Optional[str]
     """
 
     # General parameters
@@ -281,6 +285,9 @@ class AdvancedQuantizationParameters:
 
     # Backend specific parameters
     backend_params: dict[str, Any] = field(default_factory=dict)
+
+    # Calibration device
+    calibration_device: str | None = None
 
 
 @api()
@@ -427,6 +434,10 @@ class AdvancedCompressionParameters:
     :type lora_correction_params: AdvancedLoraCorrectionParameters
     :param backend_params: Backend-specific parameters.
     :type backend_params: dict[str, Any]
+    :param calibration_device: OpenVINO device name to use for calibration inference
+        (e.g. "CPU", "GPU", "GPU.0", "AUTO:GPU,CPU"). If None, defaults to "CPU".
+        Only applicable to the OpenVINO backend.
+    :type calibration_device: Optional[str]
     :param codebook: The codebook (LUT) for the weight compression.
         Applicable for vector quantization. Must be a numpy array or ov Tensor.
     :type codebook: TTensor
@@ -445,6 +456,7 @@ class AdvancedCompressionParameters:
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
+    calibration_device: str | None = None
     codebook: TTensor | None = None
     adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
         default_factory=AdvancedAdaptiveCodebookParameters
