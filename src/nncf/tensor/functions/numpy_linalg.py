@@ -12,13 +12,12 @@
 from typing import Any, Literal
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.linalg import lstsq
 
 from nncf.tensor.definitions import T_AXIS
 from nncf.tensor.functions import linalg
 
-T_NUMPY_ARRAY = NDArray[Any]
+T_NUMPY_ARRAY = np.ndarray[Any, np.dtype[Any]]
 
 
 @linalg.norm.register
