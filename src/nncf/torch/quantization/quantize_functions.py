@@ -419,6 +419,16 @@ def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
     Packs a tensor containing uint4 values (in the range [0, 15]) into a tensor with uint8 values,
     where each element stores two uint4 values.
 
+    Elements are packed in groups of two into a single uint8 byte. The element with the lower index
+    is stored in the least significant bits, and the element with the higher index in the most
+    significant bits::
+
+        index:     0       1
+        value:  [ 0xA ] [ 0xB ]          (only low 4 bits used)
+
+        bits:    7 6 5 4 | 3 2 1 0
+        byte 0: [  0xB   |  0xA  ]  = 0xBA
+
     :param tensor: A tensor of dtype `torch.uint8` where each element represents a uint4 value.
         The tensor should contain values in the range [0, 15].
     :return: A packed tensor of dtype `torch.uint8` where each element packs two uint4 values.
@@ -449,6 +459,17 @@ def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
     Packs a tensor containing int4 values (in the range [-8, 7]) into a tensor with uint8 values,
     where each element stores two int4 values.
 
+    Each int4 value is first shifted by +8 into the uint4 range [0, 15], then packed in groups of
+    two into a single uint8 byte. The element with the lower index is stored in the least
+    significant bits, and the element with the higher index in the most significant bits::
+
+        index:     0       1
+        value:  [  -8 ] [   7 ]
+        +8:     [   0 ] [  15 ]
+
+        bits:    7 6 5 4 | 3 2 1 0
+        byte 0: [  15    |   0   ]  = 0xF0
+
     :param tensor: A tensor of dtype `torch.int8` where each element represents an int4 value.
         The tensor should contain values in the range [-8, 7].
     :return: A packed tensor of dtype `torch.uint8` where each element packs two int4 values.
@@ -478,9 +499,21 @@ def pack_uint2(tensor: torch.Tensor) -> torch.Tensor:
     Packs a tensor containing uint2 values (in the range [0, 3]) into a tensor with uint8 values,
     where each element stores four uint2 values.
 
+    Elements are packed in groups of four into a single uint8 byte. The element with the lowest
+    index is stored in the least significant bits, and elements with higher indices in
+    progressively more significant bits::
+
+        index:    0     1     2     3
+        value:  [ 1 ] [ 2 ] [ 3 ] [ 0 ]    (only low 2 bits used)
+
+        bits:     7 6 | 5 4 | 3 2 | 1 0
+        byte 0:  [ 0  |  3  |  2  |  1 ]  = 0b00_11_10_01
+
     :param tensor: A tensor of dtype `torch.uint8` where each element represents a uint2 value.
         The tensor should contain values in the range [0, 3].
     :return: A packed tensor of dtype `torch.uint8` where each element packs four uint2 values.
+    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
+    :raises ValueError: If the tensor values are not in the range [0, 3].
     """
     if tensor.dtype != torch.uint8:
         msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
@@ -523,10 +556,22 @@ def pack_int2(tensor: torch.Tensor) -> torch.Tensor:
     Packs a tensor containing int2 values (in the range [-2, 1]) into a tensor with uint8 values,
     where each element stores four int2 values.
 
+    Each int2 value is first shifted by +2 into the uint2 range [0, 3], then packed in groups of
+    four into a single uint8 byte. The element with the lowest index is stored in the least
+    significant bits, and elements with higher indices in progressively more significant bits::
+
+        index:    0     1     2     3
+        value: [ -2 ] [ -1 ] [ 0 ] [ 1 ]
+        +2:    [  0 ] [  1 ] [ 2 ] [ 3 ]
+
+        bits:    7 6 | 5 4 | 3 2 | 1 0
+        byte 0: [ 3  |  2  |  1  |  0 ]  = 0b11_10_01_00
+
     :param tensor: A tensor of dtype `torch.int8` where each element represents an int2 value.
         The tensor should contain values in the range [-2, 1].
     :return: A packed tensor of dtype `torch.uint8` where each element packs four int2 values.
     :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.int8`.
+    :raises ValueError: If the tensor values are not in the range [-2, 1].
     """
     if tensor.dtype != torch.int8:
         msg = f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported."
