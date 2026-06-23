@@ -435,8 +435,11 @@ def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
     :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
     """
     if tensor.dtype != torch.uint8:
-        msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
+        msg = f"Invalid tensor dtype {tensor.dtype}. torch.uint8 type is supported."
         raise ValidationError(msg)
+    if torch.any((tensor < 0) | (tensor > 15)):
+        msg = "Tensor values are not in [0, 15]."
+        raise ValueError(msg)
     packed_tensor = tensor.contiguous()
     packed_tensor = packed_tensor.reshape(-1, 2)
     packed_tensor = torch.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
@@ -476,8 +479,11 @@ def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
     :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.int8`.
     """
     if tensor.dtype != torch.int8:
-        msg = f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported."
+        msg = f"Invalid tensor dtype {tensor.dtype}. torch.int8 type is supported."
         raise ValidationError(msg)
+    if torch.any((tensor < -8) | (tensor > 7)):
+        msg = "Tensor values are not in [-8, 7]."
+        raise ValueError(msg)
     tensor = tensor + 8
     return pack_uint4(tensor.type(torch.uint8))
 

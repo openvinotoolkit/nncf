@@ -880,6 +880,18 @@ def test_pack_invalid_dtype_raises(desc: PackUnpackDesc):
         desc.pack_fn(tensor)
 
 
+@pytest.mark.parametrize("desc", PACK_UNPACK_DESCS, ids=str)
+def test_pack_invalid_value(desc: PackUnpackDesc):
+    tensor = torch.tensor([desc.max_value + 1, 0, 0, 0], dtype=desc.input_dtype)
+    with pytest.raises(ValueError, match=r"Tensor values are not in"):
+        desc.pack_fn(tensor)
+
+    if desc.input_dtype.is_signed:
+        tensor = torch.tensor([desc.min_value - 1, 0, 0, 0], dtype=desc.input_dtype)
+        with pytest.raises(ValueError, match=r"Tensor values are not in"):
+            desc.pack_fn(tensor)
+
+
 def test_pack_uint4_layout():
     tensor = torch.tensor([1, 2, 3, 4], dtype=torch.uint8)
     # Two consecutive values [low, high] are packed into one byte as: low | (high << 4).
