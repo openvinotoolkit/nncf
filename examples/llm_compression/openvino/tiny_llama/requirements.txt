@@ -1,6 +1,6 @@
 datasets==5.0.0
 onnx==1.22.0
-openvino==2026.2.0
+openvino==2026.2.1
 optimum-intel[openvino]==2.0.0
 optimum==2.2.0
 torch==2.10.0
