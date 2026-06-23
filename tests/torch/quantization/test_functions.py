@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
 from typing import Callable
 
 import numpy as np
@@ -18,11 +19,20 @@ from torch.distributions.uniform import Uniform
 
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.os import is_windows
+from nncf.errors import ValidationError
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
+from nncf.torch.quantization.quantize_functions import pack_int2
+from nncf.torch.quantization.quantize_functions import pack_int4
+from nncf.torch.quantization.quantize_functions import pack_uint2
+from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
+from nncf.torch.quantization.quantize_functions import unpack_int2
+from nncf.torch.quantization.quantize_functions import unpack_int4
+from nncf.torch.quantization.quantize_functions import unpack_uint2
+from nncf.torch.quantization.quantize_functions import unpack_uint4
 from nncf.torch.quantization.reference import ReferenceBackendType
 from nncf.torch.quantization.reference import ReferenceQuantize
 from nncf.torch.quantization.reference import ReferenceQuantizedFunctions
@@ -814,3 +824,88 @@ def test_cuda_extension_reference_compatibility(desc):
     assert torch.allclose(bwd_grad_input, ref_grad_input)
     assert torch.allclose(bwd_grad_low, ref_grad_low)
     assert torch.allclose(bwd_grad_range, ref_grad_range, atol=1e-7)
+
+
+@dataclass
+class PackUnpackDesc:
+    name: str
+    pack_fn: Callable[[torch.Tensor], torch.Tensor]
+    unpack_fn: Callable[[torch.Tensor], torch.Tensor]
+    input_dtype: torch.dtype
+    min_value: int
+    max_value: int
+    values_per_byte: int
+    wrong_dtype: torch.dtype
+
+    def __str__(self) -> str:
+        return self.name
+
+
+PACK_UNPACK_DESCS = [
+    PackUnpackDesc("uint4", pack_uint4, unpack_uint4, torch.uint8, 0, 15, 2, torch.int8),
+    PackUnpackDesc("int4", pack_int4, unpack_int4, torch.int8, -8, 7, 2, torch.uint8),
+    PackUnpackDesc("uint2", pack_uint2, unpack_uint2, torch.uint8, 0, 3, 4, torch.int8),
+    PackUnpackDesc("int2", pack_int2, unpack_int2, torch.int8, -2, 1, 4, torch.uint8),
+]
+
+
+@pytest.mark.parametrize("desc", PACK_UNPACK_DESCS, ids=str)
+def test_pack_unpack_round_trip(desc: PackUnpackDesc):
+    # Exhaustively cover every representable value of the range, including the boundaries, tiled into a 2D tensor.
+    values = torch.arange(desc.min_value, desc.max_value + 1, dtype=desc.input_dtype)
+    tensor = values.unsqueeze(0).repeat(8, 1)
+
+    packed = desc.pack_fn(tensor)
+    unpacked = desc.unpack_fn(packed).reshape(tensor.shape)
+
+    assert unpacked.dtype == desc.input_dtype
+    assert torch.equal(unpacked, tensor)
+
+
+@pytest.mark.parametrize("desc", PACK_UNPACK_DESCS, ids=str)
+def test_pack_output_dtype_and_compression_ratio(desc: PackUnpackDesc):
+    values = torch.arange(desc.min_value, desc.max_value + 1, dtype=desc.input_dtype)
+    tensor = values.unsqueeze(0).repeat(8, 1)
+
+    packed = desc.pack_fn(tensor)
+
+    assert packed.dtype == torch.uint8
+    assert packed.numel() * desc.values_per_byte == tensor.numel()
+
+
+@pytest.mark.parametrize("desc", PACK_UNPACK_DESCS, ids=str)
+def test_pack_invalid_dtype_raises(desc: PackUnpackDesc):
+    tensor = torch.zeros(desc.values_per_byte, dtype=desc.wrong_dtype)
+    with pytest.raises(ValidationError, match="Invalid tensor dtype"):
+        desc.pack_fn(tensor)
+
+
+def test_pack_uint4_layout():
+    tensor = torch.tensor([1, 2, 3, 4], dtype=torch.uint8)
+    # Two consecutive values [low, high] are packed into one byte as: low | (high << 4).
+    expected = torch.tensor([1 | (2 << 4), 3 | (4 << 4)], dtype=torch.uint8)  # [33, 67]
+    assert torch.equal(pack_uint4(tensor).flatten(), expected)
+
+
+def test_pack_uint2_layout():
+    tensor = torch.tensor([1, 2, 3, 0, 3, 2, 1, 0], dtype=torch.uint8)
+    # Four consecutive values are packed into one byte as: v0 | v1 << 2 | v2 << 4 | v3 << 6
+    expected = torch.tensor(
+        [1 | (2 << 2) | (3 << 4) | (0 << 6), 3 | (2 << 2) | (1 << 4) | (0 << 6)],  # [57, 27]
+        dtype=torch.uint8,
+    )
+    assert torch.equal(pack_uint2(tensor).flatten(), expected)
+
+
+def test_pack_int4_layout():
+    # Signed values are mapped to the unsigned range with a +8 offset before packing.
+    tensor = torch.tensor([-8, -7, 0, 7], dtype=torch.int8)
+    expected = torch.tensor([(-8 + 8) | ((-7 + 8) << 4), (0 + 8) | ((7 + 8) << 4)], dtype=torch.uint8)  # [16, 248]
+    assert torch.equal(pack_int4(tensor).flatten(), expected)
+
+
+def test_pack_int2_layout():
+    # Signed values are mapped to the unsigned range with a +2 offset before packing.
+    tensor = torch.tensor([-2, -1, 0, 1], dtype=torch.int8)
+    expected = torch.tensor([(-2 + 2) | ((-1 + 2) << 2) | ((0 + 2) << 4) | ((1 + 2) << 6)], dtype=torch.uint8)  # [228]
+    assert torch.equal(pack_int2(tensor).flatten(), expected)
