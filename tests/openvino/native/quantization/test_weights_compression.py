@@ -739,11 +739,18 @@ LIST_DESCS = [
         weight=TWO_GROUPS_IN_TWO_ROWS_ASYM,
         config=int4_asym_grouped_config,
     ),
-    # non-zero error
-    QuantErrorDesc(name="2 rows scaled [1, 254] linspace", weight=TWO_ROWS_LINSPACE[:, 1:-1], ref_error=239, atol=1),
+    QuantErrorDesc(name="2 rows scaled [1, 254] linspace", weight=TWO_ROWS_LINSPACE[:, 1:-1], ref_error=0, atol=1),
     QuantErrorDesc(
-        name="2 columns of scaled [0, 255] linspace", weight=np.transpose(TWO_ROWS_LINSPACE), ref_error=46818, atol=1
+        name="2 columns of scaled [0, 255] linspace", weight=np.transpose(TWO_ROWS_LINSPACE), ref_error=0, atol=1
     ),
+    QuantErrorDesc(
+        name="2 columns of [0-15] linspace for asym",
+        weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
+        config=int4_asym_config,
+        ref_error=0,
+        atol=1,
+    ),
+    # non-zero error
     QuantErrorDesc(
         name="2 rows of scaled [0, 15] linspace for sym",
         weight=TWO_ROWS_LINSPACE_INT4_ASYM,
@@ -763,13 +770,6 @@ LIST_DESCS = [
         weight=TWO_ROWS_LINSPACE_INT4_ASYM[:, 1:-1],
         config=int4_asym_config,
         ref_error=1.49,
-        atol=1,
-    ),
-    QuantErrorDesc(
-        name="2 columns of [0-15] linspace for asym",
-        weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
-        config=int4_asym_config,
-        ref_error=162,
         atol=1,
     ),
 ]
@@ -1286,12 +1286,12 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
@@ -1338,6 +1338,7 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
 
     names_fp = {op.get_friendly_name() for op in ops}
     ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+
     assert ref_fp_nodes == names_fp
 
     names_e8m0 = {
@@ -1351,12 +1352,12 @@ def test_mixed_precision_mxfp(sensitivity_metric, all_layers, ratio, ref_ids, mo
     ("sensitivity_metric", "all_layers", "ratio", "ref_ids", "group_size"),
     (
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 4], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [1], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, [], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2], None),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3], None),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [1], None),
         (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, [], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2], None),
         (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2], None),
@@ -1405,6 +1406,7 @@ def test_mixed_precision_fp(sensitivity_metric, all_layers, ratio, ref_ids, mode
 
     names_fp = {op.get_friendly_name() for op in ops}
     ref_fp_nodes = {f"weights_{i}" for i in ref_ids}
+
     assert ref_fp_nodes == names_fp
     scale_dtypes = (ov.Type.f16, ov.Type.f8e4m3)
     names_scales = {
@@ -2469,40 +2471,40 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return (
             np.array(
                 [
-                    [[0.473328]],
-                    [[0.929023]],
-                    [[1.446527]],
-                    [[1.920595]],
-                    [[2.517054]],
-                    [[3.030102]],
-                    [[3.584279]],
-                    [[4.043509]],
-                    [[4.620008]],
-                    [[5.165322]],
-                    [[5.710637]],
-                    [[6.122581]],
-                    [[6.655914]],
-                    [[7.237174]],
-                    [[7.722580]],
+                    [[0.47332805]],
+                    [[1.0]],
+                    [[1.4732642]],
+                    [[2.0380495]],
+                    [[2.6054149]],
+                    [[3.0301015]],
+                    [[3.679056]],
+                    [[4.175322]],
+                    [[4.700384]],
+                    [[5.2552223]],
+                    [[5.8100615]],
+                    [[6.3083715]],
+                    [[6.858295]],
+                    [[7.4082184]],
+                    [[7.722581]],
                     [[8.255914]],
                 ]
             ),
             np.array(
                 [
                     [[0.47344488]],
-                    [[0.9287766]],
-                    [[1.4463282]],
-                    [[1.920052]],
-                    [[2.5167778]],
+                    [[1.0]],
+                    [[1.5450557]],
+                    [[2.0380037]],
+                    [[2.6055446]],
                     [[3.02987]],
-                    [[3.5842714]],
-                    [[4.0429296]],
-                    [[4.619769]],
-                    [[5.165224]],
-                    [[5.7106786]],
-                    [[6.121212]],
-                    [[6.654546]],
-                    [[7.2366524]],
+                    [[3.679132]],
+                    [[4.1754694]],
+                    [[4.7001443]],
+                    [[5.2551227]],
+                    [[5.810101]],
+                    [[6.308658]],
+                    [[6.8587303]],
+                    [[7.4]],
                     [[7.7212124]],
                     [[8.254545]],
                 ]
@@ -2517,44 +2519,44 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5732,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.2602,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.3083,
-                                7.8467,
-                                7.2233,
-                                7.2715,
-                                7.4205,
-                                7.4667,
+                                7.573249,
+                                7.58195,
+                                7.6,
+                                7.6666665,
+                                7.1209445,
+                                7.260152,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.528544,
+                                8.659291,
+                                8.879055,
+                                8.469787,
+                                8.4,
+                                8.364824,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8205,
-                                14.9032,
-                                14.9858,
-                                15.0685,
-                                15.1512,
-                                14.3400,
-                                14.4173,
-                                14.4945,
-                                14.5718,
-                                14.6491,
-                                14.7264,
-                                14.8037,
-                                14.8810,
-                                14.9583,
-                                15.0355,
-                                15.1128,
+                                16.0,
+                                16.089771,
+                                16.179543,
+                                16.269318,
+                                16.359089,
+                                16.44886,
+                                16.538631,
+                                16.628407,
+                                16.718176,
+                                16.80795,
+                                16.89772,
+                                16.987492,
+                                15.812495,
+                                15.89516,
+                                15.977826,
+                                16.060493,
                             ]
                         ]
                     ],
@@ -2566,43 +2568,43 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
                         [
                             [
                                 7.575118,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
+                                7.5841107,
+                                7.6,
+                                7.6666665,
+                                7.112954,
                                 7.254837,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
-                                7.495066,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.531546,
                                 7.850108,
-                                7.219489,
-                                7.2685375,
-                                7.418597,
-                                7.4666667,
+                                8.887045,
+                                8.468656,
+                                8.4,
+                                8.361673,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.820066,
-                                14.902746,
-                                14.985427,
-                                15.068108,
-                                15.150787,
-                                14.3391285,
-                                14.416424,
-                                14.493721,
-                                14.571016,
-                                14.648311,
-                                14.725608,
-                                14.802904,
-                                14.8801985,
-                                14.957496,
-                                15.034791,
-                                15.112087,
+                                16.0,
+                                16.089788,
+                                16.17958,
+                                16.269371,
+                                16.359161,
+                                16.448954,
+                                16.538742,
+                                16.628534,
+                                16.718325,
+                                16.808115,
+                                16.897905,
+                                16.987696,
+                                15.812232,
+                                15.894914,
+                                15.977593,
+                                16.060274,
                             ]
                         ]
                     ],
