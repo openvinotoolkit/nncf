@@ -71,9 +71,9 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def dropout_metatypes(self) -> list[type[OperatorMetatype]]:
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
         """
-        Property for the backend-specific Dropout metatypes.
+        Property for the backend-specific NoOp metatypes.
         """
 
     @property

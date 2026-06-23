@@ -6,7 +6,7 @@ To evaluate the accuracy of the compressed model we measure similarity between t
 The example includes the following steps:
 
 - Prepare `wikitext` dataset.
-- Prepare `TinyLlama/TinyLlama-1.1B-step-50K-105b` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum/intel/inference).
+- Prepare `TinyLlama/TinyLlama-1.1B-step-50K-105b` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum-intel/openvino/inference).
 - Compress weights of the model with NNCF Weight compression algorithm.
 - Find appropriate `awq`, `ratio` and `group_size` if acceptable similarity is not achieved.
 - Measure the similarity and footprint of the final model.

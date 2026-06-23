@@ -11,6 +11,7 @@
 
 
 from collections import defaultdict
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -27,6 +28,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
@@ -71,9 +73,9 @@ class SequentialMatmulModel(nn.Module):
         for _, main_value in enumerate(self.main_values):
             weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
             weights_data[-1, -1] = main_value
-            weight_tensor = torch.tensor(weights_data)
+            weight_tensor = weights_data.detach().clone()
             layer = nn.Linear(4, 4, bias=False)
-            layer.weight = nn.Parameter(weight_tensor.t())
+            layer.weight = nn.Parameter(weight_tensor)
             self.layers.append(layer)
 
     def forward(self, x):
@@ -113,13 +115,14 @@ class MatMulModel(torch.nn.Module):
 
 
 class LinearModel(torch.nn.Module):
-    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
+    def __init__(self):
         super().__init__()
-        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
+        weight = torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8)
+        self.linear = torch.nn.Linear(weight.shape[1], weight.shape[0], False)
         self.linear.weight = torch.nn.Parameter(weight)
 
-    def forward(self, input):
-        return self.linear(input)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.linear(x)
 
 
 class SimpleMoEModel(nn.Module):
@@ -220,9 +223,9 @@ class AWQLinearModel(nn.Module):
     def get_linear_layer(self, weights_data, is_int8):
         if not is_int8:
             linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
-            linear_layer.weight = nn.Parameter(torch.tensor(weights_data, dtype=torch.float32))
+            linear_layer.weight = nn.Parameter(weights_data.detach().clone().to(dtype=torch.float32))
         else:
-            qw = torch.tensor(weights_data, dtype=torch.uint8).float()
+            qw = weights_data.detach().clone().to(dtype=torch.uint8).float()
             zp = torch.tensor([2**7], dtype=torch.uint8).float()
             scale = torch.ones((weights_data.shape[0], 1), dtype=torch.float32)
             weights = (qw - zp) * scale
@@ -584,14 +587,20 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_sequential_matmul_model(transpose_a: bool) -> torch.nn.Module:
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for PT backend")
         return SequentialMatmulModel()
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
-        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+    def get_model_for_test_scale_estimation(transpose_a: bool):
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for PT backend")
+        return LinearModel()
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation():
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for PT backend")
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
@@ -650,41 +659,41 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return (
             torch.tensor(
                 [
-                    [[0.473328]],
-                    [[0.929023]],
-                    [[1.446527]],
-                    [[1.920595]],
-                    [[2.517054]],
-                    [[3.030102]],
-                    [[3.584279]],
-                    [[4.043509]],
-                    [[4.620008]],
-                    [[5.165322]],
-                    [[5.710637]],
-                    [[6.122581]],
-                    [[6.655914]],
-                    [[7.237174]],
-                    [[7.722580]],
+                    [[0.47332805]],
+                    [[1.0]],
+                    [[1.4732642]],
+                    [[2.0380495]],
+                    [[2.6054149]],
+                    [[3.0301015]],
+                    [[3.679056]],
+                    [[4.175322]],
+                    [[4.700384]],
+                    [[5.2552223]],
+                    [[5.8100615]],
+                    [[6.3083715]],
+                    [[6.858295]],
+                    [[7.4082184]],
+                    [[7.722581]],
                     [[8.255914]],
                 ]
             ),
             torch.tensor(
                 [
-                    [[0.473445]],
-                    [[0.928777]],
-                    [[1.446328]],
-                    [[1.920052]],
-                    [[2.516778]],
-                    [[3.029870]],
-                    [[3.584271]],
-                    [[4.042929]],
-                    [[4.619769]],
-                    [[5.165224]],
-                    [[5.710679]],
-                    [[6.121212]],
-                    [[6.654546]],
-                    [[7.236652]],
-                    [[7.721212]],
+                    [[0.47344488]],
+                    [[1.0]],
+                    [[1.5450557]],
+                    [[2.0380037]],
+                    [[2.6055446]],
+                    [[3.02987]],
+                    [[3.679132]],
+                    [[4.1754694]],
+                    [[4.7001443]],
+                    [[5.2551227]],
+                    [[5.810101]],
+                    [[6.308658]],
+                    [[6.8587303]],
+                    [[7.4]],
+                    [[7.7212124]],
                     [[8.254545]],
                 ]
             ),
@@ -698,44 +707,44 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5732,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.2602,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.3083,
-                                7.8467,
-                                7.2233,
-                                7.2715,
-                                7.4205,
-                                7.4667,
+                                7.573249,
+                                7.58195,
+                                7.6,
+                                7.6666665,
+                                7.1209445,
+                                7.260152,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.528544,
+                                8.659291,
+                                8.879055,
+                                8.469787,
+                                8.4,
+                                8.364824,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8205,
-                                14.9032,
-                                14.9858,
-                                15.0685,
-                                15.1512,
-                                14.3400,
-                                14.4173,
-                                14.4945,
-                                14.5718,
-                                14.6491,
-                                14.7264,
-                                14.8037,
-                                14.8810,
-                                14.9583,
-                                15.0355,
-                                15.1128,
+                                16.0,
+                                16.089771,
+                                16.179543,
+                                16.269318,
+                                16.359089,
+                                16.44886,
+                                16.538631,
+                                16.628407,
+                                16.718176,
+                                16.80795,
+                                16.89772,
+                                16.987492,
+                                15.812495,
+                                15.89516,
+                                15.977826,
+                                16.060493,
                             ]
                         ]
                     ],
@@ -746,44 +755,44 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5751,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.2548,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4951,
-                                7.8501,
-                                7.2195,
-                                7.2685,
-                                7.4186,
-                                7.4667,
+                                7.575118,
+                                7.5841107,
+                                7.6,
+                                7.6666665,
+                                7.112954,
+                                7.254837,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.531546,
+                                7.850108,
+                                8.887045,
+                                8.468656,
+                                8.4,
+                                8.361673,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8201,
-                                14.9027,
-                                14.9854,
-                                15.0681,
-                                15.1508,
-                                14.3391,
-                                14.4164,
-                                14.4937,
-                                14.5710,
-                                14.6483,
-                                14.7256,
-                                14.8029,
-                                14.8802,
-                                14.9575,
-                                15.0348,
-                                15.1121,
+                                16.0,
+                                16.089788,
+                                16.17958,
+                                16.269371,
+                                16.359161,
+                                16.448954,
+                                16.538742,
+                                16.628534,
+                                16.718325,
+                                16.808115,
+                                16.897905,
+                                16.987696,
+                                15.812232,
+                                15.894914,
+                                15.977593,
+                                16.060274,
                             ]
                         ]
                     ],
@@ -905,15 +914,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         ]
 
     @staticmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, is_3d_weights: bool = False):
-        pass
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return False
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
+        pytest.skip("Transposable models are not supported")
 
     @pytest.mark.skip("RoPE pattern is invalid for the Torch backend, ticket 183208")
-    def test_rope_weight_compression():
+    def test_rope_weight_compression(self):
         pass
 
 
@@ -931,3 +936,39 @@ def test_half_precision_models(dtype):
         awq=True,
         dataset=nncf.Dataset([dict(inputs)]),
     )
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), {"post_hooks.linear:weight__0.0"}),
+        ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["linear/linear/0"]), set()),
+        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear/*"]), set()),
+    ),
+    ids=str,
+)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
+    model = wrap_model(LinearModel())
+    example_input = torch.rand(8, 8)
+    wrapped_model = GraphModelWrapper(model, example_input=example_input)
+    compressed_model = compress_weights(
+        wrapped_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+    hooks = {n for n, _ in get_hook_storage(compressed_model).named_hooks()}
+    assert hooks == param.ref

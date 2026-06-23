@@ -108,7 +108,7 @@ def calculate_float_quantization_params(
         if config.compression_dtype in FP_MAX_VALUES:
             max_val = FP_MAX_VALUES[config.compression_dtype]
         else:
-            max_val = fns.max(fns.abs(config.get_numpy_codebook()))
+            max_val = fns.max(fns.abs(config.codebook_values.as_numpy_tensor()))
         scale = scale / max_val
 
     # NOTE: adding machine epsilon to avoid division by zero
@@ -233,7 +233,7 @@ def _do_float_quantization_single_scale(
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.is_codebook:
-        indexes = _calculate_codebook_indexes(norm_weight, quantiles=config.get_numpy_codebook())
+        indexes = _calculate_codebook_indexes(norm_weight, quantiles=config.codebook_values.as_numpy_tensor())
         return CompressedWeight(
             indexes,
             scale,
@@ -317,6 +317,11 @@ def calculate_integer_quantization_params(
         level_high = 2**num_bits - 1
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
+
+        zero = fns.zeros_like(min_values)
+        min_values = fns.minimum(zero, min_values)
+        max_values = fns.maximum(zero, max_values)
+
         scale, zero_point = calculate_scale_zero_point(
             min_values, max_values, level_low, level_high, narrow_range=False
         )
@@ -365,6 +370,7 @@ def get_integer_quantization_error(
 
     decompressed_weight = integer_quantize_dequantize_weight(weight, config, reduction_axes)
     decompressed_weight = decompressed_weight.reshape(weight.shape)
+
     if reduction == "max_mean":
         diff = (decompressed_weight - weight) ** 2
         layer_err = fns.mean(diff, axis=reduction_axes)

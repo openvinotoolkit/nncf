@@ -323,9 +323,9 @@ class CodebookEstimation(Algorithm):
 
         diff = float("inf")
 
-        if self._num_elements == config.get_numpy_codebook().size:
+        if self._num_elements == config.codebook_values.as_numpy_tensor().size:
             variants[0] = fns.tensor(
-                config.get_numpy_codebook().data, backend=weight.backend, dtype=TensorDataType.float16
+                config.codebook_values.as_numpy_tensor().data, backend=weight.backend, dtype=TensorDataType.float16
             )
         variants[1] = fns.tensor(
             list(range(-self._num_elements // 2, self._num_elements - self._num_elements // 2)),
@@ -422,9 +422,9 @@ class CodebookEstimation(Algorithm):
 
         diff = float("inf")
 
-        if self._num_elements == config.get_numpy_codebook().size:
+        if self._num_elements == config.codebook_values.as_numpy_tensor().size:
             variants[0] = fns.tensor(
-                config.get_numpy_codebook().data, backend=weight.backend, dtype=TensorDataType.float16
+                config.codebook_values.as_numpy_tensor().data, backend=weight.backend, dtype=TensorDataType.float16
             )
         variants[1] = fns.tensor(
             list(range(-self._num_elements // 2, self._num_elements - self._num_elements // 2)),

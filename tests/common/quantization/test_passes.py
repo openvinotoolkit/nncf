@@ -9,57 +9,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import pytest
 
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.passes import find_constant_subgraphs
-from nncf.quantization.passes import remove_nodes_and_reconnect_graph
+from nncf.quantization.passes import remove_noop_operation_nodes
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.cross_fw.test_templates.models import NNCFGraphDropoutRemovingCase
 from tests.cross_fw.test_templates.models import NNCFGraphToTestConstantFiltering
 
 DATA_ROOT = TEST_ROOT / "common" / "data" / "reference_graphs"
-
-
-class ParameterTestModes(Enum):
-    VALID = "valid"
-    WRONG_TENSOR_SHAPE = "wrong_dropout_node"
-    WRONG_PARALLEL_EDGES = "wrong_parallel_edges"
-
-    def __str__(self):
-        return self.value
 
 
 def _check_graphs(dot_file_name, nncf_graph) -> None:
     nx_graph = nncf_graph.get_graph_for_structure_analysis()
     path_to_dot = DATA_ROOT / dot_file_name
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
-
-
-@pytest.mark.parametrize("mode", ParameterTestModes)
-def test_remove_nodes_and_reconnect_graph(mode: ParameterTestModes):
-    dot_reference_path_before = Path("passes") / "dropout_synthetic_model_before.dot"
-    dot_reference_path_after = Path("passes") / "dropout_synthetic_model_after.dot"
-    dropout_metatype = "DROPOUT_METATYPE"
-    kwargs = {}
-    if mode != ParameterTestModes.VALID:
-        kwargs.update({mode.value: True})
-
-    nncf_graph = NNCFGraphDropoutRemovingCase(dropout_metatype, **kwargs).nncf_graph
-
-    if mode != ParameterTestModes.VALID:
-        with pytest.raises(AssertionError):
-            remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
-        return
-
-    _check_graphs(dot_reference_path_before, nncf_graph)
-    remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
-    _check_graphs(dot_reference_path_after, nncf_graph)
 
 
 @pytest.mark.parametrize("node_between_const_and_op", [False, True])
@@ -91,3 +63,207 @@ def test_find_constant_subgraphs(node_between_const_and_op):
     constant_subgraphs = find_constant_subgraphs(nncf_graph, input_nodes)
     nncf_graph.remove_nodes_from(constant_subgraphs)
     _check_graphs(dot_reference_path_after, nncf_graph)
+
+
+@dataclass
+class ParamRemoveNoop:
+    name: str
+    graph_builder: Callable[[], NNCFGraph]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def ref_file(self) -> Path:
+        return DATA_ROOT / "passes" / "remove_noop" / f"{self.name}.dot"
+
+
+class AnyTestMetaType(OperatorMetatype):
+    pass
+
+
+class NoopMetaType(OperatorMetatype):
+    pass
+
+
+def _build_one_to_one_graph():
+    #   (any)
+    #     |
+    #  (noop) <- should be removed
+    #     |
+    #   (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_one_to_many_graph():
+    #    (any)
+    #      |
+    #    (noop)  <- should be removed
+    #     /  \
+    #  (any) (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    node_output_2 = graph.add_nncf_node("Output_2", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_many_to_one_graph():
+    # (any) (any)
+    #     \  /
+    #    (noop)  <- should NOT be removed because it has more than one input edge
+    #       |
+    #     (any)
+    graph = NNCFGraph()
+    node_input_1 = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_input_2 = graph.add_nncf_node("Input_2", "any", AnyTestMetaType)
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input_1.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_input_2.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_one_to_one_diff_dtype_graph():
+    #  (any)
+    #    | <float>
+    #  (noop)  <- should NOT be removed because of different dtypes
+    #    | <int>
+    #  (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output.node_id, (1,), 0, 0, Dtype.INTEGER)
+    return graph
+
+
+def _build_one_to_one_diff_shape_graph():
+    #  (any)
+    #    | <(1,)>
+    #  (noop)  <- should NOT be removed because of different shape
+    #    | <(1,1,)>
+    #  (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output.node_id, (1, 1), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_one_to_none_graph():
+    #  (any)
+    #    |
+    #  (noop)  <- should be removed even if it has no output edges
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_none_to_one_graph():
+    #  (noop)  <- should NOT be removed even if it has no input edges
+    #     |
+    #   (any)
+    graph = NNCFGraph()
+    node_to_remove = graph.add_nncf_node("NodeToRemove", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_to_remove.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_2_noop_nodes_in_sequence_graph():
+    #  (any)
+    #    |
+    #  (noop)
+    #    |
+    #  (noop)
+    #    |
+    #  (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove_1 = graph.add_nncf_node("NodeToRemove_1", "noop", NoopMetaType)
+    node_to_remove_2 = graph.add_nncf_node("NodeToRemove_2", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_1.node_id, node_to_remove_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_2.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_2_noop_nodes_graph():
+    #      (any)
+    #        |
+    #      (noop)
+    #      /   \
+    #  (noop) (any)
+    #     |
+    #  (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove_1 = graph.add_nncf_node("NodeToRemove_1", "noop", NoopMetaType)
+    node_to_remove_2 = graph.add_nncf_node("NodeToRemove_2", "noop", NoopMetaType)
+    node_output_1 = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    node_output_2 = graph.add_nncf_node("Output_2", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_1.node_id, node_to_remove_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_1.node_id, node_output_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_2.node_id, node_output_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    return graph
+
+
+def _build_2_noop_nodes_one_output_graph():
+    #       (any)
+    #         |
+    #      (noop)
+    #       / |
+    #  (noop) |
+    #       \ |
+    #      (any)
+    graph = NNCFGraph()
+    node_input = graph.add_nncf_node("Input_1", "any", AnyTestMetaType)
+    node_to_remove_1 = graph.add_nncf_node("NodeToRemove_1", "noop", NoopMetaType)
+    node_to_remove_2 = graph.add_nncf_node("NodeToRemove_2", "noop", NoopMetaType)
+    node_output = graph.add_nncf_node("Output_1", "any", AnyTestMetaType)
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_to_remove_1.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_1.node_id, node_to_remove_2.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_1.node_id, node_output.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_to_remove_2.node_id, node_output.node_id, (1,), 1, 0, Dtype.FLOAT)
+    return graph
+
+
+@pytest.mark.parametrize(
+    "param",
+    [
+        ParamRemoveNoop(name="one_to_one", graph_builder=_build_one_to_one_graph),
+        ParamRemoveNoop(name="one_to_many", graph_builder=_build_one_to_many_graph),
+        ParamRemoveNoop(name="many_to_one", graph_builder=_build_many_to_one_graph),
+        ParamRemoveNoop(name="one_to_one_diff_dtype", graph_builder=_build_one_to_one_diff_dtype_graph),
+        ParamRemoveNoop(name="one_to_one_diff_shape", graph_builder=_build_one_to_one_diff_shape_graph),
+        ParamRemoveNoop(name="one_to_none", graph_builder=_build_one_to_none_graph),
+        ParamRemoveNoop(name="none_to_one", graph_builder=_build_none_to_one_graph),
+        ParamRemoveNoop(name="2_nodes_in_sequence", graph_builder=_build_2_noop_nodes_in_sequence_graph),
+        ParamRemoveNoop(name="subgraph_2_noop_nodes", graph_builder=_build_2_noop_nodes_graph),
+        ParamRemoveNoop(name="subgraph_2_noop_nodes_one_output", graph_builder=_build_2_noop_nodes_one_output_graph),
+    ],
+    ids=str,
+)
+def test_remove_noop_operation_nodes(param: ParamRemoveNoop):
+    graph = param.graph_builder()
+    remove_noop_operation_nodes(graph, [NoopMetaType])
+    _check_graphs(param.ref_file, graph)

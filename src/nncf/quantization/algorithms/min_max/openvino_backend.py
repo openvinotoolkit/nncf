@@ -81,7 +81,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVShapeOfMetatype]
 
     @property
-    def dropout_metatypes(self) -> list[OperatorMetatype]:
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
         return []
 
     @property

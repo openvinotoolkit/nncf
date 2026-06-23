@@ -35,7 +35,6 @@ from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
-from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
@@ -602,31 +601,6 @@ class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
         return cls(qsetup)
 
 
-class QuantizersSwitcher:
-    """Enables/disables quantizers with saving and restoring original state"""
-
-    def __init__(self, quantizers: list[BaseQuantizer]):
-        self.originally_disabled: list[BaseQuantizer] = []
-        self.originally_enabled: list[BaseQuantizer] = []
-        self._quantizers = quantizers
-
-    def disable_quantizers(self):
-        for module in self._quantizers:
-            if not module.is_enabled_quantization():
-                self.originally_disabled.append(module)
-            if module not in self.originally_enabled:
-                module.disable_quantization()
-        self.originally_enabled = []
-
-    def enable_quantizers(self):
-        for module in self._quantizers:
-            if module.is_enabled_quantization():
-                self.originally_enabled.append(module)
-            if module not in self.originally_disabled:
-                module.enable_quantization()
-        self.originally_disabled = []
-
-
 class StorageRedirectingLoadStateDictHook:
     def __init__(
         self, storage_attribute_in_module: str, name_in_state_dict: str, use_log_storage_in_module: bool = False
@@ -661,7 +635,6 @@ class StorageRedirectingStateDictHook:
         state_dict[prefix + self._name_in_state_dict] = v
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(BaseQuantizer):
     SCALE_PARAM_NAME = "scale"
@@ -843,7 +816,6 @@ class SymmetricQuantizer(BaseQuantizer):
         )
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(BaseQuantizer):
     INPUT_LOW_PARAM_NAME = "input_low"
@@ -1089,7 +1061,6 @@ class LoraNLSMixin(LoraMixin):
         return lora_A, lora_B
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA)
 class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
     _arg_names = ["qspec", "lspec"]
@@ -1140,7 +1111,6 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         return cls(qspec, lspec)
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA_NLS)
 class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
@@ -1170,7 +1140,6 @@ class AsymmetricLoraNLSQuantizer(AsymmetricLoraQuantizer, LoraNLSMixin):
         return cls(qspec, lspec)
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA)
 class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
     def __init__(self, qspec: PTQuantizerSpec, lspec: PTLoraSpec):
@@ -1218,7 +1187,6 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         return cls(qspec, lspec)
 
 
-@COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA_NLS)
 class SymmetricLoraNLSQuantizer(SymmetricLoraQuantizer, LoraNLSMixin):
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
@@ -1467,7 +1435,6 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         return result
 
 
-@COMPRESSION_MODULES.register()
 class SQMultiply(torch.nn.Module, StatefulModuleInterface):
     SCALE_SHAPE_KEY = "scale_shape"
 

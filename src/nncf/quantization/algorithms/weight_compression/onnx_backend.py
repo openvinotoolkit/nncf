@@ -137,6 +137,10 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def embedding_metatypes(self) -> list[OperatorMetatype]:
         return [metatypes.ONNXEmbeddingMetatype]
 
+    @property
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
+        return []
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         return node.layer_attributes.has_weight()

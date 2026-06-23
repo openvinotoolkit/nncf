@@ -65,10 +65,10 @@ class OperatorMetatype:
         return any(subtype.subtype_check(metatype) for subtype in subtypes)
 
 
-TOpClass = TypeVar("TOpClass", bound=type[OperatorMetatype])
+TRegisterObject = TypeVar("TRegisterObject", bound=type[OperatorMetatype])
 
 
-class OperatorMetatypeRegistry(Registry):
+class OperatorMetatypeRegistry(Registry[str, type[OperatorMetatype]]):
     """
     Operator Metatypes Registry.
     """
@@ -82,18 +82,19 @@ class OperatorMetatypeRegistry(Registry):
         super().__init__(name)
         self._op_name_to_op_meta_dict: dict[str, type[OperatorMetatype]] = {}
 
-    def register(self, name: str | None = None, is_subtype: bool = False) -> Callable[[TOpClass], TOpClass]:
+    def register(  # type: ignore[override]
+        self, name: str | None = None
+    ) -> Callable[[TRegisterObject], TRegisterObject]:
         """
         Decorator for registering operator metatypes.
 
         :param name: The registration name.
-        :param is_subtype: Whether the decorated metatype is a subtype of another registered operator.
         :return: The inner function for registering operator metatypes.
         """
         name_ = name
         super_register = super()._register
 
-        def wrap(obj: TOpClass) -> TOpClass:
+        def wrap(obj: TRegisterObject) -> TRegisterObject:
             """
             Inner function for registering operator metatypes.
 
@@ -104,16 +105,16 @@ class OperatorMetatypeRegistry(Registry):
             if cls_name is None:
                 cls_name = obj.__name__
             super_register(obj, cls_name)
-            if not is_subtype:
-                op_names = obj.get_all_aliases()
-                for name in op_names:
-                    if name in self._op_name_to_op_meta_dict:
-                        msg = (
-                            "Inconsistent operator metatype registry - single patched "
-                            f"op name `{name}` maps to multiple metatypes!"
-                        )
-                        raise nncf.InternalError(msg)
-                    self._op_name_to_op_meta_dict[name] = obj
+            op_names = obj.get_all_aliases()
+            for name in op_names:
+                if name in self._op_name_to_op_meta_dict and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
+                    msg = (
+                        "Inconsistent operator metatype registry - single patched "
+                        f"op name `{name}` maps to multiple metatypes!"
+                    )
+                    raise nncf.InternalError(msg)
+
+                self._op_name_to_op_meta_dict[name] = obj
             return obj
 
         return wrap
@@ -130,10 +131,10 @@ class OperatorMetatypeRegistry(Registry):
         return self._op_name_to_op_meta_dict[op_name]
 
 
-NOOP_METATYPES = Registry("noop_metatypes")
-INPUT_NOOP_METATYPES = Registry("input_noop_metatypes")
-OUTPUT_NOOP_METATYPES = Registry("output_noop_metatypes")
-CONST_NOOP_METATYPES = Registry("const_noop_metatypes")
+NOOP_METATYPES = Registry[str, type[OperatorMetatype]]("noop_metatypes")
+INPUT_NOOP_METATYPES = Registry[str, type[OperatorMetatype]]("input_noop_metatypes")
+OUTPUT_NOOP_METATYPES = Registry[str, type[OperatorMetatype]]("output_noop_metatypes")
+CONST_NOOP_METATYPES = Registry[str, type[OperatorMetatype]]("const_noop_metatypes")
 
 
 class UnknownMetatype(OperatorMetatype):

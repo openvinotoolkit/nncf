@@ -139,17 +139,15 @@ class ScaleEstimation:
                 continue
             _, weight_port_id = weight_data[0]
 
-            if self._backend_entity.matmul_has_transposed_activations(wp.node_with_weight, graph):
-                msg = "Transposed activations are not supported yet for the Scale Estimation algorithm"
-                raise nncf.UnsupportedModelError(msg)
-
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
+            act_ch_axis, _ = self._backend_entity.get_activation_channel_axis_and_shape(graph, wp.node_with_weight)
 
             scale, zero_point = self.calculate_quantization_params(
                 stats,
                 weight,
                 wp.reduction_axes,
                 config,
+                act_ch_axis,
                 self._subset_size,
                 self._initial_steps,
                 self._scale_steps,
@@ -165,11 +163,12 @@ class ScaleEstimation:
         weight: Tensor,
         reduction_axes: tuple[int, ...],
         config: WeightCompressionConfig,
+        act_ch_axis: int = -1,
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
         weight_penalty: float = -1.0,
-    ) -> Tensor:
+    ) -> tuple[Tensor, Tensor | None]:
         """
         Calculates the quantization parameters for a given set of weights and activations.
         This function estimates the optimal quantization scale for weight compression by
@@ -185,6 +184,7 @@ class ScaleEstimation:
         :param weight: The weight tensor that is being quantized.
         :param reduction_axes: Tuple specifying the axes along which the reduction is performed for quantization.
         :param config: Configuration parameters for the weight compression, including quantization settings.
+        :param act_ch_axis: The activation channel axis. Defaults to -1.
         :param subset_size: The number of samples to use for scale estimation. Defaults to 32.
         :param initial_steps: The number of steps for initial scale rectification using activation statistics.
             Defaults to 5.
@@ -195,7 +195,7 @@ class ScaleEstimation:
         """
         reduction_axis = reduction_axes[0]
 
-        s, X = process_stats(statistics, subset_size)
+        s, X = process_stats(statistics, subset_size, act_ch_axis=act_ch_axis)
 
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
@@ -247,8 +247,6 @@ class ScaleEstimation:
         importance = importance / (denum + eps)
 
         X, _ = reshape_weight_for_grouped_quantization(X, -2, group_size)
-        best_diffs = None
-        result_scale = None
         fp_outs = fns.matmul(fns.moveaxis(weight, -2, -3), X)
         q_outs = fns.matmul(fns.moveaxis(q_weights, -2, -3), X)
 
@@ -259,6 +257,10 @@ class ScaleEstimation:
 
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - weight) ** 2, axis=-1)
+
+        # Baseline values ensure correct behavior when initial_steps=0 and/or scale_steps=0.
+        best_diffs = min_max_scale_diffs
+        result_scale = scale
 
         scale_sign = scale / fns.abs(scale)
         zero_scale = 0.001
@@ -290,29 +292,22 @@ class ScaleEstimation:
             if weight_penalty > 0.0:
                 ideal_scale_diffs += weight_penalty * fns.mean((q_weights_ - weight) ** 2, axis=-1)
 
-            if best_diffs is None:
-                best_diffs = min_max_scale_diffs
-
             mask = (ideal_scale_diffs > best_diffs).astype(best_diffs.dtype)
 
             best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
 
             mask = fns.unsqueeze(mask, axis=-1)
 
-            if result_scale is None:
-                near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
-            else:
-                near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
-            result_scale = near_to_ideal_scale
+            result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
 
             if i < initial_steps - 1:
                 if not config.is_integer:
-                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=near_to_ideal_scale)
+                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=result_scale)
                 else:
                     compressed_weight = do_integer_quantization(
                         weight,
                         config,
-                        precomputed_scale=near_to_ideal_scale,
+                        precomputed_scale=result_scale,
                         precomputed_zero_point=zp,
                     )
                 compressed_weight = compressed_weight.get_unscaled_tensor()
@@ -362,11 +357,7 @@ class ScaleEstimation:
 
             mask = fns.unsqueeze(mask, axis=-1)
 
-            if result_scale is None:
-                near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
-            else:
-                near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
-            result_scale = near_to_ideal_scale
+            result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
 
         if config.group_size == -1:
             result_scale = fns.squeeze(result_scale, axis=-2)
@@ -384,23 +375,6 @@ class ScaleEstimation:
                     zp = fns.moveaxis(zp, (-1, -2, -3), (-2, -3, -1))
 
         return result_scale, zp
-
-    @staticmethod
-    def activations_to_wc_statistics(activations: list[Tensor]) -> WCTensorStatistic:
-        """
-        Mimic the activation reducing logic from WeightCompression.get_statistic_points.
-
-        :param activations: List of raw activations.
-        :return: Instance of WCTensorStatistic class containing reduced activations and shapes.
-        """
-        mean_values = []
-        shapes = []
-        for act in activations:
-            shapes.append(act.shape)
-            reduction_shape = tuple(range(act.ndim - 1))
-            mean_values.append(fns.mean(act, axis=reduction_shape))
-        wc_statistics = WCTensorStatistic(mean_values, shapes)
-        return wc_statistics
 
 
 def get_target_zero_mask(compressed_weights: Tensor, zp: Tensor | None = None) -> tuple[Tensor, Tensor]:
