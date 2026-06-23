@@ -13,9 +13,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any, TypeVar
 
-import torch
-from torch import nn
-
 TObj = TypeVar("TObj", bound="StatefulModuleInterface")
 
 
@@ -45,28 +42,3 @@ class StatefulModuleInterface(ABC):
         """
         Creates a compression module instance from the given config.
         """
-
-
-class CompressionParameter(nn.Parameter):
-    """
-    The class that should be used in all compression algorithms instead of torch.nn.Parameter.
-
-    This class utilize `compression_lr_multiplier` parameter
-    to increase/decrease gradients for compression algorithms' parameters.
-    """
-
-    def __new__(cls, data: torch.Tensor = None, requires_grad: bool = True, compression_lr_multiplier: float = None):
-        return super().__new__(cls, data, requires_grad=requires_grad)
-
-    def __init__(self, data: torch.Tensor = None, requires_grad: bool = True, compression_lr_multiplier: float = None):
-        """
-        :param data: Parameter tensor
-        :param requires_grad: If the parameter requires gradient
-        :param compression_lr_multiplier: Multiplier for gradient values
-        """
-        super().__init__()
-
-        if compression_lr_multiplier is not None and self.dtype.is_floating_point:
-            self.requires_grad = True
-            self.register_hook(lambda grad: compression_lr_multiplier * grad)
-            self.requires_grad = requires_grad

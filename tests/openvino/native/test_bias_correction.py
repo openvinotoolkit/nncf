@@ -20,6 +20,7 @@ from nncf.common.factory import build_graph
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_bias_value
+from nncf.quantization.algorithms.bias_correction.algorithm import SubgraphData
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
@@ -103,10 +104,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/Concat", 1): ("input.1", 0),
                         ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_1/Conv/WithoutBiases", 0)},
+                        output_ids={("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
+                    ),
                 },
             ),
             (
@@ -118,10 +119,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
                         ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_2/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Relu_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_2/Conv/WithoutBiases", 0)},
+                        output_ids={("/Relu_1", 0)},
+                    ),
                 },
             ),
             (
@@ -134,10 +135,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
                         ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv/WithoutBiases", 0), ("/conv_3/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_1/Conv/WithoutBiases", 0), ("/conv_3/Conv/WithoutBiases", 0)},
+                        output_ids={("/Split", 0), ("/Split", 1)},
+                    ),
                 },
             ),
             (
@@ -147,10 +148,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
                         ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_4/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Relu_2", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_4/Conv/WithoutBiases", 0)},
+                        output_ids={("/Relu_2", 0)},
+                    ),
                 },
             ),
             (
@@ -160,10 +161,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_5/Conv/WithoutBiases", 0): ("/Relu_2", 0),
                         ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_5/Conv/WithoutBiases", 0), ("/conv_6/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_5/Conv/WithoutBiases", 0), ("/conv_6/Conv/WithoutBiases", 0)},
+                        output_ids={("/Add_3", 0), ("/Concat_1", 0)},
+                    ),
                 },
             ),
             (
@@ -174,14 +175,14 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_9/Conv/WithoutBiases", 0): ("/Add_3", 0),
                         ("/conv_10/Conv/WithoutBiases", 0): ("/Concat", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {
+                    "subgraph_data": SubgraphData(
+                        input_ids={
                             ("/conv_8/Conv/WithoutBiases", 0),
                             ("/conv_9/Conv/WithoutBiases", 0),
                             ("/conv_10/Conv/WithoutBiases", 0),
                         },
-                        "subgraph_output_ids": {("/Concat_2", 0)},
-                    },
+                        output_ids={("/Concat_2", 0)},
+                    ),
                 },
             ),
             (
@@ -190,10 +191,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                     "collected_inputs": {
                         ("/MatMul", 0): ("/Reshape", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/MatMul", 0)},
-                        "subgraph_output_ids": {("/Reshape_1", 0), ("/Add_4", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/MatMul", 0)},
+                        output_ids={("/Reshape_1", 0), ("/Add_4", 0)},
+                    ),
                 },
             ),
         ),

@@ -83,7 +83,7 @@ class MinMaxTensorStatistic(TensorStatistic):
     min_values: Tensor
     max_values: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MinMaxTensorStatistic):
             return fns.allclose(self.min_values, other.min_values) and fns.allclose(self.max_values, other.max_values)
         return False
@@ -103,7 +103,7 @@ class AbsMaxTensorStatistic(TensorStatistic):
 
     abs_max: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, AbsMaxTensorStatistic):
             return fns.allclose(self.abs_max, other.abs_max)
         return False
@@ -121,7 +121,7 @@ class MeanTensorStatistic(TensorStatistic):
         self.mean_values = mean_values
         self.shape = tuple(shape.tolist())
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MeanTensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
@@ -147,7 +147,7 @@ class MedianMADTensorStatistic(TensorStatistic):
     median_values: Tensor
     mad_values: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MedianMADTensorStatistic):
             return fns.allclose(self.median_values, other.median_values) and fns.allclose(
                 self.mad_values, other.mad_values
@@ -168,7 +168,7 @@ class PercentileTensorStatistic(TensorStatistic):
 
     percentile_vs_values_dict: dict[int, Tensor]
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, PercentileTensorStatistic):
             if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
                 return False
@@ -202,7 +202,7 @@ class RawTensorStatistic(TensorStatistic):
 
     values: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, RawTensorStatistic):
             return fns.allclose(self.values, other.values)
         return False
@@ -214,7 +214,7 @@ class HessianTensorStatistic(TensorStatistic):
 
     hessian: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, HessianTensorStatistic):
             return fns.allclose(self.hessian, other.hessian)
         return False
@@ -226,7 +226,7 @@ class MeanVarianceTensorStatistic(TensorStatistic):
 
     mean_variance: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MeanVarianceTensorStatistic):
             return fns.allclose(self.mean_variance, other.mean_variance)
         return False
@@ -238,7 +238,7 @@ class MaxVarianceTensorStatistic(TensorStatistic):
 
     max_variance: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MaxVarianceTensorStatistic):
             return fns.allclose(self.max_variance, other.max_variance)
         return False
@@ -250,7 +250,7 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
 
     mean_magnitude: Tensor
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MeanMagnitudeTensorStatistic):
             return fns.allclose(self.mean_magnitude, other.mean_magnitude)
         return False
@@ -264,7 +264,7 @@ class WCTensorStatistic(TensorStatistic):
     mean_values: list[Tensor]
     shape_values: list[tuple[Tensor, ...]]
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, WCTensorStatistic):
             return False
         shapes_equal = all(self.shape_values[i] == other.shape_values[i] for i in range(len(self.mean_values)))

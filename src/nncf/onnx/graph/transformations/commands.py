@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from typing import Any
+
 import numpy as np
 
 from nncf.common.graph.transformations.commands import Command
@@ -34,7 +36,7 @@ class ONNXTargetPoint(TargetPoint):
         self.target_node_name = target_node_name
         self.port_id = port_id
 
-    def __eq__(self, other: "ONNXTargetPoint") -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, ONNXTargetPoint)
             and self.type == other.type
@@ -76,7 +78,7 @@ class ONNXInitializerUpdateCommand(TransformationCommand):
     Update initializer in the value.
     """
 
-    def __init__(self, target_point: ONNXTargetPoint, new_value: np.ndarray):
+    def __init__(self, target_point: ONNXTargetPoint, new_value: np.ndarray[Any, Any]):
         """
         :param target_point: Target point.
         :param new_value: New value for initializer.

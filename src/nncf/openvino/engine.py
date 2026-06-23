@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from typing import Any
+
 import numpy as np
 import openvino as ov
 from openvino import Type
@@ -33,9 +35,7 @@ class OVCompiledModelEngine(Engine):
         self.infer_request = compiled_model.create_infer_request()
         self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
 
-    def infer(
-        self, input_data: np.ndarray | list[np.ndarray] | tuple[np.ndarray] | dict[str, np.ndarray]
-    ) -> dict[str, np.ndarray]:
+    def infer(self, input_data: Any) -> dict[str, np.ndarray[Any, Any]]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
@@ -87,9 +87,7 @@ class OVNativeEngine(Engine):
         compiled_model = ie.compile_model(model, device_name="CPU", config=config)
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
-    def infer(
-        self, input_data: np.ndarray | list[np.ndarray] | tuple[np.ndarray] | dict[str, np.ndarray]
-    ) -> dict[str, np.ndarray]:
+    def infer(self, input_data: Any) -> dict[str, np.ndarray[Any, Any]]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
