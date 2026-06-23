@@ -27,18 +27,14 @@ class PreparedModel(ABC):
     @abstractmethod
     def model_for_inference(self) -> TPModel:
         """
-        Returns prepared model for inference.
-
-        :return: Prepared model for inference.
+        A prepared model for inference.
         """
 
     @property
     @abstractmethod
     def engine(self) -> Engine:
         """
-        Returns the engine for inference the prepared model.
-
-        :return: The engine for inference the prepared model.
+        An engine for inference the prepared model.
         """
 
     def __call__(self, input_data: Any) -> Any:
