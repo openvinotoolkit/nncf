@@ -432,7 +432,6 @@ def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
     :param tensor: A tensor of dtype `torch.uint8` where each element represents a uint4 value.
         The tensor should contain values in the range [0, 15].
     :return: A packed tensor of dtype `torch.uint8` where each element packs two uint4 values.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
     """
     if tensor.dtype != torch.uint8:
         msg = f"Invalid tensor dtype {tensor.dtype}. torch.uint8 type is supported."
@@ -476,7 +475,6 @@ def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
     :param tensor: A tensor of dtype `torch.int8` where each element represents an int4 value.
         The tensor should contain values in the range [-8, 7].
     :return: A packed tensor of dtype `torch.uint8` where each element packs two int4 values.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.int8`.
     """
     if tensor.dtype != torch.int8:
         msg = f"Invalid tensor dtype {tensor.dtype}. torch.int8 type is supported."
@@ -518,11 +516,9 @@ def pack_uint2(tensor: torch.Tensor) -> torch.Tensor:
     :param tensor: A tensor of dtype `torch.uint8` where each element represents a uint2 value.
         The tensor should contain values in the range [0, 3].
     :return: A packed tensor of dtype `torch.uint8` where each element packs four uint2 values.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
-    :raises ValueError: If the tensor values are not in the range [0, 3].
     """
     if tensor.dtype != torch.uint8:
-        msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
+        msg = f"Invalid tensor dtype {tensor.dtype}. torch.uint8 type is supported."
         raise ValidationError(msg)
     if torch.any((tensor < 0) | (tensor > 3)):
         msg = "Tensor values are not in [0, 3]."
@@ -576,11 +572,9 @@ def pack_int2(tensor: torch.Tensor) -> torch.Tensor:
     :param tensor: A tensor of dtype `torch.int8` where each element represents an int2 value.
         The tensor should contain values in the range [-2, 1].
     :return: A packed tensor of dtype `torch.uint8` where each element packs four int2 values.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.int8`.
-    :raises ValueError: If the tensor values are not in the range [-2, 1].
     """
     if tensor.dtype != torch.int8:
-        msg = f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported."
+        msg = f"Invalid tensor dtype {tensor.dtype}. torch.int8 type is supported."
         raise ValidationError(msg)
     if torch.any((tensor < -2) | (tensor > 1)):
         msg = "Tensor values are not in [-2, 1]."
