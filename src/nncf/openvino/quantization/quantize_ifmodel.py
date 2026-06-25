@@ -153,7 +153,7 @@ def apply_algorithm_if_bodies(
     """
     nncf_logger.info(f"Iteration [{current_model_num}/{len(graphs)}] ...")
     parent_graph = graphs[graph_id]
-    quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
+    quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, dataset=parent_dataset)
     if get_number_if_op(parent_model) == 0:
         return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
@@ -186,6 +186,7 @@ def apply_algorithm_if_bodies(
             then_dataset,
             subset_size,
             current_model_num + 1,
+            parent_statistic_points,
         )
         else_quantized_model, current_model_num = apply_algorithm_if_bodies(
             algorithm,
@@ -195,6 +196,7 @@ def apply_algorithm_if_bodies(
             else_dataset,
             subset_size,
             current_model_num + 1,
+            parent_statistic_points,
         )
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
         quantized_model = _update_if_body(model_transformer_int8, if_node, True, then_quantized_model)

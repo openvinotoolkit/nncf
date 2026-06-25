@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from typing import Any, Callable, Iterable, TypedDict, TypeVar
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -723,6 +724,7 @@ def quantize_with_tune_hyperparams(
     model_type: ModelType | None = None,
     ignored_scope: IgnoredScope | None = None,
     advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
+    initial_statistic_points: StatisticPointsContainer | None = None,
 ) -> TModel:
     """
     Applies post-training quantization algorithm with tune hyperparameters to provided model.
@@ -778,6 +780,7 @@ def quantize_with_tune_hyperparams(
         tuner_subset_size,
         initial_metric_results,
         quantized_metric_results,
+        initial_statistic_points,
     )
 
     quantized_model = hyperparameter_tuner.apply(model, validation_dataset)

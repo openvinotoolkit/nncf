@@ -12,7 +12,7 @@
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Iterable, TypeVar
+from typing import Any, Callable, Iterable, TypeVar, Tuple, Union
 
 import onnx
 from onnx.external_data_helper import ExternalDataInfo
@@ -22,6 +22,8 @@ from onnx.external_data_helper import uses_external_data
 
 import nncf
 from nncf.common.factory import build_graph
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms.pipeline import collect_statistics
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -132,7 +134,8 @@ def quantize_impl(
     model_type: ModelType | None = None,
     ignored_scope: IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
-) -> onnx.ModelProto:
+    return_statistics: bool = False,
+) -> Union[onnx.ModelProto, Tuple[onnx.ModelProto, StatisticPointsContainer]]:
     """
     Implementation of the `quantize()` method for the ONNX backend.
     """
@@ -174,7 +177,9 @@ def quantize_impl(
 
     graph = GraphConverter.create_nncf_graph(model)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
-    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+    statistic_points = quantization_algorithm.get_statistic_points(model, graph)
+    statistic_points = collect_statistics(statistic_points, model, graph, calibration_dataset)
+    quantized_model = quantization_algorithm.apply(model, graph, statistic_points, dataset=calibration_dataset)
 
     if external_data_dir:
         remove_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
@@ -184,6 +189,8 @@ def quantize_impl(
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
 
+    if return_statistics:
+        return quantized_model, statistic_points
     return quantized_model
 
 
@@ -217,7 +224,7 @@ def quantize_with_accuracy_control_impl(
         copied_parameters = deepcopy(advanced_quantization_parameters)
     copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
-    quantized_model = quantize_impl(
+    quantized_model, statistic_points = quantize_impl(
         model=model,
         calibration_dataset=calibration_dataset,
         preset=preset,
@@ -227,6 +234,7 @@ def quantize_with_accuracy_control_impl(
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=copied_parameters,
+        return_statistics=True,
     )
 
     if advanced_accuracy_restorer_parameters.intermediate_model_dir:
@@ -267,6 +275,7 @@ def quantize_with_accuracy_control_impl(
             model_type,
             ignored_scope,
             copied_parameters,
+            initial_statistic_points=statistic_points,
         )
         tuned_quantized_metric_results = evaluator.collect_metric_results(
             tuned_quantized_model, validation_dataset, model_name="tuned"
