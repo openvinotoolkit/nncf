@@ -13,8 +13,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import TypeVar
 
-import numpy as np
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -42,12 +40,15 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> TransformationCommand:
+    def create_bias_correction_command(
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
+    ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 
         :param node: The node for which bias should be updated.
         :param bias_value: New value for the bias.
+        :param nncf_graph: NNCFGraph instance.
         :return: Backend-specific command to update bias value.
         """
 
@@ -121,7 +122,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, model: TModel, nncf_graph: NNCFGraph) -> Tensor:
         """
         Returns bias value in the NumPy format of provided node.
 

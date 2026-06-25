@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
@@ -19,6 +20,7 @@ import numpy as np
 import onnx
 import onnxruntime
 import pytest
+import torch
 from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
@@ -39,6 +41,7 @@ from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization import compress_weights
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
@@ -502,23 +505,33 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_model_for_test_scale_estimation() -> onnx.ModelProto:
+    def get_model_for_test_scale_estimation(transpose_a) -> onnx.ModelProto:
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_scale_estimation()
             - TemplateWeightCompression.test_scale_estimation_outlier_channel_has_lowest_error()
         tests.
         """
+
         mb = ModelBuilder()
         x = mb.add_input("input", (1, 4, 8))
         output = mb.add_output("output", (1, 4, 16))
         weights = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8).T
-        mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
+        if transpose_a:
+            squeeze = mb.add_squeeze(x)
+            transpose = mb.add_transpose(squeeze, (1, 0))
+            mb.add_gemm(transpose, shape=(8, 16), output=output, weight_data=weights, trans_a=1)
+        else:
+            mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
 
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation() -> onnx.ModelProto:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> onnx.ModelProto:
+        if transpose_a:
+            msg = "ONNX does not support transpose_a + MoE"
+            pytest.skip(msg)
+
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
@@ -540,40 +553,40 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return (
             np.array(
                 [
-                    [[0.473328]],
-                    [[0.929023]],
-                    [[1.446527]],
-                    [[1.920595]],
-                    [[2.517054]],
-                    [[3.030102]],
-                    [[3.584279]],
-                    [[4.043509]],
-                    [[4.620008]],
-                    [[5.165322]],
-                    [[5.710637]],
-                    [[6.122581]],
-                    [[6.655914]],
-                    [[7.237174]],
-                    [[7.722580]],
+                    [[0.47332805]],
+                    [[1.0]],
+                    [[1.4732642]],
+                    [[2.0380495]],
+                    [[2.6054149]],
+                    [[3.0301015]],
+                    [[3.679056]],
+                    [[4.175322]],
+                    [[4.700384]],
+                    [[5.2552223]],
+                    [[5.8100615]],
+                    [[6.3083715]],
+                    [[6.858295]],
+                    [[7.4082184]],
+                    [[7.722581]],
                     [[8.255914]],
                 ]
             ).T,
             np.array(
                 [
                     [[0.47344488]],
-                    [[0.9287766]],
-                    [[1.4463282]],
-                    [[1.920052]],
-                    [[2.5167778]],
+                    [[1.0]],
+                    [[1.5450557]],
+                    [[2.0380037]],
+                    [[2.6055446]],
                     [[3.02987]],
-                    [[3.5842714]],
-                    [[4.0429296]],
-                    [[4.619769]],
-                    [[5.165224]],
-                    [[5.7106786]],
-                    [[6.121212]],
-                    [[6.654546]],
-                    [[7.2366524]],
+                    [[3.679132]],
+                    [[4.1754694]],
+                    [[4.7001443]],
+                    [[5.2551227]],
+                    [[5.810101]],
+                    [[6.308658]],
+                    [[6.8587303]],
+                    [[7.4]],
                     [[7.7212124]],
                     [[8.254545]],
                 ]
@@ -588,44 +601,44 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5732,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.2602,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.3083,
-                                7.8467,
-                                7.2233,
-                                7.2715,
-                                7.4205,
-                                7.4667,
+                                7.573249,
+                                7.58195,
+                                7.6,
+                                7.6666665,
+                                7.1209445,
+                                7.260152,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.528544,
+                                8.659291,
+                                8.879055,
+                                8.469787,
+                                8.4,
+                                8.364824,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8205,
-                                14.9032,
-                                14.9858,
-                                15.0685,
-                                15.1512,
-                                14.3400,
-                                14.4173,
-                                14.4945,
-                                14.5718,
-                                14.6491,
-                                14.7264,
-                                14.8037,
-                                14.8810,
-                                14.9583,
-                                15.0355,
-                                15.1128,
+                                16.0,
+                                16.089771,
+                                16.179543,
+                                16.269318,
+                                16.359089,
+                                16.44886,
+                                16.538631,
+                                16.628407,
+                                16.718176,
+                                16.80795,
+                                16.89772,
+                                16.987492,
+                                15.812495,
+                                15.89516,
+                                15.977826,
+                                16.060493,
                             ]
                         ]
                     ],
@@ -637,43 +650,43 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                         [
                             [
                                 7.575118,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
+                                7.5841107,
+                                7.6,
+                                7.6666665,
+                                7.112954,
                                 7.254837,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
-                                7.4666667,
-                                7.495066,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.531546,
                                 7.850108,
-                                7.219489,
-                                7.2685375,
-                                7.418597,
-                                7.4666667,
+                                8.887045,
+                                8.468656,
+                                8.4,
+                                8.361673,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.820066,
-                                14.902746,
-                                14.985427,
-                                15.068108,
-                                15.150787,
-                                14.3391285,
-                                14.416424,
-                                14.493721,
-                                14.571016,
-                                14.648311,
-                                14.725608,
-                                14.802904,
-                                14.8801985,
-                                14.957496,
-                                15.034791,
-                                15.112087,
+                                16.0,
+                                16.089788,
+                                16.17958,
+                                16.269371,
+                                16.359161,
+                                16.448954,
+                                16.538742,
+                                16.628534,
+                                16.718325,
+                                16.808115,
+                                16.897905,
+                                16.987696,
+                                15.812232,
+                                15.894914,
+                                15.977593,
+                                16.060274,
                             ]
                         ]
                     ],
@@ -956,5 +969,69 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return True
 
     @pytest.mark.skip("RoPE pattern is invalid for the ONNX backend, ticket 183208")
-    def test_rope_weight_compression():
+    def test_rope_weight_compression(self):
         pass
+
+
+class LinearModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        weight = torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8)
+        self.linear = torch.nn.Linear(weight.shape[1], weight.shape[0], False)
+        self.linear.weight = torch.nn.Parameter(weight)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.linear(x)
+
+
+@pytest.fixture(name="model_for_ignored_scope_test", scope="module")
+def get_model_for_ignored_scope_test(tmp_path_factory) -> onnx.ModelProto:
+    pt_model = LinearModel().eval()
+    onnx_path = tmp_path_factory.mktemp("onnx_models") / "LinearModel.onnx"
+    torch.onnx.export(
+        pt_model, torch.randn(1, 8), onnx_path, input_names=["input"], output_names=["output"], external_data=False
+    )
+    model = onnx.load(onnx_path)
+    return model
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: set[str]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), {"linear.weight_quantized"}),
+        pytest.param(
+            ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
+            marks=pytest.mark.xfail(reason="See ticket 186262"),
+        ),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["node_linear"]), set()),
+        pytest.param(
+            ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
+            marks=pytest.mark.xfail(reason="See ticket 186262"),
+        ),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["node_li.*"]), set()),
+    ),
+    ids=str,
+)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope, model_for_ignored_scope_test: onnx.ModelProto):
+    model = deepcopy(model_for_ignored_scope_test)
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+
+    names = {i.name for i in compressed_model.graph.initializer if i.data_type == onnx.TensorProto.INT4}
+    assert names == param.ref

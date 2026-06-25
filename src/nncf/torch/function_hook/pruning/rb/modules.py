@@ -20,7 +20,6 @@ from torch.overrides import has_torch_function_unary
 
 from nncf.torch.functions import STThreshold
 from nncf.torch.functions import logit
-from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
 
 
@@ -59,7 +58,6 @@ def apply_rb_binary_mask(input_: torch.Tensor, mask: torch.Tensor, training: boo
     return input_ * binary_mask(mask)
 
 
-@COMPRESSION_MODULES.register()
 class RBPruningMask(nn.Module, StatefulModuleInterface):
     """
     A module that applies a binary pruning mask to the input tensor.

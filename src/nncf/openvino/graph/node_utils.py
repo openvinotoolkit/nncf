@@ -567,7 +567,7 @@ def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any
 
 
 def get_weighted_layer_attributes(
-    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: dict[int, Any]
+    ov_node: ov.Node, ov_metatype: type[OVOpMetatype], constant_attributes: dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
     Function retrieves common layer attributes from the given node.

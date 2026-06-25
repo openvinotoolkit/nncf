@@ -55,7 +55,7 @@ def get_scoped_quantizer_config(
 def assign_qconfig_lists_to_modules(
     nodes_with_weights: list[NNCFNode],
     default_weight_qconfig: QuantizerConfig,
-    global_weight_constraints: QuantizationConstraints = None,
+    global_weight_constraints: QuantizationConstraints | None = None,
     scope_overrides_dict: dict[str, Any] | None = None,
     hw_config: HWConfig | None = None,
 ) -> dict[NNCFNode, list[QuantizerConfig]]:

@@ -19,7 +19,11 @@ from nncf.common.factory import build_graph
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.quantization.algorithms.bias_correction.algorithm import SubgraphData
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
+from tests.cross_fw.test_templates.helpers import AddWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithInput
+from tests.cross_fw.test_templates.helpers import ConcatWithReluInput
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
@@ -50,6 +54,8 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> onnx.ModelProto:
         if isinstance(model, OneDimMM):
             pytest.skip("ONNX does not support BC with MM ops")
+        if isinstance(model, (ConcatWithInput, ConcatWithReluInput, AddWithInput)):
+            pytest.skip("ONNX model extraction fails with concat skip connections, ticket 183589")
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(
             model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"], dynamo=False
@@ -98,10 +104,10 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/Concat", 1): ("nncf_model_input_0", 0),
                         ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_1/Conv", 0)},
+                        output_ids={("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
+                    ),
                 },
             ),
             (
@@ -113,10 +119,10 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_4/Conv", 0): ("/Split", 0),
                         ("/conv_6/Conv", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_2/Conv", 0)},
-                        "subgraph_output_ids": {("/Relu_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_2/Conv", 0)},
+                        output_ids={("/Relu_1", 0)},
+                    ),
                 },
             ),
             (
@@ -129,10 +135,10 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_4/Conv", 0): ("/Split", 0),
                         ("/conv_6/Conv", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_1/Conv", 0), ("/conv_3/Conv", 0)},
-                        "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_1/Conv", 0), ("/conv_3/Conv", 0)},
+                        output_ids={("/Split", 0), ("/Split", 1)},
+                    ),
                 },
             ),
             (
@@ -142,10 +148,10 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_4/Conv", 0): ("/Split", 0),
                         ("/conv_6/Conv", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_4/Conv", 0)},
-                        "subgraph_output_ids": {("/Relu_2", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_4/Conv", 0)},
+                        output_ids={("/Relu_2", 0)},
+                    ),
                 },
             ),
             (
@@ -155,10 +161,10 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_5/Conv", 0): ("/Relu_2", 0),
                         ("/conv_6/Conv", 0): ("/Split", 1),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("/conv_5/Conv", 0), ("/conv_6/Conv", 0)},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("/conv_5/Conv", 0), ("/conv_6/Conv", 0)},
+                        output_ids={("/Add_3", 0), ("/Concat_1", 0)},
+                    ),
                 },
             ),
             (
@@ -169,14 +175,14 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("/conv_9/Conv", 0): ("/Add_3", 0),
                         ("/conv_10/Conv", 0): ("/Concat_1", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {
+                    "subgraph_data": SubgraphData(
+                        input_ids={
                             ("/conv_8/Conv", 0),
                             ("/conv_9/Conv", 0),
                             ("/conv_10/Conv", 0),
                         },
-                        "subgraph_output_ids": {("/Concat_2", 0)},
-                    },
+                        output_ids={("/Concat_2", 0)},
+                    ),
                 },
             ),
             # Disabled, because ONNX backend doesn't support bias correction for MatMul

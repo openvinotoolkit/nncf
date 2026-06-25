@@ -15,51 +15,20 @@ Base subpackage for NNCF PyTorch functionality.
 """
 
 import torch
-from packaging import version
 
 # Functions most commonly used in integrating NNCF into training pipelines are
 # listed below for importing convenience
 
-from nncf.torch.model_creation import is_wrapped_model
-from nncf.torch.model_creation import wrap_model
-from nncf.torch.model_creation import load_from_config
-from nncf.torch.model_creation import get_config
-from nncf.torch.function_hook.hook_executor_mode import disable_tracing
-from nncf.torch.strip import strip
+from nncf.torch.model_creation import is_wrapped_model as is_wrapped_model
+from nncf.torch.model_creation import wrap_model as wrap_model
+from nncf.torch.function_hook.serialization import load_from_config as load_from_config
+from nncf.torch.function_hook.serialization import get_config as get_config
+from nncf.torch.function_hook.hook_executor_mode import disable_tracing as disable_tracing
+from nncf.torch.strip import strip as strip
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
 # so this call is moved to package __init__ to ensure this.
 
-from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_extensions
-
-# This is required since torchvision changes a dictionary inside of pytorch mapping
-# different ops and their role in torch fx graph. Once the nncf mapping is done, it is
-# represented as a different custom operation which is how it is changed in
-# the said mapping. The polyfills loader is the specific file to be imported
-# before making wrapping changes
-if torch.__version__ >= "2.5.0":
-    from torch._dynamo.polyfills import loader
-
-
-def patch_torch_operators():
-    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
-    from nncf.common.deprecation import warning_deprecated
-
-    warning_deprecated(
-        "nncf.torch.patch_torch_operators was called. This function is deprecated and no longer does anything."
-    )
-
-
-def register_module(*args, **kwargs):
-    # TODO(AlexanderDokuchaev): keep it until optimum=intel use it
-    from nncf.common.deprecation import warning_deprecated
-
-    warning_deprecated(
-        "nncf.torch.register_module was called. This function is deprecated and no longer does anything."
-    )
-
-    def wrap(cls):
-        return cls
-
-    return wrap
+from nncf.torch.extensions import force_build_cpu_extensions as force_build_cpu_extensions
+from nncf.torch.extensions import force_build_cuda_extensions as force_build_cuda_extensions

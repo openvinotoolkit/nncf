@@ -14,7 +14,6 @@ from torch import nn
 
 from nncf.torch.function_hook.wrapper import register_post_function_hook
 from nncf.torch.function_hook.wrapper import wrap_model
-from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
 
 
@@ -177,7 +176,6 @@ class CounterHook(nn.Module):
         return x + 1
 
 
-@COMPRESSION_MODULES.register()
 class HookWithState(torch.nn.Module, StatefulModuleInterface):
     def __init__(self, state: str):
         super().__init__()

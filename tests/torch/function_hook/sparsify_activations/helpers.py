@@ -15,7 +15,6 @@ from collections import defaultdict
 import openvino as ov
 import torch
 import torch.nn as nn
-import transformers.models
 
 from nncf import IgnoredScope
 from nncf.experimental.torch.sparsify_activations import TargetScope
@@ -34,21 +33,6 @@ class ThreeLinearModel(nn.Module):
         y0 = self.linear3(self.linear1(x))
         y1 = self.linear2(x)
         return y0, y1
-
-
-def dummy_llama_model():
-    config = transformers.models.llama.configuration_llama.LlamaConfig(
-        vocab_size=32,
-        hidden_size=8,
-        intermediate_size=14,
-        num_attention_heads=2,
-        num_key_value_heads=1,
-        num_hidden_layers=2,
-        use_cache=False,
-        return_dict=False,
-    )
-    model = transformers.AutoModelForCausalLM.from_config(config, attn_implementation="eager")
-    return model
 
 
 def count_sparsifier_patterns_in_ov(model: ov.Model) -> int:

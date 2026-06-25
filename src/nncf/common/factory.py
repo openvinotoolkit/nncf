@@ -39,7 +39,7 @@ def build_graph(model: TModel, *, example_input: Any = None) -> NNCFGraph:
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.ONNX:
-        from onnx import ModelProto  # type: ignore
+        from onnx import ModelProto
 
         from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
 

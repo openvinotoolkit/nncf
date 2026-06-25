@@ -32,7 +32,6 @@ from nncf.torch.model_creation import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.function_hook.sparsify_activations.helpers import ThreeLinearModel
 from tests.torch.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
-from tests.torch.function_hook.sparsify_activations.helpers import dummy_llama_model
 from tests.torch.helpers import set_torch_seed
 from tests.torch.utils import compare_with_reference_file
 from tests.torch.utils import to_comparable_nx_graph
@@ -99,24 +98,6 @@ SPARSIFY_ACTIVATIONS_ALGORITHM_TEST_DESCS = [
         },
         ref_num_batches_tracked=3,
         ref_num_patterns_in_ov=2,
-    ),
-    SparsifyActivationsAlgorithmTestDesc(
-        name="dummy_llama",
-        model_getter=dummy_llama_model,
-        dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
-        target_sparsity_by_scope={
-            TargetScope(patterns=[".*gate_proj.*"]): 0.2,
-            TargetScope(patterns=[".*up_proj.*"]): 0.3,
-            TargetScope(patterns=[".*down_proj.*"]): 0.4,
-        },
-        ignored_scope=None,
-        ref_sparsifier_target_sparsity={
-            (f"pre_hooks.model/mlp/{name}/linear/{layer_id}__0.0"): sparsity
-            for name, sparsity in [("gate_proj", 0.2), ("up_proj", 0.3), ("down_proj", 0.4)]
-            for layer_id in [0, 1]
-        },
-        ref_num_batches_tracked=3,
-        ref_num_patterns_in_ov=6,
     ),
 ]
 

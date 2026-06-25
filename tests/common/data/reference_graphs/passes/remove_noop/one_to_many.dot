@@ -1,0 +1,7 @@
+digraph {
+"0 Input_1" [id=0, type=any];
+"2 Output_1" [id=2, type=any];
+"3 Output_2" [id=3, type=any];
+"0 Input_1" -> "2 Output_1" [key=0];
+"0 Input_1" -> "3 Output_2" [key=0];
+}

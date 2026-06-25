@@ -46,8 +46,8 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
+from nncf.torch import load_from_config
 from nncf.torch.function_hook.wrapper import get_hook_storage
-from nncf.torch.model_creation import load_from_config
 from nncf.torch.quantization.layers import AsymmetricLoraNLSQuantizer
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricLoraNLSQuantizer

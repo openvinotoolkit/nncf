@@ -9,56 +9,71 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import auto
+
 from nncf.parameters import StrEnum
 
 
-class HWConfigOpName(StrEnum):
-    CONVOLUTION = "Convolution"
-    DEPTHWISECONVOLUTION = "DepthWiseConvolution"
-    MATMUL = "MatMul"
-    ADD = "Add"
-    MULTIPLY = "Multiply"
-    MAXIMUM = "Maximum"
-    LESS = "Less"
-    LESSEQUAL = "LessEqual"
-    GREATER = "Greater"
-    GREATEREQUAL = "GreaterEqual"
-    DIVIDE = "Divide"
-    MINIMUM = "Minimum"
-    EQUAL = "Equal"
-    SUBTRACT = "Subtract"
-    NOTEQUAL = "NotEqual"
-    FLOORMOD = "FloorMod"
-    LOGICALOR = "LogicalOr"
-    LOGICALXOR = "LogicalXor"
-    LOGICALAND = "LogicalAnd"
-    LOGICALNOT = "LogicalNot"
-    POWER = "Power"
-    AVGPOOL = "AvgPool"
-    REDUCEMEAN = "ReduceMean"
-    MAXPOOL = "MaxPool"
-    REDUCEMAX = "ReduceMax"
-    REDUCESUM = "ReduceSum"
-    REDUCEL2 = "ReduceL2"
-    INTERPOLATE = "Interpolate"
-    MVN = "MVN"
-    RESHAPE = "Reshape"
-    CONCAT = "Concat"
-    FLATTEN = "Flatten"
-    SQUEEZE = "Squeeze"
-    UNSQUEEZE = "Unsqueeze"
-    SPLIT = "Split"
-    CHUNK = "Chunk"
-    CROP = "Crop"
-    TRANSPOSE = "Transpose"
-    TILE = "Tile"
-    EMBEDDING = "Embedding"
-    EMBEDDINGBAG = "EmbeddingBag"
-    PAD = "Pad"
-    STRIDEDSLICE = "StridedSlice"
-    SLICE = "Slice"
-    GELU = "Gelu"
-    LSTMSEQUENCE = "LSTMSequence"
-    GRUSEQUENCE = "GRUSequence"
-    GROUPNORMALIZATION = "GroupNormalization"
-    SCALED_DOT_PRODUCT_ATTENTION = "ScaledDotProductAttention"
+class HWOpName(StrEnum):
+    """
+    Enumeration of operation types supported by hardware quantization configurations.
+
+    Each member represents an operation type that can be quantized on a specific hardware platform
+    (CPU, GPU, NPU). These types are used to define quantization schemes and constraints in
+    hardware-specific setup configurations.
+    """
+
+    ADD = auto()
+    AVG_POOL = auto()
+    BROADCAST = auto()
+    CHUNK = auto()
+    CONCAT = auto()
+    CONVERT_LIKE = auto()
+    CONVOLUTION = auto()
+    CROP = auto()
+    DEPTHWISE_CONVOLUTION = auto()
+    DIVIDE = auto()
+    EMBEDDING = auto()
+    EMBEDDING_BAG = auto()
+    EQUAL = auto()
+    FLATTEN = auto()
+    FLOOR_MOD = auto()
+    GELU = auto()
+    GREATER = auto()
+    GREATER_EQUAL = auto()
+    GROUP_NORMALIZATION = auto()
+    GRU_SEQUENCE = auto()
+    INTERPOLATE = auto()
+    LESS = auto()
+    LESS_EQUAL = auto()
+    LOGICAL_AND = auto()
+    LOGICAL_NOT = auto()
+    LOGICAL_OR = auto()
+    LOGICAL_XOR = auto()
+    LSTM_SEQUENCE = auto()
+    MAT_MUL = auto()
+    MAXIMUM = auto()
+    MAX_POOL = auto()
+    MINIMUM = auto()
+    MULTIPLY = auto()
+    MVN = auto()
+    NORMALIZE_L2 = auto()
+    NOT_EQUAL = auto()
+    PAD = auto()
+    POWER = auto()
+    REDUCE_L2 = auto()
+    REDUCE_MAX = auto()
+    REDUCE_MEAN = auto()
+    REDUCE_SUM = auto()
+    RESHAPE = auto()
+    SCALED_DOT_PRODUCT_ATTENTION = auto()
+    SHUFFLE_CHANNELS = auto()
+    SLICE = auto()
+    SPLIT = auto()
+    SQUEEZE = auto()
+    STRIDED_SLICE = auto()
+    SUBTRACT = auto()
+    TILE = auto()
+    TRANSPOSE = auto()
+    UNSQUEEZE = auto()
+    VARIADIC_SPLIT = auto()
