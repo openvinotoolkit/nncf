@@ -51,7 +51,7 @@ class ReferenceQuantize:
             return np.reciprocal(tensor)
         return torch.reciprocal(tensor)
 
-    def _sum_like(self, tensor_to_sum: GeneralizedTensor, ref_tensor: GeneralizedTensor):
+    def _sum_like(self, tensor_to_sum: GeneralizedTensor, ref_tensor: GeneralizedTensor) -> GeneralizedTensor:
         """Warning: may modify tensor_to_sum"""
         if self.backend is np:
             half = tensor_to_sum.dtype == np.float16
@@ -70,7 +70,7 @@ class ReferenceQuantize:
             retval = retval.type(torch.float16)
         return retval
 
-    def _sum_like_fp32(self, tensor_to_sum: GeneralizedTensor, ref_tensor: GeneralizedTensor):
+    def _sum_like_fp32(self, tensor_to_sum: GeneralizedTensor, ref_tensor: GeneralizedTensor) -> GeneralizedTensor:
         """Warning: may modify tensor_to_sum"""
         if self.backend is np:
             n_elements = ref_tensor.size
