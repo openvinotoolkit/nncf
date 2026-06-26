@@ -171,6 +171,8 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
       NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
       GIT_SSL_CAINFO: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      PIP_CERT: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      REQUESTS_CA_BUNDLE: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
     steps:
       - name: Install dependencies
         run : |
