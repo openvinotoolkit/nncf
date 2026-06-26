@@ -10,6 +10,7 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
+from typing import Any
 
 import numpy as np
 import onnx
@@ -37,7 +38,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 
 
-class ONNXModelTransformer(ModelTransformer):
+class ONNXModelTransformer(ModelTransformer[onnx.ModelProto]):
     """
     Applies transformations upon ONNX model.
     ModelTransformer should be created once for a particular model,
@@ -546,7 +547,7 @@ class ONNXModelTransformer(ModelTransformer):
         return model
 
 
-def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray) -> None:
+def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray[Any, Any]) -> None:
     """
     Updates the initializer tensor in the ONNX model.
     :param initializer_name: Name of the initializer tensor to update.

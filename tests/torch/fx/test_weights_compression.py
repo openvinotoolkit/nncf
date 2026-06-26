@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -23,6 +24,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import BaseWeightsDecompressor
@@ -346,20 +348,26 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_sequential_matmul_model(transpose_a: bool) -> torch.fx.GraphModule:
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for FX backend")
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
-    def get_model_for_test_scale_estimation():
-        model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+    def get_model_for_test_scale_estimation(transpose_a: bool):
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for FX backend")
+        model = LinearModel()
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation():
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+        if transpose_a:
+            pytest.skip("transpose_a=True is not supported for FX backend")
         num_experts = 2
         hidden_dim = 8
         out_dim = 16
@@ -429,41 +437,41 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return (
             torch.tensor(
                 [
-                    [[0.473328]],
-                    [[0.929023]],
-                    [[1.446527]],
-                    [[1.920595]],
-                    [[2.517054]],
-                    [[3.030102]],
-                    [[3.584279]],
-                    [[4.043509]],
-                    [[4.620008]],
-                    [[5.165322]],
-                    [[5.710637]],
-                    [[6.122581]],
-                    [[6.655914]],
-                    [[7.237174]],
-                    [[7.722580]],
+                    [[0.47332805]],
+                    [[1.0]],
+                    [[1.4732642]],
+                    [[2.0380495]],
+                    [[2.6054149]],
+                    [[3.0301015]],
+                    [[3.679056]],
+                    [[4.175322]],
+                    [[4.700384]],
+                    [[5.2552223]],
+                    [[5.8100615]],
+                    [[6.3083715]],
+                    [[6.858295]],
+                    [[7.4082184]],
+                    [[7.722581]],
                     [[8.255914]],
                 ]
             ),
             torch.tensor(
                 [
-                    [[0.473445]],
-                    [[0.928777]],
-                    [[1.446328]],
-                    [[1.920052]],
-                    [[2.516778]],
-                    [[3.029870]],
-                    [[3.584271]],
-                    [[4.042929]],
-                    [[4.619769]],
-                    [[5.165224]],
-                    [[5.710679]],
-                    [[6.121212]],
-                    [[6.654546]],
-                    [[7.236652]],
-                    [[7.721212]],
+                    [[0.47344488]],
+                    [[1.0]],
+                    [[1.5450557]],
+                    [[2.0380037]],
+                    [[2.6055446]],
+                    [[3.02987]],
+                    [[3.679132]],
+                    [[4.1754694]],
+                    [[4.7001443]],
+                    [[5.2551227]],
+                    [[5.810101]],
+                    [[6.308658]],
+                    [[6.8587303]],
+                    [[7.4]],
+                    [[7.7212124]],
                     [[8.254545]],
                 ]
             ),
@@ -477,44 +485,44 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5732,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.2602,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.3083,
-                                7.8467,
-                                7.2233,
-                                7.2715,
-                                7.4205,
-                                7.4667,
+                                7.573249,
+                                7.58195,
+                                7.6,
+                                7.6666665,
+                                7.1209445,
+                                7.260152,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.528544,
+                                8.659291,
+                                8.879055,
+                                8.469787,
+                                8.4,
+                                8.364824,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8205,
-                                14.9032,
-                                14.9858,
-                                15.0685,
-                                15.1512,
-                                14.3400,
-                                14.4173,
-                                14.4945,
-                                14.5718,
-                                14.6491,
-                                14.7264,
-                                14.8037,
-                                14.8810,
-                                14.9583,
-                                15.0355,
-                                15.1128,
+                                16.0,
+                                16.089771,
+                                16.179543,
+                                16.269318,
+                                16.359089,
+                                16.44886,
+                                16.538631,
+                                16.628407,
+                                16.718176,
+                                16.80795,
+                                16.89772,
+                                16.987492,
+                                15.812495,
+                                15.89516,
+                                15.977826,
+                                16.060493,
                             ]
                         ]
                     ],
@@ -525,44 +533,44 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     [
                         [
                             [
-                                7.5751,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.2548,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4667,
-                                7.4951,
-                                7.8501,
-                                7.2195,
-                                7.2685,
-                                7.4186,
-                                7.4667,
+                                7.575118,
+                                7.5841107,
+                                7.6,
+                                7.6666665,
+                                7.112954,
+                                7.254837,
+                                7.866667,
+                                7.9333334,
+                                8.0,
+                                8.066667,
+                                8.531546,
+                                7.850108,
+                                8.887045,
+                                8.468656,
+                                8.4,
+                                8.361673,
                             ]
                         ]
                     ],
                     [
                         [
                             [
-                                14.8201,
-                                14.9027,
-                                14.9854,
-                                15.0681,
-                                15.1508,
-                                14.3391,
-                                14.4164,
-                                14.4937,
-                                14.5710,
-                                14.6483,
-                                14.7256,
-                                14.8029,
-                                14.8802,
-                                14.9575,
-                                15.0348,
-                                15.1121,
+                                16.0,
+                                16.089788,
+                                16.17958,
+                                16.269371,
+                                16.359161,
+                                16.448954,
+                                16.538742,
+                                16.628534,
+                                16.718325,
+                                16.808115,
+                                16.897905,
+                                16.987696,
+                                15.812232,
+                                15.894914,
+                                15.977593,
+                                16.060274,
                             ]
                         ]
                     ],
@@ -738,13 +746,45 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         ]
 
     @staticmethod
-    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, is_3d_weights: bool = False):
-        pass
-
-    @pytest.fixture
-    def transpose_a_supported(self) -> bool:
-        return False
+    def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
+        pytest.skip("Transposable models are not supported")
 
     @pytest.mark.skip("RoPE pattern is invalid for the TorchFX backend, ticket 183208")
-    def test_rope_weight_compression():
+    def test_rope_weight_compression(self):
         pass
+
+
+@dataclass
+class ParamIgnoredScope:
+    name: str
+    ignored_scope: IgnoredScope
+    ref: int
+
+    def __str__(self) -> str:
+        return self.name
+
+
+@pytest.mark.parametrize(
+    "param",
+    (
+        ParamIgnoredScope("empty", IgnoredScope(), 1),
+        ParamIgnoredScope("name_const", IgnoredScope(names=["linear_weight"]), 0),
+        ParamIgnoredScope("name_op", IgnoredScope(names=["linear"]), 0),
+        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), 0),
+        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear*"]), 0),
+    ),
+    ids=str,
+)
+def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope):
+    example_input = torch.rand(8, 8)
+    model = get_torch_fx_model(LinearModel(), example_input)
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=-1,
+        all_layers=True,
+        ignored_scope=param.ignored_scope,
+    )
+
+    num_int4 = TestFXTemplateWeightCompression.get_num_int4_nodes(compressed_model)
+    assert num_int4 == param.ref

@@ -101,7 +101,7 @@ def test_save_load(tmpdir: Path):
     state_dict = resuming_checkpoint["state_dict"]
 
     loaded_model = ConvModel()
-    loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config, example_inputs)
+    loaded_pruned_model = nncf.torch.load_from_config(loaded_model, nncf_config)
     loaded_pruned_model.load_state_dict(state_dict)
     loaded_pruned_model.eval()
     loaded_output = loaded_pruned_model(example_inputs)

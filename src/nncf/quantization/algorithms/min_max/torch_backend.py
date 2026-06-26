@@ -75,8 +75,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def dropout_metatypes(self) -> list[OperatorMetatype]:
-        return [om.PTDropoutMetatype]
+    def noop_metatypes(self) -> list[type[OperatorMetatype]]:
+        return [om.PTNoopMetatype, om.PTDropoutMetatype]
 
     @property
     def conv_metatypes(self) -> list[OperatorMetatype]:
@@ -232,7 +232,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             half_range=False,
             logarithm_scale=False,
             is_quantized_on_export=False,
-            compression_lr_multiplier=None,
         )
         quantizer = quantizer_cls(quantizer_spec)
 

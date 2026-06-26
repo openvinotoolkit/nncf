@@ -4,7 +4,7 @@ This example demonstrates how to optimize Large Language Models (LLMs) using NNC
 
 The example includes the following steps:
 
-- Prepare `TinyLlama/TinyLlama-1.1B-Chat-v1.0` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum/intel/inference).
+- Prepare `TinyLlama/TinyLlama-1.1B-Chat-v1.0` text-generation model in OpenVINO representation using [Optimum-Intel](https://huggingface.co/docs/optimum-intel/openvino/inference).
 - Prepare `synthetic` dataset using `nncf.data.generate_text_data` method.
 - Compress weights of the model with NNCF Weight compression algorithm with Scale Estimation & `synthetic` dataset.
 

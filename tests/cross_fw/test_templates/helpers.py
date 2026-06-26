@@ -207,6 +207,74 @@ class MultipleConvTestModel(nn.Module):
         return self.conv_6(x)
 
 
+def build_conv(in_channels: int, out_channels: int, kernel_size: int) -> nn.Module:
+    conv = create_conv(in_channels, out_channels, kernel_size)
+    with set_torch_seed():
+        conv.weight.data = torch.randn([out_channels, in_channels, kernel_size, kernel_size])
+        conv.bias.data = torch.randn([out_channels])
+    return conv
+
+
+class ConcatWithInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(4, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = torch.relu(x_1)
+        x_combined = torch.cat([x_1, x], dim=1)
+        return self.conv_2(x_combined)
+
+
+class ConcatWithReluInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(4, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = torch.cat([x_1, F.relu(x)], dim=1)
+        return self.conv_2(x_combined)
+
+
+class AddWithInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(2, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = x_1 + x
+        return self.conv_2(x_combined)
+
+
+class AddWithReluInput(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = build_conv(2, 2, 1)
+        self.conv_2 = build_conv(2, 2, 1)
+
+    def forward(self, x):
+        x_1 = self.conv_1(x)
+        x_1 = F.relu(x_1)
+        x_combined = x_1 + torch.relu(x)
+        return self.conv_2(x_combined)
+
+
 class LinearMultiShapeModel(nn.Module):
     INPUT_SIZE = [1, 3, 4, 2]
 

@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import numpy as np
 
 from nncf.common.graph.graph import NNCFGraph
@@ -21,7 +23,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
 
-def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXInitializerUpdateCommand:
+def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray[Any, Any]) -> ONNXInitializerUpdateCommand:
     """
      Creates bias correction command.
 
@@ -51,13 +53,13 @@ class ONNXCommandCreator(CommandCreator):
 
     @staticmethod
     def create_command_to_update_bias(
-        node_with_bias: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node_with_bias: NNCFNode, bias_value: np.ndarray[Any, Any], nncf_graph: NNCFGraph
     ) -> ONNXInitializerUpdateCommand:
         return create_bias_correction_command(node_with_bias, bias_value)
 
     @staticmethod
     def create_command_to_update_weight(
-        node_with_weight: NNCFNode, weight_value: np.ndarray, weight_port_id: int
+        node_with_weight: NNCFNode, weight_value: np.ndarray[Any, Any], weight_port_id: int
     ) -> ONNXInitializerUpdateCommand:
         target_point = ONNXTargetPoint(TargetType.LAYER, node_with_weight.node_name, weight_port_id)
         return ONNXInitializerUpdateCommand(target_point, weight_value)
@@ -71,7 +73,7 @@ class ONNXCommandCreator(CommandCreator):
         source_node: NNCFNode,
         destination_nodes: list[NNCFNode],
         source_out_port: int,
-        scale_value: np.ndarray,
+        scale_value: np.ndarray[Any, Any],
         multiply_node_name: str,
     ) -> ONNXMultiplyInsertionCommand:
         target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, source_node.node_name, source_out_port)

@@ -26,7 +26,7 @@ class StatefulClassesRegistry:
         self._name_vs_class_map: dict[str, type] = {}
         self._class_vs_name_map: dict[type, str] = {}
 
-    def register(self, name: str = None) -> Callable[[TObj], TObj]:
+    def register(self, name: str | None = None) -> Callable[[TObj], TObj]:
         """
         Decorator to map class with some name - specified in the argument or name of the class.
 
@@ -90,7 +90,7 @@ class CommonStatefulClassesRegistry:
     """
 
     @staticmethod
-    def register(name: str = None) -> Callable[[TObj], TObj]:
+    def register(name: str | None = None) -> Callable[[TObj], TObj]:
         """
         Decorator to map class with some name - specified in the argument or name of the class.
 
