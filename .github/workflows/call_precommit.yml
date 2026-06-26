@@ -168,9 +168,10 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
-      # - name: Install dependencies
-      #   run : |
-      #     sudo apt-get update
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install git
       #     sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       # - name: Download CUDA
       #   run: |
