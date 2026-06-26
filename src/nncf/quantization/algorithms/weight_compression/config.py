@@ -48,7 +48,7 @@ class WeightCompressionConfig:
     @property
     def num_bits(self) -> int:
         """
-        :return: number of bits that is used for storing a single quantized value in the given mode.
+        Number of bits used to store a single quantized value in the given mode.
         """
         if self.is_codebook:
             if self.codebook_values is None:
@@ -77,7 +77,7 @@ class WeightCompressionConfig:
     @property
     def is_integer(self) -> bool:
         """
-        :return: True if compression type in integer, else False.
+        True if compression type in integer, else False.
         """
         return self.mode not in [
             CompressWeightsMode.NF4,
@@ -94,7 +94,7 @@ class WeightCompressionConfig:
     @property
     def is_codebook(self) -> bool:
         """
-        :return: True if compression type is codebook, else False.
+        True if compression type is codebook, else False.
         """
         return self.mode in [
             CompressWeightsMode.CODEBOOK,
@@ -105,7 +105,7 @@ class WeightCompressionConfig:
     @property
     def compression_dtype(self) -> TensorDataType:
         """
-        :return: data type that is used to store compressed weights.
+        Data type that is used to store compressed weights.
         """
         if self.is_codebook:
             if self.codebook_values is None:
@@ -160,7 +160,7 @@ class WeightCompressionParameters:
     @cached_property
     def num_weights(self) -> np.uint64:
         """
-        :return: Total number of weights in the weight tensor.
+        Total number of weights in the weight tensor.
         """
         # Explicitly use unsigned 64-bit integer for number of weight in weight compression.
         # To avoid overflow when calculating the total number of weights for large models.

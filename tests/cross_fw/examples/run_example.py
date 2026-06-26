@@ -204,6 +204,14 @@ def fp8_llm_quantization() -> dict[str, float]:
     return {"answers": list(result.values())}
 
 
+def fp8_llm_quantization_onnx() -> dict[str, float]:
+    from examples.llm_compression.onnx.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
+
+    result = fp8_llm_quantization_main()
+
+    return {"answers": list(result.values())}
+
+
 def codebook_llm_compression() -> list[str]:
     from examples.llm_compression.openvino.smollm2_360m_codebook.main import main as codebook_llm_compression_main
 

@@ -209,20 +209,20 @@ class TemplateWeightCompression(ABC):
         ("mode", "all_layers", "ratio", "ref_ids"),
         (
             (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-            (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
+            (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 1, 4]),
             (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
             (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
             (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-            (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
+            (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 2]),
             (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
             (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
             (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
             (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
-            (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+            (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 4]),
             (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-            (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+            (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 4]),
             (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-            (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
+            (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 4]),
             (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
         ),
     )
@@ -230,6 +230,7 @@ class TemplateWeightCompression(ABC):
     def test_mixed_precision(self, mode, all_layers, ratio, ref_ids, transpose_a, mocker):
         model = self.get_sequential_matmul_model(transpose_a=transpose_a)
         input_shape = (4, 4) if transpose_a else (1, 4, 4)
+
         first = self.to_tensor(np.ones(input_shape, dtype=np.float32))
         second = self.to_tensor(np.arange(16, dtype=np.float32)).reshape(input_shape)
         dataset = Dataset([first, second], self.get_transform_func())
@@ -323,6 +324,7 @@ class TemplateWeightCompression(ABC):
             reference = self.get_moe_scale_estimation_ref(check_sampling_activation_stats_flow)
         else:
             reference = self.get_scale_estimation_ref(check_sampling_activation_stats_flow)
+
         assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod

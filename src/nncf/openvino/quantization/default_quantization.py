@@ -16,7 +16,7 @@ from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 
 # If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
-DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
+DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT: dict[QuantizationTrait, list[type[ov_metatypes.OVOpMetatype]]] = {
     QuantizationTrait.INPUTS_QUANTIZABLE: INPUTS_QUANTIZABLE_OPERATIONS,
     QuantizationTrait.QUANTIZATION_AGNOSTIC: QUANTIZE_AGNOSTIC_OPERATIONS,
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],

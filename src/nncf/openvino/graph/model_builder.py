@@ -25,7 +25,7 @@ class OVModelBuilder:
     This Builder was created to reduce the number of model cloning that is required for ModelTransformer to work.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._node_factory = NodeFactory()
 
     @staticmethod
@@ -184,7 +184,7 @@ class OVModelBuilder:
         :return: Builded ov.Model based on parameters.
         """
         parameters, results = [], []
-        clone_nodes = deque()
+        clone_nodes: deque[ov.Node] = deque()
 
         # Collecting nodes that declares the graph.
         graph_nodes = self._collect_graph_nodes(input_ids, output_ids, node_mapping)

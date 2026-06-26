@@ -10,6 +10,7 @@
 # limitations under the License.
 from collections import Counter
 from copy import deepcopy
+from typing import Any
 
 import numpy as np
 import onnx
@@ -37,7 +38,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 
 
-class ONNXModelTransformer(ModelTransformer):
+class ONNXModelTransformer(ModelTransformer[onnx.ModelProto]):
     """
     Applies transformations upon ONNX model.
     ModelTransformer should be created once for a particular model,
@@ -284,13 +285,17 @@ class ONNXModelTransformer(ModelTransformer):
         dims = scale.shape if per_channel else []
         onnx_scale = [scale.tolist()] if not per_channel else scale
         onnx_zero_point = [zero_point.tolist()] if not per_channel else zero_point
+
         if tensor_type == np.uint8:
             onnx_tensor_type = onnx.TensorProto.UINT8
         elif tensor_type == np.int8:
             onnx_tensor_type = onnx.TensorProto.INT8
+        elif tensor_type in (onnx.TensorProto.FLOAT8E5M2, onnx.TensorProto.FLOAT8E4M3FN):
+            onnx_tensor_type = tensor_type
         else:
             msg = f"Incorrect tensor type - {tensor_type}."
             raise nncf.ValidationError(msg)
+
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]
@@ -546,7 +551,7 @@ class ONNXModelTransformer(ModelTransformer):
         return model
 
 
-def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray) -> None:
+def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray[Any, Any]) -> None:
     """
     Updates the initializer tensor in the ONNX model.
     :param initializer_name: Name of the initializer tensor to update.
