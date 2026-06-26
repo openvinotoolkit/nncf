@@ -3,3 +3,5 @@ self-hosted-runner:
     - windows-2025-8-core
     - windows-2025-16-core
     - aks-linux-6-cores-55gb-gpu-a10
+    - Linux
+    - NNCF
