@@ -208,7 +208,7 @@ jobs:
       labels: [Linux, NNCF]
     if: ${{ inputs.gpu_enabled == true }}
     container:
-      image: ubuntu:22.04
+      image: ubuntu:24.04
       options: --gpus all --ipc=host
     defaults:
       run:
