@@ -162,11 +162,15 @@ jobs:
     container:
       image: ubuntu:24.04
       options: --gpus all --ipc=host
+      volumes:
+        - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
     defaults:
       run:
         shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
+      NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      GIT_SSL_CAINFO: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
     steps:
       - name: Install dependencies
         run : |
