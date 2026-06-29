@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 40
     runs-on:
       group: Nvidia-GPU
-      labels: [Linux, NNCF, ov-dmz-25]
+      labels: [Linux, NNCF]
     if: ${{ inputs.gpu_enabled == true }}
     container:
       image: ubuntu:24.04
@@ -44,13 +44,12 @@ jobs:
       - name: Install dependencies
         run : |
           apt-get update
-          apt-get --assume-yes install git git-lfs ca-certificates
+          apt-get --assume-yes install git git-lfs ca-certificates build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
           update-ca-certificates
-      #     sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
-      # - name: Download CUDA
-      #   run: |
-      #     wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
-      #     sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
+          sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
@@ -64,10 +63,16 @@ jobs:
           python-version: ${{ inputs.python_version }}
       # - name: Install uv
       #   uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - name: Create virtual environment
+        run: |
+          python -m venv .venv
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
+      - name: Print installed modules
+        run: pip list
       - name: Install NNCF and test requirements
         run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
