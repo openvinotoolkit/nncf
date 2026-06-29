@@ -178,7 +178,7 @@ jobs:
       - name: Install dependencies
         run : |
           apt-get update
-          apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make ca-certificates
+          apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make ca-certificates git git-lfs
           update-ca-certificates
       # - name: Download CUDA
       #   run: |
