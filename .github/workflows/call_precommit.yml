@@ -157,7 +157,7 @@ jobs:
     timeout-minutes: 40
     runs-on:
       group: Nvidia-GPU
-      labels: [Linux, NNCF]
+      labels: [Linux, NNCF, ov-dmz-25]
     if: ${{ inputs.gpu_enabled == true }}
     container:
       image: ubuntu:22.04
