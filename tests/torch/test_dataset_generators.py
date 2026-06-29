@@ -40,9 +40,9 @@ def test_generate_text_data_usage(with_model: bool, with_tokenizer: bool, usage_
 
     if usage_error:
         with pytest.raises(nncf.ValidationError):
-            generate_text_data(model, tokenizer, seq_len=2, dataset_size=1)
+            generate_text_data(model, tokenizer, seq_len=32, dataset_size=1)
     else:
-        generate_text_data(model, tokenizer, seq_len=2, dataset_size=1)
+        generate_text_data(model, tokenizer, seq_len=32, dataset_size=1)
 
 
 @pytest.mark.parametrize("model_cls", [AutoModelForCausalLM, OVModelForCausalLM])
