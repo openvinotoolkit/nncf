@@ -180,10 +180,10 @@ jobs:
           apt-get update
           apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make ca-certificates
           update-ca-certificates
-      - name: Download CUDA
-        run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      # - name: Download CUDA
+      #   run: |
+      #     wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+      #     sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
@@ -195,8 +195,8 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      # - name: Install uv
+      #   uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
