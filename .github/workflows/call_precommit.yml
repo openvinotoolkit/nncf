@@ -202,7 +202,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt
+        run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
