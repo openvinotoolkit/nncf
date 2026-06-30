@@ -16,7 +16,6 @@ from transformers import GenerationConfig
 from transformers import GenerationMixin
 from transformers import PretrainedConfig
 from transformers import PreTrainedModel
-from transformers.cache_utils import StaticCacheConfig
 from transformers.integrations.executorch import TorchExportableModuleWithStaticCache
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
@@ -84,8 +83,9 @@ def convert_and_export_with_cache(model: PreTrainedModel):
 
     example_input_ids = torch.ones(1, 8, dtype=torch.long)
     example_cache_position = torch.arange(0, 8, dtype=torch.long)
+    model.generation_config.use_cache = True
     model.generation_config.cache_implementation = "static"
-    model.generation_config.cache_config = StaticCacheConfig(batch_size=1, max_cache_len=512)
+    model.generation_config.cache_config = {"batch_size": 1, "max_cache_len": 512}
     model.generation_config.max_new_tokens = 100
     gen_config = model.generation_config
     model_config = model.config

@@ -46,7 +46,7 @@ def get_name_to_node_map(model: onnx.ModelProto) -> dict[str, onnx.NodeProto]:
     return {node.name: node for node in model.graph.node}
 
 
-def get_edge_info_mapping(model: onnx.ModelProto) -> dict[str, onnx.ValueInfoProto]:
+def get_edge_info_mapping(model: onnx.ModelProto) -> dict[str, onnx.ValueInfoProto | onnx.TensorProto]:
     """
     Returns mapping from edge name to the edge info.
 
@@ -195,7 +195,7 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     raise nncf.ValidationError(msg)
 
 
-def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
+def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray[Any, Any]:
     """
     Returns tensor value of a tensor with the name 'tensor_name'.
 
@@ -207,7 +207,7 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     return get_array_from_tensor(model, tensor)
 
 
-def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> np.ndarray:
+def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> np.ndarray[Any, Any]:
     """
     Returns the data from an ONNX tensor as NumPy array.
 
@@ -230,7 +230,7 @@ def get_edge_shape(edge: onnx.ValueInfoProto | onnx.TensorProto) -> list[int]:
     if isinstance(edge, onnx.TensorProto):
         return list(edge.dims)
     tensor_type = edge.type.tensor_type
-    shape = []
+    shape: list[int] = []
     if not tensor_type.HasField("shape"):
         return shape  # shape is unknown
 
@@ -310,7 +310,7 @@ def is_node_has_shared_weight(
     return len(nodes) > 1
 
 
-def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
+def pack_4_bits(tensor: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
     """
     Apply packing based on the rule - https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking
     :param tensor: Tensor to pack.
@@ -333,7 +333,7 @@ def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
     return packed_tensor
 
 
-def pack_int4_to_uint8(weight: np.ndarray, block_size: int, signed: bool) -> np.ndarray:
+def pack_int4_to_uint8(weight: np.ndarray[Any, Any], block_size: int, signed: bool) -> np.ndarray[Any, Any]:
     """
     Returns `weight` that is stored as uint8 with shape (N, n_blocks_per_col, blob_size) in which:
         - n_blocks_per_col = CeilDiv(K, block_size)

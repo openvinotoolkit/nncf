@@ -56,9 +56,7 @@ class _BaseRBScheduler(ABC):
     @property
     def current_ratio(self) -> float:
         """
-        Returns the current pruning ratio.
-
-        :return: The current pruning ratio.
+        The current pruning ratio applied to the model.
         """
         return self.rb_loss.current_ratio
 
