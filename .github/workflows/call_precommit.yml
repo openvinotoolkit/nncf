@@ -64,6 +64,7 @@ jobs:
       - name: Create virtual environment
         # TODO(AlexanderDokuchaev): remove it after fix of runner
         run: |
+          pip list
           python3 -m venv .venv
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # - name: Install uv
@@ -72,8 +73,6 @@ jobs:
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
-      - name: Print installed modules
-        run: pip list
       - name: Install NNCF and test requirements
         run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
