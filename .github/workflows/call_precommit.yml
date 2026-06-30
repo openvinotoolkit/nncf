@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run : |
           apt-get update
-          apt-get --assume-yes install git git-lfs ca-certificates build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+          apt-get --assume-yes install git git-lfs ca-certificates build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make libpython3.12-dev
           update-ca-certificates
       - name: Download CUDA
         run: |
@@ -64,7 +64,7 @@ jobs:
       - name: Create virtual environment
         # TODO(AlexanderDokuchaev): remove it after fix of runner
         run: |
-          python -m venv .venv
+          python3 -m venv .venv
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # - name: Install uv
       #   uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
