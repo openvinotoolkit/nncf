@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run : |
           apt-get update
-          apt-get --assume-yes install git git-lfs ca-certificates build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make libpython3.12-dev
+          apt-get --assume-yes install git git-lfs ca-certificates build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make libpython3.12-dev libffi-dev
           update-ca-certificates
       - name: Download CUDA
         run: |
