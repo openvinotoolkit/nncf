@@ -1,14 +1,49 @@
 name: Test examples
+run-name: "Test examples${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}${{ inputs.pytest_args != '' && format(' [{0}]', inputs.pytest_args) || '' }}"
 permissions: read-all
 
 on:
-  pull_request:
+  workflow_call:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        type: string
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        type: string
+        default: ''
+      skip_windows:
+        description: 'Skip tests on Windows'
+        type: boolean
+        default: false
+      skip_gpu:
+        description: 'Skip tests on GPU'
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        default: ''
+      skip_windows:
+        description: 'Skip tests on Windows'
+        type: boolean
+        default: false
+      skip_gpu:
+        description: 'Skip tests on GPU'
+        type: boolean
+        default: false
 
 defaults:
   run:
     shell: bash
 
 env:
+  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
   TQDM_DISABLE: 1
   RESULT_XML: "pytest-results.xml"
   PYTHON_VERSION: "3.12"
@@ -24,6 +59,8 @@ jobs:
         group: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -37,4 +74,157 @@ jobs:
       - name: Run examples test scope
         run: |
           set +e
-          python -m pytest -s -ra tests/cross_fw/examples
+          python -m pytest -s -ra tests/cross_fw/examples \
+            -m 'not cuda' \
+            --junit-xml=${{ env.RESULT_XML }} \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 6 \
+            --group ${{ matrix.group }} \
+            ${{ env.PYTEST_ARGS }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: examples-cpu-pytest-results-${{ matrix.group }}
+          path: ${{ env.RESULT_XML }}
+          retention-days: 7
+
+  examples-cuda:
+    name: Test examples CUDA [${{ matrix.group }}/1]
+    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    timeout-minutes: 40
+    if: ${{ !inputs.skip_gpu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1]
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          nvidia-smi
+          cat /proc/cpuinfo
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install test requirements
+        run: |
+          pip install -r tests/cross_fw/examples/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          set +e
+          python -m pytest -s -ra tests/cross_fw/examples \
+            -m cuda \
+            --junit-xml=${{ env.RESULT_XML }} \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 1 \
+            --group ${{ matrix.group }} \
+            ${{ env.PYTEST_ARGS }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: examples-cuda-pytest-results-${{ matrix.group }}
+          path: ${{ env.RESULT_XML }}
+          retention-days: 7
+
+  examples-win-cpu:
+    name: Test examples CPU Windows [${{ matrix.group }}/6]
+    runs-on: windows-2025-16-core
+    timeout-minutes: 80
+    if: ${{ !inputs.skip_windows }}
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    env:
+      PYTHONIOENCODING: utf-8
+      NNCF_EXTENSION_LOAD_TIMEOUT: 180
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Install NNCF and test requirements
+        run: |
+          pip install -r tests/cross_fw/examples/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          set +e
+
+          sys_lib="$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
+          prefix_lib="$(python -c "import sys; print(sys.prefix + '/libs')")"
+          include_dir="$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
+
+          export LIB="${LIB};${sys_lib};${prefix_lib}"
+          export INCLUDE="${INCLUDE};${include_dir}"
+
+          python -m pytest -s -ra tests/cross_fw/examples \
+            -m 'not cuda' \
+            --junit-xml=${{ env.RESULT_XML }} \
+            --durations-path=tests/cross_fw/examples/test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 6 \
+            --group ${{ matrix.group }} \
+            ${{ env.PYTEST_ARGS }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: examples-win-cpu-pytest-results-${{ matrix.group }}
+          path: ${{ env.RESULT_XML }}
+          retention-days: 7
+
+  examples-cpu-summary:
+    name: Summary Examples CPU
+    if: ${{ !cancelled() }}
+    needs: examples-cpu
+    uses: ./.github/workflows/call_summary.yml
+    with:
+      artifact_pattern: examples-cpu-pytest-results-*
+
+  examples-cuda-summary:
+    name: Summary Examples CUDA
+    if: ${{ !cancelled() && !inputs.skip_gpu }}
+    needs: examples-cuda
+    uses: ./.github/workflows/call_summary.yml
+    with:
+      artifact_pattern: examples-cuda-pytest-results-*
+
+  examples-win-cpu-summary:
+    name: Summary Examples Windows CPU
+    if: ${{ !cancelled() && !inputs.skip_windows }}
+    needs: examples-win-cpu
+    uses: ./.github/workflows/call_summary.yml
+    with:
+      artifact_pattern: examples-win-cpu-pytest-results-*
