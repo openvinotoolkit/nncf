@@ -255,6 +255,18 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 dtype=compression_dtype,
                 name=const_node_name,
             )
+        elif compression_config.is_symmetric_represented_by_unsigned:
+            offset = 2 ** (compression_config.num_bits - 1)
+            compressed_tensor = compressed_weight.tensor + offset
+            compressed_const = create_ov_const_from_tensor(compressed_tensor, compression_dtype, name=const_node_name)
+            converted_const = opset.convert(compressed_const, ov.Type.f16)
+
+            zero_point_const = opset.constant(offset, dtype=ov.Type.i8, name=f"{const_node_name}/zero_point")
+            zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
+
+            converted_const = opset.subtract(
+                converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
+            )
         else:
             compressed_const = create_ov_const_from_tensor(
                 compressed_weight.tensor, compression_dtype, name=const_node_name
