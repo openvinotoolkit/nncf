@@ -1497,6 +1497,8 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
             CompressWeightsMode.INT4_SYM,
             [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
         ),
+        (CompressWeightsMode.INT3_SYM, [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]),
+        (CompressWeightsMode.INT2_SYM, [-2.0, -1.0, 0.0, 1.0]),
     ),
 )
 def test_int_compressed_weighs_range(mode, data):
@@ -1660,6 +1662,10 @@ def test_codebook_weights_range(data):
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), False, False, False),
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
