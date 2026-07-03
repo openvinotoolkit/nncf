@@ -76,7 +76,11 @@ class WeightCompressionConfig:
             CompressWeightsMode.INT2_SYM: 2,
         }
 
-        return mode_to_bits_map[self.mode]
+        try:
+            return mode_to_bits_map[self.mode]
+        except KeyError as e:
+            msg = f"Unsupported compression mode for num_bits: {self.mode}"
+            raise InternalError(msg) from e
 
     @property
     def is_asym_mode(self) -> bool:
