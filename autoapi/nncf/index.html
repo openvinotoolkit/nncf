@@ -577,6 +577,10 @@ criteria and the given ratio.
 <li><p><strong>INT4_ASYM</strong> – The same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
 with a typical non-fixed zero point.
 <a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization</a></p></li>
+<li><p><strong>INT3_SYM</strong> – Stands for a mixed-precision weights quantization with 3-bit integer as a primary precision.
+Weights are quantized to a primary precision symmetrically without zero point.</p></li>
+<li><p><strong>INT2_SYM</strong> – Stands for a mixed-precision weights quantization with 2-bit integer as a primary precision.
+Weights are quantized to a primary precision symmetrically without zero point.</p></li>
 <li><p><strong>NF4</strong> – The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.</p></li>
 <li><p><strong>MXFP4</strong> – MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
 <li><p><strong>MXFP8_E4M3</strong> – MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.</p></li>
