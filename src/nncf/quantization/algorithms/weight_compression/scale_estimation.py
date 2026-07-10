@@ -128,7 +128,7 @@ class ScaleEstimation:
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
 
-            if config.num_bits != 4 or node_name not in statistics:
+            if config.num_bits > 4 or node_name not in statistics:
                 res[weight_name] = CompressedWeight()
                 continue
 

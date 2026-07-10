@@ -316,7 +316,7 @@ class GPTQ:
                         )
                         scales.append(scale)
                     else:
-                        if self._scale_estimation and block_compression_config.num_bits == 4:
+                        if self._scale_estimation and block_compression_config.num_bits <= 4:
                             activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
                             wc_statistics = self.activations_to_wc_statistics(activations)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
