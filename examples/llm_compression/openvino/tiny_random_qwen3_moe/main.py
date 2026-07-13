@@ -35,7 +35,7 @@ def generate_answers(
     :param questions: List of questions to be answered.
     :param model: The model to use for generating answers.
     :param tokenizer: The tokenizer to use for processing the input and output.
-    :param max_new_tokens: Maximum number of new tokens to generate for each answer. Defaults to 50.
+    :param max_new_tokens: Maximum number of new tokens to generate for each answer. Defaults to 10.
     :return: A dictionary mapping each question to its corresponding answer.
     """
     messages = [
@@ -61,7 +61,7 @@ def generate_answers(
     return answers_by_questions
 
 
-def print_answers(header: str, answers_by_questions: list[str]) -> None:
+def print_answers(header: str, answers_by_questions: dict[str, str]) -> None:
     """
     Print the answers to the console.
 
@@ -81,7 +81,7 @@ QUESTIONS = [
 ]
 
 
-def load_model_and_tokenizer(model_id: str, export=True) -> tuple[OVModelForVisualCausalLM, AutoTokenizer]:
+def load_model_and_tokenizer(model_id: str, export: bool = True) -> tuple[OVModelForVisualCausalLM, AutoTokenizer]:
     """
     Load the model and tokenizer from the specified model ID.
 
@@ -98,7 +98,7 @@ def load_model_and_tokenizer(model_id: str, export=True) -> tuple[OVModelForVisu
     return model, tokenizer
 
 
-def main():
+def main() -> None:
     model, tokenizer = load_model_and_tokenizer(MODEL_ID)
 
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)

@@ -62,7 +62,7 @@ def generate_answers(
     return answers_by_questions
 
 
-def print_answers(header: str, answers_by_questions: list[str]) -> None:
+def print_answers(header: str, answers_by_questions: dict[str, str]) -> None:
     """
     Print the answers to the console.
 
@@ -82,7 +82,7 @@ QUESTIONS = [
 ]
 
 
-def load_model_and_tokenizer(model_id: str, export=True) -> tuple[OVModelForCausalLM, AutoTokenizer]:
+def load_model_and_tokenizer(model_id: str, export: bool = True) -> tuple[OVModelForCausalLM, AutoTokenizer]:
     """
     Load the model and tokenizer from the specified model ID.
 
