@@ -19,6 +19,7 @@ on:
         required: false
 
 jobs:
+
   pytorch-cuda:
     timeout-minutes: 40
     runs-on:

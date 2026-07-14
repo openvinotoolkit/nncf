@@ -103,6 +103,7 @@ ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WE
 INT8_MODES = (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
 INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
+INT2_3_MODES = (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT3_SYM)
 
 
 class LMLinearModel(OVReferenceModel):
@@ -908,7 +909,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 @pytest.mark.parametrize(
     "params",
     (
@@ -1023,7 +1024,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     scores_spy.assert_called()
 
 
-@pytest.mark.parametrize("mode", INT4_MODES)
+@pytest.mark.parametrize("mode", INT4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([2, 8, 8])])
@@ -1031,7 +1032,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
     dataset = Dataset([np.ones([2, 8, 8])])
@@ -1039,7 +1040,7 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([2, 8, 8])])
@@ -1250,7 +1251,7 @@ def test_call_max_var_criterion_with_dataset_by_default_scale_estimation(mode, c
     assert tzm_spy.call_args_list[0][0][0].dtype == compressed_weight_dtype
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_scale_estimation_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1258,7 +1259,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_for_compressed_mod
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, scale_estimation=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1266,7 +1267,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_gptq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1274,7 +1275,7 @@ def test_call_gptq(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1497,6 +1498,8 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
             CompressWeightsMode.INT4_SYM,
             [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
         ),
+        (CompressWeightsMode.INT3_SYM, [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]),
+        (CompressWeightsMode.INT2_SYM, [-2.0, -1.0, 0.0, 1.0]),
     ),
 )
 def test_int_compressed_weighs_range(mode, data):
@@ -1660,6 +1663,10 @@ def test_codebook_weights_range(data):
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), False, False, False),
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
