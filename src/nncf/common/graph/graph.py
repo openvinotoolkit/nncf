@@ -56,6 +56,7 @@ class NNCFNode:
     IS_IN_ITERATION_SCOPE_NODE_ATTR = "is_in_iteration_scope"
     IS_INTEGER_INPUT_NODE_ATTR = "is_integer_input"
     IS_SHARED_ATTR = "is_shared"
+    DISABLE_GETITEM_QUANTIZER_PROPAGATION_ATTR = "disable_getitem_quantizer_propagation"
 
     def __init__(self, attributes: dict[str, Any]) -> None:
         self._attributes = attributes

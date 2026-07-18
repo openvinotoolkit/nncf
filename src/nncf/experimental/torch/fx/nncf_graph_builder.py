@@ -89,6 +89,84 @@ class GraphConverter:
         return metatype
 
     @staticmethod
+    def _get_tensor_numel(tensor: torch.Tensor) -> int | None:
+        """
+        Retrieves tensor numel only when it is statically known.
+
+        :param tensor: Tensor from node metadata.
+        :return: Tensor numel or None if the shape contains symbolic dimensions.
+        """
+        numel = 1
+        for dim in tensor.shape:
+            if isinstance(dim, torch.SymInt) or not isinstance(dim, int):
+                return None
+            numel *= dim
+        return numel
+
+    @staticmethod
+    def _get_normalized_sequence_index(index: Any, sequence_len: int) -> int | None:
+        """
+        Retrieves non-negative sequence index if it is statically known.
+
+        :param index: Index from operator.getitem arguments.
+        :param sequence_len: Sequence length.
+        :return: Normalized sequence index or None if the index is unsupported.
+        """
+        if isinstance(index, bool) or not isinstance(index, int):
+            return None
+        if index < 0:
+            index += sequence_len
+        if index < 0 or index >= sequence_len:
+            return None
+        return index
+
+    @staticmethod
+    def _is_getitem_numel_preserving(node: torch.fx.Node) -> bool:
+        """
+        Checks whether operator.getitem is proven to preserve tensor numel.
+
+        :param node: operator.getitem FX node.
+        :return: True only when input and output tensor numel equality can be proven.
+        """
+        output = node.meta.get("val")
+        if not isinstance(output, torch.Tensor):
+            return False
+        output_numel = GraphConverter._get_tensor_numel(output)
+        if output_numel is None or len(node.args) < 2:
+            return False
+
+        source_node = node.args[0]
+        if not isinstance(source_node, torch.fx.Node):
+            return False
+
+        source = source_node.meta.get("val")
+        if isinstance(source, torch.Tensor):
+            source_numel = GraphConverter._get_tensor_numel(source)
+            return source_numel is not None and output_numel == source_numel
+
+        if not isinstance(source, (tuple, list)):
+            return False
+
+        index = GraphConverter._get_normalized_sequence_index(node.args[1], len(source))
+        if index is None:
+            return False
+
+        selected_output = source[index]
+        if not isinstance(selected_output, torch.Tensor):
+            return False
+        selected_output_numel = GraphConverter._get_tensor_numel(selected_output)
+        if selected_output_numel is None or selected_output_numel != output_numel:
+            return False
+
+        if source_node.args and isinstance(source_node.args[0], torch.fx.Node):
+            source_producer_output = source_node.args[0].meta.get("val")
+            if isinstance(source_producer_output, torch.Tensor):
+                source_numel = GraphConverter._get_tensor_numel(source_producer_output)
+                return source_numel is not None and output_numel == source_numel
+
+        return len(source) == 1
+
+    @staticmethod
     def get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[str, om.OperatorMetatype]:
         """
         Retrieves node's type and metatype.
@@ -148,9 +226,15 @@ class GraphConverter:
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )
 
-            nncf_graph.add_nncf_node(
+            nncf_node = nncf_graph.add_nncf_node(
                 node_name=source_node.name, node_type=node_type, node_metatype=node_metatype, is_shared=is_shared_node
             )
+            if (
+                source_node.op == "call_function"
+                and getattr(source_node.target, "__name__", None) == "getitem"
+                and not GraphConverter._is_getitem_numel_preserving(source_node)
+            ):
+                nncf_node.attributes[NNCFNode.DISABLE_GETITEM_QUANTIZER_PROPAGATION_ATTR] = True
 
         for source_node in model.graph.nodes:
             source_nncf_node = nncf_graph.get_node_by_name(source_node.name)
