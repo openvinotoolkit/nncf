@@ -77,7 +77,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
-        return [om.OVMatMulMetatype]
+        return [om.OVMatMulMetatype, om.OVGroupedMatMulMetatype]
 
     @property
     def convolution_metatypes(self) -> list[OperatorMetatype]:
