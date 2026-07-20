@@ -77,6 +77,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         inplace: bool,
         num_samples: int | None = None,
         window_size: int | None = None,
+        input_rank: int | None = None,
     ) -> TensorCollector:
         """
         Returns backend-specific mean statistic collector.
@@ -85,6 +86,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
+        :param input_rank: Rank of the input tensor of the target node, if known.
         :return: Backend-specific TensorCollector for the statistics calculation.
         """
 
