@@ -67,7 +67,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         print(f"Creating virtualenv: {cmd_create_venv}")
         subprocess.check_call(cmd_create_venv, shell=True)
     elif venv_type == "venv":
-        cmd_create_venv = f"{sys.executable} -m venv {venv_path}"
+        cmd_create_venv = f"{sys.executable} -m venv --copies {venv_path}"
         print(f"Creating venv: {cmd_create_venv}")
         subprocess.check_call(cmd_create_venv, shell=True)
 
@@ -96,7 +96,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     if package_type == "pip_pypi":
         run_cmd_line = f"{pip_with_venv} install nncf"
     elif package_type == "pip_local":
-        run_cmd_line = f"{pip_with_venv} install  --no-cache-dir {PROJECT_ROOT}"
+        run_cmd_line = f"{pip_with_venv} install {PROJECT_ROOT}"
     elif package_type == "pip_e_local":
         run_cmd_line = f"{pip_with_venv} install -e {PROJECT_ROOT}"
     elif package_type == "pip_git_develop":
@@ -122,7 +122,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         # Install backend specific packages with according version from constraints.txt
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
         extra_reqs = " ".join(packages)
-        cmd_install_backends = f"{pip_with_venv} install --no-cache-dir {extra_reqs} -c {PROJECT_ROOT}/constraints.txt"
+        cmd_install_backends = f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt"
         print(f"Installing backend packages: {cmd_install_backends}")
         subprocess.run(
             cmd_install_backends,
