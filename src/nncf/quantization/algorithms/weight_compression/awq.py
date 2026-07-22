@@ -408,7 +408,7 @@ class AWQ(Algorithm):
 
             weight_params = all_weight_params[name_mapping[target_node_names[-1]]]
 
-            if weight_params.compression_config.num_bits != 4:
+            if weight_params.compression_config.num_bits > 4:
                 continue
             target_node = weight_params.node_with_weight
 
