@@ -62,12 +62,12 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ inputs.python_version }}
-      - name: Create virtual environment
-        # TODO(AlexanderDokuchaev): remove it after fix of runner
-        run: |
-          pip list
-          python3 -m venv .venv
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      # - name: Create virtual environment
+      #   # TODO(AlexanderDokuchaev): remove it after fix of runner
+      #   run: |
+      #     pip list
+      #     python3 -m venv .venv
+      #     echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       # - name: Install uv
       #   uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Override constraints
@@ -75,7 +75,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: pip install --no-cache-dir . -r tests/torch/requirements.txt
+        run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
