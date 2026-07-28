@@ -34,11 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: openvinotoolkit/openvino/.github/actions/handle_docker@master
+      - uses: openvinotoolkit/openvino/.github/actions/handle_docker@da4ecce460b3feb67f2f5d4126841698e72447c7
         id: handle_docker
         with:
           images: |
-            pytorch_cuda
+            nncf/pytorch_cuda
           registry: 'openvinogithubactions.azurecr.io'
           dockerfiles_root_dir: '.github/dockerfiles'
           # NNCF does not run Smart CI component detection, so changed_components is
@@ -56,7 +56,7 @@ jobs:
       labels: [Linux, NNCF]
     if: ${{ inputs.gpu_enabled == true }}
     container:
-      image: ${{ fromJSON(needs.docker.outputs.images).pytorch_cuda }}
+      image: ${{ fromJSON(needs.docker.outputs.images).nncf.pytorch_cuda }}
       options: --gpus all --ipc=host
       volumes:
         - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
