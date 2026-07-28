@@ -1,5 +1,5 @@
 ARG REGISTRY="docker.io"
-FROM ${REGISTRY}/library/ubuntu:22.04
+FROM ${REGISTRY}/library/ubuntu:24.04
 
 ENV DEBIAN_FRONTEND="noninteractive" \
     TZ="Europe/London"
