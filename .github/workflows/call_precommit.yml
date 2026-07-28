@@ -53,7 +53,7 @@ jobs:
     needs: docker
     runs-on:
       group: Nvidia-GPU
-      labels: [Linux, NNCF]
+      labels: [Linux, NNCF, ov-dmz-24]
     if: ${{ inputs.gpu_enabled == true }}
     container:
       image: ${{ fromJSON(needs.docker.outputs.images).nncf.pytorch_cuda }}
