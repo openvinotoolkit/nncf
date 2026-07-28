@@ -9,9 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
-from typing import Union
+from typing import Any, Union
 
+import numpy as np
 import pytest
+from numpy.typing import NDArray
+
+try:
+    from typing_extensions import TypeAliasType
+except ImportError:
+    from typing import TypeAliasType
 
 from nncf.tensor import Tensor
 from nncf.tensor.functions.dispatcher import _get_arg_type
@@ -79,6 +86,10 @@ def test_get_arg_type(data, ref):
         (list[float | str], [float, str]),
         (dict[str, int], [int]),
         (dict[str, float | int], [float, int]),
+        (NDArray[Any], [np.ndarray]),
+        (NDArray[Any] | np.generic, [np.ndarray, np.generic]),
+        (TypeAliasType("array_alias", np.ndarray), [np.ndarray]),
+        (TypeAliasType("array_alias", np.ndarray | np.generic), [np.ndarray, np.generic]),
     ),
 )
 def test_get_register_types(data, ref):
