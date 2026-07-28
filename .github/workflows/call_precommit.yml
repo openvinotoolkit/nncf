@@ -19,177 +19,85 @@ on:
         required: false
 
 jobs:
-  common:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
-      - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/common/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run common precommit test scope
-        run: make test-common
-        env:
-          NUM_WORKERS: 2
 
-  onnx:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest-8-cores
-    defaults:
-      run:
-        shell: bash
+  docker:
+    name: Docker
+    timeout-minutes: 15
+    runs-on: aks-linux-4-cores-16gb-docker-build
+    if: ${{ inputs.gpu_enabled == true }}
+    container:
+      image: openvinogithubactions.azurecr.io/docker_build:0.2
+      volumes:
+        - /mount:/mount
+    outputs:
+      images: "${{ steps.handle_docker.outputs.images }}"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
-      - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/onnx/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run ONNX precommit test scope
-        run: make test-onnx
-        env:
-          NUM_WORKERS: 4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-  openvino:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest-8-cores
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: openvinotoolkit/openvino/.github/actions/handle_docker@master
+        id: handle_docker
         with:
-          lfs: true
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
-      - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/openvino/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run OV precommit test scope
-        run: make test-openvino
-        env:
-          NUM_WORKERS: 4
-
-  tools:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - name: Install test requirements
-        run: uv pip install --system . -r tests/tools/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run tools precommit test scope
-        run: pytest -ra tests/tools
-
-  pytorch-cpu:
-    timeout-minutes: 40
-    runs-on: ubuntu-latest
-    # TODO(AlexanderDokuchaev): Enable with torchao=0.18.0 release
-    if: ${{ inputs.python_version != '3.14' }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - name: Override constraints
-        if: ${{ inputs.override_requirements != '' }}
-        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
-      - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run torch precommit test scope
-        run: pytest -ra -n2 --durations=30 tests/torch -m "not cuda"
+          images: |
+            pytorch_cuda
+          registry: 'openvinogithubactions.azurecr.io'
+          dockerfiles_root_dir: '.github/dockerfiles'
+          # NNCF does not run Smart CI component detection, so changed_components is
+          # hardcoded and the action is never forced to rebuild on Dockerfile changes.
+          # Manually bump the tag in .github/dockerfiles/docker_tag whenever a Dockerfile
+          # under .github/dockerfiles is changed, otherwise the (now stale) cached image
+          # matching the current tag will keep being reused instead of being rebuilt.
+          changed_components: '{"docker_env": false, "dockerfiles": false}'
 
   pytorch-cuda:
     timeout-minutes: 40
-    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    needs: docker
+    runs-on:
+      group: Nvidia-GPU
+      labels: [Linux, NNCF]
     if: ${{ inputs.gpu_enabled == true }}
+    container:
+      image: ${{ fromJSON(needs.docker.outputs.images).pytorch_cuda }}
+      options: --gpus all --ipc=host
+      volumes:
+        - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
     defaults:
       run:
         shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
+      NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      GIT_SSL_CAINFO: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      PIP_CERT: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      REQUESTS_CA_BUNDLE: /usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     steps:
-      - name: Install dependencies
-        run : |
-          sudo apt-get update
-          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
-      - name: Download CUDA
-        run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Update CA certificates
+        run: update-ca-certificates
       - name: Runner info
         continue-on-error: true
         run: |
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      # - name: Create virtual environment
+      #   # TODO(AlexanderDokuchaev): remove it after fix of runner
+      #   run: |
+      #     pip list
+      #     python3 -m venv .venv
+      #     echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      # - name: Install uv
+      #   uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt
+        run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
