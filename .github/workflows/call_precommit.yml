@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - uses: openvinotoolkit/openvino/.github/actions/handle_docker@9036c7c7bb3ee93bc860ba610be3d1dc495bd44e
+      - uses: openvinotoolkit/openvino/.github/actions/handle_docker@1f6bb04df50d71dd7e392537eee6b834312f269a
         id: handle_docker
         with:
           images: |
