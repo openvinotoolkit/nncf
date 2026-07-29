@@ -10,6 +10,8 @@ RUN apt-get update && \
         git-lfs \
         ca-certificates \
         build-essential \
+        python3 \
+        python3-pip \
         ninja-build \
         libgl1-mesa-dev \
         libglib2.0-0 \
