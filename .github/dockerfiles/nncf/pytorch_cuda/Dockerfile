@@ -16,6 +16,7 @@ RUN apt-get update && \
         wget \
         make \
         libpython3.12-dev \
+        pkg-config \
         libffi-dev && \
     rm -rf /var/lib/apt/lists/*
 
