@@ -12,6 +12,7 @@ RUN apt-get update && \
         build-essential \
         python3 \
         python3-pip \
+        python3-venv \
         ninja-build \
         libgl1-mesa-dev \
         libglib2.0-0 \
