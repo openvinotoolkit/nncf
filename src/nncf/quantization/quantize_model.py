@@ -804,4 +804,4 @@ def repack_weights(
 
     from nncf.openvino.quantization.quantize_model import repack_weights_impl
 
-    return repack_weights_impl(model)
+    return repack_weights_impl(model)  # type: ignore
