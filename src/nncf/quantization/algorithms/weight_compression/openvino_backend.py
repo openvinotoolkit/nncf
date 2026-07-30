@@ -121,7 +121,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         bits = 8 if ov_node.tensor_view.element_type in [ov.Type.i8, ov.Type.u8] else 4
         asym = ov_node.tensor_view.element_type in [ov.Type.u8, ov.Type.u4]
 
-        # only repack for sym types are supported for now: i6, i3, i2
+        # only repack for sym types are supported for now: i3, i2
         if asym:
             return False
 
@@ -136,17 +136,17 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         max_val = max(int(weight_tensor.max().item()), abs(int(weight_tensor.min().item())))
         optimal_bits = int(max_val).bit_length()
 
-        supported_optimal_bits = [2, 3, 6]
+        supported_optimal_bits = [2, 3]
 
         # If the optimal bits is equal to the current bits, no need to repack
         if optimal_bits == bits or optimal_bits not in supported_optimal_bits:
             return False
 
         const_node_name = node.node_name
-        compression_dtype = ov.Type.u2 if optimal_bits == 2 else ov.Type.u3 if optimal_bits == 3 else ov.Type.u6
+        compression_dtype = ov.Type.u2 if optimal_bits == 2 else ov.Type.u3
 
         # Repack the weight tensor to the optimal bits and change constant node with new
-        # representation [u2/u3/u6] - zero_point per tensor
+        # representation [u2/u3] - zero_point per tensor
         offset = 2 ** (optimal_bits - 1)
         compressed_tensor = weight_tensor + offset
         compressed_const = create_ov_const_from_tensor(compressed_tensor, compression_dtype, name=const_node_name)
