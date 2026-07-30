@@ -26,6 +26,11 @@ def get_constant_element_types(model: ov.Model) -> list[ov.Type]:
 
 def test_repack_weights_produces_u3_and_u2():
     model = ModelForRepack().ov_model
+
+    element_types = get_constant_element_types(model)
+    assert ov.Type.u3 not in element_types, "Did not expect u3 constant before repacking"
+    assert ov.Type.u2 not in element_types, "Did not expect u2 constant before repacking"
+
     repacked_model = nncf.repack_weights(model)
 
     element_types = get_constant_element_types(repacked_model)
