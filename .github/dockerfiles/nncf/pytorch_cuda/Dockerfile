@@ -2,7 +2,12 @@ ARG REGISTRY="docker.io"
 FROM ${REGISTRY}/library/ubuntu:24.04
 
 ENV DEBIAN_FRONTEND="noninteractive" \
-    TZ="Europe/London"
+    TZ="Europe/London" \
+    NODE_EXTRA_CA_CERTS="/usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt" \
+    GIT_SSL_CAINFO="/usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt" \
+    PIP_CERT="/usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt" \
+    REQUESTS_CA_BUNDLE="/usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt" \
+    SSL_CERT_FILE="/usr/local/share/ca-certificates/IntelProxyRootCA-Base64.crt"
 
 RUN apt-get update && \
     apt-get --assume-yes install --no-install-recommends \
@@ -18,7 +23,7 @@ RUN apt-get update && \
         libglib2.0-0 \
         wget \
         make \
-        # libpython3.12-dev \
+        libpython3.12-dev \
         pkg-config \
         libffi-dev && \
     rm -rf /var/lib/apt/lists/*
