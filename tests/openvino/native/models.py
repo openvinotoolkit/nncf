@@ -1463,3 +1463,51 @@ class ParallelEdgesOutputPortIdModel(OVReferenceModel):
 
         model = ov.Model([result_node, result_node1], [input_node], name="ParallelEdgesOutputPortIdModel")
         return model
+
+
+class ModelForRepack(OVReferenceModel):
+    HIDDEN_DIM = 16
+    INPUT_SHAPE = [2, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
+
+    @staticmethod
+    def get_weights(weights_data, w_bits, name):
+        if w_bits not in [4, 8, 32]:
+            msg = f"Unsupported weight bits: {w_bits}. Supported values are 4, 8, and 32."
+            raise ValueError(msg)
+        if w_bits == 32:
+            return opset.constant(weights_data, dtype=np.float32, name=name)
+        qw = opset.constant(weights_data, dtype=ov.Type.i8 if w_bits == 8 else ov.Type.i4, name="qw_" + name)
+        qw = opset.convert(qw, destination_type=np.float32)
+
+        scale = opset.constant(
+            np.ones((weights_data.shape[-2], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+        )
+
+        return qw * scale
+
+    def _create_ov_model(
+        self,
+        input_shape=None,
+    ):
+        self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
+
+        input_1 = opset.parameter(self._input_shape, name="Input")
+
+        model_config = [
+            {"w_bits": 32, "data_range": [-128, 128]},
+            {"w_bits": 8, "data_range": [-8, 7]},
+            {"w_bits": 4, "data_range": [-4, 3]},
+            {"w_bits": 4, "data_range": [-2, 1]},
+        ]
+
+        x = opset.relu(input_1)
+        for i, config in enumerate(model_config):
+            data = np.random.randint(
+                config["data_range"][0], config["data_range"][1] + 1, size=(self.HIDDEN_DIM, self.HIDDEN_DIM)
+            ).astype(np.int32)
+            weights = ModelForRepack.get_weights(data, w_bits=config["w_bits"], name=f"weights_{i + 1}")
+            x = opset.matmul(x, weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i + 1}")
+
+        result = x
+        model = ov.Model([result], [input_1])
+        return model
