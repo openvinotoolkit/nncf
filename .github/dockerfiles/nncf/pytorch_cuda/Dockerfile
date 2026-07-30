@@ -15,7 +15,7 @@ RUN apt-get update && \
         git-lfs \
         ca-certificates \
         build-essential \
-        # python3 \
+        # python3-dev \
         # python3-pip \
         # python3-venv \
         ninja-build \
@@ -23,10 +23,11 @@ RUN apt-get update && \
         libglib2.0-0 \
         wget \
         make \
-        libpython3.12-dev \
+        # libpython3.12-dev \
         pkg-config \
-        libffi-dev && \
-    rm -rf /var/lib/apt/lists/*
+        # libopenblas0-serial \
+        # liblapack3 \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run -O /tmp/cuda_installer.run && \
     sh /tmp/cuda_installer.run --toolkit --silent && \
