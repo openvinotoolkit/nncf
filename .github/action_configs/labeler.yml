@@ -69,3 +69,16 @@ release target:
 - any:
   - base-branch:
     - '^release_v*'
+
+docker_env:
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.dockerignore'
+      - '.github/dockerfiles/**/*'
+
+dockerfiles:
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/dockerfiles/**/*'

@@ -20,7 +20,24 @@ on:
 
 jobs:
 
+  Smart_CI:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_components: "${{ steps.smart_ci.outputs.changed_components }}"
+    steps:
+      - uses: openvinotoolkit/openvino/.github/actions/smart-ci@b92810a6d7b48db3697cfb3496e84a9642bd5482
+        id: smart_ci
+        with:
+          repository: ${{ github.repository }}
+          pr: ${{ github.event.number }}
+          commit_sha: ${{ github.sha }}
+          ref_name: ${{ github.ref_name }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          labeler_config: '.github/action_configs/labeler.yml'
+          components_config: '.github/action_configs/components.yml'
+
   docker:
+    needs: Smart_CI
     name: Docker
     timeout-minutes: 15
     runs-on: aks-linux-4-cores-16gb-docker-build
@@ -41,12 +58,7 @@ jobs:
             nncf/pytorch_cuda
           registry: 'openvinogithubactions.azurecr.io'
           dockerfiles_root_dir: '.github/dockerfiles'
-          # NNCF does not run Smart CI component detection, so changed_components is
-          # hardcoded and the action is never forced to rebuild on Dockerfile changes.
-          # Manually bump the tag in .github/dockerfiles/docker_tag whenever a Dockerfile
-          # under .github/dockerfiles is changed, otherwise the (now stale) cached image
-          # matching the current tag will keep being reused instead of being rebuilt.
-          changed_components: '{"docker_env": false, "dockerfiles": false}'
+          changed_components: ${{ needs.Smart_CI.outputs.changed_components }}
 
   pytorch-cuda:
     timeout-minutes: 40
