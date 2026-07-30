@@ -10,15 +10,15 @@ RUN apt-get update && \
         git-lfs \
         ca-certificates \
         build-essential \
-        python3 \
-        python3-pip \
-        python3-venv \
+        # python3 \
+        # python3-pip \
+        # python3-venv \
         ninja-build \
         libgl1-mesa-dev \
         libglib2.0-0 \
         wget \
         make \
-        libpython3.12-dev \
+        # libpython3.12-dev \
         pkg-config \
         libffi-dev && \
     rm -rf /var/lib/apt/lists/*
