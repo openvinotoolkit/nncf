@@ -35,6 +35,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           labeler_config: '.github/action_configs/labeler.yml'
           components_config: '.github/action_configs/components.yml'
+          labeler_check_name: 'set-label'
 
   docker:
     needs: Smart_CI
