@@ -99,7 +99,7 @@ jobs:
         with:
           lfs: true
 
-
+      # to be replaced with setup-python
       - name: Create virtual environment
         run: |
           python3 -m venv .venv
