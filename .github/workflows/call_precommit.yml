@@ -29,18 +29,21 @@ jobs:
           fetch-depth: 0
       - name: Check for dockerfile changes
         id: check_docker
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          if git diff --quiet ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- .github/dockerfiles; then
+          if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- .github/dockerfiles; then
             dockerfiles=false
           else
             dockerfiles=true
           fi
-          if git diff --quiet ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- .github/dockerfiles/.dockerignore .github/dockerfiles; then
+          if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- .dockerignore .github/dockerfiles; then
             docker_env=false
           else
             docker_env=true
           fi
-          echo "changed={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> $GITHUB_OUTPUT
+          echo "changed={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> "$GITHUB_OUTPUT"
 
   # Smart_CI:
   #   runs-on: ubuntu-latest
