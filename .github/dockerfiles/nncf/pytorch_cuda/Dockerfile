@@ -27,6 +27,6 @@ RUN apt-get update && \
         # pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run -O /tmp/cuda_installer.run && \
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run -O /tmp/cuda_installer.run && \
     sh /tmp/cuda_installer.run --toolkit --silent && \
     rm -f /tmp/cuda_installer.run
