@@ -1,13 +1,13 @@
 # Docker images
+
 ## Custom docker images and handle_docker action
 
-To optimize the time required to install dependencies in workflows and to make local reproduction of workflow steps easier, 
-we create custom Docker images for different types of validation and use them in our workflows. 
-The dockerfiles for these images are stored in this repository in [`.github/dockerfiles`](./../../.github/dockerfiles) 
+To optimize the time required to install dependencies in workflows and to make local reproduction of workflow steps easier,
+we create custom Docker images for different types of validation and use them in our workflows.
+The dockerfiles for these images are stored in this repository in [`.github/dockerfiles`](./../../.github/dockerfiles)
 folder. Dockerfiles are organized as follows:
 
 * [`.github/dockerfiles/nncf`](./../../.github/dockerfiles/nncf) - contains images used in nncf workflows
-
 
 The changes to these dockerfiles are getting checked and applied automatically in pre-commits via the reusable
 [handle_docker](https://github.com/openvinotoolkit/openvino/tree/master/.github/actions/handle_docker) action from the
@@ -33,7 +33,9 @@ to use in workflow jobs.
 
 * Make sure that the `docker` job is called in your workflow. Pass a path or multiple paths to the folders with
 dockerfiles, that are going to be used further in a workflow, to `images` parameter of the `handle_docker` action.
+
 Example, taken from [call_precommit.yml](./../../.github/workflows/call_precommit.yml):
+
 ```yaml
   docker:
     needs: check_changes
@@ -57,8 +59,10 @@ Example, taken from [call_precommit.yml](./../../.github/workflows/call_precommi
           dockerfiles_root_dir: '.github/dockerfiles'
           changed_components: ${{ needs.check_changes.outputs.changed_components }}
 ```
-* Add `docker` to the `needs:` block of the job that will be executed with the desired custom image and set 
-`container.image` key in this job to point to the docker image taken from `handle_docker`'s outputs, like that: 
+
+* Add `docker` to the `needs:` block of the job that will be executed with the desired custom image and set
+`container.image` key in this job to point to the docker image taken from `handle_docker`'s outputs, like that:
+
 ```yaml
   pytorch-cuda:
     needs: docker
@@ -66,5 +70,4 @@ Example, taken from [call_precommit.yml](./../../.github/workflows/call_precommi
     container:
       image: ${{ fromJSON(needs.docker.outputs.images).nncf.pytorch_cuda }}
 ```
-
 
