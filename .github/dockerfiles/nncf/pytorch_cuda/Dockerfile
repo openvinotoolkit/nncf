@@ -24,7 +24,7 @@ RUN apt-get update && \
         wget \
         make \
         libpython3.12-dev \
-        pkg-config \
+        # pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run -O /tmp/cuda_installer.run && \
