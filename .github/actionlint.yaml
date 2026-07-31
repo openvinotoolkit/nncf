@@ -5,3 +5,4 @@ self-hosted-runner:
     - aks-linux-6-cores-55gb-gpu-a10
     - Linux
     - NNCF
+    - aks-linux-4-cores-16gb-docker-build
