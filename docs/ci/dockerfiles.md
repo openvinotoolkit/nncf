@@ -70,4 +70,3 @@ Example, taken from [call_precommit.yml](./../../.github/workflows/call_precommi
     container:
       image: ${{ fromJSON(needs.docker.outputs.images).nncf.pytorch_cuda }}
 ```
-
