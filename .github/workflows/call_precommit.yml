@@ -45,22 +45,6 @@ jobs:
           fi
           echo "changed={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> "$GITHUB_OUTPUT"
 
-  # Smart_CI:
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     changed_components: "${{ steps.smart_ci.outputs.changed_components }}"
-  #   steps:
-  #     - uses: openvinotoolkit/openvino/.github/actions/smart-ci@b92810a6d7b48db3697cfb3496e84a9642bd5482
-  #       id: smart_ci
-  #       with:
-  #         repository: ${{ github.repository }}
-  #         pr: ${{ github.event.number }}
-  #         commit_sha: ${{ github.sha }}
-  #         ref_name: ${{ github.ref_name }}
-  #         repo_token: ${{ secrets.GITHUB_TOKEN }}
-  #         labeler_config: '.github/action_configs/labeler.yml'
-  #         components_config: '.github/action_configs/components.yml'
-  #         labeler_check_name: 'set-label'
 
   docker:
     needs: check_changes
@@ -115,9 +99,6 @@ jobs:
         with:
           lfs: true
 
-      # - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-      #   with:
-      #     python-version: ${{ inputs.python_version }}
 
       - name: Create virtual environment
         run: |
