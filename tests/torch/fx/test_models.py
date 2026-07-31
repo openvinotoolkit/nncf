@@ -43,6 +43,7 @@ from tests.torch.test_models.synthetic import ConvReluBranchModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_models.synthetic import SplitBlockModel
 from tests.torch.test_models.synthetic import SplitCatModel
 from tests.torch.test_models.synthetic import SwinV2SingleBlock
 from tests.torch.test_models.synthetic import TopKModel
@@ -82,6 +83,7 @@ TEST_MODELS = (
     ModelCase(TopKModel, "topk_model", TopKModel.INPUT_SHAPE),
     ModelCase(ConcatSameTensorModel, "concat_same_tensor_model", ConcatSameTensorModel.INPUT_SHAPE),
     ModelCase(SplitCatModel, "split_cat_model", SplitCatModel.INPUT_SHAPE),
+    ModelCase(SplitBlockModel, "split_block_model", SplitBlockModel.INPUT_SHAPE),
     ModelCase(ConvReluBranchModel, "conv_relu_branch_model", ConvReluBranchModel.INPUT_SHAPE),
 )
 
@@ -194,6 +196,12 @@ TEST_MODELS_QUANIZED = (
         # (dlyakhov) Last dim has to be static, without that an assert is
         # being inserted to the fx graph to check the last dim is equal to 4
         [Dim.AUTO, Dim.AUTO, Dim.STATIC],
+    ),
+    (
+        ModelCase(SplitBlockModel, "split_block_model", SplitBlockModel.INPUT_SHAPE),
+        {"model_type": nncf.ModelType.TRANSFORMER},
+        [(4, 4), (2, 2)],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
 )
 

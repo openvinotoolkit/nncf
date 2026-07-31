@@ -562,6 +562,31 @@ class MatmulSoftmaxMatmulBlock(OVReferenceModel):
         return model
 
 
+@SYNTHETIC_MODELS.register()
+class SplitBlockModel(OVReferenceModel):
+    """
+    Conv -> Split -> conv -> Concat, like the YOLO C2f split block.
+                \           /
+                 \         /
+                   ------->
+    """
+
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 4, 8, 8], name="Input")
+        stem_kernel = self._rng.random((4, 4, 1, 1)).astype(np.float32)
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        stem = opset.convolution(input_1, stem_kernel, strides, pads, pads, dilations, name="Stem_Conv")
+        split = opset.split(stem, 1, 2, name="Split")
+        branch_kernel = self._rng.random((2, 2, 1, 1)).astype(np.float32)
+        branch = opset.convolution(split.output(0), branch_kernel, strides, pads, pads, dilations, name="Branch_Conv")
+        concat = opset.concat([branch, split.output(1)], axis=1, name="Concat")
+        result = opset.result(concat, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
 class SimpleSplitModel(OVReferenceModel):
     def _create_ov_model(self, input_shape=None, splits=None):
         if input_shape is None:

@@ -31,6 +31,7 @@ from tests.cross_fw.test_templates.helpers import UnbindScaledDotProductAttentio
 from tests.cross_fw.test_templates.helpers import YOLO26AttentionBlock
 from tests.torch import test_models
 from tests.torch.function_hook.helpers import SharedLayersModel
+from tests.torch.test_models.synthetic import SplitBlockModel
 from tests.torch.utils import compare_with_reference_file
 from tests.torch.utils import to_comparable_nx_graph
 
@@ -82,6 +83,10 @@ TEST_MODELS_DESC = [
     ),
     (
         ModelDesc("yolo26_attn_block", YOLO26AttentionBlock, YOLO26AttentionBlock.INPUT_SIZE),
+        {"model_type": ModelType.TRANSFORMER},
+    ),
+    (
+        ModelDesc("split_block_model", SplitBlockModel, SplitBlockModel.INPUT_SHAPE),
         {"model_type": ModelType.TRANSFORMER},
     ),
     (ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]), {}),

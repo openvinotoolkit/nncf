@@ -1,0 +1,20 @@
+digraph {
+"0 Input" [id=0, type=Parameter];
+"1 Stem_Conv" [id=1, type=Convolution];
+"2 Split" [id=2, type=Split];
+"3 Branch_Conv" [id=3, type=Convolution];
+"4 Concat" [id=4, type=Concat];
+"5 Result" [id=5, type=Result];
+"6 Split/Constant_28" [id=6, type=Constant];
+"7 Stem_Conv/Constant_26" [id=7, type=Constant];
+"8 Branch_Conv/Constant_30" [id=8, type=Constant];
+"0 Input" -> "1 Stem_Conv" [key=0, style=solid, label="[1, 4, 8, 8]"];
+"1 Stem_Conv" -> "2 Split" [key=0, style=solid, label="[1, 4, 8, 8]"];
+"2 Split" -> "3 Branch_Conv" [key=0, style=solid, label="[1, 2, 8, 8]"];
+"2 Split" -> "4 Concat" [key=0, style=solid, label="[1, 2, 8, 8]"];
+"3 Branch_Conv" -> "4 Concat" [key=0, style=solid, label="[1, 2, 8, 8]"];
+"4 Concat" -> "5 Result" [key=0, style=solid, label="[1, 4, 8, 8]"];
+"6 Split/Constant_28" -> "2 Split" [key=0, style=dashed, label="[]"];
+"7 Stem_Conv/Constant_26" -> "1 Stem_Conv" [key=0, style=solid, label="[4, 4, 1, 1]"];
+"8 Branch_Conv/Constant_30" -> "3 Branch_Conv" [key=0, style=solid, label="[2, 2, 1, 1]"];
+}

@@ -1,0 +1,14 @@
+digraph {
+"0 Stem_Conv" [id=0, type=Conv];
+"1 Split" [id=1, type=Split];
+"2 Branch_Conv" [id=2, type=Conv];
+"3 Concat" [id=3, type=Concat];
+"4 nncf_model_input_0" [id=4, type="nncf_model_input"];
+"5 nncf_model_output_0" [id=5, type="nncf_model_output"];
+"0 Stem_Conv" -> "1 Split" [key=0, style=solid, label="[1, 4, 8, 8]"];
+"1 Split" -> "2 Branch_Conv" [key=0, style=solid, label="[1, 2, 8, 8]"];
+"1 Split" -> "3 Concat" [key=0, style=solid, label="[1, 2, 8, 8]"];
+"2 Branch_Conv" -> "3 Concat" [key=0, style=solid, label="[1, 2, 8, 8]"];
+"3 Concat" -> "5 nncf_model_output_0" [key=0, style=solid, label="[1, 4, 8, 8]"];
+"4 nncf_model_input_0" -> "0 Stem_Conv" [key=0, style=solid, label="[1, 4, 8, 8]"];
+}

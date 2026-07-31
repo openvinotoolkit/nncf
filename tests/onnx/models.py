@@ -459,6 +459,58 @@ class OneConvolutionalModel(ONNXReferenceModel):
 
 
 @ALL_SYNTHETIC_MODELS.register()
+class SplitBlockModel(ONNXReferenceModel):
+    """
+    Like the YOLO C2f split block, with a weighted op on a single branch only.
+    conv -> chunk -> conv -> cat
+              \             /
+               \           /
+                --------->
+    """
+
+    def __init__(self):
+        input_shape = [1, 4, 8, 8]
+        model_input_name = "X"
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        rng = get_random_generator()
+
+        stem_w = rng.uniform(0, 1, (4, 4, 1, 1)).astype(np.float32)
+        stem_w_tensor = create_initializer_tensor("Stem_W", stem_w, onnx.TensorProto.FLOAT)
+        stem_node = onnx.helper.make_node(
+            name="Stem_Conv", op_type="Conv", inputs=[model_input_name, "Stem_W"], outputs=["stem"], kernel_shape=(1, 1)
+        )
+
+        split_node = onnx.helper.make_node(
+            name="Split", op_type="Split", inputs=["stem"], outputs=["split_0", "split_1"], axis=1
+        )
+
+        branch_w = rng.uniform(0, 1, (2, 2, 1, 1)).astype(np.float32)
+        branch_w_tensor = create_initializer_tensor("Branch_W", branch_w, onnx.TensorProto.FLOAT)
+        branch_node = onnx.helper.make_node(
+            name="Branch_Conv", op_type="Conv", inputs=["split_0", "Branch_W"], outputs=["branch"], kernel_shape=(1, 1)
+        )
+
+        model_output_name = "Y"
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, 4, 8, 8])
+        concat_node = onnx.helper.make_node(
+            name="Concat", op_type="Concat", inputs=["branch", "split_1"], outputs=[model_output_name], axis=1
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[stem_node, split_node, branch_node, concat_node],
+            name="SplitBlockNet",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[stem_w_tensor, branch_w_tensor],
+        )
+        op = onnx.OperatorSetIdProto()
+        op.version = self.required_opset_version
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "split_block_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
 class OneConvolutionalIdentityBiasModel(ONNXReferenceModel):
     def __init__(self):
         input_shape = [1, 3, 10, 10]

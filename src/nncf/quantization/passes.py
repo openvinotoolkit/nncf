@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import TypeVar
+from typing import Callable, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -26,6 +26,7 @@ def transform_to_inference_graph(
     shapeof_metatypes: list[type[OperatorMetatype]],
     noop_metatypes: list[type[OperatorMetatype]],
     preserved_metatypes: list[type[OperatorMetatype]],
+    custom_transformations: list[Callable[[NNCFGraph], None]] | None = None,
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -36,6 +37,8 @@ def transform_to_inference_graph(
     :param noop_metatypes: List of backend-specific NoOp metatypes that should be removed.
     :param preserved_metatypes: List of backend-specific metatypes that require preserving
         float subgraphs when removing the ShapeOf subgraph.
+    :param custom_transformations: Optional list of additional inference-graph transformations, each
+        mutating the graph in place. They are applied after the common passes.
     :return: NNCFGraph in the inference style.
     """
     shapeof_subgraphs = find_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
@@ -46,6 +49,11 @@ def transform_to_inference_graph(
     nncf_graph.remove_nodes_from(nodes_to_drop)
 
     remove_noop_operation_nodes(nncf_graph, noop_metatypes)
+
+    custom_transformations = custom_transformations or []
+    for custom_transformation in custom_transformations:
+        custom_transformation(nncf_graph)
+
     return nncf_graph
 
 
