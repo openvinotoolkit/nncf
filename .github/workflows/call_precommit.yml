@@ -19,14 +19,22 @@ on:
         required: false
 
 jobs:
-  check_changes:
-    runs-on: ubuntu-latest
+  docker:
+    name: Docker
+    timeout-minutes: 15
+    runs-on: aks-linux-4-cores-16gb-docker-build
+    if: ${{ inputs.gpu_enabled == true }}
+    container:
+      image: openvinogithubactions.azurecr.io/docker_build:0.2
+      volumes:
+        - /mount:/mount
     outputs:
-      changed_components: ${{ steps.check_docker.outputs.changed }}
+      images: "${{ steps.handle_docker.outputs.images }}"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+
       - name: Check for dockerfile changes
         id: check_docker
         env:
@@ -43,23 +51,7 @@ jobs:
           else
             docker_env=true
           fi
-          echo "changed={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> "$GITHUB_OUTPUT"
-
-
-  docker:
-    needs: check_changes
-    name: Docker
-    timeout-minutes: 15
-    runs-on: aks-linux-4-cores-16gb-docker-build
-    if: ${{ inputs.gpu_enabled == true }}
-    container:
-      image: openvinogithubactions.azurecr.io/docker_build:0.2
-      volumes:
-        - /mount:/mount
-    outputs:
-      images: "${{ steps.handle_docker.outputs.images }}"
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+          echo "changed_components={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> "$GITHUB_OUTPUT"
 
       - uses: openvinotoolkit/openvino/.github/actions/handle_docker@1f6bb04df50d71dd7e392537eee6b834312f269a
         id: handle_docker
@@ -68,7 +60,7 @@ jobs:
             nncf/pytorch_cuda
           registry: 'openvinogithubactions.azurecr.io'
           dockerfiles_root_dir: '.github/dockerfiles'
-          changed_components: ${{ needs.check_changes.outputs.changed_components }}
+          changed_components: ${{ steps.check_docker.outputs.changed_components }}
 
   pytorch-cuda:
     timeout-minutes: 40
