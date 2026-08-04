@@ -19,17 +19,13 @@ on:
         required: false
 
 jobs:
-  docker:
-    name: Docker
-    timeout-minutes: 15
-    runs-on: aks-linux-4-cores-16gb-docker-build
+  check_changes:
+    name: Check changes
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
     if: ${{ inputs.gpu_enabled == true }}
-    container:
-      image: openvinogithubactions.azurecr.io/docker_build:0.2
-      volumes:
-        - /mount:/mount
     outputs:
-      images: "${{ steps.handle_docker.outputs.images }}"
+      changed_components: ${{ steps.check_docker.outputs.changed_components }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -53,6 +49,21 @@ jobs:
           fi
           echo "changed_components={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> "$GITHUB_OUTPUT"
 
+  docker:
+    name: Docker
+    timeout-minutes: 15
+    needs: check_changes
+    runs-on: aks-linux-4-cores-16gb-docker-build
+    if: ${{ inputs.gpu_enabled == true }}
+    container:
+      image: openvinogithubactions.azurecr.io/docker_build:0.2
+      volumes:
+        - /mount:/mount
+    outputs:
+      images: "${{ steps.handle_docker.outputs.images }}"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
       - uses: openvinotoolkit/openvino/.github/actions/handle_docker@1f6bb04df50d71dd7e392537eee6b834312f269a
         id: handle_docker
         with:
@@ -60,7 +71,7 @@ jobs:
             nncf/pytorch_cuda
           registry: 'openvinogithubactions.azurecr.io'
           dockerfiles_root_dir: '.github/dockerfiles'
-          changed_components: ${{ steps.check_docker.outputs.changed_components }}
+          changed_components: ${{ needs.check_changes.outputs.changed_components }}
 
   pytorch-cuda:
     timeout-minutes: 40
@@ -91,7 +102,10 @@ jobs:
         with:
           lfs: true
 
-      # to be replaced with setup-python
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ inputs.python_version }}
+
       - name: Create virtual environment
         run: |
           python3 -m venv .venv
