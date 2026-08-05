@@ -107,7 +107,9 @@ jobs:
           python-version: ${{ inputs.python_version }}
 
       - name: Prioritize toolcache libpython for the dynamic linker
-        run: ldconfig -n "$pythonLocation/lib"
+        run: |
+          echo "$pythonLocation/lib" > /etc/ld.so.conf.d/zz-python-toolcache.conf
+          ldconfig
 
       - name: Create virtual environment
         run: |
