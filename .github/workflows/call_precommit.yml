@@ -102,11 +102,15 @@ jobs:
         with:
           lfs: true
 
+      # - uses: openvinotoolkit/openvino/.github/actions/setup_python@1f6bb04df50d71dd7e392537eee6b834312f269a
+      #   with:
+      #     version: ${{ inputs.python_version }}
+      #     set-pip-install-path: 'false'
+      #     self-hosted-runner: 'true'
+
       - uses: openvinotoolkit/openvino/.github/actions/setup_python@1f6bb04df50d71dd7e392537eee6b834312f269a
         with:
-          version: ${{ inputs.python_version }}
-          set-pip-install-path: 'false'
-          self-hosted-runner: 'true'
+          python-version: ${{ inputs.python_version }}
 
       - name: Create virtual environment
         run: |
