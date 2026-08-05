@@ -1,6 +1,5 @@
 # Openvino
-openvino==2026.3.0rc3
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
+openvino==2026.3.0
 
 # Torch
 executorch==1.3.1
