@@ -102,19 +102,16 @@ jobs:
         with:
           lfs: true
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: openvinotoolkit/openvino/.github/actions/setup_python@1f6bb04df50d71dd7e392537eee6b834312f269a
         with:
-          python-version: ${{ inputs.python_version }}
+          version: ${{ inputs.python_version }}
+          set-pip-install-path: 'false'
+          self-hosted-runner: 'true'
 
-      - name: Prioritize toolcache libpython for the dynamic linker
-        run: |
-          echo "$pythonLocation/lib" > /etc/ld.so.conf.d/zz-python-toolcache.conf
-          ldconfig
-
-      - name: Create virtual environment
-        run: |
-          python3 -m venv .venv
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      # - name: Create virtual environment
+      #   run: |
+      #     python3 -m venv .venv
+      #     echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
