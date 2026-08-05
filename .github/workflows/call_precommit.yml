@@ -108,7 +108,7 @@ jobs:
       #     set-pip-install-path: 'false'
       #     self-hosted-runner: 'true'
 
-      - uses: openvinotoolkit/openvino/.github/actions/setup_python@1f6bb04df50d71dd7e392537eee6b834312f269a
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ inputs.python_version }}
 
