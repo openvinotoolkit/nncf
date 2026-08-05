@@ -112,6 +112,11 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
 
+      - name: Register toolcache libpython with the dynamic linker
+        run: |
+          echo "$pythonLocation/lib" > /etc/ld.so.conf.d/zz-python-toolcache.conf
+          ldconfig
+
       - name: Create virtual environment
         run: |
           python3 -m venv .venv
