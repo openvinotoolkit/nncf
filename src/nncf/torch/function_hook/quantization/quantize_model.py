@@ -14,13 +14,20 @@ from copy import deepcopy
 import torch
 
 import nncf
+from nncf.common.factory import build_graph
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
 from nncf.torch.function_hook import wrap_model
@@ -74,3 +81,48 @@ def quantize_impl(
     quantized_model = quantization_algorithm.apply(model_wrapper, graph, dataset=calibration_dataset)
 
     return quantized_model.model
+
+
+def compress_weights_impl(
+    model: GraphModelWrapper | torch.nn.Module,
+    dataset: Dataset | None,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+    subset_size: int,
+    scale_estimation: bool,
+    gptq: bool,
+    lora_correction: bool,
+    backup_mode: BackupMode,
+    compression_format: CompressionFormat,
+    advanced_parameters: AdvancedCompressionParameters | None = None,
+) -> torch.nn.Module:
+    """
+    Implementation of the `compress_weights()` method for the PyTorch backend.
+    """
+    compression_algorithm = WeightCompression(
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        backup_mode,
+        compression_format,
+        advanced_parameters,
+    )
+    graph = build_graph(model)
+
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    if isinstance(compressed_model, GraphModelWrapper):
+        compressed_model = compressed_model.model
+    return compressed_model

@@ -70,7 +70,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     output_channel_axis = 1
 
 
-@OV_OPERATOR_METATYPES.register(is_subtype=True)
+@OV_OPERATOR_METATYPES.register()
 class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     name = "DepthwiseConvolutionOp"
     op_names = ["GroupConvolution"]
@@ -424,7 +424,7 @@ class OVLogicalXorMetatype(OVOpMetatype):
     hw_config_names = [HWOpName.LOGICAL_XOR]
 
 
-@OV_OPERATOR_METATYPES.register(is_subtype=True)
+@OV_OPERATOR_METATYPES.register()
 class OVEmbeddingMetatype(OVOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWOpName.EMBEDDING]
@@ -742,6 +742,13 @@ class OVCosMetatype(OVOpMetatype):
 class OVSinMetatype(OVOpMetatype):
     name = "SinOp"
     op_names = ["Sin"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVGroupedMatMulMetatype(OVOpMetatype):
+    name = "GroupedMatMulOp"
+    op_names = ["GroupedMatMul"]
+    output_channel_axis = -1
 
 
 def get_operator_metatypes() -> list[type[OperatorMetatype]]:

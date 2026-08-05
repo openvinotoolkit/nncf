@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
 
 import numpy as np
 import onnx
@@ -58,27 +59,27 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Metatypes
 
     @staticmethod
-    def get_op_with_weights_metatypes() -> list[ONNXOpMetatype]:
+    def get_op_with_weights_metatypes() -> list[type[ONNXOpMetatype]]:
         return OPERATIONS_WITH_WEIGHTS
 
     @staticmethod
-    def get_quantizer_metatypes() -> list[ONNXOpMetatype]:
+    def get_quantizer_metatypes() -> list[type[ONNXOpMetatype]]:
         return QUANTIZE_DEQUANTIZE_OPERATIONS
 
     @staticmethod
-    def get_const_metatypes() -> list[ONNXOpMetatype]:
+    def get_const_metatypes() -> list[type[ONNXOpMetatype]]:
         return [onnx_metatypes.ONNXConstantMetatype]
 
     @staticmethod
-    def get_quantizable_metatypes() -> list[ONNXOpMetatype]:
+    def get_quantizable_metatypes() -> list[type[ONNXOpMetatype]]:
         return INPUTS_QUANTIZABLE_OPERATIONS
 
     @staticmethod
-    def get_quantize_agnostic_metatypes() -> list[ONNXOpMetatype]:
+    def get_quantize_agnostic_metatypes() -> list[type[ONNXOpMetatype]]:
         return QUANTIZE_AGNOSTIC_OPERATIONS + [onnx_metatypes.ONNXConcatMetatype]
 
     @staticmethod
-    def get_shapeof_metatypes() -> list[ONNXOpMetatype]:
+    def get_shapeof_metatypes() -> list[type[ONNXOpMetatype]]:
         return [onnx_metatypes.ONNXShapeMetatype]
 
     @staticmethod
@@ -96,17 +97,17 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return node.metatype in OPERATIONS_WITH_WEIGHTS and node.layer_attributes.has_weight()
 
     @staticmethod
-    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray:
+    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: onnx.ModelProto) -> np.ndarray[Any, Any]:
         return get_bias_value(node_with_bias, model)
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: onnx.ModelProto, port_id: int) -> np.ndarray:
+    def get_weight_value(node_with_weight: NNCFNode, model: onnx.ModelProto, port_id: int) -> np.ndarray[Any, Any]:
         assert node_with_weight.layer_attributes.has_weight()
         weight_name = node_with_weight.layer_attributes.weight_attrs[port_id]["name"]
         return get_tensor_value(model, weight_name)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int | None]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int]:
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod

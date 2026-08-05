@@ -137,7 +137,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_convert_insertion_command(
+        nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
         msg = "FakeConvert insertion not implemented in PyTorch backend!"

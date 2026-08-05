@@ -27,18 +27,14 @@ class PreparedModel(ABC):
     @abstractmethod
     def model_for_inference(self) -> TPModel:
         """
-        Returns prepared model for inference.
-
-        :return: Prepared model for inference.
+        A prepared model for inference.
         """
 
     @property
     @abstractmethod
     def engine(self) -> Engine:
         """
-        Returns the engine for inference the prepared model.
-
-        :return: The engine for inference the prepared model.
+        An engine for inference the prepared model.
         """
 
     def __call__(self, input_data: Any) -> Any:
@@ -56,7 +52,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_op_with_weights_metatypes() -> list[OperatorMetatype]:
+    def get_op_with_weights_metatypes() -> list[type[OperatorMetatype]]:
         """
         Returns a list of operation metatypes that can be reverted to representation
         with int8 weights.
@@ -67,7 +63,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_quantizer_metatypes() -> list[OperatorMetatype]:
+    def get_quantizer_metatypes() -> list[type[OperatorMetatype]]:
         """
         Returns a list of quantizer metatypes.
 
@@ -76,7 +72,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_const_metatypes() -> list[OperatorMetatype]:
+    def get_const_metatypes() -> list[type[OperatorMetatype]]:
         """
         Returns a list of constant metatypes.
 
@@ -85,7 +81,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_quantizable_metatypes() -> list[OperatorMetatype]:
+    def get_quantizable_metatypes() -> list[type[OperatorMetatype]]:
         """
         Returns a list of metatypes for operations that may be quantized.
 
@@ -104,7 +100,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_quantize_agnostic_metatypes() -> list[OperatorMetatype]:
+    def get_quantize_agnostic_metatypes() -> list[type[OperatorMetatype]]:
         """
         Returns a list of quantize agnostic metatypes.
 
@@ -113,7 +109,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_shapeof_metatypes() -> list[OperatorMetatype]:
+    def get_shapeof_metatypes() -> list[type[OperatorMetatype]]:
         """
         Returns a list of shape of metatypes.
 
@@ -171,7 +167,7 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int | None]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int]:
         """
         Returns node's input port indices with weights tensors.
 

@@ -47,7 +47,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def model_extraction_command(
         input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> OVModelExtractionCommand:
-        return OVModelExtractionCommand(input_ids, output_ids)
+        return OVModelExtractionCommand(list(input_ids), list(output_ids))
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> OVOutputInsertionCommand:

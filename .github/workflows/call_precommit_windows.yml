@@ -1,4 +1,4 @@
-name: call-precommit
+name: call-precommit-windows
 permissions: read-all
 
 on:
@@ -14,24 +14,24 @@ on:
         type: string
         required: false
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   common:
     timeout-minutes: 40
     runs-on: windows-2025
-    defaults:
-      run:
-        shell: bash
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
       - name: Install NNCF and test requirements
         run: pip install . -r tests/common/requirements.txt
       - name: Print installed modules
@@ -44,20 +44,16 @@ jobs:
   onnx:
     timeout-minutes: 40
     runs-on: windows-2025-8-core
-    defaults:
-      run:
-        shell: bash
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
       - name: Install NNCF and test requirements
         run: pip install . -r tests/onnx/requirements.txt
       - name: Print installed modules
@@ -70,20 +66,16 @@ jobs:
   openvino:
     timeout-minutes: 40
     runs-on: windows-2025-8-core
-    defaults:
-      run:
-        shell: bash
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ inputs.python_version }}
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
       - name: Install NNCF and test requirements
         run: pip install . -r tests/openvino/requirements.txt
       - name: Print installed modules
@@ -96,21 +88,19 @@ jobs:
   pytorch-cpu:
     timeout-minutes: 40
     runs-on: windows-2025-8-core
-    defaults:
-      run:
-        shell: bash
+    env:
+      NNCF_EXTENSION_LOAD_TIMEOUT: 180
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ inputs.python_version }}
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
-        shell: bash
       - name: Install NNCF and test requirements
         run: |
           pip install . -r tests/torch/requirements.txt
