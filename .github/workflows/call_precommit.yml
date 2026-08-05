@@ -108,10 +108,10 @@ jobs:
           set-pip-install-path: 'false'
           self-hosted-runner: 'true'
 
-      # - name: Create virtual environment
-      #   run: |
-      #     python3 -m venv .venv
-      #     echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Create virtual environment
+        run: |
+          python3 -m venv .venv
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
