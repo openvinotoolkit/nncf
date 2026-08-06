@@ -85,6 +85,9 @@ jobs:
       options: --gpus all --ipc=host
       volumes:
         - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
+        - /opt/home/actions_runner/actions-runner/pip-cache:/opt/pip-cache
+      env:
+        PIP_CACHE_DIR: /opt/pip-cache
     defaults:
       run:
         shell: bash
