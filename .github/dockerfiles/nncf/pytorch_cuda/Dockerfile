@@ -15,15 +15,11 @@ RUN apt-get update && \
         git-lfs \
         ca-certificates \
         build-essential \
-        # python3-dev \
-        # python3-pip \
-        # python3-venv \
         ninja-build \
         libgl1-mesa-dev \
         libglib2.0-0 \
         wget \
         make \
-        # libpython3.12-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run -O /tmp/cuda_installer.run && \
