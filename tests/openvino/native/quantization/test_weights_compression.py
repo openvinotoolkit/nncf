@@ -1512,6 +1512,64 @@ def test_int_compressed_weighs_range(mode, data):
     assert np.allclose(np.abs(compressed_weight.tensor.data), np.abs(w.data))
 
 
+@pytest.mark.parametrize(
+    ("mode", "num_bits"),
+    (
+        (CompressWeightsMode.INT2_ASYM, 2),
+        (CompressWeightsMode.INT4_ASYM, 4),
+        (CompressWeightsMode.INT8_ASYM, 8),
+    ),
+)
+@pytest.mark.parametrize("sign", (1.0, -1.0), ids=("positive", "negative"))
+def test_int_asym_compressed_weights_range(mode, num_bits, sign):
+    # Asymmetric codes are unsigned and span [0, 2**num_bits - 1]. The quantization range is
+    # clamped to always include zero (calculate_integer_quantization_params), so one-sided data
+    # is what actually exercises the zero point: all-positive gives zp == 0, all-negative gives
+    # zp == level_high. Both must still use the full code range.
+    # The data starts at 0 so that the lowest code is 0 at every bit width: with a range clamped
+    # to [0, 4] a smallest value of, say, 0.5 still rounds to 0 on the coarse 2-bit grid but not
+    # on the 8-bit one.
+    level_high = 2**num_bits - 1
+    data = (sign * np.linspace(0.0, 4.0, 16)).astype(np.float32)
+    w = Tensor(data)
+
+    config = WeightCompressionConfig(mode=mode)
+    compressed_weight = do_integer_quantization(w, config, -1)
+
+    codes = compressed_weight.tensor.data
+    assert codes.min() == 0
+    assert codes.max() == level_high
+
+    zero_point = compressed_weight.zero_point
+    assert zero_point is not None
+    assert np.all(zero_point.data == (0 if sign > 0 else level_high))
+
+
+def test_int2_asym_group_wise_zero_point_shape():
+    # A per-group asymmetric zero point must have one entry per (channel, group), matching the
+    # scale -- INT2_SYM folds its zero point away, so this is specific to the asymmetric mode.
+    group_size = 4
+    w = Tensor(np.linspace(-1.0, 1.0, 2 * 16).astype(np.float32).reshape(2, 16))
+
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT2_ASYM, group_size=group_size)
+    compressed_weight = do_integer_quantization(w, config, reduction_axes=(1,))
+
+    assert compressed_weight.zero_point is not None
+    assert compressed_weight.zero_point.shape == compressed_weight.scale.shape
+    assert compressed_weight.zero_point.shape == (2, 16 // group_size, 1)
+
+
+def test_int2_asym_config():
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT2_ASYM)
+
+    assert config.num_bits == 2
+    assert config.is_asym_mode
+    # OpenVINO has no i2 type, so int2 is the physically-unsigned u2 storage that INT2_SYM also
+    # maps to; only the zero point differs between the two modes.
+    assert config.compression_dtype == TensorDataType.int2
+    assert not config.is_symmetric_represented_by_unsigned
+
+
 FP4_REF = {
     "neg": [
         -8.0,
@@ -1667,6 +1725,10 @@ def test_codebook_weights_range(data):
         (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), False, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), True, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_ASYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_ASYM), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_ASYM), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_ASYM), False, True, True),
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
