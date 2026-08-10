@@ -367,10 +367,10 @@ class GPTQ:
         scales = fns.stack(scales, axis=1)
         if wc_params.compression_config.group_size == -1:
             scales = fns.squeeze(scales, axis=-1)
-        if wc_params.compression_config.mode in [
-            CompressWeightsMode.INT8_ASYM,
-            CompressWeightsMode.INT4_ASYM,
-        ]:
+        # is_asym_mode rather than an explicit mode list: a zero point exists for exactly the
+        # asymmetric modes, and the list this replaces had already gone stale once (it predates
+        # INT2_ASYM, which would have silently fallen through to zero_points = None).
+        if wc_params.compression_config.is_asym_mode:
             zero_points = fns.stack(zero_points, axis=1)
             if wc_params.compression_config.group_size == -1:
                 zero_points = fns.squeeze(zero_points, axis=-1)
