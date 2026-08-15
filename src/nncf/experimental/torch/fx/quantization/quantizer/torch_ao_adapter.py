@@ -35,6 +35,7 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor.definitions import TensorDataType
+from nncf.torch.graph import operator_metatypes as om
 
 EdgeOrNode = tuple[torch.fx.Node, torch.fx.Node]
 
@@ -88,12 +89,14 @@ class TorchAOQuantizerAdapter(Quantizer):
         to_node = to_nodes[0]
         if from_node.op == "get_attr":
             _, metatype = GraphConverter.get_node_type_and_metatype(to_node, annotated_model)
-            # Check that the constant is placed on the actual weight port, as it is possible for
-            # activations to be a constant as well.
-            if get_node_args(to_node).index(from_node) in metatype.weight_port_ids:
+            is_mul_parameter = metatype is om.PTMulMetatype and from_node.target in dict(
+                annotated_model.named_parameters()
+            )
+
+            # Mul has no fixed weight port because either operand may be a learned parameter.
+            if is_mul_parameter or get_node_args(to_node).index(from_node) in metatype.weight_port_ids:
                 qip = WeightQuantizationInsertionPoint(to_node.name)
                 return [SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])]
-
         if len(from_node.users) == len(to_nodes):
             qip = ActivationQuantizationInsertionPoint(from_node.name)
             return [SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])]
