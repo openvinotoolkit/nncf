@@ -1001,21 +1001,21 @@ quantization, pruning and etc.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">nncf</span>
 
 <span class="c1"># Exclude by node name:</span>
-<span class="n">node_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_1&#39;</span><span class="p">,</span> <span class="s1">&#39;node_2&#39;</span><span class="p">,</span> <span class="s1">&#39;node_3&#39;</span><span class="p">]</span>
+<span class="n">node_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'node_1'</span><span class="p">,</span> <span class="s1">'node_2'</span><span class="p">,</span> <span class="s1">'node_3'</span><span class="p">]</span>
 <span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="n">node_names</span><span class="p">)</span>
 
 <span class="c1"># Exclude using regular expressions:</span>
-<span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_</span><span class="se">\\</span><span class="s1">d&#39;</span><span class="p">]</span>
+<span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'node_</span><span class="se">\\</span><span class="s1">d'</span><span class="p">]</span>
 <span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">patterns</span><span class="o">=</span><span class="n">patterns</span><span class="p">)</span>
 
 <span class="c1"># Exclude by operation type:</span>
 
 <span class="c1"># OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html</span>
-<span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Multiply&#39;</span><span class="p">,</span> <span class="s1">&#39;GroupConvolution&#39;</span><span class="p">,</span> <span class="s1">&#39;Interpolate&#39;</span><span class="p">]</span>
+<span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Multiply'</span><span class="p">,</span> <span class="s1">'GroupConvolution'</span><span class="p">,</span> <span class="s1">'Interpolate'</span><span class="p">]</span>
 <span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
 
 <span class="c1"># ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md</span>
-<span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Mul&#39;</span><span class="p">,</span> <span class="s1">&#39;Conv&#39;</span><span class="p">,</span> <span class="s1">&#39;Resize&#39;</span><span class="p">]</span>
+<span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Mul'</span><span class="p">,</span> <span class="s1">'Conv'</span><span class="p">,</span> <span class="s1">'Resize'</span><span class="p">]</span>
 <span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
 </pre></div>
 </div>
