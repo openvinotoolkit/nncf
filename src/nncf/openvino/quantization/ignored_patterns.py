@@ -177,24 +177,21 @@ def create_rope() -> GraphPattern:
     present in the OpenVINO models.
     Scheme:
 
-      (matmul)           (matmul)
-         |                 | |
-     (transpose)         (concat)
-         |                /   \
-      (concat)         (cos) (sin)
+      (matmul)           (matmul)         (matmul)
+         |                 | |               |
+     (transpose)         (concat)       (transpose)
+         |                /   |            /    \
+      (concat)         (cos) (sin)     (cos)   (sin)
        /   \
     (cos) (sin)
 
     :return: The Rotary Positional Embedding (RoPE) pattern.
     """
     ret_pattern = GraphPattern()
-    for with_transpose in [True, False]:
+    for with_transpose, with_concat in [(True, True), (False, True), (True, False)]:
         pattern = GraphPattern()
         matmul_node = pattern.add_node(
             **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype}
-        )
-        concat_node = pattern.add_node(
-            **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
         )
         cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.OVCosMetatype})
         sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.OVSinMetatype})
@@ -207,11 +204,17 @@ def create_rope() -> GraphPattern:
         else:
             transpose_node = matmul_node
 
-        pattern.add_edge(transpose_node, concat_node)
-        pattern.add_edge(transpose_node, concat_node)
+        if with_concat:
+            cos_sin_source = pattern.add_node(
+                **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
+            )
+            pattern.add_edge(transpose_node, cos_sin_source)
+            pattern.add_edge(transpose_node, cos_sin_source)
+        else:
+            cos_sin_source = transpose_node
 
-        pattern.add_edge(concat_node, cos_node)
-        pattern.add_edge(concat_node, sin_node)
+        pattern.add_edge(cos_sin_source, cos_node)
+        pattern.add_edge(cos_sin_source, sin_node)
         ret_pattern.add_pattern_alternative(pattern)
     return ret_pattern
 
