@@ -932,10 +932,6 @@ class HAWQAggregator(AggregatorBase):
         # the sensitivity scores
         self._container += trace / x.size
 
-    def reset(self) -> None:
-        self._collected_samples = 0
-        self._container = Tensor(0.0)
-
     def _aggregate_impl(self) -> Tensor:
         return self._container * 2 / self._collected_samples
 
