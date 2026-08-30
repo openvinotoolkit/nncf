@@ -8,10 +8,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Post-training quantization APIs."""
 
-from nncf.common.quantization.structs import QuantizationPreset as QuantizationPreset
-from nncf.quantization.quantize_model import compress_weights as compress_weights
-from nncf.quantization.quantize_model import quantize as quantize
-from nncf.quantization.quantize_model import quantize_with_accuracy_control as quantize_with_accuracy_control
-from nncf.quantization.quantize_model import repack_weights as repack_weights
+from optimum.intel.openvino import OVModelForCausalLM
+
+from nncf.quantization.quantize_model import repack_weights
+
+model = OVModelForCausalLM.from_pretrained("output/last")
+model.model = repack_weights(model.model)
+
+model.save_pretrained("output/last_repacked")

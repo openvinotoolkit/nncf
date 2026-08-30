@@ -263,6 +263,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         compression_config = wc_params.compression_config
         # default mapping for 4bit weight compression and FQ_LORA format, no need to add lora adapters for 8bit weight
         mode_vs_schema_map = {
+            CompressWeightsMode.INT2_SYM: QuantizationScheme.SYMMETRIC_LORA,
+            CompressWeightsMode.INT3_SYM: QuantizationScheme.SYMMETRIC_LORA,
             CompressWeightsMode.INT4_ASYM: QuantizationScheme.ASYMMETRIC_LORA,
             CompressWeightsMode.INT4_SYM: QuantizationScheme.SYMMETRIC_LORA,
             CompressWeightsMode.INT8_ASYM: QuantizationScheme.ASYMMETRIC,

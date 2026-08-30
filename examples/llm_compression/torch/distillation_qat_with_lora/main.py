@@ -162,7 +162,7 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> list[dict[s
     adapters_to_train = []
     hook_storage = get_hook_storage(model)
     for _, module in hook_storage.named_hooks():
-        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits == 4):
+        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits < 4):
             module.enable_gradients()
             params = module.get_trainable_params()
             adapters = module.get_adapters()
@@ -298,7 +298,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         help="Learning rate for fine-tuning. "
         "For larger models (over 3 billion parameters), a learning rate of 5e-5 is recommended.",
     )
-    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs.")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of epochs.")
     parser.add_argument("--batch_size", type=int, default=32, help="Size of training batch.")
     parser.add_argument(
         "--microbatch_size",
@@ -321,7 +321,7 @@ def main(argv) -> float:
     device = "cuda"
     torch_dtype = torch.bfloat16
     compression_config = dict(
-        mode=CompressWeightsMode.INT4_ASYM,
+        mode=CompressWeightsMode.INT3_SYM,
         group_size=64,
         awq=not args.basic_init,
         scale_estimation=not args.basic_init,
