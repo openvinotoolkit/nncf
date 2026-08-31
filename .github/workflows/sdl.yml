@@ -39,18 +39,18 @@ jobs:
         with:
           lfs: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           languages: python
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           category: "/language:python"
 
       # pdf reports always empty for pull_request
       - name: Generate Security Report
         if: ${{ github.event_name != 'pull_request' }}
-        uses: rsdmike/github-security-report-action@a149b24539044c92786ec39af8ba38c93496495d # v3.0.4
+        uses: rsdmike/github-security-report-action@1df22b1e0a7e15b32f728ccf7bab259e46c80589 # v4.0.1
         with:
           template: report
           token: ${{ secrets.GITHUB_TOKEN }}
