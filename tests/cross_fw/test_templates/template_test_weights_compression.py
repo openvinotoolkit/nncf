@@ -9,11 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import os
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 from unittest.mock import patch
 
@@ -45,6 +47,8 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import inte
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from tests.cross_fw.shared.json import dump_to_json
+from tests.cross_fw.shared.json import load_json
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -256,37 +260,37 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool, grouped_mm: bool = False) -> TModel:
         """
-        Returns a backend MoE model for test_scale_estimation with 3D weights.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
-        """
-        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
-            activation statistics
-        Returns the reference output of calculate_quantization_params for MoE model.
+        Returns a backend MoE model with 3D weights. Could be grouped_mm or batched_mm implementation
+        for the MoE.
+        :raises NotImplementedError: If grouped_mm is not supported by the backend.
         """
 
     @staticmethod
     @abstractmethod
-    def get_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
+    def get_scale_estimation_ref_path() -> Path:
         """
-        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
-            activation statistics
-        Returns the reference output of calculate_quantization_params of ScaleEstimation.
+        Returns path to the file with the reference output of calculate_quantization_params of ScaleEstimation
         """
 
-    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
-    @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
+    @pytest.mark.parametrize(
+        "model_type,transpose_a",
+        [("reg", False), ("reg", True), ("moe_bmm", False), ("moe_bmm", True), ("moe_grouped_mm", False)],
+        ids=["reg", "reg_tr_a", "moe_bmm", "moe_bmm_tr_a", "moe_grouped_mm"],
+    )
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
-    def test_scale_estimation(self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow):
+    def test_scale_estimation(self, mocker, transpose_a, model_type, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
-        if is_moe:
+        if model_type == "moe_grouped_mm":
+            try:
+                model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a, grouped_mm=True)
+            except NotImplementedError as e:
+                pytest.xfail(str(e))
+            input = np.arange(0, 4 * 8, dtype=np.float32).reshape(4, 8)
+        elif model_type == "moe_bmm":
             model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
         else:
@@ -320,11 +324,15 @@ class TemplateWeightCompression(ABC):
 
         computed_scale = calc_q_params_spy.spy_return[0]
 
-        if is_moe:
-            reference = self.get_moe_scale_estimation_ref(check_sampling_activation_stats_flow)
-        else:
-            reference = self.get_scale_estimation_ref(check_sampling_activation_stats_flow)
+        ref_key = f"{model_type}_{'sampled' if check_sampling_activation_stats_flow else 'full'}"
+        ref_path = self.get_scale_estimation_ref_path()
 
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            ref_scales = load_json(ref_path)
+            ref_scales[ref_key] = computed_scale.as_numpy_tensor().data
+            dump_to_json(ref_path, ref_scales)
+
+        reference = self.to_tensor(load_json(ref_path)[ref_key])
         assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
@@ -658,10 +666,12 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> TModel:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool, grouped_mm: bool = False) -> TModel:
         """
         Returns a backend model for test_awq_with_ignored_scope."
         :param is_3d_weights: The model has 3d weights
+        :param grouped_mm: The 3d weights are applied as a GroupedMatMul
+        :raises NotImplementedError: If grouped_mm is not supported by the backend.
         """
 
     @staticmethod
@@ -758,24 +768,42 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    @pytest.fixture
-    def test_awq_scale_ref() -> dict[str, Tensor]:
-        "Returns reference for test_awq_scale_reference."
+    def get_awq_scale_ref_path() -> Path:
+        """
+        Returns path to the file with the reference scales for test_awq_scale_reference.
+        """
 
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
-    @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
-    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    @pytest.mark.parametrize(
+        "model_type,transpose_a,non_mergable_pattern",
+        [
+            ("reg", True, True),
+            ("reg", False, True),
+            ("reg", False, False),
+            ("moe_bmm", True, True),
+            ("moe_bmm", False, True),
+            ("moe_bmm", False, False),
+            ("moe_grouped_mm", False, True),
+            ("moe_grouped_mm", False, False),
+        ],
+    )
     def test_awq_scale_reference(
         self,
         non_mergable_pattern,
         transpose_a,
-        test_awq_scale_ref,
-        is_3d_weights,
+        model_type,
         monkeypatch,
         mocker,
     ):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
-        if transpose_a:
+        is_3d_weights = model_type == "moe_bmm"
+        if model_type == "moe_grouped_mm":
+            try:
+                model = self.get_awq_model(non_mergable_pattern, is_3d_weights=False, grouped_mm=True)
+            except NotImplementedError as e:
+                pytest.xfail(str(e))
+            INPUT_SHAPE = (4, 8)
+        elif transpose_a:
             INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
             model = self.get_transposable_awq_model(
                 transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
@@ -793,14 +821,26 @@ class TemplateWeightCompression(ABC):
                 model,
                 mode=CompressWeightsMode.INT4_SYM,
                 ratio=1.0,
-                all_layers=transpose_a,
+                all_layers=transpose_a or model_type == "moe_grouped_mm",
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
             )
         assert spy_instance is not None
+        if model_type == "moe_grouped_mm":
+            assert spy_instance._scale_per_target_node
+
+        ref_path = self.get_awq_scale_ref_path()
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            ref_scales = load_json(ref_path)
+            ref_scales.setdefault(model_type, {}).update(
+                {name: scales.as_numpy_tensor().data for name, scales in spy_instance._scale_per_target_node.items()}
+            )
+            dump_to_json(ref_path, ref_scales)
+
+        model_ref_scales = load_json(ref_path)[model_type]
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            ref = test_awq_scale_ref[is_3d_weights][node_name]
+            ref = Tensor(self.to_tensor(model_ref_scales[node_name]))
             assert fns.allclose(scales, ref)
             assert scales.shape == ref.shape
 

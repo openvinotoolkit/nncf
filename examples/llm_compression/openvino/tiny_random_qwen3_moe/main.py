@@ -11,6 +11,8 @@
 
 import warnings
 
+import numpy as np
+import openvino as ov
 from optimum.intel.openvino import OVModelForVisualCausalLM
 from torch.jit import TracerWarning
 from transformers import AutoTokenizer
@@ -98,15 +100,41 @@ def load_model_and_tokenizer(model_id: str, export: bool = True) -> tuple[OVMode
     return model, tokenizer
 
 
+def get_dummy_dataset(model: ov.Model, seq_len: int = 16) -> nncf.Dataset:
+    """
+    Build a dummy calibration dataset holding a single all-ones sample.
+
+    :param model: The OV model
+    :param seq_len: Sequence length of the synthetic sample.
+    :return: An NNCF dataset with a single sample.
+    """
+    # The language model of a visual causal LM is fed with embeddings, not with token ids.
+    hidden_size = model.input("inputs_embeds").get_partial_shape()[2].get_length()
+
+    inputs = {
+        "inputs_embeds": np.ones((1, seq_len, hidden_size), dtype=np.float32),
+        "attention_mask": np.ones((1, seq_len), dtype=np.int64),
+        "position_ids": np.ones((4, 1, seq_len), dtype=np.int64),
+        "beam_idx": np.zeros(1, dtype=np.int32),
+    }
+
+    return nncf.Dataset([inputs])
+
+
 def main() -> None:
     model, tokenizer = load_model_and_tokenizer(MODEL_ID)
 
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print_answers("Non-optimized model outputs:\n", answers_by_questions)
 
+    calibration_dataset = get_dummy_dataset(model.language_model.model)
+
     model.language_model.model = nncf.compress_weights(
         model.language_model.model,
         mode=nncf.CompressWeightsMode.INT4_ASYM,
+        scale_estimation=True,
+        awq=True,
+        dataset=calibration_dataset,
         group_size=16,
         advanced_parameters=nncf.AdvancedCompressionParameters(
             group_size_fallback_mode=nncf.GroupSizeFallbackMode.ADJUST

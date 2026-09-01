@@ -14,6 +14,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 from typing import Callable
 from unittest.mock import patch
 
@@ -73,6 +74,7 @@ from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
+from tests.openvino.native.models import GroupedMatMulModel
 from tests.openvino.native.models import IdentityMatmul
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import MatMul
@@ -2423,11 +2425,15 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return MatMul(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool, grouped_mm: bool = False):
+        if grouped_mm:
+            return GroupedMatMulModel().ov_model
         return SimpleMoEModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> ov.Model:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool, grouped_mm: bool = False) -> ov.Model:
+        if grouped_mm:
+            return GroupedMatMulModel(mergeable=not non_mergable_pattern).ov_model
         # if is_3d_weights:
         #     return AWQMatmulModel3D(non_mergable_pattern=non_mergable_pattern).ov_model
         return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern, is_3d_weights=is_3d_weights).ov_model
@@ -2474,150 +2480,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            np.array(
-                [
-                    [[0.47332805]],
-                    [[1.0]],
-                    [[1.4732642]],
-                    [[2.0380495]],
-                    [[2.6054149]],
-                    [[3.0301015]],
-                    [[3.679056]],
-                    [[4.175322]],
-                    [[4.700384]],
-                    [[5.2552223]],
-                    [[5.8100615]],
-                    [[6.3083715]],
-                    [[6.858295]],
-                    [[7.4082184]],
-                    [[7.722581]],
-                    [[8.255914]],
-                ]
-            ),
-            np.array(
-                [
-                    [[0.47344488]],
-                    [[1.0]],
-                    [[1.5450557]],
-                    [[2.0380037]],
-                    [[2.6055446]],
-                    [[3.02987]],
-                    [[3.679132]],
-                    [[4.1754694]],
-                    [[4.7001443]],
-                    [[5.2551227]],
-                    [[5.810101]],
-                    [[6.308658]],
-                    [[6.8587303]],
-                    [[7.4]],
-                    [[7.7212124]],
-                    [[8.254545]],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
-
-    @staticmethod
-    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            np.array(
-                [
-                    [
-                        [
-                            [
-                                7.573249,
-                                7.58195,
-                                7.6,
-                                7.6666665,
-                                7.1209445,
-                                7.260152,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.528544,
-                                8.659291,
-                                8.879055,
-                                8.469787,
-                                8.4,
-                                8.364824,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089771,
-                                16.179543,
-                                16.269318,
-                                16.359089,
-                                16.44886,
-                                16.538631,
-                                16.628407,
-                                16.718176,
-                                16.80795,
-                                16.89772,
-                                16.987492,
-                                15.812495,
-                                15.89516,
-                                15.977826,
-                                16.060493,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-            np.array(
-                [
-                    [
-                        [
-                            [
-                                7.575118,
-                                7.5841107,
-                                7.6,
-                                7.6666665,
-                                7.112954,
-                                7.254837,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.531546,
-                                7.850108,
-                                8.887045,
-                                8.468656,
-                                8.4,
-                                8.361673,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089788,
-                                16.17958,
-                                16.269371,
-                                16.359161,
-                                16.448954,
-                                16.538742,
-                                16.628534,
-                                16.718325,
-                                16.808115,
-                                16.897905,
-                                16.987696,
-                                15.812232,
-                                15.894914,
-                                15.977593,
-                                16.060274,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
+    def get_scale_estimation_ref_path() -> Path:
+        return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "scale_estimation_ref.json")
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
@@ -2678,105 +2542,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    @pytest.fixture
-    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
-        return [
-            {
-                "MatMul": Tensor(np.array([[10.337929], [6.4558873]], dtype=np.float32)),
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [1.2264546],
-                            [1.2054994],
-                            [1.1413403],
-                            [1.0974358],
-                            [1.0643553],
-                            [1.0379708],
-                            [1.0161183],
-                            [0.9975262],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_2": Tensor(
-                    np.array(
-                        [
-                            [
-                                [
-                                    1.9909902,
-                                    1.8632966,
-                                    1.5759803,
-                                    1.3974594,
-                                    1.2722752,
-                                    1.1779976,
-                                    1.1035581,
-                                    1.042768,
-                                ]
-                            ]
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-            },
-            {
-                "MatMul": Tensor(
-                    np.array(
-                        [
-                            [[10.337929], [6.4558873]],
-                            [[7.7174687], [5.987996]],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [
-                                [1.2264546],
-                                [1.2054994],
-                                [1.1413403],
-                                [1.0974358],
-                                [1.0643553],
-                                [1.0379708],
-                                [1.0161183],
-                                [0.9975262],
-                            ],
-                            [
-                                [0.46889508],
-                                [0.4599662],
-                                [0.4321173],
-                                [0.40815368],
-                                [0.387274],
-                                [0.36888793],
-                                [0.35255024],
-                                [0.33791822],
-                            ],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_2": Tensor(
-                    np.array(
-                        [
-                            [[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]],
-                            [
-                                [
-                                    0.47422293,
-                                    0.4648561,
-                                    0.4367122,
-                                    0.41249463,
-                                    0.39139354,
-                                    0.37281245,
-                                    0.3563014,
-                                    0.3415141,
-                                ]
-                            ],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-            },
-        ]
+    def get_awq_scale_ref_path() -> Path:
+        return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "awq_scale_ref.json")
 
     @pytest.fixture
     def transpose_a_supported(self) -> bool:

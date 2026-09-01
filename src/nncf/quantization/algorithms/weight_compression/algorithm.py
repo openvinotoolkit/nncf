@@ -1362,8 +1362,9 @@ class WeightCompression(Algorithm):
                 input_channel_axis = input_channel_axis % n_dims
                 reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
 
-                # For 3D weights, keep the batch dimention
-                if any(weight_dim == 3 for weight_dim in all_weight_dims):
+                # For 3D weights, keep the batch (per-expert) dimension only when activation
+                # and weight dimensions are same.
+                if any(weight_dim == 3 for weight_dim in all_weight_dims) and n_dims == 3:
                     assert len(reduction_axes) == 2
                     reduction_axes = reduction_axes[1:]
 

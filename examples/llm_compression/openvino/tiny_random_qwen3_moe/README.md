@@ -1,6 +1,6 @@
-# Qwen3.5-MoE Data-Free Weight Compression Example
+# Qwen3.5-MoE Data-Aware Weight Compression Example
 
-This example demonstrates how to apply data-free weight compression to [optimum-intel-internal-testing/tiny-random-qwen3.5-moe](https://huggingface.co/optimum-intel-internal-testing/tiny-random-qwen3.5-moe) model.
+This example demonstrates how to apply data-aware weight compression to [optimum-intel-internal-testing/tiny-random-qwen3.5-moe](https://huggingface.co/optimum-intel-internal-testing/tiny-random-qwen3.5-moe) model.
 
 ## Prerequisites
 
@@ -31,5 +31,5 @@ python main.py
 This will automatically:
 
 - Download the Qwen3.5-MoE model
-- Apply data-free weight compression using NNCF
+- Apply data-aware weight compression with scale estimation and AWQ using NNCF
 - Save the optimized model

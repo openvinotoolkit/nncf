@@ -169,6 +169,10 @@ class AWQ(Algorithm):
                 graph, wp.node_with_weight
             )
 
+            # We have a special case when activation is 2D and weights are 3D. In this case, we
+            # fold the weight batch axis into the output channel axis, so that the weight and activation shapes match.
+            is_weight_3d_act_2d = len(weight.shape) == 3 and len(act_shape) != 3
+
             is_mergeable = False
             if self._backend_entity.is_node_with_weights(merge_node, graph):
                 mergeable_node_weight_data = self._backend_entity.get_weight_names_and_port_ids(merge_node, graph)
@@ -187,6 +191,9 @@ class AWQ(Algorithm):
             #          3D -> 3 - reduction_axes (reduction_axes=1) = 2
             #          4D -> 5 - reduction_axes (reduction_axes=1) = 4
             weight_scale_reduction_axes = (weight_ndim * 2) - 3 - wp.reduction_axes[0]
+            if is_weight_3d_act_2d:
+                # The scale is shared, so it is reduced over the weight batch axis as well.
+                weight_scale_reduction_axes = tuple(i for i in range(weight_ndim) if i != wp.reduction_axes[0])
             if is_data_free:
                 scale = self._data_free_step(weight, axis=weight_scale_reduction_axes)
             else:
@@ -200,16 +207,28 @@ class AWQ(Algorithm):
                     prev_statistics = statistics[merge_node.node_name]
                 scale = self._data_aware_step(wp, weight, statistics[k], act_ch_axis, prev_weight, prev_statistics)
 
-            w_scale = fns.unsqueeze(scale, weight_scale_reduction_axes)
+            if is_weight_3d_act_2d:
+                # The scale has a single element per input channel and is broadcast over the weight batch axis.
+                w_scale_shape = [1] * weight_ndim
+                w_scale_shape[wp.reduction_axes[0]] = scale.shape[-1]
+                w_scale = fns.reshape(scale, tuple(w_scale_shape))
+            else:
+                w_scale = fns.unsqueeze(scale, weight_scale_reduction_axes)
             a_scale = 1.0 / scale
 
             scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
             if is_mergeable:  # for MatMul->Multiply->MatMul pattern the scale is merged to the first MatMul
+                if is_weight_3d_act_2d:
+                    # The shared scale is applied to the output channels of the whole previous weight batch.
+                    a_scale_shape = [1] * weight_ndim
+                    a_scale_shape[wp.reduction_axes[0] - 1] = a_scale.shape[-1]
+                    a_scale = fns.reshape(a_scale, tuple(a_scale_shape))
+                else:
+                    a_scale = fns.unsqueeze(a_scale, wp.reduction_axes[0])
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
-                    a_scale = fns.unsqueeze(a_scale, wp.reduction_axes[0])
                     merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
@@ -247,10 +266,23 @@ class AWQ(Algorithm):
         s = s.astype(TensorDataType.float32)
         X = X.astype(TensorDataType.float32)
 
-        is_2d_weight = weight.ndim == 2
-
         assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
         reduction_axis = wp.reduction_axes[0]
+
+        if weight.ndim == 3 and X.ndim == 2:
+            # In the case where weights are in 3D and activation in 2D, we must fold the batch axis
+            # of the weight into the output channel axis. This is done so that the AWQ scale can match
+            # the activation shape. The rest of the algorithm will treat the weight as if it were 2D.
+            # [batch_size, out_features, hidden_dim] -> [batch_size * out_features, hidden_dim]
+            # The reduced axis is moved last first, so [batch_size, hidden_dim, out_features] folds the same.
+            reduction_channels = weight.shape[reduction_axis]
+            weight = fns.moveaxis(weight, reduction_axis, -1).reshape((-1, reduction_channels))
+            if prev_weight is not None and prev_weight.ndim == 3:
+                # One scale is shared, so the overflow check below uses the largest magnitudes of the batch.
+                prev_weight = fns.max(fns.abs(prev_weight), axis=0)
+            reduction_axis = 1
+
+        is_2d_weight = weight.ndim == 2
 
         if is_2d_weight:
             s = fns.unsqueeze(s, 0)

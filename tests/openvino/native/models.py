@@ -17,6 +17,7 @@ from typing import Callable
 import numpy as np
 import openvino as ov
 from openvino import opset13 as opset
+from openvino import opset17
 from torchvision.models import mobilenet_v2
 from torchvision.models import mobilenet_v3_small
 
@@ -89,6 +90,36 @@ class SimpleMoEModel(OVReferenceModel):
         matmul = opset.matmul(transpose, weight_data, transpose_a=transpose_a, transpose_b=False, name="MoE_MatMul")
 
         result = opset.result(matmul, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class GroupedMatMulModel(OVReferenceModel):
+    def _create_ov_model(self, num_experts=2, hidden_dim=8, out_dim=16, num_tokens=4, mergeable=False):
+        input_1 = opset.parameter([num_tokens, hidden_dim], name="Input")
+        zero = opset.convert(
+            opset.reduce_sum(opset.multiply(input_1, opset.constant(0.0, np.float32)), reduction_axes=[0, 1]),
+            np.int32,
+        )
+        tokens_per_expert = opset.constant(np.full(num_experts, num_tokens // num_experts, dtype=np.int32))
+        offsets = opset.cumsum(opset.add(tokens_per_expert, zero), opset.constant(0, np.int64), name="offsets")
+
+        if mergeable:
+            prev_weight_data = self._rng.random((num_experts, hidden_dim, hidden_dim)).astype(np.float32) - 0.5
+            prev_weight = opset.constant(prev_weight_data, name="grouped_matmul_data_0")
+            node = opset17.grouped_matmul(input_1, prev_weight, offsets, name="GroupedMatMul_0")
+            node = opset.multiply(node, opset.constant(1.3, np.float32), name="Multiply")
+        else:
+            node = opset.swish(input_1, name="Swish")
+
+        weight_data = self._rng.random((num_experts, out_dim, hidden_dim)).astype(np.float32) - 0.5
+        name_suffix = "_1" if mergeable else ""
+        weight = opset.constant(weight_data, name=f"grouped_matmul_data{name_suffix}")
+        node = opset17.grouped_matmul(node, weight, offsets, name=f"GroupedMatMul{name_suffix}")
+
+        result = opset.result(node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
 
         model = ov.Model([result], [input_1])
