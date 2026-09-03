@@ -12,9 +12,12 @@ import copy
 from collections import defaultdict
 from pathlib import Path
 
-import networkx as nx  # type: ignore
+import networkx as nx
+
+from nncf.common.utils.decorators import raise_if_dependency_unavailable
 
 
+@raise_if_dependency_unavailable(dependencies=["pydot"])
 def write_dot_graph(G: nx.DiGraph, path: Path | str) -> None:
     # NOTE: writing dot files with colons even in labels or other node/edge/graph attributes leads to an
     # error. See https://github.com/networkx/networkx/issues/5962. If `relabel` is True in this function,
@@ -23,6 +26,7 @@ def write_dot_graph(G: nx.DiGraph, path: Path | str) -> None:
     nx.nx_pydot.write_dot(relabeled, str(path))
 
 
+@raise_if_dependency_unavailable(dependencies=["pydot"])
 def read_dot_graph(path: Path) -> nx.MultiDiGraph:
     loaded = nx.MultiDiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)

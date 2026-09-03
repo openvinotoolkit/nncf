@@ -19,6 +19,7 @@ pytest-ordering==0.6
 pytest-xdist==3.8.0
 pytest-forked==1.6.0
 pytest-split==0.11.0
+pydot==3.0.4
 fastprogress==1.0.5
 
 # This is because torch backend uses it and we import from torch

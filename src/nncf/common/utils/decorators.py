@@ -9,12 +9,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import wraps
 from importlib import import_module
-from typing import Any, Callable
+from typing import Any, Callable, ParamSpec, TypeVar
 
 from nncf.common.logging import nncf_logger
 
 IMPORTED_DEPENDENCIES: dict[str, bool] = {}
+
+P = ParamSpec("P")
+T = TypeVar("T")
+
+_PLOTS_EXTRA_HINT = (
+    "Please install NNCF package with plots extra. Use one of the following commands "
+    '"pip install .[plots]" running from the repository root directory or "pip install nncf[plots]"'
+)
 
 
 def skip_if_dependency_unavailable(dependencies: list[str]) -> Callable[[Callable[..., None]], Callable[..., None]]:
@@ -36,17 +45,40 @@ def skip_if_dependency_unavailable(dependencies: list[str]) -> Callable[[Callabl
                     _ = import_module(libname)
                     IMPORTED_DEPENDENCIES[libname] = True
                 except ImportError as ex:
-                    nncf_logger.warning(
-                        f"{ex.msg} Please install NNCF package with plots "
-                        "extra. Use one of the following commands "
-                        '"pip install .[plots]" running from the repository '
-                        'root directory or "pip install nncf[plots]"'
-                    )
+                    nncf_logger.warning(f"{ex.msg} {_PLOTS_EXTRA_HINT}")
                     IMPORTED_DEPENDENCIES[libname] = False
                     break
             else:
                 return func(*args, **kwargs)
             return None
+
+        return wrapped_f
+
+    return wrap
+
+
+def raise_if_dependency_unavailable(dependencies: list[str]) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    """
+    Decorator factory to raise an informative error if dependencies are not met.
+
+    :param dependencies: A list of module names required by the decorated function.
+    :return: A decorator that raises ImportError with an installation hint when a dependency is missing.
+    """
+
+    def wrap(func: Callable[P, T]) -> Callable[P, T]:
+        @wraps(func)
+        def wrapped_f(*args: P.args, **kwargs: P.kwargs) -> T:
+            for libname in dependencies:
+                if IMPORTED_DEPENDENCIES.get(libname, False):
+                    continue
+                try:
+                    _ = import_module(libname)
+                    IMPORTED_DEPENDENCIES[libname] = True
+                except ImportError as ex:
+                    IMPORTED_DEPENDENCIES[libname] = False
+                    msg = f"{ex.msg} {_PLOTS_EXTRA_HINT}"
+                    raise ImportError(msg) from ex
+            return func(*args, **kwargs)
 
         return wrapped_f
 
