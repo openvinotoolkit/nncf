@@ -1,5 +1,5 @@
 transformers==5.0.0
-openvino==2026.3.0
+openvino==2026.3.1
 optimum-intel[openvino]==2.0.0
 optimum==2.2.0
 optimum-onnx @ git+https://github.com/AlexanderDokuchaev/optimum-onnx.git@b577399d0a6fe748af0ad2c776c7aab3adeec66d

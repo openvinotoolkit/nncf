@@ -1,6 +1,6 @@
 whowhatbench @ git+https://github.com/AlexanderDokuchaev/openvino.genai@a26c9b20d07209f035f6d74aeae94d6a72a132ab#subdirectory=tools/who_what_benchmark
 numpy==1.26.4
-openvino==2026.3.0
+openvino==2026.3.1
 optimum-intel==2.0.0
 optimum==2.2.0
 transformers==5.0.0
