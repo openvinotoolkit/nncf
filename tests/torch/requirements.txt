@@ -8,7 +8,6 @@ pytest
 pytest-cov
 pytest-mock
 pytest-xdist
-pydot
 torch
 torchao
 torchvision

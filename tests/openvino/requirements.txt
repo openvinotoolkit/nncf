@@ -7,7 +7,6 @@ pytest
 pytest-cov
 pytest-mock
 pytest-xdist
-pydot
 torch
 torchvision
 virtualenv

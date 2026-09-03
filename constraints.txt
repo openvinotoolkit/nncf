@@ -28,4 +28,3 @@ pandas==2.3.3
 fastprogress==1.0.5
 fastcore==1.11.5
 typing_extensions==4.16.0; python_version < '3.12'
-pydot==3.0.4

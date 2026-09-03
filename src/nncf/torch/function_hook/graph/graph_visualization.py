@@ -8,22 +8,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import annotations
 
 import hashlib
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import networkx as nx  # type: ignore[import-untyped]
+import pydot  # type: ignore[import-untyped]
 
-from nncf.common.utils.decorators import raise_if_dependency_unavailable
 from nncf.torch.function_hook.graph.graph_utils import ConstMeta
 from nncf.torch.function_hook.graph.graph_utils import EdgeMeta
 from nncf.torch.function_hook.graph.graph_utils import FunctionMeta
 from nncf.torch.function_hook.graph.graph_utils import InOutMeta
-
-if TYPE_CHECKING:
-    import pydot  # type: ignore[import-not-found]
 
 
 class PydotStyleTemplate(Enum):
@@ -208,7 +204,6 @@ def get_style(node: dict[str, Any], style: PydotStyleTemplate) -> dict[str, str]
     raise ValueError(msg)
 
 
-@raise_if_dependency_unavailable(dependencies=["pydot"])
 def to_pydot(nx_graph: nx.MultiDiGraph, style_template: PydotStyleTemplate = PydotStyleTemplate.full) -> pydot.Graph:
     """
     Converts a NetworkX directed graph to a Pydot graph with specified styling.
@@ -217,8 +212,6 @@ def to_pydot(nx_graph: nx.MultiDiGraph, style_template: PydotStyleTemplate = Pyd
     :param style_template: Style template to determine node and edge styles.
     :return: Pydot graph representation of the input NetworkX graph.
     """
-    import pydot
-
     dot_graph = pydot.Dot("", rankdir="TB")
 
     for key, data in nx_graph.nodes(data=True):
