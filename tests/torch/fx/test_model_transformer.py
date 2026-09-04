@@ -26,6 +26,7 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.experimental.torch.fx.commands import FXModelExtractionCommand
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
@@ -42,7 +43,6 @@ from nncf.experimental.torch.fx.transformations import node_removal_transformati
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import remove_split_getitem_nodes
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
@@ -70,42 +70,42 @@ TRANSFORMED_GRAPH_DIR_NAME = REF_DIR / "transformed"
 class ModelExtractionTestCase:
     model: torch.nn.Module
     input_shape: tuple[int, ...]
-    command: PTModelExtractionCommand
+    command: FXModelExtractionCommand
 
 
 MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
-        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
+        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
     ),
     ModelExtractionTestCase(
-        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
+        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d_1", 0)], [("add__1", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d_1", 0)], [("add__1", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add_", 0), ("add", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("add_", 0), ("add", 0)])
     ),
     ModelExtractionTestCase(
         MultiBranchesConnectedModel,
         (1, 3, 3, 3),
-        PTModelExtractionCommand([("conv2d", 0), ("conv2d_1", 0)], [("add_", 0), ("add__1", 0)]),
+        FXModelExtractionCommand([("conv2d", 0), ("conv2d_1", 0)], [("add_", 0), ("add__1", 0)]),
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d_2", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("conv2d_2", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add__1", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("add__1", 0)])
     ),
     ModelExtractionTestCase(
         ConcatWithInput,
         ConcatWithInput.INPUT_SIZE,
-        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
+        FXModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
     ModelExtractionTestCase(
         ConcatWithReluInput,
         ConcatWithReluInput.INPUT_SIZE,
-        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
+        FXModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
 )
 
@@ -146,7 +146,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
             ),
             False,
             "(conv2d,)",
@@ -155,14 +155,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             False,
             "(conv2d, conv2d, conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("output", 0)])
+                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("output", 0)])
             ),
             False,
             "([conv2d, add],)",
@@ -171,7 +171,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithSeveralOutputs,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             False,
             "(conv2d, [conv2d, add], conv2d)",
@@ -180,7 +180,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
             ),
             True,
             "(conv2d,)",
@@ -189,7 +189,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             True,
             "(conv2d, conv2d, conv2d)",
@@ -198,7 +198,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConcatWithReluInput,
                 ConcatWithReluInput.INPUT_SIZE,
-                PTModelExtractionCommand([("cat", 1)], [("output", 0)]),
+                FXModelExtractionCommand([("cat", 1)], [("output", 0)]),
             ),
             False,
             "(conv2d_1,)",
