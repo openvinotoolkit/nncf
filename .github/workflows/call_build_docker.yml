@@ -8,16 +8,10 @@ on:
         description: 'Newline-separated list of images to build (relative to dockerfiles_root_dir)'
         type: string
         required: true
-      registry:
-        description: 'Container registry to push/pull images'
-        default: 'openvinogithubactions.azurecr.io'
+      pr_num:
+        description: 'The pull request number'
         type: string
-        required: false
-      dockerfiles_root_dir:
-        description: 'Root directory that holds the dockerfiles'
-        default: '.github/dockerfiles'
-        type: string
-        required: false
+        default: ''
     outputs:
       images:
         description: 'JSON map of resolved image references'
@@ -41,6 +35,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
 
       - name: Check for dockerfile changes
         id: check_docker
@@ -48,16 +43,24 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- .github/dockerfiles; then
+          set -e
+          if [ -z "$BASE_SHA" ]; then
+            # No PR context (e.g. scheduled run): nothing to diff, reuse existing images.
             dockerfiles=false
-          else
-            dockerfiles=true
-          fi
-          if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- .dockerignore .github/dockerfiles; then
             docker_env=false
           else
-            docker_env=true
+            if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- .github/dockerfiles; then
+              dockerfiles=false
+            else
+              dockerfiles=true
+            fi
+            if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- .dockerignore .github/dockerfiles; then
+              docker_env=false
+            else
+              docker_env=true
+            fi
           fi
+
           echo "changed_components={\"docker_env\": $docker_env, \"dockerfiles\": $dockerfiles}" >> "$GITHUB_OUTPUT"
 
       - uses: openvinotoolkit/openvino/.github/actions/handle_docker@1f6bb04df50d71dd7e392537eee6b834312f269a
