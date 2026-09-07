@@ -75,7 +75,7 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Install NNCF and test requirements
-        run: UV_HTTP_RETRIES=10 uv pip install . -r tests/torch/requirements.txt
+        run: UV_CONCURRENT_DOWNLOADS=2 uv pip install . -r tests/torch/requirements.txt
 
       - name: Print installed modules
         run: pip list
