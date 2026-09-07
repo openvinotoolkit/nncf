@@ -50,7 +50,7 @@ jobs:
       # pdf reports always empty for pull_request
       - name: Generate Security Report
         if: ${{ github.event_name != 'pull_request' }}
-        uses: rsdmike/github-security-report-action@1df22b1e0a7e15b32f728ccf7bab259e46c80589 # v4.0.1
+        uses: rsdmike/github-security-report-action@a3d8cc051bc89f1b622d396adab901aa73857a29 # v4.1.0
         with:
           template: report
           token: ${{ secrets.GITHUB_TOKEN }}
