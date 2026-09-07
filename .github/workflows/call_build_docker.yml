@@ -21,9 +21,6 @@ jobs:
   build_docker:
     name: Docker
     timeout-minutes: 15
-    concurrency:
-      group: build_docker
-      cancel-in-progress: false
     runs-on: aks-linux-4-cores-16gb-docker-build
     container:
       image: openvinogithubactions.azurecr.io/docker_build:0.2
@@ -33,9 +30,14 @@ jobs:
       images: "${{ steps.handle_docker.outputs.images }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if : ${{ inputs.pr_num == '' }}
         with:
           fetch-depth: 0
-          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if : ${{ inputs.pr_num != '' }}
+        with:
+          ref: ${{ format('refs/pull/{0}/head', inputs.pr_num)}}
 
       - name: Check for dockerfile changes
         id: check_docker
