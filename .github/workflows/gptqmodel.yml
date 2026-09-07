@@ -11,40 +11,63 @@ on:
       - tests/integration/gptq_model/**
 
 jobs:
+  build_cuda_docker:
+    uses: ./.github/workflows/call_build_docker.yml
+    with:
+      images: |
+        nncf/pytorch_cuda
+
   pytorch-cuda:
     timeout-minutes: 40
-    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    needs: build_cuda_docker
+    runs-on:
+      group: Nvidia-GPU
+      labels: [Linux, NNCF]
+    container:
+      image: ${{ fromJSON(needs.build_cuda_docker.outputs.images).nncf.pytorch_cuda }}
+      options: --gpus all --ipc=host
+      volumes:
+        - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
+        - /opt/home/actions_runner/actions-runner/pip-cache:/opt/pip-cache
+      env:
+        # PIP_CACHE_DIR: /opt/pip-cache
+        DEBIAN_FRONTEND: noninteractive
     defaults:
       run:
         shell: bash
-    env:
-      DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Install dependencies
-        run : |
-          sudo apt-get update
-          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
-      - name: Download CUDA
-        run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Update CA certificates
+        run: update-ca-certificates
+
       - name: Runner info
         continue-on-error: true
         run: |
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Register toolcache libpython with the dynamic linker
+        run: |
+          echo "$pythonLocation/lib" > /etc/ld.so.conf.d/zz-python-toolcache.conf
+          ldconfig
+
+      - name: Create virtual environment
+        run: |
+          python3 -m venv .venv
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      # uv fails by timeout
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/integration/gptq_model/requirements.txt
+        run: pip install . -r tests/integration/gptq_model/requirements.txt
       - name: Install extra requirements
-        run: uv pip install --system -r tests/integration/gptq_model/requirements_extra.txt
+        run: pip install -r tests/integration/gptq_model/requirements_extra.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA

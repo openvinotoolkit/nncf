@@ -43,30 +43,42 @@ jobs:
       - name: Run install test scope
         run: pytest tests/cross_fw/install -rA -s --host-configuration cpu --backend ${{ matrix.backend }}
 
+  build_cuda_docker:
+    uses: ./.github/workflows/call_build_docker.yml
+    with:
+      images: |
+        nncf/pytorch_cuda
+
   install-torch-gpu:
     name: Test install [torch - ubuntu-gpu]
+    needs: build_cuda_docker
     defaults:
       run:
         shell: bash
-    runs-on: aks-linux-6-cores-55gb-gpu-a10
+    runs-on:
+      group: Nvidia-GPU
+      labels: [Linux, NNCF]
     timeout-minutes: 20
-    env:
-      DEBIAN_FRONTEND: noninteractive
+    container:
+      image: ${{ fromJSON(needs.build_cuda_docker.outputs.images).nncf.pytorch_cuda }}
+      options: --gpus all --ipc=host
+      volumes:
+        - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
+        - /opt/home/actions_runner/actions-runner/pip-cache:/opt/pip-cache
+      env:
+        # PIP_CACHE_DIR: /opt/pip-cache
+        DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Install dependencies
-        run : |
-          sudo apt-get update
-          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make virtualenv
-      - name: Download CUDA
-        run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+      - name: Update CA certificates
+        run: update-ca-certificates
+
       - name: Runner info
         continue-on-error: true
         run: |
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
       - name: Fetch and Checkout the Pull Request Branch
@@ -74,9 +86,21 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+
+      - name: Register toolcache libpython with the dynamic linker
+        run: |
+          echo "$pythonLocation/lib" > /etc/ld.so.conf.d/zz-python-toolcache.conf
+          ldconfig
+
+      - name: Create virtual environment
+        run: |
+          python3 -m venv .venv
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
       - name: Install test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt
