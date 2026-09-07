@@ -112,6 +112,7 @@ desynchronization
 distilbert
 dlyakhov
 dnnl
+dockerfiles
 docstrings
 dokuchaev
 dtypes
@@ -321,6 +322,7 @@ onnxroi
 onnxx
 openbookqa
 openvino
+openvinogithubactions
 openvinotoolkit
 oplambda
 opset

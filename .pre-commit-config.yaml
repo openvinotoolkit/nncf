@@ -39,3 +39,9 @@ repos:
       - id: taplo-format
         files: \.toml$
         args: ["--option", "indent_string=    "]
+
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3008]
