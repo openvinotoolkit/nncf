@@ -30,14 +30,15 @@ jobs:
       images: "${{ steps.handle_docker.outputs.images }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if : ${{ inputs.pr_num == '' }}
+        # if : ${{ inputs.pr_num == '' }}
         with:
           fetch-depth: 0
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if : ${{ inputs.pr_num != '' }}
-        with:
-          ref: ${{ format('refs/pull/{0}/head', inputs.pr_num)}}
+      # - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      #   if : ${{ inputs.pr_num != '' }}
+      #   with:
+      #     ref: ${{ format('refs/pull/{0}/head', inputs.pr_num)}}
 
       - name: Check for dockerfile changes
         id: check_docker
@@ -46,6 +47,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -e
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           if [ -z "$BASE_SHA" ]; then
             # No PR context (e.g. scheduled run): nothing to diff, reuse existing images.
             dockerfiles=false
