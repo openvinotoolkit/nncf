@@ -120,7 +120,7 @@ jobs:
         - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates:ro
         - /opt/home/actions_runner/actions-runner/pip-cache:/opt/pip-cache
       env:
-        PIP_CACHE_DIR: /opt/pip-cache
+        # PIP_CACHE_DIR: /opt/pip-cache
         DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Update CA certificates
