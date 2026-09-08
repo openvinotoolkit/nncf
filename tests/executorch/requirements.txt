@@ -27,4 +27,4 @@ onnx==1.22.0
 onnx-ir==1.0.0
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
-onnxscript==0.5.7
+onnxscript==0.7.1
