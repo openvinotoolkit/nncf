@@ -1,5 +1,5 @@
 torch==2.10.0
-datasets==5.0.0
+datasets==5.0.1
 numpy>=1.23.5,<2
 openvino==2026.3.1
 optimum-intel==2.0.0
