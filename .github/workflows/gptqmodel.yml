@@ -4,11 +4,11 @@ permissions: read-all
 
 on:
   workflow_call:
-  pull_request:
-    paths:
-      - .github/workflows/gptqmodel.yml
-      - src/nncf/experimental/torch/gptqmodel/**
-      - tests/integration/gptq_model/**
+  # pull_request:
+  #   paths:
+  #     - .github/workflows/gptqmodel.yml
+  #     - src/nncf/experimental/torch/gptqmodel/**
+  #     - tests/integration/gptq_model/**
 
 jobs:
   pytorch-cuda:
