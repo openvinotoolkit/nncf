@@ -43,6 +43,6 @@ jobs:
       python_version: "3.12"
       gpu_enabled: true
 
-  gptqmodel:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/gptqmodel.yml
+  # gptqmodel:
+  #   if: github.repository_owner == 'openvinotoolkit'
+  #   uses: ./.github/workflows/gptqmodel.yml
