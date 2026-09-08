@@ -151,7 +151,7 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run torch precommit test scope
-        run: pytest -ra -n2 --durations=30 tests/torch -m "not cuda"
+        run: pytest -ra -n2 --durations=30 tests/torch -m "not cuda and not long"
 
   pytorch-cuda:
     timeout-minutes: 40
@@ -197,4 +197,4 @@ jobs:
           python -c "import torch; print(torch.cuda.is_available())"
       - name: Run PyTorch precommit test scope
         run: |
-          pytest -ra --durations=30 tests/torch -m cuda
+          pytest -ra --durations=30 tests/torch -m "cuda and not long"
