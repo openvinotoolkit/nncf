@@ -6,4 +6,4 @@ optimum-intel==2.0.0
 optimum==2.2.0
 transformers==5.0.0
 lm_eval[hf]==0.4.12
-torchao==0.17.0
+torchao==0.18.0
