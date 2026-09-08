@@ -205,7 +205,7 @@ def multi_head_attention_forward_less_2130(
 
     if key_padding_mask is not None:
         if not torch.jit.is_scripting() and not torch.jit.is_tracing():  # type: ignore
-            _check_key_padding_mask(key_padding_mask, src_len, bsz)  # type: ignore
+            _check_key_padding_mask(key_padding_mask, src_len, bsz)
 
         key_padding_mask = (
             key_padding_mask.view(bsz, 1, 1, src_len).expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
