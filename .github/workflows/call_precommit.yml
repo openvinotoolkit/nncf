@@ -189,7 +189,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt
+        run: uv pip install --system . -r tests/torch/requirements.txt --index-strategy unsafe-best-match
         env:
           UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126
       - name: Print installed modules
