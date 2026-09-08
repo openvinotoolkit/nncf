@@ -1,4 +1,4 @@
-name: weekly
+name: "[Schedule] Weekly"
 permissions: read-all
 
 on:

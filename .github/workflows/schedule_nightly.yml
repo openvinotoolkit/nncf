@@ -1,4 +1,4 @@
-name: nightly
+name: "[Schedule] Nightly"
 permissions: read-all
 
 on:
