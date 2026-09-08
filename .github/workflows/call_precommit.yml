@@ -191,7 +191,7 @@ jobs:
       - name: Install NNCF and test requirements
         run: uv pip install --system . -r tests/torch/requirements.txt --index-strategy unsafe-best-match
         env:
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126
+          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
