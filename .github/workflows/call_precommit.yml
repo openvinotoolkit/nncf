@@ -200,3 +200,5 @@ jobs:
       - name: Run PyTorch precommit test scope
         run: |
           pytest -ra --durations=30 tests/torch -m "cuda and not long"
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13

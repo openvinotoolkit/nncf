@@ -37,7 +37,6 @@ on:
         description: 'Skip tests on GPU'
         type: boolean
         default: false
-  pull_request:
 
 defaults:
   run:
