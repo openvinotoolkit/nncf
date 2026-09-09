@@ -189,7 +189,9 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt
+        run: uv pip install --system . -r tests/torch/requirements.txt --index-strategy unsafe-best-match
+        env:
+          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
@@ -198,3 +200,5 @@ jobs:
       - name: Run PyTorch precommit test scope
         run: |
           pytest -ra --durations=30 tests/torch -m "cuda and not long"
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
