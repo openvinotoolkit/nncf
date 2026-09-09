@@ -39,10 +39,16 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         self.device = torch.device(device)
 
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
-        cache_position = kwargs["cache_position"]
-        past_len = cache_position[0]
-        if past_len < input_ids.shape[1]:
-            input_ids = input_ids[:, past_len:]
+        cache_position = kwargs.get("cache_position")
+        if cache_position is None:
+            sequence_length = kwargs.get("next_sequence_length") or input_ids.shape[1]
+            cache_position = torch.arange(
+                input_ids.shape[1] - sequence_length,
+                input_ids.shape[1],
+                dtype=torch.long,
+                device=input_ids.device,
+            )
+        input_ids = input_ids[:, -cache_position.shape[0] :]
         return {"input_ids": input_ids, "cache_position": cache_position}
 
     def forward(
@@ -67,10 +73,15 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
 
 class TorchExportableModuleWithStaticCacheDynamicShape(TorchExportableModuleWithStaticCache):
     def forward(self, input_ids: torch.Tensor, cache_position: torch.Tensor):
-        abc = cache_position.unsqueeze(0)
+        for layer in self.static_cache.layers:
+            cumulative_length = getattr(layer, "cumulative_length", None)
+            if isinstance(cumulative_length, torch.Tensor):
+                cumulative_length.copy_(cache_position[0:1])
+
+        position_ids = cache_position.unsqueeze(0)
         outs = self.model(
             input_ids=input_ids,
-            position_ids=abc,
+            position_ids=position_ids,
             cache_position=cache_position,
             past_key_values=self.static_cache,
             use_cache=True,
