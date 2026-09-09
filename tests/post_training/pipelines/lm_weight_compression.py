@@ -237,10 +237,10 @@ class LMWeightCompression(BaseTestPipeline):
                 for input_name in inputs:
                     inputs[input_name] = torch.from_numpy(inputs[input_name]).to(self.model_hf.device)
             elif self.backend == BackendType.FX_TORCH:
-                fx_inputs = ()
-                fx_inputs += (torch.from_numpy(inputs["input_ids"]).to(self.model_hf.device),)
-                fx_inputs += (torch.from_numpy(inputs["position_ids"]).to(self.model_hf.device).squeeze(0),)
-                inputs = fx_inputs
+                inputs = {
+                    "input_ids": torch.from_numpy(inputs["input_ids"]).to(self.model_hf.device),
+                    "cache_position": torch.from_numpy(inputs["position_ids"]).to(self.model_hf.device).squeeze(0),
+                }
             elif self.backend == BackendType.ONNX:
                 batch_size = input_ids.shape[0]
                 onnx_type_to_numpy = {
@@ -321,7 +321,7 @@ class LMWeightCompression(BaseTestPipeline):
                     self.compressed_model,
                     backend="openvino",
                     options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
-                )(example_input_ids, example_cache_position)
+                )(input_ids=example_input_ids, cache_position=example_cache_position)
 
                 # Get the OV *.xml files in torch compile cache directory
                 cached_ov_model_files = list(Path(self.output_model_dir / "model").glob("*.xml"))

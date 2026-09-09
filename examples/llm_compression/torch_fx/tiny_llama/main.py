@@ -25,7 +25,7 @@ import nncf
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
-def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
+def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> dict[str, torch.Tensor]:
     tokenized_text = tokenizer(data["text"], return_tensors="pt")
     input_ids = tokenized_text["input_ids"]
     attention_mask = tokenized_text["attention_mask"]
@@ -33,10 +33,7 @@ def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor
     position_ids = torch.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
 
-    inputs = (
-        input_ids,
-        position_ids.squeeze(0),
-    )
+    inputs = {"input_ids": input_ids, "cache_position": position_ids.squeeze(0)}
 
     return inputs
 
