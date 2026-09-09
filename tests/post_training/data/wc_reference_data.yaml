@@ -19,23 +19,23 @@ tinyllama_data_aware_backend_TORCH:
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_stateful_backend_OV:
-  metric_value: 0.85616
+  metric_value: 0.85776
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.85502
+  metric_value: 0.83415
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_TORCH:
-  metric_value: 0.85502
+  metric_value: 0.82814
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.85502
+  metric_value: 0.83415
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_ONNX:
-  metric_value: 0.85502
+  metric_value: 0.83037
   num_int4: 188
   num_int8: 124
 tinyllama_int8_data_free_backend_TORCH:
@@ -43,12 +43,12 @@ tinyllama_int8_data_free_backend_TORCH:
   num_int4: 0
   num_int8: 312
 tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.86503
+  metric_value: 0.82839
   num_int4: 94
   num_int8: 124
   metrics_xfail_reason: "Issue-180624"
 tinyllama_scale_estimation_per_channel_backend_OV:
-  metric_value: 0.80873
+  metric_value: 0.80699
   num_int4: 188
   num_int8: 124
 tinyllama_scale_estimation_per_channel_backend_TORCH:
@@ -57,15 +57,15 @@ tinyllama_scale_estimation_per_channel_backend_TORCH:
   num_int8: 124
   atol: 0.006 # difference across devices: 0.80873 vs 0.81389
 tinyllama_data_aware_lora_stateful_backend_OV:
-  metric_value: 0.83446
+  metric_value: 0.85051
   num_int4: 94
   num_int8: 500
 tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
-  metric_value: 0.88663
-  num_int4: 11
-  num_int8: 290
+  metric_value: 0.91044
+  num_int4: 10
+  num_int8: 292
 tinyllama_awq_backup_mode_none_backend_OV:
-  metric_value: 0.84783
+  metric_value: 0.85117
   num_int4: 208
   num_int8: 0
 tinyllama_int4_data_free_backend_TORCH:
@@ -90,7 +90,7 @@ tinyllama_scale_estimation_per_channel_backend_FX_TORCH:
   num_int8: 124
   atol: 0.006 # difference across devices: 0.80873 vs 0.81389
 tinyllama_scale_estimation_per_channel_backend_ONNX:
-  metric_value: 0.80878
+  metric_value: 0.81204
   num_int4: 188
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH:
