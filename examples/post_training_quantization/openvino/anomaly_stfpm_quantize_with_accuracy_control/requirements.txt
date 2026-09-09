@@ -1,5 +1,6 @@
-anomalib==0.6.0
+anomalib==2.2.0
+torch==2.13.0
 openvino==2026.3.1
-numpy<2
-setuptools==81.0.0
+numpy==2.2.6
+timm==1.0.22
 pandas==2.3.3
