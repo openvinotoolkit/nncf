@@ -87,9 +87,7 @@ class ImageClassificationBase(PTQTestPipeline):
             BackendType.FX_TORCH,
             BackendType.CUDA_FX_TORCH,
         ]:
-            compiled_model = torch.compile(
-                self.compressed_model.cpu(), backend="openvino", options={"aot_autograd": True}
-            )
+            compiled_model = torch.compile(self.compressed_model.cpu(), backend="openvino")
         else:
             compiled_model = torch.compile(self.compressed_model)
         for i, (images, target) in enumerate(val_loader):
