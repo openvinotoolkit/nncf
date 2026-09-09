@@ -3,7 +3,7 @@ torch==2.13.0
 torchao==0.18.0
 numpy>=1.23.5,<2
 openvino==2026.3.1
-optimum-intel==2.0.0
+optimum-intel==2.1.0
 optimum==2.2.0
-transformers==5.0.0
+transformers==5.5.0
 lm_eval[hf]==0.4.12
