@@ -16,6 +16,7 @@ from functools import reduce
 import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.utils.api_marker import api
 from nncf.errors import InternalError
 from nncf.errors import ValidationError
 from nncf.parameters import CompressWeightsMode
@@ -23,6 +24,7 @@ from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
 
+@api(canonical_alias="nncf.WeightCompressionConfig")
 @dataclass
 class WeightCompressionConfig:
     """

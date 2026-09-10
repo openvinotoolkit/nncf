@@ -925,6 +925,81 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
+@pytest.mark.parametrize(
+    "custom_annotation, error",
+    (
+        (nncf.CustomAnnotation(), nncf.ValidationError),
+        (["anything"], nncf.ValidationError),
+        ([nncf.CustomAnnotation(scope=nncf.IgnoredScope())], nncf.ValidationError),
+        ([nncf.CustomAnnotation(config="anything")], nncf.ValidationError),
+        (
+            [
+                nncf.CustomAnnotation(
+                    config=WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=None)
+                )
+            ],
+            nncf.ValidationError,
+        ),
+        (
+            [nncf.CustomAnnotation(config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=4))],
+            nncf.ParameterNotSupportedError,
+        ),
+        (
+            [nncf.CustomAnnotation(config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_ASYM, group_size=4))],
+            nncf.ParameterNotSupportedError,
+        ),
+    ),
+    ids=[
+        "not_a_list",
+        "not_an_annotation",
+        "wrong_scope",
+        "wrong_config",
+        "codebook_without_values",
+        "int8_sym_with_group_size",
+        "int8_asym_with_group_size",
+    ],
+)
+def test_raise_error_with_invalid_custom_annotation(custom_annotation, error):
+    with pytest.raises(error):
+        compress_weights(ov.Model([], []), mode=CompressWeightsMode.INT4_SYM, custom_annotation=custom_annotation)
+
+
+@pytest.mark.parametrize(
+    "custom_annotation, expected_dump",
+    [
+        (None, {"": "[]"}),
+        (
+            [
+                nncf.CustomAnnotation(
+                    scope=nncf.CustomAnnotationScope(patterns=["MatMul.*"], types=["MatMul"]),
+                    config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                ),
+                nncf.CustomAnnotation(
+                    scope=nncf.CustomAnnotationScope(names=["MatMul_1"]),
+                    config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=3),
+                ),
+            ],
+            {
+                "0/scope/patterns": "['MatMul.*']",
+                "0/scope/types": "['MatMul']",
+                "0/config": "{'mode': 'int8_sym', 'group_size': -1}",
+                "1/scope/names": "['MatMul_1']",
+                "1/config": "{'mode': 'int4_asym', 'group_size': 3}",
+            },
+        ),
+    ],
+    ids=["without_annotation", "with_annotation"],
+)
+def test_dump_custom_annotation(custom_annotation, expected_dump):
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, custom_annotation=custom_annotation)
+
+    rt_path = ["nncf", "weight_compression", "custom_annotation"]
+    for key, value in expected_dump.items():
+        path = rt_path + key.split("/") if key else rt_path
+        assert compressed_model.get_rt_info(path).astype(str) == value
+
+
 @pytest.mark.parametrize("mode", [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4])
 class TestUnsupportedParams:
     @pytest.mark.parametrize(

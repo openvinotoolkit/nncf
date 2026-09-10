@@ -38,6 +38,7 @@ from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import CustomAnnotation
 from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -50,8 +51,9 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_reduction_channel_size
+from nncf.scopes import CustomAnnotationScope
 from nncf.scopes import IgnoredScope
-from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.scopes import get_node_names_from_scope
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -85,6 +87,7 @@ def get_weight_compression_configuration(
     sensitivity_metric: SensitivityMetric | None = None,
     backup_mode: BackupMode | None = None,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    custom_annotation: list[CustomAnnotation] | None = None,
 ) -> dict[str, Any]:
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
@@ -134,7 +137,62 @@ def get_weight_compression_configuration(
         ),
         "backup_mode": backup_mode,
         "advanced_parameters": advanced_parameters or AdvancedCompressionParameters(),
+        "custom_annotation": custom_annotation,
     }
+
+
+def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None) -> None:
+    """
+    Validates the user-defined custom annotation.
+
+    :param custom_annotation: List of custom annotations to validate.
+    """
+    if custom_annotation is None:
+        return
+
+    if not isinstance(custom_annotation, (list, tuple)):
+        msg = (
+            "The custom_annotation option expects a list of nncf.CustomAnnotation instances, "
+            f"but {type(custom_annotation).__name__} is given."
+        )
+        raise nncf.ValidationError(msg)
+
+    for annotation in custom_annotation:
+        if not isinstance(annotation, CustomAnnotation):
+            msg = (
+                "The custom_annotation option expects a list of nncf.CustomAnnotation instances, "
+                f"but an element of type {type(annotation).__name__} is given."
+            )
+            raise nncf.ValidationError(msg)
+
+        if not isinstance(annotation.config, WeightCompressionConfig):
+            msg = (
+                "The config of a custom annotation must be an nncf.WeightCompressionConfig instance, "
+                f"but {type(annotation.config).__name__} is given."
+            )
+            raise nncf.ValidationError(msg)
+
+        if not isinstance(annotation.scope, CustomAnnotationScope):
+            msg = (
+                "The scope of a custom annotation must be an nncf.CustomAnnotationScope instance, "
+                f"but {type(annotation.scope).__name__} is given."
+            )
+            raise nncf.ValidationError(msg)
+
+        if annotation.config.is_codebook and annotation.config.codebook_values is None:
+            msg = (
+                f"Codebook values must be provided in the custom annotation config for the "
+                f"{annotation.config.mode.value} compression mode."
+            )
+            raise nncf.ValidationError(msg)
+
+        if annotation.config.mode in INT8_MODES and annotation.config.group_size != -1:
+            msg = (
+                "INT8 modes require per-channel quantization in 8 bit, so the group size of a custom annotation "
+                f"with the {annotation.config.mode.value} mode must be -1, but "
+                f"group_size={annotation.config.group_size} is given."
+            )
+            raise nncf.ParameterNotSupportedError(msg)
 
 
 def check_user_compression_configuration(
@@ -153,10 +211,12 @@ def check_user_compression_configuration(
     backup_mode: BackupMode | None,
     compression_format: CompressionFormat | None,
     advanced_parameters: AdvancedCompressionParameters | None,
+    custom_annotation: list[CustomAnnotation] | None = None,
 ) -> None:
     """
     Validates the user's weight compression configuration for correctness.
     """
+    validate_custom_annotation(custom_annotation)
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
             msg = (
@@ -319,6 +379,7 @@ class WeightCompression(Algorithm):
         backup_mode: BackupMode,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters | None = None,
+        custom_annotation: list[CustomAnnotation] | None = None,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -365,6 +426,9 @@ class WeightCompression(Algorithm):
             FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.
         :param compression_format: Describes the format in which the model is saved after weight compression.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
+        :param custom_annotation: A list of user-defined weight compression configurations bound to portions of
+            the model. The configuration of a custom annotation takes precedence over the one assigned by the
+            algorithm for all the matched nodes.
         """
         super().__init__()
         self._mode = mode
@@ -387,6 +451,7 @@ class WeightCompression(Algorithm):
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
+        self._custom_annotation = custom_annotation
 
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(self._ratio, self._subset_size)
@@ -506,9 +571,7 @@ class WeightCompression(Algorithm):
         :param nncf_graph: The NNCF graph to analyze.
         :return: A set of node names to be ignored during weight compression.
         """
-        ignored_names = get_ignored_node_names_from_ignored_scope(
-            self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
-        )
+        ignored_names = get_node_names_from_scope(self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate)
 
         autogenerated_ignored_names = get_node_names_matching_graph_pattern(
             nncf_graph, self._backend_entity.get_ignored_patterns()
@@ -653,24 +716,28 @@ class WeightCompression(Algorithm):
 
     def validate_group_size(
         self,
-        ratio_defining_params: list[WeightCompressionParameters],
+        weight_params: list[WeightCompressionParameters],
     ) -> None:
         """
         Validates that the configured group size is divisible by the reduction channel size for all weights.
 
-        :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
-            backup precisions.
+        :param weight_params: Information about weights to validate. Typically, the weights that are used for
+            calculating ratio between primary and backup precisions.
         """
-        # Check if group size is valid for each weight in ratio_defining_params
+        # Check if group size is valid for each weight in weight_params
         failed_nodes = []
-        for w_params in ratio_defining_params:
+        for w_params in weight_params:
             if w_params.compression_config is None or w_params.compression_config.group_size == -1:
                 continue
+            group_size = w_params.compression_config.group_size
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
-            if reduction_channel_size % w_params.compression_config.group_size != 0:
-                failed_nodes.append((w_params.node_with_weight.node_name, reduction_channel_size))
+            if reduction_channel_size % group_size != 0:
+                failed_nodes.append((w_params.node_with_weight.node_name, reduction_channel_size, group_size))
         if len(failed_nodes) > 0:
-            names = "\n\t".join(f'"{name}" (channel size: {channel_size})' for name, channel_size in failed_nodes)
+            names = "\n\t".join(
+                f'"{name}" (channel size: {channel_size}, group size: {group_size})'
+                for name, channel_size, group_size in failed_nodes
+            )
             msg = (
                 f"Failed to apply group-wise quantization with group size value {self._group_size}.\n"
                 "Ensure that the group size is divisible by the channel size, "
@@ -678,29 +745,52 @@ class WeightCompression(Algorithm):
             )
             raise nncf.InvalidGroupSizeError(msg)
 
+    @staticmethod
+    def _get_requested_group_sizes(
+        weight_params: list[WeightCompressionParameters], group_size: int | None = None
+    ) -> dict[str, int]:
+        """
+        Returns the group size that is requested for each of the given weight parameters.
+
+        :param weight_params: List of weight parameters.
+        :param group_size: Group size requested for all the given weight parameters. If None, the group size is
+            taken from the compression config of each weight parameter.
+        :return: A dictionary mapping weight names to the requested group size values.
+        """
+        if group_size is not None:
+            return {w_params.weight_name: group_size for w_params in weight_params}
+        return {w_params.weight_name: w_params.compression_config.group_size for w_params in weight_params}
+
     def _handle_ignore_group_size_fallback(
         self,
         all_weight_params: list[WeightCompressionParameters],
-        ratio_defining_params: list[WeightCompressionParameters],
+        target_weight_params: list[WeightCompressionParameters],
         skipped_weight_params: list[WeightCompressionParameters],
+        group_sizes: dict[str, int],
     ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], list[WeightCompressionParameters]]:
         """
-        Removes nodes that cannot be quantized with the specified group size from the lists of weight parameters.
-        """
-        if self._group_size == -1:
-            return all_weight_params, ratio_defining_params, skipped_weight_params
+        Removes nodes that cannot be quantized with the requested group size from the lists of weight parameters.
 
+        :param all_weight_params: List of all weight parameters that can be compressed.
+        :param target_weight_params: List of weight parameters to check.
+        :param skipped_weight_params: List of weight parameters that are not compressed.
+        :param group_sizes: A dictionary mapping weight names to the requested group size values.
+        :return: The updated tuple of all, target and skipped weight compression parameters.
+        """
         nodes_to_exclude = {}
-        for w_params in ratio_defining_params:
+        for w_params in target_weight_params:
+            group_size = group_sizes[w_params.weight_name]
+            if group_size == -1:
+                continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
-            if reduction_channel_size % self._group_size != 0:
+            if reduction_channel_size % group_size != 0:
                 nodes_to_exclude[w_params.node_with_weight.node_name] = w_params.weight_shape
                 skipped_weight_params.append(dataclasses.replace(w_params, compression_config=None))
 
         if nodes_to_exclude:
-            ratio_defining_params = [
+            target_weight_params = [
                 w_params
-                for w_params in ratio_defining_params
+                for w_params in target_weight_params
                 if w_params.node_with_weight.node_name not in nodes_to_exclude
             ]
             all_weight_params = [
@@ -710,36 +800,36 @@ class WeightCompression(Algorithm):
             ]
 
             nncf_logger.warning(
-                f"Group-wise quantization with group size {self._group_size} can't be applied to some nodes. "
+                "Group-wise quantization with the requested group size can't be applied to some nodes. "
                 "They will be ignored and kept with original precision.\n"
                 "Consider changing group size value or setting group size fallback parameter to ADJUST, which enables "
                 "automatic adjustment to smaller group size values."
             )
 
-        return all_weight_params, ratio_defining_params, skipped_weight_params
+        return all_weight_params, target_weight_params, skipped_weight_params
 
     def _handle_adjust_group_size_fallback(
-        self, weight_params: list[WeightCompressionParameters]
+        self, weight_params: list[WeightCompressionParameters], group_sizes: dict[str, int]
     ) -> tuple[list[WeightCompressionParameters], dict[str, int]]:
         """
-        Calculates adjusted group size for weight parameters that cannot be quantized with the specified group size.
+        Calculates adjusted group size for weight parameters that cannot be quantized with the requested group size.
+
         :param weight_params: List of weight parameters to process.
+        :param group_sizes: A dictionary mapping weight names to the requested group size values.
         :return: A tuple containing two elements:
-            - A list of weight parameters that can be quantized with the specified or adjusted group size.
+            - A list of weight parameters that can be quantized with the requested or adjusted group size.
             - A dictionary mapping weight names to their group size values.
         """
-        if self._group_size == -1:
-            return weight_params, {w_params.weight_name: self._group_size for w_params in weight_params}
-
         group_size_values = {}
         valid_weight_params = []
         invalid_weight_params = []
         adjusted_weight_params = []
         for w_params in weight_params:
+            group_size = group_sizes[w_params.weight_name]
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
-            if reduction_channel_size % self._group_size == 0:
+            if group_size == -1 or reduction_channel_size % group_size == 0:
                 valid_weight_params.append(w_params)
-                group_size_values[w_params.weight_name] = self._group_size
+                group_size_values[w_params.weight_name] = group_size
                 continue
 
             # The maximal power of two that divides reduction_channel_size
@@ -755,8 +845,7 @@ class WeightCompression(Algorithm):
         if adjusted_weight_params:
             # Adjusted group size value for some nodes
             nncf_logger.info(
-                f"Some nodes can't be quantized with the specified group size of {self._group_size}. "
-                "Adjusted group size values will be used."
+                "Some nodes can't be quantized with the requested group size. Adjusted group size values will be used."
             )
 
         if invalid_weight_params:
@@ -858,7 +947,7 @@ class WeightCompression(Algorithm):
         :param graph: Model graph.
         :return: A list of weight sizes for the ignored nodes.
         """
-        ignored_names = get_ignored_node_names_from_ignored_scope(self._ignored_scope, graph, strict=False)
+        ignored_names = get_node_names_from_scope(self._ignored_scope, graph, strict=False)
         weighted_metatypes = (
             self._backend_entity.matmul_metatypes
             + self._backend_entity.embedding_metatypes
@@ -1074,20 +1163,194 @@ class WeightCompression(Algorithm):
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_skipped)
 
         # Handle group size fallback modes
+        group_size_values = self._get_requested_group_sizes(ratio_defining_params, self._group_size)
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
-                all_weight_params, ratio_defining_params, skipped_weight_params
+                all_weight_params, ratio_defining_params, skipped_weight_params, group_size_values
             )
         if self._group_size_fallback_mode == GroupSizeFallbackMode.ADJUST:
-            ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(ratio_defining_params)
-        else:
-            group_size_values = {w_params.weight_name: self._group_size for w_params in ratio_defining_params}
+            ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(
+                ratio_defining_params, group_size_values
+            )
 
         # Set each ratio defining parameter to primary config
         for weight_param in ratio_defining_params:
             weight_param.compression_config = self._get_primary_config(group_size_values[weight_param.weight_name])
 
         return all_weight_params, ratio_defining_params, skipped_weight_params
+
+    def _get_custom_annotation_configs(self, graph: NNCFGraph) -> dict[str, WeightCompressionConfig]:
+        """
+        Maps node names matched by the custom annotation to the user-defined weight compression configuration.
+
+        If several annotations match the same node, the last one takes precedence.
+
+        :param graph: NNCFGraph instance.
+        :return: A mapping from a node name to the user-defined weight compression configuration.
+        """
+        node_name_to_config: dict[str, WeightCompressionConfig] = {}
+        for annotation in self._custom_annotation:
+            annotated_names = get_node_names_from_scope(
+                annotation.scope, graph, strict=annotation.scope.validate, scope_kind="Annotated"
+            )
+            overlapped_names = sorted(annotated_names & node_name_to_config.keys())
+            if overlapped_names:
+                nncf_logger.warning(
+                    "Several custom annotations match the same nodes. The last matched annotation takes "
+                    "precedence for the following nodes:\n\t" + "\n\t".join(overlapped_names)
+                )
+            for node_name in annotated_names:
+                node_name_to_config[node_name] = annotation.config
+        return node_name_to_config
+
+    def apply_custom_annotation(
+        self,
+        graph: NNCFGraph,
+        all_weight_params: list[WeightCompressionParameters],
+        ratio_defining_params: list[WeightCompressionParameters],
+        skipped_weight_params: list[WeightCompressionParameters],
+    ) -> tuple[
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+        list[WeightCompressionParameters],
+    ]:
+        """
+        Assigns the user-defined weight compression configurations to the weight parameters matched by the
+        custom annotation.
+
+        The annotated parameters are excluded from the ratio-defining ones, so that neither the mixed precision
+        algorithm nor the `all_layers` and the last layer rules can override the user-defined configuration.
+        The parameters that were skipped, e.g. by the ignored scope, are returned back to the compressed ones
+        if they are matched by the custom annotation.
+
+        :param graph: NNCFGraph instance.
+        :param all_weight_params: List of all weight compression parameters that can be compressed.
+        :param ratio_defining_params: List of ratio-defining parameters.
+        :param skipped_weight_params: List of weight compression parameters that are not compressed.
+        :return: The updated tuple of all, ratio-defining and skipped weight compression parameters.
+        """
+        if not self._custom_annotation:
+            return all_weight_params, ratio_defining_params, skipped_weight_params
+
+        node_name_to_config = self._get_custom_annotation_configs(graph)
+        compressed_weight_names = set(w_params.weight_name for w_params in all_weight_params)
+        annotated_weight_params = []
+        restored_weight_params = []
+        unsupported_node_names = []
+
+        def annotate(w_params: WeightCompressionParameters) -> bool:
+            config = node_name_to_config.get(w_params.node_with_weight.node_name)
+            if config is None:
+                return False
+            if not self.is_weight_compression_supported(w_params.weight_dtype, config.mode):
+                unsupported_node_names.append(w_params.node_with_weight.node_name)
+                return False
+            # A deep copy is required since some algorithms, e.g. codebook estimation, update the compression
+            # config of a weight parameter in place.
+            w_params.compression_config = copy.deepcopy(config)
+            annotated_weight_params.append(w_params)
+            return True
+
+        for w_params in all_weight_params:
+            annotate(w_params)
+
+        for w_params in skipped_weight_params:
+            # A weight that is already compressed under another node, e.g. a shared weight, must not be restored
+            # to avoid processing the same weight more than once.
+            if w_params.weight_name in compressed_weight_names:
+                continue
+            if annotate(w_params):
+                compressed_weight_names.add(w_params.weight_name)
+                restored_weight_params.append(w_params)
+
+        if unsupported_node_names:
+            nncf_logger.warning(
+                "The compression mode defined by the custom annotation is not supported for the data type of the "
+                "following nodes. They are kept with the configuration assigned by the algorithm:\n\t"
+                + "\n\t".join(sorted(unsupported_node_names))
+            )
+
+        matched_node_names = set(
+            w_params.node_with_weight.node_name
+            for w_params in all_weight_params + skipped_weight_params
+            if w_params.node_with_weight.node_name in node_name_to_config
+        )
+        not_applied_node_names = node_name_to_config.keys() - matched_node_names
+        if not_applied_node_names:
+            nncf_logger.warning(
+                "The following nodes are matched by the custom annotation, but have no weight to compress. "
+                "The annotation has no effect for them:\n\t" + "\n\t".join(sorted(not_applied_node_names))
+            )
+
+        if restored_weight_params:
+            nncf_logger.warning(
+                "The following nodes are excluded from the compression, e.g. by the ignored scope, but are matched "
+                "by the custom annotation. They will be compressed with the user-defined configuration:\n\t"
+                + "\n\t".join(sorted(w_params.node_with_weight.node_name for w_params in restored_weight_params))
+            )
+            restored_weight_names = set(w_params.weight_name for w_params in restored_weight_params)
+            skipped_weight_params = [
+                w_params for w_params in skipped_weight_params if w_params.weight_name not in restored_weight_names
+            ]
+            # Keep the topological order of the weight parameters
+            node_name_to_position = {node.node_name: i for i, node in enumerate(graph.topological_sort())}
+            all_weight_params = sorted(
+                all_weight_params + restored_weight_params,
+                key=lambda wp: node_name_to_position[wp.node_with_weight.node_name],
+            )
+
+        # The user-defined configuration takes precedence over the mixed precision assignment
+        annotated_weight_names = set(w_params.weight_name for w_params in annotated_weight_params)
+        ratio_defining_params = [
+            w_params for w_params in ratio_defining_params if w_params.weight_name not in annotated_weight_names
+        ]
+
+        # The group size fallback modes are applied to the annotated weights as well. The resulting group size is
+        # validated together with the rest of the weights in the apply() method.
+        all_weight_params, annotated_weight_params, skipped_weight_params = self._handle_group_size_fallback(
+            all_weight_params, annotated_weight_params, skipped_weight_params
+        )
+
+        return all_weight_params, ratio_defining_params, skipped_weight_params
+
+    def _handle_group_size_fallback(
+        self,
+        all_weight_params: list[WeightCompressionParameters],
+        annotated_weight_params: list[WeightCompressionParameters],
+        skipped_weight_params: list[WeightCompressionParameters],
+    ) -> tuple[list[WeightCompressionParameters], list[WeightCompressionParameters], list[WeightCompressionParameters]]:
+        """
+        Applies the configured group size fallback mode to the weights annotated by the custom annotation.
+
+        The group size of an annotated weight is defined by the user, so the fallback mode is applied to that value
+        instead of the group size configured for the algorithm.
+
+        :param all_weight_params: List of all weight compression parameters that can be compressed.
+        :param annotated_weight_params: List of annotated weight compression parameters.
+        :param skipped_weight_params: List of weight compression parameters that are not compressed.
+        :return: The updated tuple of all, annotated and skipped weight compression parameters.
+        """
+        group_sizes = self._get_requested_group_sizes(annotated_weight_params)
+        if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
+            all_weight_params, annotated_weight_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
+                all_weight_params, annotated_weight_params, skipped_weight_params, group_sizes
+            )
+        elif self._group_size_fallback_mode == GroupSizeFallbackMode.ADJUST:
+            valid_weight_params, group_size_values = self._handle_adjust_group_size_fallback(
+                annotated_weight_params, group_sizes
+            )
+            valid_weight_names = set(w_params.weight_name for w_params in valid_weight_params)
+            for w_params in annotated_weight_params:
+                if w_params.weight_name in valid_weight_names:
+                    w_params.compression_config = dataclasses.replace(
+                        w_params.compression_config, group_size=group_size_values[w_params.weight_name]
+                    )
+                else:
+                    # A valid adjusted group size wasn't found, the annotated config can not be applied
+                    w_params.compression_config = self._get_backup_config(w_params.weight_dtype)
+            annotated_weight_params = valid_weight_params
+
+        return all_weight_params, annotated_weight_params, skipped_weight_params
 
     def apply(
         self,
@@ -1102,13 +1365,18 @@ class WeightCompression(Algorithm):
         all_weight_params, ratio_defining_params, skipped_weight_params = self.get_weight_compression_parameters(
             model, graph
         )
+        # Assign the user-defined weight compression configurations
+        all_weight_params, ratio_defining_params, skipped_weight_params = self.apply_custom_annotation(
+            graph, all_weight_params, ratio_defining_params, skipped_weight_params
+        )
         # Collect statistics for the weights compression
         statistics, statistic_points = self.collect_statistics_and_statistic_points(
             model, graph, statistic_points, dataset, ratio_defining_params, all_weight_params
         )
         # Apply Mixed precision algorithm to ratio defining parameters
         self.apply_mixed_precision(ratio_defining_params, model, graph, statistic_points)
-        self.validate_group_size(ratio_defining_params)
+        # All the weights are validated, since the group size of a weight can also be defined by the custom annotation
+        self.validate_group_size(all_weight_params)
 
         # Print statistics
         nncf_logger.info(
@@ -1228,6 +1496,7 @@ class WeightCompression(Algorithm):
                 "backup_mode": self._backup_mode.value,
                 "compression_format": self._compression_format.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
+                "custom_annotation": self._custom_annotation or [],
             },
             algo_name="weight_compression",
         )

@@ -12,9 +12,10 @@ import pytest
 
 from nncf.common.graph import NNCFNode
 from nncf.common.scopes import get_not_matched_scopes
+from nncf.scopes import CustomAnnotationScope
 from nncf.scopes import IgnoredScope
 from nncf.scopes import Subgraph
-from nncf.scopes import get_difference_ignored_scope
+from nncf.scopes import get_difference_scope
 
 
 @pytest.mark.parametrize(
@@ -71,7 +72,14 @@ def test_get_not_matched_scopes(scope, ref):
                 subgraphs=[Subgraph(inputs=["A_input"], outputs=["A_output"])],
             ),
         ),
+        (
+            CustomAnnotationScope(names=["A_name", "B_name"]),
+            CustomAnnotationScope(names=["B_name"]),
+            CustomAnnotationScope(names=["A_name"]),
+        ),
     ),
 )
-def test_ignored_scope_diff(scope_1, scope_2, ref):
-    assert get_difference_ignored_scope(scope_1, scope_2) == ref
+def test_scope_diff(scope_1, scope_2, ref):
+    diff_scope = get_difference_scope(scope_1, scope_2)
+    assert type(diff_scope) is type(scope_1)
+    assert diff_scope == ref

@@ -30,6 +30,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import CustomAnnotation
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
@@ -424,6 +425,7 @@ def compress_weights(
     backup_mode: BackupMode | None = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    custom_annotation: list[CustomAnnotation] | None = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -492,6 +494,13 @@ def compress_weights(
     :type compression_format: nncf.CompressionFormat
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
+    :param custom_annotation: A list of user-defined weight compression configurations bound to portions of the
+        model. For all the matched nodes the given configuration is used instead of the one assigned by the
+        algorithm, which makes it possible to compress certain layers, e.g. attention or MoE router layers, to a
+        precision different from the one defined by `mode`, `ratio` and `backup_mode`. The custom annotation
+        takes precedence over the mixed precision assignment, the `ignored_scope` and the `all_layers` options.
+        If several annotations match the same node, the last one takes precedence.
+    :type custom_annotation: list[nncf.CustomAnnotation]
     :return: The non-trainable model with compressed weights.
     """
     backend = get_backend(model)
@@ -671,6 +680,7 @@ def compress_weights(
         backup_mode,
         compression_format,
         advanced_parameters,
+        custom_annotation,
     )
     weight_compression_configuration = get_weight_compression_configuration(
         mode,
@@ -686,6 +696,7 @@ def compress_weights(
         sensitivity_metric,
         backup_mode,
         advanced_parameters,
+        custom_annotation,
     )
 
     return compression_weights_impl(

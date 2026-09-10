@@ -24,7 +24,9 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizerProp
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.scopes import CustomAnnotationScope
 from nncf.tensor import TensorDataType
 
 TTensor = Any
@@ -449,6 +451,37 @@ class AdvancedCompressionParameters:
     adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
         default_factory=AdvancedAdaptiveCodebookParameters
     )
+
+
+@api(canonical_alias="nncf.CustomAnnotation")
+@dataclass
+class CustomAnnotation:
+    """
+    Binds a user-defined weight compression configuration to a portion of a model.
+
+    The configuration takes precedence over the one assigned by the weight compression algorithm for all
+    matched nodes, including the assignment made by the mixed precision algorithm and the `ignored_scope`,
+    `all_layers` and `backup_mode` options.
+
+    Example:
+
+    ..  code-block:: python
+
+            import nncf
+
+            annotation = nncf.CustomAnnotation(
+                scope=nncf.CustomAnnotationScope(patterns=['.*self_attn.*', '.*router.*']),
+                config=nncf.WeightCompressionConfig(mode=nncf.CompressWeightsMode.INT8_ASYM, group_size=-1),
+            )
+
+    :param scope: Defines the portion of a model to annotate.
+    :type scope: nncf.CustomAnnotationScope
+    :param config: Weight compression configuration to apply to the matched nodes.
+    :type config: nncf.WeightCompressionConfig
+    """
+
+    scope: CustomAnnotationScope = field(default_factory=CustomAnnotationScope)
+    config: WeightCompressionConfig = field(default_factory=WeightCompressionConfig)
 
 
 @api()

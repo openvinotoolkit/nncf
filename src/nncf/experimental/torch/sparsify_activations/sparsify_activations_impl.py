@@ -27,7 +27,7 @@ from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
 from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
 from nncf.scopes import IgnoredScope
-from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.scopes import get_node_names_from_scope
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 
@@ -181,9 +181,7 @@ class SparsifyActivationsAlgorithm:
         :return: A dictionary with nodes and the corresponding target sparsity level.
         """
         supported_metatypes = self._backend_entity.supported_metatypes
-        ignored_names = get_ignored_node_names_from_ignored_scope(
-            self._ignored_scope, graph, strict=self._ignored_scope.validate
-        )
+        ignored_names = get_node_names_from_scope(self._ignored_scope, graph, strict=self._ignored_scope.validate)
         target_sparsity_by_node = {}
         for scope, target_sparsity in self._target_sparsity_by_scope.items():
             target_names = get_target_node_names_from_target_scope(scope, graph, strict=scope.validate)
