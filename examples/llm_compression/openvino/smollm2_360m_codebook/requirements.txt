@@ -1,4 +1,4 @@
-openvino==2026.4.0
+openvino==2026.4.0rc2
 optimum-intel[openvino]==2.1.0
 optimum==2.3.0
 transformers==5.5.0

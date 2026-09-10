@@ -1,5 +1,5 @@
 datasets==5.0.1
-openvino==2026.4.0
+openvino==2026.4.0rc2
 optimum-intel[openvino]==2.1.0
 optimum==2.3.0
 optimum-onnx @ git+https://github.com/AlexanderDokuchaev/optimum-onnx.git@7186b0687ca9ac6ecd737a9e3ca0672c7335543c
