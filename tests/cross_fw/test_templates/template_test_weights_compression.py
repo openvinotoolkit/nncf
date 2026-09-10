@@ -974,29 +974,34 @@ class TemplateWeightCompression(ABC):
             self.get_sequential_matmul_model(transpose_a=False), np.ones([1, 4, 4], dtype=np.float32)
         )
 
-    def _compress_and_get_configs(self, mocker, **kwargs) -> dict[str, WeightCompressionConfig]:
+    def _compress_and_get_configs(self, **kwargs) -> dict[str, WeightCompressionConfig]:
         """
         Compresses a model and returns the compression config assigned to each compressed weight node.
 
-        :param mocker: Mocker fixture.
         :param kwargs: Arguments for the `compress_weights` function.
         :return: A mapping from a node name to the assigned compression config.
         """
-        spy = mocker.spy(WeightCompression, "apply_with_parameters")
-        compress_weights(**kwargs)
-        all_weight_params = spy.call_args.args[5]
+        captured_weight_params = []
+        original_fn = WeightCompression.apply_with_parameters
+
+        def apply_with_parameters(self, model, graph, dataset, statistics, all_weight_params):
+            captured_weight_params.append(all_weight_params)
+            return original_fn(self, model, graph, dataset, statistics, all_weight_params)
+
+        with patch.object(WeightCompression, "apply_with_parameters", apply_with_parameters):
+            compress_weights(**kwargs)
+
+        all_weight_params = captured_weight_params[-1]
         return {wp.node_with_weight.node_name: wp.compression_config for wp in all_weight_params}
 
-    def test_custom_annotation(self, mocker):
+    def test_custom_annotation(self):
         """
         Checks that the config given by the custom annotation is assigned to the matched nodes, overriding both
         the primary precision and the backup precision of the last layer, and that the rest of the nodes is not
         affected.
         """
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=False)
-        reference_configs = self._compress_and_get_configs(
-            mocker, model=self._get_sequential_matmul_model(), **common_kwargs
-        )
+        reference_configs = self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs)
         node_names = list(reference_configs)
         # The last layer is compressed to the backup precision since all_layers is False
         assert reference_configs[node_names[-1]].mode == CompressWeightsMode.INT8_ASYM
@@ -1004,7 +1009,6 @@ class TemplateWeightCompression(ABC):
         annotated_config = WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1)
         last_layer_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4)
         configs = self._compress_and_get_configs(
-            mocker,
             model=self._get_sequential_matmul_model(),
             **common_kwargs,
             custom_annotation=[
@@ -1031,13 +1035,10 @@ class TemplateWeightCompression(ABC):
         """
         annotated_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=-1)
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=0.5, group_size=-1, all_layers=True)
-        node_names = list(
-            self._compress_and_get_configs(mocker, model=self._get_sequential_matmul_model(), **common_kwargs)
-        )
+        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
 
         mixed_precision_spy = mocker.spy(WeightCompression, "apply_mixed_precision")
         configs = self._compress_and_get_configs(
-            mocker,
             model=self._get_sequential_matmul_model(),
             **common_kwargs,
             custom_annotation=[
@@ -1053,21 +1054,18 @@ class TemplateWeightCompression(ABC):
         assert node_names[1] not in ratio_defining_names
         assert configs[node_names[1]] == annotated_config
 
-    def test_custom_annotation_over_ignored_scope(self, mocker):
+    def test_custom_annotation_over_ignored_scope(self):
         """
         Checks that a node from the ignored scope is compressed with the config given by the custom annotation
         and that a warning is logged.
         """
         annotated_config = WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1)
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=True)
-        node_names = list(
-            self._compress_and_get_configs(mocker, model=self._get_sequential_matmul_model(), **common_kwargs)
-        )
+        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
         ignored_node_name = node_names[1]
 
         with patch.object(nncf_logger, "warning") as mock_warning:
             configs = self._compress_and_get_configs(
-                mocker,
                 model=self._get_sequential_matmul_model(),
                 **common_kwargs,
                 ignored_scope=IgnoredScope(names=[ignored_node_name]),
@@ -1085,20 +1083,17 @@ class TemplateWeightCompression(ABC):
         warn_msg = "are excluded from the compression, e.g. by the ignored scope, but are matched"
         assert any(warn_msg in msg for msg in warning_messages)
 
-    def test_custom_annotation_overlap(self, mocker):
+    def test_custom_annotation_overlap(self):
         """
         Checks that the last matched annotation takes precedence and that a warning is logged.
         """
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=True)
-        node_names = list(
-            self._compress_and_get_configs(mocker, model=self._get_sequential_matmul_model(), **common_kwargs)
-        )
+        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
         first_config = WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1)
         last_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4)
 
         with patch.object(nncf_logger, "warning") as mock_warning:
             configs = self._compress_and_get_configs(
-                mocker,
                 model=self._get_sequential_matmul_model(),
                 **common_kwargs,
                 custom_annotation=[
@@ -1119,7 +1114,7 @@ class TemplateWeightCompression(ABC):
         warn_msg = "Several custom annotations match the same nodes"
         assert any(warn_msg in msg for msg in warning_messages)
 
-    def test_custom_annotation_without_weights(self, mocker):
+    def test_custom_annotation_without_weights(self):
         """
         Checks that a warning is logged when the custom annotation matches only the nodes that have no weight.
         """
@@ -1128,7 +1123,6 @@ class TemplateWeightCompression(ABC):
 
         with patch.object(nncf_logger, "warning") as mock_warning:
             self._compress_and_get_configs(
-                mocker,
                 model=self._get_sequential_matmul_model(),
                 mode=CompressWeightsMode.INT4_SYM,
                 ratio=1.0,
@@ -1145,15 +1139,13 @@ class TemplateWeightCompression(ABC):
         warn_msg = "are matched by the custom annotation, but have no weight to compress"
         assert any(warn_msg in msg for msg in warning_messages)
 
-    def test_custom_annotation_with_invalid_group_size(self, mocker):
+    def test_custom_annotation_with_invalid_group_size(self):
         """
         Checks that an error is raised when the group size given by the custom annotation is not divisible by the
         channel size.
         """
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=True)
-        node_names = list(
-            self._compress_and_get_configs(mocker, model=self._get_sequential_matmul_model(), **common_kwargs)
-        )
+        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
 
         with pytest.raises(InvalidGroupSizeError) as exc_info:
             compress_weights(
@@ -1176,18 +1168,15 @@ class TemplateWeightCompression(ABC):
             (nncf.GroupSizeFallbackMode.IGNORE, None, None),
         ],
     )
-    def test_custom_annotation_group_size_fallback(self, mocker, fallback_mode, ref_group_size, ref_mode):
+    def test_custom_annotation_group_size_fallback(self, fallback_mode, ref_group_size, ref_mode):
         """
         Checks that the group size fallback mode is applied to the group size defined by the custom annotation:
         ADJUST replaces it with a valid value, IGNORE keeps the node in the original precision.
         """
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=True)
-        node_names = list(
-            self._compress_and_get_configs(mocker, model=self._get_sequential_matmul_model(), **common_kwargs)
-        )
+        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
 
         configs = self._compress_and_get_configs(
-            mocker,
             model=self._get_sequential_matmul_model(),
             **common_kwargs,
             advanced_parameters=CompressionParams(group_size_fallback_mode=fallback_mode, min_adjusted_group_size=4),
