@@ -51,6 +51,7 @@ tinyllama_scale_estimation_per_channel_backend_OV:
   metric_value: 0.80699
   num_int4: 188
   num_int8: 124
+  atol: 0.01 # difference across devices: 0.80699 vs 0.80829
 tinyllama_scale_estimation_per_channel_backend_TORCH:
   metric_value: 0.81745
   num_int4: 188
