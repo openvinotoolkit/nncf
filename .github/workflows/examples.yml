@@ -143,6 +143,8 @@ jobs:
             ${{ env.PYTEST_ARGS }}
           ret=$?
           [ $ret -eq 5 ] && [ -n "${{ inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126   # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
       - name: Upload test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -106,7 +106,7 @@ def convert_and_export_with_cache(model: PreTrainedModel) -> tuple[ExportedProgr
 
     dynamic_shapes = {"input_ids": {1: torch.export.Dim.DYNAMIC}, "cache_position": {0: torch.export.Dim.DYNAMIC}}
 
-    exported_program = torch.export.export_for_training(
+    exported_program = torch.export.export(
         model,
         args=(
             example_input_ids,

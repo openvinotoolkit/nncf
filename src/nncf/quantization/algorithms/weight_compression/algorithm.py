@@ -1387,8 +1387,9 @@ class WeightCompression(Algorithm):
                 if not all_weight_dims:
                     continue
 
-                # For 3D weights, keep the batch dimention
-                if any(weight_dim == 3 for weight_dim in all_weight_dims):
+                # For 3D weights, keep the batch (per-expert) dimension only when activation
+                # and weight dimensions are same.
+                if any(weight_dim == 3 for weight_dim in all_weight_dims) and n_dims == 3:
                     assert len(reduction_axes) == 2
                     reduction_axes = reduction_axes[1:]
                     stat_collector, _ = self._backend_entity.get_statistic_collector(

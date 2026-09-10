@@ -608,7 +608,7 @@ class TestParametrizedFast(BaseParametrized):
     pass
 
 
-@pytest.mark.nightly
+@pytest.mark.long
 @pytest.mark.parametrize(
     "input_size",
     [[1, 48, 112, 112], [1, 96, 28, 28], [1, 288, 14, 14], [16, 96, 112, 112], [16, 192, 28, 28], [16, 576, 14, 14]],

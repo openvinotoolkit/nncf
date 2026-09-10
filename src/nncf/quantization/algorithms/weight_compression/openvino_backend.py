@@ -121,6 +121,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
+        if node.metatype == om.OVGroupedMatMulMetatype:
+            # GroupedMatMul accepts activations on port 0 (mat_a), per-group weights on port 1 (mat_b) and
+            # group offsets on port 2. Only mat_b is collected as a weight, so the generic logic below would
+            # consider the offsets to be a second activation.
+            return 0
+
         constant_ports = node.layer_attributes.get_const_port_ids()
         activation_ports = [
             e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
@@ -429,7 +435,9 @@ class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
-        return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype, ATOMIC_ACTIVATIONS_OPERATIONS)
+        return get_awq_patterns(
+            [om.OVMatMulMetatype, om.OVGroupedMatMulMetatype], om.OVMultiplyMetatype, ATOMIC_ACTIVATIONS_OPERATIONS
+        )
 
     @staticmethod
     def scale_insertion_command(source_node, next_nodes, source_node_output_port, scale):

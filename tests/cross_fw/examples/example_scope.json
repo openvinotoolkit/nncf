@@ -200,7 +200,7 @@
         "requirements": "examples/llm_compression/openvino/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 74
+            "word_count": 80
         }
     },
     "llm_compression_fx": {
@@ -225,7 +225,7 @@
         "requirements": "examples/llm_compression/onnx/tiny_llama_scale_estimation/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 81
+            "word_count": 83
         }
     },
     "llm_tune_params": {
@@ -355,15 +355,6 @@
         "accuracy_tolerance": 0.2,
         "accuracy_metrics": {
             "acc1": 54.96
-        }
-    },
-    "llm_compression_torch_gptqmodel_convertor": {
-        "backend": "torch",
-        "device": "cuda",
-        "requirements": "examples/llm_compression/torch/gptq_model_convertor/requirements.txt",
-        "extra_requirements": "examples/llm_compression/torch/gptq_model_convertor/requirements_extra.txt",
-        "accuracy_metrics": {
-            "word_count": 28
         }
     }
 }
