@@ -12,6 +12,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 import torch
@@ -43,11 +44,14 @@ from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
+
+REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "quantization" / "reference_scales"
 
 ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 
@@ -598,7 +602,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return LinearModel()
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool, grouped_mm: bool = False):
+        if grouped_mm:
+            msg = "GroupedMatMul is not supported in the PyTorch backend."
+            raise NotImplementedError(msg)
         if transpose_a:
             pytest.skip("transpose_a=True is not supported for PT backend")
         num_experts = 2
@@ -608,7 +615,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> torch.nn.Module:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool, grouped_mm: bool = False) -> torch.nn.Module:
+        if grouped_mm:
+            msg = "GroupedMatMul is not supported in the PyTorch backend."
+            raise NotImplementedError(msg)
         if not is_3d_weights:
             return AWQLinearModel(non_mergable_pattern=non_mergable_pattern)
         return AWQLinearModel3D(non_mergable_pattern=non_mergable_pattern)
@@ -655,150 +665,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return wrapped_model
 
     @staticmethod
-    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            torch.tensor(
-                [
-                    [[0.47332805]],
-                    [[1.0]],
-                    [[1.4732642]],
-                    [[2.0380495]],
-                    [[2.6054149]],
-                    [[3.0301015]],
-                    [[3.679056]],
-                    [[4.175322]],
-                    [[4.700384]],
-                    [[5.2552223]],
-                    [[5.8100615]],
-                    [[6.3083715]],
-                    [[6.858295]],
-                    [[7.4082184]],
-                    [[7.722581]],
-                    [[8.255914]],
-                ]
-            ),
-            torch.tensor(
-                [
-                    [[0.47344488]],
-                    [[1.0]],
-                    [[1.5450557]],
-                    [[2.0380037]],
-                    [[2.6055446]],
-                    [[3.02987]],
-                    [[3.679132]],
-                    [[4.1754694]],
-                    [[4.7001443]],
-                    [[5.2551227]],
-                    [[5.810101]],
-                    [[6.308658]],
-                    [[6.8587303]],
-                    [[7.4]],
-                    [[7.7212124]],
-                    [[8.254545]],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
-
-    @staticmethod
-    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            torch.tensor(
-                [
-                    [
-                        [
-                            [
-                                7.573249,
-                                7.58195,
-                                7.6,
-                                7.6666665,
-                                7.1209445,
-                                7.260152,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.528544,
-                                8.659291,
-                                8.879055,
-                                8.469787,
-                                8.4,
-                                8.364824,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089771,
-                                16.179543,
-                                16.269318,
-                                16.359089,
-                                16.44886,
-                                16.538631,
-                                16.628407,
-                                16.718176,
-                                16.80795,
-                                16.89772,
-                                16.987492,
-                                15.812495,
-                                15.89516,
-                                15.977826,
-                                16.060493,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-            torch.tensor(
-                [
-                    [
-                        [
-                            [
-                                7.575118,
-                                7.5841107,
-                                7.6,
-                                7.6666665,
-                                7.112954,
-                                7.254837,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.531546,
-                                7.850108,
-                                8.887045,
-                                8.468656,
-                                8.4,
-                                8.361673,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089788,
-                                16.17958,
-                                16.269371,
-                                16.359161,
-                                16.448954,
-                                16.538742,
-                                16.628534,
-                                16.718325,
-                                16.808115,
-                                16.897905,
-                                16.987696,
-                                15.812232,
-                                15.894914,
-                                15.977593,
-                                16.060274,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
+    def get_scale_estimation_ref_path() -> Path:
+        return REFERENCE_SCALES_DIR / "scale_estimation_ref.json"
 
     @staticmethod
     def get_orig_weight(model: torch.nn.Module) -> Tensor:
@@ -852,66 +720,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    @pytest.fixture
-    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
-        return [
-            {
-                "linear3/linear/0": Tensor(
-                    torch.tensor(
-                        [
-                            [1.226455],
-                            [1.205499],
-                            [1.141340],
-                            [1.097436],
-                            [1.064355],
-                            [1.037971],
-                            [1.016118],
-                            [0.997526],
-                        ],
-                        dtype=torch.float32,
-                    )
-                ),
-                "linear2/linear/0": Tensor(
-                    torch.tensor(
-                        [
-                            [
-                                [
-                                    1.990990,
-                                    1.863296,
-                                    1.575980,
-                                    1.397459,
-                                    1.272275,
-                                    1.177998,
-                                    1.103558,
-                                    1.042768,
-                                ]
-                            ]
-                        ],
-                        dtype=torch.float32,
-                    )
-                ),
-            },
-            {
-                "/bmm/2": Tensor(
-                    torch.tensor(
-                        [
-                            [[1.109999, 1.108342, 1.102878, 1.097587, 1.092457, 1.087481, 1.082649, 1.077955]],
-                            [[0.130212, 0.129630, 0.127712, 0.125842, 0.124017, 0.122236, 0.120498, 0.118800]],
-                        ],
-                        dtype=torch.float32,
-                    )
-                ),
-                "/bmm/1": Tensor(
-                    torch.tensor(
-                        [
-                            [[1.146233, 1.144337, 1.138152, 1.132161, 1.126355, 1.120723, 1.115255, 1.109944]],
-                            [[0.259758, 0.258977, 0.256409, 0.253892, 0.251424, 0.249004, 0.246630, 0.244301]],
-                        ],
-                        dtype=torch.float32,
-                    )
-                ),
-            },
-        ]
+    def get_awq_scale_ref_path() -> Path:
+        return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):

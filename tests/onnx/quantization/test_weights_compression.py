@@ -14,6 +14,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
+from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
@@ -46,6 +47,9 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.onnx.common import ModelBuilder
+from tests.onnx.conftest import ONNX_TEST_ROOT
+
+REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / "data" / "reference_scales"
 
 UNSUPPORTED_MODES = (
     CompressWeightsMode.NF4,
@@ -526,7 +530,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> onnx.ModelProto:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool, grouped_mm: bool = False) -> onnx.ModelProto:
+        if grouped_mm:
+            msg = "GroupedMatMul is not supported in the ONNX backend."
+            raise NotImplementedError(msg)
         if transpose_a:
             msg = "ONNX does not support transpose_a + MoE"
             pytest.skip(msg)
@@ -548,150 +555,8 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return mb.build(opset_version=21)
 
     @staticmethod
-    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            np.array(
-                [
-                    [[0.47332805]],
-                    [[1.0]],
-                    [[1.4732642]],
-                    [[2.0380495]],
-                    [[2.6054149]],
-                    [[3.0301015]],
-                    [[3.679056]],
-                    [[4.175322]],
-                    [[4.700384]],
-                    [[5.2552223]],
-                    [[5.8100615]],
-                    [[6.3083715]],
-                    [[6.858295]],
-                    [[7.4082184]],
-                    [[7.722581]],
-                    [[8.255914]],
-                ]
-            ).T,
-            np.array(
-                [
-                    [[0.47344488]],
-                    [[1.0]],
-                    [[1.5450557]],
-                    [[2.0380037]],
-                    [[2.6055446]],
-                    [[3.02987]],
-                    [[3.679132]],
-                    [[4.1754694]],
-                    [[4.7001443]],
-                    [[5.2551227]],
-                    [[5.810101]],
-                    [[6.308658]],
-                    [[6.8587303]],
-                    [[7.4]],
-                    [[7.7212124]],
-                    [[8.254545]],
-                ]
-            ).T,
-        )[check_sampling_activation_stats_flow]
-
-    @staticmethod
-    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            np.array(
-                [
-                    [
-                        [
-                            [
-                                7.573249,
-                                7.58195,
-                                7.6,
-                                7.6666665,
-                                7.1209445,
-                                7.260152,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.528544,
-                                8.659291,
-                                8.879055,
-                                8.469787,
-                                8.4,
-                                8.364824,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089771,
-                                16.179543,
-                                16.269318,
-                                16.359089,
-                                16.44886,
-                                16.538631,
-                                16.628407,
-                                16.718176,
-                                16.80795,
-                                16.89772,
-                                16.987492,
-                                15.812495,
-                                15.89516,
-                                15.977826,
-                                16.060493,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-            np.array(
-                [
-                    [
-                        [
-                            [
-                                7.575118,
-                                7.5841107,
-                                7.6,
-                                7.6666665,
-                                7.112954,
-                                7.254837,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.531546,
-                                7.850108,
-                                8.887045,
-                                8.468656,
-                                8.4,
-                                8.361673,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089788,
-                                16.17958,
-                                16.269371,
-                                16.359161,
-                                16.448954,
-                                16.538742,
-                                16.628534,
-                                16.718325,
-                                16.808115,
-                                16.897905,
-                                16.987696,
-                                15.812232,
-                                15.894914,
-                                15.977593,
-                                16.060274,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
+    def get_scale_estimation_ref_path() -> Path:
+        return REFERENCE_SCALES_DIR / "scale_estimation_ref.json"
 
     @staticmethod
     def get_orig_weight(model: onnx.ModelProto) -> Tensor:
@@ -765,7 +630,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> onnx.ModelProto:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool, grouped_mm: bool = False) -> onnx.ModelProto:
+        if grouped_mm:
+            msg = "GroupedMatMul is not supported in the ONNX backend."
+            raise NotImplementedError(msg)
         """
         Builds a model to be used in the following tests:
             - TemplateWeightCompression.test_awq_with_ignored_scope()
@@ -855,102 +723,8 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_4"  # Zero-based indices (e.g., MatMul_0, MatMul_1, ...)
 
     @staticmethod
-    @pytest.fixture
-    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
-        return [
-            {
-                "Gemm_1": Tensor(np.array([[14.299703], [8.364688]], dtype=np.float32)),
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [
-                                1.2264546,
-                                1.2054994,
-                                1.1413404,
-                                1.0974358,
-                                1.0643553,
-                                1.0379708,
-                                1.0161183,
-                                0.9975262,
-                            ]
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_2": Tensor(
-                    np.array(
-                        [
-                            [
-                                [
-                                    1.9909902,
-                                    1.8632966,
-                                    1.5759803,
-                                    1.3974594,
-                                    1.2722752,
-                                    1.1779976,
-                                    1.1035581,
-                                    1.042768,
-                                ]
-                            ]
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-            },
-            {
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [[1.119726, 1.1012304, 1.0438583, 1.006067, 0.97812414, 0.95607865, 0.9379444, 0.922586]],
-                            [
-                                [
-                                    0.99698645,
-                                    0.9808075,
-                                    0.9307146,
-                                    0.8974796,
-                                    0.87281394,
-                                    0.8533093,
-                                    0.8372402,
-                                    0.82361573,
-                                ]
-                            ],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_2": Tensor(
-                    np.array(
-                        [
-                            [
-                                [
-                                    1.1409731,
-                                    1.1160939,
-                                    1.0581433,
-                                    1.0199243,
-                                    0.9916471,
-                                    0.96932924,
-                                    0.95096624,
-                                    0.93541104,
-                                ]
-                            ],
-                            [
-                                [
-                                    1.0040698,
-                                    0.9826729,
-                                    0.9324939,
-                                    0.8991995,
-                                    0.87448895,
-                                    0.85494846,
-                                    0.83884954,
-                                    0.8251996,
-                                ]
-                            ],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-            },
-        ]
+    def get_awq_scale_ref_path() -> Path:
+        return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
     def get_transform_func() -> Callable[..., Any] | None:
