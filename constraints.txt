@@ -2,7 +2,7 @@
 openvino==2026.3.1
 
 # Pytorch
-torch==2.13.0
+torch==2.14.0
 torchvision==0.28.0
 torchao==0.18.0
 
