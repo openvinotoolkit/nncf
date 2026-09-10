@@ -1,5 +1,6 @@
 transformers==5.5.0
 openvino==2026.4.0rc2
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly --pre
 optimum-intel[openvino]==2.1.0
 optimum==2.3.0
 optimum-onnx @ git+https://github.com/AlexanderDokuchaev/optimum-onnx.git@7186b0687ca9ac6ecd737a9e3ca0672c7335543c
