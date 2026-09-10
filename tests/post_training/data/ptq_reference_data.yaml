@@ -1,5 +1,9 @@
 hf/bert-base-uncased_backend_CUDA_TORCH:
   metric_value: null
+  exception_xfail_reason:
+    type: "RuntimeError"
+    error_message: "Couldn't get TorchScript module by tracing."
+    message: "Failed on converting to OV, after bump transformers to 5.5"
 hf/bert-base-uncased_backend_FP32:
   metric_value: null
 hf/bert-base-uncased_backend_ONNX:
@@ -10,6 +14,10 @@ hf/bert-base-uncased_backend_OV:
   metric_value: null
 hf/bert-base-uncased_backend_TORCH:
   metric_value: null
+  exception_xfail_reason:
+    type: "RuntimeError"
+    error_message: "Couldn't get TorchScript module by tracing."
+    message: "Failed on converting to OV, after bump transformers to 5.5"
 hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull_backend_FP32:
   metric_value: null
 hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless_backend_FP32:
@@ -26,6 +34,10 @@ hf/hf-internal-testing/tiny-random-gpt2_backend_OV:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_TORCH:
   metric_value: null
+  exception_xfail_reason:
+    type: "RuntimeError"
+    error_message: "Couldn't get TorchScript module by tracing."
+    message: "Failed on converting to OV, after bump transformers to 5.5"
 torchvision/resnet18_backend_FP32:
   metric_value: 0.6978
 torchvision/resnet18_backend_OV:
