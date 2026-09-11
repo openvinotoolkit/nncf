@@ -1,9 +1,9 @@
-transformers==5.0.0
+transformers==5.5.0
 openvino==2026.3.1
-optimum-intel[openvino]==2.0.0
-optimum==2.2.0
-optimum-onnx @ git+https://github.com/AlexanderDokuchaev/optimum-onnx.git@b577399d0a6fe748af0ad2c776c7aab3adeec66d
+optimum-intel[openvino]==2.1.0
+optimum==2.3.0
+optimum-onnx @ git+https://github.com/AlexanderDokuchaev/optimum-onnx.git@7186b0687ca9ac6ecd737a9e3ca0672c7335543c
 onnx==1.22.0
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
-torch==2.10.0
+torch==2.13.0
