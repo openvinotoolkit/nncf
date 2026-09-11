@@ -1101,7 +1101,6 @@ class TemplateWeightCompression(ABC):
     @pytest.mark.parametrize(
         "kwargs",
         [
-            dict(lora_correction=True),
             dict(
                 gptq=True,
                 advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
@@ -1111,8 +1110,6 @@ class TemplateWeightCompression(ABC):
     def test_compression_skipped_with_transposed_activations(self, kwargs):
         if kwargs.get("gptq", False) and "gptq" in self.get_not_supported_algorithms():
             pytest.skip("GPTQ is not supported")
-        if kwargs.get("lora_correction", False) and "lora_correction" in self.get_not_supported_algorithms():
-            pytest.skip("lora_correction is not supported")
 
         INPUT_SHAPE = (2, 4)
         model = self.get_transposable_awq_model(transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE)

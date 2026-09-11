@@ -1729,12 +1729,17 @@ def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
 
 
 @pytest.mark.parametrize(
-    "params, transpose_b",
-    ((None, True), (LoraParams(adapter_rank=4, use_int8_adapters=False), False)),
+    "params, transpose_a, transpose_b",
+    (
+        (None, False, True),
+        (LoraParams(adapter_rank=4, use_int8_adapters=False), False, False),
+        (LoraParams(adapter_rank=4, use_int8_adapters=False), True, False),
+        (LoraParams(adapter_rank=8, use_int8_adapters=True), True, True),
+    ),
 )
-def test_lora_adapters_in_the_graph(params, transpose_b):
+def test_lora_adapters_in_the_graph(params, transpose_a, transpose_b):
     advanced_parameters = CompressionParams() if params is None else CompressionParams(lora_correction_params=params)
-    model = LMLinearModel(transpose_b=transpose_b)
+    model = LMLinearModel(transpose_a=transpose_a, transpose_b=transpose_b)
     ov_model = model.ov_model
     dataset = Dataset(np.ones(inp.shape) for inp in ov_model.inputs)
 
