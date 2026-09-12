@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import json
+import logging
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
@@ -35,6 +36,7 @@ from torchao.quantization.pt2e.utils import _fuse_conv_bn_
 import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.utils.os import safe_open
+from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
 from nncf.experimental.torch.fx import quantize_pt2e
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -400,6 +402,99 @@ class OneNodeAnnotationQuantizer(TorchAOQuantizer):
 
     def validate(self, model):
         return
+
+
+class ActivationTimesWeightModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones(3, 1, 1))
+
+    def forward(self, x):
+        return x * self.weight
+
+
+class WeightTimesActivationModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones(3, 1, 1))
+
+    def forward(self, x):
+        return self.weight * x
+
+
+class ActivationTimesBufferModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.register_buffer("scale", torch.ones(3, 1, 1))
+
+    def forward(self, x):
+        return x * self.scale
+
+
+def _get_int8_per_tensor_symmetric_qspec() -> TorchAOQuantizationSpec:
+    return TorchAOQuantizationSpec(
+        dtype=torch.int8,
+        observer_or_fake_quant_ctr=None,
+        qscheme=torch.per_tensor_symmetric,
+    )
+
+
+def _get_mul_input_quantization_point_class(model: torch.nn.Module, input_node_name: str) -> str:
+    example_input = torch.ones(2, 3, 8, 8)
+    fx_model = get_torch_fx_model(model.eval(), example_input)
+    input_node = get_graph_node_by_name(fx_model.graph, input_node_name)
+    annotation = QuantizationAnnotation(input_qspec_map={input_node: _get_int8_per_tensor_symmetric_qspec()})
+    adapter = TorchAOQuantizerAdapter(OneNodeAnnotationQuantizer("mul", annotation))
+    setup = adapter.get_quantization_setup(fx_model, GraphConverter.create_nncf_graph(fx_model))
+    quantization_point = next(iter(setup.get_state()["quantization_points"].values()))
+    return quantization_point["qip_class"]
+
+
+@pytest.mark.parametrize(
+    "model_cls",
+    [
+        ActivationTimesWeightModel,
+        WeightTimesActivationModel,
+    ],
+)
+def test_torch_ao_adapter_detects_parameter_as_mul_weight(model_cls):
+    assert _get_mul_input_quantization_point_class(model_cls(), "weight") == "WeightQuantizationInsertionPoint"
+
+
+def test_torch_ao_adapter_does_not_detect_buffer_as_mul_weight():
+    assert (
+        _get_mul_input_quantization_point_class(ActivationTimesBufferModel(), "scale")
+        == "ActivationQuantizationInsertionPoint"
+    )
+
+
+def test_quantize_pt2e_custom_quantizer_with_batchwise_statistics(caplog, mocker):
+    example_input = torch.ones(2, 3, 3, 3)
+    fx_model = get_torch_fx_model(LinearModel(torch.ones(3, 3)), example_input)
+    annotation = QuantizationAnnotation(output_qspec=_get_int8_per_tensor_symmetric_qspec())
+    quantizer = OneNodeAnnotationQuantizer("linear", annotation)
+    data_loader = torch.utils.data.DataLoader(torch.ones(2, 3, 3, 3), batch_size=2)
+    calibration_dataset = nncf.Dataset(data_loader, lambda x: x.to("cpu"))
+    ptq_init_spy = mocker.spy(ExperimentalPostTrainingQuantization, "__init__")
+    caplog.set_level(logging.INFO, logger="nncf")
+
+    quantized_model = quantize_pt2e(
+        fx_model,
+        quantizer,
+        calibration_dataset=calibration_dataset,
+        subset_size=1,
+        fast_bias_correction=None,
+        fold_quantize=False,
+        do_copy=True,
+    )
+
+    assert calibration_dataset.get_batch_size() == 2
+    assert ptq_init_spy.call_args.kwargs["batchwise_statistics"] is True
+    assert "The model has no operations to apply quantization" not in caplog.text
+
+    node_targets = {node.target for node in quantized_model.graph.nodes}
+    assert torch.ops.quantized_decomposed.quantize_per_tensor.default in node_targets
+    assert torch.ops.quantized_decomposed.dequantize_per_tensor.default in node_targets
 
 
 REF_NONE_Q_MIN_Q_MAX_SETUP = {
