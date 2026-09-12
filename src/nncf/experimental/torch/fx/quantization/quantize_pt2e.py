@@ -14,6 +14,7 @@ from copy import deepcopy
 import torch.fx
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
+from torchao.quantization.pt2e.quantize_pt2e import prepare_qat_pt2e
 from torchao.quantization.pt2e.quantizer import PortNodeMetaForQDQ
 from torchao.quantization.pt2e.quantizer.quantizer import Quantizer
 from torchao.quantization.pt2e.utils import _disallow_eval_train
@@ -37,6 +38,25 @@ from nncf.experimental.torch.fx.transformations import compress_post_quantize_tr
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+
+
+@api(canonical_alias="nncf.experimental.torch.fx.quantize_qat_pt2e")
+def quantize_qat_pt2e(
+    model: torch.fx.GraphModule,
+    quantizer: Quantizer,
+) -> torch.fx.GraphModule:
+    """
+    Prepares the provided torch.fx.GraphModule for quantization-aware training
+    using the provided torchao quantizer.
+
+    :param model: A torch.fx.GraphModule instance to be prepared for QAT.
+    :param quantizer: TorchAO quantizer used to annotate the graph with
+        quantization specifications.
+    :return: A torch.fx.GraphModule prepared for quantization-aware training.
+    """
+    nncf_logger.warning("This is an experimental feature and may change in the future without notice.")
+
+    return prepare_qat_pt2e(model, quantizer)
 
 
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
