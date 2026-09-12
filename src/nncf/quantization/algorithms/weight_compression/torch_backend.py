@@ -28,6 +28,7 @@ from nncf.common.tensor_statistics.collectors import MeanReducer
 from nncf.common.tensor_statistics.collectors import NoopAggregator
 from nncf.common.tensor_statistics.collectors import ShapeReducer
 from nncf.common.tensor_statistics.collectors import TensorCollector
+from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressionFormat
@@ -51,6 +52,7 @@ from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
+from nncf.torch.graph.operator_metatypes import PTGroupedMatMulMetatype
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.operator_metatypes import PTNoopMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -74,6 +76,36 @@ from nncf.torch.quantization.layers import PTLoraNLSSpec
 from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SQMultiply
+
+
+class GroupedMatMulMeanReducer(TensorReducerBase):
+    """Reduce grouped-matmul activations to per-expert mean values."""
+
+    def _reduce_out_of_place(self, inputs: list[Tensor]) -> list[Tensor]:
+        activations = inputs[0].data
+        cumulative_offsets = inputs[1].data
+        counts = torch.diff(cumulative_offsets, prepend=cumulative_offsets.new_zeros(1))
+        expert_ids = torch.arange(counts.numel(), device=counts.device).repeat_interleave(counts)
+        values = activations.new_zeros((counts.numel(), activations.shape[-1]))
+        values = values.index_add(0, expert_ids, activations)
+        values /= counts.clamp_min(1).unsqueeze(1)
+        shape = torch.tensor(values.shape, dtype=torch.int32, device=values.device)
+        return [Tensor(values), Tensor(shape)]
+
+
+class GroupedMatMulStatisticCollector(TensorCollector):
+    """Collect activation and offset inputs of one grouped-matmul invocation."""
+
+    def __init__(self, subset_size: int | None) -> None:
+        super().__init__(
+            WCTensorStatistic,
+            input_port_ids=(PTGroupedMatMulMetatype.activation_port_id, PTGroupedMatMulMetatype.offset_port_id),
+        )
+        reducer = GroupedMatMulMeanReducer()
+        self.register_statistic_branch(WCTensorStatistic.MEAN_STAT, reducer, NoopAggregator(subset_size))
+        self.register_statistic_branch(
+            WCTensorStatistic.SHAPE_STAT, reducer, NoopAggregator(subset_size), reducer_output_port_id=1
+        )
 
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -152,8 +184,25 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         collector.register_statistic_branch(WCTensorStatistic.SHAPE_STAT, shape_reducer, NoopAggregator(subset_size))
         return collector
 
+    def get_statistic_collector(
+        self,
+        node: NNCFNode,
+        graph: NNCFGraph,
+        reduction_axes: tuple[int, ...],
+        subset_size: int | None = None,
+    ) -> tuple[TensorCollector, tuple[int, ...]]:
+        """Return an input statistics collector for the given operation."""
+        if node.metatype != PTGroupedMatMulMetatype:
+            return super().get_statistic_collector(node, graph, reduction_axes, subset_size)
+        return GroupedMatMulStatisticCollector(subset_size), (
+            PTGroupedMatMulMetatype.activation_port_id,
+            PTGroupedMatMulMetatype.offset_port_id,
+        )
+
     @staticmethod
     def get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
+        if node.metatype == PTGroupedMatMulMetatype:
+            return PTGroupedMatMulMetatype.activation_port_id
         activation_ports = []
         for prev_node in graph.get_previous_nodes(node):
             if prev_node.metatype in CONST_NOOP_METATYPES:
@@ -233,10 +282,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
         def filter_func(point: StatisticPoint) -> bool:
-            return (
-                algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type
+            return algorithm_key in point.algorithm_to_tensor_collectors and (
+                point.target_point.type
                 == PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.POST_LAYER_OPERATION]
+                or point.target_point.input_port_id == PTGroupedMatMulMetatype.activation_port_id
             )
 
         return filter_func
