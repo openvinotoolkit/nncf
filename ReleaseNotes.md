@@ -8,8 +8,8 @@
   - ...
 - Features:
   - (OpenVINO) Added `GroupedMatMul` support to the AWQ and Scale Estimation algorithms, enabling data-aware weight compression of `grouped_mm`-based MoE models (https://github.com/openvinotoolkit/nncf/pull/4176).
-  - (OpenVINO) Extended the RoPE ignored pattern to recognize the `matmul -> transpose -> cos/sin` structure used by models such as GPT-OSS (https://github.com/openvinotoolkit/nncf/pull/4175).
 - Fixes:
+  - (OpenVINO) Extended the RoPE ignored pattern to recognize the `matmul -> transpose -> cos/sin` structure used by models such as GPT-OSS (https://github.com/openvinotoolkit/nncf/pull/4175).
   - (PyTorch) Removed the `__getitem__` node that follows split-like operations (e.g. `chunk`) from the TorchFX inference graph, fixing statistic collection errors for models such as YOLO11 (https://github.com/openvinotoolkit/nncf/pull/4155).
   - (ONNX) Fixed a `KeyError` in bias attribute resolution when a tensor is a model input and therefore has no parent node (https://github.com/openvinotoolkit/nncf/pull/4169).
   - (ONNX) Fixed squeeze axis determination for `ONNXEmbeddingMetatype` nodes (https://github.com/openvinotoolkit/nncf/pull/4144).
