@@ -1,5 +1,36 @@
 # Release Notes
 
+## New in Release 3.4.0
+
+- Breaking changes:
+  - ...
+- General:
+  - ...
+- Features:
+  - (OpenVINO) Added `GroupedMatMul` support to the AWQ and Scale Estimation algorithms, enabling data-aware weight compression of `grouped_mm`-based MoE models (https://github.com/openvinotoolkit/nncf/pull/4176).
+- Fixes:
+  - (OpenVINO) Extended the RoPE ignored pattern to recognize the `matmul -> transpose -> cos/sin` structure used by models such as GPT-OSS (https://github.com/openvinotoolkit/nncf/pull/4175).
+  - (PyTorch) Removed the `__getitem__` node that follows split-like operations (e.g. `chunk`) from the TorchFX inference graph, fixing statistic collection errors for models such as YOLO11 (https://github.com/openvinotoolkit/nncf/pull/4155).
+  - (ONNX) Fixed a `KeyError` in bias attribute resolution when a tensor is a model input and therefore has no parent node (https://github.com/openvinotoolkit/nncf/pull/4169).
+  - (ONNX) Fixed squeeze axis determination for `ONNXEmbeddingMetatype` nodes (https://github.com/openvinotoolkit/nncf/pull/4144).
+- Improvements:
+  - Improved the tensor function dispatcher to handle `TypeAliasType` annotations in function signatures, adding support for `numpy` 2.5 (https://github.com/openvinotoolkit/nncf/pull/4157).
+  - (PyTorch) Replaced the deprecated `export_for_training` with `export` in TorchFX examples, documentation, and tests (https://github.com/openvinotoolkit/nncf/pull/4191).
+- Tutorials:
+  - ...
+- Known issues:
+  - ...
+- Deprecations/Removals:
+  - ...
+- Requirements:
+  - Updated `openvino` to 2026.4.0 (https://github.com/openvinotoolkit/nncf/pull/4178) (https://github.com/openvinotoolkit/nncf/pull/4211).
+  - Updated `torch` to 2.13.0 (https://github.com/openvinotoolkit/nncf/pull/4197).
+  - Updated `torchao` to 0.18.0 (https://github.com/openvinotoolkit/nncf/pull/4196).
+  - Updated `transformers` to 5.5.0, `optimum` to 2.3.0, and `optimum-intel` to 2.1.0 (https://github.com/openvinotoolkit/nncf/pull/4200).
+  - Updated `onnx-ir` to 1.0.0 and `onnxscript` to 0.7.1 (https://github.com/openvinotoolkit/nncf/pull/4190).
+  - Updated `datasets` to 5.0.1 (https://github.com/openvinotoolkit/nncf/pull/4182).
+  - Updated the `pydot` upper bound to <= 4.0.1 (https://github.com/openvinotoolkit/nncf/pull/4181).
+
 ## New in Release 3.3.0
 
 - Features:
