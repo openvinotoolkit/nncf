@@ -25,6 +25,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from tests.cross_fw.test_templates.helpers import ConvBNTestModel
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import FCTestModel
+from tests.cross_fw.test_templates.helpers import OneDimMM
 from tests.cross_fw.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -121,6 +122,7 @@ class TemplateTestFBCAlgorithm:
             TestCase(ConvTestModel, [0.0288348, 1.0838453]),
             TestCase(ConvBNTestModel, [0.08396978, 1.1676897]),
             TestCase(FCTestModel, [0.9999, 1.9989]),
+            TestCase(OneDimMM, [0.95773065, 1.3218939, 0.81694865]),
         ),
         ids=str,
     )

@@ -23,7 +23,7 @@ from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 
 
 def get_mean_statistic_collector(
-    num_samples: int, channel_axis: int, window_size: int | None = None
+    num_samples: int, channel_axis: int, window_size: int | None = None, input_rank: int | None = None
 ) -> TensorCollector:
     """
     Mean statistic collector builder.
@@ -33,11 +33,16 @@ def get_mean_statistic_collector(
     :param window_size: Number of samples from the end of the list of collected samples to aggregate.
         Aggregates all available collected statistics in case parameter is None.
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
+    :param input_rank: Rank of the input tensor of the target node, if known.
     :return: Mean statistic collector.
     """
     inplace = False
     reducer: TensorReducerBase
-    if channel_axis == 0:
+    if input_rank == 1:
+        # A 1D activation has no batch dimension: its elements are already the per-channel
+        # values, so they are collected as is and averaged across samples by the aggregator.
+        reducer = RawReducer()
+    elif channel_axis == 0:
         reducer = BatchMeanReducer(inplace)
     else:
         reducer = MeanPerChReducer(channel_axis=channel_axis, inplace=inplace)
