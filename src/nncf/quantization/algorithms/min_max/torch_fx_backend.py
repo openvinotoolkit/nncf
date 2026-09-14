@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from typing import Callable
+
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 from torchao.quantization.pt2e.observer import MinMaxObserver
@@ -32,6 +34,7 @@ from nncf.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import remove_split_getitem_nodes
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -56,6 +59,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def preserved_metatypes(self) -> list[OperatorMetatype]:
         return []
+
+    @property
+    def inference_graph_transformations(self) -> list[Callable[[NNCFGraph], None]]:
+        return [remove_split_getitem_nodes]
 
     @property
     def mat_mul_metatypes(self) -> list[OperatorMetatype]:

@@ -648,6 +648,8 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple
     if node.metatype == OVMatMulMetatype:
         activations_layout = get_linear_activations_layout_from_node(node, port_id, input_shape)
         channel_axis = activations_layout.index(OVLayoutElem.C_IN)
+    elif node.metatype == OVGroupedMatMulMetatype:
+        channel_axis = len(input_shape) - 1
 
     return channel_axis
 
