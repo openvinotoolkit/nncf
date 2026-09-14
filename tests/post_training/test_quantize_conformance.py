@@ -37,15 +37,20 @@ DATA_ROOT = Path(__file__).parent / "data"
 
 @pytest.fixture(scope="function", name="use_avx2")
 def fixture_use_avx2():
-    old_value = os.environ.get("OV_MAX_CPU_ISA")
-    os.environ["OV_MAX_CPU_ISA"] = "AVX2"
-    if old_value is not None and old_value != "AVX2":
-        print(f"Warning: OV_MAX_CPU_ISA is overriding to AVX2, was {old_value}")
+    env_vars = ("OV_MAX_CPU_ISA", "ONEDNN_MAX_CPU_ISA")
+    old_values = {name: os.environ.get(name) for name in env_vars}
+    for name in env_vars:
+        old_value = old_values[name]
+        os.environ[name] = "AVX2"
+        if old_value is not None and old_value != "AVX2":
+            print(f"Warning: {name} is overriding to AVX2, was {old_value}")
     yield
-    if old_value is None:
-        del os.environ["OV_MAX_CPU_ISA"]
-    else:
-        os.environ["OV_MAX_CPU_ISA"] = old_value
+    for name in env_vars:
+        old_value = old_values[name]
+        if old_value is None:
+            del os.environ[name]
+        else:
+            os.environ[name] = old_value
 
 
 def _parse_version(s: Path):
