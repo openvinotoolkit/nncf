@@ -37,7 +37,7 @@ DATA_ROOT = Path(__file__).parent / "data"
 
 @pytest.fixture(scope="function", name="use_avx2")
 def fixture_use_avx2():
-    env_vars = ("OV_MAX_CPU_ISA", "ONEDNN_MAX_CPU_ISA")
+    env_vars = ("OV_CPU_MAX_ISA", "ONEDNN_MAX_CPU_ISA")
     old_values = {name: os.environ.get(name) for name in env_vars}
     for name in env_vars:
         old_value = old_values[name]
