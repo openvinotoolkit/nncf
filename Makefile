@@ -63,7 +63,7 @@ install-openvino-test:
 install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
+	pip install -r examples/post_training_quantization/openvino/yolo26/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
