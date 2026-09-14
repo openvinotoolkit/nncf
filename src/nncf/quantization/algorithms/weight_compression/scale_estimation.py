@@ -197,6 +197,13 @@ class ScaleEstimation:
 
         s, X = process_stats(statistics, subset_size, act_ch_axis=act_ch_axis)
 
+        # Experts of a grouped MatMul that received no tokens during the calibration have all-zero activation
+        # statistics, which makes the data-aware search degenerate: zero importance collapses the estimated scale
+        # to zero. Such experts fall back to the data-free (RTN) scale. The mask is shaped to be broadcastable to
+        # the scale: [Num Experts, 1, 1, 1] for 3D weights and [1, 1, 1] for 2D ones.
+        no_data_mask = fns.max(fns.abs(s), axis=-1, keepdims=True) == 0
+        no_data_mask = fns.unsqueeze(fns.unsqueeze(no_data_mask, -1), -1)
+
         X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
@@ -275,6 +282,7 @@ class ScaleEstimation:
         for i in range(initial_steps):
             near_to_ideal_scale = estimate_scales(weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
+            near_to_ideal_scale = fns.where(no_data_mask, scale, near_to_ideal_scale)
 
             if not config.is_integer:
                 q_weights_ = float_quantize_dequantize_weight(
@@ -339,6 +347,7 @@ class ScaleEstimation:
             zero_mask = zero_scale * zero_mask.astype(weight.dtype)
             near_to_ideal_scale = estimate_scales(weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
+            near_to_ideal_scale = fns.where(no_data_mask, scale, near_to_ideal_scale)
 
             if not config.is_integer:
                 q_weights_ = float_quantize_dequantize_weight(weight, config, precomputed_scale=near_to_ideal_scale)

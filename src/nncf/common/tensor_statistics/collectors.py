@@ -243,11 +243,17 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: type[TensorStatistic] | None = None) -> None:
+    def __init__(
+        self,
+        statistic_container: type[TensorStatistic] | None = None,
+        input_port_ids: tuple[int, ...] | None = None,
+    ) -> None:
         self._reducers: set[TensorReducerBase] = set()
         self._aggregators: dict[tuple[int, int, int], AggregatorBase] = {}
         self._stat_container_kwargs_map: dict[str, tuple[int, int, int]] = {}
         self._stat_container = statistic_container
+        self._input_port_ids = input_port_ids
+        self._pending_inputs: dict[int, Tensor] = {}
         self.enable()
         self.clear_cache()
 
@@ -335,13 +341,29 @@ class TensorCollector:
             if reducer_hash in reduced_inputs:
                 aggregator.register_reduced_input(reduced_inputs[reducer_hash][reducer_port_id])
 
-    def register_input_for_all_reducers(self, input_: Tensor) -> None:
+    def register_input_for_all_reducers(self, input_: Tensor, input_port_id: int | None = None) -> None:
         """
         Registers given input_ in each available statistic collection branch.
 
         :param input_: Tensor input to register.
+        :param input_port_id: Optional input port identifier for collectors that combine several inputs.
         """
-        self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
+        if self._input_port_ids is None:
+            self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
+            return
+        if input_port_id not in self._input_port_ids:
+            msg = (
+                f"Unexpected statistic collector input port ID: {input_port_id}. "
+                f"Expected one of {self._input_port_ids}."
+            )
+            raise ValueError(msg)
+        if not self.enabled:
+            return
+
+        self._pending_inputs[input_port_id] = input_
+        if len(self._pending_inputs) == len(self._input_port_ids):
+            inputs = [self._pending_inputs.pop(expected_id) for expected_id in self._input_port_ids]
+            self.register_inputs({hash(reducer): inputs for reducer in self._reducers})
 
     def _aggregate(self) -> dict[Any, Any]:
         result = {}
@@ -409,6 +431,7 @@ class TensorCollector:
         self._aggregators[key] = aggregator
 
     def reset(self) -> None:
+        self._pending_inputs.clear()
         for aggregator in self._aggregators.values():
             aggregator.reset()
 
