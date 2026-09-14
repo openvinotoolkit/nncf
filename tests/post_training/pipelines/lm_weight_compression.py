@@ -320,7 +320,7 @@ class LMWeightCompression(BaseTestPipeline):
                 torch.compile(
                     self.compressed_model,
                     backend="openvino",
-                    options={"aot_autograd": True, "model_caching": True, "cache_dir": str(self.output_model_dir)},
+                    options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
                 )(example_input_ids, example_cache_position)
 
                 # Get the OV *.xml files in torch compile cache directory

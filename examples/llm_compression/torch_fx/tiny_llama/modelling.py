@@ -33,7 +33,7 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
     ) -> None:
         super().__init__(model, config)
         if compile:
-            self.model = torch.compile(model, backend="openvino", options={"aot_autograd": True})
+            self.model = torch.compile(model, backend="openvino")
         self.generation_config = generation_config
         self.main_input_name = "input_ids"
         self._device = device.upper()
