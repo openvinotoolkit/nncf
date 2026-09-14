@@ -74,6 +74,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.MXFP8_E4M3: 8,
             CompressWeightsMode.INT3_SYM: 3,
             CompressWeightsMode.INT2_SYM: 2,
+            CompressWeightsMode.INT2_ASYM: 2,
         }
 
         try:
@@ -84,7 +85,11 @@ class WeightCompressionConfig:
 
     @property
     def is_asym_mode(self) -> bool:
-        return self.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+        return self.mode in [
+            CompressWeightsMode.INT2_ASYM,
+            CompressWeightsMode.INT4_ASYM,
+            CompressWeightsMode.INT8_ASYM,
+        ]
 
     @property
     def is_integer(self) -> bool:
@@ -130,7 +135,14 @@ class WeightCompressionConfig:
                 return TensorDataType.uint8
             return TensorDataType.uint16
         dtype_per_mode = {
+            # OpenVINO has no i2/i3 element type, so TensorDataType.int2 is physically stored as
+            # ov.Type.u2 (see DTYPE_MAP in tensor/functions/openvino_numeric.py). That is why the
+            # symmetric path shifts codes by +2**(num_bits-1) and subtracts a scalar zero point,
+            # and it is also why INT2_ASYM maps to the same int2 dtype rather than to a new uint2:
+            # asymmetric codes already land in [0, 2**num_bits - 1], so only the zero point
+            # differs -- per-group and u2-packed instead of a folded scalar.
             CompressWeightsMode.INT2_SYM: TensorDataType.int2,
+            CompressWeightsMode.INT2_ASYM: TensorDataType.int2,
             CompressWeightsMode.INT3_SYM: TensorDataType.int3,
             CompressWeightsMode.INT4_SYM: TensorDataType.int4,
             CompressWeightsMode.INT4_ASYM: TensorDataType.uint4,
