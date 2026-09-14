@@ -356,8 +356,13 @@ class QuantizerSetupBase:
 
     def equivalent_to(self, other: "QuantizerSetupBase") -> bool:
         this_qp_id_to_other_qp_id_dict: dict[QuantizationPointId, QuantizationPointId] = {}
+        other_qp_id_to_this_qp_id_dict: dict[QuantizationPointId, QuantizationPointId] = {}
 
-        def _compare_qps(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
+        def _compare_qps(
+            first: "QuantizerSetupBase",
+            second: "QuantizerSetupBase",
+            id_map: dict[QuantizationPointId, QuantizationPointId],
+        ) -> bool:
             for this_qp_id, this_qp in first.quantization_points.items():
                 matches: list[QuantizationPointId] = []
                 for other_qp_id, other_qp in second.quantization_points.items():
@@ -366,14 +371,16 @@ class QuantizerSetupBase:
                 if len(matches) == 0:
                     return False
                 assert len(matches) == 1  # separate quantization points should not compare equal to each other
-                this_qp_id_to_other_qp_id_dict[this_qp_id] = matches[0]
+                id_map[this_qp_id] = matches[0]
             return True
 
-        def _compare_shared_input_groups(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
+        def _compare_shared_input_groups(
+            first: "QuantizerSetupBase",
+            second: "QuantizerSetupBase",
+            id_map: dict[QuantizationPointId, QuantizationPointId],
+        ) -> bool:
             for this_same_input_group_set in first.shared_input_operation_set_groups.values():
-                translated_id_set = set(
-                    this_qp_id_to_other_qp_id_dict[this_qp_id] for this_qp_id in this_same_input_group_set
-                )
+                translated_id_set = set(id_map[this_qp_id] for this_qp_id in this_same_input_group_set)
                 matches = []
 
                 for other_shared_inputs_group in second.shared_input_operation_set_groups.values():
@@ -384,11 +391,13 @@ class QuantizerSetupBase:
                 assert len(matches) == 1  # shared inputs group entries should be present in only one group
             return True
 
-        def _compare_unified_scale_groups(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
+        def _compare_unified_scale_groups(
+            first: "QuantizerSetupBase",
+            second: "QuantizerSetupBase",
+            id_map: dict[QuantizationPointId, QuantizationPointId],
+        ) -> bool:
             for this_unified_scales_group in first.unified_scale_groups.values():
-                translated_id_set = set(
-                    this_qp_id_to_other_qp_id_dict[this_qp_id] for this_qp_id in this_unified_scales_group
-                )
+                translated_id_set = set(id_map[this_qp_id] for this_qp_id in this_unified_scales_group)
                 matches = []
                 for other_unified_scales_group in second.unified_scale_groups.values():
                     if translated_id_set == other_unified_scales_group:
@@ -399,12 +408,12 @@ class QuantizerSetupBase:
             return True
 
         return (
-            _compare_qps(self, other)
-            and _compare_qps(other, self)
-            and _compare_shared_input_groups(self, other)
-            and _compare_shared_input_groups(self, other)
-            and _compare_unified_scale_groups(self, other)
-            and _compare_unified_scale_groups(self, other)
+            _compare_qps(self, other, this_qp_id_to_other_qp_id_dict)
+            and _compare_qps(other, self, other_qp_id_to_this_qp_id_dict)
+            and _compare_shared_input_groups(self, other, this_qp_id_to_other_qp_id_dict)
+            and _compare_shared_input_groups(other, self, other_qp_id_to_this_qp_id_dict)
+            and _compare_unified_scale_groups(self, other, this_qp_id_to_other_qp_id_dict)
+            and _compare_unified_scale_groups(other, self, other_qp_id_to_this_qp_id_dict)
         )
 
 
