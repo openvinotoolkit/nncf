@@ -56,4 +56,4 @@ jobs:
       - name: Run pre-commit
         run: pytest -ra tests/openvino
         env:
-          ONEDNN_MAX_CPU_ISA: AVX2
+          OV_MAX_CPU_ISA: AVX2
