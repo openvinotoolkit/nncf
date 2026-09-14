@@ -173,6 +173,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt
