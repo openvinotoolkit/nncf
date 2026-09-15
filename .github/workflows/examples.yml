@@ -167,7 +167,7 @@ jobs:
 
   examples-win-cpu:
     name: Test examples CPU Windows [${{ matrix.group }}/6]
-    runs-on: windows-2025-16-core
+    runs-on: aks-win-16-cores-32gb
     timeout-minutes: 80
     if: ${{ !inputs.skip_windows }}
     strategy:
@@ -178,6 +178,8 @@ jobs:
       PYTHONIOENCODING: utf-8
       NNCF_EXTENSION_LOAD_TIMEOUT: 180
     steps:
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
@@ -185,8 +187,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-      - name: cpuinfo
-        run: cat /proc/cpuinfo
+
       - name: Install NNCF and test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt
