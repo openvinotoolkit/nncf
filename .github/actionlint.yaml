@@ -3,5 +3,7 @@ self-hosted-runner:
     - windows-2025-8-core
     - windows-2025-16-core
     - aks-linux-6-cores-55gb-gpu-a10
-    - aks-linux-4-cores-32gb
     - aks-linux-4-cores-16gb
+    - aks-linux-4-cores-32gb
+    - aks-linux-8-cores-16gb
+    - aks-linux-8-cores-32gb
