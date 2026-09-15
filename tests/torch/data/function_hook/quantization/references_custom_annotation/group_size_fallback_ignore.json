@@ -1,18 +1,22 @@
 {
     "/linear/0": {
         "mode": "int4_sym",
-        "group_size": -1
+        "group_size": -1,
+        "codebook_values": null
     },
     "/linear/2": {
         "mode": "int4_sym",
-        "group_size": -1
+        "group_size": -1,
+        "codebook_values": null
     },
     "/linear/3": {
         "mode": "int4_sym",
-        "group_size": -1
+        "group_size": -1,
+        "codebook_values": null
     },
     "/linear/4": {
         "mode": "int4_sym",
-        "group_size": -1
+        "group_size": -1,
+        "codebook_values": null
     }
 }

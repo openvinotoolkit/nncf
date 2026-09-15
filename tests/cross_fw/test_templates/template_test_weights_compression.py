@@ -12,6 +12,7 @@ import math
 import os
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import asdict
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
@@ -981,7 +982,7 @@ class TemplateWeightCompression(ABC):
             self.get_sequential_matmul_model(transpose_a=False), np.ones([1, 4, 4], dtype=np.float32)
         )
 
-    def _compress_and_get_configs(self, **kwargs) -> dict[str, WeightCompressionConfig]:
+    def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
         """
         Compresses a model and returns the compression config assigned to each compressed weight node.
 
@@ -999,7 +1000,7 @@ class TemplateWeightCompression(ABC):
             compress_weights(**kwargs)
 
         all_weight_params = captured_weight_params[-1]
-        return {wp.node_with_weight.node_name: wp.compression_config for wp in all_weight_params}
+        return {wp.node_with_weight.node_name: asdict(wp.compression_config) for wp in all_weight_params}
 
     # The weight nodes of the sequential MatMul model are named "MatMul_<i>" / "linear_<i>" / "/linear/<i>"
     # depending on the backend, so they are referred to by a pattern that matches the node index.
@@ -1111,15 +1112,11 @@ class TemplateWeightCompression(ABC):
             custom_annotation=[nncf.CustomAnnotation(scope=scope, config=config) for scope, config in annotations],
         )
 
-        actual_configs = {
-            node_name: {"mode": config.mode, "group_size": config.group_size} for node_name, config in configs.items()
-        }
-
         ref_path = self.get_custom_annotation_ref_path(request.node.callspec.id)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-            dump_to_json(ref_path, actual_configs)
+            dump_to_json(ref_path, configs)
 
-        assert actual_configs == load_json(ref_path)
+        assert configs == load_json(ref_path)
 
     @pytest.mark.parametrize(
         ("custom_annotation", "error"),
@@ -1160,7 +1157,6 @@ class TemplateWeightCompression(ABC):
                 [
                     nncf.CustomAnnotation(
                         scope=nncf.CustomAnnotationScope(patterns=[".*"]),
-                        # The channel size of the model is 4, so the group size of 3 is invalid
                         config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=3),
                     )
                 ],
